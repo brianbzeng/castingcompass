@@ -51,6 +51,7 @@ test("ships install and offline assets", async () => {
   assert.equal(parsed.display, "standalone");
   assert.equal(parsed.icons.length, 2);
   assert.match(serviceWorker, /\/data\/opportunities\.json/);
+  assert.match(serviceWorker, /\/data\/community-pulse\.json/);
   assert.match(serviceWorker, /caches\.match/);
 });
 
@@ -62,5 +63,23 @@ test("keeps the score framed as a relative ranking", async () => {
   assert.match(app, /percentile within that current comparison set/);
   assert.match(app, /It is <strong>not<\/strong> an 80% chance/);
   assert.match(app, /Expired live inputs are excluded/);
-  assert.match(app, /deep model is promoted only if geographically blocked evaluation beats simpler baselines/i);
+  assert.match(app, /research pipeline, not the live score/i);
+  assert.match(app, /self-supervised ResNet\/SimCLR encoder/i);
+  assert.match(app, /Community pulse — historical discussion/);
+  assert.match(app, /Not a live bite report/);
+  assert.match(app, /\["today", "Today"\]/);
+  assert.match(app, /\["custom", "Custom"\]/);
+  assert.doesNotMatch(app, /Best next|\["weekend", "Weekend"\]/);
+});
+
+test("uses the blue vector map and exposes a deterministic Bay recenter control", async () => {
+  const map = await readFile(
+    new URL("../app/components/ContourMap.tsx", import.meta.url),
+    "utf8",
+  );
+
+  assert.match(map, /tiles\.openfreemap\.org\/styles\/fiord/);
+  assert.match(map, /bathymetry-vectors/);
+  assert.match(map, /Center Bay/);
+  assert.doesNotMatch(map, /tile\.openstreetmap\.org/);
 });

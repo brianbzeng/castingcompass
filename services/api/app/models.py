@@ -60,6 +60,9 @@ class CurrentConditions(APIModel):
     wind_mph: float | None = Field(default=None, ge=0)
     swell_feet: float | None = Field(default=None, ge=0)
     water_temp_f: float | None = None
+    water_temp_source: str | None = None
+    ndbc_observed_water_temp_f: float | None = None
+    ndbc_observed_at: datetime | None = None
     daylight: bool | None = None
 
 

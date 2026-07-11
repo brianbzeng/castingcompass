@@ -29,7 +29,20 @@ def snapshot_root(tmp_path: Path) -> Path:
                         "access_notes": "Public pedestrian access during posted hours.",
                         "regulation_url": "https://wildlife.ca.gov/Fishing/Ocean/Regulations/Fishing-Map/sf-bay",
                         "structure_tags": ["channel edge"],
-                    }
+                    },
+                    {
+                        "id": "closed-pier",
+                        "name": "Closed Pier",
+                        "region": "San Francisco Bay",
+                        "latitude": 37.61,
+                        "longitude": -122.5,
+                        "modes": ["public pier"],
+                        "accessStatus": "closed",
+                        "accessSourceUrl": "https://example.com/official-closure",
+                        "access_notes": "Closed by the managing agency.",
+                        "regulation_url": "https://wildlife.ca.gov/Fishing/Ocean/Regulations/Fishing-Map/sf-bay",
+                        "structure_tags": ["pier pilings"],
+                    },
                 ]
             }
         ),
@@ -40,6 +53,14 @@ def snapshot_root(tmp_path: Path) -> Path:
         json.dumps(
             {
                 "generated_at": generated_at.isoformat(),
+                "sources": [
+                    {
+                        "name": "Open-Meteo Marine SST forecast (Météo-France)",
+                        "observedAt": generated_at.isoformat(),
+                        "status": "fresh; forecast context only; excluded from scoring",
+                        "freshnessLimitHours": 30,
+                    }
+                ],
                 "windows": [
                     {
                         "id": "test-window",
@@ -64,7 +85,12 @@ def snapshot_root(tmp_path: Path) -> Path:
                             }
                         ],
                         "model_version": "test-v1",
+                        "conditions": {"waterTempF": 59.8},
                         "source_freshness": [
+                            {
+                                "source": "water_temperature",
+                                "status": "fresh-model-forecast-not-scored",
+                            },
                             {
                                 "source": "weather",
                                 "observed_at": generated_at.isoformat(),
@@ -120,6 +146,7 @@ def test_site_detail_and_not_found(client: TestClient):
     assert response.json()["official_links"][0]["kind"] == "regulations"
     assert response.json()["next_window"]["opportunity_score"] == 82
     assert response.json()["data_freshness"]
+    assert client.get("/v1/sites/closed-pier").status_code == 404
     assert client.get("/v1/sites/does-not-exist").status_code == 404
 
 
@@ -141,6 +168,10 @@ def test_opportunity_contract_marks_stale_sources_excluded(client: TestClient):
     assert stale["status"] == "stale"
     assert stale["used_in_score"] is False
     assert "limit" in stale["excluded_reason"]
+    sst = next(item for item in window["source_freshness"] if item["source"] == "water_temperature")
+    assert sst["status"] == "excluded"
+    assert sst["used_in_score"] is False
+    assert window["conditions"]["water_temp_f"] == 59.8
 
 
 def test_rejects_unsupported_species_and_horizon(client: TestClient):

@@ -12,6 +12,7 @@ from __future__ import annotations
 import argparse
 from bisect import bisect_left, bisect_right
 import json
+import math
 import re
 import shutil
 import urllib.error
@@ -92,7 +93,7 @@ def parse_iso(value: str) -> datetime:
     return parsed.astimezone(timezone.utc)
 
 
-def request_json(url: str, timeout: int = 20) -> dict[str, Any]:
+def request_json(url: str, timeout: int = 20) -> Any:
     request = urllib.request.Request(url, headers={"User-Agent": USER_AGENT, "Accept": "application/json"})
     with urllib.request.urlopen(request, timeout=timeout) as response:
         return json.load(response)
@@ -187,29 +188,61 @@ def fetch_buoy_observation(station: str) -> dict[str, Any]:
     try:
         lines = [line for line in request_text(url).splitlines() if line.strip()]
         headers = lines[0].lstrip("#").split()
-        row = lines[2].split() if len(lines) > 2 and lines[1].startswith("#") else lines[1].split()
-        values = dict(zip(headers, row))
-        observed = datetime(
-            int(values["YY"]),
-            int(values["MM"]),
-            int(values["DD"]),
-            int(values["hh"]),
-            int(values["mm"]),
-            tzinfo=timezone.utc,
-        )
+        records: list[tuple[datetime, dict[str, str]]] = []
+        for line in lines[1:]:
+            if line.startswith("#"):
+                continue
+            values = dict(zip(headers, line.split()))
+            try:
+                observed = datetime(
+                    int(values["YY"]),
+                    int(values["MM"]),
+                    int(values["DD"]),
+                    int(values["hh"]),
+                    int(values["mm"]),
+                    tzinfo=timezone.utc,
+                )
+            except (KeyError, TypeError, ValueError):
+                continue
+            records.append((observed, values))
+        if not records:
+            raise ValueError("no parseable buoy observations")
+        records.sort(key=lambda item: item[0], reverse=True)
 
-        def numeric(key: str) -> float | None:
+        def numeric(values: dict[str, str], key: str) -> float | None:
             raw = values.get(key)
-            if raw in {None, "MM", "99.0", "999.0"}:
+            if raw in {None, "MM"}:
                 return None
-            return float(raw)
+            try:
+                value = float(raw)
+            except (TypeError, ValueError):
+                return None
+            if not math.isfinite(value):
+                return None
+            if key == "WVHT" and value >= 99:
+                return None
+            if key == "WTMP" and value >= 999:
+                return None
+            return value
 
-        wave_m = numeric("WVHT")
-        water_c = numeric("WTMP")
+        def latest_valid(key: str) -> tuple[datetime | None, float | None]:
+            for stamp, values in records:
+                value = numeric(values, key)
+                if value is not None:
+                    return stamp, value
+            return None, None
+
+        swell_observed, wave_m = latest_valid("WVHT")
+        water_observed, water_c = latest_valid("WTMP")
+        observed = records[0][0]
+        if wave_m is None and water_c is None:
+            raise ValueError("no valid WVHT or WTMP values in buoy observations")
         return {
             "status": "fresh",
             "url": url,
             "observed": observed,
+            "swellObserved": swell_observed,
+            "waterObserved": water_observed,
             "swellFeet": round(wave_m * 3.28084, 1) if wave_m is not None else None,
             "waterTempF": round((water_c * 9 / 5) + 32, 1) if water_c is not None else None,
             "error": None,
@@ -219,10 +252,68 @@ def fetch_buoy_observation(station: str) -> dict[str, Any]:
             "status": "unavailable-excluded",
             "url": url,
             "observed": None,
+            "swellObserved": None,
+            "waterObserved": None,
             "swellFeet": None,
             "waterTempF": None,
             "error": str(exc),
         }
+
+
+def fetch_marine_sst(anchors: list[str], start: datetime, end: datetime) -> dict[str, dict[str, Any]]:
+    """Fetch hourly SST for all weather anchors in one Open-Meteo request.
+
+    The public endpoint is appropriate for this non-commercial prototype only.
+    A paid customer endpoint and API key are required before subscriptions,
+    advertising, or another commercial launch.
+    """
+
+    ordered_anchors = list(dict.fromkeys(anchors))
+    if not ordered_anchors:
+        return {}
+    params = {
+        "latitude": ",".join(f"{WEATHER_ANCHORS[anchor][0]:.4f}" for anchor in ordered_anchors),
+        "longitude": ",".join(f"{WEATHER_ANCHORS[anchor][1]:.4f}" for anchor in ordered_anchors),
+        "hourly": "sea_surface_temperature",
+        "timezone": "GMT",
+        "cell_selection": "sea",
+        "start_hour": start.astimezone(timezone.utc).strftime("%Y-%m-%dT%H:%M"),
+        "end_hour": end.astimezone(timezone.utc).strftime("%Y-%m-%dT%H:%M"),
+    }
+    url = "https://marine-api.open-meteo.com/v1/marine?" + urllib.parse.urlencode(params)
+    results = {
+        anchor: {"status": "unavailable-excluded", "url": url, "values": [], "error": None}
+        for anchor in ordered_anchors
+    }
+    try:
+        payload = request_json(url)
+        locations = payload if isinstance(payload, list) else [payload]
+        if len(locations) != len(ordered_anchors):
+            raise ValueError(f"expected {len(ordered_anchors)} marine locations, received {len(locations)}")
+        for anchor, location in zip(ordered_anchors, locations):
+            hourly = location.get("hourly", {})
+            times = hourly.get("time", [])
+            temperatures = hourly.get("sea_surface_temperature", [])
+            values: list[tuple[datetime, float]] = []
+            for raw_time, raw_temperature in zip(times, temperatures):
+                if raw_temperature is None:
+                    continue
+                try:
+                    temperature_c = float(raw_temperature)
+                except (TypeError, ValueError):
+                    continue
+                if not math.isfinite(temperature_c):
+                    continue
+                values.append((parse_iso(raw_time), round((temperature_c * 9 / 5) + 32, 1)))
+            if values:
+                results[anchor] = {"status": "fresh", "url": url, "values": values, "error": None}
+            else:
+                results[anchor]["error"] = "no valid sea-surface-temperature values returned"
+        return results
+    except (OSError, ValueError, KeyError, TypeError, urllib.error.URLError) as exc:
+        for result in results.values():
+            result["error"] = str(exc)
+        return results
 
 
 def nearest_tide(values: list[tuple[datetime, float]], target: datetime) -> float | None:
@@ -261,6 +352,15 @@ def weather_for_window(periods: list[dict[str, Any]], midpoint: datetime) -> dic
         return None
     nearest = min(periods, key=lambda period: abs((period["start"] - midpoint).total_seconds()))
     return nearest if abs((nearest["start"] - midpoint).total_seconds()) <= 90 * 60 else None
+
+
+def sst_for_window(values: list[tuple[datetime, float]], midpoint: datetime) -> float | None:
+    if not values:
+        return None
+    stamp, temperature_f = min(values, key=lambda item: abs((item[0] - midpoint).total_seconds()))
+    if abs((stamp - midpoint).total_seconds()) > 90 * 60:
+        return None
+    return temperature_f
 
 
 def daylight_fallback(midpoint: datetime) -> bool:
@@ -335,6 +435,8 @@ def factor_text(
     tide_change: float | None,
     wind_mph: float | None,
     swell_feet: float | None,
+    water_temp_f: float | None,
+    ndbc_water_temp_f: float | None,
     daylight: bool,
 ) -> list[str]:
     tags = ", ".join(site["structureTags"][:2]).replace("-", " ")
@@ -350,9 +452,19 @@ def factor_text(
         factors.append(f"NWS hourly wind is approximately {wind_mph:.0f} mph for the middle of the window.")
     if site["region"] in OPEN_COAST_REGIONS:
         if swell_feet is None:
-            factors.append("The latest buoy observation is outside its six-hour freshness limit for this window, so swell and SST are excluded.")
+            factors.append("The latest buoy observation is outside its six-hour freshness limit for this window, so swell is excluded.")
         else:
             factors.append(f"Fresh NDBC swell observation is {swell_feet:.1f} ft; treat it as a near-term observation, not a 72-hour forecast.")
+    if water_temp_f is None:
+        factors.append("Open-Meteo marine SST was unavailable for this window; no fallback value was invented.")
+    else:
+        factors.append(
+            f"Open-Meteo/Météo-France marine SST is {water_temp_f:.1f}°F; it is displayed as forecast context and is not used in the Opportunity Score."
+        )
+    if ndbc_water_temp_f is not None:
+        factors.append(
+            f"The latest fresh NDBC buoy observation is {ndbc_water_temp_f:.1f}°F and is retained separately as regional validation context."
+        )
     factors.append("Daylight is included." if daylight else "This is a nighttime window; verify access hours before traveling.")
     return factors
 
@@ -375,24 +487,30 @@ def main() -> None:
     start = next_even_hour(generated_at)
     end = start + timedelta(hours=72)
     sites = json.loads(SITES_PATH.read_text())
+    active_sites = [site for site in sites if site.get("accessStatus") != "closed"]
 
     tide_results = {
         station: fetch_tides(station, start - timedelta(hours=3), end + timedelta(hours=3))
-        for station in sorted({site["tideStation"] for site in sites})
+        for station in sorted({site["tideStation"] for site in active_sites})
     }
     weather_results = {
-        anchor: fetch_hourly_weather(anchor) for anchor in sorted({site["weatherAnchor"] for site in sites})
+        anchor: fetch_hourly_weather(anchor) for anchor in sorted({site["weatherAnchor"] for site in active_sites})
     }
     buoy_results = {
-        station: fetch_buoy_observation(station) for station in sorted(set(BUOY_BY_ANCHOR.values()))
+        station: fetch_buoy_observation(station)
+        for station in sorted({BUOY_BY_ANCHOR[site["weatherAnchor"]] for site in active_sites})
     }
+    marine_sst_results = fetch_marine_sst(
+        sorted({site["weatherAnchor"] for site in active_sites}), start, end
+    )
 
     windows: list[dict[str, Any]] = []
-    for site in sites:
+    for site in active_sites:
         habitat = int(site["habitatPrior"])
         tide_result = tide_results[site["tideStation"]]
         weather_result = weather_results[site["weatherAnchor"]]
         buoy_result = buoy_results[BUOY_BY_ANCHOR[site["weatherAnchor"]]]
+        marine_sst_result = marine_sst_results[site["weatherAnchor"]]
         for index in range(36):
             window_start = start + timedelta(hours=index * 2)
             window_end = window_start + timedelta(hours=2)
@@ -404,14 +522,20 @@ def main() -> None:
             daylight = weather["isDaytime"] if weather else daylight_fallback(midpoint)
             open_coast = site["region"] in OPEN_COAST_REGIONS
 
-            buoy_fresh = (
+            swell_fresh = (
                 open_coast
                 and buoy_result["status"] == "fresh"
-                and buoy_result["observed"] is not None
-                and timedelta(hours=-1) <= window_start - buoy_result["observed"] <= timedelta(hours=6)
+                and buoy_result["swellObserved"] is not None
+                and timedelta(hours=-1) <= window_start - buoy_result["swellObserved"] <= timedelta(hours=6)
             )
-            swell_feet = buoy_result["swellFeet"] if buoy_fresh else None
-            water_temp_f = buoy_result["waterTempF"] if buoy_fresh else None
+            ndbc_water_fresh = (
+                buoy_result["status"] == "fresh"
+                and buoy_result["waterObserved"] is not None
+                and timedelta(hours=-1) <= generated_at - buoy_result["waterObserved"] <= timedelta(hours=6)
+            )
+            swell_feet = buoy_result["swellFeet"] if swell_fresh else None
+            water_temp_f = sst_for_window(marine_sst_result["values"], midpoint)
+            ndbc_water_temp_f = buoy_result["waterTempF"] if ndbc_water_fresh else None
             dynamic = dynamic_score(
                 tide_change,
                 wind_mph,
@@ -426,11 +550,14 @@ def main() -> None:
                 "tides": tide_result["status"],
                 "weather": weather_result["status"] if weather else "unavailable-excluded",
                 "buoy": (
-                    "fresh"
-                    if buoy_fresh
-                    else "not-applicable-excluded"
-                    if not open_coast
+                    "fresh-observation-used-for-swell"
+                    if swell_fresh
+                    else "fresh-current-context-not-scored"
+                    if ndbc_water_fresh
                     else "stale-or-unavailable-excluded"
+                ),
+                "waterTemperature": (
+                    "fresh-model-forecast-not-scored" if water_temp_f is not None else "unavailable-not-scored"
                 ),
                 "currents": "not-integrated-excluded",
                 "satellite": "not-integrated-excluded",
@@ -454,6 +581,8 @@ def main() -> None:
                         tide_change,
                         wind_mph,
                         swell_feet,
+                        water_temp_f,
+                        ndbc_water_temp_f,
                         daylight,
                     ),
                     "conditions": {
@@ -462,6 +591,9 @@ def main() -> None:
                         "windMph": wind_mph,
                         "swellFeet": swell_feet,
                         "waterTempF": water_temp_f,
+                        "waterTempSource": "Open-Meteo Marine / Météo-France" if water_temp_f is not None else None,
+                        "ndbcObservedWaterTempF": ndbc_water_temp_f,
+                        "ndbcObservedAt": isoformat(buoy_result["waterObserved"]) if ndbc_water_fresh else None,
                         "daylight": daylight,
                     },
                     "sourceFreshness": freshness,
@@ -486,6 +618,7 @@ def main() -> None:
     tide_status = source_status(list(tide_results.values()))
     weather_status = source_status(list(weather_results.values()))
     buoy_status = source_status(list(buoy_results.values()))
+    marine_sst_status = source_status(list(marine_sst_results.values()))
     sources = [
         {
             "name": "NOAA CO-OPS hourly tide predictions",
@@ -504,9 +637,19 @@ def main() -> None:
         {
             "name": "NOAA NDBC buoy observations",
             "observedAt": isoformat(max((result["observed"] for result in buoy_results.values() if result["observed"]), default=generated_at)),
-            "status": buoy_status + "; observations excluded from windows more than six hours ahead",
+            "status": buoy_status + "; swell is scored only within six hours; observed water temperature is validation context only",
             "url": "https://www.ndbc.noaa.gov/",
             "freshnessLimitHours": 6,
+        },
+        {
+            "name": "Open-Meteo Marine SST forecast (Météo-France)",
+            "observedAt": retrieved_at,
+            "status": marine_sst_status + "; forecast context only; excluded from scoring",
+            "url": "https://open-meteo.com/en/docs/marine-weather-api",
+            "freshnessLimitHours": 30,
+            "attribution": "Weather data by Open-Meteo.com; sea-surface-temperature model data by Météo-France.",
+            "license": "CC BY 4.0",
+            "usageNote": "The free endpoint is non-commercial only; use Open-Meteo's paid customer endpoint before enabling subscriptions, advertising, or other commercial use.",
         },
         {
             "name": "Provisional monthly California halibut seasonality fixture",
@@ -550,11 +693,13 @@ def main() -> None:
         "tides": {station: result["error"] for station, result in tide_results.items() if result["error"]},
         "weather": {anchor: result["error"] for anchor, result in weather_results.items() if result["error"]},
         "buoys": {station: result["error"] for station, result in buoy_results.items() if result["error"]},
+        "marineSst": {anchor: result["error"] for anchor, result in marine_sst_results.items() if result["error"]},
     }
     print(
         json.dumps(
             {
                 "siteCount": len(sites),
+                "rankedSiteCount": len(active_sites),
                 "windowCount": len(ordered),
                 "validFrom": payload["validFrom"],
                 "validThrough": payload["validThrough"],

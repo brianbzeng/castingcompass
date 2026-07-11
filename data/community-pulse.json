@@ -1,0 +1,229 @@
+[
+  {
+    "siteId": "pacifica-municipal-pier",
+    "reviewedAt": "2026-07-11T04:30:00-07:00",
+    "coverage": "Official access status plus historical guide and recent public discussion; not a live bite report",
+    "confidence": "high",
+    "summary": "Historically, anglers describe a busy, exposed pier where wind, surf and crossed lines can shape the session as much as the fishing. Public discussion often leans toward crabbing and mixed-species pier fishing rather than a dependable halibut pattern. The pier is currently closed, so this context is archival until the City announces reopening.",
+    "themes": [
+      { "label": "Currently closed", "note": "The City reports the pier closed to the public beginning June 4, 2026." },
+      { "label": "Wind and surf", "note": "Older reports consistently emphasize exposed conditions and changing water clarity." },
+      { "label": "Crowds and tangles", "note": "Popular periods can mean limited rail space and crossed lines." },
+      { "label": "Mixed-species history", "note": "Discussion is broad and should not be interpreted as a current halibut signal." }
+    ],
+    "sources": [
+      {
+        "label": "City of Pacifica pier status",
+        "url": "https://www.cityofpacifica.org/departments/public-works/field-services/pacifica-pier",
+        "publishedAt": "2026-06-04",
+        "kind": "official"
+      },
+      {
+        "label": "Pier Fishing in California guide (undated)",
+        "url": "https://www.pierfishing.com/pacifica-pier/",
+        "kind": "guide"
+      },
+      {
+        "label": "Public crabbing discussion",
+        "url": "https://www.reddit.com/r/crabbing/comments/1qfxp6d/crabbing_off_the_pacifica_pier/",
+        "kind": "discussion"
+      }
+    ]
+  },
+  {
+    "siteId": "oyster-point-fishing-pier",
+    "reviewedAt": "2026-07-11T04:30:00-07:00",
+    "coverage": "Official facility information and historical pier guide; sparse recent discussion and no live catch signal",
+    "confidence": "medium",
+    "summary": "The recurring picture is a small, shallow-water pier beside mud flats, tidal shelves and the marina edge. Those transitions make the access interesting, but publicly available recent shore reports are thin and do not support claiming a current halibut trend.",
+    "themes": [
+      { "label": "Shallow and tidal", "note": "Water level can materially change the fishable edge around the pier." },
+      { "label": "Mud-flat margin", "note": "Historical descriptions emphasize soft bottom and shelf transitions." },
+      { "label": "Marina edge", "note": "The dredged basin and marina mouth are the main structural features." },
+      { "label": "Sparse chatter", "note": "There is not enough recent public discussion for a reliable bite trend." }
+    ],
+    "sources": [
+      {
+        "label": "California boating facility record",
+        "url": "https://www.parks.ca.gov/BoatingFacilities/f/496",
+        "kind": "official"
+      },
+      {
+        "label": "Pier Fishing in California guide (undated)",
+        "url": "https://www.pierfishing.com/oyster-point-fishing-pier/",
+        "kind": "guide"
+      }
+    ]
+  },
+  {
+    "siteId": "berkeley-marina-north-basin",
+    "reviewedAt": "2026-07-11T04:30:00-07:00",
+    "coverage": "Current public-project context plus historical pier material; no reliable recent shoreline trend",
+    "confidence": "medium",
+    "summary": "Much of the online fishing history refers to Berkeley's closed municipal pier, not the open North Basin shoreline shown in ContourCast. The useful takeaway is structural—riprap, a marina mouth and a dredged edge—while recent public discussion is too limited to call a present-day shore bite.",
+    "themes": [
+      { "label": "Shoreline only", "note": "This location is the public North Basin shore, not the closed municipal pier deck." },
+      { "label": "Riprap edge", "note": "Rock wall access borders a shallow exterior flat and marina basin." },
+      { "label": "History can mislead", "note": "Older Berkeley Pier reports should not be treated as reports for this casting zone." },
+      { "label": "No current signal", "note": "Recent location-specific public discussion is insufficient for a trend." }
+    ],
+    "sources": [
+      {
+        "label": "BCDC Berkeley Pier project review",
+        "url": "https://www.bcdc.ca.gov/event/may-11-2026-design-review-board-meeting/",
+        "publishedAt": "2026-05-11",
+        "kind": "official"
+      },
+      {
+        "label": "Historical Berkeley Pier guide (undated)",
+        "url": "https://www.pierfishing.com/berkeley-pier/",
+        "kind": "guide"
+      }
+    ]
+  },
+  {
+    "siteId": "torpedo-wharf",
+    "reviewedAt": "2026-07-11T04:30:00-07:00",
+    "coverage": "Current NPS access notes and historical fishing guide; not a live catch report",
+    "confidence": "high",
+    "summary": "Torpedo Wharf is repeatedly described as a high-current, windy urban pier where parking, visitor traffic and crabbing activity affect the experience. Halibut appears in the historical seasonal mix, but the reviewed sources do not establish a fresh bite; uneven pavement is also a current access consideration.",
+    "themes": [
+      { "label": "Strong current", "note": "Golden Gate flow and vessel wakes can make presentation and footing more demanding." },
+      { "label": "Wind exposure", "note": "The open waterfront can be uncomfortable even when inland weather is mild." },
+      { "label": "Limited parking", "note": "Nearby free and time-restricted spaces can fill quickly." },
+      { "label": "Uneven pavement", "note": "NPS notes cracked and heaving asphalt on the pier approach and surface." }
+    ],
+    "sources": [
+      {
+        "label": "National Park Service access page",
+        "url": "https://www.nps.gov/thingstodo/torpedo-wharf-fishing.htm",
+        "kind": "official"
+      },
+      {
+        "label": "Fort Point pier guide (undated)",
+        "url": "https://www.pierfishing.com/fort-point-pier/",
+        "kind": "guide"
+      }
+    ]
+  },
+  {
+    "siteId": "paradise-beach-pier",
+    "reviewedAt": "2026-07-11T04:30:00-07:00",
+    "coverage": "Current park information, historical guide and one older public report; not a live bite report",
+    "confidence": "medium",
+    "summary": "Paradise Beach is generally portrayed as a quieter, family-oriented pier over shallow mud, grass and a narrow rocky-sand edge. Reports describe variable fishing with occasional seasonal halibut, but the public sample is small and older, so it is context rather than evidence of a current bite.",
+    "themes": [
+      { "label": "Quiet park setting", "note": "The site is commonly framed as a relaxed shoreline park and pier." },
+      { "label": "Shallow bottom", "note": "Mud, grass and a narrow edge make tide and current especially relevant." },
+      { "label": "Occasional halibut history", "note": "Historical mentions are seasonal and too sparse to predict a current bite." },
+      { "label": "Free entry", "note": "Marin County eliminated park entry fees in 2023; posted hours still apply." }
+    ],
+    "sources": [
+      {
+        "label": "Marin County park page",
+        "url": "https://www.parks.marincounty.gov/parkspreserves/parks/paradise-beach-park",
+        "kind": "official"
+      },
+      {
+        "label": "2023 Marin County fee elimination announcement",
+        "url": "https://www.marincounty.gov/news-releases/gift-county-elimination-park-entry-fees",
+        "kind": "official"
+      },
+      {
+        "label": "Paradise Beach pier guide (undated)",
+        "url": "https://www.pierfishing.com/paradise-beach-pier-tiburon/",
+        "kind": "guide"
+      },
+      {
+        "label": "Older public trip discussion",
+        "url": "https://www.norcalkayakanglers.com/index.php?topic=102088.0",
+        "kind": "discussion"
+      }
+    ]
+  },
+  {
+    "siteId": "pier-7",
+    "reviewedAt": "2026-07-11T04:30:00-07:00",
+    "coverage": "Official waterfront guidance and historical pier guide; no verified current bite signal",
+    "confidence": "medium",
+    "summary": "Historical descriptions emphasize deeper urban water, strong current and snag-prone debris, with summer and fall halibut among the seasonal possibilities. Pier 7 also doubles as a busy promenade and photo stop, so sharing space with pedestrians is part of the access experience; none of this is a live catch report.",
+    "themes": [
+      { "label": "Strong current", "note": "Tidal flow can be pronounced along the downtown waterfront." },
+      { "label": "Snag potential", "note": "Pilings and submerged urban debris are recurring historical cautions." },
+      { "label": "Busy promenade", "note": "Pedestrians and photographers share the narrow pier." },
+      { "label": "Seasonal history", "note": "Older summer and fall halibut references are not a present-day bite signal." }
+    ],
+    "sources": [
+      {
+        "label": "Port of San Francisco fishing guidance",
+        "url": "https://www.sfport.com/visit/fishing-and-sport-fishing",
+        "kind": "official"
+      },
+      {
+        "label": "Pier 7 fishing guide (undated)",
+        "url": "https://www.pierfishing.com/pier-7-san-francisco/",
+        "kind": "guide"
+      }
+    ]
+  },
+  {
+    "siteId": "pillar-point-east-jetty",
+    "reviewedAt": "2026-07-11T04:30:00-07:00",
+    "coverage": "Current harbor status, historical guide and older forum context; not a live bite report",
+    "confidence": "medium",
+    "summary": "Discussion distinguishes the calmer, shallower inner harbor from the rocky jetty and dredged entrance edge. Anglers mention a mixed-species fishery, snags and strong tide dependence; the reviewed public posts are too old and broad to support a current halibut claim.",
+    "themes": [
+      { "label": "Dredged entrance", "note": "The east side sits near a transition from protected shallows to the harbor channel." },
+      { "label": "Rock and sand", "note": "Mixed bottom creates structure but can also increase snags." },
+      { "label": "Tide dependent", "note": "Water movement changes substantially around the harbor entrance." },
+      { "label": "Stable footing only", "note": "Use dry, stable access and follow posted harbor restrictions." }
+    ],
+    "sources": [
+      {
+        "label": "Pillar Point Harbor status",
+        "url": "https://www.smharbor.com/pillar-point-harbor",
+        "kind": "official"
+      },
+      {
+        "label": "Pillar Point harbor guide (undated)",
+        "url": "https://www.pierfishing.com/pillar-point-harbor-pier/",
+        "kind": "guide"
+      },
+      {
+        "label": "Older public harbor discussion",
+        "url": "https://www.norcalkayakanglers.com/index.php?topic=32711.0",
+        "kind": "discussion"
+      }
+    ]
+  },
+  {
+    "siteId": "pillar-point-west-jetty",
+    "reviewedAt": "2026-07-11T04:30:00-07:00",
+    "coverage": "Current harbor status, historical guide and older forum context; not a live bite report",
+    "confidence": "medium",
+    "summary": "The west jetty is described as the more exposed side of the harbor mouth, with a pronounced channel edge, current, rock snags and meaningful wave risk on the outer face. Historical discussion covers a mixed fishery rather than a dependable halibut pattern, and it should not be read as a current bite update.",
+    "themes": [
+      { "label": "Channel edge", "note": "The harbor-mouth drop and moving water are the defining structural features." },
+      { "label": "More exposed", "note": "Outer rocks can be wave-washed even when the inner harbor looks calm." },
+      { "label": "Snag potential", "note": "Rock structure demands conservative rigging and stable footing." },
+      { "label": "No live trend", "note": "Reviewed discussion is historical and does not verify present fishing quality." }
+    ],
+    "sources": [
+      {
+        "label": "Pillar Point Harbor status",
+        "url": "https://www.smharbor.com/pillar-point-harbor",
+        "kind": "official"
+      },
+      {
+        "label": "Pillar Point harbor guide (undated)",
+        "url": "https://www.pierfishing.com/pillar-point-harbor-pier/",
+        "kind": "guide"
+      },
+      {
+        "label": "Older public harbor discussion",
+        "url": "https://www.norcalkayakanglers.com/index.php?topic=32711.0",
+        "kind": "discussion"
+      }
+    ]
+  }
+]

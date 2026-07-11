@@ -6,7 +6,7 @@
 flowchart TB
     subgraph Client["Cloudflare-hosted PWA"]
       UI["Next.js / TypeScript UI"]
-      MAP["MapLibre map"]
+      MAP["MapLibre + OpenFreeMap vector map"]
       SW["Service worker cache"]
       CACHE["Last verified snapshot"]
       UI --> MAP
@@ -35,6 +35,7 @@ flowchart TB
     subgraph Inputs["Public official inputs"]
       NOAA["NOAA bathymetry / tides / currents / buoy / CoastWatch"]
       NWS["NWS hourly forecasts"]
+      MARINE["Open-Meteo Marine modeled SST"]
       FISH["CDFW CRFS + RecFIN"]
     end
 
@@ -54,6 +55,7 @@ flowchart TB
     API -->|"primary when populated"| PG
     NOAA --> INGEST
     NWS --> INGEST
+    MARINE --> INGEST
     FISH --> INGEST
     GATE -->|"versioned artifact + metrics"| API
 ```
@@ -62,7 +64,7 @@ flowchart TB
 
 1. `HabitatScore` comes from the promoted spatial model. In the current demo it is a labeled curated proxy, not a trained-model output.
 2. `SeasonalityMultiplier` comes from monthly public catch and effort. The current demo uses a labeled provisional fixture pending a reproducible RecFIN export.
-3. `DynamicModifier` uses fresh tide, wind, swell, water temperature, current, and daylight inputs. It is bounded so conditions cannot erase the habitat signal.
+3. `DynamicModifier` uses fresh tide, wind, swell, current, and daylight inputs. It is bounded so conditions cannot erase the habitat signal. Modeled SST is currently displayed as unscored context while forecast-versus-station error is measured.
 4. The combined values are ranked across the current candidate site/window set.
 5. The user receives the percentile as `OpportunityScore`, plus components, confidence, explanation factors, model version, and source freshness.
 
@@ -84,7 +86,7 @@ Stale or missing values are not silently imputed as live observations. The API c
 - API reads prefer Postgres when configured and fall back to the packaged verified snapshot on database failure.
 - The PWA uses the API when `NEXT_PUBLIC_API_URL` is set and the static snapshot otherwise.
 - The service worker uses network-first caching for forecast JSON and navigation, retaining the last successful response for offline use.
-- Map tiles are external and may not be available offline; rankings and site details remain available.
+- OpenFreeMap vector tiles and the optional VersaTiles regional bathymetry overlay are external and may not be available offline; rankings and site details remain available. The bathymetry overlay is coarse explanatory context, not navigation data and not the live habitat model.
 
 ## Security and privacy
 

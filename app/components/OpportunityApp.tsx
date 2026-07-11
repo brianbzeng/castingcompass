@@ -19,6 +19,7 @@ import {
   WindIcon,
 } from "./icons";
 import type {
+  CommunityPulse,
   FishingSite,
   OpportunitySnapshot,
   OpportunityWindow,
@@ -95,6 +96,9 @@ interface ApiOpportunityWindow {
     wind_mph?: number | null;
     swell_feet?: number | null;
     water_temp_f?: number | null;
+    water_temp_source?: string | null;
+    ndbc_observed_water_temp_f?: number | null;
+    ndbc_observed_at?: string | null;
     daylight?: boolean | null;
   } | null;
   rank?: number | null;
@@ -147,6 +151,9 @@ function normalizeApiSnapshot(payload: ApiOpportunityResponse): OpportunitySnaps
         windMph: window.conditions?.wind_mph ?? undefined,
         swellFeet: window.conditions?.swell_feet ?? undefined,
         waterTempF: window.conditions?.water_temp_f ?? undefined,
+        waterTempSource: window.conditions?.water_temp_source ?? undefined,
+        ndbcObservedWaterTempF: window.conditions?.ndbc_observed_water_temp_f ?? undefined,
+        ndbcObservedAt: window.conditions?.ndbc_observed_at ?? undefined,
         daylight: window.conditions?.daylight ?? undefined,
       },
       modelVersion: window.model_version,
@@ -167,10 +174,17 @@ async function loadForecastData() {
     if (!response.ok) throw new Error("sites unavailable");
     return response.json() as Promise<FishingSite[]>;
   });
+  const communityPromise = fetch("/data/community-pulse.json")
+    .then(async (response) => {
+      if (!response.ok) return [];
+      const payload = (await response.json()) as CommunityPulse[] | { pulses?: CommunityPulse[] };
+      return Array.isArray(payload) ? payload : payload.pulses ?? [];
+    })
+    .catch(() => [] as CommunityPulse[]);
   const apiBase = process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, "");
 
   if (apiBase) {
-    const staticSites = await staticSitesPromise;
+    const [staticSites, community] = await Promise.all([staticSitesPromise, communityPromise]);
     try {
       const from = new Date().toISOString();
       const response = await fetch(
@@ -178,27 +192,34 @@ async function loadForecastData() {
       );
       if (!response.ok) throw new Error(`API returned ${response.status}`);
       const apiSnapshot = (await response.json()) as ApiOpportunityResponse;
-      return { sites: staticSites, snapshot: normalizeApiSnapshot(apiSnapshot), state: "live" as const };
+      return {
+        sites: staticSites,
+        snapshot: normalizeApiSnapshot(apiSnapshot),
+        community,
+        state: "live" as const,
+      };
     } catch {
       const response = await fetch("/data/opportunities.json");
       if (!response.ok) throw new Error("API and snapshot unavailable");
       return {
         sites: staticSites,
         snapshot: (await response.json()) as OpportunitySnapshot,
+        community,
         state: "cached" as const,
       };
     }
   }
 
-  const [staticSites, staticSnapshot] = await Promise.all([
+  const [staticSites, staticSnapshot, community] = await Promise.all([
     staticSitesPromise,
     fetch("/data/opportunities.json").then((response) => {
       if (!response.ok) throw new Error("snapshot unavailable");
       return response.json() as Promise<OpportunitySnapshot>;
     }),
+    communityPromise,
   ]);
   const state = staticSnapshot.sources.some((source) => source.status.startsWith("fresh")) ? "live" : "cached";
-  return { sites: staticSites, snapshot: staticSnapshot, state: state as "live" | "cached" };
+  return { sites: staticSites, snapshot: staticSnapshot, community, state: state as "live" | "cached" };
 }
 
 function fallbackSnapshot(): OpportunitySnapshot {
@@ -257,6 +278,22 @@ function scoreTone(score: number) {
   return "quiet";
 }
 
+function googleMapsSearchUrl(site: FishingSite) {
+  return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${site.name}, California`)}`;
+}
+
+function googleStreetViewUrl(site: FishingSite) {
+  return `https://www.google.com/maps/@?api=1&map_action=pano&viewpoint=${site.latitude}%2C${site.longitude}`;
+}
+
+function googleSatelliteUrl(site: FishingSite) {
+  return `https://www.google.com/maps/@?api=1&map_action=map&center=${site.latitude}%2C${site.longitude}&zoom=17&basemap=satellite`;
+}
+
+function googleDirectionsUrl(site: FishingSite) {
+  return `https://www.google.com/maps/dir/?api=1&destination=${site.latitude}%2C${site.longitude}`;
+}
+
 function formatWindow(startIso: string, endIso: string, compact = false) {
   const start = new Date(startIso);
   const end = new Date(endIso);
@@ -276,27 +313,65 @@ function formatAge(iso: string) {
   return `${Math.round(hours / 24)}d ago`;
 }
 
-function filterWindow(window: OpportunityWindow, filter: TimeFilter) {
+function dateInputValue(date: Date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+function dateFromInput(value: string) {
+  const [year, month, day] = value.split("-").map(Number);
+  return new Date(year, month - 1, day);
+}
+
+function isFiniteNumber(value: unknown): value is number {
+  return typeof value === "number" && Number.isFinite(value);
+}
+
+function defaultCustomEnd() {
+  const end = new Date();
+  end.setDate(end.getDate() + 2);
+  return dateInputValue(end);
+}
+
+function filterWindow(
+  window: OpportunityWindow,
+  filter: TimeFilter,
+  nowMs: number,
+  customStart: string,
+  customEnd: string,
+) {
   const start = new Date(window.start);
-  const now = new Date();
-  if (filter === "next") return start.getTime() >= now.getTime() - 2 * 60 * 60 * 1000;
-  if (filter === "today") return start.toDateString() === now.toDateString();
+  const end = new Date(window.end);
+  if (end.getTime() <= nowMs) return false;
+
+  const now = new Date(nowMs);
+  if (filter === "today") {
+    return start.toDateString() === now.toDateString() || (start.getTime() <= nowMs && end.getTime() > nowMs);
+  }
   if (filter === "tomorrow") {
     const tomorrow = new Date(now);
     tomorrow.setDate(now.getDate() + 1);
     return start.toDateString() === tomorrow.toDateString();
   }
-  return start.getDay() === 0 || start.getDay() === 6;
+
+  const rangeStart = dateFromInput(customStart);
+  const rangeEndExclusive = dateFromInput(customEnd);
+  rangeEndExclusive.setDate(rangeEndExclusive.getDate() + 1);
+  return end > rangeStart && start < rangeEndExclusive;
 }
 
-function latestPerSite(windows: OpportunityWindow[], filter: TimeFilter) {
+function latestPerSite(
+  windows: OpportunityWindow[],
+  filter: TimeFilter,
+  nowMs: number,
+  customStart: string,
+  customEnd: string,
+) {
   const result = new Map<string, OpportunityWindow>();
   windows
-    .filter((window) => filterWindow(window, filter))
-    .sort((a, b) => {
-      if (filter === "next") return b.score - a.score;
-      return new Date(a.start).getTime() - new Date(b.start).getTime() || b.score - a.score;
-    })
+    .filter((window) => filterWindow(window, filter, nowMs, customStart, customEnd))
     .forEach((window) => {
       const existing = result.get(window.siteId);
       if (!existing || window.score > existing.score) result.set(window.siteId, window);
@@ -340,8 +415,12 @@ function SourceStatus({ source }: { source: SourceFreshness }) {
 export function OpportunityApp() {
   const [sites, setSites] = useState<FishingSite[]>(FALLBACK_SITES);
   const [snapshot, setSnapshot] = useState<OpportunitySnapshot>(fallbackSnapshot);
+  const [communityPulses, setCommunityPulses] = useState<CommunityPulse[]>([]);
   const [selectedSiteId, setSelectedSiteId] = useState<string | null>(null);
-  const [timeFilter, setTimeFilter] = useState<TimeFilter>("next");
+  const [timeFilter, setTimeFilter] = useState<TimeFilter>("today");
+  const [customStart, setCustomStart] = useState(() => dateInputValue(new Date()));
+  const [customEnd, setCustomEnd] = useState(defaultCustomEnd);
+  const [clockMs, setClockMs] = useState(() => Date.now());
   const [view, setView] = useState<"map" | "list">("map");
   const [region, setRegion] = useState("All water");
   const [userPosition, setUserPosition] = useState<[number, number] | null>(null);
@@ -354,10 +433,11 @@ export function OpportunityApp() {
   useEffect(() => {
     let active = true;
     loadForecastData()
-      .then(({ sites: nextSites, snapshot: nextSnapshot, state }) => {
+      .then(({ sites: nextSites, snapshot: nextSnapshot, community, state }) => {
         if (!active) return;
         setSites(nextSites);
         setSnapshot(nextSnapshot);
+        setCommunityPulses(community);
         setDataState(state);
       })
       .catch(() => {
@@ -366,6 +446,11 @@ export function OpportunityApp() {
     return () => {
       active = false;
     };
+  }, []);
+
+  useEffect(() => {
+    const timer = window.setInterval(() => setClockMs(Date.now()), 60_000);
+    return () => window.clearInterval(timer);
   }, []);
 
   useEffect(() => {
@@ -378,17 +463,31 @@ export function OpportunityApp() {
   }, []);
 
   const windowsBySite = useMemo(
-    () => latestPerSite(snapshot.windows, timeFilter),
-    [snapshot.windows, timeFilter],
+    () => latestPerSite(snapshot.windows, timeFilter, clockMs, customStart, customEnd),
+    [snapshot.windows, timeFilter, clockMs, customStart, customEnd],
   );
+
+  const maxForecastDate = useMemo(() => {
+    const latest = snapshot.windows.reduce(
+      (maximum, window) => Math.max(maximum, new Date(window.start).getTime()),
+      clockMs,
+    );
+    return dateInputValue(new Date(latest));
+  }, [snapshot.windows, clockMs]);
 
   const regions = useMemo(
     () => ["All water", ...Array.from(new Set(sites.map((site) => site.region))).sort()],
     [sites],
   );
 
+  const closedSites = useMemo(
+    () => sites.filter((site) => site.accessStatus === "closed"),
+    [sites],
+  );
+
   const rankedSites = useMemo(() => {
     return sites
+      .filter((site) => site.accessStatus !== "closed")
       .filter((site) => region === "All water" || site.region === region)
       .map((site) => ({
         ...site,
@@ -410,6 +509,14 @@ export function OpportunityApp() {
   const bestWindow = bestSite ? windowsBySite.get(bestSite.id) ?? null : null;
   const selectedSite = sites.find((site) => site.id === selectedSiteId) ?? null;
   const selectedWindow = selectedSiteId ? windowsBySite.get(selectedSiteId) ?? null : null;
+  const selectedCommunity = selectedSiteId
+    ? communityPulses.find((pulse) => pulse.siteId === selectedSiteId) ?? null
+    : null;
+  const strongestWindowLabel = timeFilter === "today"
+    ? "Strongest remaining today"
+    : timeFilter === "tomorrow"
+      ? "Strongest tomorrow"
+      : "Strongest in your range";
 
   const requestLocation = useCallback(() => {
     if (!navigator.geolocation) {
@@ -481,7 +588,7 @@ export function OpportunityApp() {
                 <small>of 100</small>
               </div>
               <div className="next-window-copy">
-                <span>Strongest upcoming window</span>
+                <span>{strongestWindowLabel}</span>
                 <strong>{bestSite.name}</strong>
                 <p><ClockIcon /> {formatWindow(bestWindow.start, bestWindow.end)}</p>
               </div>
@@ -496,10 +603,9 @@ export function OpportunityApp() {
       <section className="control-deck" id="forecast">
         <div className="time-tabs" role="tablist" aria-label="Forecast period">
           {([
-            ["next", "Best next"],
             ["today", "Today"],
             ["tomorrow", "Tomorrow"],
-            ["weekend", "Weekend"],
+            ["custom", "Custom"],
           ] as [TimeFilter, string][]).map(([value, label]) => (
             <button
               key={value}
@@ -513,6 +619,35 @@ export function OpportunityApp() {
             </button>
           ))}
         </div>
+        {timeFilter === "custom" ? (
+          <div className="custom-date-range" aria-label="Custom forecast date range">
+            <label>
+              <span>From</span>
+              <input
+                type="date"
+                min={dateInputValue(new Date(clockMs))}
+                max={maxForecastDate}
+                value={customStart}
+                onChange={(event) => {
+                  const nextStart = event.target.value;
+                  setCustomStart(nextStart);
+                  if (nextStart > customEnd) setCustomEnd(nextStart);
+                }}
+              />
+            </label>
+            <span aria-hidden="true">to</span>
+            <label>
+              <span>Through</span>
+              <input
+                type="date"
+                min={customStart}
+                max={maxForecastDate}
+                value={customEnd}
+                onChange={(event) => setCustomEnd(event.target.value)}
+              />
+            </label>
+          </div>
+        ) : null}
         <div className="filters">
           <label>
             <span>Area</span>
@@ -529,6 +664,14 @@ export function OpportunityApp() {
           </div>
         </div>
         {locationMessage ? <p className="location-message">{locationMessage}</p> : null}
+        {closedSites.length > 0 ? (
+          <p className="closure-notice">
+            {closedSites.length} temporarily closed access point{closedSites.length === 1 ? " is" : "s are"} excluded from ranking.
+            {closedSites[0].accessSourceUrl ? (
+              <> <a href={closedSites[0].accessSourceUrl} target="_blank" rel="noreferrer">Official status ↗</a></>
+            ) : null}
+          </p>
+        ) : null}
       </section>
 
       <section className={`workspace ${view === "list" ? "list-only" : ""}`}>
@@ -540,7 +683,7 @@ export function OpportunityApp() {
             onSelectSite={setSelectedSiteId}
             userPosition={userPosition}
           />
-          <div className="map-overlay-label"><LayersIcon /> 30–50 accessible casting zones</div>
+          <div className="map-overlay-label"><LayersIcon /> {rankedSites.length} accessible casting zones</div>
           <div className="map-legend">
             <span><i className="excellent" />80+</span>
             <span><i className="good" />65–79</span>
@@ -623,6 +766,7 @@ export function OpportunityApp() {
         <div>
           <a href="https://wildlife.ca.gov/Fishing/Ocean/Regulations/Fishing-Map/sf-bay" target="_blank" rel="noreferrer">CDFW Bay regulations ↗</a>
           <a href="https://wildlife.ca.gov/Fishing/Ocean/Regulations/Fishing-Map/San-Francisco" target="_blank" rel="noreferrer">Coast regulations ↗</a>
+          <a href="https://open-meteo.com/en/docs/marine-weather-api" target="_blank" rel="noreferrer">Marine weather by Open-Meteo · Météo-France ↗</a>
         </div>
       </footer>
 
@@ -660,9 +804,23 @@ export function OpportunityApp() {
 
             <div className="conditions-grid">
               <div><TideIcon /><span>Tide</span><strong>{selectedWindow.conditions.tideStage ?? "Unavailable"}</strong></div>
-              <div><WindIcon /><span>Wind</span><strong>{selectedWindow.conditions.windMph !== undefined ? `${Math.round(selectedWindow.conditions.windMph)} mph` : "Unavailable"}</strong></div>
-              <div><TemperatureIcon /><span>Water</span><strong>{selectedWindow.conditions.waterTempF !== undefined ? `${Math.round(selectedWindow.conditions.waterTempF)}°F` : "Unavailable"}</strong></div>
+              <div><WindIcon /><span>Wind</span><strong>{isFiniteNumber(selectedWindow.conditions.windMph) ? `${Math.round(selectedWindow.conditions.windMph)} mph` : "Unavailable"}</strong></div>
+              <div>
+                <TemperatureIcon />
+                <span>Modeled SST</span>
+                <strong>
+                  {isFiniteNumber(selectedWindow.conditions.waterTempF)
+                    ? `${Math.round(selectedWindow.conditions.waterTempF)}°F`
+                    : "Unavailable"}
+                </strong>
+              </div>
             </div>
+            {isFiniteNumber(selectedWindow.conditions.ndbcObservedWaterTempF) ? (
+              <p className="condition-source-note">
+                Latest regional NDBC observation: {Math.round(selectedWindow.conditions.ndbcObservedWaterTempF)}°F
+                {selectedWindow.conditions.ndbcObservedAt ? ` · ${formatAge(selectedWindow.conditions.ndbcObservedAt)}` : ""}. Shown for comparison, not scoring.
+              </p>
+            ) : null}
 
             <div className="detail-freshness">
               <h3>Input status</h3>
@@ -684,6 +842,53 @@ export function OpportunityApp() {
               <h3>Access notes</h3>
               <p>{selectedSite.access}</p>
               {selectedSite.depthProfile ? <small>{selectedSite.depthProfile}</small> : null}
+              {selectedSite.accessSourceUrl ? (
+                <a href={selectedSite.accessSourceUrl} target="_blank" rel="noreferrer">Check official access status ↗</a>
+              ) : null}
+            </div>
+
+            <div className="place-media-block">
+              <h3>See the access</h3>
+              <p>Open current Google Maps imagery and routing outside ContourCast.</p>
+              <div className="place-media-links">
+                <a href={googleMapsSearchUrl(selectedSite)} target="_blank" rel="noreferrer">Photos &amp; reviews ↗</a>
+                <a href={googleStreetViewUrl(selectedSite)} target="_blank" rel="noreferrer">Street View 360° ↗</a>
+                <a href={googleSatelliteUrl(selectedSite)} target="_blank" rel="noreferrer">Satellite view ↗</a>
+                <a href={googleDirectionsUrl(selectedSite)} target="_blank" rel="noreferrer">Directions ↗</a>
+              </div>
+              <small>Street View coverage varies, and Google may open the nearest available panorama.</small>
+            </div>
+
+            <div className="community-pulse-block">
+              <div className="community-pulse-heading">
+                <h3>Community pulse — historical discussion</h3>
+                <span>Not a live bite report</span>
+              </div>
+              {selectedCommunity ? (
+                <>
+                  <p>{selectedCommunity.summary}</p>
+                  <div className="factor-block community-themes">
+                    {selectedCommunity.themes.map((theme) => (
+                      <span key={theme.label} title={theme.note}>{theme.label}</span>
+                    ))}
+                  </div>
+                  <p className="community-meta">
+                    {selectedCommunity.confidence} confidence · {selectedCommunity.coverage} · reviewed {formatAge(selectedCommunity.reviewedAt)}
+                  </p>
+                  <div className="community-sources" aria-label="Community pulse sources">
+                    {selectedCommunity.sources.map((source) => (
+                      <a key={`${source.url}-${source.label}`} href={source.url} target="_blank" rel="noreferrer">
+                        {source.label}{source.publishedAt ? ` · ${source.publishedAt.slice(0, 10)}` : ""} ↗
+                      </a>
+                    ))}
+                  </div>
+                </>
+              ) : (
+                <p>No curated discussion summary is available for this access point yet.</p>
+              )}
+              <small>
+                Editorial summaries are kept separate from the Opportunity Score. Structured trip reports—including zero-catch trips—are planned for a future release.
+              </small>
             </div>
 
             <a className="regulations-link" href={selectedSite.regulationUrl} target="_blank" rel="noreferrer">
@@ -711,11 +916,17 @@ export function OpportunityApp() {
               <b>×</b>
               <div><span>02</span><strong>Season</strong><p>Monthly California halibut catch and effort patterns from public recreational fisheries data.</p></div>
               <b>×</b>
-              <div><span>03</span><strong>Conditions</strong><p>Tide, current, wind, water temperature, swell, and daylight—with hard bounds.</p></div>
+              <div><span>03</span><strong>Conditions</strong><p>Tide, current, wind, swell, and daylight—with hard bounds. Modeled SST is shown separately as unscored context.</p></div>
             </div>
             <div className="method-callout">
               <InfoIcon />
-              <p>The deep model is promoted only if geographically blocked evaluation beats simpler baselines. Until then, the strongest validated model or ensemble owns the score.</p>
+              <p><strong>Deep-learning status: research pipeline, not the live score.</strong> The current live Habitat score is a labeled, curated proxy—not output from a trained neural network.</p>
+            </div>
+            <div className="method-callout">
+              <InfoIcon />
+              <p>
+                The research pipeline sends six-channel bathymetry patches into a self-supervised ResNet/SimCLR encoder, then fine-tunes presence and <code>log1p(CPUA)</code> heads. It is promoted only after geographically blocked validation shows a reliable ranking gain over simpler baselines.
+              </p>
             </div>
             <a href="#sources" onClick={() => setShowMethod(false)}>Inspect source freshness <ArrowIcon /></a>
           </section>

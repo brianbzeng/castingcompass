@@ -36,6 +36,7 @@ FRESHNESS_LIMITS = {
     "buoy": 180,
     "ocean": 480,
     "sst": 480,
+    "water_temperature": 1_800,
     "chlorophyll": 720,
     # Versioned historical artifacts age on a model-governance cadence, not an
     # hourly-conditions cadence. Their provisional quality is exposed in the
@@ -152,6 +153,16 @@ def normalize_site(raw: dict[str, Any]) -> SiteDetail:
                 {"label": "Official access information", "url": raw["accessSourceUrl"], "kind": "access"}
             )
 
+    access_status = str(_first(raw, "access_status", "accessStatus", default="open")).lower()
+    is_accessible = bool(
+        _first(
+            raw,
+            "is_accessible",
+            "accessible",
+            default=access_status not in {"closed", "inaccessible"},
+        )
+    )
+
     site_payload = {
         **raw,
         "id": site_id,
@@ -162,7 +173,7 @@ def normalize_site(raw: dict[str, Any]) -> SiteDetail:
         "longitude": float(longitude),
         "fishing_modes": _normalize_modes(_first(raw, "fishing_modes", "modes", "mode", "type")),
         "access_type": str(_first(raw, "access_type", default="public")),
-        "is_accessible": bool(_first(raw, "is_accessible", "accessible", default=True)),
+        "is_accessible": is_accessible,
         "structure_tags": list(_first(raw, "structure_tags", "structureTags", "structures", default=[])),
         "regulation_url": regulation_url,
         "description": _first(raw, "description", "summary"),
@@ -224,7 +235,8 @@ def normalize_freshness(
         raw_used = bool(_first(entry, "used_in_score", "included", default=True))
 
         explicit_exclusion = any(
-            marker in raw_status for marker in ("excluded", "not integrated", "not-integrated")
+            marker in raw_status
+            for marker in ("excluded", "not integrated", "not-integrated", "not-scored")
         )
         if explicit_exclusion or not raw_used:
             age_minutes = (
@@ -388,6 +400,15 @@ def normalize_opportunity(
             wind_mph=_first(conditions_raw, "wind_mph", "windMph"),
             swell_feet=_first(conditions_raw, "swell_feet", "swellFeet"),
             water_temp_f=_first(conditions_raw, "water_temp_f", "waterTempF"),
+            water_temp_source=_first(conditions_raw, "water_temp_source", "waterTempSource"),
+            ndbc_observed_water_temp_f=_first(
+                conditions_raw,
+                "ndbc_observed_water_temp_f",
+                "ndbcObservedWaterTempF",
+            ),
+            ndbc_observed_at=as_datetime(
+                _first(conditions_raw, "ndbc_observed_at", "ndbcObservedAt")
+            ),
             daylight=conditions_raw.get("daylight"),
         )
     opportunity_id = str(
@@ -452,7 +473,13 @@ class FileRepository(Repository):
         records = document.get("sites", document.get("data", [])) if isinstance(document, dict) else document
         if not isinstance(records, list):
             raise DataUnavailableError("sites.json must contain a list or a {sites: [...]} object")
-        sites = [normalize_site(item) for item in records if isinstance(item, dict)]
+        sites = [
+            site
+            for item in records
+            if isinstance(item, dict)
+            for site in [normalize_site(item)]
+            if site.is_accessible
+        ]
         if not sites:
             raise DataUnavailableError("sites.json contains no usable sites")
         return sites
@@ -469,6 +496,8 @@ class FileRepository(Repository):
             return ["weather"]
         if "buoy" in token or "ndbc" in token:
             return ["buoy"]
+        if "open-meteo" in token or "marine sst" in token or "water temperature" in token:
+            return ["water_temperature"]
         if "recfin" in token or "season" in token:
             return ["seasonality"]
         if "bathymetry" in token or "ncei" in token:
@@ -498,6 +527,7 @@ class FileRepository(Repository):
                     catalog[source] = {**catalog.get(source, {}), **item, "source": source}
         elif isinstance(window_freshness, dict):
             for source, status in window_freshness.items():
+                source = "water_temperature" if source == "waterTemperature" else source
                 if isinstance(status, dict):
                     catalog[source] = {**catalog.get(source, {}), **status, "source": source}
                 else:

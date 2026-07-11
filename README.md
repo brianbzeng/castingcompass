@@ -6,7 +6,7 @@ It compares reachable casting zones and two-hour windows using three separately 
 
 - **Habitat** — long-term seafloor structure and public recreational catch evidence.
 - **Seasonality** — monthly California halibut catch and effort patterns.
-- **Conditions** — a bounded modifier from tide, wind, swell, water temperature, current, and daylight.
+- **Conditions** — a bounded modifier from tide, wind, swell, current, and daylight. Modeled water temperature is shown as context but is not scored until it is validated against local observations.
 
 The final 0–100 **Opportunity Score is a relative percentile**, not a catch probability. A score of 80 means a site/window ranks above 80% of the candidates in the current evaluation set.
 
@@ -14,15 +14,15 @@ The final 0–100 **Opportunity Score is a relative percentile**, not a catch pr
 
 The checked-in demo includes:
 
-- 47 curated public access locations.
-- 1,692 two-hour windows over a 72-hour horizon.
-- Live public NOAA CO-OPS tide predictions, NWS hourly forecasts, and NDBC observations at snapshot generation time.
+- 47 curated public access locations, with temporary closures retained in the catalog but excluded from ranking.
+- 1,656 two-hour windows over a 72-hour horizon when one catalog location is closed.
+- Live public NOAA CO-OPS tide predictions, NWS hourly forecasts, NDBC observations, and Open-Meteo Marine modeled SST at snapshot generation time.
 - Visible freshness states and exclusion of missing/stale inputs.
-- A MapLibre map, ranked access list, score explanations, official CDFW links, responsive detail sheets, geolocation sorting, PWA installation, and offline access to the latest loaded forecast.
+- A MapLibre map using OpenFreeMap vector styling and optional VersaTiles regional bathymetry context, a ranked access list, score explanations, official CDFW links, responsive detail sheets, geolocation sorting, PWA installation, and offline access to the latest loaded forecast.
 - FastAPI endpoints, PostgreSQL/PostGIS schema, Docker/Render configuration, and file-snapshot fallback.
 - A reproducible geospatial/ML pipeline with terrain derivation, blocked validation, baselines, ablations, a six-channel ResNet-style encoder, SimCLR-style pretraining, and two-task fine-tuning scaffolding.
 
-The live snapshot's habitat score and monthly seasonality are explicitly labeled **demo/provisional proxies**. No trained deep model or real-world performance claim is shipped yet. See the [model card](docs/MODEL_CARD.md), [dataset card](docs/DATASET_CARD.md), and [feasibility report](docs/FEASIBILITY_REPORT.md).
+The live snapshot's habitat score and monthly seasonality are explicitly labeled **demo/provisional proxies**. No trained deep model contributes to the live score and no real-world performance claim is shipped yet. The repository contains the six-channel ResNet/SimCLR research pipeline and two prediction heads; that model can replace the habitat proxy only after official-data training and geographically blocked validation. See the [model card](docs/MODEL_CARD.md), [dataset card](docs/DATASET_CARD.md), and [feasibility report](docs/FEASIBILITY_REPORT.md).
 
 ## Architecture
 
@@ -30,10 +30,10 @@ The live snapshot's habitat score and monthly seasonality are explicitly labeled
 flowchart LR
     U["Mobile / desktop PWA"] -->|"live JSON"| A["FastAPI on Render"]
     U -->|"offline fallback"| S["Versioned 72-hour snapshot"]
-    U --> M["MapLibre + OpenStreetMap"]
+    U --> M["MapLibre + OpenFreeMap"]
     A --> P["Supabase PostgreSQL / PostGIS"]
     A --> S
-    R["NOAA CO-OPS · NWS · NDBC"] --> J["Snapshot refresh"]
+    R["NOAA CO-OPS · NWS · NDBC · Open-Meteo Marine"] --> J["Snapshot refresh"]
     J --> S
     B["NOAA bathymetry · CRFS · RecFIN"] --> G["Geospatial / ML pipeline"]
     G --> V["Versioned model artifacts"]
@@ -71,7 +71,7 @@ NEXT_PUBLIC_API_URL=http://localhost:8000
 npm run data:refresh
 ```
 
-The generator never substitutes invented ocean/weather values. Missing sources remain null and are marked excluded.
+The generator never substitutes invented ocean/weather values. Missing sources remain null and are marked excluded. Open-Meteo's public endpoint is non-commercial and requires attribution; switch to a commercial plan or another licensed provider before enabling subscriptions or ads.
 
 ### FastAPI
 
@@ -142,6 +142,9 @@ Set the production PWA's `NEXT_PUBLIC_API_URL` to the Render service URL and the
 - [NOAA CO-OPS API](https://api.tidesandcurrents.noaa.gov/api/dev)
 - [NWS API](https://www.weather.gov/documentation/services-web-api)
 - [NOAA CoastWatch ERDDAP](https://coastwatch.noaa.gov/erddap/index.html)
+- [Open-Meteo Marine API](https://open-meteo.com/en/docs/marine-weather-api)
+- [OpenFreeMap](https://openfreemap.org/)
+- [VersaTiles bathymetry tileset](https://docs.versatiles.org/basics/tilesets.html#bathymetry)
 - [CDFW San Francisco Bay regulations](https://wildlife.ca.gov/Fishing/Ocean/Regulations/Fishing-Map/sf-bay)
 - [CDFW San Francisco coast regulations](https://wildlife.ca.gov/Fishing/Ocean/Regulations/Fishing-Map/San-Francisco)
 

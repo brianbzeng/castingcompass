@@ -1,4 +1,4 @@
-const CACHE_NAME = "contourcast-v1";
+const CACHE_NAME = "contourcast-v2";
 const APP_SHELL = [
   "/",
   "/manifest.webmanifest",
@@ -7,6 +7,7 @@ const APP_SHELL = [
   "/icons/icon-512.png",
   "/data/sites.json",
   "/data/opportunities.json",
+  "/data/community-pulse.json",
 ];
 
 self.addEventListener("install", (event) => {

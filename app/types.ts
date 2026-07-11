@@ -14,7 +14,33 @@ export interface FishingSite {
   parking?: string;
   transit?: string;
   amenities?: string[];
+  accessSourceUrl?: string;
+  accessStatus?: "open" | "limited" | "closed" | "unknown";
+  accessStatusNote?: string;
+  accessStatusUpdatedAt?: string;
   distanceMiles?: number;
+}
+
+export interface CommunityPulseTheme {
+  label: string;
+  note: string;
+}
+
+export interface CommunityPulseSource {
+  label: string;
+  url: string;
+  publishedAt?: string;
+  kind: "official" | "discussion" | "guide" | string;
+}
+
+export interface CommunityPulse {
+  siteId: string;
+  reviewedAt: string;
+  coverage: string;
+  confidence: "high" | "medium" | "low";
+  summary: string;
+  themes: CommunityPulseTheme[];
+  sources: CommunityPulseSource[];
 }
 
 export interface SourceFreshness {
@@ -33,6 +59,9 @@ export interface Conditions {
   windDirection?: string;
   swellFeet?: number;
   waterTempF?: number;
+  waterTempSource?: string;
+  ndbcObservedWaterTempF?: number;
+  ndbcObservedAt?: string;
   daylight?: boolean;
   summary?: string;
 }
@@ -62,4 +91,4 @@ export interface OpportunitySnapshot {
   windows: OpportunityWindow[];
 }
 
-export type TimeFilter = "next" | "today" | "tomorrow" | "weekend";
+export type TimeFilter = "today" | "tomorrow" | "custom";

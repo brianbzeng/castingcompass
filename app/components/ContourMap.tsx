@@ -3,6 +3,12 @@
 import { useEffect, useRef, useState } from "react";
 import type { Map as MapLibreMap, Marker as MapLibreMarker } from "maplibre-gl";
 import type { FishingSite, OpportunityWindow } from "../types";
+import { LocateIcon } from "./icons";
+
+const BAY_AREA_BOUNDS: [[number, number], [number, number]] = [
+  [-123.06, 37.34],
+  [-121.93, 38.18],
+];
 
 interface ContourMapProps {
   sites: FishingSite[];
@@ -42,32 +48,55 @@ export function ContourMap({
       const map = new maplibregl.Map({
         container: containerRef.current,
         center: [-122.42, 37.79],
-        zoom: 8.65,
+        zoom: 9,
         minZoom: 7.2,
         maxZoom: 16,
         attributionControl: false,
-        style: {
-          version: 8,
-          sources: {
-            osm: {
-              type: "raster",
-              tiles: [
-                "https://a.tile.openstreetmap.org/{z}/{x}/{y}.png",
-                "https://b.tile.openstreetmap.org/{z}/{x}/{y}.png",
-              ],
-              tileSize: 256,
-              attribution: "© OpenStreetMap contributors",
-              maxzoom: 19,
-            },
-          },
-          layers: [
-            { id: "osm", type: "raster", source: "osm", paint: { "raster-saturation": -0.72, "raster-contrast": 0.12, "raster-brightness-max": 0.68, "raster-hue-rotate": 148 } },
-          ],
-        },
+        style: "https://tiles.openfreemap.org/styles/fiord",
       });
 
       map.addControl(new maplibregl.NavigationControl({ showCompass: false }), "bottom-right");
       map.addControl(new maplibregl.AttributionControl({ compact: true }), "bottom-right");
+      map.once("load", () => {
+        try {
+          map.addSource("regional-bathymetry", {
+            type: "vector",
+            tiles: ["https://tiles.versatiles.org/tiles/bathymetry-vectors/{z}/{x}/{y}"],
+            maxzoom: 10,
+            attribution: "Bathymetry: GEBCO, Natural Earth, OpenDEM via VersaTiles",
+          });
+          map.addLayer({
+            id: "regional-bathymetry-fill",
+            type: "fill",
+            source: "regional-bathymetry",
+            "source-layer": "bathymetry",
+            paint: {
+              "fill-color": [
+                "interpolate",
+                ["linear"],
+                ["to-number", ["get", "mindepth"]],
+                0,
+                "#2b6d8e",
+                100,
+                "#205a7a",
+                1000,
+                "#113b5b",
+                4000,
+                "#071d34",
+              ],
+              "fill-opacity": 0.12,
+              "fill-outline-color": "rgba(113, 209, 224, 0.18)",
+            },
+          });
+        } catch {
+          // The basemap remains fully usable if the optional regional overlay is unavailable.
+        }
+        map.fitBounds(BAY_AREA_BOUNDS, {
+          padding: { top: 58, right: 58, bottom: 58, left: 58 },
+          duration: 0,
+          maxZoom: 9.35,
+        });
+      });
       mapRef.current = map;
       setMapReady(true);
     });
@@ -95,7 +124,9 @@ export function ContourMap({
         element.type = "button";
         element.className = `map-score-marker ${markerTone(score)}${selectedSiteId === site.id ? " selected" : ""}`;
         element.setAttribute("aria-label", `${site.name}, opportunity score ${score}`);
-        element.innerHTML = `<span>${score || "–"}</span>`;
+        const label = document.createElement("span");
+        label.textContent = score ? String(score) : "–";
+        element.append(label);
         element.addEventListener("click", () => onSelectSite(site.id));
 
         return new maplibregl.Marker({ element, anchor: "center" })
@@ -140,5 +171,20 @@ export function ContourMap({
     };
   }, [userPosition]);
 
-  return <div ref={containerRef} className="contour-map" aria-label="Map of fishing access locations" />;
+  const centerBay = () => {
+    mapRef.current?.fitBounds(BAY_AREA_BOUNDS, {
+      padding: { top: 58, right: 58, bottom: 58, left: 58 },
+      duration: 650,
+      maxZoom: 9.35,
+    });
+  };
+
+  return (
+    <div className="contour-map-shell">
+      <div ref={containerRef} className="contour-map" aria-label="Map of fishing access locations" />
+      <button className="map-center-button" type="button" onClick={centerBay}>
+        <LocateIcon /> Center Bay
+      </button>
+    </div>
+  );
 }

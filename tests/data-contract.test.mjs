@@ -26,6 +26,10 @@ test("curates the required number of reachable Bay Area access sites", async () 
     assert.ok(site.regulationUrl.startsWith("https://wildlife.ca.gov/"));
     assert.ok(site.structureTags.length > 0);
     assert.ok(site.castingZone?.radiusMeters > 0);
+    if (site.accessStatus === "closed") {
+      assert.match(site.accessSourceUrl ?? "", /^https:\/\//);
+      assert.ok(site.accessStatusNote?.length > 20);
+    }
   }
 });
 
@@ -34,6 +38,8 @@ test("publishes every two-hour window across the 72-hour snapshot", async () => 
     readJson("data/sites.json"),
     readJson("public/data/opportunities.json"),
   ]);
+  const activeSites = sites.filter((site) => site.accessStatus !== "closed");
+  const closedIds = new Set(sites.filter((site) => site.accessStatus === "closed").map((site) => site.id));
   const bySite = new Map();
 
   for (const window of snapshot.windows) {
@@ -44,11 +50,32 @@ test("publishes every two-hour window across the 72-hour snapshot", async () => 
     }
     assert.ok(["low", "medium", "high"].includes(window.confidence));
     assert.ok(window.explanationFactors.length >= 3);
+    assert.ok(Number.isFinite(window.conditions?.waterTempF), `${window.id} must include modeled SST`);
+    assert.equal(closedIds.has(window.siteId), false, `${window.siteId} is closed and must not be ranked`);
   }
 
-  assert.equal(snapshot.windows.length, sites.length * 36);
-  for (const site of sites) assert.equal(bySite.get(site.id), 36, `${site.id} must have 36 windows`);
+  assert.equal(snapshot.windows.length, activeSites.length * 36);
+  for (const site of activeSites) assert.equal(bySite.get(site.id), 36, `${site.id} must have 36 windows`);
   assert.match(snapshot.scoreDefinition, /not an 80% catch probability/i);
   assert.ok(snapshot.sources.some((source) => source.status.startsWith("fresh")));
   assert.ok(snapshot.sources.some((source) => /not integrated|excluded/i.test(source.status)));
+  assert.ok(snapshot.sources.some((source) => /Open-Meteo Marine SST/i.test(source.name)));
+});
+
+test("publishes original community context separately from the score", async () => {
+  const [community, publicCommunity] = await Promise.all([
+    readJson("data/community-pulse.json"),
+    readJson("public/data/community-pulse.json"),
+  ]);
+  const pulses = Array.isArray(community) ? community : community.pulses;
+
+  assert.deepEqual(publicCommunity, community);
+  assert.ok(Array.isArray(pulses) && pulses.length >= 7);
+  for (const pulse of pulses) {
+    assert.match(pulse.siteId, /^[a-z0-9]+(?:-[a-z0-9]+)*$/);
+    assert.ok(["low", "medium", "high"].includes(pulse.confidence));
+    assert.ok(pulse.summary.length >= 80);
+    assert.ok(pulse.themes.length >= 2);
+    assert.ok(pulse.sources.every((source) => /^https:\/\//.test(source.url)));
+  }
 });
