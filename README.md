@@ -19,6 +19,7 @@ The checked-in demo includes:
 - Live public NOAA CO-OPS tide predictions, NWS hourly forecasts, NDBC observations, and Open-Meteo Marine modeled SST at snapshot generation time.
 - Visible freshness states and exclusion of missing/stale inputs.
 - A MapLibre map using ArcGIS World Ocean base and reference layers, clustered map-native site points, a ranked access list, score explanations, official CDFW links, responsive detail sheets, geolocation sorting, PWA installation, and offline access to the latest loaded forecast.
+- A first-party validation beta with start/end trip logging, complete catch and no-catch outcomes, anonymous effort tracking, pending-review submissions, aggregate ledger totals, and optional metadata-stripped verification photos.
 - FastAPI endpoints, PostgreSQL/PostGIS schema, Docker/Render configuration, and file-snapshot fallback.
 - A reproducible geospatial/ML pipeline with terrain derivation, blocked validation, baselines, ablations, a six-channel ResNet-style encoder, SimCLR-style pretraining, and two-task fine-tuning scaffolding.
 
@@ -31,6 +32,8 @@ flowchart LR
     U["Mobile / desktop PWA"] -->|"live JSON"| A["FastAPI on Render"]
     U -->|"offline fallback"| S["Versioned 72-hour snapshot"]
     U --> M["MapLibre + ArcGIS World Ocean"]
+    U -->|"trip reports"| D1["Cloudflare D1"]
+    U -->|"processed photos"| R2["Cloudflare R2"]
     A --> P["Supabase PostgreSQL / PostGIS"]
     A --> S
     R["NOAA CO-OPS · NWS · NDBC · Open-Meteo Marine"] --> J["Snapshot refresh"]
@@ -64,6 +67,8 @@ The PWA uses `public/data/opportunities.json` when `NEXT_PUBLIC_API_URL` is unse
 ```bash
 NEXT_PUBLIC_API_URL=http://localhost:8000
 ```
+
+Trip-report APIs are served by the PWA Worker itself. Local and hosted builds use the logical `DB` D1 binding for structured reports and `TRIP_PHOTOS` R2 binding for processed WebP verification images. The checked-in migration is applied through the Sites deployment workflow.
 
 ### Refresh the 72-hour public-data snapshot
 
@@ -133,6 +138,7 @@ Set the production PWA's `NEXT_PUBLIC_API_URL` to the Render service URL and the
 - Bathymetry is explanatory context, not navigational data.
 - Regulation links are informational; always check official CDFW rules and posted access closures.
 - Only public access locations are ranked. Exact user catch locations are not collected in this version.
+- Trip reports remain pending review and do not alter the Opportunity Score automatically. Public ledger values are aggregate submission totals, not verified catch claims.
 
 ## Official source entry points
 

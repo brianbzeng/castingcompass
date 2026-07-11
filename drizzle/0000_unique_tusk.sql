@@ -1,0 +1,47 @@
+CREATE TABLE `trips` (
+	`id` text PRIMARY KEY NOT NULL,
+	`status` text NOT NULL,
+	`source` text NOT NULL,
+	`site_id` text NOT NULL,
+	`started_at` text NOT NULL,
+	`ended_at` text,
+	`mode` text NOT NULL,
+	`fishing_method` text,
+	`gear` text,
+	`angler_count` integer NOT NULL,
+	`angler_hours` real,
+	`keeper_count` integer,
+	`short_released_count` integer,
+	`halibut_encounters` integer,
+	`no_catch` integer,
+	`notes` text,
+	`consent` integer NOT NULL,
+	`consent_at` text,
+	`moderation_status` text NOT NULL,
+	`reporter_key_hash` text NOT NULL,
+	`referral_code` text,
+	`token_hash` text,
+	`opportunity_window_id` text,
+	`opportunity_score` real,
+	`habitat_score` real,
+	`seasonality_score` real,
+	`conditions_score` real,
+	`model_version` text,
+	`score_influenced_choice` integer,
+	`prediction_metadata_json` text,
+	`photo_key` text,
+	`photo_content_type` text,
+	`photo_size_bytes` integer,
+	`created_at` text NOT NULL,
+	`updated_at` text NOT NULL,
+	`completed_at` text,
+	CONSTRAINT "trips_status_check" CHECK("trips"."status" in ('active', 'completed')),
+	CONSTRAINT "trips_source_check" CHECK("trips"."source" in ('live', 'past_report')),
+	CONSTRAINT "trips_moderation_status_check" CHECK("trips"."moderation_status" in ('pending', 'approved', 'rejected')),
+	CONSTRAINT "trips_angler_count_check" CHECK("trips"."angler_count" between 1 and 12)
+);
+--> statement-breakpoint
+CREATE INDEX `trips_status_started_idx` ON `trips` (`status`,`started_at`);--> statement-breakpoint
+CREATE INDEX `trips_site_started_idx` ON `trips` (`site_id`,`started_at`);--> statement-breakpoint
+CREATE INDEX `trips_reporter_created_idx` ON `trips` (`reporter_key_hash`,`created_at`);--> statement-breakpoint
+CREATE INDEX `trips_referral_created_idx` ON `trips` (`referral_code`,`created_at`);

@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ContourMap } from "./ContourMap";
+import { TripReportFeature } from "./TripReportFeature";
 import {
   ArrowIcon,
   ChevronIcon,
@@ -25,6 +26,7 @@ import type {
   OpportunityWindow,
   SourceFreshness,
   TimeFilter,
+  TripReportRequest,
 } from "../types";
 
 const PACIFIC_TIME_ZONE = "America/Los_Angeles";
@@ -447,6 +449,8 @@ export function OpportunityApp() {
   const [showCompare, setShowCompare] = useState(false);
   const [dataState, setDataState] = useState<"loading" | "live" | "cached">("loading");
   const [installPrompt, setInstallPrompt] = useState<Event | null>(null);
+  const [tripReportRequest, setTripReportRequest] = useState<TripReportRequest | null>(null);
+  const tripReportRequestKey = useRef(0);
 
   useEffect(() => {
     let active = true;
@@ -636,6 +640,11 @@ export function OpportunityApp() {
     setSelectedSiteId(null);
   }, []);
 
+  const openTripReport = useCallback((mode: "start" | "past", siteId?: string, window?: OpportunityWindow) => {
+    tripReportRequestKey.current += 1;
+    setTripReportRequest({ key: tripReportRequestKey.current, mode, siteId, window });
+  }, []);
+
   const scrollToSection = useCallback((sectionId: "forecast" | "sources") => {
     setShowMethod(false);
     setShowCompare(false);
@@ -673,6 +682,7 @@ export function OpportunityApp() {
           <button type="button" onClick={() => scrollToSection("sources")}>Data</button>
         </nav>
         <div className="topbar-actions">
+          <button className="log-trip-button" type="button" onClick={() => openTripReport("past")}>Log trip</button>
           <button
             className={`data-pill ${dataState}`}
             type="button"
@@ -874,6 +884,8 @@ export function OpportunityApp() {
         <button type="button" onClick={() => setShowMethod(true)}>See methodology <ArrowIcon /></button>
       </section>
 
+      <TripReportFeature sites={sites} snapshot={snapshot} request={tripReportRequest} />
+
       <section className="source-section" id="sources">
         <div className="source-heading">
           <span>Forecast inputs</span>
@@ -915,6 +927,17 @@ export function OpportunityApp() {
             </div>
             <h2 id="detail-title">{selectedSite.name}</h2>
             <p className="sheet-window"><ClockIcon /> {formatWindow(selectedWindow.start, selectedWindow.end)}</p>
+
+            <button
+              className="fish-window-button"
+              type="button"
+              onClick={() => {
+                openTripReport("start", selectedSite.id, selectedWindow);
+                closeSiteDetail();
+              }}
+            >
+              Fish this window <ArrowIcon />
+            </button>
 
             <div className="place-media-block">
               <h3>See the access</h3>
@@ -1020,7 +1043,7 @@ export function OpportunityApp() {
                 <p>No curated discussion summary is available for this access point yet.</p>
               )}
               <small>
-                Editorial summaries are kept separate from the Opportunity Score. Structured trip reports—including zero-catch trips—are planned for a future release.
+                Editorial summaries stay separate from the Opportunity Score. Use the trip logger to add a complete catch or no-catch result to the validation dataset.
               </small>
             </div>
 

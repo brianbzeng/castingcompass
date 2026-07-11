@@ -1,20 +1,16 @@
 /** Cloudflare Worker entry point for the ContourCast PWA. */
 import { handleImageOptimization, DEFAULT_DEVICE_SIZES, DEFAULT_IMAGE_SIZES } from "vinext/server/image-optimization";
 import handler from "vinext/server/app-router-entry";
+import sites from "../public/data/sites.json";
+import { handleTripRequest, type TripApiEnv } from "./trips";
 
 interface AssetFetcher {
   fetch(request: Request): Promise<Response>;
 }
 
-interface Env {
+interface Env extends TripApiEnv {
   ASSETS: AssetFetcher;
-  IMAGES: {
-    input(stream: ReadableStream): {
-      transform(options: Record<string, unknown>): {
-        output(options: { format: string; quality: number }): Promise<{ response(): Response }>;
-      };
-    };
-  };
+  IMAGES: NonNullable<TripApiEnv["IMAGES"]>;
 }
 
 interface ExecutionContext {
@@ -31,6 +27,9 @@ interface ExecutionContext {
 const worker = {
   async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
     const url = new URL(request.url);
+
+    const tripResponse = await handleTripRequest(request, env, sites);
+    if (tripResponse) return tripResponse;
 
     if (url.pathname === "/_vinext/image") {
       const allowedWidths = [...DEFAULT_DEVICE_SIZES, ...DEFAULT_IMAGE_SIZES];

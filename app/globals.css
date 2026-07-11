@@ -204,6 +204,25 @@ button.data-pill {
   height: 14px;
 }
 
+.log-trip-button {
+  min-height: 36px;
+  padding: 0.55rem 0.82rem;
+  border: 1px solid rgba(216, 237, 148, 0.42);
+  border-radius: 100px;
+  color: var(--ocean-deep);
+  background: var(--lime);
+  font-family: var(--font-mono);
+  font-size: 0.61rem;
+  font-weight: 750;
+  letter-spacing: 0.045em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.log-trip-button:hover {
+  background: #e4f4ad;
+}
+
 .forecast-intro {
   position: relative;
   padding: 4.5rem 4vw 3.5rem;
@@ -1897,6 +1916,573 @@ footer > div {
   font-size: 0.92em;
 }
 
+.fish-window-button {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  min-height: 48px;
+  margin-top: 1.25rem;
+  padding: 0.85rem 1rem;
+  color: var(--ocean-deep);
+  background: var(--lime);
+  font-size: 0.68rem;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.fish-window-button svg {
+  width: 17px;
+}
+
+.validation-section {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 0.95fr) minmax(420px, 1.05fr);
+  gap: clamp(2rem, 7vw, 7rem);
+  width: min(100%, 1440px);
+  margin-inline: auto;
+  padding: clamp(4rem, 8vw, 7rem) 4vw;
+  border-bottom: 1px solid var(--line);
+  scroll-margin-top: 88px;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 94% 9%, rgba(40, 124, 194, 0.22), transparent 22rem),
+    repeating-radial-gradient(ellipse 62% 38% at -10% 110%, transparent 0 31px, rgba(168, 216, 242, 0.09) 32px 33px, transparent 34px 58px),
+    linear-gradient(135deg, rgba(5, 22, 45, 0.94), rgba(10, 45, 84, 0.76));
+}
+
+.validation-copy h2 {
+  margin: 1.15rem 0 1.2rem;
+  font-size: clamp(3.1rem, 6.4vw, 6.8rem);
+  font-weight: 600;
+  letter-spacing: -0.085em;
+  line-height: 0.87;
+}
+
+.validation-copy > p {
+  max-width: 600px;
+  margin: 0;
+  color: var(--ink-soft);
+  font-size: 0.88rem;
+  line-height: 1.75;
+}
+
+.validation-copy > p strong {
+  color: var(--ink);
+}
+
+.validation-copy > small {
+  display: block;
+  max-width: 580px;
+  margin-top: 1.2rem;
+  color: var(--ink-soft);
+  font-family: var(--font-mono);
+  font-size: 0.53rem;
+  line-height: 1.65;
+}
+
+.validation-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.65rem;
+  margin-top: 1.8rem;
+}
+
+.validation-actions button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.65rem;
+  min-height: 48px;
+  padding: 0.8rem 1rem;
+  border: 1px solid var(--line-strong);
+  color: var(--ink);
+  background: rgba(6, 26, 52, 0.66);
+  font-size: 0.7rem;
+  font-weight: 780;
+  cursor: pointer;
+}
+
+.validation-actions button:first-child {
+  border-color: var(--lime);
+  color: var(--ocean-deep);
+  background: var(--lime);
+}
+
+.validation-actions svg {
+  width: 16px;
+}
+
+.validation-ledger {
+  align-self: center;
+  border: 1px solid var(--line-strong);
+  background:
+    repeating-radial-gradient(ellipse 80% 54% at 112% -5%, transparent 0 28px, rgba(168, 216, 242, 0.085) 29px 30px, transparent 31px 52px),
+    rgba(5, 23, 47, 0.76);
+  box-shadow: 0 28px 80px rgba(1, 8, 21, 0.24);
+}
+
+.ledger-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 64px;
+  padding: 1rem 1.15rem;
+  border-bottom: 1px solid var(--line-strong);
+  font-family: var(--font-mono);
+  font-size: 0.61rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.ledger-heading em {
+  padding: 0.3rem 0.45rem;
+  border: 1px solid var(--line-strong);
+  border-radius: 100px;
+  color: var(--seafoam);
+  font-size: 0.49rem;
+  font-style: normal;
+}
+
+.ledger-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.ledger-grid > div {
+  display: grid;
+  gap: 0.35rem;
+  min-height: 132px;
+  padding: 1.3rem;
+  border-right: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+}
+
+.ledger-grid > div:nth-child(2n) {
+  border-right: 0;
+}
+
+.ledger-grid strong {
+  color: var(--lime);
+  font-family: var(--font-mono);
+  font-size: 2.3rem;
+  font-weight: 500;
+}
+
+.ledger-grid span {
+  align-self: end;
+  color: var(--ink-soft);
+  font-size: 0.65rem;
+}
+
+.ledger-empty {
+  min-height: 190px;
+  padding: 2rem 1.3rem;
+}
+
+.ledger-empty strong {
+  font-size: 1.1rem;
+}
+
+.ledger-empty p,
+.ledger-method {
+  color: var(--ink-soft);
+  font-size: 0.65rem;
+  line-height: 1.65;
+}
+
+.ledger-method {
+  margin: 0;
+  padding: 1.1rem 1.3rem;
+}
+
+.active-trip-banner {
+  position: fixed;
+  right: 1.25rem;
+  bottom: max(1.25rem, env(safe-area-inset-bottom));
+  z-index: 72;
+  display: flex;
+  align-items: center;
+  gap: 1.2rem;
+  width: min(430px, calc(100vw - 2rem));
+  padding: 0.8rem;
+  border: 1px solid rgba(216, 237, 148, 0.4);
+  color: var(--ink);
+  background: rgba(4, 20, 40, 0.94);
+  box-shadow: 0 24px 70px rgba(1, 7, 18, 0.48);
+  backdrop-filter: blur(16px);
+}
+
+.active-trip-banner > div {
+  min-width: 0;
+}
+
+.active-trip-banner span {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  color: var(--lime);
+  font-family: var(--font-mono);
+  font-size: 0.48rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.active-trip-banner span i {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #51b990;
+  box-shadow: 0 0 0 4px rgba(81, 185, 144, 0.12);
+}
+
+.active-trip-banner strong {
+  display: block;
+  margin-top: 0.22rem;
+  overflow: hidden;
+  font-size: 0.76rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.active-trip-banner small {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin-top: 0.25rem;
+  color: var(--ink-soft);
+  font-size: 0.52rem;
+}
+
+.active-trip-banner small svg {
+  width: 12px;
+}
+
+.active-trip-banner button {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  min-height: 44px;
+  padding: 0.65rem 0.75rem;
+  color: var(--ocean-deep);
+  background: var(--lime);
+  font-size: 0.6rem;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.active-trip-banner button svg {
+  width: 14px;
+}
+
+.trip-modal-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: grid;
+  place-items: center;
+  padding: 1rem;
+  background: rgba(1, 8, 19, 0.74);
+  backdrop-filter: blur(8px);
+  animation: fade-in 160ms ease-out;
+}
+
+.trip-modal {
+  position: relative;
+  width: min(720px, 100%);
+  max-height: calc(100dvh - 2rem);
+  padding: clamp(1.5rem, 4vw, 2.8rem);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  border: 1px solid var(--line-strong);
+  background:
+    radial-gradient(circle at 105% 0%, rgba(34, 113, 184, 0.28), transparent 20rem),
+    repeating-radial-gradient(ellipse 70% 40% at -8% 92%, transparent 0 30px, rgba(168, 216, 242, 0.07) 31px 32px, transparent 33px 56px),
+    var(--paper-bright);
+  box-shadow: 0 34px 100px rgba(1, 7, 18, 0.58);
+  animation: modal-up 220ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.trip-modal:focus {
+  outline: none;
+}
+
+.trip-modal > .eyebrow {
+  padding-right: 3rem;
+}
+
+.trip-form-heading h2,
+.trip-success-panel h2 {
+  margin: 1rem 0 0;
+  font-size: clamp(3rem, 7vw, 5.3rem);
+  font-weight: 600;
+  letter-spacing: -0.085em;
+  line-height: 0.9;
+}
+
+.trip-form-heading p,
+.trip-success-panel > p {
+  max-width: 550px;
+  margin: 1rem 0 0;
+  color: var(--ink-soft);
+  font-size: 0.75rem;
+  line-height: 1.65;
+}
+
+.trip-field-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+  margin-top: 1.5rem;
+}
+
+.trip-field.wide {
+  grid-column: 1 / -1;
+}
+
+.trip-field {
+  display: grid;
+  gap: 0.42rem;
+  margin-top: 0.8rem;
+}
+
+.trip-field-grid .trip-field {
+  margin-top: 0;
+}
+
+.trip-field > span,
+.photo-field > span,
+.catch-fieldset legend {
+  color: var(--ink-soft);
+  font-family: var(--font-mono);
+  font-size: 0.55rem;
+  font-weight: 650;
+  letter-spacing: 0.055em;
+  text-transform: uppercase;
+}
+
+.trip-field em,
+.photo-field em {
+  font-style: normal;
+  opacity: 0.62;
+}
+
+.trip-field input,
+.trip-field select,
+.trip-field textarea {
+  width: 100%;
+  min-height: 46px;
+  padding: 0.7rem 0.75rem;
+  border: 1px solid var(--line-strong);
+  border-radius: 0;
+  color: var(--ink);
+  background: rgba(4, 20, 41, 0.76);
+  font-size: 0.7rem;
+  outline: 0;
+}
+
+.trip-field textarea {
+  min-height: 100px;
+  resize: vertical;
+  font-family: var(--font-sans);
+  line-height: 1.55;
+}
+
+.trip-field input:focus,
+.trip-field select:focus,
+.trip-field textarea:focus,
+.photo-field:focus-within {
+  border-color: var(--seafoam);
+  box-shadow: 0 0 0 2px rgba(168, 216, 242, 0.14);
+}
+
+.trip-field > small {
+  justify-self: end;
+  color: var(--ink-soft);
+  font-family: var(--font-mono);
+  font-size: 0.45rem;
+}
+
+.captured-forecast {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 0.25rem 1rem;
+  margin-top: 1rem;
+  padding: 0.85rem 1rem;
+  border: 1px solid var(--line);
+  background: rgba(17, 67, 118, 0.28);
+}
+
+.captured-forecast span {
+  color: var(--seafoam);
+  font-family: var(--font-mono);
+  font-size: 0.5rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.captured-forecast strong {
+  grid-row: span 2;
+  color: var(--lime);
+  font-family: var(--font-mono);
+  font-size: 1.8rem;
+  font-weight: 500;
+}
+
+.captured-forecast p {
+  margin: 0;
+  color: var(--ink-soft);
+  font-size: 0.58rem;
+}
+
+.trip-privacy-note {
+  margin-top: 1rem;
+  padding: 0.9rem 1rem;
+  border-left: 2px solid var(--seafoam);
+  background: rgba(4, 20, 41, 0.58);
+}
+
+.trip-privacy-note strong {
+  font-size: 0.64rem;
+}
+
+.trip-privacy-note p {
+  margin: 0.3rem 0 0;
+  color: var(--ink-soft);
+  font-size: 0.58rem;
+  line-height: 1.55;
+}
+
+.catch-fieldset {
+  margin: 1.4rem 0 0;
+  padding: 1rem;
+  border: 1px solid var(--line-strong);
+}
+
+.catch-fieldset p {
+  margin: 0.4rem 0 0;
+  color: var(--ink-soft);
+  font-size: 0.6rem;
+}
+
+.catch-fieldset > div {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+  margin-top: 0.8rem;
+}
+
+.count-field input {
+  font-family: var(--font-mono);
+  font-size: 1rem;
+}
+
+.photo-field {
+  position: relative;
+  display: grid;
+  gap: 0.45rem;
+  margin-top: 0.8rem;
+  padding: 0.85rem;
+  border: 1px dashed var(--line-strong);
+  cursor: pointer;
+}
+
+.photo-field input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+.photo-field strong {
+  color: var(--seafoam);
+  font-size: 0.61rem;
+  font-weight: 650;
+}
+
+.consent-field {
+  display: grid;
+  grid-template-columns: 20px 1fr;
+  gap: 0.65rem;
+  align-items: start;
+  margin-top: 1rem;
+  color: var(--ink-soft);
+  font-size: 0.59rem;
+  line-height: 1.55;
+  cursor: pointer;
+}
+
+.consent-field input {
+  width: 18px;
+  height: 18px;
+  margin: 0;
+  accent-color: var(--lime);
+}
+
+.trip-submit {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  min-height: 50px;
+  margin-top: 1.25rem;
+  padding: 0.85rem 1rem;
+  color: var(--ocean-deep);
+  background: var(--lime);
+  font-size: 0.69rem;
+  font-weight: 820;
+  cursor: pointer;
+}
+
+.trip-submit:disabled {
+  color: var(--ink-soft);
+  background: rgba(102, 126, 149, 0.22);
+  cursor: not-allowed;
+}
+
+.trip-submit svg {
+  width: 17px;
+}
+
+.trip-form-status {
+  min-height: 1.2rem;
+  margin-top: 0.7rem;
+  font-size: 0.6rem;
+  line-height: 1.5;
+}
+
+.trip-form-status.error {
+  color: #ff9e8f;
+}
+
+.trip-form-status.success {
+  color: #8ee0bd;
+}
+
+.trip-beta-note {
+  margin: 0.8rem 0 0;
+  padding-top: 0.8rem;
+  border-top: 1px solid var(--line);
+  color: var(--ink-soft);
+  font-family: var(--font-mono);
+  font-size: 0.47rem;
+  line-height: 1.6;
+}
+
+.log-trip-button:focus-visible,
+.fish-window-button:focus-visible,
+.validation-actions button:focus-visible,
+.active-trip-banner button:focus-visible,
+.trip-submit:focus-visible,
+.consent-field input:focus-visible {
+  outline: 2px solid var(--seafoam);
+  outline-offset: 3px;
+}
+
 @keyframes fade-in {
   from { opacity: 0; }
 }
@@ -1970,6 +2556,14 @@ footer > div {
     grid-template-columns: 1fr;
     gap: 2.5rem;
   }
+
+  .validation-section {
+    grid-template-columns: 1fr;
+  }
+
+  .validation-ledger {
+    width: min(100%, 680px);
+  }
 }
 
 @media (max-width: 720px) {
@@ -1993,7 +2587,20 @@ footer > div {
   }
 
   .data-pill {
-    padding-inline: 0.58rem;
+    justify-content: center;
+    width: 34px;
+    padding: 0;
+    font-size: 0;
+  }
+
+  .topbar-actions {
+    gap: 0.35rem;
+  }
+
+  .log-trip-button {
+    min-height: 34px;
+    padding-inline: 0.65rem;
+    font-size: 0.53rem;
   }
 
   .install-button {
@@ -2208,6 +2815,33 @@ footer > div {
     padding: 3.5rem 1rem;
   }
 
+  .validation-section {
+    gap: 2.4rem;
+    padding: 4rem 1rem;
+  }
+
+  .validation-copy h2 {
+    font-size: clamp(3.5rem, 17vw, 5rem);
+  }
+
+  .validation-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .validation-actions button {
+    padding-inline: 0.65rem;
+  }
+
+  .ledger-grid > div {
+    min-height: 112px;
+    padding: 1rem;
+  }
+
+  .ledger-grid strong {
+    font-size: 1.9rem;
+  }
+
   .source-heading h2 {
     font-size: 3.2rem;
   }
@@ -2301,6 +2935,47 @@ footer > div {
 
   .compare-grid {
     grid-template-columns: 1fr;
+  }
+
+  .trip-modal-layer {
+    align-items: end;
+    padding: 0;
+  }
+
+  .trip-modal {
+    width: 100%;
+    max-height: 92dvh;
+    padding: 2.7rem 1rem calc(1.2rem + env(safe-area-inset-bottom));
+    border-right: 0;
+    border-bottom: 0;
+    border-left: 0;
+    border-radius: 18px 18px 0 0;
+    animation-name: sheet-up;
+  }
+
+  .trip-form-heading h2,
+  .trip-success-panel h2 {
+    font-size: 3.3rem;
+  }
+
+  .trip-field-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .trip-field.wide {
+    grid-column: auto;
+  }
+
+  .trip-field input,
+  .trip-field select {
+    min-height: 48px;
+    font-size: 0.78rem;
+  }
+
+  .active-trip-banner {
+    right: 0.75rem;
+    bottom: max(0.75rem, env(safe-area-inset-bottom));
+    width: calc(100vw - 1.5rem);
   }
 
   .compare-grid h3,

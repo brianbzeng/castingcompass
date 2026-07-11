@@ -9,9 +9,14 @@ const registrationSource = await readFile(
 );
 
 test("service worker publishes a new cache and removes prior ContourCast releases", () => {
-  assert.match(workerSource, /CACHE_NAME = "contourcast-v3"/);
+  assert.match(workerSource, /CACHE_NAME = "contourcast-v4"/);
   assert.match(workerSource, /key\.startsWith\(CACHE_PREFIX\) && key !== CACHE_NAME/);
   assert.match(workerSource, /caches\.delete\(key\)/);
+});
+
+test("live trip APIs bypass the offline response cache", () => {
+  assert.match(workerSource, /url\.pathname\.startsWith\("\/api\/"\)/);
+  assert.match(workerSource, /event\.respondWith\(fetch\(event\.request\)\)/);
 });
 
 test("registration bypasses cached worker scripts and checks for updates", () => {

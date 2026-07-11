@@ -8,6 +8,12 @@ stored. Historical fishing discussion in `data/community-pulse.json` is an
 original editorial summary with outbound sources and is never used in the
 Opportunity Score.
 
+The validation beta also accepts first-party ContourCast trip reports. These
+are direct, consented submissions rather than imported social content. They
+record a curated access zone, time, effort, fishing method, complete catch or
+no-catch outcome, and an optional verification photo. Reports remain pending
+review and are not automatically added to the Opportunity Score.
+
 ## Google Maps
 
 Automated crawling of Google Maps or copying review text is not an acceptable
@@ -45,20 +51,22 @@ commercial partnership and licensed data feed from Fishbrain.
 
 Reference: [Fishbrain Terms of Service](https://fishbrain.com/policies/terms-of-service/latest)
 
-## Recommended first-party path
+## First-party path now implemented
 
-Build structured ContourCast Trip Reports rather than a generic comment wall:
+ContourCast uses structured Trip Reports rather than a generic comment wall:
 
 - site, visit time, fishing mode, target species, and catch/no-catch outcome;
 - tide, wind, water clarity, bait or lure, optional note, and optional photo;
 - zero-catch reports made as easy and visible as successful reports;
 - separate access-status updates from fishing reports;
-- authentication, edit/delete, reporting, blocking, rate limits, and a
-  moderation queue;
+- anonymous reporter-key hashing, honeypot and rate controls, plus a pending
+  moderation state;
 - photo EXIF removal and no user-supplied exact coordinates outside curated
   access sites;
 - explicit consent before any report can be used for model research.
 
-Supabase authentication and Postgres are appropriate for this phase. Google
-sign-in can authenticate the ContourCast account, but it must not be described
-as authorization to crawl Google Maps.
+D1 stores report metadata and R2 stores only processed WebP photo bytes. A
+future account release should add authentication, contributor edit/deletion,
+reporting, and moderation tools. Google sign-in could authenticate a
+ContourCast account, but it must not be described as authorization to crawl
+Google Maps.

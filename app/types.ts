@@ -92,3 +92,10 @@ export interface OpportunitySnapshot {
 }
 
 export type TimeFilter = "today" | "tomorrow" | "custom";
+
+export interface TripReportRequest {
+  key: number;
+  mode: "start" | "past";
+  siteId?: string;
+  window?: OpportunityWindow;
+}

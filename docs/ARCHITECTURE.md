@@ -14,6 +14,14 @@ flowchart TB
       SW --> CACHE
     end
 
+    subgraph Validation["Cloudflare validation storage"]
+      D1["D1 trip reports"]
+      R2["R2 processed photos"]
+      REVIEW["Pending moderation state"]
+      D1 --> REVIEW
+      R2 --> REVIEW
+    end
+
     subgraph Serving["Render"]
       API["FastAPI v1"]
       FILES["Versioned file snapshot fallback"]
@@ -52,6 +60,8 @@ flowchart TB
     end
 
     UI -->|"HTTPS /v1"| API
+    UI -->|"/api/trips start · complete · report · summary"| D1
+    UI -->|"EXIF-stripped WebP"| R2
     API -->|"primary when populated"| PG
     NOAA --> INGEST
     NWS --> INGEST
@@ -86,12 +96,16 @@ Stale or missing values are not silently imputed as live observations. The API c
 - API reads prefer Postgres when configured and fall back to the packaged verified snapshot on database failure.
 - The PWA uses the API when `NEXT_PUBLIC_API_URL` is set and the static snapshot otherwise.
 - The service worker uses network-first caching for forecast JSON and navigation, retaining the last successful response for offline use.
+- Trip APIs always bypass the service-worker response cache; offline forecast access never fabricates or queues a report submission.
 - ArcGIS World Ocean base/reference tiles are external and may not be available offline; rankings and site details remain available. Basemap bathymetry is explanatory context, not navigation data and not the live habitat model.
 
 ## Security and privacy
 
-- v1 is anonymous and read-only.
+- Forecast browsing remains anonymous. Trip reporting uses a random device key that is hashed before storage; no IP address, social identity, live GPS point, or raw reporter key is retained.
+- Structured reports store only a curated access-zone identifier, trip time and effort, outcome, validation covariates, consent, and moderation state.
+- Optional JPEG/PNG/WebP uploads are re-encoded to bounded WebP before private R2 storage, removing original metadata and filenames.
+- Public summary responses expose aggregate totals only. Raw notes and photos have no public read endpoint, and pending reports do not automatically influence the score.
 - Secrets live in Render/Supabase/hosting environment variables, not the repository.
 - CORS is explicit.
-- No private catch locations or user accounts exist in v1.
-- Authentication, Stripe, alerts, and personal logs are deferred until product value and model quality are demonstrated.
+- No private catch coordinates or user accounts exist in v1.
+- Authentication, report deletion/editing, moderation tooling, Stripe, alerts, and personal logs remain future work.
