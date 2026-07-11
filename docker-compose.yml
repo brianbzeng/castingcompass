@@ -1,0 +1,35 @@
+services:
+  postgres:
+    image: postgis/postgis:16-3.4
+    environment:
+      POSTGRES_DB: contourcast
+      POSTGRES_USER: contourcast
+      POSTGRES_PASSWORD: contourcast
+    ports:
+      - "5432:5432"
+    volumes:
+      - contourcast-postgres:/var/lib/postgresql/data
+      - ./infra/schema.sql:/docker-entrypoint-initdb.d/001-schema.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U contourcast -d contourcast"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  api:
+    build:
+      context: .
+      dockerfile: services/api/Dockerfile
+    environment:
+      DATABASE_URL: postgresql://contourcast:contourcast@postgres:5432/contourcast
+      ALLOWED_ORIGINS: http://localhost:3000
+      DATA_ROOT: /app
+      PORT: 8000
+    ports:
+      - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+volumes:
+  contourcast-postgres:

@@ -1,0 +1,29 @@
+{
+  "manifest_version": "1.0",
+  "source_id": "cdfw_crfs",
+  "title": "California Recreational Fisheries Survey (CRFS)",
+  "steward": "California Department of Fish and Wildlife",
+  "official_landing_page": "https://wildlife.ca.gov/Conservation/Marine/CRFS/Additional-Information",
+  "related_official_pages": [
+    "https://www.recfin.org/"
+  ],
+  "access": {
+    "mode": "manual_recfin_export",
+    "reason": "CDFW directs public users to RecFIN for CRFS sample data and estimates from 2004 onward; exports depend on the query selected in the interactive warehouse.",
+    "instructions": [
+      "Record whether the export contains sample data or expanded estimates, the query filters, survey mode, area, species, time range, and retrieval date.",
+      "Retain effort, weights, strata, and uncertainty fields supplied by the export.",
+      "Do not treat aggregate area labels or centroids as exact fishing locations.",
+      "Store the raw export unchanged and provide an explicit canonical-to-source column map."
+    ],
+    "ingestion_command": "python -m pipeline.contourcast.cli ingest-observations --input CRFS_EXPORT.csv --output DATA/crfs.csv --source-id cdfw_crfs --column-map column_map.json --expected-sha256 SHA256"
+  },
+  "temporal_coverage": "2004-present, subject to release schedule",
+  "citation": "California Department of Fish and Wildlife, California Recreational Fisheries Survey; data accessed through RecFIN. Include query and access date.",
+  "limitations": [
+    "CRFS is a probability survey designed for catch and effort estimation, not a census of all trips.",
+    "Sample records and expanded estimates have different statistical meanings and must not be pooled without design-aware treatment.",
+    "Public spatial fields may be aggregated or withheld.",
+    "Survey modes, coverage, regulations, and sampling intensity vary over time."
+  ]
+}

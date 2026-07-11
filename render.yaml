@@ -1,0 +1,17 @@
+services:
+  - type: web
+    name: contourcast-api
+    runtime: docker
+    dockerfilePath: ./services/api/Dockerfile
+    dockerContext: .
+    healthCheckPath: /health
+    autoDeploy: true
+    envVars:
+      - key: DATABASE_URL
+        sync: false
+      - key: ALLOWED_ORIGINS
+        value: https://contourcast.brianbzeng.com
+      - key: DATA_ROOT
+        value: /app
+      - key: PYTHONUNBUFFERED
+        value: "1"

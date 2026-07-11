@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="ContourCast logo">
+  <rect width="512" height="512" rx="112" fill="#071915"/>
+  <g fill="none" stroke="#d8ed94" stroke-linecap="round" stroke-width="18">
+    <path d="M76 306c58-94 118-140 180-140 67 0 125 46 180 140"/>
+    <path d="M96 354c49-58 103-87 160-87s110 29 160 87" opacity=".7"/>
+    <path d="M142 398c42-34 80-51 114-51 37 0 75 17 114 51" opacity=".4"/>
+    <path d="M256 86v83"/>
+  </g>
+  <circle cx="256" cy="84" r="24" fill="#ff725c"/>
+</svg>

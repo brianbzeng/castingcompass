@@ -1,0 +1,30 @@
+{
+  "manifest_version": "1.0",
+  "source_id": "noaa_ncei_cudem",
+  "title": "NOAA NCEI Continuously Updated Digital Elevation Models and Coastal Relief Models",
+  "steward": "NOAA National Centers for Environmental Information",
+  "official_landing_page": "https://www.ncei.noaa.gov/products/coastal-elevation-models",
+  "related_official_pages": [
+    "https://www.ncei.noaa.gov/products/bathymetry",
+    "https://www.ncei.noaa.gov/products/coastal-relief-model"
+  ],
+  "access": {
+    "mode": "manual_official_export",
+    "reason": "The official viewers and catalogs resolve tiles by selected geography and product version; a stable direct object URL must be recorded at download time.",
+    "instructions": [
+      "Select the Bay/coastal California extent in the NOAA NCEI Bathymetric Data Viewer or NOAA Digital Coast CUDEM catalog.",
+      "Prefer the highest-resolution current CUDEM tile whose published horizontal and vertical datums cover the study area.",
+      "Download GeoTIFF plus source metadata, retain the original filename, and compute SHA-256 during ingestion.",
+      "Warp to one projected metre-based CRS before terrain derivation; never relabel a CRS without a true reprojection."
+    ],
+    "ingestion_command": "python -m pipeline.contourcast.cli ingest-bathymetry --input RAW.tif --output DATA/bathymetry.npz --source-id noaa_ncei_cudem --vertical-datum PUBLISHED_DATUM --expected-sha256 SHA256"
+  },
+  "expected_formats": ["GeoTIFF", "NetCDF plus metadata"],
+  "citation": "NOAA National Centers for Environmental Information. Coastal Elevation Models / Coastal Relief Models. Record product version, DOI when supplied, and access date.",
+  "limitations": [
+    "Not for navigation.",
+    "Horizontal and vertical datums vary by product and vintage and must not be mixed without transformation.",
+    "Resolution does not equal positional or vertical accuracy.",
+    "Merged DEM cells may derive from surveys collected at different times and densities."
+  ]
+}

@@ -1,0 +1,30 @@
+{
+  "manifest_version": "1.0",
+  "source_id": "psmfc_recfin",
+  "title": "Pacific Coast Recreational Fisheries Information Network Data Warehouse",
+  "steward": "Pacific States Marine Fisheries Commission",
+  "official_landing_page": "https://www.recfin.org/",
+  "related_official_pages": [
+    "https://reports.psmfc.org/",
+    "https://www.recfin.org/resources/citing-recfin-data-and-documents/"
+  ],
+  "access": {
+    "mode": "manual_official_export",
+    "reason": "The RecFIN warehouse is interactive and query-specific; reproducibility requires retaining the exported file and query parameters rather than assuming a stable download URL.",
+    "instructions": [
+      "Export the selected California sample or estimate table from the official data warehouse.",
+      "Save query parameters and the export timestamp alongside the raw file.",
+      "Preserve state, survey, mode, area, species, time, effort, expansion, and precision fields.",
+      "Only rows with legitimately released point coordinates may enter point-level terrain models."
+    ],
+    "ingestion_command": "python -m pipeline.contourcast.cli ingest-observations --input RECFIN_EXPORT.csv --output DATA/recfin.csv --source-id psmfc_recfin --column-map column_map.json --expected-sha256 SHA256"
+  },
+  "coverage": "Recreational sample data and estimates for Washington, Oregon, and California; product-specific years vary.",
+  "citation": "Pacific States Marine Fisheries Commission, Recreational Fisheries Information Network. Cite the contributing survey, query, and access date.",
+  "limitations": [
+    "Data from different state/federal surveys may use different designs and are not automatically comparable.",
+    "Expanded estimates require survey-design-aware uncertainty handling.",
+    "Public location granularity may be coarser than bathymetry pixels.",
+    "Absence of an observed catch is not proof that a species was absent from a location."
+  ]
+}
