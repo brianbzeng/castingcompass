@@ -59,7 +59,7 @@ Implemented now:
 - static/offline fallback;
 - API/PostGIS contracts;
 - reproducible ten-channel structure, multiscale self-supervision, area-bag weak-supervision, baseline, blocked-validation, ablation, and versioning code;
-- an official USGS 2 m pilot that produces a geographically held-out self-supervised checkpoint without claiming catch skill;
+- an exactly reproduced full-survey USGS 2 m run over 4,096 locations that produces a geographically held-out self-supervised checkpoint without claiming catch skill;
 - dataset/model cards with unrun results clearly marked.
 
 Still required before an accuracy claim:

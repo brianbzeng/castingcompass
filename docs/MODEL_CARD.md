@@ -1,7 +1,8 @@
 # ContourCast model card
 
-**Status:** multiscale encoder and official-bathymetry self-supervised pilot
-implemented; catch heads remain untrained; no catch performance measured.
+**Status:** multiscale encoder and exactly reproduced full-survey official-
+bathymetry self-supervised pretraining implemented; catch heads remain
+untrained; no catch performance measured.
 
 **Version:** 0.2.0
 
@@ -159,6 +160,7 @@ channel order, source version, or coverage contract fails.
 | Synthetic smoke workflow | Implemented | Plumbing test only; numeric output intentionally not reported here |
 | Official-data classical baselines | Unrun | No result |
 | Self-supervised pretraining | [Pilot completed on official USGS 2 m bathymetry](experiments/2026-07-11-usgs-sf-2m-ssl-pilot.md) | Best geographically held-out NT-Xent 2.6161 at epoch 1; optimization/provenance validation only, not catch accuracy |
+| Full-survey self-supervised pretraining | [Completed and exactly reproduced on 4,096 USGS 2 m locations](experiments/2026-07-11-usgs-sf-2m-full-ssl-v1.md) | Best geographically held-out NT-Xent 1.4683 at epoch 20; eligible for habitat probing, not live scoring |
 | Two-head fine-tuning | Unrun | No checkpoint |
 | Geographic generalization | Unrun | No result |
 | Calibration / ablations | Unrun on official data | No result |

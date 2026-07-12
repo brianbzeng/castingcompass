@@ -1,8 +1,9 @@
 # ContourCast dataset card
 
-**Status:** data contract, multiscale structure pipeline, and one reproducible
-official-data self-supervised pilot implemented. Official rasters and weights
-are not bundled. No supervised catch-training dataset has been approved.
+**Status:** data contract, multiscale structure pipeline, and reproducible
+full-survey official-data self-supervised pretraining implemented. Official
+rasters and weights are not bundled. No supervised catch-training dataset has
+been approved.
 
 **Version:** 0.2.0
 
@@ -195,8 +196,9 @@ results.
 
 ## Current results
 
-An official USGS 2 m bathymetry crop has passed the ingestion, resolution audit,
-ten-channel derivation, three-scale corpus, and self-supervised checkpoint
-workflow. This is unlabeled representation learning only. No class balance,
-catch metric, habitat conclusion, or Opportunity Score accuracy improvement is
-claimed.
+The full official USGS 2 m survey has passed windowed ingestion, resolution
+audit, ten-channel derivation, three-scale corpus creation, geographic
+validation, and exactly reproduced self-supervised checkpoint training across
+4,096 sampled locations. This is unlabeled representation learning only. No
+class balance, catch metric, habitat conclusion, or Opportunity Score accuracy
+improvement is claimed.

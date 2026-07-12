@@ -174,8 +174,20 @@ PYTHON_BIN=.venv-geo-deep/bin/python \
 ```
 
 The pilot crop is 4.096 km square and uses 512 locations with 64 m, 256 m,
-and 1,024 m diameter views. Full-area training should stream tiled GeoTIFF/COG
-windows instead of materializing every derived channel in one NPZ.
+and 1,024 m diameter views. The full-area path below streams tiled GeoTIFF/COG
+windows instead of materializing every derived channel in one feature stack.
+
+The production-scale corpus path streams the complete source survey in
+overlapping tiles and reproduces the recorded 4,096-location SSL v1 run:
+
+```bash
+PYTHON_BIN=.venv-geo-deep/bin/python \
+  pipeline/scripts/run_usgs_sf_2m_full_pretraining.sh
+```
+
+The complete run uses five spatial regions, 20 epochs, nearby-negative
+exclusion, and a wider encoder. Its checkpoint remains research-only until it
+passes an independently labeled seafloor-character or habitat probe.
 
 ## Outputs
 
