@@ -18,6 +18,7 @@ from .deep_model import (
     torch,
     train_ssl_epoch,
 )
+from .geo import GeoGrid, verify_projected_crs
 from .metadata import build_run_record, sha256_file, write_json
 from .patches import (
     extract_multiscale_patches,
@@ -26,7 +27,8 @@ from .patches import (
     save_patch_corpus,
 )
 from .splits import spatial_block_folds
-from .structure import load_feature_stack
+from .sources import get_source_manifest
+from .structure import STRUCTURE_CHANNELS, derive_structure_channels, load_feature_stack
 
 
 def build_pretraining_corpus(
@@ -90,6 +92,242 @@ def build_pretraining_corpus(
         "claim_boundary": (
             "This corpus has no catch labels. It can pretrain a terrain representation but "
             "cannot measure or claim fishing-prediction skill."
+        ),
+    }
+    write_json(output_path.with_suffix(".provenance.json"), report)
+    return report
+
+
+def build_geotiff_pretraining_corpus(
+    source_path: Path,
+    output_path: Path,
+    *,
+    source_id: str,
+    vertical_datum: str,
+    expected_sha256: str | None = None,
+    radii_m: Sequence[float] = (32.0, 128.0, 512.0),
+    output_size: int = 33,
+    stride_m: float = 64.0,
+    max_centers: int = 4096,
+    min_valid_fraction: float = 0.8,
+    local_radius: int = 4,
+    broad_radius: int = 24,
+    relief_radius: int = 8,
+    horizontal_accuracy_m: float | None = None,
+    tile_size: int = 1024,
+    seed: int = 42,
+) -> Mapping[str, Any]:
+    """Window a full GeoTIFF into a multiscale corpus without a giant feature stack.
+
+    Structure channels are derived once per overlapping tile with enough halo
+    for the broadest physical view. This keeps native-resolution computation
+    bounded while sampling the complete survey footprint.
+    """
+
+    if source_path.suffix.lower() not in {".tif", ".tiff"}:
+        raise ValueError("streaming pretraining input must be a GeoTIFF")
+    if max_centers < 2 or tile_size < 128:
+        raise ValueError("max_centers must be at least two and tile_size at least 128")
+    if stride_m <= 0:
+        raise ValueError("stride_m must be positive")
+    manifest = get_source_manifest(source_id)
+    source_sha256 = sha256_file(source_path)
+    if expected_sha256 and expected_sha256.lower() != source_sha256:
+        raise ValueError(
+            f"checksum mismatch for {source_path}: expected {expected_sha256}, got {source_sha256}"
+        )
+    try:
+        import rasterio
+        from rasterio.enums import Resampling
+        from rasterio.windows import Window
+    except ImportError as error:
+        raise RuntimeError(
+            "full-survey GeoTIFF corpus building requires rasterio in an isolated environment"
+        ) from error
+
+    radii = tuple(float(radius) for radius in radii_m)
+    if not radii or any(radius <= 0 for radius in radii):
+        raise ValueError("radii_m must contain positive physical radii")
+    generator = np.random.default_rng(seed)
+    patch_parts = []
+    x_parts = []
+    y_parts = []
+    tiles_processed = 0
+    requested_candidates = 0
+    derivation_metadata: Mapping[str, Any] | None = None
+
+    with rasterio.open(source_path) as dataset:
+        if dataset.count != 1 or not dataset.crs:
+            raise ValueError("bathymetry GeoTIFF must have one band and an explicit CRS")
+        crs = dataset.crs.to_string()
+        verify_projected_crs(crs)
+        transform = dataset.transform
+        if not np.isclose(transform.b, 0) or not np.isclose(transform.d, 0):
+            raise ValueError("rotated rasters must be warped north-up before corpus building")
+        dx, dy = float(transform.a), float(abs(transform.e))
+        if dx <= 0 or transform.e >= 0:
+            raise ValueError("expected positive x and negative y pixel sizes")
+        stride_cells = max(1, int(round(stride_m / max(dx, dy))))
+        coarse_height = max(1, int(np.ceil(dataset.height / stride_cells)))
+        coarse_width = max(1, int(np.ceil(dataset.width / stride_cells)))
+        coarse = dataset.read(
+            1,
+            out_shape=(coarse_height, coarse_width),
+            masked=True,
+            resampling=Resampling.nearest,
+        )
+        mask = np.ma.getmaskarray(coarse)
+        values = np.asarray(coarse.filled(np.nan), dtype=float)
+        water = (~mask) & np.isfinite(values) & (values < 0)
+        coarse_rows, coarse_cols = np.nonzero(water)
+        if len(coarse_rows) < 2:
+            raise ValueError("source raster contains too few sampled underwater cells")
+        source_rows = np.minimum(
+            ((coarse_rows + 0.5) * dataset.height / coarse_height).astype(int),
+            dataset.height - 1,
+        )
+        source_cols = np.minimum(
+            ((coarse_cols + 0.5) * dataset.width / coarse_width).astype(int),
+            dataset.width - 1,
+        )
+        # Oversample to absorb coastal/nodata rejections at the broadest view.
+        candidate_limit = min(len(source_rows), max_centers * 2)
+        selected = np.sort(
+            generator.choice(len(source_rows), size=candidate_limit, replace=False)
+        )
+        source_rows = source_rows[selected]
+        source_cols = source_cols[selected]
+        requested_candidates = int(len(source_rows))
+        tile_keys = np.column_stack([source_rows // tile_size, source_cols // tile_size])
+        order = np.lexsort((tile_keys[:, 1], tile_keys[:, 0]))
+        source_rows = source_rows[order]
+        source_cols = source_cols[order]
+        tile_keys = tile_keys[order]
+        unique_keys = np.unique(tile_keys, axis=0)
+        largest_radius_cells = int(np.ceil(max(radii) / min(dx, dy)))
+        halo = largest_radius_cells + max(broad_radius, relief_radius) + 2
+        nodata = dataset.nodata
+        fill_value = nodata if nodata is not None else np.nan
+
+        for tile_row, tile_col in unique_keys:
+            if sum(len(part) for part in x_parts) >= max_centers:
+                break
+            include = (tile_keys[:, 0] == tile_row) & (tile_keys[:, 1] == tile_col)
+            rows = source_rows[include]
+            cols = source_cols[include]
+            inner_row = int(tile_row * tile_size)
+            inner_col = int(tile_col * tile_size)
+            inner_height = min(tile_size, dataset.height - inner_row)
+            inner_width = min(tile_size, dataset.width - inner_col)
+            window = Window(
+                inner_col - halo,
+                inner_row - halo,
+                inner_width + 2 * halo,
+                inner_height + 2 * halo,
+            )
+            elevation = dataset.read(
+                1,
+                window=window,
+                boundless=True,
+                fill_value=fill_value,
+            )
+            window_transform = dataset.window_transform(window)
+            grid = GeoGrid(
+                values=elevation,
+                crs=crs,
+                transform=(
+                    window_transform.c,
+                    window_transform.a,
+                    window_transform.b,
+                    window_transform.f,
+                    window_transform.d,
+                    window_transform.e,
+                ),
+                vertical_datum=vertical_datum,
+                nodata=nodata,
+                source_id=source_id,
+            )
+            channels, derivation_metadata = derive_structure_channels(
+                grid,
+                local_radius=local_radius,
+                broad_radius=broad_radius,
+                relief_radius=relief_radius,
+                horizontal_accuracy_m=horizontal_accuracy_m,
+            )
+            xs = transform.c + (cols + 0.5) * transform.a
+            ys = transform.f + (rows + 0.5) * transform.e
+            try:
+                patches, patch_metadata = extract_multiscale_patches(
+                    channels,
+                    grid,
+                    xs,
+                    ys,
+                    radii_m=radii,
+                    output_size=output_size,
+                    min_valid_fraction=min_valid_fraction,
+                )
+            except ValueError as error:
+                if "no patches meet min_valid_fraction" in str(error):
+                    tiles_processed += 1
+                    continue
+                raise
+            retained = np.asarray(patch_metadata["retained_mask"], dtype=bool)
+            patch_parts.append(patches)
+            x_parts.append(np.asarray(xs, dtype=float)[retained])
+            y_parts.append(np.asarray(ys, dtype=float)[retained])
+            tiles_processed += 1
+
+        if not patch_parts or derivation_metadata is None:
+            raise ValueError("no full-survey patches passed the coverage contract")
+        patches = np.concatenate(patch_parts, axis=0)[:max_centers]
+        x = np.concatenate(x_parts)[:max_centers]
+        y = np.concatenate(y_parts)[:max_centers]
+        if len(patches) < 2:
+            raise ValueError("fewer than two full-survey patches were retained")
+        corpus_metadata: Dict[str, Any] = {
+            "source_path": str(source_path.resolve()),
+            "source_sha256": source_sha256,
+            "source_id": source_id,
+            "source_title": manifest["title"],
+            "official_landing_page": manifest["official_landing_page"],
+            "crs": crs,
+            "vertical_datum": vertical_datum,
+            "source_bounds": list(dataset.bounds),
+            "source_shape": [dataset.height, dataset.width],
+            "native_pixel_m": [dx, dy],
+            "feature_metadata": dict(derivation_metadata),
+            "patch_design": {
+                "radii_m": list(radii),
+                "diameters_m": [2 * radius for radius in radii],
+                "output_size": output_size,
+                "min_valid_fraction": min_valid_fraction,
+            },
+            "sampling": {
+                "method": "full-survey coarse water grid, seeded subsample, tiled derivation",
+                "stride_m": stride_m,
+                "requested_candidates": requested_candidates,
+                "retained_centers": int(len(patches)),
+                "tiles_processed": tiles_processed,
+                "tile_size_cells": tile_size,
+                "halo_cells": halo,
+                "seed": seed,
+            },
+            "label_scope": "unlabeled bathymetry representation pretraining only",
+        }
+    save_patch_corpus(output_path, patches, x, y, STRUCTURE_CHANNELS, corpus_metadata)
+    report = {
+        "status": "completed",
+        "output_path": str(output_path.resolve()),
+        "output_sha256": sha256_file(output_path),
+        "source_sha256": source_sha256,
+        "patches": int(len(patches)),
+        "scales": int(patches.shape[1]),
+        "channels": list(STRUCTURE_CHANNELS),
+        "geographic_bounds": [float(np.min(x)), float(np.min(y)), float(np.max(x)), float(np.max(y))],
+        "sampling": corpus_metadata["sampling"],
+        "claim_boundary": (
+            "This full-survey corpus has no catch labels. It can pretrain a terrain "
+            "representation but cannot measure or claim fishing-prediction skill."
         ),
     }
     write_json(output_path.with_suffix(".provenance.json"), report)

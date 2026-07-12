@@ -13,6 +13,14 @@ from pipeline.contourcast.patches import (
 )
 from pipeline.contourcast.structure import STRUCTURE_CHANNELS, derive_structure_channels
 from pipeline.contourcast.training import normalize_patches, robust_patch_normalization
+from pipeline.contourcast.training import build_geotiff_pretraining_corpus
+
+try:
+    import rasterio
+    from rasterio.transform import from_origin
+except ImportError:
+    rasterio = None
+    from_origin = None
 
 
 class MultiScaleTrainingTests(unittest.TestCase):
@@ -71,6 +79,52 @@ class MultiScaleTrainingTests(unittest.TestCase):
         self.assertEqual(normalized.shape, patches.shape)
         training_values = normalized[train_indices]
         np.testing.assert_allclose(np.median(training_values, axis=(0, 1, 3, 4)), 0, atol=1e-6)
+
+    @unittest.skipIf(rasterio is None, "rasterio is optional")
+    def test_windowed_geotiff_corpus_uses_full_source_contract(self):
+        rows, cols = np.mgrid[0:256, 0:256]
+        elevation = -(5 + 0.02 * rows + np.sin(cols / 8)).astype(np.float32)
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            source = root / "source.tif"
+            output = root / "corpus.npz"
+            with rasterio.open(
+                source,
+                "w",
+                driver="GTiff",
+                height=256,
+                width=256,
+                count=1,
+                dtype="float32",
+                crs="EPSG:32610",
+                transform=from_origin(500000, 4200000, 2, 2),
+                nodata=-9999,
+            ) as dataset:
+                dataset.write(elevation, 1)
+            report = build_geotiff_pretraining_corpus(
+                source,
+                output,
+                source_id="usgs_sf_state_waters_2m",
+                vertical_datum="NAVD88",
+                radii_m=(8, 16, 32),
+                output_size=9,
+                stride_m=16,
+                max_centers=16,
+                min_valid_fraction=1.0,
+                local_radius=2,
+                broad_radius=4,
+                relief_radius=2,
+                horizontal_accuracy_m=2,
+                tile_size=128,
+                seed=7,
+            )
+            patches, x, y, names, metadata = load_patch_corpus(output)
+        self.assertEqual(report["patches"], 16)
+        self.assertEqual(patches.shape, (16, 3, 10, 9, 9))
+        self.assertEqual(len(x), len(y))
+        self.assertEqual(names, STRUCTURE_CHANNELS)
+        self.assertEqual(metadata["source_shape"], [256, 256])
+        self.assertGreaterEqual(metadata["sampling"]["tiles_processed"], 1)
 
 
 if __name__ == "__main__":

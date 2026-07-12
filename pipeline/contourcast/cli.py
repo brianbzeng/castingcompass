@@ -22,7 +22,11 @@ from .terrain import (
     robust_channel_stats,
     save_terrain_stack,
 )
-from .training import build_pretraining_corpus, run_bathymetry_pretraining
+from .training import (
+    build_geotiff_pretraining_corpus,
+    build_pretraining_corpus,
+    run_bathymetry_pretraining,
+)
 from .workflow import run_baseline_workflow, run_smoke_workflow
 
 
@@ -82,6 +86,24 @@ def build_parser() -> argparse.ArgumentParser:
     corpus.add_argument("--max-centers", type=int, default=2000)
     corpus.add_argument("--min-valid-fraction", type=float, default=0.8)
     corpus.add_argument("--seed", type=int, default=42)
+
+    geotiff_corpus = subcommands.add_parser("build-geotiff-pretraining-corpus")
+    geotiff_corpus.add_argument("--input", required=True, type=_path)
+    geotiff_corpus.add_argument("--output", required=True, type=_path)
+    geotiff_corpus.add_argument("--source-id", required=True)
+    geotiff_corpus.add_argument("--vertical-datum", required=True)
+    geotiff_corpus.add_argument("--expected-sha256")
+    geotiff_corpus.add_argument("--radii-m", type=float, nargs="+", default=[32, 128, 512])
+    geotiff_corpus.add_argument("--output-size", type=int, default=33)
+    geotiff_corpus.add_argument("--stride-m", type=float, default=64)
+    geotiff_corpus.add_argument("--max-centers", type=int, default=4096)
+    geotiff_corpus.add_argument("--min-valid-fraction", type=float, default=0.8)
+    geotiff_corpus.add_argument("--local-radius", type=int, default=4)
+    geotiff_corpus.add_argument("--broad-radius", type=int, default=24)
+    geotiff_corpus.add_argument("--relief-radius", type=int, default=8)
+    geotiff_corpus.add_argument("--horizontal-accuracy-m", type=float)
+    geotiff_corpus.add_argument("--tile-size", type=int, default=1024)
+    geotiff_corpus.add_argument("--seed", type=int, default=42)
 
     pretrain = subcommands.add_parser("pretrain-bathymetry")
     pretrain.add_argument("--corpus", required=True, type=_path)
@@ -207,6 +229,27 @@ def main(argv: Sequence[str] | None = None) -> int:
                 stride_m=args.stride_m,
                 max_centers=args.max_centers,
                 min_valid_fraction=args.min_valid_fraction,
+                seed=args.seed,
+            )
+        )
+    elif args.command == "build-geotiff-pretraining-corpus":
+        _print(
+            build_geotiff_pretraining_corpus(
+                args.input,
+                args.output,
+                source_id=args.source_id,
+                vertical_datum=args.vertical_datum,
+                expected_sha256=args.expected_sha256,
+                radii_m=args.radii_m,
+                output_size=args.output_size,
+                stride_m=args.stride_m,
+                max_centers=args.max_centers,
+                min_valid_fraction=args.min_valid_fraction,
+                local_radius=args.local_radius,
+                broad_radius=args.broad_radius,
+                relief_radius=args.relief_radius,
+                horizontal_accuracy_m=args.horizontal_accuracy_m,
+                tile_size=args.tile_size,
                 seed=args.seed,
             )
         )

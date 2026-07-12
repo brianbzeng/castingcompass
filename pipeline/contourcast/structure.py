@@ -29,18 +29,15 @@ STRUCTURE_CHANNELS: Tuple[str, ...] = TERRAIN_CHANNELS + (
 def _window_extreme(values: np.ndarray, radius: int, reducer: str) -> np.ndarray:
     if radius < 1:
         raise ValueError("window radius must be positive")
-    padded = np.pad(values, radius, mode="edge")
-    height, width = values.shape
-    layers = [
-        padded[row : row + height, col : col + width]
-        for row in range(2 * radius + 1)
-        for col in range(2 * radius + 1)
-    ]
-    stack = np.stack(layers)
+    try:
+        from scipy.ndimage import maximum_filter, minimum_filter
+    except ImportError as error:  # pragma: no cover - scipy accompanies sklearn
+        raise RuntimeError("structure relief filters require scipy") from error
+    size = 2 * radius + 1
     if reducer == "min":
-        return np.min(stack, axis=0)
+        return minimum_filter(values, size=size, mode="nearest")
     if reducer == "max":
-        return np.max(stack, axis=0)
+        return maximum_filter(values, size=size, mode="nearest")
     raise ValueError("reducer must be 'min' or 'max'")
 
 
