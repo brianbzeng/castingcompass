@@ -125,6 +125,29 @@ python3 -m unittest discover -s pipeline/tests -v
 
 ## Deployment
 
+## Account and trip data operations
+
+Production account, saved-location, and trip data lives in the Cloudflare D1 database named `contourcast-trips`. In the Cloudflare dashboard, open **Storage & databases → D1 SQL database → contourcast-trips → Console**. The main tables are:
+
+- `users` — account identity and password hashes (never display or export password fields)
+- `auth_sessions` — hashed, expiring session tokens
+- `saved_sites` — account-owned saved fishing locations
+- `trips` — active and completed trip logs, forecast context, moderation state, and advisory AI-review results
+- `email_challenges` — short-lived signup and password-reset codes
+
+Use narrow projections when inspecting production records. For example:
+
+```bash
+npx wrangler d1 execute contourcast-trips --remote --config wrangler.jsonc \
+  --command "SELECT id, user_id, site_id, started_at, ended_at, halibut_encounters, no_catch, moderation_status FROM trips ORDER BY created_at DESC LIMIT 25;"
+```
+
+Email verification and password recovery use Resend. Verify a sending subdomain, then add `RESEND_API_KEY` as a Worker secret and set `AUTH_EMAIL_FROM` to a sender on that verified domain. New-account creation intentionally remains unavailable until the sender is connected; existing accounts can still sign in.
+
+Optional MiMo review is advisory only. Add `MIMO_API_KEY` as a Worker secret to check a completed report for missing or internally inconsistent fields. The review never approves, rejects, or labels an angler as truthful or untruthful, and receives no account email or session data.
+
+The public forecast snapshot refreshes every three hours through `.github/workflows/refresh-snapshot.yml`. That cadence is appropriate for wind, swell, buoy, tide, and temperature inputs. Bathymetry is static survey data and should be refreshed only when a source survey or derived terrain model changes, not every day.
+
 - **PWA:** Cloudflare or Sites-compatible vinext deployment.
 - **API:** Render using `render.yaml`.
 - **Database:** Supabase PostgreSQL with PostGIS; apply `infra/schema.sql`.
