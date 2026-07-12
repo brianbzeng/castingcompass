@@ -559,14 +559,6 @@ export function TripReportFeature({ sites, snapshot, request }: TripReportFeatur
             <button type="button" onClick={() => openPanel("start", sites[0]?.id)}>Start a trip <ArrowIcon /></button>
             <button type="button" onClick={openShareableReport}>Log a past trip</button>
           </div>
-          <div className="stewardship-reminder">
-            <strong>Respect the water.</strong>
-            <p>
-              Pack out line and trash, avoid disturbing wildlife and habitat, and follow current regulations.
-              California halibut must be at least <strong>22 inches total length</strong> to keep.
-              {" "}<a href="https://wildlife.ca.gov/Fishing/Ocean/Regulations/Fishing-Map/San-Francisco" target="_blank" rel="noreferrer">Check CDFW rules ↗</a>
-            </p>
-          </div>
           <small>
             Beta · reports are reviewed before model use. Public results never expose exact coordinates,
             notes, photos, or identity.

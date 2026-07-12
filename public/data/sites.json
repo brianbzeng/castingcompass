@@ -9,15 +9,33 @@
     "access": "Public NPS beach reached from the Limantour parking area; verify wildlife closures and surf conditions before leaving.",
     "regulationUrl": "https://wildlife.ca.gov/Fishing/Ocean/Regulations/Fishing-Map/San-Francisco",
     "depthProfile": "Broad shallow sand flat that deepens gradually outside the first breakers.",
-    "structureTags": ["sand-flat", "trough", "estuary-mouth"],
+    "structureTags": [
+      "sand-flat",
+      "trough",
+      "estuary-mouth"
+    ],
     "parking": "Free NPS lot; fills on summer weekends.",
     "transit": "No regular transit; long bicycle approach from Bear Valley.",
-    "amenities": ["restrooms", "picnic-tables"],
+    "amenities": [
+      "restrooms",
+      "picnic-tables"
+    ],
     "habitatPrior": 72,
     "tideStation": "9415020",
     "weatherAnchor": "point-reyes",
-    "castingZone": {"radiusMeters": 650, "bearingDegrees": 205, "targetDepthMeters": [1, 7], "exposure": "open-coast"},
-    "accessSourceUrl": "https://www.nps.gov/pore/planyourvisit/beaches.htm"
+    "castingZone": {
+      "radiusMeters": 650,
+      "bearingDegrees": 205,
+      "targetDepthMeters": [
+        1,
+        7
+      ],
+      "exposure": "open-coast"
+    },
+    "accessSourceUrl": "https://www.nps.gov/pore/planyourvisit/beaches.htm",
+    "streetViewLatitude": 38.028717,
+    "streetViewLongitude": -122.8826,
+    "streetViewRoadDistanceMeters": 204
   },
   {
     "id": "drakes-beach",
@@ -29,15 +47,33 @@
     "access": "Public NPS beach below the Kenneth C. Patrick Visitor Center; seasonal wildlife restrictions can affect nearby shoreline.",
     "regulationUrl": "https://wildlife.ca.gov/Fishing/Ocean/Regulations/Fishing-Map/San-Francisco",
     "depthProfile": "Protected sandy shelf with a gentler nearshore slope than the outer Point Reyes beaches.",
-    "structureTags": ["sand-flat", "shelf-break", "protected-bay"],
+    "structureTags": [
+      "sand-flat",
+      "shelf-break",
+      "protected-bay"
+    ],
     "parking": "Large free NPS lot.",
     "transit": "No regular public transit.",
-    "amenities": ["restrooms", "visitor-center"],
+    "amenities": [
+      "restrooms",
+      "visitor-center"
+    ],
     "habitatPrior": 75,
     "tideStation": "9415020",
     "weatherAnchor": "point-reyes",
-    "castingZone": {"radiusMeters": 550, "bearingDegrees": 155, "targetDepthMeters": [1, 8], "exposure": "semi-protected"},
-    "accessSourceUrl": "https://www.nps.gov/pore/planyourvisit/beaches.htm"
+    "castingZone": {
+      "radiusMeters": 550,
+      "bearingDegrees": 155,
+      "targetDepthMeters": [
+        1,
+        8
+      ],
+      "exposure": "semi-protected"
+    },
+    "accessSourceUrl": "https://www.nps.gov/pore/planyourvisit/beaches.htm",
+    "streetViewLatitude": 38.027623,
+    "streetViewLongitude": -122.961989,
+    "streetViewRoadDistanceMeters": 35
   },
   {
     "id": "point-reyes-south-beach",
@@ -49,15 +85,32 @@
     "access": "Public NPS ocean beach from the South Beach lot; exposed surf, sneaker waves, and seasonal closures make a same-day access check essential.",
     "regulationUrl": "https://wildlife.ca.gov/Fishing/Ocean/Regulations/Fishing-Map/San-Francisco",
     "depthProfile": "Steep high-energy beach face with mobile bars and troughs.",
-    "structureTags": ["sand-bar", "trough", "open-coast"],
+    "structureTags": [
+      "sand-bar",
+      "trough",
+      "open-coast"
+    ],
     "parking": "Free NPS lot with a short sand walk.",
     "transit": "No regular public transit.",
-    "amenities": ["restrooms"],
+    "amenities": [
+      "restrooms"
+    ],
     "habitatPrior": 60,
     "tideStation": "9415020",
     "weatherAnchor": "point-reyes",
-    "castingZone": {"radiusMeters": 600, "bearingDegrees": 245, "targetDepthMeters": [1, 9], "exposure": "open-coast"},
-    "accessSourceUrl": "https://www.nps.gov/pore/planyourvisit/beaches.htm"
+    "castingZone": {
+      "radiusMeters": 600,
+      "bearingDegrees": 245,
+      "targetDepthMeters": [
+        1,
+        9
+      ],
+      "exposure": "open-coast"
+    },
+    "accessSourceUrl": "https://www.nps.gov/pore/planyourvisit/beaches.htm",
+    "streetViewLatitude": 38.047151,
+    "streetViewLongitude": -122.987637,
+    "streetViewRoadDistanceMeters": 558
   },
   {
     "id": "bolinas-beach",
@@ -69,15 +122,32 @@
     "access": "Public sandy beach reached at the end of Brighton Avenue; stay clear of the Bolinas Lagoon harbor entrance and private property.",
     "regulationUrl": "https://wildlife.ca.gov/Fishing/Ocean/Regulations/Fishing-Map/San-Francisco",
     "depthProfile": "Shallow sandy embayment beside a tidal-lagoon channel.",
-    "structureTags": ["lagoon-mouth", "sand-flat", "channel-edge"],
+    "structureTags": [
+      "lagoon-mouth",
+      "sand-flat",
+      "channel-edge"
+    ],
     "parking": "Very limited street parking; do not block driveways.",
     "transit": "Marin Transit serves downtown Bolinas on limited schedules.",
-    "amenities": ["seasonal-restrooms"],
+    "amenities": [
+      "seasonal-restrooms"
+    ],
     "habitatPrior": 81,
     "tideStation": "9415020",
     "weatherAnchor": "marin-coast",
-    "castingZone": {"radiusMeters": 400, "bearingDegrees": 170, "targetDepthMeters": [1, 7], "exposure": "semi-protected"},
-    "accessSourceUrl": "https://www.parks.ca.gov/?page_id=470"
+    "castingZone": {
+      "radiusMeters": 400,
+      "bearingDegrees": 170,
+      "targetDepthMeters": [
+        1,
+        7
+      ],
+      "exposure": "semi-protected"
+    },
+    "accessSourceUrl": "https://www.parks.ca.gov/?page_id=470",
+    "streetViewLatitude": 37.908748,
+    "streetViewLongitude": -122.686796,
+    "streetViewRoadDistanceMeters": 10
   },
   {
     "id": "stinson-beach",
@@ -89,15 +159,34 @@
     "access": "Public GGNRA beach; fish outside guarded swim zones and confirm posted restrictions.",
     "regulationUrl": "https://wildlife.ca.gov/Fishing/Ocean/Regulations/Fishing-Map/San-Francisco",
     "depthProfile": "Long sandy beach with seasonal troughs and bars.",
-    "structureTags": ["sand-bar", "trough", "open-coast"],
+    "structureTags": [
+      "sand-bar",
+      "trough",
+      "open-coast"
+    ],
     "parking": "Large free lot that fills early on warm days.",
     "transit": "Marin Transit route 61 serves Stinson Beach.",
-    "amenities": ["restrooms", "showers", "picnic-tables"],
+    "amenities": [
+      "restrooms",
+      "showers",
+      "picnic-tables"
+    ],
     "habitatPrior": 70,
     "tideStation": "9415020",
     "weatherAnchor": "marin-coast",
-    "castingZone": {"radiusMeters": 650, "bearingDegrees": 220, "targetDepthMeters": [1, 8], "exposure": "open-coast"},
-    "accessSourceUrl": "https://www.nps.gov/goga/planyourvisit/stinson-beach.htm"
+    "castingZone": {
+      "radiusMeters": 650,
+      "bearingDegrees": 220,
+      "targetDepthMeters": [
+        1,
+        8
+      ],
+      "exposure": "open-coast"
+    },
+    "accessSourceUrl": "https://www.nps.gov/goga/planyourvisit/stinson-beach.htm",
+    "streetViewLatitude": 37.899188,
+    "streetViewLongitude": -122.644174,
+    "streetViewRoadDistanceMeters": 23
   },
   {
     "id": "muir-beach",
@@ -109,15 +198,33 @@
     "access": "Public GGNRA cove reached by a footbridge; small beach and strong shorebreak require extra spacing and caution.",
     "regulationUrl": "https://wildlife.ca.gov/Fishing/Ocean/Regulations/Fishing-Map/San-Francisco",
     "depthProfile": "Compact sand-and-gravel cove bounded by rocky points.",
-    "structureTags": ["cove", "rock-sand-edge", "creek-mouth"],
+    "structureTags": [
+      "cove",
+      "rock-sand-edge",
+      "creek-mouth"
+    ],
     "parking": "Free GGNRA lot; capacity is limited.",
     "transit": "No regular public transit.",
-    "amenities": ["restrooms", "picnic-tables"],
+    "amenities": [
+      "restrooms",
+      "picnic-tables"
+    ],
     "habitatPrior": 66,
     "tideStation": "9414290",
     "weatherAnchor": "marin-coast",
-    "castingZone": {"radiusMeters": 260, "bearingDegrees": 235, "targetDepthMeters": [1, 8], "exposure": "open-coast"},
-    "accessSourceUrl": "https://www.nps.gov/goga/planyourvisit/muir-beach.htm"
+    "castingZone": {
+      "radiusMeters": 260,
+      "bearingDegrees": 235,
+      "targetDepthMeters": [
+        1,
+        8
+      ],
+      "exposure": "open-coast"
+    },
+    "accessSourceUrl": "https://www.nps.gov/goga/planyourvisit/muir-beach.htm",
+    "streetViewLatitude": 37.862517,
+    "streetViewLongitude": -122.57934,
+    "streetViewRoadDistanceMeters": 36
   },
   {
     "id": "rodeo-beach",
@@ -129,15 +236,33 @@
     "access": "Public GGNRA beach at Fort Cronkhite; exposed shorebreak and fast-changing surf demand conservative judgment.",
     "regulationUrl": "https://wildlife.ca.gov/Fishing/Ocean/Regulations/Fishing-Map/San-Francisco",
     "depthProfile": "Coarse sand and gravel beach with a steep face near a lagoon outlet.",
-    "structureTags": ["lagoon-mouth", "gravel-slope", "rock-sand-edge"],
+    "structureTags": [
+      "lagoon-mouth",
+      "gravel-slope",
+      "rock-sand-edge"
+    ],
     "parking": "Free Fort Cronkhite lots.",
     "transit": "Seasonal Muni 76X service varies; verify schedule.",
-    "amenities": ["restrooms", "picnic-tables"],
+    "amenities": [
+      "restrooms",
+      "picnic-tables"
+    ],
     "habitatPrior": 65,
     "tideStation": "9414290",
     "weatherAnchor": "marin-coast",
-    "castingZone": {"radiusMeters": 420, "bearingDegrees": 245, "targetDepthMeters": [1, 10], "exposure": "open-coast"},
-    "accessSourceUrl": "https://www.nps.gov/goga/planyourvisit/rodeo-beach.htm"
+    "castingZone": {
+      "radiusMeters": 420,
+      "bearingDegrees": 245,
+      "targetDepthMeters": [
+        1,
+        10
+      ],
+      "exposure": "open-coast"
+    },
+    "accessSourceUrl": "https://www.nps.gov/goga/planyourvisit/rodeo-beach.htm",
+    "streetViewLatitude": 37.831862,
+    "streetViewLongitude": -122.536599,
+    "streetViewRoadDistanceMeters": 132
   },
   {
     "id": "mcnears-beach-pier",
@@ -149,38 +274,76 @@
     "access": "Public Marin County fishing pier inside McNears Beach Park; park hours and vehicle entry fees apply.",
     "regulationUrl": "https://wildlife.ca.gov/Fishing/Ocean/Regulations/Fishing-Map/sf-bay",
     "depthProfile": "Shallow bay margin dropping toward the San Rafael channel system.",
-    "structureTags": ["pier-pilings", "mud-sand-flat", "channel-edge"],
+    "structureTags": [
+      "pier-pilings",
+      "mud-sand-flat",
+      "channel-edge"
+    ],
     "parking": "Paid park entry with parking near the pier.",
     "transit": "No direct regular transit.",
-    "amenities": ["restrooms", "picnic-tables", "fish-cleaning-area"],
+    "amenities": [
+      "restrooms",
+      "picnic-tables",
+      "fish-cleaning-area"
+    ],
     "habitatPrior": 77,
     "tideStation": "9414863",
     "weatherAnchor": "north-bay",
-    "castingZone": {"radiusMeters": 150, "bearingDegrees": 80, "targetDepthMeters": [1, 7], "exposure": "bay"},
-    "accessSourceUrl": "https://www.parks.marincounty.org/parkspreserves/mcnears-beach"
+    "castingZone": {
+      "radiusMeters": 150,
+      "bearingDegrees": 80,
+      "targetDepthMeters": [
+        1,
+        7
+      ],
+      "exposure": "bay"
+    },
+    "accessSourceUrl": "https://www.parks.marincounty.org/parkspreserves/mcnears-beach",
+    "streetViewLatitude": 37.994089,
+    "streetViewLongitude": -122.457406,
+    "streetViewRoadDistanceMeters": 9
   },
   {
     "id": "paradise-beach-pier",
     "name": "Paradise Beach Pier",
-    "latitude": 37.9120,
-    "longitude": -122.4750,
+    "latitude": 37.912,
+    "longitude": -122.475,
     "region": "North Bay",
     "type": "Pier",
     "access": "Public Marin County fishing pier in Paradise Beach Park; posted park hours apply. Marin County eliminated park entry fees in 2023.",
     "regulationUrl": "https://wildlife.ca.gov/Fishing/Ocean/Regulations/Fishing-Map/sf-bay",
     "depthProfile": "Pier reaches from a narrow rocky-sand shelf toward deeper central-bay water.",
-    "structureTags": ["pier-pilings", "rock-sand-edge", "slope-break"],
+    "structureTags": [
+      "pier-pilings",
+      "rock-sand-edge",
+      "slope-break"
+    ],
     "parking": "Free park entry and an on-site lot close to the pier; capacity can be limited at busy times.",
     "transit": "No direct regular transit.",
-    "amenities": ["restrooms", "picnic-tables", "fish-cleaning-area"],
+    "amenities": [
+      "restrooms",
+      "picnic-tables",
+      "fish-cleaning-area"
+    ],
     "habitatPrior": 79,
     "tideStation": "9414290",
     "weatherAnchor": "north-bay",
-    "castingZone": {"radiusMeters": 170, "bearingDegrees": 105, "targetDepthMeters": [2, 11], "exposure": "bay"},
+    "castingZone": {
+      "radiusMeters": 170,
+      "bearingDegrees": 105,
+      "targetDepthMeters": [
+        2,
+        11
+      ],
+      "exposure": "bay"
+    },
     "accessSourceUrl": "https://www.parks.marincounty.gov/parkspreserves/parks/paradise-beach-park",
     "accessStatus": "open",
     "accessStatusNote": "Open public park and fishing pier during posted hours; park entry fees were eliminated in 2023.",
-    "accessStatusUpdatedAt": "2026-07-11"
+    "accessStatusUpdatedAt": "2026-07-11",
+    "streetViewLatitude": 37.912058,
+    "streetViewLongitude": -122.47446,
+    "streetViewRoadDistanceMeters": 48
   },
   {
     "id": "fort-baker-pier",
@@ -192,38 +355,74 @@
     "access": "Public GGNRA fishing pier at Horseshoe Cove; strong Golden Gate current can make some tide stages unfishable.",
     "regulationUrl": "https://wildlife.ca.gov/Fishing/Ocean/Regulations/Fishing-Map/sf-bay",
     "depthProfile": "Protected cove shelf close to a steep, high-current channel edge.",
-    "structureTags": ["pier-pilings", "channel-edge", "rock-sand-edge"],
+    "structureTags": [
+      "pier-pilings",
+      "channel-edge",
+      "rock-sand-edge"
+    ],
     "parking": "Free and paid spaces around Fort Baker; obey posted restrictions.",
     "transit": "Golden Gate Transit stops require a walk; bicycle access available.",
-    "amenities": ["restrooms", "benches"],
+    "amenities": [
+      "restrooms",
+      "benches"
+    ],
     "habitatPrior": 82,
     "tideStation": "9414290",
     "weatherAnchor": "golden-gate",
-    "castingZone": {"radiusMeters": 170, "bearingDegrees": 145, "targetDepthMeters": [2, 15], "exposure": "channel"},
-    "accessSourceUrl": "https://www.nps.gov/goga/planyourvisit/fort-baker.htm"
+    "castingZone": {
+      "radiusMeters": 170,
+      "bearingDegrees": 145,
+      "targetDepthMeters": [
+        2,
+        15
+      ],
+      "exposure": "channel"
+    },
+    "accessSourceUrl": "https://www.nps.gov/goga/planyourvisit/fort-baker.htm",
+    "streetViewLatitude": 37.833983,
+    "streetViewLongitude": -122.475873,
+    "streetViewRoadDistanceMeters": 131
   },
   {
     "id": "torpedo-wharf",
     "name": "Torpedo Wharf",
     "latitude": 37.8106,
-    "longitude": -122.4760,
+    "longitude": -122.476,
     "region": "San Francisco",
     "type": "Pier",
     "access": "Public NPS fishing pier east of Fort Point; cracked and heaving asphalt creates uneven surfaces, and the wharf is exposed to strong current, wind, and large vessel wakes.",
     "regulationUrl": "https://wildlife.ca.gov/Fishing/Ocean/Regulations/Fishing-Map/sf-bay",
     "depthProfile": "Narrow shelf at the edge of the Golden Gate channel.",
-    "structureTags": ["pier-pilings", "channel-edge", "current-seam"],
+    "structureTags": [
+      "pier-pilings",
+      "channel-edge",
+      "current-seam"
+    ],
     "parking": "Limited free and time-restricted parking near Fort Point; spaces can fill quickly.",
     "transit": "Muni routes and the Presidio shuttle stop within walking distance.",
-    "amenities": ["restrooms-nearby", "benches"],
+    "amenities": [
+      "restrooms-nearby",
+      "benches"
+    ],
     "habitatPrior": 80,
     "tideStation": "9414290",
     "weatherAnchor": "golden-gate",
-    "castingZone": {"radiusMeters": 160, "bearingDegrees": 35, "targetDepthMeters": [3, 18], "exposure": "channel"},
+    "castingZone": {
+      "radiusMeters": 160,
+      "bearingDegrees": 35,
+      "targetDepthMeters": [
+        3,
+        18
+      ],
+      "exposure": "channel"
+    },
     "accessSourceUrl": "https://www.nps.gov/thingstodo/torpedo-wharf-fishing.htm",
     "accessStatus": "limited",
     "accessStatusNote": "The wharf is public, but NPS notes cracked and heaving asphalt; use care on uneven surfaces.",
-    "accessStatusUpdatedAt": "2026-07-11"
+    "accessStatusUpdatedAt": "2026-07-11",
+    "streetViewLatitude": 37.810468,
+    "streetViewLongitude": -122.476534,
+    "streetViewRoadDistanceMeters": 49
   },
   {
     "id": "crissy-field-east-beach",
@@ -235,15 +434,34 @@
     "access": "Public GGNRA beach; share the shoreline with swimmers, boardsports users, and dogs, and avoid signed restoration areas.",
     "regulationUrl": "https://wildlife.ca.gov/Fishing/Ocean/Regulations/Fishing-Map/sf-bay",
     "depthProfile": "Shallow sand flat with a gradual slope toward the Golden Gate approach channel.",
-    "structureTags": ["sand-flat", "channel-shoulder", "current-seam"],
+    "structureTags": [
+      "sand-flat",
+      "channel-shoulder",
+      "current-seam"
+    ],
     "parking": "Paid lots and limited free spaces around Crissy Field.",
     "transit": "Muni and Presidio shuttle stops nearby.",
-    "amenities": ["restrooms", "water", "picnic-tables"],
+    "amenities": [
+      "restrooms",
+      "water",
+      "picnic-tables"
+    ],
     "habitatPrior": 84,
     "tideStation": "9414290",
     "weatherAnchor": "golden-gate",
-    "castingZone": {"radiusMeters": 420, "bearingDegrees": 25, "targetDepthMeters": [1, 8], "exposure": "bay"},
-    "accessSourceUrl": "https://www.nps.gov/goga/planyourvisit/crissy-field.htm"
+    "castingZone": {
+      "radiusMeters": 420,
+      "bearingDegrees": 25,
+      "targetDepthMeters": [
+        1,
+        8
+      ],
+      "exposure": "bay"
+    },
+    "accessSourceUrl": "https://www.nps.gov/goga/planyourvisit/crissy-field.htm",
+    "streetViewLatitude": 37.804876,
+    "streetViewLongitude": -122.450988,
+    "streetViewRoadDistanceMeters": 17
   },
   {
     "id": "baker-beach",
@@ -255,75 +473,144 @@
     "access": "Public GGNRA beach; powerful shorebreak and rip currents are common, and the north end is clothing optional.",
     "regulationUrl": "https://wildlife.ca.gov/Fishing/Ocean/Regulations/Fishing-Map/San-Francisco",
     "depthProfile": "Steep sandy beach beside rocky Golden Gate headlands.",
-    "structureTags": ["sand-trough", "rock-sand-edge", "channel-approach"],
+    "structureTags": [
+      "sand-trough",
+      "rock-sand-edge",
+      "channel-approach"
+    ],
     "parking": "Free NPS lots with limited capacity.",
     "transit": "Muni route 29 stops near the access road.",
-    "amenities": ["restrooms", "picnic-tables"],
+    "amenities": [
+      "restrooms",
+      "picnic-tables"
+    ],
     "habitatPrior": 74,
     "tideStation": "9414290",
     "weatherAnchor": "sf-coast",
-    "castingZone": {"radiusMeters": 520, "bearingDegrees": 295, "targetDepthMeters": [1, 10], "exposure": "open-coast"},
-    "accessSourceUrl": "https://www.nps.gov/goga/planyourvisit/baker-beach.htm"
+    "castingZone": {
+      "radiusMeters": 520,
+      "bearingDegrees": 295,
+      "targetDepthMeters": [
+        1,
+        10
+      ],
+      "exposure": "open-coast"
+    },
+    "accessSourceUrl": "https://www.nps.gov/goga/planyourvisit/baker-beach.htm",
+    "streetViewLatitude": 37.793178,
+    "streetViewLongitude": -122.483132,
+    "streetViewRoadDistanceMeters": 69
   },
   {
     "id": "china-beach",
     "name": "China Beach",
-    "latitude": 37.7880,
+    "latitude": 37.788,
     "longitude": -122.4918,
     "region": "San Francisco Coast",
     "type": "Beach",
     "access": "Public GGNRA cove reached by stairs and a steep path; confirm construction or access notices before visiting.",
     "regulationUrl": "https://wildlife.ca.gov/Fishing/Ocean/Regulations/Fishing-Map/San-Francisco",
     "depthProfile": "Small sandy pocket framed by rocky points and a nearshore slope break.",
-    "structureTags": ["cove", "rock-sand-edge", "slope-break"],
+    "structureTags": [
+      "cove",
+      "rock-sand-edge",
+      "slope-break"
+    ],
     "parking": "Very limited street parking.",
     "transit": "Muni routes stop in Sea Cliff within walking distance.",
-    "amenities": ["restrooms-seasonal"],
+    "amenities": [
+      "restrooms-seasonal"
+    ],
     "habitatPrior": 69,
     "tideStation": "9414290",
     "weatherAnchor": "sf-coast",
-    "castingZone": {"radiusMeters": 240, "bearingDegrees": 320, "targetDepthMeters": [1, 9], "exposure": "open-coast"},
-    "accessSourceUrl": "https://www.nps.gov/goga/planyourvisit/china-beach.htm"
+    "castingZone": {
+      "radiusMeters": 240,
+      "bearingDegrees": 320,
+      "targetDepthMeters": [
+        1,
+        9
+      ],
+      "exposure": "open-coast"
+    },
+    "accessSourceUrl": "https://www.nps.gov/goga/planyourvisit/china-beach.htm",
+    "streetViewLatitude": 37.787054,
+    "streetViewLongitude": -122.491105,
+    "streetViewRoadDistanceMeters": 122
   },
   {
     "id": "ocean-beach-north",
     "name": "Ocean Beach North",
     "latitude": 37.7742,
-    "longitude": -122.5130,
+    "longitude": -122.513,
     "region": "San Francisco Coast",
     "type": "Beach",
     "access": "Public GGNRA beach near Balboa Street; high-energy surf, sneaker waves, and shifting bars require conservative conditions.",
     "regulationUrl": "https://wildlife.ca.gov/Fishing/Ocean/Regulations/Fishing-Map/San-Francisco",
     "depthProfile": "High-energy sand beach with mobile bars and deep troughs.",
-    "structureTags": ["sand-bar", "trough", "open-coast"],
+    "structureTags": [
+      "sand-bar",
+      "trough",
+      "open-coast"
+    ],
     "parking": "Large roadside lots and street parking.",
     "transit": "Muni lines 5R, 31, and N Judah serve nearby access points.",
-    "amenities": ["restrooms-nearby"],
+    "amenities": [
+      "restrooms-nearby"
+    ],
     "habitatPrior": 68,
     "tideStation": "9414290",
     "weatherAnchor": "sf-coast",
-    "castingZone": {"radiusMeters": 650, "bearingDegrees": 270, "targetDepthMeters": [1, 11], "exposure": "open-coast"},
-    "accessSourceUrl": "https://www.nps.gov/goga/planyourvisit/oceanbeach.htm"
+    "castingZone": {
+      "radiusMeters": 650,
+      "bearingDegrees": 270,
+      "targetDepthMeters": [
+        1,
+        11
+      ],
+      "exposure": "open-coast"
+    },
+    "accessSourceUrl": "https://www.nps.gov/goga/planyourvisit/oceanbeach.htm",
+    "streetViewLatitude": 37.774321,
+    "streetViewLongitude": -122.511491,
+    "streetViewRoadDistanceMeters": 134
   },
   {
     "id": "ocean-beach-south",
     "name": "Ocean Beach South",
-    "latitude": 37.7350,
+    "latitude": 37.735,
     "longitude": -122.5063,
     "region": "San Francisco Coast",
     "type": "Beach",
     "access": "Public GGNRA beach south of Sloat Boulevard; check temporary closures and erosion work, and avoid heavy surf.",
     "regulationUrl": "https://wildlife.ca.gov/Fishing/Ocean/Regulations/Fishing-Map/San-Francisco",
     "depthProfile": "Broad sand beach with shifting nearshore bars and cuts.",
-    "structureTags": ["sand-bar", "trough", "rip-channel"],
+    "structureTags": [
+      "sand-bar",
+      "trough",
+      "rip-channel"
+    ],
     "parking": "Roadside parking varies with construction and closures.",
     "transit": "Muni L bus and route 23 serve the Sloat area.",
-    "amenities": ["restrooms-nearby"],
+    "amenities": [
+      "restrooms-nearby"
+    ],
     "habitatPrior": 71,
     "tideStation": "9414290",
     "weatherAnchor": "sf-coast",
-    "castingZone": {"radiusMeters": 700, "bearingDegrees": 270, "targetDepthMeters": [1, 11], "exposure": "open-coast"},
-    "accessSourceUrl": "https://www.nps.gov/goga/planyourvisit/oceanbeach.htm"
+    "castingZone": {
+      "radiusMeters": 700,
+      "bearingDegrees": 270,
+      "targetDepthMeters": [
+        1,
+        11
+      ],
+      "exposure": "open-coast"
+    },
+    "accessSourceUrl": "https://www.nps.gov/goga/planyourvisit/oceanbeach.htm",
+    "streetViewLatitude": 37.734878,
+    "streetViewLongitude": -122.505861,
+    "streetViewRoadDistanceMeters": 41
   },
   {
     "id": "pier-7",
@@ -335,15 +622,34 @@
     "access": "Public Port of San Francisco pier; keep clear of promenade users and obey posted fishing restrictions.",
     "regulationUrl": "https://wildlife.ca.gov/Fishing/Ocean/Regulations/Fishing-Map/sf-bay",
     "depthProfile": "Urban pier over a sloping mud-and-sand shelf close to deeper ferry water.",
-    "structureTags": ["pier-pilings", "slope-break", "current-seam"],
+    "structureTags": [
+      "pier-pilings",
+      "slope-break",
+      "current-seam"
+    ],
     "parking": "Paid garages and meters; costly at peak times.",
     "transit": "Muni F line, buses, BART, and ferries are nearby.",
-    "amenities": ["lighting", "benches", "restrooms-nearby"],
+    "amenities": [
+      "lighting",
+      "benches",
+      "restrooms-nearby"
+    ],
     "habitatPrior": 78,
     "tideStation": "9414290",
     "weatherAnchor": "central-bay",
-    "castingZone": {"radiusMeters": 150, "bearingDegrees": 70, "targetDepthMeters": [2, 13], "exposure": "bay"},
-    "accessSourceUrl": "https://www.sfport.com/"
+    "castingZone": {
+      "radiusMeters": 150,
+      "bearingDegrees": 70,
+      "targetDepthMeters": [
+        2,
+        13
+      ],
+      "exposure": "bay"
+    },
+    "accessSourceUrl": "https://www.sfport.com/",
+    "streetViewLatitude": 37.799598,
+    "streetViewLongitude": -122.397569,
+    "streetViewRoadDistanceMeters": 233
   },
   {
     "id": "pier-14",
@@ -355,15 +661,34 @@
     "access": "Public Port of San Francisco pedestrian pier; fish only where posted rules allow and yield to other pier users.",
     "regulationUrl": "https://wildlife.ca.gov/Fishing/Ocean/Regulations/Fishing-Map/sf-bay",
     "depthProfile": "Pier reaches across a sloping urban shelf into faster central-bay water.",
-    "structureTags": ["pier-pilings", "slope-break", "current-seam"],
+    "structureTags": [
+      "pier-pilings",
+      "slope-break",
+      "current-seam"
+    ],
     "parking": "Paid garages and meters along the Embarcadero.",
     "transit": "Muni, BART, and ferries are within walking distance.",
-    "amenities": ["lighting", "benches", "restrooms-nearby"],
+    "amenities": [
+      "lighting",
+      "benches",
+      "restrooms-nearby"
+    ],
     "habitatPrior": 77,
     "tideStation": "9414290",
     "weatherAnchor": "central-bay",
-    "castingZone": {"radiusMeters": 160, "bearingDegrees": 80, "targetDepthMeters": [2, 14], "exposure": "bay"},
-    "accessSourceUrl": "https://www.sfport.com/"
+    "castingZone": {
+      "radiusMeters": 160,
+      "bearingDegrees": 80,
+      "targetDepthMeters": [
+        2,
+        14
+      ],
+      "exposure": "bay"
+    },
+    "accessSourceUrl": "https://www.sfport.com/",
+    "streetViewLatitude": 37.792777,
+    "streetViewLongitude": -122.391216,
+    "streetViewRoadDistanceMeters": 134
   },
   {
     "id": "crane-cove-park",
@@ -375,15 +700,34 @@
     "access": "Public Port of San Francisco shoreline park; use designated public edges and avoid swim and launch areas.",
     "regulationUrl": "https://wildlife.ca.gov/Fishing/Ocean/Regulations/Fishing-Map/sf-bay",
     "depthProfile": "Protected cove with a shallow sand-mud shelf near old maritime structures.",
-    "structureTags": ["protected-cove", "sand-mud-flat", "pilings"],
+    "structureTags": [
+      "protected-cove",
+      "sand-mud-flat",
+      "pilings"
+    ],
     "parking": "Metered street parking; limited free spaces farther inland.",
     "transit": "Muni T line and buses stop nearby.",
-    "amenities": ["restrooms", "water", "picnic-tables"],
+    "amenities": [
+      "restrooms",
+      "water",
+      "picnic-tables"
+    ],
     "habitatPrior": 74,
     "tideStation": "9414290",
     "weatherAnchor": "central-bay",
-    "castingZone": {"radiusMeters": 220, "bearingDegrees": 75, "targetDepthMeters": [1, 6], "exposure": "protected-bay"},
-    "accessSourceUrl": "https://sfport.com/cranecovepark"
+    "castingZone": {
+      "radiusMeters": 220,
+      "bearingDegrees": 75,
+      "targetDepthMeters": [
+        1,
+        6
+      ],
+      "exposure": "protected-bay"
+    },
+    "accessSourceUrl": "https://sfport.com/cranecovepark",
+    "streetViewLatitude": 37.75031,
+    "streetViewLongitude": -122.382547,
+    "streetViewRoadDistanceMeters": 14
   },
   {
     "id": "herons-head-park-pier",
@@ -395,55 +739,110 @@
     "access": "Public fishing pier and shoreline at Heron's Head Park; protect restored wetlands and respect any posted habitat closures.",
     "regulationUrl": "https://wildlife.ca.gov/Fishing/Ocean/Regulations/Fishing-Map/sf-bay",
     "depthProfile": "Very shallow mud-sand flats cut by a modest tidal channel.",
-    "structureTags": ["tidal-channel", "mud-sand-flat", "pier-pilings"],
+    "structureTags": [
+      "tidal-channel",
+      "mud-sand-flat",
+      "pier-pilings"
+    ],
     "parking": "Free lot near the park entrance.",
     "transit": "Muni T line and route 19 require a moderate walk.",
-    "amenities": ["restrooms-limited", "benches", "environmental-center"],
+    "amenities": [
+      "restrooms-limited",
+      "benches",
+      "environmental-center"
+    ],
     "habitatPrior": 73,
     "tideStation": "9414290",
     "weatherAnchor": "central-bay",
-    "castingZone": {"radiusMeters": 190, "bearingDegrees": 95, "targetDepthMeters": [1, 5], "exposure": "bay"},
-    "accessSourceUrl": "https://sfport.com/herons-head-park"
+    "castingZone": {
+      "radiusMeters": 190,
+      "bearingDegrees": 95,
+      "targetDepthMeters": [
+        1,
+        5
+      ],
+      "exposure": "bay"
+    },
+    "accessSourceUrl": "https://sfport.com/herons-head-park",
+    "streetViewLatitude": 37.740598,
+    "streetViewLongitude": -122.372616,
+    "streetViewRoadDistanceMeters": 127
   },
   {
     "id": "ferry-point-pier",
     "name": "Ferry Point Fishing Pier",
     "latitude": 37.9253,
-    "longitude": -122.3850,
+    "longitude": -122.385,
     "region": "Richmond",
     "type": "Pier",
     "access": "Public EBRPD pier in Miller/Knox Regional Shoreline; check park hours and any pier maintenance notices.",
     "regulationUrl": "https://wildlife.ca.gov/Fishing/Ocean/Regulations/Fishing-Map/sf-bay",
     "depthProfile": "Pier crosses a shallow sand-mud shelf toward a San Pablo Bay channel edge.",
-    "structureTags": ["pier-pilings", "channel-edge", "sand-mud-flat"],
+    "structureTags": [
+      "pier-pilings",
+      "channel-edge",
+      "sand-mud-flat"
+    ],
     "parking": "Free park lot near Ferry Point.",
     "transit": "AC Transit service to Point Richmond followed by a walk or bicycle ride.",
-    "amenities": ["restrooms", "picnic-tables"],
+    "amenities": [
+      "restrooms",
+      "picnic-tables"
+    ],
     "habitatPrior": 82,
     "tideStation": "9414863",
     "weatherAnchor": "east-bay",
-    "castingZone": {"radiusMeters": 180, "bearingDegrees": 225, "targetDepthMeters": [1, 9], "exposure": "bay"},
-    "accessSourceUrl": "https://www.ebparks.org/parks/miller-knox"
+    "castingZone": {
+      "radiusMeters": 180,
+      "bearingDegrees": 225,
+      "targetDepthMeters": [
+        1,
+        9
+      ],
+      "exposure": "bay"
+    },
+    "accessSourceUrl": "https://www.ebparks.org/parks/miller-knox",
+    "streetViewLatitude": 37.925299,
+    "streetViewLongitude": -122.384996,
+    "streetViewRoadDistanceMeters": 0
   },
   {
     "id": "keller-beach",
     "name": "Keller Beach",
-    "latitude": 37.9210,
+    "latitude": 37.921,
     "longitude": -122.3859,
     "region": "Richmond",
     "type": "Beach",
     "access": "Public EBRPD beach in Miller/Knox; fish away from swimmers and confirm water-contact advisories.",
     "regulationUrl": "https://wildlife.ca.gov/Fishing/Ocean/Regulations/Fishing-Map/sf-bay",
     "depthProfile": "Protected sandy pocket with rocky edges and a gradual bayward slope.",
-    "structureTags": ["cove", "rock-sand-edge", "sand-flat"],
+    "structureTags": [
+      "cove",
+      "rock-sand-edge",
+      "sand-flat"
+    ],
     "parking": "Free park lots; a short walk to the beach.",
     "transit": "AC Transit to Point Richmond, then walk or bicycle.",
-    "amenities": ["restrooms", "picnic-tables"],
+    "amenities": [
+      "restrooms",
+      "picnic-tables"
+    ],
     "habitatPrior": 76,
     "tideStation": "9414863",
     "weatherAnchor": "east-bay",
-    "castingZone": {"radiusMeters": 300, "bearingDegrees": 220, "targetDepthMeters": [1, 7], "exposure": "protected-bay"},
-    "accessSourceUrl": "https://www.ebparks.org/parks/miller-knox"
+    "castingZone": {
+      "radiusMeters": 300,
+      "bearingDegrees": 220,
+      "targetDepthMeters": [
+        1,
+        7
+      ],
+      "exposure": "protected-bay"
+    },
+    "accessSourceUrl": "https://www.ebparks.org/parks/miller-knox",
+    "streetViewLatitude": 37.921161,
+    "streetViewLongitude": -122.385828,
+    "streetViewRoadDistanceMeters": 19
   },
   {
     "id": "point-isabel-shoreline",
@@ -455,15 +854,34 @@
     "access": "Public EBRPD shoreline; the area is heavily used by off-leash dogs, so keep hooks and bait controlled and fish only from durable public edges.",
     "regulationUrl": "https://wildlife.ca.gov/Fishing/Ocean/Regulations/Fishing-Map/sf-bay",
     "depthProfile": "Very shallow mud-sand flat with small tidal drains.",
-    "structureTags": ["mud-sand-flat", "tidal-drain", "riprap"],
+    "structureTags": [
+      "mud-sand-flat",
+      "tidal-drain",
+      "riprap"
+    ],
     "parking": "Free lots, often busy.",
     "transit": "AC Transit 72-series buses and Bay Trail bicycle access.",
-    "amenities": ["restrooms", "water", "cafe-nearby"],
+    "amenities": [
+      "restrooms",
+      "water",
+      "cafe-nearby"
+    ],
     "habitatPrior": 65,
     "tideStation": "9414863",
     "weatherAnchor": "east-bay",
-    "castingZone": {"radiusMeters": 280, "bearingDegrees": 250, "targetDepthMeters": [0.5, 4], "exposure": "bay"},
-    "accessSourceUrl": "https://www.ebparks.org/parks/point-isabel"
+    "castingZone": {
+      "radiusMeters": 280,
+      "bearingDegrees": 250,
+      "targetDepthMeters": [
+        0.5,
+        4
+      ],
+      "exposure": "bay"
+    },
+    "accessSourceUrl": "https://www.ebparks.org/parks/point-isabel",
+    "streetViewLatitude": 37.899069,
+    "streetViewLongitude": -122.324689,
+    "streetViewRoadDistanceMeters": 100
   },
   {
     "id": "albany-bulb",
@@ -475,15 +893,33 @@
     "access": "Public waterfront reached on rough trails; fish from stable shoreline only and avoid unstable rubble and restoration areas.",
     "regulationUrl": "https://wildlife.ca.gov/Fishing/Ocean/Regulations/Fishing-Map/sf-bay",
     "depthProfile": "Riprap peninsula surrounded by shallow flats with a sharper western edge.",
-    "structureTags": ["riprap", "slope-break", "sand-mud-flat"],
+    "structureTags": [
+      "riprap",
+      "slope-break",
+      "sand-mud-flat"
+    ],
     "parking": "Free lot at the Albany waterfront.",
     "transit": "AC Transit and Bay Trail access.",
-    "amenities": ["portable-restrooms", "benches"],
+    "amenities": [
+      "portable-restrooms",
+      "benches"
+    ],
     "habitatPrior": 75,
     "tideStation": "9414863",
     "weatherAnchor": "east-bay",
-    "castingZone": {"radiusMeters": 350, "bearingDegrees": 255, "targetDepthMeters": [1, 7], "exposure": "bay"},
-    "accessSourceUrl": "https://www.albanyca.org/recreation/waterfront"
+    "castingZone": {
+      "radiusMeters": 350,
+      "bearingDegrees": 255,
+      "targetDepthMeters": [
+        1,
+        7
+      ],
+      "exposure": "bay"
+    },
+    "accessSourceUrl": "https://www.albanyca.org/recreation/waterfront",
+    "streetViewLatitude": 37.887543,
+    "streetViewLongitude": -122.315796,
+    "streetViewRoadDistanceMeters": 779
   },
   {
     "id": "berkeley-marina-north-basin",
@@ -495,55 +931,112 @@
     "access": "Public marina shoreline and rock wall; Berkeley Pier is closed, so this location deliberately excludes the closed pier deck.",
     "regulationUrl": "https://wildlife.ca.gov/Fishing/Ocean/Regulations/Fishing-Map/sf-bay",
     "depthProfile": "Riprap edge bordering a dredged marina basin and shallow exterior flat.",
-    "structureTags": ["riprap", "dredged-edge", "marina-mouth"],
+    "structureTags": [
+      "riprap",
+      "dredged-edge",
+      "marina-mouth"
+    ],
     "parking": "Free and metered marina parking depending on area.",
     "transit": "AC Transit route 51B and Bay Trail bicycle access.",
-    "amenities": ["restrooms", "water", "bait-shop-nearby"],
+    "amenities": [
+      "restrooms",
+      "water",
+      "bait-shop-nearby"
+    ],
     "habitatPrior": 78,
     "tideStation": "9414863",
     "weatherAnchor": "east-bay",
-    "castingZone": {"radiusMeters": 300, "bearingDegrees": 285, "targetDepthMeters": [1, 9], "exposure": "bay"},
-    "accessSourceUrl": "https://berkeleyca.gov/community-recreation/parks-recreation/parks/berkeley-marina"
+    "castingZone": {
+      "radiusMeters": 300,
+      "bearingDegrees": 285,
+      "targetDepthMeters": [
+        1,
+        9
+      ],
+      "exposure": "bay"
+    },
+    "accessSourceUrl": "https://berkeleyca.gov/community-recreation/parks-recreation/parks/berkeley-marina",
+    "streetViewLatitude": 37.870537,
+    "streetViewLongitude": -122.314597,
+    "streetViewRoadDistanceMeters": 326
   },
   {
     "id": "cesar-chavez-park",
     "name": "Cesar Chavez Park Shoreline",
-    "latitude": 37.8720,
+    "latitude": 37.872,
     "longitude": -122.3182,
     "region": "East Bay",
     "type": "Shore",
     "access": "Public Berkeley shoreline; use stable riprap access points and keep clear of kite, dog, and trail users.",
     "regulationUrl": "https://wildlife.ca.gov/Fishing/Ocean/Regulations/Fishing-Map/sf-bay",
     "depthProfile": "Riprap peninsula with shallow flats and a modest outer slope break.",
-    "structureTags": ["riprap", "slope-break", "sand-mud-flat"],
+    "structureTags": [
+      "riprap",
+      "slope-break",
+      "sand-mud-flat"
+    ],
     "parking": "Free lots and street parking at the marina.",
     "transit": "AC Transit and Bay Trail bicycle access.",
-    "amenities": ["restrooms-nearby", "water", "picnic-tables"],
+    "amenities": [
+      "restrooms-nearby",
+      "water",
+      "picnic-tables"
+    ],
     "habitatPrior": 76,
     "tideStation": "9414863",
     "weatherAnchor": "east-bay",
-    "castingZone": {"radiusMeters": 360, "bearingDegrees": 275, "targetDepthMeters": [1, 8], "exposure": "bay"},
-    "accessSourceUrl": "https://berkeleyca.gov/community-recreation/parks-recreation/parks/cesar-chavez-park"
+    "castingZone": {
+      "radiusMeters": 360,
+      "bearingDegrees": 275,
+      "targetDepthMeters": [
+        1,
+        8
+      ],
+      "exposure": "bay"
+    },
+    "accessSourceUrl": "https://berkeleyca.gov/community-recreation/parks-recreation/parks/cesar-chavez-park",
+    "streetViewLatitude": 37.870043,
+    "streetViewLongitude": -122.317657,
+    "streetViewRoadDistanceMeters": 222
   },
   {
     "id": "emeryville-marina-pier",
     "name": "Emeryville Marina Fishing Pier",
-    "latitude": 37.8400,
+    "latitude": 37.84,
     "longitude": -122.3151,
     "region": "East Bay",
     "type": "Pier",
     "access": "Public fishing pier at Emeryville Marina; verify posted hours and temporary maintenance closures.",
     "regulationUrl": "https://wildlife.ca.gov/Fishing/Ocean/Regulations/Fishing-Map/sf-bay",
     "depthProfile": "Pier reaches from riprap across a shallow shelf near a dredged marina approach.",
-    "structureTags": ["pier-pilings", "dredged-edge", "riprap"],
+    "structureTags": [
+      "pier-pilings",
+      "dredged-edge",
+      "riprap"
+    ],
     "parking": "Public marina lots; obey permit and time-limit signs.",
     "transit": "Emery Go-Round and Bay Trail bicycle access.",
-    "amenities": ["restrooms", "benches", "restaurants-nearby"],
+    "amenities": [
+      "restrooms",
+      "benches",
+      "restaurants-nearby"
+    ],
     "habitatPrior": 80,
     "tideStation": "9414290",
     "weatherAnchor": "east-bay",
-    "castingZone": {"radiusMeters": 180, "bearingDegrees": 255, "targetDepthMeters": [1, 9], "exposure": "bay"},
-    "accessSourceUrl": "https://www.ci.emeryville.ca.us/"
+    "castingZone": {
+      "radiusMeters": 180,
+      "bearingDegrees": 255,
+      "targetDepthMeters": [
+        1,
+        9
+      ],
+      "exposure": "bay"
+    },
+    "accessSourceUrl": "https://www.ci.emeryville.ca.us/",
+    "streetViewLatitude": 37.839987,
+    "streetViewLongitude": -122.315038,
+    "streetViewRoadDistanceMeters": 6
   },
   {
     "id": "port-view-park-pier",
@@ -555,35 +1048,72 @@
     "access": "Public fishing pier at the west end of 7th Street; observe Port of Oakland security boundaries and posted park hours.",
     "regulationUrl": "https://wildlife.ca.gov/Fishing/Ocean/Regulations/Fishing-Map/sf-bay",
     "depthProfile": "Pier over the dredged Oakland Outer Harbor margin.",
-    "structureTags": ["pier-pilings", "dredged-channel", "slope-break"],
+    "structureTags": [
+      "pier-pilings",
+      "dredged-channel",
+      "slope-break"
+    ],
     "parking": "Free lot when the park is open.",
     "transit": "AC Transit route 72M stops on 7th Street; long bicycle access from BART.",
-    "amenities": ["restrooms-limited", "benches"],
+    "amenities": [
+      "restrooms-limited",
+      "benches"
+    ],
     "habitatPrior": 83,
     "tideStation": "9414750",
     "weatherAnchor": "central-bay",
-    "castingZone": {"radiusMeters": 180, "bearingDegrees": 275, "targetDepthMeters": [3, 14], "exposure": "harbor"},
-    "accessSourceUrl": "https://www.portofoakland.com/community/port-view-park/"
+    "castingZone": {
+      "radiusMeters": 180,
+      "bearingDegrees": 275,
+      "targetDepthMeters": [
+        3,
+        14
+      ],
+      "exposure": "harbor"
+    },
+    "accessSourceUrl": "https://www.portofoakland.com/community/port-view-park/",
+    "streetViewLatitude": 37.806561,
+    "streetViewLongitude": -122.340444,
+    "streetViewRoadDistanceMeters": 575
   },
   {
     "id": "middle-harbor-shoreline",
     "name": "Middle Harbor Shoreline Park",
-    "latitude": 37.8060,
+    "latitude": 37.806,
     "longitude": -122.3297,
     "region": "Oakland",
     "type": "Shore",
     "access": "Public shoreline park with designated fishing areas; stay outside habitat restoration zones and Port security boundaries.",
     "regulationUrl": "https://wildlife.ca.gov/Fishing/Ocean/Regulations/Fishing-Map/sf-bay",
     "depthProfile": "Restored shallow cove beside the dredged Oakland harbor channel.",
-    "structureTags": ["dredged-edge", "sand-mud-flat", "riprap"],
+    "structureTags": [
+      "dredged-edge",
+      "sand-mud-flat",
+      "riprap"
+    ],
     "parking": "Free park lot during posted hours.",
     "transit": "Limited AC Transit; bicycle access from West Oakland BART.",
-    "amenities": ["restrooms", "water", "picnic-tables"],
+    "amenities": [
+      "restrooms",
+      "water",
+      "picnic-tables"
+    ],
     "habitatPrior": 81,
     "tideStation": "9414750",
     "weatherAnchor": "central-bay",
-    "castingZone": {"radiusMeters": 360, "bearingDegrees": 250, "targetDepthMeters": [1, 10], "exposure": "harbor"},
-    "accessSourceUrl": "https://www.portofoakland.com/community/middle-harbor-shoreline-park/"
+    "castingZone": {
+      "radiusMeters": 360,
+      "bearingDegrees": 250,
+      "targetDepthMeters": [
+        1,
+        10
+      ],
+      "exposure": "harbor"
+    },
+    "accessSourceUrl": "https://www.portofoakland.com/community/middle-harbor-shoreline-park/",
+    "streetViewLatitude": 37.807105,
+    "streetViewLongitude": -122.330438,
+    "streetViewRoadDistanceMeters": 139
   },
   {
     "id": "alameda-south-shore-rockwall",
@@ -595,15 +1125,33 @@
     "access": "Public bayfront segments along Shore Line Drive; use legal public access points and avoid protected bird areas and private marina property.",
     "regulationUrl": "https://wildlife.ca.gov/Fishing/Ocean/Regulations/Fishing-Map/sf-bay",
     "depthProfile": "Riprap edge fronting an extensive shallow sand flat.",
-    "structureTags": ["riprap", "sand-flat", "eelgrass-edge"],
+    "structureTags": [
+      "riprap",
+      "sand-flat",
+      "eelgrass-edge"
+    ],
     "parking": "Street and beach parking; restrictions vary by segment.",
     "transit": "AC Transit buses and Cross Alameda Trail connections.",
-    "amenities": ["restrooms-nearby", "benches"],
+    "amenities": [
+      "restrooms-nearby",
+      "benches"
+    ],
     "habitatPrior": 79,
     "tideStation": "9414750",
     "weatherAnchor": "central-bay",
-    "castingZone": {"radiusMeters": 400, "bearingDegrees": 205, "targetDepthMeters": [1, 6], "exposure": "bay"},
-    "accessSourceUrl": "https://www.alamedaca.gov/Departments/Recreation-Parks"
+    "castingZone": {
+      "radiusMeters": 400,
+      "bearingDegrees": 205,
+      "targetDepthMeters": [
+        1,
+        6
+      ],
+      "exposure": "bay"
+    },
+    "accessSourceUrl": "https://www.alamedaca.gov/Departments/Recreation-Parks",
+    "streetViewLatitude": 37.762183,
+    "streetViewLongitude": -122.271294,
+    "streetViewRoadDistanceMeters": 459
   },
   {
     "id": "crown-memorial-state-beach",
@@ -615,15 +1163,34 @@
     "access": "Public state beach managed by EBRPD; fish outside swim zones and heed seasonal wildlife and water-quality notices.",
     "regulationUrl": "https://wildlife.ca.gov/Fishing/Ocean/Regulations/Fishing-Map/sf-bay",
     "depthProfile": "Very broad, shallow sand flat with small tidal channels.",
-    "structureTags": ["sand-flat", "tidal-channel", "eelgrass-edge"],
+    "structureTags": [
+      "sand-flat",
+      "tidal-channel",
+      "eelgrass-edge"
+    ],
     "parking": "Paid park lot plus nearby street parking.",
     "transit": "AC Transit buses and bicycle routes serve the shoreline.",
-    "amenities": ["restrooms", "showers", "picnic-tables"],
+    "amenities": [
+      "restrooms",
+      "showers",
+      "picnic-tables"
+    ],
     "habitatPrior": 78,
     "tideStation": "9414750",
     "weatherAnchor": "central-bay",
-    "castingZone": {"radiusMeters": 600, "bearingDegrees": 215, "targetDepthMeters": [0.5, 5], "exposure": "bay"},
-    "accessSourceUrl": "https://www.ebparks.org/parks/crown-beach"
+    "castingZone": {
+      "radiusMeters": 600,
+      "bearingDegrees": 215,
+      "targetDepthMeters": [
+        0.5,
+        5
+      ],
+      "exposure": "bay"
+    },
+    "accessSourceUrl": "https://www.ebparks.org/parks/crown-beach",
+    "streetViewLatitude": 37.768405,
+    "streetViewLongitude": -122.281159,
+    "streetViewRoadDistanceMeters": 34
   },
   {
     "id": "oyster-bay-shoreline",
@@ -635,15 +1202,33 @@
     "access": "Public EBRPD shoreline; fish from stable public edges and stay out of marsh restoration areas.",
     "regulationUrl": "https://wildlife.ca.gov/Fishing/Ocean/Regulations/Fishing-Map/sf-bay",
     "depthProfile": "Shallow east-bay mud flat beside remediated peninsula riprap.",
-    "structureTags": ["mud-sand-flat", "riprap", "tidal-drain"],
+    "structureTags": [
+      "mud-sand-flat",
+      "riprap",
+      "tidal-drain"
+    ],
     "parking": "Free park lots during posted hours.",
     "transit": "AC Transit and Bay Trail bicycle access.",
-    "amenities": ["restrooms", "picnic-tables"],
+    "amenities": [
+      "restrooms",
+      "picnic-tables"
+    ],
     "habitatPrior": 66,
     "tideStation": "9414523",
     "weatherAnchor": "south-bay",
-    "castingZone": {"radiusMeters": 350, "bearingDegrees": 235, "targetDepthMeters": [0.5, 5], "exposure": "bay"},
-    "accessSourceUrl": "https://www.ebparks.org/parks/oyster-bay"
+    "castingZone": {
+      "radiusMeters": 350,
+      "bearingDegrees": 235,
+      "targetDepthMeters": [
+        0.5,
+        5
+      ],
+      "exposure": "bay"
+    },
+    "accessSourceUrl": "https://www.ebparks.org/parks/oyster-bay",
+    "streetViewLatitude": 37.691432,
+    "streetViewLongitude": -122.184952,
+    "streetViewRoadDistanceMeters": 729
   },
   {
     "id": "san-leandro-marina-shore",
@@ -655,35 +1240,72 @@
     "access": "Public shoreline around Marina Park; redevelopment can change access, so follow construction signs and use designated edges.",
     "regulationUrl": "https://wildlife.ca.gov/Fishing/Ocean/Regulations/Fishing-Map/sf-bay",
     "depthProfile": "Riprap and marina mouth adjoining broad shallow flats.",
-    "structureTags": ["marina-mouth", "riprap", "dredged-edge"],
+    "structureTags": [
+      "marina-mouth",
+      "riprap",
+      "dredged-edge"
+    ],
     "parking": "Free city park lots where open.",
     "transit": "AC Transit connections and Bay Trail access.",
-    "amenities": ["restrooms", "picnic-tables", "playground"],
+    "amenities": [
+      "restrooms",
+      "picnic-tables",
+      "playground"
+    ],
     "habitatPrior": 72,
     "tideStation": "9414523",
     "weatherAnchor": "south-bay",
-    "castingZone": {"radiusMeters": 300, "bearingDegrees": 250, "targetDepthMeters": [1, 7], "exposure": "bay"},
-    "accessSourceUrl": "https://www.sanleandro.org/"
+    "castingZone": {
+      "radiusMeters": 300,
+      "bearingDegrees": 250,
+      "targetDepthMeters": [
+        1,
+        7
+      ],
+      "exposure": "bay"
+    },
+    "accessSourceUrl": "https://www.sanleandro.org/",
+    "streetViewLatitude": 37.695573,
+    "streetViewLongitude": -122.191546,
+    "streetViewRoadDistanceMeters": 347
   },
   {
     "id": "dumbarton-pier",
     "name": "Dumbarton Fishing Pier",
     "latitude": 37.5063,
-    "longitude": -122.1190,
+    "longitude": -122.119,
     "region": "South Bay",
     "type": "Pier",
     "access": "Public fishing pier at Don Edwards San Francisco Bay National Wildlife Refuge; refuge hours and wildlife protections apply.",
     "regulationUrl": "https://wildlife.ca.gov/Fishing/Ocean/Regulations/Fishing-Map/sf-bay",
     "depthProfile": "Long pier crosses expansive mud flats toward the former rail alignment and deeper tidal flow.",
-    "structureTags": ["pier-pilings", "tidal-channel", "mud-sand-flat"],
+    "structureTags": [
+      "pier-pilings",
+      "tidal-channel",
+      "mud-sand-flat"
+    ],
     "parking": "Free refuge lot; gate hours apply.",
     "transit": "No convenient regular transit; Bay Trail bicycle approach available.",
-    "amenities": ["restrooms-limited", "interpretive-panels"],
+    "amenities": [
+      "restrooms-limited",
+      "interpretive-panels"
+    ],
     "habitatPrior": 74,
     "tideStation": "9414523",
     "weatherAnchor": "south-bay",
-    "castingZone": {"radiusMeters": 220, "bearingDegrees": 295, "targetDepthMeters": [1, 8], "exposure": "bay"},
-    "accessSourceUrl": "https://www.fws.gov/refuge/don-edwards-san-francisco-bay"
+    "castingZone": {
+      "radiusMeters": 220,
+      "bearingDegrees": 295,
+      "targetDepthMeters": [
+        1,
+        8
+      ],
+      "exposure": "bay"
+    },
+    "accessSourceUrl": "https://www.fws.gov/refuge/don-edwards-san-francisco-bay",
+    "streetViewLatitude": 37.505922,
+    "streetViewLongitude": -122.118596,
+    "streetViewRoadDistanceMeters": 55
   },
   {
     "id": "coyote-point-jetty",
@@ -695,35 +1317,73 @@
     "access": "Public San Mateo County park shoreline and jetty; park entry fee and hours apply, and rocks can be slick.",
     "regulationUrl": "https://wildlife.ca.gov/Fishing/Ocean/Regulations/Fishing-Map/sf-bay",
     "depthProfile": "Rocky point and marina entrance beside a shallow sand-mud shelf.",
-    "structureTags": ["jetty", "marina-mouth", "slope-break"],
+    "structureTags": [
+      "jetty",
+      "marina-mouth",
+      "slope-break"
+    ],
     "parking": "Paid county park entry with multiple lots.",
     "transit": "Caltrain Burlingame or SamTrans plus a long walk/bicycle ride.",
-    "amenities": ["restrooms", "picnic-tables", "fish-cleaning-area"],
+    "amenities": [
+      "restrooms",
+      "picnic-tables",
+      "fish-cleaning-area"
+    ],
     "habitatPrior": 83,
     "tideStation": "9414523",
     "weatherAnchor": "peninsula-bay",
-    "castingZone": {"radiusMeters": 220, "bearingDegrees": 65, "targetDepthMeters": [1, 9], "exposure": "bay"},
-    "accessSourceUrl": "https://www.smcgov.org/parks/coyote-point-recreation-area"
+    "castingZone": {
+      "radiusMeters": 220,
+      "bearingDegrees": 65,
+      "targetDepthMeters": [
+        1,
+        9
+      ],
+      "exposure": "bay"
+    },
+    "accessSourceUrl": "https://www.smcgov.org/parks/coyote-point-recreation-area",
+    "streetViewLatitude": 37.590411,
+    "streetViewLongitude": -122.319327,
+    "streetViewRoadDistanceMeters": 24
   },
   {
     "id": "seal-point-park",
     "name": "Seal Point Park Shoreline",
-    "latitude": 37.5860,
-    "longitude": -122.3020,
+    "latitude": 37.586,
+    "longitude": -122.302,
     "region": "Peninsula Bay",
     "type": "Shore",
     "access": "Public San Mateo shoreline; fish only from stable public riprap and keep hooks controlled around dogs and Bay Trail users.",
     "regulationUrl": "https://wildlife.ca.gov/Fishing/Ocean/Regulations/Fishing-Map/sf-bay",
     "depthProfile": "Shallow sand-mud flats with riprap and small tidal drains.",
-    "structureTags": ["riprap", "sand-mud-flat", "tidal-drain"],
+    "structureTags": [
+      "riprap",
+      "sand-mud-flat",
+      "tidal-drain"
+    ],
     "parking": "Free city lot.",
     "transit": "SamTrans and Bay Trail bicycle access.",
-    "amenities": ["restrooms", "water", "benches"],
+    "amenities": [
+      "restrooms",
+      "water",
+      "benches"
+    ],
     "habitatPrior": 69,
     "tideStation": "9414523",
     "weatherAnchor": "peninsula-bay",
-    "castingZone": {"radiusMeters": 300, "bearingDegrees": 55, "targetDepthMeters": [0.5, 5], "exposure": "bay"},
-    "accessSourceUrl": "https://www.cityofsanmateo.org/3319/Seal-Point-Park"
+    "castingZone": {
+      "radiusMeters": 300,
+      "bearingDegrees": 55,
+      "targetDepthMeters": [
+        0.5,
+        5
+      ],
+      "exposure": "bay"
+    },
+    "accessSourceUrl": "https://www.cityofsanmateo.org/3319/Seal-Point-Park",
+    "streetViewLatitude": 37.579044,
+    "streetViewLongitude": -122.311627,
+    "streetViewRoadDistanceMeters": 1149
   },
   {
     "id": "oyster-point-fishing-pier",
@@ -735,38 +1395,76 @@
     "access": "Public pier near Oyster Point Marina; redevelopment and maintenance can change routes, so follow posted access signs.",
     "regulationUrl": "https://wildlife.ca.gov/Fishing/Ocean/Regulations/Fishing-Map/sf-bay",
     "depthProfile": "Pier and rock edge adjacent to a dredged marina basin and channel shoulder.",
-    "structureTags": ["pier-pilings", "dredged-edge", "marina-mouth"],
+    "structureTags": [
+      "pier-pilings",
+      "dredged-edge",
+      "marina-mouth"
+    ],
     "parking": "Public marina and park lots; restrictions vary.",
     "transit": "SamTrans, Caltrain shuttle connections, and Bay Trail access.",
-    "amenities": ["restrooms", "benches", "restaurants-nearby"],
+    "amenities": [
+      "restrooms",
+      "benches",
+      "restaurants-nearby"
+    ],
     "habitatPrior": 81,
     "tideStation": "9414523",
     "weatherAnchor": "peninsula-bay",
-    "castingZone": {"radiusMeters": 180, "bearingDegrees": 55, "targetDepthMeters": [1, 9], "exposure": "bay"},
-    "accessSourceUrl": "https://www.ssf.net/departments/parks-recreation"
+    "castingZone": {
+      "radiusMeters": 180,
+      "bearingDegrees": 55,
+      "targetDepthMeters": [
+        1,
+        9
+      ],
+      "exposure": "bay"
+    },
+    "accessSourceUrl": "https://www.ssf.net/departments/parks-recreation",
+    "streetViewLatitude": 37.663678,
+    "streetViewLongitude": -122.378522,
+    "streetViewRoadDistanceMeters": 227
   },
   {
     "id": "pacifica-municipal-pier",
     "name": "Pacifica Municipal Pier",
-    "latitude": 37.6330,
+    "latitude": 37.633,
     "longitude": -122.4938,
     "region": "San Mateo Coast",
     "type": "Pier",
     "access": "Closed to the public since June 4, 2026, while the City of Pacifica assesses and repairs storm-related structural damage. Do not enter the pier; check the City's official status page before travel.",
     "regulationUrl": "https://wildlife.ca.gov/Fishing/Ocean/Regulations/Fishing-Map/San-Francisco",
     "depthProfile": "Long pier over a sandy nearshore shelf with seasonal bars.",
-    "structureTags": ["pier-pilings", "sand-trough", "slope-break"],
+    "structureTags": [
+      "pier-pilings",
+      "sand-trough",
+      "slope-break"
+    ],
     "parking": "Street and public lots near Sharp Park; restrictions apply.",
     "transit": "SamTrans routes 110 and 112 serve nearby stops.",
-    "amenities": ["restrooms-nearby", "lighting", "fish-cleaning-area"],
+    "amenities": [
+      "restrooms-nearby",
+      "lighting",
+      "fish-cleaning-area"
+    ],
     "habitatPrior": 78,
     "tideStation": "9414290",
     "weatherAnchor": "sf-coast",
-    "castingZone": {"radiusMeters": 190, "bearingDegrees": 270, "targetDepthMeters": [2, 13], "exposure": "open-coast"},
+    "castingZone": {
+      "radiusMeters": 190,
+      "bearingDegrees": 270,
+      "targetDepthMeters": [
+        2,
+        13
+      ],
+      "exposure": "open-coast"
+    },
     "accessSourceUrl": "https://www.cityofpacifica.org/departments/public-works/field-services/pacifica-pier",
     "accessStatus": "closed",
     "accessStatusNote": "Closed beginning June 4, 2026, because storm damage compromised structural members. Reopening timing has not been announced.",
-    "accessStatusUpdatedAt": "2026-06-04"
+    "accessStatusUpdatedAt": "2026-06-04",
+    "streetViewLatitude": 37.632747,
+    "streetViewLongitude": -122.4938,
+    "streetViewRoadDistanceMeters": 28
   },
   {
     "id": "sharp-park-beach",
@@ -778,15 +1476,32 @@
     "access": "Public city beach south of the pier; exposed surf and a steep beach face require careful conditions.",
     "regulationUrl": "https://wildlife.ca.gov/Fishing/Ocean/Regulations/Fishing-Map/San-Francisco",
     "depthProfile": "Dark sand beach with a steep inner trough and seasonal bars.",
-    "structureTags": ["sand-trough", "sand-bar", "open-coast"],
+    "structureTags": [
+      "sand-trough",
+      "sand-bar",
+      "open-coast"
+    ],
     "parking": "Street and public lots around Sharp Park.",
     "transit": "SamTrans routes serve Palmetto Avenue.",
-    "amenities": ["restrooms-nearby"],
+    "amenities": [
+      "restrooms-nearby"
+    ],
     "habitatPrior": 72,
     "tideStation": "9414290",
     "weatherAnchor": "sf-coast",
-    "castingZone": {"radiusMeters": 450, "bearingDegrees": 270, "targetDepthMeters": [1, 10], "exposure": "open-coast"},
-    "accessSourceUrl": "https://www.cityofpacifica.org/departments/parks-beaches-recreation"
+    "castingZone": {
+      "radiusMeters": 450,
+      "bearingDegrees": 270,
+      "targetDepthMeters": [
+        1,
+        10
+      ],
+      "exposure": "open-coast"
+    },
+    "accessSourceUrl": "https://www.cityofpacifica.org/departments/parks-beaches-recreation",
+    "streetViewLatitude": 37.627218,
+    "streetViewLongitude": -122.493976,
+    "streetViewRoadDistanceMeters": 104
   },
   {
     "id": "rockaway-beach",
@@ -798,15 +1513,33 @@
     "access": "Public city beach in a small cove; fish only in manageable surf and give swimmers and surfers room.",
     "regulationUrl": "https://wildlife.ca.gov/Fishing/Ocean/Regulations/Fishing-Map/San-Francisco",
     "depthProfile": "Compact sand cove bounded by rocky headlands and a defined trough.",
-    "structureTags": ["cove", "rock-sand-edge", "sand-trough"],
+    "structureTags": [
+      "cove",
+      "rock-sand-edge",
+      "sand-trough"
+    ],
     "parking": "Public lots and street spaces near Rockaway Beach Avenue.",
     "transit": "SamTrans route 110 serves Rockaway Beach.",
-    "amenities": ["restrooms", "restaurants-nearby"],
+    "amenities": [
+      "restrooms",
+      "restaurants-nearby"
+    ],
     "habitatPrior": 75,
     "tideStation": "9414290",
     "weatherAnchor": "sf-coast",
-    "castingZone": {"radiusMeters": 300, "bearingDegrees": 260, "targetDepthMeters": [1, 10], "exposure": "open-coast"},
-    "accessSourceUrl": "https://www.cityofpacifica.org/departments/parks-beaches-recreation"
+    "castingZone": {
+      "radiusMeters": 300,
+      "bearingDegrees": 260,
+      "targetDepthMeters": [
+        1,
+        10
+      ],
+      "exposure": "open-coast"
+    },
+    "accessSourceUrl": "https://www.cityofpacifica.org/departments/parks-beaches-recreation",
+    "streetViewLatitude": 37.608911,
+    "streetViewLongitude": -122.497533,
+    "streetViewRoadDistanceMeters": 168
   },
   {
     "id": "pacifica-state-beach",
@@ -818,15 +1551,34 @@
     "access": "Public city beach with heavy surfing use; fish at uncrowded edges and respect protected habitat near San Pedro Creek.",
     "regulationUrl": "https://wildlife.ca.gov/Fishing/Ocean/Regulations/Fishing-Map/San-Francisco",
     "depthProfile": "Curving sand beach with a creek mouth, bars, and a deeper southern pocket.",
-    "structureTags": ["creek-mouth", "sand-bar", "rock-sand-edge"],
+    "structureTags": [
+      "creek-mouth",
+      "sand-bar",
+      "rock-sand-edge"
+    ],
     "parking": "Paid city lots and limited street parking.",
     "transit": "SamTrans routes 110 and 112 serve Linda Mar.",
-    "amenities": ["restrooms", "showers", "restaurants-nearby"],
+    "amenities": [
+      "restrooms",
+      "showers",
+      "restaurants-nearby"
+    ],
     "habitatPrior": 77,
     "tideStation": "9414290",
     "weatherAnchor": "sf-coast",
-    "castingZone": {"radiusMeters": 520, "bearingDegrees": 250, "targetDepthMeters": [1, 9], "exposure": "open-coast"},
-    "accessSourceUrl": "https://www.cityofpacifica.org/departments/parks-beaches-recreation/pacifica-state-beach"
+    "castingZone": {
+      "radiusMeters": 520,
+      "bearingDegrees": 250,
+      "targetDepthMeters": [
+        1,
+        9
+      ],
+      "exposure": "open-coast"
+    },
+    "accessSourceUrl": "https://www.cityofpacifica.org/departments/parks-beaches-recreation/pacifica-state-beach",
+    "streetViewLatitude": 37.598298,
+    "streetViewLongitude": -122.501346,
+    "streetViewRoadDistanceMeters": 17
   },
   {
     "id": "montara-state-beach",
@@ -838,15 +1590,32 @@
     "access": "Public state beach; steep paths, strong shorebreak, and rip currents require conservative access and surf choices.",
     "regulationUrl": "https://wildlife.ca.gov/Fishing/Ocean/Regulations/Fishing-Map/San-Francisco",
     "depthProfile": "Steep sand beach bracketed by rocky reef and headlands.",
-    "structureTags": ["rock-sand-edge", "sand-trough", "reef-edge"],
+    "structureTags": [
+      "rock-sand-edge",
+      "sand-trough",
+      "reef-edge"
+    ],
     "parking": "Free roadside lots on Highway 1; use marked crossings.",
     "transit": "SamTrans route 117 has limited coastal service.",
-    "amenities": ["restrooms-limited"],
+    "amenities": [
+      "restrooms-limited"
+    ],
     "habitatPrior": 73,
     "tideStation": "9414131",
     "weatherAnchor": "half-moon-bay",
-    "castingZone": {"radiusMeters": 520, "bearingDegrees": 250, "targetDepthMeters": [1, 12], "exposure": "open-coast"},
-    "accessSourceUrl": "https://www.parks.ca.gov/?page_id=532"
+    "castingZone": {
+      "radiusMeters": 520,
+      "bearingDegrees": 250,
+      "targetDepthMeters": [
+        1,
+        12
+      ],
+      "exposure": "open-coast"
+    },
+    "accessSourceUrl": "https://www.parks.ca.gov/?page_id=532",
+    "streetViewLatitude": 37.545565,
+    "streetViewLongitude": -122.514019,
+    "streetViewRoadDistanceMeters": 8
   },
   {
     "id": "pillar-point-west-jetty",
@@ -858,15 +1627,33 @@
     "access": "Public harbor jetty approached from the Mavericks area; remain on stable surfaces and never climb wave-washed outer rocks.",
     "regulationUrl": "https://wildlife.ca.gov/Fishing/Ocean/Regulations/Fishing-Map/San-Francisco",
     "depthProfile": "Rock jetty separating a protected harbor basin from a deeper ocean channel.",
-    "structureTags": ["jetty", "harbor-mouth", "channel-edge"],
+    "structureTags": [
+      "jetty",
+      "harbor-mouth",
+      "channel-edge"
+    ],
     "parking": "Public harbor and Mavericks lots; some spaces are restricted.",
     "transit": "SamTrans route 117 serves Princeton with a walk to the jetty.",
-    "amenities": ["restrooms-nearby", "bait-shop-nearby"],
+    "amenities": [
+      "restrooms-nearby",
+      "bait-shop-nearby"
+    ],
     "habitatPrior": 84,
     "tideStation": "9414131",
     "weatherAnchor": "half-moon-bay",
-    "castingZone": {"radiusMeters": 260, "bearingDegrees": 150, "targetDepthMeters": [2, 15], "exposure": "harbor-mouth"},
-    "accessSourceUrl": "https://www.smharbor.com/pillar-point-harbor"
+    "castingZone": {
+      "radiusMeters": 260,
+      "bearingDegrees": 150,
+      "targetDepthMeters": [
+        2,
+        15
+      ],
+      "exposure": "harbor-mouth"
+    },
+    "accessSourceUrl": "https://www.smharbor.com/pillar-point-harbor",
+    "streetViewLatitude": 37.502931,
+    "streetViewLongitude": -122.484215,
+    "streetViewRoadDistanceMeters": 208
   },
   {
     "id": "pillar-point-east-jetty",
@@ -878,15 +1665,34 @@
     "access": "Public harbor edge reached near Princeton; use only stable, dry access and respect posted harbor operations and closures.",
     "regulationUrl": "https://wildlife.ca.gov/Fishing/Ocean/Regulations/Fishing-Map/San-Francisco",
     "depthProfile": "Rock jetty beside a dredged harbor entrance and shallow sand beach.",
-    "structureTags": ["jetty", "dredged-channel", "rock-sand-edge"],
+    "structureTags": [
+      "jetty",
+      "dredged-channel",
+      "rock-sand-edge"
+    ],
     "parking": "Public harbor lots with posted restrictions.",
     "transit": "SamTrans route 117 serves Princeton.",
-    "amenities": ["restrooms", "restaurants-nearby", "bait-shop-nearby"],
+    "amenities": [
+      "restrooms",
+      "restaurants-nearby",
+      "bait-shop-nearby"
+    ],
     "habitatPrior": 85,
     "tideStation": "9414131",
     "weatherAnchor": "half-moon-bay",
-    "castingZone": {"radiusMeters": 240, "bearingDegrees": 245, "targetDepthMeters": [2, 14], "exposure": "harbor-mouth"},
-    "accessSourceUrl": "https://www.smharbor.com/pillar-point-harbor"
+    "castingZone": {
+      "radiusMeters": 240,
+      "bearingDegrees": 245,
+      "targetDepthMeters": [
+        2,
+        14
+      ],
+      "exposure": "harbor-mouth"
+    },
+    "accessSourceUrl": "https://www.smharbor.com/pillar-point-harbor",
+    "streetViewLatitude": 37.502163,
+    "streetViewLongitude": -122.477541,
+    "streetViewRoadDistanceMeters": 740
   },
   {
     "id": "surfers-beach",
@@ -898,15 +1704,33 @@
     "access": "Public beach south of the harbor; heavy surfing use and ongoing erosion mean access points can change.",
     "regulationUrl": "https://wildlife.ca.gov/Fishing/Ocean/Regulations/Fishing-Map/San-Francisco",
     "depthProfile": "Sand beach beside the harbor jetty, with a pronounced trough and structure transition.",
-    "structureTags": ["jetty-edge", "sand-trough", "harbor-mouth"],
+    "structureTags": [
+      "jetty-edge",
+      "sand-trough",
+      "harbor-mouth"
+    ],
     "parking": "Highway 1 pullouts and harbor parking; obey signs.",
     "transit": "SamTrans route 117 serves Princeton and El Granada.",
-    "amenities": ["restrooms-nearby", "restaurants-nearby"],
+    "amenities": [
+      "restrooms-nearby",
+      "restaurants-nearby"
+    ],
     "habitatPrior": 82,
     "tideStation": "9414131",
     "weatherAnchor": "half-moon-bay",
-    "castingZone": {"radiusMeters": 420, "bearingDegrees": 245, "targetDepthMeters": [1, 10], "exposure": "open-coast"},
-    "accessSourceUrl": "https://www.smharbor.com/pillar-point-harbor"
+    "castingZone": {
+      "radiusMeters": 420,
+      "bearingDegrees": 245,
+      "targetDepthMeters": [
+        1,
+        10
+      ],
+      "exposure": "open-coast"
+    },
+    "accessSourceUrl": "https://www.smharbor.com/pillar-point-harbor",
+    "streetViewLatitude": 37.495836,
+    "streetViewLongitude": -122.462772,
+    "streetViewRoadDistanceMeters": 658
   },
   {
     "id": "francis-state-beach",
@@ -918,15 +1742,34 @@
     "access": "Public state beach in Half Moon Bay State Beach; fish away from swimmers and check campground and day-use hours.",
     "regulationUrl": "https://wildlife.ca.gov/Fishing/Ocean/Regulations/Fishing-Map/San-Francisco",
     "depthProfile": "Long sand beach with mobile bars, cuts, and a moderate nearshore slope.",
-    "structureTags": ["sand-bar", "trough", "open-coast"],
+    "structureTags": [
+      "sand-bar",
+      "trough",
+      "open-coast"
+    ],
     "parking": "Paid state park day-use lot.",
     "transit": "SamTrans route 294 plus a walk; Coastal Trail bicycle access.",
-    "amenities": ["restrooms", "showers", "campground"],
+    "amenities": [
+      "restrooms",
+      "showers",
+      "campground"
+    ],
     "habitatPrior": 76,
     "tideStation": "9414131",
     "weatherAnchor": "half-moon-bay",
-    "castingZone": {"radiusMeters": 650, "bearingDegrees": 240, "targetDepthMeters": [1, 10], "exposure": "open-coast"},
-    "accessSourceUrl": "https://www.parks.ca.gov/?page_id=531"
+    "castingZone": {
+      "radiusMeters": 650,
+      "bearingDegrees": 240,
+      "targetDepthMeters": [
+        1,
+        10
+      ],
+      "exposure": "open-coast"
+    },
+    "accessSourceUrl": "https://www.parks.ca.gov/?page_id=531",
+    "streetViewLatitude": 37.468663,
+    "streetViewLongitude": -122.446089,
+    "streetViewRoadDistanceMeters": 74
   },
   {
     "id": "poplar-beach",
@@ -938,14 +1781,32 @@
     "access": "Public city beach reached by a steep bluff trail; high tides can reduce usable beach and dogs and horses are common.",
     "regulationUrl": "https://wildlife.ca.gov/Fishing/Ocean/Regulations/Fishing-Map/San-Francisco",
     "depthProfile": "Broad sand beach with seasonal bars and a steeper outer trough.",
-    "structureTags": ["sand-bar", "trough", "open-coast"],
+    "structureTags": [
+      "sand-bar",
+      "trough",
+      "open-coast"
+    ],
     "parking": "Paid city lot at the west end of Poplar Street.",
     "transit": "Limited local transit; Coastal Trail bicycle access.",
-    "amenities": ["portable-restrooms", "coastal-trail"],
+    "amenities": [
+      "portable-restrooms",
+      "coastal-trail"
+    ],
     "habitatPrior": 74,
     "tideStation": "9414131",
     "weatherAnchor": "half-moon-bay",
-    "castingZone": {"radiusMeters": 600, "bearingDegrees": 240, "targetDepthMeters": [1, 10], "exposure": "open-coast"},
-    "accessSourceUrl": "https://www.half-moon-bay.ca.us/"
+    "castingZone": {
+      "radiusMeters": 600,
+      "bearingDegrees": 240,
+      "targetDepthMeters": [
+        1,
+        10
+      ],
+      "exposure": "open-coast"
+    },
+    "accessSourceUrl": "https://www.half-moon-bay.ca.us/",
+    "streetViewLatitude": 37.454771,
+    "streetViewLongitude": -122.443682,
+    "streetViewRoadDistanceMeters": 562
   }
 ]

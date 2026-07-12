@@ -33,6 +33,8 @@ test("server-renders the ContourCast product shell", async () => {
   assert.match(html, /Find the water/);
   assert.match(html, /California halibut/);
   assert.match(html, /Pick the hours you have/);
+  assert.match(html, /Work in progress/);
+  assert.match(html, /currently hunts for California halibut only/);
   assert.match(html, /It is <strong>not<\/strong> an 80% chance/i);
   assert.match(html, /CDFW Bay regulations/);
   assert.doesNotMatch(html, /codex-preview|Your site is taking shape|SkeletonPreview/i);
@@ -52,7 +54,7 @@ test("ships install and offline assets", async () => {
   assert.equal(parsed.icons.length, 2);
   assert.match(serviceWorker, /\/data\/opportunities\.json/);
   assert.match(serviceWorker, /\/data\/community-pulse\.json/);
-  assert.match(serviceWorker, /\/topography-contours\.webp/);
+  assert.match(serviceWorker, /\/topography-contours-v2\.webp/);
   assert.match(serviceWorker, /caches\.match/);
 });
 
@@ -86,6 +88,22 @@ test("filters forecasts to the hours an angler can actually fish", async () => {
   assert.match(app, /type="time"/);
   assert.match(app, /overlapsAvailableHours/);
   assert.match(app, /Best match for your hours/);
+});
+
+test("surfaces the expanded halibut condition set and first-visit stewardship notice", async () => {
+  const app = await readFile(
+    new URL("../app/components/OpportunityApp.tsx", import.meta.url),
+    "utf8",
+  );
+
+  assert.match(app, /Cloud cover/);
+  assert.match(app, /Pressure/);
+  assert.match(app, /Moon/);
+  assert.match(app, /Tide cycle/);
+  assert.match(app, /Respect the water/);
+  assert.match(app, /Do not show this reminder again/);
+  assert.match(app, /Install app — coming soon/);
+  assert.doesNotMatch(app, /What does the score mean\?/);
 });
 
 test("turns site structure tags into angler-facing water-reading cues", async () => {
@@ -150,6 +168,6 @@ test("defers the interactive map and keeps the offline snapshot lightweight", as
   assert.match(app, /new IntersectionObserver/);
   assert.match(app, /Open interactive map/);
   assert.ok(snapshotStats.size < 1_200_000, `forecast snapshot is ${snapshotStats.size} bytes`);
-  assert.match(css, /url\("\/topography-contours\.webp"\)/);
+  assert.match(css, /url\("\/topography-contours-v2\.webp"\)/);
   assert.match(css, /content-visibility:\s*auto/);
 });

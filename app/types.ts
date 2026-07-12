@@ -5,6 +5,9 @@ export interface FishingSite {
   name: string;
   latitude: number;
   longitude: number;
+  streetViewLatitude?: number;
+  streetViewLongitude?: number;
+  streetViewRoadDistanceMeters?: number;
   region: string;
   type: SiteType | string;
   access: string;
@@ -18,6 +21,7 @@ export interface FishingSite {
   accessStatus?: "open" | "limited" | "closed" | "unknown";
   accessStatusNote?: string;
   accessStatusUpdatedAt?: string;
+  tideStation?: string;
   distanceMiles?: number;
 }
 
@@ -50,10 +54,13 @@ export interface SourceFreshness {
   ageMinutes?: number;
   freshnessLimitMinutes?: number;
   detail?: string;
+  url?: string;
 }
 
 export interface Conditions {
   tideStage?: string;
+  tideChangeFeet?: number;
+  tideLevelsFeet?: [number, number, number, number];
   currentKnots?: number;
   windMph?: number;
   windDirection?: string;
@@ -63,6 +70,12 @@ export interface Conditions {
   ndbcObservedWaterTempF?: number;
   ndbcObservedAt?: string;
   daylight?: boolean;
+  cloudCoverPct?: number;
+  pressureHpa?: number;
+  pressureTrendHpa3h?: number;
+  pressureObservedAt?: string;
+  moonPhase?: string;
+  moonIlluminationPct?: number;
   summary?: string;
 }
 

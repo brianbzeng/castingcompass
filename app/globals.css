@@ -68,8 +68,8 @@ svg {
   min-height: 100vh;
   overflow: clip;
   background:
-    linear-gradient(rgba(3, 17, 38, 0.46), rgba(4, 19, 40, 0.78)),
-    url("/topography-contours.webp") center top / 960px 960px repeat,
+    linear-gradient(rgba(3, 17, 38, 0.32), rgba(4, 19, 40, 0.68)),
+    url("/topography-contours-v2.webp") center top / 940px 940px repeat,
     #06172e;
   background-attachment: fixed;
 }
@@ -189,14 +189,39 @@ button.data-pill {
 }
 
 .install-button {
-  color: var(--ink);
-  background: var(--ocean);
-  cursor: pointer;
+  position: relative;
+  color: rgba(240, 247, 255, 0.46);
+  border-color: rgba(162, 197, 229, 0.11);
+  background: rgba(93, 112, 132, 0.2);
+  cursor: not-allowed;
 }
 
 .install-button svg {
   width: 14px;
   height: 14px;
+}
+
+.install-button > span {
+  position: absolute;
+  top: calc(100% + 0.55rem);
+  left: 50%;
+  z-index: 12;
+  width: max-content;
+  padding: 0.38rem 0.5rem;
+  border: 1px solid var(--line-strong);
+  border-radius: 3px;
+  color: var(--ink);
+  background: var(--ocean-deep);
+  font-size: 0.64rem;
+  opacity: 0;
+  pointer-events: none;
+  transform: translate(-50%, -4px);
+  transition: opacity 140ms ease, transform 140ms ease;
+}
+
+.install-button:hover > span {
+  opacity: 1;
+  transform: translate(-50%, 0);
 }
 
 .log-trip-button {
@@ -230,6 +255,7 @@ button.data-pill {
 }
 
 .eyebrow-row,
+.work-in-progress-note,
 .intro-grid,
 .control-deck,
 .workspace,
@@ -244,7 +270,30 @@ footer {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 2.25rem;
+  margin-bottom: 1rem;
+}
+
+.work-in-progress-note {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  margin-bottom: 1.8rem;
+  color: var(--ink-soft);
+  font-size: 0.75rem;
+  line-height: 1.45;
+}
+
+.work-in-progress-note strong {
+  flex: 0 0 auto;
+  padding: 0.34rem 0.55rem;
+  border: 1px solid rgba(243, 184, 91, 0.42);
+  border-radius: 100px;
+  color: #ffd38d;
+  background: rgba(243, 184, 91, 0.1);
+  font-family: var(--font-mono);
+  font-size: 0.67rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
 }
 
 .eyebrow {
@@ -423,16 +472,23 @@ footer {
 }
 
 .control-deck {
-  display: flex;
+  display: grid;
   position: relative;
   z-index: 5;
   align-items: center;
-  justify-content: space-between;
-  flex-wrap: wrap;
-  gap: 1rem;
-  padding: 1.05rem 4vw;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0.85rem 1rem;
+  padding: 1.2rem 4vw;
   background: rgba(6, 24, 47, 0.88);
   backdrop-filter: blur(18px);
+}
+
+.forecast-time-controls {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.8rem;
+  grid-column: 1;
 }
 
 .time-tabs {
@@ -512,8 +568,11 @@ footer {
   display: inline-flex;
   align-items: center;
   gap: 0.5rem;
-  min-height: 62px;
-  padding: 0.48rem 0.55rem 0.48rem 0.85rem;
+  grid-column: 2;
+  grid-row: 1 / span 2;
+  align-self: center;
+  min-height: 82px;
+  padding: 0.72rem 0.72rem 0.72rem 0.9rem;
   border: 1px solid var(--line);
   border-radius: 2px;
   background: rgba(13, 44, 79, 0.78);
@@ -578,7 +637,7 @@ footer {
 }
 
 .availability-filter button {
-  align-self: end;
+  align-self: center;
   min-height: 34px;
   padding: 0.42rem 0.58rem;
   border: 1px solid var(--line);
@@ -595,6 +654,7 @@ footer {
   align-items: center;
   flex-wrap: wrap;
   gap: 0.65rem;
+  grid-column: 1;
 }
 
 .filters label {
@@ -708,6 +768,7 @@ footer {
   font-family: var(--font-mono);
   font-size: 0.54rem;
   line-height: 1.55;
+  grid-column: 1 / -1;
 }
 
 .closure-notice a {
@@ -747,7 +808,7 @@ footer {
   color: var(--ink);
   background:
     linear-gradient(rgba(5, 23, 47, 0.62), rgba(4, 19, 38, 0.82)),
-    url("/topography-contours.webp") center / 720px 720px repeat,
+    url("/topography-contours-v2.webp") center / 720px 720px repeat,
     var(--ocean-deep);
   text-align: center;
 }
@@ -760,7 +821,7 @@ footer {
 .map-load-panel:hover {
   background:
     linear-gradient(rgba(8, 34, 66, 0.58), rgba(5, 25, 49, 0.78)),
-    url("/topography-contours.webp") center / 720px 720px repeat,
+    url("/topography-contours-v2.webp") center / 720px 720px repeat,
     var(--ocean-deep);
 }
 
@@ -967,7 +1028,7 @@ footer {
   color: var(--ink);
   background:
     linear-gradient(rgba(4, 19, 38, 0.85), rgba(4, 19, 38, 0.93)),
-    url("/topography-contours.webp") center / 620px 620px repeat,
+    url("/topography-contours-v2.webp") center / 620px 620px repeat,
     var(--ocean-deep);
 }
 
@@ -1239,7 +1300,7 @@ footer {
   scroll-margin-top: 88px;
   background:
     linear-gradient(rgba(4, 19, 40, 0.72), rgba(7, 32, 61, 0.68)),
-    url("/topography-contours.webp") center / 760px 760px repeat,
+    url("/topography-contours-v2.webp") center / 760px 760px repeat,
     linear-gradient(125deg, rgba(5, 22, 43, 0.48), rgba(12, 43, 79, 0.32));
 }
 
@@ -1269,13 +1330,28 @@ footer {
 
 .source-row {
   display: grid;
-  grid-template-columns: 10px 1fr;
+  grid-template-columns: 10px 1fr auto;
   align-items: start;
   gap: 0.6rem;
   min-height: 82px;
   padding: 1.05rem 0.7rem;
   border-right: 1px solid var(--line);
   border-bottom: 1px solid var(--line);
+}
+
+.source-row > a {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border: 1px solid var(--line);
+  color: var(--seafoam);
+  font-size: 0.78rem;
+}
+
+.source-row > a:hover {
+  border-color: var(--line-strong);
+  background: rgba(159, 216, 229, 0.1);
 }
 
 .source-dot {
@@ -1318,7 +1394,7 @@ footer {
   border-top: 1px solid var(--line);
   background:
     linear-gradient(rgba(3, 15, 31, 0.9), rgba(3, 15, 31, 0.96)),
-    url("/topography-contours.webp") center / 720px 720px repeat;
+    url("/topography-contours-v2.webp") center / 720px 720px repeat;
 }
 
 .footer-brand {
@@ -1339,6 +1415,23 @@ footer > div {
   gap: 0.4rem;
   font-family: var(--font-mono);
   font-size: 0.55rem;
+}
+
+.footer-center {
+  align-items: center;
+}
+
+.contact-bar {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.45rem 0.9rem;
+  color: var(--seafoam);
+}
+
+.contact-bar a {
+  border-bottom: 1px solid var(--line-strong);
 }
 
 .detail-layer,
@@ -1374,7 +1467,7 @@ footer > div {
   border-left: 1px solid var(--line-strong);
   background:
     linear-gradient(rgba(10, 34, 65, 0.9), rgba(12, 35, 65, 0.94)),
-    url("/topography-contours.webp") center / 620px 620px repeat,
+    url("/topography-contours-v2.webp") center / 620px 620px repeat,
     var(--paper-bright);
   box-shadow: -24px 0 80px rgba(1, 8, 19, 0.46);
   animation: slide-in 230ms cubic-bezier(0.22, 1, 0.36, 1);
@@ -1679,6 +1772,14 @@ footer > div {
   border-bottom: 1px solid var(--line-strong);
 }
 
+.conditions-grid > div:nth-child(3n) {
+  border-right: 0;
+}
+
+.conditions-grid > div:nth-child(n + 4) {
+  border-top: 1px solid var(--line);
+}
+
 .conditions-grid > div {
   padding: 0.85rem 0.55rem;
   border-right: 1px solid var(--line);
@@ -1696,6 +1797,198 @@ footer > div {
 .conditions-grid span,
 .conditions-grid strong {
   display: block;
+}
+
+.tide-chart-block {
+  margin-top: 1rem;
+  padding: 1rem;
+  border: 1px solid var(--line-strong);
+  background: rgba(5, 25, 49, 0.66);
+}
+
+.tide-chart-heading {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.tide-chart-heading span,
+.tide-chart-heading strong {
+  display: block;
+}
+
+.tide-chart-heading span {
+  color: var(--ink-soft);
+  font-family: var(--font-mono);
+  font-size: 0.62rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.tide-chart-heading strong {
+  margin-top: 0.24rem;
+  font-size: 0.86rem;
+  text-transform: capitalize;
+}
+
+.tide-chart-heading a {
+  border-bottom: 1px solid var(--line-strong);
+  color: var(--seafoam);
+  font-size: 0.68rem;
+  font-weight: 700;
+}
+
+.tide-chart-block svg {
+  width: 100%;
+  height: 118px;
+  margin-top: 0.65rem;
+  overflow: visible;
+}
+
+.tide-chart-block svg rect {
+  fill: rgba(216, 237, 148, 0.08);
+}
+
+.tide-chart-block svg line {
+  stroke: rgba(168, 216, 242, 0.18);
+  stroke-width: 0.7;
+}
+
+.tide-chart-block svg polyline {
+  fill: none;
+  stroke: var(--seafoam);
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.tide-chart-block svg circle {
+  fill: var(--lime);
+  stroke: var(--ocean-deep);
+  stroke-width: 0.9;
+}
+
+.tide-chart-labels {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.5rem;
+  color: var(--ink-soft);
+  font-family: var(--font-mono);
+  font-size: 0.58rem;
+  line-height: 1.45;
+  text-align: center;
+}
+
+.tide-chart-labels b {
+  color: var(--ink);
+}
+
+.tide-chart-block > p {
+  margin: 0.75rem 0 0;
+  color: var(--ink-soft);
+  font-size: 0.66rem;
+  text-align: center;
+}
+
+.detail-freshness > a {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.34rem;
+  margin: 0 0.35rem 0.35rem 0;
+  padding: 0.35rem 0.46rem;
+  border: 1px solid var(--line);
+  color: var(--seafoam);
+  font-family: var(--font-mono);
+  font-size: 0.6rem;
+  text-transform: capitalize;
+}
+
+.respect-modal-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 130;
+  display: grid;
+  place-items: center;
+  padding: 1rem;
+  background: rgba(1, 8, 19, 0.82);
+  backdrop-filter: blur(8px);
+}
+
+.respect-modal {
+  width: min(560px, 100%);
+  padding: clamp(1.5rem, 5vw, 3rem);
+  border: 1px solid var(--line-strong);
+  background:
+    linear-gradient(rgba(7, 28, 55, 0.88), rgba(5, 22, 44, 0.94)),
+    url("/topography-contours-v2.webp") center / 620px 620px repeat,
+    var(--paper-bright);
+  box-shadow: 0 34px 100px rgba(1, 7, 18, 0.66);
+}
+
+.respect-modal h2 {
+  margin: 1rem 0 0;
+  font-size: clamp(2.7rem, 8vw, 4.7rem);
+  font-weight: 600;
+  letter-spacing: -0.034em;
+  line-height: 1;
+}
+
+.respect-modal > p {
+  margin: 1.2rem 0 0;
+  color: var(--ink-soft);
+  font-size: 0.85rem;
+  line-height: 1.7;
+}
+
+.respect-modal > p strong {
+  color: var(--ink);
+}
+
+.respect-modal > a {
+  display: inline-flex;
+  margin-top: 1rem;
+  border-bottom: 1px solid var(--line-strong);
+  color: var(--seafoam);
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.respect-modal > label {
+  display: grid;
+  grid-template-columns: 20px 1fr;
+  align-items: start;
+  gap: 0.65rem;
+  margin-top: 1.5rem;
+  color: var(--ink-soft);
+  font-size: 0.72rem;
+  line-height: 1.5;
+  cursor: pointer;
+}
+
+.respect-modal input {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--lime);
+}
+
+.respect-modal > button {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  min-height: 52px;
+  margin-top: 1rem;
+  padding: 0.8rem 1rem;
+  color: var(--ocean-deep);
+  background: var(--lime);
+  font-size: 0.78rem;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.respect-modal > button svg {
+  width: 17px;
 }
 
 .conditions-grid span {
@@ -1796,7 +2089,7 @@ footer > div {
   border: 1px solid var(--line-strong);
   background:
     linear-gradient(rgba(11, 42, 78, 0.82), rgba(11, 42, 78, 0.9)),
-    url("/topography-contours.webp") center / 520px 520px repeat,
+    url("/topography-contours-v2.webp") center / 520px 520px repeat,
     rgba(15, 55, 95, 0.46);
 }
 
@@ -2143,7 +2436,7 @@ footer > div {
   overflow: hidden;
   background:
     linear-gradient(rgba(4, 20, 42, 0.74), rgba(7, 31, 59, 0.82)),
-    url("/topography-contours.webp") center / 820px 820px repeat,
+    url("/topography-contours-v2.webp") center / 820px 820px repeat,
     linear-gradient(135deg, rgba(5, 22, 45, 0.94), rgba(10, 45, 84, 0.76));
 }
 
@@ -2209,31 +2502,6 @@ footer > div {
   width: 16px;
 }
 
-.stewardship-reminder {
-  max-width: 620px;
-  margin-top: 1rem;
-  padding: 0.9rem 1rem;
-  border-left: 2px solid var(--seafoam);
-  background: rgba(4, 20, 41, 0.58);
-}
-
-.stewardship-reminder > strong {
-  color: var(--seafoam);
-  font-size: 0.66rem;
-}
-
-.stewardship-reminder p {
-  margin: 0.3rem 0 0;
-  color: var(--ink-soft);
-  font-size: 0.59rem;
-  line-height: 1.6;
-}
-
-.stewardship-reminder p strong {
-  color: var(--ink);
-}
-
-.stewardship-reminder a,
 .regulation-reminder a {
   border-bottom: 1px solid var(--line-strong);
   color: var(--seafoam);
@@ -2245,7 +2513,7 @@ footer > div {
   border: 1px solid var(--line-strong);
   background:
     linear-gradient(rgba(5, 23, 47, 0.78), rgba(5, 23, 47, 0.88)),
-    url("/topography-contours.webp") center / 680px 680px repeat;
+    url("/topography-contours-v2.webp") center / 680px 680px repeat;
   box-shadow: 0 28px 80px rgba(1, 8, 21, 0.24);
 }
 
@@ -2425,7 +2693,7 @@ footer > div {
   border: 1px solid var(--line-strong);
   background:
     linear-gradient(rgba(9, 33, 64, 0.9), rgba(12, 35, 65, 0.94)),
-    url("/topography-contours.webp") center / 680px 680px repeat,
+    url("/topography-contours-v2.webp") center / 680px 680px repeat,
     var(--paper-bright);
   box-shadow: 0 34px 100px rgba(1, 7, 18, 0.58);
   animation: modal-up 220ms cubic-bezier(0.22, 1, 0.36, 1);
@@ -2758,8 +3026,13 @@ footer > div {
   }
 
   .control-deck {
+    display: flex;
     align-items: flex-start;
     flex-direction: column;
+  }
+
+  .forecast-time-controls {
+    width: 100%;
   }
 
   .custom-date-range {
@@ -2864,7 +3137,15 @@ footer > div {
   }
 
   .eyebrow-row {
-    margin-bottom: 1.5rem;
+    margin-bottom: 0.8rem;
+  }
+
+  .work-in-progress-note {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 0.55rem;
+    margin-bottom: 1.35rem;
+    font-size: 0.72rem;
   }
 
   .method-link {
@@ -2927,6 +3208,12 @@ footer > div {
     overflow: visible;
   }
 
+  .forecast-time-controls {
+    align-items: stretch;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
   .time-tabs {
     width: calc(100vw - 2rem);
     padding-bottom: 0.15rem;
@@ -2967,7 +3254,7 @@ footer > div {
     display: grid;
     grid-template-columns: 1fr auto auto auto auto;
     gap: 0.4rem;
-    padding: 0.65rem;
+    padding: 0.8rem;
   }
 
   .availability-copy {
@@ -3150,6 +3437,10 @@ footer > div {
     align-items: flex-start;
   }
 
+  .contact-bar {
+    justify-content: flex-start;
+  }
+
   .detail-layer {
     display: flex;
     align-items: flex-end;
@@ -3188,6 +3479,23 @@ footer > div {
 
   .detail-score strong {
     font-size: 1.9rem;
+  }
+
+  .conditions-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .conditions-grid > div,
+  .conditions-grid > div:nth-child(3n) {
+    border-right: 1px solid var(--line);
+  }
+
+  .conditions-grid > div:nth-child(2n) {
+    border-right: 0;
+  }
+
+  .conditions-grid > div:nth-child(n + 3) {
+    border-top: 1px solid var(--line);
   }
 
   .place-media-links {
@@ -3359,9 +3667,7 @@ footer p { font-size: 0.76rem; }
 .compare-grid article > button,
 .fish-window-button { font-size: 0.76rem; }
 .validation-copy > small { font-size: 0.68rem; }
-.stewardship-reminder > strong,
 .ledger-heading { font-size: 0.72rem; }
-.stewardship-reminder p,
 .ledger-grid span,
 .ledger-empty p,
 .ledger-method { font-size: 0.7rem; }

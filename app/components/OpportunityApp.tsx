@@ -5,6 +5,7 @@ import { TripReportFeature } from "./TripReportFeature";
 import {
   ArrowIcon,
   ChevronIcon,
+  CloudIcon,
   ClockIcon,
   CloseIcon,
   DownloadIcon,
@@ -14,6 +15,8 @@ import {
   LocateIcon,
   LogoMark,
   MapIcon,
+  MoonIcon,
+  PressureIcon,
   TemperatureIcon,
   TideIcon,
   WindIcon,
@@ -96,6 +99,8 @@ interface ApiOpportunityWindow {
   source_freshness: ApiSourceFreshness[];
   conditions?: {
     tide_stage?: string | null;
+    tide_change_feet?: number | null;
+    tide_levels_feet?: [number, number, number, number] | null;
     current_knots?: number | null;
     wind_mph?: number | null;
     swell_feet?: number | null;
@@ -104,6 +109,12 @@ interface ApiOpportunityWindow {
     ndbc_observed_water_temp_f?: number | null;
     ndbc_observed_at?: string | null;
     daylight?: boolean | null;
+    cloud_cover_pct?: number | null;
+    pressure_hpa?: number | null;
+    pressure_trend_hpa_3h?: number | null;
+    pressure_observed_at?: string | null;
+    moon_phase?: string | null;
+    moon_illumination_pct?: number | null;
   } | null;
   rank?: number | null;
 }
@@ -112,6 +123,17 @@ interface ApiOpportunityResponse {
   generated_at: string;
   score_definition: string;
   windows: ApiOpportunityWindow[];
+}
+
+function sourceUrlForName(name: string) {
+  const normalized = name.toLowerCase();
+  if (normalized.includes("tide")) return "https://api.tidesandcurrents.noaa.gov/api/prod/";
+  if (normalized.includes("weather") || normalized.includes("nws")) return "https://api.weather.gov/";
+  if (normalized.includes("buoy") || normalized.includes("ndbc") || normalized.includes("pressure")) return "https://www.ndbc.noaa.gov/";
+  if (normalized.includes("temperature") || normalized.includes("sst")) return "https://open-meteo.com/en/docs/marine-weather-api";
+  if (normalized.includes("moon")) return "https://aa.usno.navy.mil/data/MoonFraction";
+  if (normalized.includes("bathymetry")) return "https://www.ncei.noaa.gov/maps/bathymetry/";
+  return undefined;
 }
 
 function normalizeApiSnapshot(payload: ApiOpportunityResponse): OpportunitySnapshot {
@@ -127,6 +149,7 @@ function normalizeApiSnapshot(payload: ApiOpportunityResponse): OpportunitySnaps
           ageMinutes: source.age_minutes ?? undefined,
           freshnessLimitMinutes: source.freshness_limit_minutes,
           detail: source.excluded_reason ?? undefined,
+          url: sourceUrlForName(source.source),
         });
       }
     });
@@ -151,6 +174,8 @@ function normalizeApiSnapshot(payload: ApiOpportunityResponse): OpportunitySnaps
       explanationFactors: window.explanation_factors.map((factor) => factor.detail || factor.label),
       conditions: {
         tideStage: window.conditions?.tide_stage ?? undefined,
+        tideChangeFeet: window.conditions?.tide_change_feet ?? undefined,
+        tideLevelsFeet: window.conditions?.tide_levels_feet ?? undefined,
         currentKnots: window.conditions?.current_knots ?? undefined,
         windMph: window.conditions?.wind_mph ?? undefined,
         swellFeet: window.conditions?.swell_feet ?? undefined,
@@ -159,6 +184,12 @@ function normalizeApiSnapshot(payload: ApiOpportunityResponse): OpportunitySnaps
         ndbcObservedWaterTempF: window.conditions?.ndbc_observed_water_temp_f ?? undefined,
         ndbcObservedAt: window.conditions?.ndbc_observed_at ?? undefined,
         daylight: window.conditions?.daylight ?? undefined,
+        cloudCoverPct: window.conditions?.cloud_cover_pct ?? undefined,
+        pressureHpa: window.conditions?.pressure_hpa ?? undefined,
+        pressureTrendHpa3h: window.conditions?.pressure_trend_hpa_3h ?? undefined,
+        pressureObservedAt: window.conditions?.pressure_observed_at ?? undefined,
+        moonPhase: window.conditions?.moon_phase ?? undefined,
+        moonIlluminationPct: window.conditions?.moon_illumination_pct ?? undefined,
       },
       modelVersion: window.model_version,
       sources: window.source_freshness.map((source) => ({
@@ -168,6 +199,7 @@ function normalizeApiSnapshot(payload: ApiOpportunityResponse): OpportunitySnaps
         ageMinutes: source.age_minutes ?? undefined,
         freshnessLimitMinutes: source.freshness_limit_minutes,
         detail: source.excluded_reason ?? undefined,
+        url: sourceUrlForName(source.source),
       })),
     })),
   };
@@ -249,7 +281,15 @@ function fallbackSnapshot(): OpportunitySnapshot {
     confidence: "low",
     rank: index + 1,
     explanationFactors: ["Accessible casting zone", "Seasonal halibut pattern", "Cached conditions"],
-    conditions: { tideStage: "Loading", windMph: 9, waterTempF: 58, daylight: true },
+    conditions: {
+      tideStage: "Loading",
+      windMph: 9,
+      waterTempF: 58,
+      daylight: true,
+      cloudCoverPct: 45,
+      moonPhase: "waxing crescent",
+      moonIlluminationPct: 32,
+    },
     modelVersion: "fallback-0.1",
     sources,
   }));
@@ -287,7 +327,9 @@ function googleMapsSearchUrl(site: FishingSite) {
 }
 
 function googleStreetViewUrl(site: FishingSite) {
-  return `https://www.google.com/maps/@?api=1&map_action=pano&viewpoint=${site.latitude}%2C${site.longitude}`;
+  const latitude = site.streetViewLatitude ?? site.latitude;
+  const longitude = site.streetViewLongitude ?? site.longitude;
+  return `https://www.google.com/maps/@?api=1&map_action=pano&viewpoint=${latitude}%2C${longitude}`;
 }
 
 function googleSatelliteUrl(site: FishingSite) {
@@ -668,6 +710,56 @@ function MetricBar({ label, value, note }: { label: string; value: number; note:
   );
 }
 
+function pressureTrendLabel(value?: number) {
+  if (!isFiniteNumber(value) || Math.abs(value) <= 1.5) return "steady";
+  return value > 0 ? "rising" : "falling";
+}
+
+function TideChart({ site, window }: { site: FishingSite; window: OpportunityWindow }) {
+  const levels = window.conditions.tideLevelsFeet;
+  if (!levels || levels.length !== 4 || levels.some((level) => !isFiniteNumber(level))) return null;
+
+  const minimum = Math.min(...levels);
+  const maximum = Math.max(...levels);
+  const spread = Math.max(0.2, maximum - minimum);
+  const xPositions = [8, 36, 64, 92];
+  const points = levels.map((level, index) => {
+    const y = 46 - ((level - minimum) / spread) * 34;
+    return `${xPositions[index]},${y.toFixed(1)}`;
+  }).join(" ");
+  const stationUrl = site.tideStation
+    ? `https://tidesandcurrents.noaa.gov/noaatidepredictions.html?id=${encodeURIComponent(site.tideStation)}`
+    : "https://tidesandcurrents.noaa.gov/";
+
+  return (
+    <div className="tide-chart-block">
+      <div className="tide-chart-heading">
+        <div>
+          <span>Tide cycle</span>
+          <strong>{window.conditions.tideStage ?? "Unavailable"}</strong>
+        </div>
+        <a href={stationUrl} target="_blank" rel="noreferrer">NOAA chart ↗</a>
+      </div>
+      <svg viewBox="0 0 100 56" role="img" aria-label={`Tide around this window: ${levels.map((level) => `${level.toFixed(1)} feet`).join(", ")}`}>
+        <rect x="36" y="4" width="28" height="46" rx="2" />
+        <line x1="8" y1="46" x2="92" y2="46" />
+        <polyline points={points} />
+        {points.split(" ").map((point, index) => {
+          const [cx, cy] = point.split(",");
+          return <circle key={`${cx}-${cy}`} cx={cx} cy={cy} r={index === 1 || index === 2 ? 2.1 : 1.5} />;
+        })}
+      </svg>
+      <div className="tide-chart-labels">
+        <span>2h before<br /><b>{levels[0].toFixed(1)} ft</b></span>
+        <span>Start<br /><b>{levels[1].toFixed(1)} ft</b></span>
+        <span>End<br /><b>{levels[2].toFixed(1)} ft</b></span>
+        <span>2h after<br /><b>{levels[3].toFixed(1)} ft</b></span>
+      </div>
+      <p>The highlighted section is your fishing window.</p>
+    </div>
+  );
+}
+
 function SourceStatus({ source }: { source: SourceFreshness }) {
   const statusTone = source.status.startsWith("fresh")
     ? "fresh"
@@ -682,6 +774,7 @@ function SourceStatus({ source }: { source: SourceFreshness }) {
         <strong>{source.name}</strong>
         <small>{statusLabel} · {formatAge(source.observedAt)}</small>
       </div>
+      {source.url ? <a href={source.url} target="_blank" rel="noreferrer" aria-label={`Open ${source.name}`}>↗</a> : null}
     </div>
   );
 }
@@ -710,9 +803,10 @@ export function OpportunityApp() {
   const [showMethod, setShowMethod] = useState(false);
   const [showCompare, setShowCompare] = useState(false);
   const [dataState, setDataState] = useState<"loading" | "live" | "cached">("loading");
-  const [installPrompt, setInstallPrompt] = useState<Event | null>(null);
   const [tripReportRequest, setTripReportRequest] = useState<TripReportRequest | null>(null);
   const [mapEnabled, setMapEnabled] = useState(false);
+  const [showRespectNotice, setShowRespectNotice] = useState(false);
+  const [rememberRespectNotice, setRememberRespectNotice] = useState(false);
   const tripReportRequestKey = useRef(0);
 
   useEffect(() => {
@@ -739,13 +833,19 @@ export function OpportunityApp() {
   }, []);
 
   useEffect(() => {
-    const handler = (event: Event) => {
-      event.preventDefault();
-      setInstallPrompt(event);
-    };
-    window.addEventListener("beforeinstallprompt", handler);
-    return () => window.removeEventListener("beforeinstallprompt", handler);
+    if (window.localStorage.getItem("contourcast.respect-water.v1") === "dismissed") return;
+    const frame = window.requestAnimationFrame(() => setShowRespectNotice(true));
+    return () => window.cancelAnimationFrame(frame);
   }, []);
+
+  useEffect(() => {
+    if (!showRespectNotice) return;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [showRespectNotice]);
 
   useEffect(() => {
     if (mapEnabled || view !== "map" || !mapWrapRef.current) return;
@@ -936,12 +1036,12 @@ export function OpportunityApp() {
     );
   }, [activeRadiusMiles]);
 
-  const triggerInstall = useCallback(() => {
-    if (!installPrompt) return;
-    const promptEvent = installPrompt as Event & { prompt: () => Promise<void> };
-    void promptEvent.prompt();
-    setInstallPrompt(null);
-  }, [installPrompt]);
+  const continueFromRespectNotice = useCallback(() => {
+    if (rememberRespectNotice) {
+      window.localStorage.setItem("contourcast.respect-water.v1", "dismissed");
+    }
+    setShowRespectNotice(false);
+  }, [rememberRespectNotice]);
 
   const openSiteDetail = useCallback((siteId: string) => {
     const activeElement = document.activeElement;
@@ -1005,27 +1105,27 @@ export function OpportunityApp() {
           >
             <i /> {dataState === "loading" ? "Loading" : dataState === "live" ? "Live data" : "Cached"}
           </button>
-          {installPrompt ? (
-            <button className="install-button" type="button" onClick={triggerInstall}>
-              <DownloadIcon /> Install
-            </button>
-          ) : null}
+          <button className="install-button" type="button" disabled title="Coming Soon" aria-label="Install app — coming soon">
+            <DownloadIcon /> Install
+            <span>Coming Soon</span>
+          </button>
         </div>
       </header>
 
       <section className="forecast-intro" id="top">
         <div className="eyebrow-row">
           <span className="eyebrow"><span /> California halibut</span>
-          <button className="method-link" type="button" onClick={() => setShowMethod(true)}>
-            What does the score mean? <InfoIcon />
-          </button>
+        </div>
+        <div className="work-in-progress-note">
+          <strong>Work in progress</strong>
+          <span>ContourCast currently hunts for California halibut only. Every score and condition adjustment is tuned around halibut habitat and behavior.</span>
         </div>
         <div className="intro-grid">
           <div>
             <h1>Find the water<br />worth fishing.</h1>
             <p>
               Pick the hours you have. We compare public shore and pier spots using bottom structure,
-              time of year, tides, wind, and water conditions.
+              time of year, tide, wind, swell, water temperature, clouds, pressure, daylight, and moon phase.
             </p>
           </div>
           {bestSite && bestWindow ? (
@@ -1048,53 +1148,55 @@ export function OpportunityApp() {
       </section>
 
       <section className="control-deck" id="forecast">
-        <div className="time-tabs" role="tablist" aria-label="Forecast period">
-          {([
-            ["today", "Today"],
-            ["tomorrow", "Tomorrow"],
-            ["custom", "Custom"],
-          ] as [TimeFilter, string][]).map(([value, label]) => (
-            <button
-              key={value}
-              role="tab"
-              aria-selected={timeFilter === value}
-              className={timeFilter === value ? "active" : ""}
-              type="button"
-              onClick={() => setTimeFilter(value)}
-            >
-              {label}
-            </button>
-          ))}
-        </div>
-        {timeFilter === "custom" ? (
-          <div className="custom-date-range" aria-label="Custom forecast date range">
-            <label>
-              <span>From</span>
-              <input
-                type="date"
-                min={dateInputValue(new Date(clockMs))}
-                max={maxForecastDate}
-                value={customStart}
-                onChange={(event) => {
-                  const nextStart = event.target.value;
-                  setCustomStart(nextStart);
-                  if (nextStart > customEnd) setCustomEnd(nextStart);
-                }}
-              />
-            </label>
-            <span aria-hidden="true">to</span>
-            <label>
-              <span>Through</span>
-              <input
-                type="date"
-                min={customStart}
-                max={maxForecastDate}
-                value={customEnd}
-                onChange={(event) => setCustomEnd(event.target.value)}
-              />
-            </label>
+        <div className="forecast-time-controls">
+          <div className="time-tabs" role="tablist" aria-label="Forecast period">
+            {([
+              ["today", "Today"],
+              ["tomorrow", "Tomorrow"],
+              ["custom", "Custom"],
+            ] as [TimeFilter, string][]).map(([value, label]) => (
+              <button
+                key={value}
+                role="tab"
+                aria-selected={timeFilter === value}
+                className={timeFilter === value ? "active" : ""}
+                type="button"
+                onClick={() => setTimeFilter(value)}
+              >
+                {label}
+              </button>
+            ))}
           </div>
-        ) : null}
+          {timeFilter === "custom" ? (
+            <div className="custom-date-range" aria-label="Custom forecast date range">
+              <label>
+                <span>From</span>
+                <input
+                  type="date"
+                  min={dateInputValue(new Date(clockMs))}
+                  max={maxForecastDate}
+                  value={customStart}
+                  onChange={(event) => {
+                    const nextStart = event.target.value;
+                    setCustomStart(nextStart);
+                    if (nextStart > customEnd) setCustomEnd(nextStart);
+                  }}
+                />
+              </label>
+              <span aria-hidden="true">to</span>
+              <label>
+                <span>Through</span>
+                <input
+                  type="date"
+                  min={customStart}
+                  max={maxForecastDate}
+                  value={customEnd}
+                  onChange={(event) => setCustomEnd(event.target.value)}
+                />
+              </label>
+            </div>
+          ) : null}
+        </div>
         <div className="availability-filter" aria-label="Hours available to fish">
           <div className="availability-copy">
             <strong>When can you fish?</strong>
@@ -1294,13 +1396,43 @@ export function OpportunityApp() {
 
       <footer>
         <a className="brand footer-brand" href="#top"><LogoMark /><span>ContourCast</span></a>
-        <p>Planning aid only. Not navigational data, legal advice, or a guarantee of catch.</p>
+        <div className="footer-center">
+          <p>Planning aid only. Not navigational data, legal advice, or a guarantee of catch.</p>
+          <div className="contact-bar" aria-label="Contact Brian Zeng">
+            <a href="mailto:bzeng0000@gmail.com">Email ↗</a>
+            <a href="https://github.com/brianbzeng" target="_blank" rel="noreferrer">GitHub ↗</a>
+            <a href="https://www.linkedin.com/in/brianbzeng" target="_blank" rel="noreferrer">LinkedIn ↗</a>
+          </div>
+        </div>
         <div>
           <a href="https://wildlife.ca.gov/Fishing/Ocean/Regulations/Fishing-Map/sf-bay" target="_blank" rel="noreferrer">CDFW Bay regulations ↗</a>
           <a href="https://wildlife.ca.gov/Fishing/Ocean/Regulations/Fishing-Map/San-Francisco" target="_blank" rel="noreferrer">Coast regulations ↗</a>
           <a href="https://open-meteo.com/en/docs/marine-weather-api" target="_blank" rel="noreferrer">Marine weather by Open-Meteo · Météo-France ↗</a>
         </div>
       </footer>
+
+      {showRespectNotice ? (
+        <div className="respect-modal-layer" role="presentation">
+          <section className="respect-modal" role="dialog" aria-modal="true" aria-labelledby="respect-title">
+            <span className="eyebrow"><span /> Before you fish</span>
+            <h2 id="respect-title">Respect the water.</h2>
+            <p>
+              Pack out line and trash, avoid disturbing wildlife and habitat, and follow current access rules and fishing regulations.
+              California halibut must be at least <strong>22 inches total length</strong> to keep.
+            </p>
+            <a href="https://wildlife.ca.gov/Fishing/Ocean/Regulations/Fishing-Map/San-Francisco" target="_blank" rel="noreferrer">Check current CDFW rules ↗</a>
+            <label>
+              <input
+                type="checkbox"
+                checked={rememberRespectNotice}
+                onChange={(event) => setRememberRespectNotice(event.target.checked)}
+              />
+              Do not show this reminder again on this device
+            </label>
+            <button type="button" onClick={continueFromRespectNotice}>Continue to ContourCast <ArrowIcon /></button>
+          </section>
+        </div>
+      ) : null}
 
       {selectedSite && selectedWindow ? (
         <div className="detail-layer" role="presentation" onClick={(event) => {
@@ -1343,7 +1475,7 @@ export function OpportunityApp() {
                 <a href={googleSatelliteUrl(selectedSite)} target="_blank" rel="noreferrer">Satellite view ↗</a>
                 <a href={googleDirectionsUrl(selectedSite)} target="_blank" rel="noreferrer">Directions ↗</a>
               </div>
-              <small>Street View coverage varies, and Google may open the nearest available panorama.</small>
+              <small>Street View starts from the nearest mapped road or access point instead of the fishing marker in the water. Coverage still varies.</small>
             </div>
 
             <div className="detail-score-block">
@@ -1358,7 +1490,7 @@ export function OpportunityApp() {
               <h3>Why this time stands out</h3>
               <MetricBar label="Bottom" value={selectedWindow.habitatScore} note="How fishy the nearby structure looks" />
               <MetricBar label="Time of year" value={selectedWindow.seasonalityScore} note="How this month usually fishes" />
-              <MetricBar label="Today’s conditions" value={selectedWindow.dynamicScore} note="Tide, wind, swell, and daylight" />
+              <MetricBar label="Today’s conditions" value={selectedWindow.dynamicScore} note="Tide, wind, swell, water temperature, cloud cover, pressure, daylight, and moon phase" />
             </div>
 
             {selectedStructureGuides.length > 0 ? (
@@ -1394,7 +1526,19 @@ export function OpportunityApp() {
                     : "Unavailable"}
                 </strong>
               </div>
+              <div><CloudIcon /><span>Cloud cover</span><strong>{isFiniteNumber(selectedWindow.conditions.cloudCoverPct) ? `${Math.round(selectedWindow.conditions.cloudCoverPct)}%` : "Unavailable"}</strong></div>
+              <div>
+                <PressureIcon />
+                <span>Pressure</span>
+                <strong>{isFiniteNumber(selectedWindow.conditions.pressureHpa) ? `${Math.round(selectedWindow.conditions.pressureHpa)} hPa · ${pressureTrendLabel(selectedWindow.conditions.pressureTrendHpa3h)}` : "Unavailable"}</strong>
+              </div>
+              <div>
+                <MoonIcon />
+                <span>Moon</span>
+                <strong>{selectedWindow.conditions.moonPhase ? `${selectedWindow.conditions.moonPhase} · ${Math.round(selectedWindow.conditions.moonIlluminationPct ?? 0)}%` : "Unavailable"}</strong>
+              </div>
             </div>
+            <TideChart site={selectedSite} window={selectedWindow} />
             {isFiniteNumber(selectedWindow.conditions.ndbcObservedWaterTempF) ? (
               <p className="condition-source-note">
                 Latest nearby buoy reading: {Math.round(selectedWindow.conditions.ndbcObservedWaterTempF)}°F
@@ -1410,10 +1554,11 @@ export function OpportunityApp() {
                   : source.status.includes("excluded") || source.status.includes("not integrated")
                     ? "stale"
                     : "aging";
-                return (
-                  <span key={source.name} title={source.detail}>
-                    <i className={tone} /> {source.name.replace("NOAA ", "")}
-                  </span>
+                const label = <><i className={tone} /> {source.name.replace("NOAA ", "")}{source.url ? " ↗" : ""}</>;
+                return source.url ? (
+                  <a key={source.name} href={source.url} target="_blank" rel="noreferrer" title={source.detail}>{label}</a>
+                ) : (
+                  <span key={source.name} title={source.detail}>{label}</span>
                 );
               })}
             </div>
@@ -1483,11 +1628,15 @@ export function OpportunityApp() {
               <b>×</b>
               <div><span>02</span><strong>Season</strong><p>Monthly California halibut catch and effort patterns from public recreational fisheries data.</p></div>
               <b>×</b>
-              <div><span>03</span><strong>Conditions</strong><p>Tide, current, wind, swell, and daylight—with hard bounds. Modeled SST is shown separately as unscored context.</p></div>
+              <div><span>03</span><strong>Conditions</strong><p>Tide, wind, swell, water temperature, cloud cover, pressure trend, daylight, and moon phase—with hard bounds so one reading cannot dominate.</p></div>
             </div>
             <div className="method-callout">
               <InfoIcon />
               <p><strong>Deep-learning status: research pipeline, not the live score.</strong> The current live Habitat score is a labeled, curated proxy—not output from a trained neural network.</p>
+            </div>
+            <div className="method-callout">
+              <InfoIcon />
+              <p><strong>Moon and pressure stay low-weight.</strong> Moon phase overlaps with the tide signal, and atmospheric-pressure effects are not yet validated against enough local trip reports. They are included without being allowed to overpower habitat, tide, or wind.</p>
             </div>
             <div className="method-callout">
               <InfoIcon />

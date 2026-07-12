@@ -46,7 +46,8 @@ test("trip entry points are present in the top bar, forecast detail, and validat
   assert.match(app, /<TripReportFeature sites=\{sites\}/);
   assert.match(feature, /id="validation"/);
   assert.match(feature, /The skunks/);
-  assert.match(feature, /22 inches total length/);
+  assert.match(app, /22 inches total length/);
+  assert.match(app, /contourcast\.respect-water\.v1/);
   assert.match(feature, /whether it’s a skunk or not are useful and genuinely appreciated/);
 });
 

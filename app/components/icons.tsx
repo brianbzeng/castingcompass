@@ -60,6 +60,18 @@ export function TemperatureIcon(props: IconProps) {
   return <svg {...base} {...props}><path d="M14 14.8V5a4 4 0 0 0-8 0v9.8a6 6 0 1 0 8 0Z"/><path d="M10 9v8"/></svg>;
 }
 
+export function CloudIcon(props: IconProps) {
+  return <svg {...base} {...props}><path d="M6 18h11a4 4 0 0 0 .5-8A6 6 0 0 0 6.2 8.2 4.9 4.9 0 0 0 6 18Z"/></svg>;
+}
+
+export function PressureIcon(props: IconProps) {
+  return <svg {...base} {...props}><circle cx="12" cy="12" r="8"/><path d="m12 12 4-3M8 17h8"/></svg>;
+}
+
+export function MoonIcon(props: IconProps) {
+  return <svg {...base} {...props}><path d="M20 15.5A8.5 8.5 0 1 1 8.5 4 7 7 0 0 0 20 15.5Z"/></svg>;
+}
+
 export function ArrowIcon(props: IconProps) {
   return <svg {...base} {...props}><path d="M5 12h14M13 6l6 6-6 6"/></svg>;
 }
