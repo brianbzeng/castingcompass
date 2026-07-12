@@ -189,6 +189,18 @@ The complete run uses five spatial regions, 20 epochs, nearby-negative
 exclusion, and a wider encoder. Its checkpoint remains research-only until it
 passes an independently labeled seafloor-character or habitat probe.
 
+Run the strict substrate-component probe with:
+
+```bash
+PYTHON_BIN=.venv-geo-deep/bin/python \
+  pipeline/scripts/run_usgs_sf_2m_seafloor_probe.sh
+```
+
+The probe compares the frozen pretrained encoder with an identical random
+encoder, classical ten-channel summaries, and depth-only summaries. It removes
+the source raster's composite depth/slope digits and uses the same region that
+was held out during self-supervised pretraining.
+
 ## Outputs
 
 - Canonical bathymetry: compressed NPZ plus provenance JSON.

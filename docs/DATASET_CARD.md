@@ -202,3 +202,10 @@ validation, and exactly reproduced self-supervised checkpoint training across
 4,096 sampled locations. This is unlabeled representation learning only. No
 class balance, catch metric, habitat conclusion, or Opportunity Score accuracy
 improvement is claimed.
+
+The first frozen-embedding probe joins 4,095 corpus locations to the USGS 2 m
+seafloor-character map after an explicit EPSG:26910-to-EPSG:32610 coordinate
+transformation. Composite depth/slope digits are removed from the target. The
+map was itself derived from bathymetry, acoustic backscatter, and
+interpreter/video evidence, so the result measures transferable character
+signal rather than an independent biological endpoint.

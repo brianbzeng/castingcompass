@@ -161,6 +161,7 @@ channel order, source version, or coverage contract fails.
 | Official-data classical baselines | Unrun | No result |
 | Self-supervised pretraining | [Pilot completed on official USGS 2 m bathymetry](experiments/2026-07-11-usgs-sf-2m-ssl-pilot.md) | Best geographically held-out NT-Xent 2.6161 at epoch 1; optimization/provenance validation only, not catch accuracy |
 | Full-survey self-supervised pretraining | [Completed and exactly reproduced on 4,096 USGS 2 m locations](experiments/2026-07-11-usgs-sf-2m-full-ssl-v1.md) | Best geographically held-out NT-Xent 1.4683 at epoch 20; eligible for habitat probing, not live scoring |
+| Frozen seafloor-character probe | [Completed and exactly reproduced on a strict unseen region](experiments/2026-07-11-usgs-sf-2m-seafloor-probe-v1.md) | Pretrained macro F1 0.3914; beats depth-only but is reliably worse than classical structure summaries, so it is not promoted |
 | Two-head fine-tuning | Unrun | No checkpoint |
 | Geographic generalization | Unrun | No result |
 | Calibration / ablations | Unrun on official data | No result |
