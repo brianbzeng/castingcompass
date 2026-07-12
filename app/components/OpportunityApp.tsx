@@ -13,7 +13,6 @@ import {
   LayersIcon,
   ListIcon,
   LocateIcon,
-  LogoMark,
   MapIcon,
   MoonIcon,
   PressureIcon,
@@ -352,8 +351,16 @@ function formatWindow(startIso: string, endIso: string, compact = false) {
     minute: "2-digit",
     timeZone: PACIFIC_TIME_ZONE,
   };
-  if (compact) return `${day}, ${start.toLocaleTimeString("en-US", timeOptions)}`;
+  if (compact) return `${day}, ${start.toLocaleTimeString("en-US", timeOptions)}–${end.toLocaleTimeString("en-US", timeOptions)}`;
   return `${day} · ${start.toLocaleTimeString("en-US", timeOptions)}–${end.toLocaleTimeString("en-US", timeOptions)}`;
+}
+
+function formatTimeOnly(iso: string) {
+  return new Date(iso).toLocaleTimeString("en-US", {
+    hour: "numeric",
+    minute: "2-digit",
+    timeZone: PACIFIC_TIME_ZONE,
+  });
 }
 
 function formatAge(iso: string) {
@@ -414,10 +421,16 @@ function timeInputMinutes(value: string) {
   return hour * 60 + minute;
 }
 
-function overlapsAvailableHours(window: OpportunityWindow, availableFrom: string, availableUntil: string) {
+interface AvailabilityFit {
+  matches: boolean;
+  overlapMinutes: number;
+  gapMinutes: number;
+}
+
+function availabilityFit(window: OpportunityWindow, availableFrom: string, availableUntil: string): AvailabilityFit {
   const from = timeInputMinutes(availableFrom);
   const until = timeInputMinutes(availableUntil);
-  if (from === null && until === null) return true;
+  if (from === null && until === null) return { matches: true, overlapMinutes: 0, gapMinutes: 0 };
 
   const windowStart = new Date(window.start);
   const windowEnd = new Date(window.end);
@@ -425,16 +438,55 @@ function overlapsAvailableHours(window: OpportunityWindow, availableFrom: string
   let endMinute = pacificClockMinutes(windowEnd);
   if (dateInputValue(windowStart) !== dateInputValue(windowEnd) || endMinute <= startMinute) endMinute += 1440;
 
-  if (from !== null && until === null) return endMinute > from;
-  if (from === null && until !== null) return startMinute < until;
-  if (from === null || until === null) return true;
+  const availableStart = from ?? 0;
+  let availableEnd = until ?? 1440;
+  if (from !== null && until !== null && until <= from) availableEnd += 1440;
 
-  if (until > from) return endMinute > from && startMinute < until;
+  const candidates = [-1440, 0, 1440].map((shift) => ({
+    start: startMinute + shift,
+    end: endMinute + shift,
+  }));
+  let overlapMinutes = 0;
+  let gapMinutes = Number.POSITIVE_INFINITY;
 
-  // An end time before the start time means the angler is available overnight.
-  const overlapsEvening = endMinute > from && startMinute < until + 1440;
-  const overlapsEarlyMorning = endMinute > from - 1440 && startMinute < until;
-  return overlapsEvening || overlapsEarlyMorning;
+  candidates.forEach((candidate) => {
+    overlapMinutes = Math.max(
+      overlapMinutes,
+      Math.max(0, Math.min(candidate.end, availableEnd) - Math.max(candidate.start, availableStart)),
+    );
+    gapMinutes = Math.min(
+      gapMinutes,
+      candidate.end < availableStart
+        ? availableStart - candidate.end
+        : candidate.start > availableEnd
+          ? candidate.start - availableEnd
+          : 0,
+    );
+  });
+
+  // Availability is a preference, not a brick wall. A strong window that
+  // overlaps the angler's hours—or sits within an hour of them—can still rank.
+  return {
+    matches: overlapMinutes > 0 || gapMinutes <= 60,
+    overlapMinutes,
+    gapMinutes,
+  };
+}
+
+function availabilityMatchScore(window: OpportunityWindow, availableFrom: string, availableUntil: string) {
+  const fit = availabilityFit(window, availableFrom, availableUntil);
+  if (!availableFrom && !availableUntil) return window.score;
+  return window.score + Math.min(4, fit.overlapMinutes / 30) - Math.min(4, fit.gapMinutes / 15);
+}
+
+function availabilityMatchSummary(window: OpportunityWindow, availableFrom: string, availableUntil: string) {
+  if (!availableFrom && !availableUntil) return null;
+  const fit = availabilityFit(window, availableFrom, availableUntil);
+  if (fit.overlapMinutes > 0) {
+    const hours = fit.overlapMinutes / 60;
+    return `Overlaps your available hours by ${Number.isInteger(hours) ? hours : hours.toFixed(1)} ${hours === 1 ? "hour" : "hours"}.`;
+  }
+  return `Starts within ${fit.gapMinutes} minutes of your available hours.`;
 }
 
 function filterWindow(
@@ -463,7 +515,7 @@ function filterWindow(
     matchesDate = end > rangeStart && start < rangeEndExclusive;
   }
 
-  return matchesDate && overlapsAvailableHours(window, availableFrom, availableUntil);
+  return matchesDate && availabilityFit(window, availableFrom, availableUntil).matches;
 }
 
 function latestPerSite(
@@ -488,7 +540,11 @@ function latestPerSite(
     ))
     .forEach((window) => {
       const existing = result.get(window.siteId);
-      if (!existing || window.score > existing.score) result.set(window.siteId, window);
+      if (
+        !existing ||
+        availabilityMatchScore(window, availableFrom, availableUntil) >
+          availabilityMatchScore(existing, availableFrom, availableUntil)
+      ) result.set(window.siteId, window);
     });
   return result;
 }
@@ -760,6 +816,80 @@ function TideChart({ site, window }: { site: FishingSite; window: OpportunityWin
   );
 }
 
+function smoothChartPath(points: Array<{ x: number; y: number }>) {
+  if (points.length === 0) return "";
+  if (points.length === 1) return `M ${points[0].x} ${points[0].y}`;
+
+  return points.slice(1).reduce((path, point, index) => {
+    const previous = points[index];
+    const previousPrevious = points[Math.max(0, index - 1)];
+    const next = points[Math.min(points.length - 1, index + 2)];
+    const controlOneX = previous.x + (point.x - previousPrevious.x) / 6;
+    const controlOneY = previous.y + (point.y - previousPrevious.y) / 6;
+    const controlTwoX = point.x - (next.x - previous.x) / 6;
+    const controlTwoY = point.y - (next.y - previous.y) / 6;
+    return `${path} C ${controlOneX.toFixed(2)} ${controlOneY.toFixed(2)}, ${controlTwoX.toFixed(2)} ${controlTwoY.toFixed(2)}, ${point.x.toFixed(2)} ${point.y.toFixed(2)}`;
+  }, `M ${points[0].x.toFixed(2)} ${points[0].y.toFixed(2)}`);
+}
+
+function OpportunityDayChart({
+  windows,
+  selectedWindow,
+}: {
+  windows: OpportunityWindow[];
+  selectedWindow: OpportunityWindow;
+}) {
+  if (windows.length < 2) return null;
+
+  const points = windows.map((window) => ({
+    x: 6 + (pacificClockMinutes(new Date(window.start)) / 1440) * 88,
+    y: 58 - (Math.max(0, Math.min(100, window.score)) / 100) * 46,
+    window,
+  }));
+  const linePath = smoothChartPath(points);
+  const areaPath = `${linePath} L ${points.at(-1)!.x.toFixed(2)} 64 L ${points[0].x.toFixed(2)} 64 Z`;
+  const peak = windows.reduce((best, window) => window.score > best.score ? window : best, windows[0]);
+  const dayLabel = new Date(selectedWindow.start).toLocaleDateString("en-US", {
+    weekday: "long",
+    month: "short",
+    day: "numeric",
+    timeZone: PACIFIC_TIME_ZONE,
+  });
+
+  return (
+    <section className="opportunity-day-chart" aria-labelledby="day-chart-title">
+      <div className="opportunity-chart-heading">
+        <div>
+          <span>All-day outlook</span>
+          <h3 id="day-chart-title">Opportunity through the day</h3>
+        </div>
+        <p><strong>Peak {formatTimeOnly(peak.start)}</strong><br />{Math.round(peak.score)} score</p>
+      </div>
+      <svg viewBox="0 0 100 68" role="img" aria-label={`${dayLabel} opportunity scores from ${formatTimeOnly(windows[0].start)} to ${formatTimeOnly(windows.at(-1)!.end)}`}>
+        <line className="chart-grid-line" x1="6" y1="35" x2="94" y2="35" />
+        <line className="chart-grid-line" x1="6" y1="58" x2="94" y2="58" />
+        <path className="opportunity-chart-area" d={areaPath} />
+        <path className="opportunity-chart-line" d={linePath} />
+        {points.map((point) => (
+          <circle
+            key={point.window.id}
+            className={point.window.id === selectedWindow.id ? "selected" : ""}
+            cx={point.x}
+            cy={point.y}
+            r={point.window.id === selectedWindow.id ? 2.7 : 1.35}
+          />
+        ))}
+      </svg>
+      <div className="opportunity-chart-axis">
+        <span>{formatTimeOnly(windows[0].start)}</span>
+        <strong>{dayLabel}</strong>
+        <span>{formatTimeOnly(windows.at(-1)!.end)}</span>
+      </div>
+      <p className="opportunity-chart-note">The curve follows each two-hour forecast. Use the arrows above to inspect a specific window.</p>
+    </section>
+  );
+}
+
 function SourceStatus({ source }: { source: SourceFreshness }) {
   const statusTone = source.status.startsWith("fresh")
     ? "fresh"
@@ -788,6 +918,7 @@ export function OpportunityApp() {
   const [snapshot, setSnapshot] = useState<OpportunitySnapshot>(fallbackSnapshot);
   const [communityPulses, setCommunityPulses] = useState<CommunityPulse[]>([]);
   const [selectedSiteId, setSelectedSiteId] = useState<string | null>(null);
+  const [selectedDetailWindowId, setSelectedDetailWindowId] = useState<string | null>(null);
   const [timeFilter, setTimeFilter] = useState<TimeFilter>("today");
   const [customStart, setCustomStart] = useState(() => dateInputValue(new Date()));
   const [customEnd, setCustomEnd] = useState(defaultCustomEnd);
@@ -1004,7 +1135,21 @@ export function OpportunityApp() {
   const bestSite = rankedSites[0] ?? null;
   const bestWindow = bestSite ? windowsBySite.get(bestSite.id) ?? null : null;
   const selectedSite = sites.find((site) => site.id === selectedSiteId) ?? null;
-  const selectedWindow = selectedSiteId ? windowsBySite.get(selectedSiteId) ?? null : null;
+  const defaultSelectedWindow = selectedSiteId ? windowsBySite.get(selectedSiteId) ?? null : null;
+  const selectedWindow = selectedSiteId && selectedDetailWindowId
+    ? snapshot.windows.find((window) => window.siteId === selectedSiteId && window.id === selectedDetailWindowId)
+      ?? defaultSelectedWindow
+    : defaultSelectedWindow;
+  const detailDayWindows = useMemo(() => {
+    if (!selectedSiteId || !selectedWindow) return [];
+    const selectedDay = dateInputValue(new Date(selectedWindow.start));
+    return snapshot.windows
+      .filter((window) => window.siteId === selectedSiteId && dateInputValue(new Date(window.start)) === selectedDay)
+      .sort((a, b) => new Date(a.start).getTime() - new Date(b.start).getTime());
+  }, [selectedSiteId, selectedWindow, snapshot.windows]);
+  const selectedDayWindowIndex = selectedWindow
+    ? detailDayWindows.findIndex((window) => window.id === selectedWindow.id)
+    : -1;
   const selectedCommunity = selectedSiteId
     ? communityPulses.find((pulse) => pulse.siteId === selectedSiteId) ?? null
     : null;
@@ -1047,11 +1192,13 @@ export function OpportunityApp() {
     const activeElement = document.activeElement;
     detailTriggerRef.current = activeElement instanceof HTMLElement ? activeElement : null;
     detailTriggerSiteIdRef.current = siteId;
+    setSelectedDetailWindowId(windowsBySite.get(siteId)?.id ?? null);
     setSelectedSiteId(siteId);
-  }, []);
+  }, [windowsBySite]);
 
   const closeSiteDetail = useCallback(() => {
     setSelectedSiteId(null);
+    setSelectedDetailWindowId(null);
   }, []);
 
   const openTripReport = useCallback((mode: "start" | "past", siteId?: string, window?: OpportunityWindow) => {
@@ -1085,9 +1232,9 @@ export function OpportunityApp() {
   return (
     <main className="app-shell">
       <header className="topbar">
-        <a className="brand" href="#top" aria-label="ContourCast home">
-          <LogoMark />
-          <span>ContourCast</span>
+        <a className="brand" href="#top" aria-label="CastCompass home">
+          <span className="brand-icon" aria-hidden="true" />
+          <span>CastCompass</span>
           <em>Bay Area beta</em>
         </a>
         <nav className="desktop-nav" aria-label="Primary navigation">
@@ -1118,7 +1265,7 @@ export function OpportunityApp() {
         </div>
         <div className="work-in-progress-note">
           <strong>Work in progress</strong>
-          <span>ContourCast currently hunts for California halibut only. Every score and condition adjustment is tuned around halibut habitat and behavior.</span>
+          <span>CastCompass currently hunts for California halibut only. Every score and condition adjustment is tuned around halibut habitat and behavior.</span>
         </div>
         <div className="intro-grid">
           <div>
@@ -1395,7 +1542,7 @@ export function OpportunityApp() {
       </section>
 
       <footer>
-        <a className="brand footer-brand" href="#top"><LogoMark /><span>ContourCast</span></a>
+        <a className="brand footer-brand" href="#top"><span className="brand-icon" aria-hidden="true" /><span>CastCompass</span></a>
         <div className="footer-center">
           <p>Planning aid only. Not navigational data, legal advice, or a guarantee of catch.</p>
           <div className="contact-bar" aria-label="Contact Brian Zeng">
@@ -1429,7 +1576,7 @@ export function OpportunityApp() {
               />
               Do not show this reminder again on this device
             </label>
-            <button type="button" onClick={continueFromRespectNotice}>Continue to ContourCast <ArrowIcon /></button>
+            <button type="button" onClick={continueFromRespectNotice}>Continue to CastCompass <ArrowIcon /></button>
           </section>
         </div>
       ) : null}
@@ -1453,7 +1600,33 @@ export function OpportunityApp() {
               <span className={`confidence ${selectedWindow.confidence}`}>{selectedWindow.confidence} confidence</span>
             </div>
             <h2 id="detail-title">{selectedSite.name}</h2>
-            <p className="sheet-window"><ClockIcon /> {formatWindow(selectedWindow.start, selectedWindow.end)}</p>
+            <div className="window-navigator" aria-label="Choose another forecast window on this day">
+              <button
+                type="button"
+                aria-label="Previous fishing window"
+                disabled={selectedDayWindowIndex <= 0}
+                onClick={() => setSelectedDetailWindowId(detailDayWindows[selectedDayWindowIndex - 1]?.id ?? null)}
+              >
+                <ChevronIcon className="previous-window-icon" />
+              </button>
+              <div>
+                <span>Selected window</span>
+                <strong><ClockIcon /> {formatWindow(selectedWindow.start, selectedWindow.end)}</strong>
+                {availabilityMatchSummary(selectedWindow, availableFrom, availableUntil) ? (
+                  <small>{availabilityMatchSummary(selectedWindow, availableFrom, availableUntil)}</small>
+                ) : (
+                  <small>{Math.max(1, selectedDayWindowIndex + 1)} of {detailDayWindows.length} today</small>
+                )}
+              </div>
+              <button
+                type="button"
+                aria-label="Next fishing window"
+                disabled={selectedDayWindowIndex < 0 || selectedDayWindowIndex >= detailDayWindows.length - 1}
+                onClick={() => setSelectedDetailWindowId(detailDayWindows[selectedDayWindowIndex + 1]?.id ?? null)}
+              >
+                <ChevronIcon />
+              </button>
+            </div>
 
             <button
               className="fish-window-button"
@@ -1465,6 +1638,8 @@ export function OpportunityApp() {
             >
               Fish this window <ArrowIcon />
             </button>
+
+            <OpportunityDayChart windows={detailDayWindows} selectedWindow={selectedWindow} />
 
             <div className="place-media-block">
               <h3>See the access</h3>
@@ -1621,7 +1796,7 @@ export function OpportunityApp() {
             <span className="eyebrow"><span /> Model note</span>
             <h2 id="method-title">A ranking, not a promise.</h2>
             <p>
-              ContourCast compares reachable casting zones and upcoming two-hour windows. The 0–100 value is a percentile within that current comparison set—not a catch probability.
+              CastCompass compares reachable casting zones and upcoming two-hour windows. The 0–100 value is a percentile within that current comparison set—not a catch probability.
             </p>
             <div className="method-equation">
               <div><span>01</span><strong>Habitat</strong><p>Depth, slope, roughness, channel edges, shoreline distance, and public historical catch patterns.</p></div>

@@ -1,4 +1,4 @@
-/** Cloudflare Worker entry point for the ContourCast PWA. */
+/** Cloudflare Worker entry point for the CastCompass PWA. */
 import { handleImageOptimization, DEFAULT_DEVICE_SIZES, DEFAULT_IMAGE_SIZES } from "vinext/server/image-optimization";
 import handler from "vinext/server/app-router-entry";
 import sites from "../public/data/sites.json";

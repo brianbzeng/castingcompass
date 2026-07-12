@@ -127,4 +127,4 @@ FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
 COMMENT ON TABLE public.opportunity_windows IS
     'Relative rankings among evaluated site/time candidates. Scores are not catch probabilities.';
 COMMENT ON COLUMN public.sites.location IS
-    'Public access/casting-site location only. ContourCast bathymetry is not navigational data.';
+    'Public access/casting-site location only. CastCompass bathymetry is not navigational data.';

@@ -1,1 +1,1 @@
-"""ContourCast geospatial and machine-learning workflows."""
+"""CastCompass geospatial and machine-learning workflows."""

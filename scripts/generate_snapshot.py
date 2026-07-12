@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Build the static ContourCast demo snapshot from public forecast endpoints.
+"""Build the static CastCompass demo snapshot from public forecast endpoints.
 
 The generator is deterministic for a fixed ``--as-of`` timestamp and the same
 upstream responses. Missing upstream values stay null and contribute a neutral
@@ -27,7 +27,7 @@ from zoneinfo import ZoneInfo
 ROOT = Path(__file__).resolve().parents[1]
 SITES_PATH = ROOT / "data" / "sites.json"
 PUBLIC_DATA = ROOT / "public" / "data"
-USER_AGENT = "ContourCast/0.1 (public-data demo; contact: bzeng0000@gmail.com)"
+USER_AGENT = "CastCompass/0.1 (public-data demo; contact: bzeng0000@gmail.com)"
 PACIFIC = ZoneInfo("America/Los_Angeles")
 
 WEATHER_ANCHORS = {
@@ -140,7 +140,7 @@ def next_even_hour(value: datetime) -> datetime:
 def fetch_tides(station: str, start: datetime, end: datetime) -> dict[str, Any]:
     params = {
         "product": "predictions",
-        "application": "ContourCast",
+        "application": "CastCompass",
         "begin_date": start.strftime("%Y%m%d"),
         "end_date": end.strftime("%Y%m%d"),
         "datum": "MLLW",
@@ -848,7 +848,7 @@ def main() -> None:
         "generatedAt": retrieved_at,
         "validFrom": isoformat(start),
         "validThrough": isoformat(end),
-        "modelVersion": "contourcast-hybrid-demo-0.2.0",
+        "modelVersion": "castcompass-hybrid-demo-0.3.0",
         "status": "demo-public-data-snapshot",
         "species": "california-halibut",
         "scoreDefinition": f"A score of 80 means this site/window ranks above 80% of the {len(ordered):,} options in this snapshot; it is not an 80% catch probability.",

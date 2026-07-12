@@ -17,26 +17,26 @@ const plexMono = IBM_Plex_Mono({
 export const metadata: Metadata = {
   metadataBase: new URL("https://contourcast.brianbzeng.com"),
   title: {
-    default: "ContourCast",
-    template: "%s · ContourCast",
+    default: "CastCompass",
+    template: "%s · CastCompass",
   },
   description:
     "An explainable California halibut opportunity planner for public shore, beach, jetty, and pier access around the San Francisco Bay Area.",
-  applicationName: "ContourCast",
+  applicationName: "CastCompass",
   manifest: "/manifest.webmanifest",
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
-    title: "ContourCast",
+    title: "CastCompass",
   },
   formatDetection: { telephone: false },
   icons: {
-    icon: "/icon.svg",
-    shortcut: "/icon.svg",
+    icon: "/castcompass-icon.png",
+    shortcut: "/castcompass-icon.png",
     apple: "/icons/icon-192.png",
   },
   openGraph: {
-    title: "ContourCast",
+    title: "CastCompass",
     description:
       "Find the strongest upcoming California halibut opportunity windows around the Bay.",
     type: "website",

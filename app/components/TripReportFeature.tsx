@@ -655,7 +655,7 @@ export function TripReportFeature({ sites, snapshot, request }: TripReportFeatur
                 </div>
                 <label className="consent-field">
                   <input type="checkbox" checked={fields.consent} onChange={(event) => setFields((current) => ({ ...current, consent: event.target.checked }))} required />
-                  <span>I own anything I submit and consent to private use of this trip, its result, and any later photo for ContourCast model training and validation.</span>
+                  <span>I own anything I submit and consent to private use of this trip, its result, and any later photo for CastCompass model training and validation.</span>
                 </label>
                 <button className="trip-submit" type="submit" disabled={submitState === "submitting" || Boolean(activeTrip)}>
                   {activeTrip ? "Finish the active trip first" : submitState === "submitting" ? "Starting…" : "Start trip"}
@@ -809,7 +809,7 @@ function TripCompletionFields({
       ) : null}
       <label className="consent-field">
         <input type="checkbox" checked={fields.consent} onChange={(event) => setFields((current) => ({ ...current, consent: event.target.checked }))} required />
-        <span>I confirm this reflects the whole trip, own anything I submit, and consent to private use of the report{PHOTO_UPLOADS_ENABLED ? " and photo" : ""} for ContourCast model training and validation.</span>
+        <span>I confirm this reflects the whole trip, own anything I submit, and consent to private use of the report{PHOTO_UPLOADS_ENABLED ? " and photo" : ""} for CastCompass model training and validation.</span>
       </label>
     </>
   );

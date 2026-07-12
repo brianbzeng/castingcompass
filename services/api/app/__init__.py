@@ -1,1 +1,1 @@
-"""ContourCast API package."""
+"""CastCompass API package."""

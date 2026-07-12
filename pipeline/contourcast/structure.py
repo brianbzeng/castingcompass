@@ -50,7 +50,7 @@ def audit_feature_resolution(
     """Classify feature widths against the grid's real resolving power.
 
     Two cells is a marginal sampling threshold. Three cells is the conservative
-    threshold used by ContourCast for a repeatable structure claim. Published
+    threshold used by CastCompass for a repeatable structure claim. Published
     horizontal accuracy, when supplied, can only make those thresholds larger.
     """
 

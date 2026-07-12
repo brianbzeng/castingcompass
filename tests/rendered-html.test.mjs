@@ -23,13 +23,13 @@ async function render(path = "/") {
   );
 }
 
-test("server-renders the ContourCast product shell", async () => {
+test("server-renders the CastCompass product shell", async () => {
   const response = await render();
   assert.equal(response.status, 200);
   assert.match(response.headers.get("content-type") ?? "", /^text\/html\b/i);
 
   const html = await response.text();
-  assert.match(html, /<title>ContourCast — California halibut opportunity planner(?: · ContourCast)?<\/title>/i);
+  assert.match(html, /<title>CastCompass — California halibut opportunity planner(?: · CastCompass)?<\/title>/i);
   assert.match(html, /Find the water/);
   assert.match(html, /California halibut/);
   assert.match(html, /Pick the hours you have/);
@@ -49,7 +49,7 @@ test("ships install and offline assets", async () => {
   ]);
 
   const parsed = JSON.parse(manifest);
-  assert.equal(parsed.name, "ContourCast — Halibut Opportunity Planner");
+  assert.equal(parsed.name, "CastCompass — Halibut Opportunity Planner");
   assert.equal(parsed.display, "standalone");
   assert.equal(parsed.icons.length, 2);
   assert.match(serviceWorker, /\/data\/opportunities\.json/);
@@ -86,8 +86,12 @@ test("filters forecasts to the hours an angler can actually fish", async () => {
   assert.match(app, /When can you fish\?/);
   assert.match(app, /The best time to fish is when you have time/);
   assert.match(app, /type="time"/);
-  assert.match(app, /overlapsAvailableHours/);
+  assert.match(app, /availabilityFit/);
+  assert.match(app, /within an hour of them/);
   assert.match(app, /Best match for your hours/);
+  assert.match(app, /Opportunity through the day/);
+  assert.match(app, /Previous fishing window/);
+  assert.match(app, /Next fishing window/);
 });
 
 test("surfaces the expanded halibut condition set and first-visit stewardship notice", async () => {

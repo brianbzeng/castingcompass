@@ -1,4 +1,4 @@
-# ContourCast architecture
+# CastCompass architecture
 
 ## Runtime topology
 

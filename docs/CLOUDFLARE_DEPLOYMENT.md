@@ -1,6 +1,6 @@
 # Cloudflare deployment
 
-ContourCast deploys as a Cloudflare Worker at
+CastCompass deploys as a Cloudflare Worker at
 `https://contourcast.brianbzeng.com`, with the normal `workers.dev` address
 left enabled as a fallback.
 

@@ -1,4 +1,4 @@
-# ContourCast model card
+# CastCompass model card
 
 **Status:** multiscale encoder and exactly reproduced full-survey official-
 bathymetry self-supervised pretraining implemented; catch heads remain
@@ -8,7 +8,7 @@ untrained; no catch performance measured.
 
 ## Model purpose
 
-ContourCast explores whether bathymetric structure contains useful signal for:
+CastCompass explores whether bathymetric structure contains useful signal for:
 
 1. recreational catch occurrence for a declared target species; and
 2. positive-catch CPUE conditional on an observed catch.

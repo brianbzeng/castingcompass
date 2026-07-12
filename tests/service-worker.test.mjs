@@ -8,9 +8,9 @@ const registrationSource = await readFile(
   "utf8",
 );
 
-test("service worker publishes a new cache and removes prior ContourCast releases", () => {
-  assert.match(workerSource, /CACHE_NAME = "contourcast-v8"/);
-  assert.match(workerSource, /key\.startsWith\(CACHE_PREFIX\) && key !== CACHE_NAME/);
+test("service worker publishes a new cache and removes prior CastCompass releases", () => {
+  assert.match(workerSource, /CACHE_NAME = "castcompass-v9"/);
+  assert.match(workerSource, /CACHE_PREFIXES\.some/);
   assert.match(workerSource, /caches\.delete\(key\)/);
 });
 

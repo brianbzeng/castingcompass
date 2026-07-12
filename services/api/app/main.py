@@ -27,7 +27,7 @@ def _origins() -> list[str]:
 
 
 app = FastAPI(
-    title="ContourCast API",
+    title="CastCompass API",
     version=API_VERSION,
     description=(
         "Explainable, relative California-halibut opportunity rankings for public shore and pier sites. "
@@ -63,7 +63,7 @@ async def cache_headers(request: Request, call_next):
             response.headers["Cache-Control"] = "public, max-age=300, stale-while-revalidate=600"
         elif request.url.path.startswith("/v1/sites"):
             response.headers["Cache-Control"] = "public, max-age=3600, stale-while-revalidate=86400"
-        response.headers["X-ContourCast-Data-Source"] = getattr(repository, "source", "unknown")
+        response.headers["X-CastCompass-Data-Source"] = getattr(repository, "source", "unknown")
     return response
 
 
@@ -73,7 +73,7 @@ async def unavailable_handler(_: Request, exc: DataUnavailableError):
     return JSONResponse(
         status_code=503,
         content={
-            "detail": "The latest verified ContourCast data snapshot is unavailable.",
+            "detail": "The latest verified CastCompass data snapshot is unavailable.",
             "reason": str(exc),
             "invented_values_used": False,
         },

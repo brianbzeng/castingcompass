@@ -1,9 +1,9 @@
-const CACHE_PREFIX = "contourcast-";
-const CACHE_NAME = "contourcast-v8";
+const CACHE_PREFIXES = ["castcompass-", "contourcast-"];
+const CACHE_NAME = "castcompass-v9";
 const APP_SHELL = [
   "/",
   "/manifest.webmanifest",
-  "/icon.svg",
+  "/castcompass-icon.png",
   "/icons/icon-192.png",
   "/icons/icon-512.png",
   "/topography-contours-v2.webp",
@@ -28,7 +28,7 @@ self.addEventListener("activate", (event) => {
       .then((keys) =>
         Promise.all(
           keys
-            .filter((key) => key.startsWith(CACHE_PREFIX) && key !== CACHE_NAME)
+            .filter((key) => CACHE_PREFIXES.some((prefix) => key.startsWith(prefix)) && key !== CACHE_NAME)
             .map((key) => caches.delete(key)),
         ),
       )

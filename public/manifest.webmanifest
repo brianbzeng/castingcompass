@@ -1,12 +1,12 @@
 {
-  "name": "ContourCast — Halibut Opportunity Planner",
-  "short_name": "ContourCast",
+  "name": "CastCompass — Halibut Opportunity Planner",
+  "short_name": "CastCompass",
   "description": "Rank upcoming California halibut windows at public Bay Area shore and pier access.",
   "start_url": "/",
   "display": "standalone",
   "orientation": "portrait-primary",
-  "background_color": "#f3f2ea",
-  "theme_color": "#071915",
+  "background_color": "#06172e",
+  "theme_color": "#06172e",
   "categories": ["sports", "weather", "navigation"],
   "icons": [
     {

@@ -1,4 +1,4 @@
-# ContourCast dataset card
+# CastCompass dataset card
 
 **Status:** data contract, multiscale structure pipeline, and reproducible
 full-survey official-data self-supervised pretraining implemented. Official
@@ -9,7 +9,7 @@ been approved.
 
 ## Intended dataset
 
-ContourCast is designed to join a bathymetric terrain grid with recreational
+CastCompass is designed to join a bathymetric terrain grid with recreational
 fishing observations for Bay and coastal California research. The intended
 learning unit is a point-resolution fishing event with effort, a target species,
 an occurrence label, and catch per unit effort (CPUE). Aggregated survey
@@ -124,7 +124,7 @@ values are filled.
 
 ## Physical resolution contract
 
-ContourCast separates pixel spacing from reliable feature detection:
+CastCompass separates pixel spacing from reliable feature detection:
 
 - fewer than two native cells across: `unresolved`;
 - two to fewer than three cells: `marginal`;

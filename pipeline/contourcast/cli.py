@@ -1,4 +1,4 @@
-"""Command-line entry point for reproducible ContourCast data and ML work."""
+"""Command-line entry point for reproducible CastCompass data and ML work."""
 
 from __future__ import annotations
 

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Reproduce the full-survey USGS 2 m ContourCast SSL v1 experiment.
+# Reproduce the full-survey USGS 2 m CastCompass SSL v1 experiment.
 
 ROOT_DIR="$(cd "$(dirname "$0")/../.." && pwd)"
 PYTHON_BIN="${PYTHON_BIN:-python3}"
