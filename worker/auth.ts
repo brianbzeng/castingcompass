@@ -7,6 +7,8 @@ const PASSWORD_ITERATIONS = 100_000;
 
 export interface AuthApiEnv {
   DB?: D1DatabaseLike;
+  RESEND_API_KEY?: string;
+  AUTH_EMAIL_FROM?: string;
 }
 
 export interface AuthUser {
@@ -55,6 +57,20 @@ const CREATE_AUTH_ATTEMPTS_SQL = `CREATE TABLE IF NOT EXISTS auth_attempts (
   successful INTEGER NOT NULL DEFAULT 0
 )`;
 
+const CREATE_EMAIL_CHALLENGES_SQL = `CREATE TABLE IF NOT EXISTS email_challenges (
+  id TEXT PRIMARY KEY NOT NULL,
+  kind TEXT NOT NULL,
+  email TEXT NOT NULL,
+  user_id TEXT,
+  code_hash TEXT NOT NULL,
+  password_salt TEXT,
+  password_hash TEXT,
+  expires_at TEXT NOT NULL,
+  attempts INTEGER NOT NULL DEFAULT 0,
+  created_at TEXT NOT NULL,
+  CONSTRAINT email_challenges_kind_check CHECK (kind in ('signup', 'password_reset'))
+)`;
+
 async function initialize(db: D1DatabaseLike) {
   let pending = initializedDatabases.get(db as object);
   if (!pending) {
@@ -63,8 +79,10 @@ async function initialize(db: D1DatabaseLike) {
       db.prepare(CREATE_SESSIONS_SQL),
       db.prepare(CREATE_SAVED_SITES_SQL),
       db.prepare(CREATE_AUTH_ATTEMPTS_SQL),
+      db.prepare(CREATE_EMAIL_CHALLENGES_SQL),
       db.prepare("CREATE INDEX IF NOT EXISTS auth_sessions_user_idx ON auth_sessions (user_id, expires_at)"),
       db.prepare("CREATE INDEX IF NOT EXISTS auth_attempts_email_time_idx ON auth_attempts (email_hash, attempted_at)"),
+      db.prepare("CREATE INDEX IF NOT EXISTS email_challenges_email_time_idx ON email_challenges (email, created_at)"),
     ]).then(() => undefined).catch((error) => {
       initializedDatabases.delete(db as object);
       throw error;
@@ -97,7 +115,11 @@ export async function handleAccountRequest(
   curatedSites: readonly CuratedSite[],
 ): Promise<Response | null> {
   const url = new URL(request.url);
-  if (!url.pathname.startsWith("/api/auth") && !url.pathname.startsWith("/api/saved-sites")) return null;
+  if (
+    !url.pathname.startsWith("/api/auth") &&
+    !url.pathname.startsWith("/api/saved-sites") &&
+    url.pathname !== "/api/profile"
+  ) return null;
   if (!env.DB) return errorResponse(503, "storage_unavailable", "Account storage is temporarily unavailable.");
 
   const db = env.DB;
@@ -111,6 +133,10 @@ export async function handleAccountRequest(
     }
 
     if (url.pathname === "/api/auth/signup") {
+      return errorResponse(410, "verification_required", "Create accounts through email verification.");
+    }
+
+    if (url.pathname === "/api/auth/signup/request") {
       if (request.method !== "POST") return methodNotAllowed("POST");
       assertSameOrigin(request);
       const body = await readJson(request);
@@ -118,16 +144,98 @@ export async function handleAccountRequest(
       const password = parsePassword(body.password);
       const existing = await db.prepare("SELECT id FROM users WHERE email = ? LIMIT 1").bind(email).first();
       if (existing) return errorResponse(409, "email_in_use", "An account already uses this email.");
-
+      await assertEmailChallengeAllowed(db, email);
+      const id = `challenge_${crypto.randomUUID()}`;
+      const code = randomCode();
       const salt = randomSecret(18);
-      const passwordHash = await hashPassword(password, salt);
-      const user: AuthUser = { id: `user_${crypto.randomUUID()}`, email };
-      const timestamp = new Date().toISOString();
-      await db.prepare(`INSERT INTO users (id, email, password_salt, password_hash, created_at, updated_at)
-        VALUES (?, ?, ?, ?, ?, ?)`)
-        .bind(user.id, email, salt, passwordHash, timestamp, timestamp)
+      const timestamp = new Date();
+      await db.prepare(`INSERT INTO email_challenges
+        (id, kind, email, user_id, code_hash, password_salt, password_hash, expires_at, attempts, created_at)
+        VALUES (?, 'signup', ?, NULL, ?, ?, ?, ?, 0, ?)`)
+        .bind(
+          id,
+          email,
+          await sha256(`${id}:${code}`),
+          salt,
+          await hashPassword(password, salt),
+          new Date(timestamp.getTime() + 15 * 60 * 1000).toISOString(),
+          timestamp.toISOString(),
+        )
         .run();
+      try {
+        await sendVerificationEmail(env, email, code, "Confirm your CastCompass account");
+      } catch (error) {
+        await db.prepare("DELETE FROM email_challenges WHERE id = ?").bind(id).run();
+        throw error;
+      }
+      return jsonResponse({ challengeId: id, expiresInMinutes: 15 });
+    }
+
+    if (url.pathname === "/api/auth/signup/verify") {
+      if (request.method !== "POST") return methodNotAllowed("POST");
+      assertSameOrigin(request);
+      const body = await readJson(request);
+      const challenge = await verifyEmailChallenge(db, body.challengeId, body.code, "signup");
+      const existing = await db.prepare("SELECT id FROM users WHERE email = ? LIMIT 1").bind(challenge.email).first();
+      if (existing) return errorResponse(409, "email_in_use", "An account already uses this email.");
+      if (!challenge.password_salt || !challenge.password_hash) {
+        throw new AuthError(400, "invalid_challenge", "Request a new verification code.");
+      }
+      const user: AuthUser = { id: `user_${crypto.randomUUID()}`, email: challenge.email };
+      const timestamp = new Date().toISOString();
+      await db.batch([
+        db.prepare(`INSERT INTO users (id, email, password_salt, password_hash, created_at, updated_at)
+          VALUES (?, ?, ?, ?, ?, ?)`).bind(
+            user.id, user.email, challenge.password_salt, challenge.password_hash, timestamp, timestamp,
+          ),
+        db.prepare("DELETE FROM email_challenges WHERE id = ?").bind(challenge.id),
+      ]);
       return createSessionResponse(db, request, user, 201);
+    }
+
+    if (url.pathname === "/api/auth/password/request") {
+      if (request.method !== "POST") return methodNotAllowed("POST");
+      assertSameOrigin(request);
+      const body = await readJson(request);
+      const email = parseEmail(body.email);
+      const user = await db.prepare("SELECT id FROM users WHERE email = ? LIMIT 1").bind(email).first<{ id: string }>();
+      if (!user) return jsonResponse({ requested: true, challengeId: `challenge_${crypto.randomUUID()}`, expiresInMinutes: 15 });
+      await assertEmailChallengeAllowed(db, email);
+      const id = `challenge_${crypto.randomUUID()}`;
+      const code = randomCode();
+      const timestamp = new Date();
+      await db.prepare(`INSERT INTO email_challenges
+        (id, kind, email, user_id, code_hash, expires_at, attempts, created_at)
+        VALUES (?, 'password_reset', ?, ?, ?, ?, 0, ?)`)
+        .bind(id, email, user.id, await sha256(`${id}:${code}`), new Date(timestamp.getTime() + 15 * 60 * 1000).toISOString(), timestamp.toISOString())
+        .run();
+      try {
+        await sendVerificationEmail(env, email, code, "Reset your CastCompass password");
+      } catch (error) {
+        await db.prepare("DELETE FROM email_challenges WHERE id = ?").bind(id).run();
+        throw error;
+      }
+      return jsonResponse({ requested: true, challengeId: id, expiresInMinutes: 15 });
+    }
+
+    if (url.pathname === "/api/auth/password/reset") {
+      if (request.method !== "POST") return methodNotAllowed("POST");
+      assertSameOrigin(request);
+      const body = await readJson(request);
+      const password = parsePassword(body.password);
+      const challenge = await verifyEmailChallenge(db, body.challengeId, body.code, "password_reset");
+      if (!challenge.user_id) throw new AuthError(400, "invalid_challenge", "Request a new reset code.");
+      const salt = randomSecret(18);
+      const timestamp = new Date().toISOString();
+      await db.batch([
+        db.prepare("UPDATE users SET password_salt = ?, password_hash = ?, updated_at = ? WHERE id = ?")
+          .bind(salt, await hashPassword(password, salt), timestamp, challenge.user_id),
+        db.prepare("DELETE FROM auth_sessions WHERE user_id = ?").bind(challenge.user_id),
+        db.prepare("DELETE FROM email_challenges WHERE id = ?").bind(challenge.id),
+      ]);
+      const user = await db.prepare("SELECT id, email FROM users WHERE id = ? LIMIT 1").bind(challenge.user_id).first<AuthUser>();
+      if (!user) throw new AuthError(404, "account_not_found", "The account could not be found.");
+      return createSessionResponse(db, request, user);
     }
 
     if (url.pathname === "/api/auth/login") {
@@ -168,6 +276,29 @@ export async function handleAccountRequest(
 
     const user = await getAuthenticatedUser(request, env);
     if (!user) return unauthorizedResponse();
+
+    if (url.pathname === "/api/profile") {
+      if (request.method !== "GET") return methodNotAllowed("GET");
+      const [savedRows, tripRows] = await Promise.all([
+        db.prepare("SELECT site_id, created_at FROM saved_sites WHERE user_id = ? ORDER BY created_at DESC")
+          .bind(user.id)
+          .all<{ site_id: string; created_at: string }>(),
+        db.prepare(`SELECT id, source, site_id, started_at, ended_at, mode, fishing_method,
+          angler_count, angler_hours, keeper_count, short_released_count, halibut_encounters,
+          no_catch, notes, moderation_status, opportunity_score, model_version, completed_at
+          FROM trips
+          WHERE user_id = ? AND status = 'completed'
+          ORDER BY COALESCE(completed_at, ended_at, started_at) DESC
+          LIMIT 100`)
+          .bind(user.id)
+          .all<Record<string, unknown>>(),
+      ]);
+      return jsonResponse({
+        user,
+        savedSites: savedRows.results ?? [],
+        trips: tripRows.results ?? [],
+      });
+    }
 
     if (url.pathname === "/api/saved-sites") {
       if (request.method !== "GET") return methodNotAllowed("GET");
@@ -268,6 +399,87 @@ async function verifyPassword(password: string, salt: string, expected: string) 
   let difference = 0;
   for (let index = 0; index < actual.length; index += 1) difference |= actual.charCodeAt(index) ^ expected.charCodeAt(index);
   return difference === 0;
+}
+
+interface EmailChallengeRow {
+  id: string;
+  kind: "signup" | "password_reset";
+  email: string;
+  user_id: string | null;
+  code_hash: string;
+  password_salt: string | null;
+  password_hash: string | null;
+  expires_at: string;
+  attempts: number;
+}
+
+async function assertEmailChallengeAllowed(db: D1DatabaseLike, email: string) {
+  const cutoff = new Date(Date.now() - 60 * 60 * 1000).toISOString();
+  const row = await db.prepare("SELECT COUNT(*) AS count FROM email_challenges WHERE email = ? AND created_at >= ?")
+    .bind(email, cutoff)
+    .first<{ count: number }>();
+  if (Number(row?.count ?? 0) >= 5) {
+    throw new AuthError(429, "too_many_codes", "Too many email codes were requested. Try again in an hour.");
+  }
+}
+
+async function verifyEmailChallenge(
+  db: D1DatabaseLike,
+  challengeIdValue: unknown,
+  codeValue: unknown,
+  kind: EmailChallengeRow["kind"],
+) {
+  const challengeId = typeof challengeIdValue === "string" ? challengeIdValue : "";
+  const code = typeof codeValue === "string" ? codeValue.trim() : "";
+  if (!/^challenge_[a-f0-9-]{36}$/.test(challengeId) || !/^\d{6}$/.test(code)) {
+    throw new AuthError(422, "invalid_code", "Enter the six-digit code from your email.");
+  }
+  const row = await db.prepare("SELECT * FROM email_challenges WHERE id = ? AND kind = ? LIMIT 1")
+    .bind(challengeId, kind)
+    .first<EmailChallengeRow>();
+  if (!row || row.expires_at <= new Date().toISOString()) {
+    if (row) await db.prepare("DELETE FROM email_challenges WHERE id = ?").bind(challengeId).run();
+    throw new AuthError(410, "code_expired", "That code expired. Request a new one.");
+  }
+  if (Number(row.attempts) >= 6) {
+    throw new AuthError(429, "too_many_code_attempts", "Too many code attempts. Request a new code.");
+  }
+  const valid = (await sha256(`${challengeId}:${code}`)) === row.code_hash;
+  if (!valid) {
+    await db.prepare("UPDATE email_challenges SET attempts = attempts + 1 WHERE id = ?").bind(challengeId).run();
+    throw new AuthError(401, "invalid_code", "That verification code is incorrect.");
+  }
+  return row;
+}
+
+async function sendVerificationEmail(env: AuthApiEnv, to: string, code: string, subject: string) {
+  if (!env.RESEND_API_KEY) {
+    throw new AuthError(503, "email_not_configured", "Email verification is waiting for the site mail sender to be connected.");
+  }
+  const from = env.AUTH_EMAIL_FROM ?? "CastCompass <account@updates.brianbzeng.com>";
+  const response = await fetch("https://api.resend.com/emails", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${env.RESEND_API_KEY}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      from,
+      to: [to],
+      subject,
+      text: `Your CastCompass verification code is ${code}. It expires in 15 minutes. If you did not request this, you can ignore this email.`,
+      html: `<div style="font-family:Arial,sans-serif;color:#081a33"><h1>CastCompass</h1><p>Your verification code is:</p><p style="font-size:32px;font-weight:700;letter-spacing:8px">${code}</p><p>This code expires in 15 minutes. If you did not request it, you can ignore this email.</p></div>`,
+    }),
+  });
+  if (!response.ok) {
+    console.error("Transactional email delivery failed", response.status);
+    throw new AuthError(502, "email_delivery_failed", "The verification email could not be sent. Try again shortly.");
+  }
+}
+
+function randomCode() {
+  const values = crypto.getRandomValues(new Uint32Array(1));
+  return String(values[0] % 1_000_000).padStart(6, "0");
 }
 
 function randomSecret(length: number) {

@@ -46,10 +46,31 @@ export const authAttempts = sqliteTable(
   (table) => [index("auth_attempts_email_time_idx").on(table.emailHash, table.attemptedAt)],
 );
 
+export const emailChallenges = sqliteTable(
+  "email_challenges",
+  {
+    id: text("id").primaryKey(),
+    kind: text("kind").notNull(),
+    email: text("email").notNull(),
+    userId: text("user_id").references(() => users.id, { onDelete: "cascade" }),
+    codeHash: text("code_hash").notNull(),
+    passwordSalt: text("password_salt"),
+    passwordHash: text("password_hash"),
+    expiresAt: text("expires_at").notNull(),
+    attempts: integer("attempts").notNull().default(0),
+    createdAt: text("created_at").notNull(),
+  },
+  (table) => [
+    check("email_challenges_kind_check", sql`${table.kind} in ('signup', 'password_reset')`),
+    index("email_challenges_email_time_idx").on(table.email, table.createdAt),
+  ],
+);
+
 export const trips = sqliteTable(
   "trips",
   {
     id: text("id").primaryKey(),
+    userId: text("user_id").references(() => users.id, { onDelete: "set null" }),
     status: text("status").notNull(),
     source: text("source").notNull(),
     siteId: text("site_id").notNull(),
@@ -85,6 +106,10 @@ export const trips = sqliteTable(
     createdAt: text("created_at").notNull(),
     updatedAt: text("updated_at").notNull(),
     completedAt: text("completed_at"),
+    aiReviewStatus: text("ai_review_status"),
+    aiReviewJson: text("ai_review_json"),
+    aiReviewModel: text("ai_review_model"),
+    aiReviewedAt: text("ai_reviewed_at"),
   },
   (table) => [
     check("trips_status_check", sql`${table.status} in ('active', 'completed')`),
@@ -98,5 +123,6 @@ export const trips = sqliteTable(
     index("trips_site_started_idx").on(table.siteId, table.startedAt),
     index("trips_reporter_created_idx").on(table.reporterKeyHash, table.createdAt),
     index("trips_referral_created_idx").on(table.referralCode, table.createdAt),
+    index("trips_user_completed_idx").on(table.userId, table.completedAt),
   ],
 );

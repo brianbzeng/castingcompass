@@ -1822,7 +1822,7 @@ export function OpportunityApp() {
                         <details className="structure-image-details">
                           <summary>See an example</summary>
                           <figure>
-                            <Image src={guide.image.src} alt={guide.image.alt} width={1000} height={650} loading="lazy" />
+                            <Image src={guide.image.src} alt={guide.image.alt} width={1000} height={650} loading="lazy" unoptimized />
                             <figcaption>
                               Reference example—not this exact spot. <a href={guide.image.sourceUrl} target="_blank" rel="noreferrer">{guide.image.credit} · {guide.image.license} ↗</a>
                             </figcaption>
@@ -1983,7 +1983,7 @@ export function OpportunityApp() {
         </div>
       ) : null}
 
-      <AccountModal account={account} />
+      <AccountModal account={account} sites={sites} />
 
       {showCompare ? (
         <div className="modal-layer" role="presentation" onClick={(event) => {

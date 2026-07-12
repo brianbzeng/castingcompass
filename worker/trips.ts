@@ -49,6 +49,7 @@ export interface CuratedSite {
 
 export interface TripRow {
   id: string;
+  user_id: string | null;
   status: "active" | "completed";
   source: "live" | "past_report";
   site_id: string;
@@ -84,10 +85,15 @@ export interface TripRow {
   created_at: string;
   updated_at: string;
   completed_at: string | null;
+  ai_review_status: string | null;
+  ai_review_json: string | null;
+  ai_review_model: string | null;
+  ai_reviewed_at: string | null;
 }
 
 interface NewTripRecord {
   id: string;
+  userId: string | null;
   status: "active" | "completed";
   source: "live" | "past_report";
   siteId: string;
@@ -168,10 +174,13 @@ export interface TripStore {
 export interface TripHandlerOptions {
   store?: TripStore;
   now?: () => Date;
+  accountId?: string | null;
+  onTripCompleted?: (trip: TripRow) => void;
 }
 
 const CREATE_TRIPS_SQL = `CREATE TABLE IF NOT EXISTS trips (
   id TEXT PRIMARY KEY NOT NULL,
+  user_id TEXT,
   status TEXT NOT NULL,
   source TEXT NOT NULL,
   site_id TEXT NOT NULL,
@@ -207,6 +216,10 @@ const CREATE_TRIPS_SQL = `CREATE TABLE IF NOT EXISTS trips (
   created_at TEXT NOT NULL,
   updated_at TEXT NOT NULL,
   completed_at TEXT,
+  ai_review_status TEXT,
+  ai_review_json TEXT,
+  ai_review_model TEXT,
+  ai_reviewed_at TEXT,
   CONSTRAINT trips_status_check CHECK (status in ('active', 'completed')),
   CONSTRAINT trips_source_check CHECK (source in ('live', 'past_report')),
   CONSTRAINT trips_moderation_status_check CHECK (moderation_status in ('pending', 'approved', 'rejected')),
@@ -218,17 +231,18 @@ const CREATE_INDEX_STATEMENTS = [
   "CREATE INDEX IF NOT EXISTS trips_site_started_idx ON trips (site_id, started_at)",
   "CREATE INDEX IF NOT EXISTS trips_reporter_created_idx ON trips (reporter_key_hash, created_at)",
   "CREATE INDEX IF NOT EXISTS trips_referral_created_idx ON trips (referral_code, created_at)",
+  "CREATE INDEX IF NOT EXISTS trips_user_completed_idx ON trips (user_id, completed_at)",
 ];
 
 const INSERT_TRIP_SQL = `INSERT INTO trips (
-  id, status, source, site_id, started_at, ended_at, mode, fishing_method, gear,
+  id, user_id, status, source, site_id, started_at, ended_at, mode, fishing_method, gear,
   angler_count, angler_hours, keeper_count, short_released_count, halibut_encounters,
   no_catch, notes, consent, consent_at, moderation_status, reporter_key_hash, referral_code, token_hash,
   opportunity_window_id, opportunity_score, habitat_score, seasonality_score, conditions_score,
   model_version, score_influenced_choice, prediction_metadata_json, photo_key,
   photo_content_type, photo_size_bytes, created_at, updated_at, completed_at
 ) VALUES (
-  ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
+  ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
   ?, ?, ?, ?, ?, ?, ?
 )`;
 
@@ -309,6 +323,7 @@ export function createTripStore(db: D1DatabaseLike): TripStore {
         .prepare(INSERT_TRIP_SQL)
         .bind(
           record.id,
+          record.userId,
           record.status,
           record.source,
           record.siteId,
@@ -469,6 +484,7 @@ export async function handleTripRequest(
 
       const trip = await store.insertTrip({
         id: `trip_${crypto.randomUUID()}`,
+        userId: options.accountId ?? null,
         status: "active",
         source: "live",
         siteId: site.id,
@@ -572,6 +588,7 @@ export async function handleTripRequest(
         if (!completed) {
           throw new ApiError(404, "trip_not_found", "The active trip could not be found.");
         }
+        options.onTripCompleted?.(completed);
         return jsonResponse({ trip: publicTrip(completed) });
       } catch (error) {
         if (uploaded) await env.TRIP_PHOTOS?.delete(uploaded.key).catch(() => undefined);
@@ -612,6 +629,7 @@ export async function handleTripRequest(
       try {
         const trip = await store.insertTrip({
           id,
+          userId: options.accountId ?? null,
           status: "completed",
           source: "past_report",
           siteId: site.id,
@@ -641,6 +659,7 @@ export async function handleTripRequest(
           updatedAt: timestamp,
           completedAt: timestamp,
         });
+        options.onTripCompleted?.(trip);
         return jsonResponse({ trip: publicTrip(trip) }, 201, reporter.setCookie);
       } catch (error) {
         if (uploaded) await env.TRIP_PHOTOS?.delete(uploaded.key).catch(() => undefined);

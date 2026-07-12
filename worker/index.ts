@@ -4,6 +4,7 @@ import handler from "vinext/server/app-router-entry";
 import sites from "../public/data/sites.json";
 import { handleTripRequest, type TripApiEnv } from "./trips";
 import { getAuthenticatedUser, handleAccountRequest, unauthorizedResponse } from "./auth";
+import { reviewTripWithMimo } from "./trip-review";
 
 interface AssetFetcher {
   fetch(request: Request): Promise<Response>;
@@ -11,6 +12,8 @@ interface AssetFetcher {
 
 interface Env extends TripApiEnv {
   ASSETS: AssetFetcher;
+  MIMO_API_KEY?: string;
+  MIMO_MODEL?: string;
 }
 
 interface ExecutionContext {
@@ -33,11 +36,15 @@ const worker = {
 
     const protectedTripMutation = url.pathname.startsWith("/api/trips/") &&
       url.pathname !== "/api/trips/summary" && request.method !== "GET";
-    if (protectedTripMutation && !(await getAuthenticatedUser(request, env))) {
+    const authenticatedUser = protectedTripMutation ? await getAuthenticatedUser(request, env) : null;
+    if (protectedTripMutation && !authenticatedUser) {
       return unauthorizedResponse();
     }
 
-    const tripResponse = await handleTripRequest(request, env, sites);
+    const tripResponse = await handleTripRequest(request, env, sites, {
+      accountId: authenticatedUser?.id ?? null,
+      onTripCompleted: (trip) => ctx.waitUntil(reviewTripWithMimo(env, trip, sites)),
+    });
     if (tripResponse) return tripResponse;
 
     if (url.pathname === "/_vinext/image") {
