@@ -1,7 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ContourMap } from "./ContourMap";
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { TripReportFeature } from "./TripReportFeature";
 import {
   ArrowIcon,
@@ -30,6 +29,7 @@ import type {
 } from "../types";
 
 const PACIFIC_TIME_ZONE = "America/Los_Angeles";
+const ContourMap = lazy(() => import("./ContourMap").then((module) => ({ default: module.ContourMap })));
 
 const FALLBACK_SITES: FishingSite[] = [
   {
@@ -690,6 +690,7 @@ export function OpportunityApp() {
   const detailDialogRef = useRef<HTMLElement>(null);
   const detailTriggerRef = useRef<HTMLElement | null>(null);
   const detailTriggerSiteIdRef = useRef<string | null>(null);
+  const mapWrapRef = useRef<HTMLDivElement>(null);
   const [sites, setSites] = useState<FishingSite[]>(FALLBACK_SITES);
   const [snapshot, setSnapshot] = useState<OpportunitySnapshot>(fallbackSnapshot);
   const [communityPulses, setCommunityPulses] = useState<CommunityPulse[]>([]);
@@ -711,6 +712,7 @@ export function OpportunityApp() {
   const [dataState, setDataState] = useState<"loading" | "live" | "cached">("loading");
   const [installPrompt, setInstallPrompt] = useState<Event | null>(null);
   const [tripReportRequest, setTripReportRequest] = useState<TripReportRequest | null>(null);
+  const [mapEnabled, setMapEnabled] = useState(false);
   const tripReportRequestKey = useRef(0);
 
   useEffect(() => {
@@ -744,6 +746,28 @@ export function OpportunityApp() {
     window.addEventListener("beforeinstallprompt", handler);
     return () => window.removeEventListener("beforeinstallprompt", handler);
   }, []);
+
+  useEffect(() => {
+    if (mapEnabled || view !== "map" || !mapWrapRef.current) return;
+    if (typeof IntersectionObserver === "undefined") return;
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (!entry.isIntersecting) return;
+        setMapEnabled(true);
+        observer.disconnect();
+      },
+      {
+        // Wait until the map is meaningfully inside the viewport. This keeps
+        // MapLibre out of the critical render path while still loading as the
+        // angler scrolls toward it.
+        rootMargin: "-36% 0px",
+        threshold: 0.01,
+      },
+    );
+    observer.observe(mapWrapRef.current);
+    return () => observer.disconnect();
+  }, [mapEnabled, view]);
 
   useEffect(() => {
     if (!selectedSiteId || !detailDialogRef.current) return;
@@ -1165,22 +1189,36 @@ export function OpportunityApp() {
       </section>
 
       <section className={`workspace ${view === "list" ? "list-only" : ""}`}>
-        <div className="map-wrap">
-          <ContourMap
-            sites={rankedSites}
-            windowsBySite={windowsBySite}
-            selectedSiteId={selectedSiteId}
-            onSelectSite={openSiteDetail}
-            userPosition={userPosition}
-          />
-          <div className="map-overlay-label"><LayersIcon /> {rankedSites.length} spots · tap a group to spread it out</div>
-          <div className="map-legend">
-            <span><i className="cluster" />Grouped</span>
-            <span><i className="excellent" />80+</span>
-            <span><i className="good" />65–79</span>
-            <span><i className="fair" />45–64</span>
-            <span><i className="quiet" />Below 45</span>
-          </div>
+        <div className="map-wrap" ref={mapWrapRef}>
+          {mapEnabled ? (
+            <Suspense fallback={<div className="map-loading-panel"><span /> Loading interactive map…</div>}>
+              <ContourMap
+                sites={rankedSites}
+                windowsBySite={windowsBySite}
+                selectedSiteId={selectedSiteId}
+                onSelectSite={openSiteDetail}
+                userPosition={userPosition}
+              />
+            </Suspense>
+          ) : (
+            <button className="map-load-panel" type="button" onClick={() => setMapEnabled(true)}>
+              <MapIcon />
+              <strong>Open interactive map</strong>
+              <span>The map loads when you reach it, keeping the forecast quick to open.</span>
+            </button>
+          )}
+          {mapEnabled ? (
+            <>
+              <div className="map-overlay-label"><LayersIcon /> {rankedSites.length} spots · tap a group to spread it out</div>
+              <div className="map-legend">
+                <span><i className="cluster" />Grouped</span>
+                <span><i className="excellent" />80+</span>
+                <span><i className="good" />65–79</span>
+                <span><i className="fair" />45–64</span>
+                <span><i className="quiet" />Below 45</span>
+              </div>
+            </>
+          ) : null}
         </div>
 
         <div className="ranking-panel">

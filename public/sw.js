@@ -1,11 +1,12 @@
 const CACHE_PREFIX = "contourcast-";
-const CACHE_NAME = "contourcast-v6";
+const CACHE_NAME = "contourcast-v7";
 const APP_SHELL = [
   "/",
   "/manifest.webmanifest",
   "/icon.svg",
   "/icons/icon-192.png",
   "/icons/icon-512.png",
+  "/topography-contours.webp",
   "/data/sites.json",
   "/data/opportunities.json",
   "/data/community-pulse.json",

@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { access, readFile } from "node:fs/promises";
+import { access, readFile, stat } from "node:fs/promises";
 import test from "node:test";
 
 async function render(path = "/") {
@@ -52,6 +52,7 @@ test("ships install and offline assets", async () => {
   assert.equal(parsed.icons.length, 2);
   assert.match(serviceWorker, /\/data\/opportunities\.json/);
   assert.match(serviceWorker, /\/data\/community-pulse\.json/);
+  assert.match(serviceWorker, /\/topography-contours\.webp/);
   assert.match(serviceWorker, /caches\.match/);
 });
 
@@ -136,4 +137,19 @@ test("keeps maps and source navigation immediately reachable", async () => {
   assert.match(css, /\.site-list\s*\{[^}]*overscroll-behavior-y:\s*auto/s);
   assert.match(css, /\.detail-sheet\s*\{[^}]*height:\s*100dvh/s);
   assert.match(css, /\.source-section\s*\{[^}]*scroll-margin-top:\s*88px/s);
+});
+
+test("defers the interactive map and keeps the offline snapshot lightweight", async () => {
+  const [app, css, snapshotStats] = await Promise.all([
+    readFile(new URL("../app/components/OpportunityApp.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/globals.css", import.meta.url), "utf8"),
+    stat(new URL("../public/data/opportunities.json", import.meta.url)),
+  ]);
+
+  assert.match(app, /lazy\(\(\) => import\("\.\/ContourMap"\)/);
+  assert.match(app, /new IntersectionObserver/);
+  assert.match(app, /Open interactive map/);
+  assert.ok(snapshotStats.size < 1_200_000, `forecast snapshot is ${snapshotStats.size} bytes`);
+  assert.match(css, /url\("\/topography-contours\.webp"\)/);
+  assert.match(css, /content-visibility:\s*auto/);
 });

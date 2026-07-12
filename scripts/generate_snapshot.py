@@ -440,32 +440,25 @@ def factor_text(
     daylight: bool,
 ) -> list[str]:
     tags = ", ".join(site["structureTags"][:2]).replace("-", " ")
-    factors = [f"Habitat proxy favors the site's {tags}; this demo value is not yet the trained bathymetry model."]
-    factors.append(f"July seasonal index is {seasonality}/100 from the provisional fixture pending a reproducible RecFIN export.")
+    factors = [f"Look for {tags}.", f"Time of year: {seasonality}/100."]
     if tide_change is None:
-        factors.append("NOAA tide prediction was unavailable, so tide contributed a neutral value and is marked excluded.")
+        factors.append("Tide forecast unavailable.")
     else:
-        factors.append(f"NOAA predicts a {tide_stage} tide with {tide_change:.2f} m of change across this window.")
+        factors.append(f"Tide: {tide_stage}, changing {tide_change:.2f} m.")
     if wind_mph is None:
-        factors.append("NWS wind forecast was unavailable, so wind contributed a neutral value and is marked excluded.")
+        factors.append("Wind forecast unavailable.")
     else:
-        factors.append(f"NWS hourly wind is approximately {wind_mph:.0f} mph for the middle of the window.")
+        factors.append(f"Wind: about {wind_mph:.0f} mph.")
     if site["region"] in OPEN_COAST_REGIONS:
         if swell_feet is None:
-            factors.append("The latest buoy observation is outside its six-hour freshness limit for this window, so swell is excluded.")
+            factors.append("Fresh swell reading unavailable.")
         else:
-            factors.append(f"Fresh NDBC swell observation is {swell_feet:.1f} ft; treat it as a near-term observation, not a 72-hour forecast.")
+            factors.append(f"Nearby swell: {swell_feet:.1f} ft.")
     if water_temp_f is None:
-        factors.append("Open-Meteo marine SST was unavailable for this window; no fallback value was invented.")
+        factors.append("Water temperature unavailable.")
     else:
-        factors.append(
-            f"Open-Meteo/Météo-France marine SST is {water_temp_f:.1f}°F; it is displayed as forecast context and is not used in the Opportunity Score."
-        )
-    if ndbc_water_temp_f is not None:
-        factors.append(
-            f"The latest fresh NDBC buoy observation is {ndbc_water_temp_f:.1f}°F and is retained separately as regional validation context."
-        )
-    factors.append("Daylight is included." if daylight else "This is a nighttime window; verify access hours before traveling.")
+        factors.append(f"Water temperature: {water_temp_f:.1f}°F.")
+    factors.append("Daylight window." if daylight else "After dark—check access hours.")
     return factors
 
 
@@ -546,22 +539,6 @@ def main() -> None:
             raw_score = (0.52 * habitat) + (0.18 * seasonality) + (0.30 * dynamic)
             available_primary = int(tide_change is not None) + int(wind_mph is not None)
             confidence = "medium" if available_primary == 2 else "low"
-            freshness = {
-                "tides": tide_result["status"],
-                "weather": weather_result["status"] if weather else "unavailable-excluded",
-                "buoy": (
-                    "fresh-observation-used-for-swell"
-                    if swell_fresh
-                    else "fresh-current-context-not-scored"
-                    if ndbc_water_fresh
-                    else "stale-or-unavailable-excluded"
-                ),
-                "waterTemperature": (
-                    "fresh-model-forecast-not-scored" if water_temp_f is not None else "unavailable-not-scored"
-                ),
-                "currents": "not-integrated-excluded",
-                "satellite": "not-integrated-excluded",
-            }
             windows.append(
                 {
                     "id": f"{site['id']}--{window_start.strftime('%Y%m%dT%H%MZ')}",
@@ -596,7 +573,6 @@ def main() -> None:
                         "ndbcObservedAt": isoformat(buoy_result["waterObserved"]) if ndbc_water_fresh else None,
                         "daylight": daylight,
                     },
-                    "sourceFreshness": freshness,
                     "_rawScore": round(raw_score, 6),
                 }
             )
@@ -687,7 +663,13 @@ def main() -> None:
 
     PUBLIC_DATA.mkdir(parents=True, exist_ok=True)
     shutil.copyfile(SITES_PATH, PUBLIC_DATA / "sites.json")
-    (PUBLIC_DATA / "opportunities.json").write_text(json.dumps(payload, indent=2) + "\n")
+    # Keep the browser payload compact. This file is parsed during startup on
+    # mobile, so repeated per-window source metadata and pretty-printing have a
+    # measurable interaction cost. Source freshness remains available once at
+    # the snapshot level.
+    (PUBLIC_DATA / "opportunities.json").write_text(
+        json.dumps(payload, separators=(",", ":")) + "\n"
+    )
 
     failures = {
         "tides": {station: result["error"] for station, result in tide_results.items() if result["error"]},

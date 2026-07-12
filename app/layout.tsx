@@ -1,7 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { IBM_Plex_Mono, Manrope } from "next/font/google";
 import { RegisterServiceWorker } from "./register-service-worker";
-import "maplibre-gl/dist/maplibre-gl.css";
 import "./globals.css";
 
 const manrope = Manrope({
