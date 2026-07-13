@@ -65,6 +65,8 @@ export interface Conditions {
   windMph?: number;
   windDirection?: string;
   swellFeet?: number;
+  swellPeriodSeconds?: number;
+  wavePowerKwM?: number;
   waterTempF?: number;
   waterTempSource?: string;
   ndbcObservedWaterTempF?: number;

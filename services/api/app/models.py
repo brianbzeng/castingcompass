@@ -59,11 +59,18 @@ class CurrentConditions(APIModel):
     current_knots: float | None = None
     wind_mph: float | None = Field(default=None, ge=0)
     swell_feet: float | None = Field(default=None, ge=0)
+    swell_period_seconds: float | None = Field(default=None, ge=0)
+    wave_power_kw_m: float | None = Field(default=None, ge=0)
     water_temp_f: float | None = None
     water_temp_source: str | None = None
     ndbc_observed_water_temp_f: float | None = None
     ndbc_observed_at: datetime | None = None
     daylight: bool | None = None
+    cloud_cover_pct: float | None = Field(default=None, ge=0, le=100)
+    pressure_hpa: float | None = Field(default=None, ge=800, le=1200)
+    pressure_trend_hpa_3h: float | None = None
+    moon_phase: str | None = None
+    moon_illumination_pct: float | None = Field(default=None, ge=0, le=100)
 
 
 class SiteSummary(APIModel):

@@ -399,6 +399,8 @@ def normalize_opportunity(
             current_knots=_first(conditions_raw, "current_knots", "currentKnots"),
             wind_mph=_first(conditions_raw, "wind_mph", "windMph"),
             swell_feet=_first(conditions_raw, "swell_feet", "swellFeet"),
+            swell_period_seconds=_first(conditions_raw, "swell_period_seconds", "swellPeriodSeconds"),
+            wave_power_kw_m=_first(conditions_raw, "wave_power_kw_m", "wavePowerKwM"),
             water_temp_f=_first(conditions_raw, "water_temp_f", "waterTempF"),
             water_temp_source=_first(conditions_raw, "water_temp_source", "waterTempSource"),
             ndbc_observed_water_temp_f=_first(
@@ -410,6 +412,11 @@ def normalize_opportunity(
                 _first(conditions_raw, "ndbc_observed_at", "ndbcObservedAt")
             ),
             daylight=conditions_raw.get("daylight"),
+            cloud_cover_pct=_first(conditions_raw, "cloud_cover_pct", "cloudCoverPct"),
+            pressure_hpa=_first(conditions_raw, "pressure_hpa", "pressureHpa"),
+            pressure_trend_hpa_3h=_first(conditions_raw, "pressure_trend_hpa_3h", "pressureTrendHpa3h"),
+            moon_phase=_first(conditions_raw, "moon_phase", "moonPhase"),
+            moon_illumination_pct=_first(conditions_raw, "moon_illumination_pct", "moonIlluminationPct"),
         )
     opportunity_id = str(
         _first(raw, "id", default=f"{site.id}-{start_time.strftime('%Y%m%dT%H%M%SZ')}")

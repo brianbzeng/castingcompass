@@ -46,6 +46,16 @@ input {
   font: inherit;
 }
 
+select {
+  color-scheme: dark;
+}
+
+select option,
+select optgroup {
+  color: #e9fff2;
+  background: #06172e;
+}
+
 button,
 a {
   -webkit-tap-highlight-color: transparent;
@@ -2951,6 +2961,111 @@ footer > div {
   margin: 0;
 }
 
+.profile-trip-actions {
+  display: flex !important;
+  justify-content: flex-start !important;
+  gap: 0.55rem !important;
+  margin-top: 0.35rem;
+}
+
+.profile-trip-actions button,
+.profile-trip-editor-heading button {
+  padding: 0.35rem 0;
+  border-bottom: 1px solid var(--line-strong);
+  color: var(--seafoam);
+  background: transparent;
+  font-size: 0.68rem;
+  font-weight: 750;
+  cursor: pointer;
+}
+
+.profile-trip-actions button:last-child {
+  color: #ffab9f;
+}
+
+.profile-trip-actions button:disabled {
+  opacity: 0.45;
+  cursor: wait;
+}
+
+.profile-review-note {
+  display: block;
+  margin-top: 0.65rem;
+  color: var(--ink-soft);
+  font-size: 0.65rem;
+  line-height: 1.5;
+}
+
+.profile-trip-editor {
+  margin-top: 1.2rem;
+  padding: 1rem;
+  border: 1px solid var(--line-strong);
+  background: rgba(3, 20, 42, 0.66);
+}
+
+.profile-trip-editor-heading {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.profile-trip-editor-heading span {
+  color: var(--seafoam);
+  font-family: var(--font-mono);
+  font-size: 0.6rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.profile-trip-editor-heading h3 {
+  margin: 0.25rem 0 0;
+  font-size: 1.1rem;
+}
+
+.profile-trip-editor-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.65rem;
+}
+
+.profile-trip-editor label {
+  display: grid;
+  gap: 0.35rem;
+  margin-top: 0.7rem;
+  color: var(--ink-soft);
+  font-family: var(--font-mono);
+  font-size: 0.62rem;
+  text-transform: uppercase;
+}
+
+.profile-trip-editor input,
+.profile-trip-editor select,
+.profile-trip-editor textarea {
+  width: 100%;
+  min-height: 42px;
+  padding: 0.65rem 0.7rem;
+  border: 1px solid var(--line-strong);
+  color: var(--ink);
+  background: rgba(2, 17, 37, 0.82);
+  font-family: var(--font-sans);
+  font-size: 0.74rem;
+  outline: none;
+}
+
+.profile-trip-editor textarea {
+  resize: vertical;
+  text-transform: none;
+}
+
+.profile-trip-editor > small {
+  display: block;
+  margin-top: 0.7rem;
+  color: var(--ink-soft);
+  font-size: 0.62rem;
+  text-transform: none;
+}
+
 .account-primary:disabled {
   opacity: 0.55;
   cursor: wait;
@@ -3326,6 +3441,11 @@ footer > div {
   background: rgba(4, 20, 41, 0.76);
   font-size: 0.7rem;
   outline: 0;
+}
+
+.trip-site-search input[type="search"] {
+  border-color: rgba(168, 216, 242, 0.34);
+  background: rgba(16, 57, 99, 0.58);
 }
 
 .trip-field textarea {
@@ -4300,6 +4420,103 @@ footer p { font-size: 0.76rem; }
 .photo-field strong { font-size: 0.74rem; }
 .trip-submit { font-size: 0.78rem; }
 
+.trip-draft-note {
+  margin: 0.5rem 0 0;
+  color: var(--seafoam);
+  font-family: var(--font-mono);
+  font-size: 0.64rem;
+}
+
+.wave-power-condition {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: 22px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.25rem 0.7rem;
+  border-top: 1px solid var(--line) !important;
+  border-right: 0 !important;
+}
+
+.wave-power-condition svg {
+  grid-row: 1 / span 2;
+  margin: 0;
+}
+
+.wave-power-condition strong {
+  grid-column: 3;
+  grid-row: 1;
+  text-align: right;
+}
+
+.wave-power-condition small {
+  grid-column: 2 / -1;
+  color: var(--ink-soft);
+  font-size: 0.66rem;
+  line-height: 1.45;
+}
+
+.wave-power-condition.danger {
+  color: #ffab9f;
+  background: rgba(255, 114, 92, 0.09);
+}
+
+.wave-power-condition.caution {
+  color: #ffd38d;
+  background: rgba(243, 184, 91, 0.08);
+}
+
+.wave-power-condition.calm {
+  color: var(--seafoam);
+}
+
+/* One continuous topographic canvas. Sections keep their layout, while the
+   fixed page background supplies the visual surface from top to bottom. */
+.forecast-intro,
+.score-note,
+.validation-section,
+.source-section,
+footer {
+  width: 100%;
+  max-width: none;
+  margin-inline: 0;
+  background: transparent;
+}
+
+.score-note,
+.validation-section,
+.source-section,
+footer {
+  padding-inline: max(4vw, calc((100vw - 1440px) / 2 + 4vw));
+}
+
+.control-deck {
+  background: rgba(4, 20, 41, 0.38);
+  border-block: 1px solid var(--line);
+}
+
+.validation-ledger,
+.source-row,
+.score-note-number {
+  box-shadow: 0 18px 54px rgba(1, 8, 19, 0.16);
+}
+
+@keyframes scroll-content-in {
+  from { opacity: 0.18; transform: translateY(34px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@supports (animation-timeline: view()) {
+  .score-note > *,
+  .validation-copy,
+  .validation-ledger,
+  .source-heading,
+  .source-grid {
+    animation: scroll-content-in linear both;
+    animation-timeline: view();
+    animation-range: entry 4% cover 30%;
+  }
+}
+
 .score-note,
 .validation-section,
 .source-section,
@@ -4317,6 +4534,23 @@ footer {
 
   .method-link::before {
     font-size: 0.7rem;
+  }
+}
+
+@media (max-width: 720px) {
+  .profile-trip-editor-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .wave-power-condition {
+    grid-template-columns: 20px 1fr;
+  }
+
+  .wave-power-condition strong,
+  .wave-power-condition small {
+    grid-column: 2;
+    grid-row: auto;
+    text-align: left;
   }
 }
 

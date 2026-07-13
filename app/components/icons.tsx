@@ -52,6 +52,10 @@ export function WindIcon(props: IconProps) {
   return <svg {...base} {...props}><path d="M3 8h11a3 3 0 1 0-3-3M3 12h16a2 2 0 1 1-2 2M3 16h8"/></svg>;
 }
 
+export function WaveIcon(props: IconProps) {
+  return <svg {...base} {...props}><path d="M2 15c2.6-3.4 5.2-3.4 7.8 0s5.2 3.4 7.8 0c1.5-2 2.8-2.7 4.4-2.2"/><path d="M4 9c2-2.4 4-2.4 6 0s4 2.4 6 0 4-2.4 6 0"/></svg>;
+}
+
 export function TideIcon(props: IconProps) {
   return <svg {...base} {...props}><path d="M2 15c3-4 5-4 8 0s5 4 8 0 4-2 4-2"/><path d="M5 9h14M12 3v6M9 6l3 3 3-3"/></svg>;
 }

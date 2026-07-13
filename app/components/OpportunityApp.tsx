@@ -21,6 +21,7 @@ import {
   TemperatureIcon,
   TideIcon,
   WindIcon,
+  WaveIcon,
 } from "./icons";
 import type {
   CommunityPulse,
@@ -105,6 +106,8 @@ interface ApiOpportunityWindow {
     current_knots?: number | null;
     wind_mph?: number | null;
     swell_feet?: number | null;
+    swell_period_seconds?: number | null;
+    wave_power_kw_m?: number | null;
     water_temp_f?: number | null;
     water_temp_source?: string | null;
     ndbc_observed_water_temp_f?: number | null;
@@ -131,7 +134,7 @@ function sourceUrlForName(name: string) {
   if (normalized.includes("tide")) return "https://api.tidesandcurrents.noaa.gov/api/prod/";
   if (normalized.includes("weather") || normalized.includes("nws")) return "https://api.weather.gov/";
   if (normalized.includes("buoy") || normalized.includes("ndbc") || normalized.includes("pressure")) return "https://www.ndbc.noaa.gov/";
-  if (normalized.includes("temperature") || normalized.includes("sst")) return "https://open-meteo.com/en/docs/marine-weather-api";
+  if (normalized.includes("temperature") || normalized.includes("sst") || normalized.includes("marine") || normalized.includes("wave")) return "https://open-meteo.com/en/docs/marine-weather-api";
   if (normalized.includes("moon")) return "https://aa.usno.navy.mil/data/MoonFraction";
   if (normalized.includes("bathymetry")) return "https://www.ncei.noaa.gov/maps/bathymetry/";
   return undefined;
@@ -180,6 +183,8 @@ function normalizeApiSnapshot(payload: ApiOpportunityResponse): OpportunitySnaps
         currentKnots: window.conditions?.current_knots ?? undefined,
         windMph: window.conditions?.wind_mph ?? undefined,
         swellFeet: window.conditions?.swell_feet ?? undefined,
+        swellPeriodSeconds: window.conditions?.swell_period_seconds ?? undefined,
+        wavePowerKwM: window.conditions?.wave_power_kw_m ?? undefined,
         waterTempF: window.conditions?.water_temp_f ?? undefined,
         waterTempSource: window.conditions?.water_temp_source ?? undefined,
         ndbcObservedWaterTempF: window.conditions?.ndbc_observed_water_temp_f ?? undefined,
@@ -866,6 +871,16 @@ function pressureTrendLabel(value?: number) {
   return value > 0 ? "rising" : "falling";
 }
 
+function wavePowerReport(power?: number, period?: number, applies = true) {
+  if (!applies) return { value: "Sheltered water", note: "Open-coast wave power is not applied at this Bay location", tone: "calm" };
+  if (!isFiniteNumber(power)) return { value: "Unavailable", note: "No fresh wave height + period pair", tone: "unknown" };
+  const periodText = isFiniteNumber(period) ? ` · ${Math.round(period)} s period` : "";
+  if (power >= 15) return { value: `${power.toFixed(1)} kW/m${periodText}`, note: "Very powerful surf—exposed water may be unsafe or unfishable", tone: "danger" };
+  if (power >= 10) return { value: `${power.toFixed(1)} kW/m${periodText}`, note: "Powerful surf—expect heavy shore break and wash", tone: "danger" };
+  if (power >= 6) return { value: `${power.toFixed(1)} kW/m${periodText}`, note: "Moderate-to-strong surf energy", tone: "caution" };
+  return { value: `${power.toFixed(1)} kW/m${periodText}`, note: "Low-to-moderate surf energy", tone: "calm" };
+}
+
 function TideChart({ site, window }: { site: FishingSite; window: OpportunityWindow }) {
   const levels = window.conditions.tideLevelsFeet;
   if (!levels || levels.length !== 4 || levels.some((level) => !isFiniteNumber(level))) return null;
@@ -1381,7 +1396,7 @@ export function OpportunityApp() {
             <h1>Find the water<br />worth fishing.</h1>
             <p>
               Pick the hours you have. We compare public shore and pier spots using bottom structure,
-              time of year, tide, wind, swell, water temperature, clouds, pressure, daylight, and moon phase.
+              time of year, tide, wind, swell, wave power, water temperature, clouds, pressure, daylight, and moon phase.
             </p>
           </div>
           {bestSite && bestWindow ? (
@@ -1668,6 +1683,7 @@ export function OpportunityApp() {
         <div className="footer-center">
           <p>Planning aid only. Not navigational data, legal advice, or a guarantee of catch.</p>
           <div className="contact-bar" aria-label="Contact Brian Zeng">
+            <a href="https://brianzeng.com" target="_blank" rel="noreferrer">Portfolio ↗</a>
             <a href="mailto:bzeng0000@gmail.com">Email ↗</a>
             <a href="https://github.com/brianbzeng" target="_blank" rel="noreferrer">GitHub ↗</a>
             <a href="https://www.linkedin.com/in/brianbzeng" target="_blank" rel="noreferrer">LinkedIn ↗</a>
@@ -1805,7 +1821,7 @@ export function OpportunityApp() {
               <h3>Why this time stands out</h3>
               <MetricBar label="Bottom" value={selectedWindow.habitatScore} note="How fishy the nearby structure looks" />
               <MetricBar label="Time of year" value={selectedWindow.seasonalityScore} note="How this month usually fishes" />
-              <MetricBar label="Today’s conditions" value={selectedWindow.dynamicScore} note="Tide, wind, swell, water temperature, cloud cover, pressure, daylight, and moon phase" />
+              <MetricBar label="Today’s conditions" value={selectedWindow.dynamicScore} note="Tide, wind, swell energy, water temperature, cloud cover, pressure, daylight, and moon phase" />
             </div>
 
             {selectedStructureGuides.length > 0 ? (
@@ -1863,6 +1879,21 @@ export function OpportunityApp() {
                 <span>Moon</span>
                 <strong>{selectedWindow.conditions.moonPhase ? `${selectedWindow.conditions.moonPhase} · ${Math.round(selectedWindow.conditions.moonIlluminationPct ?? 0)}%` : "Unavailable"}</strong>
               </div>
+              {(() => {
+                const report = wavePowerReport(
+                  selectedWindow.conditions.wavePowerKwM,
+                  selectedWindow.conditions.swellPeriodSeconds,
+                  ["Point Reyes", "Marin Coast", "San Francisco Coast", "San Mateo Coast", "Half Moon Bay"].includes(selectedSite.region),
+                );
+                return (
+                  <div className={`wave-power-condition ${report.tone}`}>
+                    <WaveIcon />
+                    <span>Estimated wave power</span>
+                    <strong>{report.value}</strong>
+                    <small>{report.note}</small>
+                  </div>
+                );
+              })()}
             </div>
             <TideChart site={selectedSite} window={selectedWindow} />
             {isFiniteNumber(selectedWindow.conditions.ndbcObservedWaterTempF) ? (
@@ -1954,7 +1985,7 @@ export function OpportunityApp() {
               <b>×</b>
               <div><span>02</span><strong>Season</strong><p>Monthly California halibut catch and effort patterns from public recreational fisheries data.</p></div>
               <b>×</b>
-              <div><span>03</span><strong>Conditions</strong><p>Tide, wind, swell, water temperature, cloud cover, pressure trend, daylight, and moon phase—with hard bounds so one reading cannot dominate.</p></div>
+              <div><span>03</span><strong>Conditions</strong><p>Tide, wind, swell height and period, wave power, water temperature, cloud cover, pressure trend, daylight, and moon phase. High wave power hard-caps exposed-coast scores.</p></div>
             </div>
             <div className="method-callout">
               <InfoIcon />
@@ -1962,7 +1993,7 @@ export function OpportunityApp() {
             </div>
             <div className="method-callout">
               <InfoIcon />
-              <p><strong>Moon and pressure stay low-weight.</strong> Moon phase overlaps with the tide signal, and atmospheric-pressure effects are not yet validated against enough local trip reports. They are included without being allowed to overpower habitat, tide, or wind.</p>
+              <p><strong>Wave power acts as a constraint.</strong> It is estimated from buoy height and period. When the surf carries too much energy, a calm wind or favorable tide cannot hide the safety and fishability penalty. Moon and pressure remain low-weight until local trip reports can validate them.</p>
             </div>
             <div className="method-callout">
               <InfoIcon />

@@ -14,6 +14,7 @@ import { ArrowIcon, ClockIcon, CloseIcon } from "./icons";
 
 const ACTIVE_TRIP_KEY = "contourcast.active-trip.v1";
 const REPORTER_KEY = "contourcast.reporter-key.v1";
+const TRIP_DRAFT_PREFIX = "castcompass.trip-draft.v1.";
 const MAX_PHOTO_BYTES = 5 * 1024 * 1024;
 const ACCEPTED_PHOTO_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
 const PHOTO_UPLOADS_ENABLED = process.env.NEXT_PUBLIC_PHOTO_UPLOADS !== "false";
@@ -90,6 +91,23 @@ function freshFields(siteId = ""): FormFields {
     notes: "",
     consent: false,
   };
+}
+
+function parseFormDraft(raw: string | null, fallback: FormFields) {
+  if (!raw) return fallback;
+  try {
+    const parsed = JSON.parse(raw) as Partial<FormFields>;
+    return {
+      ...fallback,
+      ...parsed,
+      anglerCount: Number(parsed.anglerCount ?? fallback.anglerCount),
+      keeperCount: Number(parsed.keeperCount ?? fallback.keeperCount),
+      shortReleasedCount: Number(parsed.shortReleasedCount ?? fallback.shortReleasedCount),
+      consent: Boolean(parsed.consent),
+    };
+  } catch {
+    return fallback;
+  }
 }
 
 function integerValue(value: string) {
@@ -233,10 +251,15 @@ export function TripReportFeature({ sites, snapshot, request, canSubmit, onRequi
   const [photo, setPhoto] = useState<File | null>(null);
   const [submitState, setSubmitState] = useState<SubmitState>("idle");
   const [message, setMessage] = useState("");
+  const [siteSearch, setSiteSearch] = useState("");
   const [summary, setSummary] = useState<SummaryView | null>(null);
   const [summaryUnavailable, setSummaryUnavailable] = useState(false);
 
   const siteMap = useMemo(() => new Map(sites.map((site) => [site.id, site])), [sites]);
+  const filteredSites = useMemo(() => {
+    const query = siteSearch.trim().toLowerCase();
+    return sites.filter((site) => !query || `${site.name} ${site.region} ${site.type}`.toLowerCase().includes(query));
+  }, [siteSearch, sites]);
   const totalFish = fields.keeperCount + fields.shortReleasedCount;
 
   const resetFeedback = useCallback(() => {
@@ -254,25 +277,29 @@ export function TripReportFeature({ sites, snapshot, request, canSubmit, onRequi
     const activeElement = document.activeElement;
     openerRef.current = activeElement instanceof HTMLElement ? activeElement : null;
     resetFeedback();
+    setSiteSearch("");
     setSelectedWindow(forecastWindow ?? null);
 
     if (nextPanel === "complete" && activeTrip) {
-      setFields({
+      const fallback = {
         ...freshFields(activeTrip.siteId),
         startedAt: localDateTimeValue(new Date(activeTrip.startedAt)),
         endedAt: localDateTimeValue(new Date()),
         anglerCount: activeTrip.anglerCount,
         fishingMethod: activeTrip.fishingMethod,
         contourCastInfluenced: activeTrip.contourCastInfluenced,
-      });
+      };
+      setFields(parseFormDraft(window.localStorage.getItem(`${TRIP_DRAFT_PREFIX}complete.${activeTrip.id}`), fallback));
     } else if (nextPanel === "start") {
-      setFields({
+      const fallback = {
         ...freshFields(siteId ?? sites[0]?.id ?? ""),
         startedAt: localDateTimeValue(new Date()),
         endedAt: localDateTimeValue(new Date()),
-      });
+      };
+      setFields(parseFormDraft(window.localStorage.getItem(`${TRIP_DRAFT_PREFIX}start`), fallback));
     } else {
-      setFields(freshFields(siteId ?? sites[0]?.id ?? ""));
+      const fallback = freshFields(siteId ?? sites[0]?.id ?? "");
+      setFields(parseFormDraft(window.localStorage.getItem(`${TRIP_DRAFT_PREFIX}past`), fallback));
     }
 
     if (nextPanel === "past") {
@@ -371,6 +398,12 @@ export function TripReportFeature({ sites, snapshot, request, canSubmit, onRequi
     };
   }, [closePanel, panel]);
 
+  useEffect(() => {
+    if (!panel) return;
+    const suffix = panel === "complete" && activeTrip ? `complete.${activeTrip.id}` : panel;
+    window.localStorage.setItem(`${TRIP_DRAFT_PREFIX}${suffix}`, JSON.stringify(fields));
+  }, [activeTrip, fields, panel]);
+
   const handlePhoto = (event: ChangeEvent<HTMLInputElement>) => {
     const nextPhoto = event.target.files?.[0] ?? null;
     try {
@@ -457,6 +490,7 @@ export function TripReportFeature({ sites, snapshot, request, canSubmit, onRequi
         contourCastInfluenced: fields.contourCastInfluenced,
       };
       window.localStorage.setItem(ACTIVE_TRIP_KEY, JSON.stringify(stored));
+      window.localStorage.removeItem(`${TRIP_DRAFT_PREFIX}start`);
       setActiveTrip(stored);
       setSubmitState("success");
       setMessage("Trip started. Return here when you finish—even if the result is zero fish.");
@@ -487,6 +521,7 @@ export function TripReportFeature({ sites, snapshot, request, canSubmit, onRequi
       });
       await responsePayload(response);
       window.localStorage.removeItem(ACTIVE_TRIP_KEY);
+      window.localStorage.removeItem(`${TRIP_DRAFT_PREFIX}complete.${activeTrip.id}`);
       setActiveTrip(null);
       void refreshSummary(setSummary, setSummaryUnavailable);
       setSubmitState("success");
@@ -527,6 +562,7 @@ export function TripReportFeature({ sites, snapshot, request, canSubmit, onRequi
       }
       const response = await fetch("/api/trips/report", { method: "POST", body: formData });
       await responsePayload(response);
+      window.localStorage.removeItem(`${TRIP_DRAFT_PREFIX}past`);
       void refreshSummary(setSummary, setSummaryUnavailable);
       setSubmitState("success");
       setMessage(totalFish === 0
@@ -616,12 +652,18 @@ export function TripReportFeature({ sites, snapshot, request, canSubmit, onRequi
                   <p>We save the chosen forecast now, then ask for the full result when you finish.</p>
                 </header>
                 <div className="trip-field-grid">
+                  <label className="trip-field wide trip-site-search">
+                    <span>Search fishing locations</span>
+                    <input type="search" value={siteSearch} onChange={(event) => setSiteSearch(event.target.value)} placeholder="Pier, beach, city, or shoreline…" autoComplete="off" />
+                  </label>
                   <label className="trip-field wide">
                     <span>Fishing location</span>
                     <select value={fields.siteId} onChange={(event) => updateSite(event.target.value)} required>
                       <option value="" disabled>Choose a location</option>
-                      {sites.map((site) => <option key={site.id} value={site.id}>{site.name}</option>)}
+                      {!filteredSites.some((site) => site.id === fields.siteId) && siteMap.get(fields.siteId) ? <option value={fields.siteId}>{siteMap.get(fields.siteId)?.name}</option> : null}
+                      {filteredSites.map((site) => <option key={site.id} value={site.id}>{site.name}</option>)}
                     </select>
+                    <small>{filteredSites.length} location{filteredSites.length === 1 ? "" : "s"} match</small>
                   </label>
                   <label className="trip-field">
                     <span>Start time</span>
@@ -701,12 +743,18 @@ export function TripReportFeature({ sites, snapshot, request, canSubmit, onRequi
                   <p>Complete results—including zero fish—help test whether the ranking separates stronger windows from weaker ones.</p>
                 </header>
                 <div className="trip-field-grid">
+                  <label className="trip-field wide trip-site-search">
+                    <span>Search fishing locations</span>
+                    <input type="search" value={siteSearch} onChange={(event) => setSiteSearch(event.target.value)} placeholder="Pier, beach, city, or shoreline…" autoComplete="off" />
+                  </label>
                   <label className="trip-field wide">
                     <span>Fishing location</span>
                     <select value={fields.siteId} onChange={(event) => updateSite(event.target.value)} required>
                       <option value="" disabled>Choose a location</option>
-                      {sites.map((site) => <option key={site.id} value={site.id}>{site.name}</option>)}
+                      {!filteredSites.some((site) => site.id === fields.siteId) && siteMap.get(fields.siteId) ? <option value={fields.siteId}>{siteMap.get(fields.siteId)?.name}</option> : null}
+                      {filteredSites.map((site) => <option key={site.id} value={site.id}>{site.name}</option>)}
                     </select>
+                    <small>{filteredSites.length} location{filteredSites.length === 1 ? "" : "s"} match</small>
                   </label>
                   <label className="trip-field">
                     <span>Start</span>
@@ -747,6 +795,7 @@ export function TripReportFeature({ sites, snapshot, request, canSubmit, onRequi
             ) : null}
 
             <p className="trip-beta-note">Beta · submitted reports remain pending review. Public output is aggregate only and cannot reveal a contributor or exact fishing position.</p>
+            <p className="trip-draft-note">Draft saved on this device as you type.</p>
           </section>
         </div>
       ) : null}

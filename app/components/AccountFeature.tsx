@@ -37,11 +37,45 @@ interface ProfileTrip {
   no_catch: number | null;
   moderation_status: string;
   opportunity_score: number | null;
+  angler_count: number;
+  notes: string | null;
 }
 
 interface ProfileData {
   savedSites: Array<{ site_id: string; created_at: string }>;
   trips: ProfileTrip[];
+}
+
+interface ProfileTripEditFields {
+  siteId: string;
+  startedAt: string;
+  endedAt: string;
+  anglerCount: number;
+  keeperCount: number;
+  shortReleasedCount: number;
+  fishingMethod: string;
+  notes: string;
+}
+
+const PROFILE_TRIP_DRAFT_PREFIX = "castcompass.profile-trip-draft.v1.";
+
+function localDateTimeValue(value: string | null) {
+  const date = value ? new Date(value) : new Date();
+  const offset = date.getTimezoneOffset() * 60_000;
+  return new Date(date.getTime() - offset).toISOString().slice(0, 16);
+}
+
+function editFieldsForTrip(trip: ProfileTrip): ProfileTripEditFields {
+  return {
+    siteId: trip.site_id,
+    startedAt: localDateTimeValue(trip.started_at),
+    endedAt: localDateTimeValue(trip.ended_at),
+    anglerCount: Number(trip.angler_count ?? 1),
+    keeperCount: Number(trip.keeper_count ?? 0),
+    shortReleasedCount: Number(trip.short_released_count ?? 0),
+    fishingMethod: trip.fishing_method ?? "bait",
+    notes: trip.notes ?? "",
+  };
 }
 
 export function useAccount(): AccountController {
@@ -136,35 +170,44 @@ export function AccountModal({ account, sites }: { account: AccountController; s
   const [challengeId, setChallengeId] = useState("");
   const [profile, setProfile] = useState<ProfileData | null>(null);
   const [profileLoading, setProfileLoading] = useState(false);
+  const [editingTrip, setEditingTrip] = useState<ProfileTrip | null>(null);
+  const [editFields, setEditFields] = useState<ProfileTripEditFields | null>(null);
+  const [editSiteSearch, setEditSiteSearch] = useState("");
+  const [profileActionBusy, setProfileActionBusy] = useState(false);
+  const [profileActionError, setProfileActionError] = useState("");
+
+  const loadProfile = useCallback(async () => {
+    setProfileLoading(true);
+    try {
+      const response = await fetch("/api/profile", { cache: "no-store" });
+      if (!response.ok) throw new Error("Profile could not be loaded.");
+      setProfile(await response.json() as ProfileData);
+    } catch {
+      setProfile({ savedSites: [], trips: [] });
+    } finally {
+      setProfileLoading(false);
+    }
+  }, []);
 
   useEffect(() => {
     if (!account.modalOpen || !account.user) {
-      setProfile(null);
       return;
     }
-    let cancelled = false;
-    setProfileLoading(true);
     const timer = window.setTimeout(() => {
-      void fetch("/api/profile", { cache: "no-store" })
-        .then(async (response) => {
-          if (!response.ok) throw new Error("Profile could not be loaded.");
-          return response.json() as Promise<ProfileData>;
-        })
-        .then((data) => {
-          if (!cancelled) setProfile(data);
-        })
-        .catch(() => {
-          if (!cancelled) setProfile({ savedSites: [], trips: [] });
-        })
-        .finally(() => {
-          if (!cancelled) setProfileLoading(false);
-        });
+      void loadProfile();
     }, 0);
     return () => {
-      cancelled = true;
       window.clearTimeout(timer);
     };
-  }, [account.modalOpen, account.user]);
+  }, [account.modalOpen, account.user, loadProfile]);
+
+  useEffect(() => {
+    if (!editingTrip || !editFields) return;
+    window.localStorage.setItem(
+      `${PROFILE_TRIP_DRAFT_PREFIX}${editingTrip.id}`,
+      JSON.stringify(editFields),
+    );
+  }, [editFields, editingTrip]);
 
   if (!account.modalOpen) return null;
 
@@ -209,6 +252,77 @@ export function AccountModal({ account, sites }: { account: AccountController; s
     }
   };
 
+  const beginTripEdit = (trip: ProfileTrip) => {
+    const draftKey = `${PROFILE_TRIP_DRAFT_PREFIX}${trip.id}`;
+    let nextFields = editFieldsForTrip(trip);
+    try {
+      const savedDraft = window.localStorage.getItem(draftKey);
+      if (savedDraft) nextFields = { ...nextFields, ...JSON.parse(savedDraft) as Partial<ProfileTripEditFields> };
+    } catch {
+      window.localStorage.removeItem(draftKey);
+    }
+    setProfileActionError("");
+    setEditSiteSearch("");
+    setEditingTrip(trip);
+    setEditFields(nextFields);
+  };
+
+  const closeTripEdit = () => {
+    setEditingTrip(null);
+    setEditFields(null);
+    setEditSiteSearch("");
+    setProfileActionError("");
+  };
+
+  const saveTripEdit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!editingTrip || !editFields) return;
+    setProfileActionBusy(true);
+    setProfileActionError("");
+    try {
+      const response = await fetch(`/api/profile/trips/${encodeURIComponent(editingTrip.id)}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          ...editFields,
+          startedAt: new Date(editFields.startedAt).toISOString(),
+          endedAt: new Date(editFields.endedAt).toISOString(),
+        }),
+      });
+      const body = await response.json() as { error?: { message?: string } };
+      if (!response.ok) throw new Error(body.error?.message ?? "The trip log could not be updated.");
+      window.localStorage.removeItem(`${PROFILE_TRIP_DRAFT_PREFIX}${editingTrip.id}`);
+      closeTripEdit();
+      await loadProfile();
+    } catch (editError) {
+      setProfileActionError(editError instanceof Error ? editError.message : "The trip log could not be updated.");
+    } finally {
+      setProfileActionBusy(false);
+    }
+  };
+
+  const deleteTrip = async (trip: ProfileTrip) => {
+    if (!window.confirm("Remove this pending trip log? This cannot be undone.")) return;
+    setProfileActionBusy(true);
+    setProfileActionError("");
+    try {
+      const response = await fetch(`/api/profile/trips/${encodeURIComponent(trip.id)}`, { method: "DELETE" });
+      const body = await response.json() as { error?: { message?: string } };
+      if (!response.ok) throw new Error(body.error?.message ?? "The trip log could not be removed.");
+      window.localStorage.removeItem(`${PROFILE_TRIP_DRAFT_PREFIX}${trip.id}`);
+      await loadProfile();
+    } catch (deleteError) {
+      setProfileActionError(deleteError instanceof Error ? deleteError.message : "The trip log could not be removed.");
+    } finally {
+      setProfileActionBusy(false);
+    }
+  };
+
+  const filteredEditSites = sites.filter((site) => {
+    const query = editSiteSearch.trim().toLowerCase();
+    return !query || `${site.name} ${site.region} ${site.type}`.toLowerCase().includes(query);
+  });
+
   return (
     <div className="account-modal-layer" role="presentation" onClick={(event) => {
       if (event.target === event.currentTarget) account.closeAccount();
@@ -247,12 +361,51 @@ export function AccountModal({ account, sites }: { account: AccountController; s
                         <div><strong>{site?.name ?? trip.site_id}</strong><span>{new Date(trip.started_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}</span></div>
                         <p>{encounters > 0 ? `${encounters} halibut encounter${encounters === 1 ? "" : "s"}` : "Skunk logged"} · {Number(trip.angler_hours ?? 0).toFixed(1)} angler-hours</p>
                         <small>{trip.moderation_status === "pending" ? "Awaiting dataset review" : trip.moderation_status}</small>
+                        {trip.moderation_status === "pending" ? (
+                          <div className="profile-trip-actions">
+                            <button type="button" onClick={() => beginTripEdit(trip)}>Edit</button>
+                            <button type="button" disabled={profileActionBusy} onClick={() => void deleteTrip(trip)}>Remove</button>
+                          </div>
+                        ) : null}
                       </article>
                     );
                   })}
                 </div>
               ) : <p>No completed trip logs are attached to this account yet.</p>}
+              <small className="profile-review-note">Pending reports can be edited or removed. Those controls close once dataset review is complete.</small>
+              {profileActionError && !editingTrip ? <p className="account-error" role="alert">{profileActionError}</p> : null}
             </section>
+            {editingTrip && editFields ? (
+              <form className="profile-trip-editor" onSubmit={saveTripEdit}>
+                <div className="profile-trip-editor-heading">
+                  <div><span>Pending trip</span><h3>Edit trip log</h3></div>
+                  <button type="button" onClick={closeTripEdit}>Close</button>
+                </div>
+                <label>Search locations<input type="search" value={editSiteSearch} onChange={(event) => setEditSiteSearch(event.target.value)} placeholder="Pier, beach, city…" /></label>
+                <label>Fishing location
+                  <select value={editFields.siteId} onChange={(event) => setEditFields((current) => current ? { ...current, siteId: event.target.value } : current)} required>
+                    {!filteredEditSites.some((site) => site.id === editFields.siteId) ? <option value={editFields.siteId}>{sites.find((site) => site.id === editFields.siteId)?.name ?? editFields.siteId}</option> : null}
+                    {filteredEditSites.map((site) => <option key={site.id} value={site.id}>{site.name}</option>)}
+                  </select>
+                </label>
+                <div className="profile-trip-editor-grid">
+                  <label>Start<input type="datetime-local" value={editFields.startedAt} onChange={(event) => setEditFields((current) => current ? { ...current, startedAt: event.target.value } : current)} required /></label>
+                  <label>Finish<input type="datetime-local" value={editFields.endedAt} onChange={(event) => setEditFields((current) => current ? { ...current, endedAt: event.target.value } : current)} required /></label>
+                  <label>Anglers<input type="number" min="1" max="12" value={editFields.anglerCount} onChange={(event) => setEditFields((current) => current ? { ...current, anglerCount: Number(event.target.value) } : current)} required /></label>
+                  <label>Fishing method
+                    <select value={editFields.fishingMethod} onChange={(event) => setEditFields((current) => current ? { ...current, fishingMethod: event.target.value } : current)}>
+                      <option value="bait">Bait</option><option value="artificial-lure">Artificial lure</option><option value="both">Bait + lure</option><option value="other">Other</option>
+                    </select>
+                  </label>
+                  <label>Kept<input type="number" min="0" max="25" value={editFields.keeperCount} onChange={(event) => setEditFields((current) => current ? { ...current, keeperCount: Number(event.target.value) } : current)} required /></label>
+                  <label>Short / released<input type="number" min="0" max="25" value={editFields.shortReleasedCount} onChange={(event) => setEditFields((current) => current ? { ...current, shortReleasedCount: Number(event.target.value) } : current)} required /></label>
+                </div>
+                <label>Notes<textarea rows={4} maxLength={1000} value={editFields.notes} onChange={(event) => setEditFields((current) => current ? { ...current, notes: event.target.value } : current)} /></label>
+                <small>Your edits are saved in this browser as you type.</small>
+                {profileActionError ? <p className="account-error" role="alert">{profileActionError}</p> : null}
+                <button className="account-primary" type="submit" disabled={profileActionBusy}>{profileActionBusy ? "Saving…" : "Save trip changes"}</button>
+              </form>
+            ) : null}
             <button className="account-primary account-signout" type="button" onClick={() => void account.signOut()}>Sign out</button>
           </>
         ) : (

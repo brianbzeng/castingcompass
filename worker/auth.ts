@@ -7,6 +7,7 @@ const PASSWORD_ITERATIONS = 100_000;
 
 export interface AuthApiEnv {
   DB?: D1DatabaseLike;
+  TRIP_PHOTOS?: { delete(key: string): Promise<void> };
   RESEND_API_KEY?: string;
   AUTH_EMAIL_FROM?: string;
 }
@@ -118,7 +119,8 @@ export async function handleAccountRequest(
   if (
     !url.pathname.startsWith("/api/auth") &&
     !url.pathname.startsWith("/api/saved-sites") &&
-    url.pathname !== "/api/profile"
+    url.pathname !== "/api/profile" &&
+    !url.pathname.startsWith("/api/profile/trips/")
   ) return null;
   if (!env.DB) return errorResponse(503, "storage_unavailable", "Account storage is temporarily unavailable.");
 
@@ -300,6 +302,74 @@ export async function handleAccountRequest(
       });
     }
 
+    const profileTripMatch = url.pathname.match(/^\/api\/profile\/trips\/(trip_[a-f0-9-]{36})$/);
+    if (profileTripMatch) {
+      assertSameOrigin(request);
+      const tripId = profileTripMatch[1];
+      const trip = await db.prepare(`SELECT id, user_id, moderation_status, photo_key
+        FROM trips WHERE id = ? AND user_id = ? AND status = 'completed' LIMIT 1`)
+        .bind(tripId, user.id)
+        .first<{ id: string; user_id: string; moderation_status: string; photo_key: string | null }>();
+      if (!trip) return errorResponse(404, "trip_not_found", "That trip log could not be found.");
+      if (trip.moderation_status !== "pending") {
+        return errorResponse(409, "trip_reviewed", "Reviewed trip logs can no longer be changed.");
+      }
+
+      if (request.method === "DELETE") {
+        await db.prepare("DELETE FROM trips WHERE id = ? AND user_id = ? AND moderation_status = 'pending'")
+          .bind(tripId, user.id)
+          .run();
+        if (trip.photo_key) await env.TRIP_PHOTOS?.delete(trip.photo_key).catch(() => undefined);
+        return jsonResponse({ deleted: true, tripId });
+      }
+
+      if (request.method === "PATCH") {
+        const body = await readJson(request);
+        const siteId = parseProfileTripSite(body.siteId, curatedSites);
+        const startedAt = parseProfileTripDate(body.startedAt, "start time");
+        const endedAt = parseProfileTripDate(body.endedAt, "finish time");
+        const durationHours = (new Date(endedAt).getTime() - new Date(startedAt).getTime()) / 3_600_000;
+        if (!Number.isFinite(durationHours) || durationHours < (1 / 60) || durationHours > 36) {
+          throw new AuthError(422, "invalid_duration", "Trip duration must be between 1 minute and 36 hours.");
+        }
+        const anglerCount = parseProfileTripInteger(body.anglerCount, "angler count", 1, 12);
+        const keeperCount = parseProfileTripInteger(body.keeperCount, "kept halibut", 0, 25);
+        const shortReleasedCount = parseProfileTripInteger(body.shortReleasedCount, "short or released halibut", 0, 25);
+        if (keeperCount + shortReleasedCount > 40) {
+          throw new AuthError(422, "invalid_counts", "Combined halibut encounters cannot exceed 40.");
+        }
+        const fishingMethod = parseProfileTripText(body.fishingMethod, "fishing method", 80, true);
+        const notes = parseProfileTripText(body.notes, "notes", 1000, false);
+        const timestamp = new Date().toISOString();
+        await db.prepare(`UPDATE trips SET site_id = ?, started_at = ?, ended_at = ?, fishing_method = ?,
+          angler_count = ?, angler_hours = ?, keeper_count = ?, short_released_count = ?,
+          halibut_encounters = ?, no_catch = ?, notes = ?, updated_at = ?, completed_at = ?,
+          ai_review_status = 'retry', ai_review_json = NULL, ai_reviewed_at = NULL
+          WHERE id = ? AND user_id = ? AND moderation_status = 'pending'`)
+          .bind(
+            siteId,
+            startedAt,
+            endedAt,
+            fishingMethod,
+            anglerCount,
+            Math.round(durationHours * anglerCount * 100) / 100,
+            keeperCount,
+            shortReleasedCount,
+            keeperCount + shortReleasedCount,
+            Number(keeperCount + shortReleasedCount === 0),
+            notes,
+            timestamp,
+            endedAt,
+            tripId,
+            user.id,
+          )
+          .run();
+        return jsonResponse({ updated: true, tripId });
+      }
+
+      return methodNotAllowed("PATCH, DELETE");
+    }
+
     if (url.pathname === "/api/saved-sites") {
       if (request.method !== "GET") return methodNotAllowed("GET");
       const rows = await db
@@ -334,6 +404,40 @@ export async function handleAccountRequest(
     console.error("Account API request failed", error);
     return errorResponse(500, "internal_error", "The account request could not be completed.");
   }
+}
+
+function parseProfileTripSite(value: unknown, curatedSites: readonly CuratedSite[]) {
+  if (typeof value !== "string" || !curatedSites.some((site) => site.id === value)) {
+    throw new AuthError(422, "invalid_site", "Choose a current CastCompass location.");
+  }
+  return value;
+}
+
+function parseProfileTripDate(value: unknown, label: string) {
+  if (typeof value !== "string" || value.length > 80) {
+    throw new AuthError(422, "invalid_date", `Enter a valid ${label}.`);
+  }
+  const date = new Date(value);
+  if (!Number.isFinite(date.getTime()) || date.getTime() > Date.now() + 15 * 60 * 1000) {
+    throw new AuthError(422, "invalid_date", `Enter a valid ${label}.`);
+  }
+  return date.toISOString();
+}
+
+function parseProfileTripInteger(value: unknown, label: string, minimum: number, maximum: number) {
+  const parsed = typeof value === "number" ? value : Number(value);
+  if (!Number.isInteger(parsed) || parsed < minimum || parsed > maximum) {
+    throw new AuthError(422, "invalid_number", `${label} must be a whole number from ${minimum} to ${maximum}.`);
+  }
+  return parsed;
+}
+
+function parseProfileTripText(value: unknown, label: string, maximum: number, required: boolean) {
+  if ((value === null || value === undefined || value === "") && !required) return null;
+  if (typeof value !== "string" || value.trim().length > maximum || (required && !value.trim())) {
+    throw new AuthError(422, "invalid_text", `${label} must be ${required ? "provided and " : ""}under ${maximum} characters.`);
+  }
+  return value.trim() || null;
 }
 
 export function unauthorizedResponse() {

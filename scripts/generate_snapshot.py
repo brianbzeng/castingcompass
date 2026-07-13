@@ -260,6 +260,8 @@ def fetch_buoy_observation(station: str) -> dict[str, Any]:
                 return None
             if key == "WVHT" and value >= 99:
                 return None
+            if key in {"DPD", "APD"} and (value <= 0 or value >= 99):
+                return None
             if key == "WTMP" and value >= 999:
                 return None
             return value
@@ -272,6 +274,9 @@ def fetch_buoy_observation(station: str) -> dict[str, Any]:
             return None, None
 
         swell_observed, wave_m = latest_valid("WVHT")
+        period_observed, wave_period_seconds = latest_valid("DPD")
+        if wave_period_seconds is None:
+            period_observed, wave_period_seconds = latest_valid("APD")
         water_observed, water_c = latest_valid("WTMP")
         pressure_observed, pressure_hpa = latest_valid("PRES")
         pressure_trend_hpa_3h = None
@@ -300,9 +305,11 @@ def fetch_buoy_observation(station: str) -> dict[str, Any]:
             "url": url,
             "observed": observed,
             "swellObserved": swell_observed,
+            "periodObserved": period_observed,
             "waterObserved": water_observed,
             "pressureObserved": pressure_observed,
             "swellFeet": round(wave_m * 3.28084, 1) if wave_m is not None else None,
+            "swellPeriodSeconds": round(wave_period_seconds, 1) if wave_period_seconds is not None else None,
             "waterTempF": round((water_c * 9 / 5) + 32, 1) if water_c is not None else None,
             "pressureHpa": round(pressure_hpa, 1) if pressure_hpa is not None else None,
             "pressureTrendHpa3h": pressure_trend_hpa_3h,
@@ -314,9 +321,11 @@ def fetch_buoy_observation(station: str) -> dict[str, Any]:
             "url": url,
             "observed": None,
             "swellObserved": None,
+            "periodObserved": None,
             "waterObserved": None,
             "pressureObserved": None,
             "swellFeet": None,
+            "swellPeriodSeconds": None,
             "waterTempF": None,
             "pressureHpa": None,
             "pressureTrendHpa3h": None,
@@ -325,7 +334,7 @@ def fetch_buoy_observation(station: str) -> dict[str, Any]:
 
 
 def fetch_marine_sst(anchors: list[str], start: datetime, end: datetime) -> dict[str, dict[str, Any]]:
-    """Fetch hourly SST for all weather anchors in one Open-Meteo request.
+    """Fetch hourly SST, wave height, and period in one Open-Meteo request.
 
     The public endpoint is appropriate for this non-commercial prototype only.
     A paid customer endpoint and API key are required before subscriptions,
@@ -338,7 +347,7 @@ def fetch_marine_sst(anchors: list[str], start: datetime, end: datetime) -> dict
     params = {
         "latitude": ",".join(f"{WEATHER_ANCHORS[anchor][0]:.4f}" for anchor in ordered_anchors),
         "longitude": ",".join(f"{WEATHER_ANCHORS[anchor][1]:.4f}" for anchor in ordered_anchors),
-        "hourly": "sea_surface_temperature",
+        "hourly": "sea_surface_temperature,wave_height,wave_period",
         "timezone": "GMT",
         "cell_selection": "sea",
         "start_hour": start.astimezone(timezone.utc).strftime("%Y-%m-%dT%H:%M"),
@@ -346,7 +355,7 @@ def fetch_marine_sst(anchors: list[str], start: datetime, end: datetime) -> dict
     }
     url = "https://marine-api.open-meteo.com/v1/marine?" + urllib.parse.urlencode(params)
     results = {
-        anchor: {"status": "unavailable-excluded", "url": url, "values": [], "error": None}
+        anchor: {"status": "unavailable-excluded", "url": url, "values": [], "waveValues": [], "error": None}
         for anchor in ordered_anchors
     }
     try:
@@ -358,6 +367,8 @@ def fetch_marine_sst(anchors: list[str], start: datetime, end: datetime) -> dict
             hourly = location.get("hourly", {})
             times = hourly.get("time", [])
             temperatures = hourly.get("sea_surface_temperature", [])
+            wave_heights = hourly.get("wave_height", [])
+            wave_periods = hourly.get("wave_period", [])
             values: list[tuple[datetime, float]] = []
             for raw_time, raw_temperature in zip(times, temperatures):
                 if raw_temperature is None:
@@ -369,10 +380,28 @@ def fetch_marine_sst(anchors: list[str], start: datetime, end: datetime) -> dict
                 if not math.isfinite(temperature_c):
                     continue
                 values.append((parse_iso(raw_time), round((temperature_c * 9 / 5) + 32, 1)))
-            if values:
-                results[anchor] = {"status": "fresh", "url": url, "values": values, "error": None}
+            wave_values: list[tuple[datetime, float, float]] = []
+            for raw_time, raw_height, raw_period in zip(times, wave_heights, wave_periods):
+                if raw_height is None or raw_period is None:
+                    continue
+                try:
+                    height_m = float(raw_height)
+                    period_seconds = float(raw_period)
+                except (TypeError, ValueError):
+                    continue
+                if not math.isfinite(height_m) or not math.isfinite(period_seconds) or height_m < 0 or period_seconds <= 0:
+                    continue
+                wave_values.append((parse_iso(raw_time), round(height_m * 3.28084, 1), round(period_seconds, 1)))
+            if values or wave_values:
+                results[anchor] = {
+                    "status": "fresh",
+                    "url": url,
+                    "values": values,
+                    "waveValues": wave_values,
+                    "error": None,
+                }
             else:
-                results[anchor]["error"] = "no valid sea-surface-temperature values returned"
+                results[anchor]["error"] = "no valid marine temperature or wave values returned"
         return results
     except (OSError, ValueError, KeyError, TypeError, urllib.error.URLError) as exc:
         for result in results.values():
@@ -439,6 +468,17 @@ def sst_for_window(values: list[tuple[datetime, float]], midpoint: datetime) -> 
     if abs((stamp - midpoint).total_seconds()) > 90 * 60:
         return None
     return temperature_f
+
+
+def marine_wave_for_window(
+    values: list[tuple[datetime, float, float]], midpoint: datetime
+) -> tuple[float | None, float | None]:
+    if not values:
+        return None, None
+    stamp, height_feet, period_seconds = min(values, key=lambda item: abs((item[0] - midpoint).total_seconds()))
+    if abs((stamp - midpoint).total_seconds()) > 90 * 60:
+        return None, None
+    return height_feet, period_seconds
 
 
 def daylight_fallback(midpoint: datetime) -> bool:
@@ -510,6 +550,32 @@ def swell_subscore(swell_feet: float | None) -> float:
     return 12
 
 
+def wave_power_kw_per_meter(swell_feet: float | None, period_seconds: float | None) -> float | None:
+    """Estimate deep-water wave energy flux from significant height and buoy peak period.
+
+    P ~= 0.49 * Hs^2 * T (kW/m). NDBC peak period is used as a practical
+    proxy for energy period, so the product is labeled an estimate in the UI.
+    """
+    if swell_feet is None or period_seconds is None:
+        return None
+    height_meters = swell_feet / 3.28084
+    return round(0.49 * (height_meters ** 2) * period_seconds, 1)
+
+
+def wave_power_subscore(power_kw_m: float | None) -> float:
+    if power_kw_m is None:
+        return 50
+    if power_kw_m < 3:
+        return 82
+    if power_kw_m < 6:
+        return 68
+    if power_kw_m < 10:
+        return 50
+    if power_kw_m < 15:
+        return 28
+    return 8
+
+
 def cloud_subscore(cloud_cover_pct: float | None) -> float:
     if cloud_cover_pct is None:
         return 50
@@ -556,6 +622,7 @@ def dynamic_score(
     tide_change: float | None,
     wind_mph: float | None,
     swell_feet: float | None,
+    wave_power_kw_m: float | None,
     daylight: bool,
     open_coast: bool,
     cloud_cover_pct: float | None,
@@ -573,9 +640,19 @@ def dynamic_score(
         (moon_subscore(lunar_age_days), 0.05),
     ]
     if open_coast:
-        weighted = [(value, weight * 0.85) for value, weight in weighted]
-        weighted.append((swell_subscore(swell_feet), 0.15))
+        weighted = [(value, weight * 0.78) for value, weight in weighted]
+        weighted.append((swell_subscore(swell_feet), 0.08))
+        weighted.append((wave_power_subscore(wave_power_kw_m), 0.14))
     raw = sum(value * weight for value, weight in weighted) / sum(weight for _, weight in weighted)
+    # High-energy surf is a hard constraint for shore and jetty fishing. Calm
+    # wind or a favorable tide must not mask an unsafe/unfishable wave field.
+    if open_coast and wave_power_kw_m is not None:
+        if wave_power_kw_m >= 15:
+            raw = min(raw, 30)
+        elif wave_power_kw_m >= 10:
+            raw = min(raw, 44)
+        elif wave_power_kw_m >= 6:
+            raw = min(raw, 58)
     # Conditions are deliberately bounded so a transient forecast cannot erase
     # long-term habitat evidence in the combined rank.
     return round(max(30, min(78, raw)))
@@ -700,7 +777,17 @@ def main() -> None:
                 and timedelta(hours=-1) <= generated_at - buoy_result["pressureObserved"] <= timedelta(hours=6)
                 and window_start <= generated_at + timedelta(hours=6)
             )
-            swell_feet = buoy_result["swellFeet"] if swell_fresh else None
+            forecast_swell_feet, forecast_period_seconds = marine_wave_for_window(
+                marine_sst_result.get("waveValues", []), midpoint
+            )
+            swell_feet = forecast_swell_feet if open_coast else None
+            swell_period_seconds = forecast_period_seconds if open_coast else None
+            # A fresh buoy pair takes precedence for the immediate window; the
+            # marine forecast carries the same metric through the full 72 hours.
+            if swell_fresh and buoy_result["swellFeet"] is not None and buoy_result["swellPeriodSeconds"] is not None:
+                swell_feet = buoy_result["swellFeet"]
+                swell_period_seconds = buoy_result["swellPeriodSeconds"]
+            wave_power_kw_m = wave_power_kw_per_meter(swell_feet, swell_period_seconds)
             water_temp_f = sst_for_window(marine_sst_result["values"], midpoint)
             ndbc_water_temp_f = buoy_result["waterTempF"] if ndbc_water_fresh else None
             pressure_hpa = buoy_result["pressureHpa"] if pressure_fresh else None
@@ -709,6 +796,7 @@ def main() -> None:
                 tide_change,
                 wind_mph,
                 swell_feet,
+                wave_power_kw_m,
                 daylight,
                 open_coast,
                 cloud_cover_pct,
@@ -724,6 +812,8 @@ def main() -> None:
                 "tideLevelsFeet": tide_levels_feet,
                 "windMph": wind_mph,
                 "swellFeet": swell_feet,
+                "swellPeriodSeconds": swell_period_seconds,
+                "wavePowerKwM": wave_power_kw_m,
                 "waterTempF": water_temp_f,
                 "daylight": daylight,
                 "cloudCoverPct": cloud_cover_pct,
@@ -802,17 +892,17 @@ def main() -> None:
         {
             "name": "NOAA NDBC buoy observations",
             "observedAt": isoformat(max((result["observed"] for result in buoy_results.values() if result["observed"]), default=generated_at)),
-            "status": buoy_status + "; fresh swell and three-hour atmospheric-pressure trend are scored near term",
+            "status": buoy_status + "; fresh swell height, period, estimated wave power, and three-hour atmospheric-pressure trend are scored near term",
             "url": "https://www.ndbc.noaa.gov/",
             "freshnessLimitHours": 6,
         },
         {
-            "name": "Open-Meteo Marine SST forecast (Météo-France)",
+            "name": "Open-Meteo marine temperature + wave forecast (Météo-France)",
             "observedAt": retrieved_at,
-            "status": marine_sst_status + "; sea-surface temperature is a small, bounded score input",
+            "status": marine_sst_status + "; sea-surface temperature plus wave height, period, and power are bounded score inputs",
             "url": "https://open-meteo.com/en/docs/marine-weather-api",
             "freshnessLimitHours": 30,
-            "attribution": "Weather data by Open-Meteo.com; sea-surface-temperature model data by Météo-France.",
+            "attribution": "Weather data by Open-Meteo.com; marine model data by Météo-France.",
             "license": "CC BY 4.0",
             "usageNote": "The free endpoint is non-commercial only; use Open-Meteo's paid customer endpoint before enabling subscriptions, advertising, or other commercial use.",
         },
@@ -848,7 +938,7 @@ def main() -> None:
         "generatedAt": retrieved_at,
         "validFrom": isoformat(start),
         "validThrough": isoformat(end),
-        "modelVersion": "castcompass-hybrid-demo-0.3.0",
+        "modelVersion": "castcompass-hybrid-demo-0.4.0",
         "status": "demo-public-data-snapshot",
         "species": "california-halibut",
         "scoreDefinition": f"A score of 80 means this site/window ranks above 80% of the {len(ordered):,} options in this snapshot; it is not an 80% catch probability.",
