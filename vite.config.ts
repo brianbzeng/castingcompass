@@ -7,6 +7,10 @@ const SITE_CREATOR_PLACEHOLDER_DATABASE_ID =
   "00000000-0000-4000-8000-000000000000";
 
 const { d1, r2 } = hostingConfig;
+const isCloudflareProductionBuild =
+  process.env.CASTCOMPASS_CLOUDFLARE_BUILD === "1"
+  || process.env.NODE_ENV === "production"
+  || process.argv.some((argument) => argument === "build");
 
 // macOS Seatbelt blocks FSEvents, so Codex previews need polling for HMR.
 const isCodexSeatbeltSandbox = process.env.CODEX_SANDBOX === "seatbelt";
@@ -14,7 +18,10 @@ const isCodexSeatbeltSandbox = process.env.CODEX_SANDBOX === "seatbelt";
 const localBindingConfig = {
   main: "./worker/index.ts",
   compatibility_flags: ["nodejs_compat"],
-  d1_databases: d1
+  // Sites/local previews need placeholder bindings. The production Wrangler
+  // config already supplies the real bindings, so adding placeholders during
+  // that build creates duplicate `DB` entries in dist/server/wrangler.json.
+  d1_databases: d1 && !isCloudflareProductionBuild
     ? [
         {
           binding: d1,
@@ -23,7 +30,7 @@ const localBindingConfig = {
         },
       ]
     : [],
-  r2_buckets: r2
+  r2_buckets: r2 && !isCloudflareProductionBuild
     ? [
         {
           binding: r2,

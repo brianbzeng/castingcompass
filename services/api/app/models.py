@@ -62,7 +62,13 @@ class CurrentConditions(APIModel):
     wind_mph: float | None = Field(default=None, ge=0)
     swell_feet: float | None = Field(default=None, ge=0)
     swell_period_seconds: float | None = Field(default=None, ge=0)
+    swell_direction_degrees: float | None = Field(default=None, ge=0, lt=360)
+    swell_direction: str | None = None
     wave_power_kw_m: float | None = Field(default=None, ge=0)
+    breaking_intensity: str | None = None
+    breaking_wave_height_feet: float | None = Field(default=None, ge=0)
+    fishability_label: str | None = None
+    fishability_reasons: list[str] = Field(default_factory=list)
     water_temp_f: float | None = None
     water_temp_source: str | None = None
     ndbc_observed_water_temp_f: float | None = None
@@ -111,6 +117,7 @@ class ComponentScores(APIModel):
     habitat_score: float = Field(ge=0, le=100)
     seasonality_score: float = Field(ge=0, le=100)
     dynamic_score: float = Field(ge=0, le=100)
+    fishability_score: float = Field(default=50, ge=0, le=100)
     seasonality_multiplier: float | None = Field(default=None, ge=0, le=3)
     dynamic_modifier: float | None = Field(default=None, ge=-0.5, le=0.5)
 

@@ -26,12 +26,21 @@ export async function reviewTripWithMimo(env: ReviewEnv, trip: TripRow, sites: r
     mode: trip.mode,
     fishingMethod: trip.fishing_method,
     gear: trip.gear,
+    rod: trip.rod,
+    reel: trip.reel,
+    baitOrLure: trip.bait_lure,
+    rig: trip.rig,
     anglerCount: trip.angler_count,
     anglerHours: trip.angler_hours,
     keeperCount: trip.keeper_count,
     shortReleasedCount: trip.short_released_count,
     halibutEncounters: trip.halibut_encounters,
     noCatch: Boolean(trip.no_catch),
+    otherCatchCount: trip.other_catch_count,
+    otherSpecies: trip.other_species,
+    observedFishability: safeJson(trip.observations_json),
+    forecastFishabilityScore: trip.fishability_score,
+    forecastMetadata: safeJson(trip.prediction_metadata_json),
     notes: trip.notes?.slice(0, 1000) ?? null,
   };
 
@@ -83,4 +92,13 @@ export async function reviewTripWithMimo(env: ReviewEnv, trip: TripRow, sites: r
 function clampNumber(value: unknown, minimum: number, maximum: number) {
   const number = typeof value === "number" && Number.isFinite(value) ? value : minimum;
   return Math.max(minimum, Math.min(maximum, number));
+}
+
+function safeJson(value: string | null) {
+  if (!value) return null;
+  try {
+    return JSON.parse(value) as unknown;
+  } catch {
+    return null;
+  }
 }

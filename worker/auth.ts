@@ -68,8 +68,22 @@ const CREATE_EMAIL_CHALLENGES_SQL = `CREATE TABLE IF NOT EXISTS email_challenges
   password_hash TEXT,
   expires_at TEXT NOT NULL,
   attempts INTEGER NOT NULL DEFAULT 0,
+  resend_count INTEGER NOT NULL DEFAULT 0,
   created_at TEXT NOT NULL,
   CONSTRAINT email_challenges_kind_check CHECK (kind in ('signup', 'password_reset'))
+)`;
+
+const CREATE_GEAR_PROFILES_SQL = `CREATE TABLE IF NOT EXISTS gear_profiles (
+  id TEXT PRIMARY KEY NOT NULL,
+  user_id TEXT NOT NULL,
+  name TEXT NOT NULL,
+  rod TEXT,
+  reel TEXT,
+  bait_lure TEXT,
+  rig TEXT,
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL,
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 )`;
 
 async function initialize(db: D1DatabaseLike) {
@@ -81,9 +95,12 @@ async function initialize(db: D1DatabaseLike) {
       db.prepare(CREATE_SAVED_SITES_SQL),
       db.prepare(CREATE_AUTH_ATTEMPTS_SQL),
       db.prepare(CREATE_EMAIL_CHALLENGES_SQL),
+      db.prepare(CREATE_GEAR_PROFILES_SQL),
       db.prepare("CREATE INDEX IF NOT EXISTS auth_sessions_user_idx ON auth_sessions (user_id, expires_at)"),
       db.prepare("CREATE INDEX IF NOT EXISTS auth_attempts_email_time_idx ON auth_attempts (email_hash, attempted_at)"),
       db.prepare("CREATE INDEX IF NOT EXISTS email_challenges_email_time_idx ON email_challenges (email, created_at)"),
+      db.prepare("CREATE UNIQUE INDEX IF NOT EXISTS gear_profiles_user_name_unique ON gear_profiles (user_id, name)"),
+      db.prepare("CREATE INDEX IF NOT EXISTS gear_profiles_user_updated_idx ON gear_profiles (user_id, updated_at)"),
     ]).then(() => undefined).catch((error) => {
       initializedDatabases.delete(db as object);
       throw error;
@@ -119,6 +136,7 @@ export async function handleAccountRequest(
   if (
     !url.pathname.startsWith("/api/auth") &&
     !url.pathname.startsWith("/api/saved-sites") &&
+    !url.pathname.startsWith("/api/gear-profiles") &&
     url.pathname !== "/api/profile" &&
     !url.pathname.startsWith("/api/profile/trips/")
   ) return null;
@@ -192,7 +210,63 @@ export async function handleAccountRequest(
           ),
         db.prepare("DELETE FROM email_challenges WHERE id = ?").bind(challenge.id),
       ]);
+      // Account creation should succeed even if the optional welcome message is
+      // delayed. Verification already proved ownership of the address.
+      await sendWelcomeEmail(env, user.email, user.id).catch((error) => {
+        console.error("Welcome email delivery failed", error);
+      });
       return createSessionResponse(db, request, user, 201);
+    }
+
+    if (url.pathname === "/api/auth/challenge/resend") {
+      if (request.method !== "POST") return methodNotAllowed("POST");
+      assertSameOrigin(request);
+      const body = await readJson(request);
+      const challengeId = typeof body.challengeId === "string" ? body.challengeId : "";
+      if (!/^challenge_[a-f0-9-]{36}$/.test(challengeId)) {
+        throw new AuthError(422, "invalid_challenge", "Start the email verification again.");
+      }
+      const challenge = await db.prepare("SELECT * FROM email_challenges WHERE id = ? LIMIT 1")
+        .bind(challengeId)
+        .first<EmailChallengeRow>();
+      if (!challenge) {
+        // Keep password-reset requests from becoming an account-enumeration path.
+        return jsonResponse({ requested: true, challengeId, expiresInMinutes: 15, retryAfterSeconds: 60 });
+      }
+      const createdAt = new Date(challenge.created_at).getTime();
+      const retryAfterSeconds = Math.max(0, 60 - Math.floor((Date.now() - createdAt) / 1000));
+      if (retryAfterSeconds > 0) {
+        return errorResponse(
+          429,
+          "resend_cooldown",
+          `Wait ${retryAfterSeconds} seconds before requesting another code.`,
+          undefined,
+          { "Retry-After": String(retryAfterSeconds) },
+        );
+      }
+      if (Number(challenge.resend_count ?? 0) >= 4) {
+        throw new AuthError(429, "too_many_codes", "Too many email codes were requested. Start again in an hour.");
+      }
+      const code = randomCode();
+      const timestamp = new Date();
+      await sendVerificationEmail(
+        env,
+        challenge.email,
+        code,
+        challenge.kind === "signup" ? "Confirm your CastCompass account" : "Reset your CastCompass password",
+        `${challenge.id}:resend:${Number(challenge.resend_count ?? 0) + 1}`,
+      );
+      await db.prepare(`UPDATE email_challenges
+        SET code_hash = ?, expires_at = ?, attempts = 0, resend_count = resend_count + 1, created_at = ?
+        WHERE id = ?`)
+        .bind(
+          await sha256(`${challenge.id}:${code}`),
+          new Date(timestamp.getTime() + 15 * 60 * 1000).toISOString(),
+          timestamp.toISOString(),
+          challenge.id,
+        )
+        .run();
+      return jsonResponse({ requested: true, challengeId, expiresInMinutes: 15, retryAfterSeconds: 60 });
     }
 
     if (url.pathname === "/api/auth/password/request") {
@@ -281,17 +355,23 @@ export async function handleAccountRequest(
 
     if (url.pathname === "/api/profile") {
       if (request.method !== "GET") return methodNotAllowed("GET");
-      const [savedRows, tripRows] = await Promise.all([
+      const [savedRows, tripRows, gearRows] = await Promise.all([
         db.prepare("SELECT site_id, created_at FROM saved_sites WHERE user_id = ? ORDER BY created_at DESC")
           .bind(user.id)
           .all<{ site_id: string; created_at: string }>(),
         db.prepare(`SELECT id, source, site_id, started_at, ended_at, mode, fishing_method,
           angler_count, angler_hours, keeper_count, short_released_count, halibut_encounters,
-          no_catch, notes, moderation_status, opportunity_score, model_version, completed_at
+          no_catch, other_catch_count, other_species, observations_json, notes, moderation_status,
+          opportunity_score, fishability_score, model_version, gear_profile_id, rod, reel,
+          bait_lure, rig, completed_at
           FROM trips
           WHERE user_id = ? AND status = 'completed'
           ORDER BY COALESCE(completed_at, ended_at, started_at) DESC
           LIMIT 100`)
+          .bind(user.id)
+          .all<Record<string, unknown>>(),
+        db.prepare(`SELECT id, name, rod, reel, bait_lure, rig, created_at, updated_at
+          FROM gear_profiles WHERE user_id = ? ORDER BY updated_at DESC`)
           .bind(user.id)
           .all<Record<string, unknown>>(),
       ]);
@@ -299,7 +379,56 @@ export async function handleAccountRequest(
         user,
         savedSites: savedRows.results ?? [],
         trips: tripRows.results ?? [],
+        gearProfiles: gearRows.results ?? [],
       });
+    }
+
+    if (url.pathname === "/api/gear-profiles") {
+      if (request.method === "GET") {
+        const rows = await db.prepare(`SELECT id, name, rod, reel, bait_lure, rig, created_at, updated_at
+          FROM gear_profiles WHERE user_id = ? ORDER BY updated_at DESC`)
+          .bind(user.id)
+          .all<Record<string, unknown>>();
+        return jsonResponse({ gearProfiles: rows.results ?? [] });
+      }
+      if (request.method === "POST") {
+        assertSameOrigin(request);
+        const body = await readJson(request);
+        const id = `gear_${crypto.randomUUID()}`;
+        const timestamp = new Date().toISOString();
+        const gear = parseGearProfile(body);
+        await db.prepare(`INSERT INTO gear_profiles
+          (id, user_id, name, rod, reel, bait_lure, rig, created_at, updated_at)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`)
+          .bind(id, user.id, gear.name, gear.rod, gear.reel, gear.baitLure, gear.rig, timestamp, timestamp)
+          .run();
+        return jsonResponse({ gearProfile: { id, ...gear, created_at: timestamp, updated_at: timestamp } }, 201);
+      }
+      return methodNotAllowed("GET, POST");
+    }
+
+    const gearProfileMatch = url.pathname.match(/^\/api\/gear-profiles\/(gear_[a-f0-9-]{36})$/);
+    if (gearProfileMatch) {
+      assertSameOrigin(request);
+      const id = gearProfileMatch[1];
+      const existing = await db.prepare("SELECT id FROM gear_profiles WHERE id = ? AND user_id = ? LIMIT 1")
+        .bind(id, user.id)
+        .first();
+      if (!existing) return errorResponse(404, "gear_profile_not_found", "That gear preset could not be found.");
+      if (request.method === "DELETE") {
+        await db.prepare("DELETE FROM gear_profiles WHERE id = ? AND user_id = ?").bind(id, user.id).run();
+        return jsonResponse({ deleted: true, id });
+      }
+      if (request.method === "PATCH") {
+        const gear = parseGearProfile(await readJson(request));
+        const timestamp = new Date().toISOString();
+        await db.prepare(`UPDATE gear_profiles SET name = ?, rod = ?, reel = ?, bait_lure = ?, rig = ?, updated_at = ?
+          WHERE id = ? AND user_id = ?`)
+          .bind(gear.name, gear.rod, gear.reel, gear.baitLure, gear.rig, timestamp, id, user.id)
+          .run();
+        return jsonResponse({ updated: true, id });
+      }
+      return methodNotAllowed("PATCH, DELETE");
     }
 
     const profileTripMatch = url.pathname.match(/^\/api\/profile\/trips\/(trip_[a-f0-9-]{36})$/);
@@ -339,11 +468,19 @@ export async function handleAccountRequest(
           throw new AuthError(422, "invalid_counts", "Combined halibut encounters cannot exceed 40.");
         }
         const fishingMethod = parseProfileTripText(body.fishingMethod, "fishing method", 80, true);
+        const rod = parseProfileTripText(body.rod, "rod", 160, false);
+        const reel = parseProfileTripText(body.reel, "reel", 160, false);
+        const baitLure = parseProfileTripText(body.baitLure, "bait or lure", 200, false);
+        const rig = parseProfileTripText(body.rig, "rig", 200, false);
+        const otherCatchCount = parseProfileTripInteger(body.otherCatchCount ?? 0, "other fish caught", 0, 100);
+        const otherSpecies = parseProfileTripText(body.otherSpecies, "other species", 240, false);
+        const observations = parseProfileTripObservations(body);
         const notes = parseProfileTripText(body.notes, "notes", 1000, false);
         const timestamp = new Date().toISOString();
         await db.prepare(`UPDATE trips SET site_id = ?, started_at = ?, ended_at = ?, fishing_method = ?,
           angler_count = ?, angler_hours = ?, keeper_count = ?, short_released_count = ?,
-          halibut_encounters = ?, no_catch = ?, notes = ?, updated_at = ?, completed_at = ?,
+          halibut_encounters = ?, no_catch = ?, rod = ?, reel = ?, bait_lure = ?, rig = ?,
+          other_catch_count = ?, other_species = ?, observations_json = ?, notes = ?, updated_at = ?, completed_at = ?,
           ai_review_status = 'retry', ai_review_json = NULL, ai_reviewed_at = NULL
           WHERE id = ? AND user_id = ? AND moderation_status = 'pending'`)
           .bind(
@@ -357,6 +494,13 @@ export async function handleAccountRequest(
             shortReleasedCount,
             keeperCount + shortReleasedCount,
             Number(keeperCount + shortReleasedCount === 0),
+            rod,
+            reel,
+            baitLure,
+            rig,
+            otherCatchCount,
+            otherSpecies,
+            observations,
             notes,
             timestamp,
             endedAt,
@@ -440,6 +584,40 @@ function parseProfileTripText(value: unknown, label: string, maximum: number, re
   return value.trim() || null;
 }
 
+function parseGearProfile(body: Record<string, unknown>) {
+  return {
+    name: parseProfileTripText(body.name, "preset name", 60, true) as string,
+    rod: parseProfileTripText(body.rod, "rod", 160, false),
+    reel: parseProfileTripText(body.reel, "reel", 160, false),
+    baitLure: parseProfileTripText(body.baitLure, "bait or lure", 200, false),
+    rig: parseProfileTripText(body.rig, "rig", 200, false),
+  };
+}
+
+function parseProfileTripObservations(body: Record<string, unknown>) {
+  const observations = {
+    shorebreak: parseProfileTripText(body.shorebreak, "shorebreak", 40, false),
+    wadingDepth: parseProfileTripText(body.wadingDepth, "water depth", 40, false),
+    waterClarity: parseProfileTripText(body.waterClarity, "water clarity", 40, false),
+    crowding: parseProfileTripText(body.crowding, "crowding", 40, false),
+    fishabilityRating: body.fishabilityRating === null || body.fishabilityRating === undefined || body.fishabilityRating === ""
+      ? null
+      : parseProfileTripInteger(body.fishabilityRating, "fishability rating", 1, 5),
+    observedWaveHeightFeet: parseOptionalProfileTripNumber(body.observedWaveHeightFeet, "observed wave height", 0, 30),
+    fishabilityNotes: parseProfileTripText(body.fishabilityNotes, "fishability notes", 500, false),
+  };
+  return Object.values(observations).some((value) => value !== null) ? JSON.stringify(observations) : null;
+}
+
+function parseOptionalProfileTripNumber(value: unknown, label: string, minimum: number, maximum: number) {
+  if (value === null || value === undefined || value === "") return null;
+  const parsed = typeof value === "number" ? value : Number(value);
+  if (!Number.isFinite(parsed) || parsed < minimum || parsed > maximum) {
+    throw new AuthError(422, "invalid_number", `${label} must be between ${minimum} and ${maximum}.`);
+  }
+  return Math.round(parsed * 10) / 10;
+}
+
 export function unauthorizedResponse() {
   return errorResponse(401, "authentication_required", "Sign in to submit a trip report or save a location.");
 }
@@ -515,6 +693,8 @@ interface EmailChallengeRow {
   password_hash: string | null;
   expires_at: string;
   attempts: number;
+  resend_count: number;
+  created_at: string;
 }
 
 async function assertEmailChallengeAllowed(db: D1DatabaseLike, email: string) {
@@ -556,7 +736,13 @@ async function verifyEmailChallenge(
   return row;
 }
 
-async function sendVerificationEmail(env: AuthApiEnv, to: string, code: string, subject: string) {
+async function sendVerificationEmail(
+  env: AuthApiEnv,
+  to: string,
+  code: string,
+  subject: string,
+  idempotencyKey = `${subject}:${to}:${code}`,
+) {
   if (!env.RESEND_API_KEY) {
     throw new AuthError(503, "email_not_configured", "Email verification is waiting for the site mail sender to be connected.");
   }
@@ -566,6 +752,7 @@ async function sendVerificationEmail(env: AuthApiEnv, to: string, code: string, 
     headers: {
       Authorization: `Bearer ${env.RESEND_API_KEY}`,
       "Content-Type": "application/json",
+      "Idempotency-Key": `castcompass/${idempotencyKey}`.slice(0, 256),
     },
     body: JSON.stringify({
       from,
@@ -576,9 +763,34 @@ async function sendVerificationEmail(env: AuthApiEnv, to: string, code: string, 
     }),
   });
   if (!response.ok) {
-    console.error("Transactional email delivery failed", response.status);
+    console.error("Transactional email delivery failed", response.status, await response.text());
     throw new AuthError(502, "email_delivery_failed", "The verification email could not be sent. Try again shortly.");
   }
+  const receipt = await response.json().catch(() => null) as { id?: string } | null;
+  console.log("Transactional email accepted by Resend", { id: receipt?.id, to, subject });
+}
+
+async function sendWelcomeEmail(env: AuthApiEnv, to: string, userId: string) {
+  if (!env.RESEND_API_KEY) return;
+  const from = env.AUTH_EMAIL_FROM ?? "CastCompass <account@updates.brianbzeng.com>";
+  const response = await fetch("https://api.resend.com/emails", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${env.RESEND_API_KEY}`,
+      "Content-Type": "application/json",
+      "Idempotency-Key": `castcompass/welcome/${userId}`,
+    },
+    body: JSON.stringify({
+      from,
+      to: [to],
+      subject: "Welcome to CastCompass",
+      text: "Welcome to CastCompass. Start by saving a few fishing spots, checking the practical fishability details before you leave, and logging the full trip when you get back—even when it is a skunk. CastCompass is still a work in progress, and complete trip logs are especially valuable right now because they create the real-world backlog needed to test and improve the model. Scores are planning guidance, not catch guarantees. Respect access rules, the water, and current California regulations.",
+      html: `<div style="font-family:Arial,sans-serif;line-height:1.55;color:#081a33;max-width:620px"><h1>Welcome to CastCompass.</h1><p>Save a few fishing spots, check practical fishability before you leave, and log the full trip when you get back, even when it is a skunk.</p><h2>Quick guide</h2><ol><li>Choose the hours you can fish.</li><li>Compare the opportunity and fishability details.</li><li>Save the spot and add your gear.</li><li>Log the result, conditions you observed, and any catch.</li></ol><p><strong>This project is still a work in progress.</strong> Complete trip logs are especially helpful right now because they create the real-world backlog needed to test and improve the model.</p><p>Scores are planning guidance, not catch guarantees. Respect access rules, the water, and current California regulations.</p><p><a href="https://castcompass.brianbzeng.com">Open CastCompass</a></p></div>`,
+    }),
+  });
+  if (!response.ok) throw new Error(`Welcome email failed with status ${response.status}: ${await response.text()}`);
+  const receipt = await response.json().catch(() => null) as { id?: string } | null;
+  console.log("Welcome email accepted by Resend", { id: receipt?.id, to });
 }
 
 function randomCode() {

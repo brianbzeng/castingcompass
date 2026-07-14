@@ -1742,6 +1742,7 @@
     "access": "Public state beach in Half Moon Bay State Beach; fish away from swimmers and check campground and day-use hours.",
     "regulationUrl": "https://wildlife.ca.gov/Fishing/Ocean/Regulations/Fishing-Map/San-Francisco",
     "depthProfile": "Long sand beach with mobile bars, cuts, and a moderate nearshore slope.",
+    "beachSlopeClass": "steep",
     "structureTags": [
       "sand-bar",
       "trough",

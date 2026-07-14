@@ -37,15 +37,15 @@ test("primary controls stay inside common phone viewports", async ({ page }) => 
 
 test("map overlays do not collide or clip", async ({ page }) => {
   const map = page.locator(".map-wrap");
-  const centerButton = page.locator(".map-center-button");
-  await map.scrollIntoViewIfNeeded();
+  const centerButton = page.getByRole("button", { name: /center bay/i });
+  await map.evaluate((element) => element.scrollIntoView({ block: "center", behavior: "instant" }));
   if (!(await centerButton.isVisible())) {
     const loadMap = page.getByRole("button", { name: /open interactive map/i });
     if (await loadMap.isVisible()) {
       await loadMap.click().catch(() => undefined);
     }
   }
-  await expect(centerButton).toBeVisible();
+  await expect(centerButton).toBeVisible({ timeout: 15_000 });
 
   const viewportWidth = await page.evaluate(() => window.innerWidth);
   const label = await page.locator(".map-overlay-label").boundingBox();

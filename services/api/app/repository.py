@@ -344,6 +344,9 @@ def normalize_opportunity(
         dynamic_score=_component_score(
             raw, components_raw, "dynamic_score", "dynamicScore", "dynamic", default=dynamic_default
         ),
+        fishability_score=_component_score(
+            raw, components_raw, "fishability_score", "fishabilityScore", default=dynamic_default
+        ),
         seasonality_multiplier=float(multiplier) if multiplier is not None else None,
         dynamic_modifier=float(modifier) if modifier is not None else None,
     )
@@ -404,7 +407,19 @@ def normalize_opportunity(
             wind_mph=_first(conditions_raw, "wind_mph", "windMph"),
             swell_feet=_first(conditions_raw, "swell_feet", "swellFeet"),
             swell_period_seconds=_first(conditions_raw, "swell_period_seconds", "swellPeriodSeconds"),
+            swell_direction_degrees=_first(
+                conditions_raw, "swell_direction_degrees", "swellDirectionDegrees"
+            ),
+            swell_direction=_first(conditions_raw, "swell_direction", "swellDirection"),
             wave_power_kw_m=_first(conditions_raw, "wave_power_kw_m", "wavePowerKwM"),
+            breaking_intensity=_first(conditions_raw, "breaking_intensity", "breakingIntensity"),
+            breaking_wave_height_feet=_first(
+                conditions_raw, "breaking_wave_height_feet", "breakingWaveHeightFeet"
+            ),
+            fishability_label=_first(conditions_raw, "fishability_label", "fishabilityLabel"),
+            fishability_reasons=list(
+                _first(conditions_raw, "fishability_reasons", "fishabilityReasons", default=[])
+            ),
             water_temp_f=_first(conditions_raw, "water_temp_f", "waterTempF"),
             water_temp_source=_first(conditions_raw, "water_temp_source", "waterTempSource"),
             ndbc_observed_water_temp_f=_first(

@@ -378,7 +378,7 @@ def fetch_marine_sst(anchors: list[str], start: datetime, end: datetime) -> dict
     params = {
         "latitude": ",".join(f"{WEATHER_ANCHORS[anchor][0]:.4f}" for anchor in ordered_anchors),
         "longitude": ",".join(f"{WEATHER_ANCHORS[anchor][1]:.4f}" for anchor in ordered_anchors),
-        "hourly": "sea_surface_temperature,wave_height,wave_period,ocean_current_velocity,ocean_current_direction",
+        "hourly": "sea_surface_temperature,wave_height,wave_period,wave_direction,ocean_current_velocity,ocean_current_direction",
         "timezone": "GMT",
         "cell_selection": "sea",
         "start_hour": start.astimezone(timezone.utc).strftime("%Y-%m-%dT%H:%M"),
@@ -407,6 +407,7 @@ def fetch_marine_sst(anchors: list[str], start: datetime, end: datetime) -> dict
             temperatures = hourly.get("sea_surface_temperature", [])
             wave_heights = hourly.get("wave_height", [])
             wave_periods = hourly.get("wave_period", [])
+            wave_directions = hourly.get("wave_direction", [])
             current_velocities = hourly.get("ocean_current_velocity", [])
             current_directions = hourly.get("ocean_current_direction", [])
             values: list[tuple[datetime, float]] = []
@@ -420,18 +421,34 @@ def fetch_marine_sst(anchors: list[str], start: datetime, end: datetime) -> dict
                 if not math.isfinite(temperature_c):
                     continue
                 values.append((parse_iso(raw_time), round((temperature_c * 9 / 5) + 32, 1)))
-            wave_values: list[tuple[datetime, float, float]] = []
-            for raw_time, raw_height, raw_period in zip(times, wave_heights, wave_periods):
-                if raw_height is None or raw_period is None:
+            wave_values: list[tuple[datetime, float, float, float]] = []
+            for raw_time, raw_height, raw_period, raw_direction in zip(
+                times, wave_heights, wave_periods, wave_directions
+            ):
+                if raw_height is None or raw_period is None or raw_direction is None:
                     continue
                 try:
                     height_m = float(raw_height)
                     period_seconds = float(raw_period)
+                    direction_degrees = float(raw_direction)
                 except (TypeError, ValueError):
                     continue
-                if not math.isfinite(height_m) or not math.isfinite(period_seconds) or height_m < 0 or period_seconds <= 0:
+                if (
+                    not math.isfinite(height_m)
+                    or not math.isfinite(period_seconds)
+                    or not math.isfinite(direction_degrees)
+                    or height_m < 0
+                    or period_seconds <= 0
+                ):
                     continue
-                wave_values.append((parse_iso(raw_time), round(height_m * 3.28084, 1), round(period_seconds, 1)))
+                wave_values.append(
+                    (
+                        parse_iso(raw_time),
+                        round(height_m * 3.28084, 1),
+                        round(period_seconds, 1),
+                        round(direction_degrees % 360, 1),
+                    )
+                )
             current_values: list[tuple[datetime, float, float]] = []
             for raw_time, raw_velocity, raw_direction in zip(times, current_velocities, current_directions):
                 if raw_velocity is None or raw_direction is None:
@@ -526,14 +543,16 @@ def sst_for_window(values: list[tuple[datetime, float]], midpoint: datetime) -> 
 
 
 def marine_wave_for_window(
-    values: list[tuple[datetime, float, float]], midpoint: datetime
-) -> tuple[float | None, float | None]:
+    values: list[tuple[datetime, float, float, float]], midpoint: datetime
+) -> tuple[float | None, float | None, float | None]:
     if not values:
-        return None, None
-    stamp, height_feet, period_seconds = min(values, key=lambda item: abs((item[0] - midpoint).total_seconds()))
+        return None, None, None
+    stamp, height_feet, period_seconds, direction_degrees = min(
+        values, key=lambda item: abs((item[0] - midpoint).total_seconds())
+    )
     if abs((stamp - midpoint).total_seconds()) > 90 * 60:
-        return None, None
-    return height_feet, period_seconds
+        return None, None, None
+    return height_feet, period_seconds, direction_degrees
 
 
 def marine_current_for_window(
@@ -745,6 +764,155 @@ def access_pressure_for_window(site: dict[str, Any], midpoint: datetime) -> tupl
     return label, pressure_pct, adjustment
 
 
+def angular_difference(first: float, second: float) -> float:
+    return abs((first - second + 180) % 360 - 180)
+
+
+def beach_slope_class(site: dict[str, Any]) -> str:
+    explicit = str(site.get("beachSlopeClass", "")).lower()
+    if explicit in {"gentle", "moderate", "steep"}:
+        return explicit
+    profile = str(site.get("depthProfile", "")).lower()
+    if any(token in profile for token in ("steep", "abrupt", "deep close")):
+        return "steep"
+    if any(token in profile for token in ("gentle", "gradual", "shallow flat", "broad flat")):
+        return "gentle"
+    return "moderate"
+
+
+def fishability_score(
+    site: dict[str, Any],
+    wind_mph: float | None,
+    swell_feet: float | None,
+    swell_period_seconds: float | None,
+    swell_direction_degrees: float | None,
+    wave_power_kw_m: float | None,
+    current_knots: float | None,
+    tide_change: float | None,
+    fishing_pressure_pct: int,
+) -> tuple[int, str, list[str], str | None, float | None]:
+    """Estimate whether an angler can make an effective presentation.
+
+    This is intentionally separate from whether habitat looks promising. It is
+    a conservative planning gate based on public forecasts and site exposure,
+    not a safety rating. Trip observations will be retained to calibrate it.
+    """
+
+    score = 92.0
+    reasons: list[str] = []
+    open_coast = site["region"] in OPEN_COAST_REGIONS
+    breaking_intensity: str | None = None
+    breaking_wave_height_feet: float | None = None
+
+    if wind_mph is None:
+        score -= 6
+        reasons.append("Wind is unavailable, so fishability is treated cautiously.")
+    elif wind_mph > 25:
+        score -= 42
+        reasons.append("Very strong wind makes casting and line control difficult.")
+    elif wind_mph > 18:
+        score -= 28
+        reasons.append("Strong wind will make casting and line control difficult.")
+    elif wind_mph > 12:
+        score -= 14
+        reasons.append("Moderate wind may reduce casting distance and feel.")
+
+    if current_knots is not None:
+        if current_knots > 2.25:
+            score -= 24
+            reasons.append("Very fast modeled current may make it hard to hold the presentation near bottom.")
+        elif current_knots > 1.75:
+            score -= 12
+            reasons.append("Fast modeled current may require heavier tackle and tighter line control.")
+
+    if fishing_pressure_pct >= 80:
+        score -= 14
+        reasons.append("Expected crowding may leave less room to cast and more lines in the water.")
+    elif fishing_pressure_pct >= 60:
+        score -= 8
+        reasons.append("Expected crowding may limit comfortable casting space.")
+    elif fishing_pressure_pct <= 20:
+        score += 2
+
+    if tide_change is not None and tide_change > 1.15:
+        score -= 7
+        reasons.append("A large tide change may make a bottom presentation harder to control.")
+
+    if open_coast:
+        slope = beach_slope_class(site)
+        slope_multiplier = {"gentle": 0.82, "moderate": 1.0, "steep": 1.28}[slope]
+        bearing = float(site.get("castingZone", {}).get("bearingDegrees", 0))
+        if swell_direction_degrees is None:
+            direction_exposure = 0.75
+        else:
+            alignment = max(0.0, math.cos(math.radians(angular_difference(bearing, swell_direction_degrees))))
+            direction_exposure = 0.25 + (0.75 * alignment)
+
+        if swell_feet is None or wave_power_kw_m is None:
+            score = min(score - 18, 62)
+            reasons.append("A complete surf forecast is unavailable, so exposed-water fishability is capped.")
+        else:
+            breaking_wave_height_feet = round(swell_feet * math.sqrt(direction_exposure) * slope_multiplier, 1)
+            exposed_power = wave_power_kw_m * direction_exposure * slope_multiplier
+            if swell_period_seconds is not None and swell_period_seconds >= 14:
+                exposed_power *= 1.12
+                score -= 8
+                reasons.append("Long-period swell can create stronger surges than wave height alone suggests.")
+            elif swell_period_seconds is not None and swell_period_seconds >= 11:
+                score -= 4
+
+            if exposed_power >= 15:
+                score -= 68
+            elif exposed_power >= 10:
+                score -= 52
+            elif exposed_power >= 6:
+                score -= 36
+            elif exposed_power >= 3.5:
+                score -= 23
+            elif exposed_power >= 1.8:
+                score -= 11
+
+            if breaking_wave_height_feet >= 6:
+                score = min(score, 24)
+            elif breaking_wave_height_feet >= 4.5:
+                score = min(score, 38)
+            elif breaking_wave_height_feet >= 3.5:
+                score = min(score, 54)
+            elif breaking_wave_height_feet >= 2.5:
+                score = min(score, 69)
+
+            if score < 55:
+                reasons.append("Estimated shorebreak and surge may prevent a controlled, repeatable presentation.")
+            elif score < 72:
+                reasons.append("Surf should be fishable only with careful timing and solid footing.")
+
+        if slope == "steep":
+            score -= 6
+            reasons.append("This beach has a steep nearshore slope where waves can stand up and surge quickly.")
+
+    score = round(max(5, min(98, score)))
+    label = "good" if score >= 78 else "workable" if score >= 60 else "difficult" if score >= 38 else "poor"
+    if open_coast:
+        breaking_intensity = "light" if score >= 78 else "workable" if score >= 60 else "difficult" if score >= 38 else "severe"
+    if not reasons:
+        reasons.append("Forecast wind, water movement, access pressure, and presentation control look manageable.")
+    return score, label, reasons[:4], breaking_intensity, breaking_wave_height_feet
+
+
+def fishability_score_cap(score: int) -> int:
+    if score < 25:
+        return 32
+    if score < 40:
+        return 48
+    if score < 55:
+        return 66
+    if score < 65:
+        return 80
+    if score < 75:
+        return 90
+    return 100
+
+
 def moon_subscore(lunar_age_days: float) -> float:
     # This stays deliberately low-weight. Tide predictions already contain
     # much of the lunar signal, so a second large lunar boost would double-count it.
@@ -811,6 +979,9 @@ def factor_text(
     moon_illumination_pct: float,
     current_knots: float | None,
     current_direction: str | None,
+    wave_power_kw_m: float | None,
+    fishability: int,
+    fishability_label: str,
 ) -> list[str]:
     tags = ", ".join(site["structureTags"][:2]).replace("-", " ")
     factors = [f"Look for {tags}.", f"Time of year: {seasonality}/100."]
@@ -835,6 +1006,9 @@ def factor_text(
             factors.append("Fresh swell reading unavailable.")
         else:
             factors.append(f"Nearby swell: {swell_feet:.1f} ft.")
+        if wave_power_kw_m is not None:
+            factors.append(f"Estimated surf energy: {wave_power_kw_m:.1f} kW/m.")
+    factors.append(f"Fishability: {fishability}/100 ({fishability_label}).")
     sky_bits = []
     if pressure_hpa is not None:
         trend = "steady" if pressure_trend_hpa_3h is None or abs(pressure_trend_hpa_3h) <= 1.5 else "changing"
@@ -918,7 +1092,7 @@ def main() -> None:
                 and timedelta(hours=-1) <= generated_at - buoy_result["pressureObserved"] <= timedelta(hours=6)
                 and window_start <= generated_at + timedelta(hours=6)
             )
-            forecast_swell_feet, forecast_period_seconds = marine_wave_for_window(
+            forecast_swell_feet, forecast_period_seconds, forecast_direction_degrees = marine_wave_for_window(
                 marine_sst_result.get("waveValues", []), midpoint
             )
             current_knots, current_direction_degrees = marine_current_for_window(
@@ -927,6 +1101,8 @@ def main() -> None:
             current_direction = compass_direction(current_direction_degrees)
             swell_feet = forecast_swell_feet if open_coast else None
             swell_period_seconds = forecast_period_seconds if open_coast else None
+            swell_direction_degrees = forecast_direction_degrees if open_coast else None
+            swell_direction = compass_direction(swell_direction_degrees)
             # A fresh buoy pair takes precedence for the immediate window; the
             # marine forecast carries the same metric through the full 72 hours.
             if swell_fresh and buoy_result["swellFeet"] is not None and buoy_result["swellPeriodSeconds"] is not None:
@@ -951,7 +1127,24 @@ def main() -> None:
                 current_knots,
             )
             access_pressure, access_pressure_pct, access_adjustment = access_pressure_for_window(site, midpoint)
-            raw_score = (0.52 * habitat) + (0.18 * seasonality) + (0.30 * dynamic) + access_adjustment
+            fishability, fishability_label, fishability_reasons, breaking_intensity, breaking_wave_height_feet = fishability_score(
+                site,
+                wind_mph,
+                swell_feet,
+                swell_period_seconds,
+                swell_direction_degrees,
+                wave_power_kw_m,
+                current_knots,
+                tide_change,
+                access_pressure_pct,
+            )
+            raw_score = (
+                (0.44 * habitat)
+                + (0.16 * seasonality)
+                + (0.20 * dynamic)
+                + (0.20 * fishability)
+                + (access_adjustment * 0.25)
+            )
             available_primary = int(tide_change is not None) + int(wind_mph is not None)
             confidence = "medium" if available_primary == 2 else "low"
             conditions = {
@@ -963,7 +1156,13 @@ def main() -> None:
                 "windMph": wind_mph,
                 "swellFeet": swell_feet,
                 "swellPeriodSeconds": swell_period_seconds,
+                "swellDirectionDegrees": swell_direction_degrees,
+                "swellDirection": swell_direction,
                 "wavePowerKwM": wave_power_kw_m,
+                "breakingIntensity": breaking_intensity,
+                "breakingWaveHeightFeet": breaking_wave_height_feet,
+                "fishabilityLabel": fishability_label,
+                "fishabilityReasons": fishability_reasons,
                 "waterTempF": water_temp_f,
                 "daylight": daylight,
                 "cloudCoverPct": cloud_cover_pct,
@@ -986,6 +1185,7 @@ def main() -> None:
                     "habitatScore": habitat,
                     "seasonalityScore": seasonality,
                     "dynamicScore": dynamic,
+                    "fishabilityScore": fishability,
                     "confidence": confidence,
                     "rank": 0,
                     "explanationFactors": factor_text(
@@ -1005,9 +1205,13 @@ def main() -> None:
                         moon_illumination_pct,
                         current_knots,
                         current_direction,
+                        wave_power_kw_m,
+                        fishability,
+                        fishability_label,
                     ),
                     "conditions": conditions,
                     "_rawScore": round(raw_score, 6),
+                    "_scoreCap": fishability_score_cap(fishability),
                 }
             )
 
@@ -1021,8 +1225,10 @@ def main() -> None:
         lower_index = bisect_left(ascending_raw_scores, item["_rawScore"])
         upper_index = bisect_right(ascending_raw_scores, item["_rawScore"]) - 1
         tie_midpoint = (lower_index + upper_index) / 2
-        item["score"] = round(100 * tie_midpoint / denominator)
+        percentile_score = round(100 * tie_midpoint / denominator)
+        item["score"] = min(percentile_score, item["_scoreCap"])
         del item["_rawScore"]
+        del item["_scoreCap"]
 
     retrieved_at = isoformat(generated_at)
     tide_status = source_status(list(tide_results.values()))
@@ -1099,10 +1305,10 @@ def main() -> None:
         "generatedAt": retrieved_at,
         "validFrom": isoformat(start),
         "validThrough": isoformat(end),
-        "modelVersion": "castcompass-hybrid-demo-0.5.0",
+        "modelVersion": "castcompass-hybrid-demo-0.6.0",
         "status": "demo-public-data-snapshot",
         "species": "california-halibut",
-        "scoreDefinition": f"A score of 80 means this site/window ranks above 80% of the {len(ordered):,} options in this snapshot; it is not an 80% catch probability.",
+        "scoreDefinition": f"Before the fishability cap, a score of 80 ranks within the current comparison set above 80% of the {len(ordered):,} site/windows. Surf, wind, current, steep shorebreak, or expected crowding can cap the displayed score. It is not an 80% catch probability.",
         "notice": "Conditions are informational only. Check official access and CDFW rules. Bathymetry is not for navigation.",
         "sources": sources,
         "windows": ordered,

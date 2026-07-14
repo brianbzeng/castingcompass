@@ -2928,6 +2928,59 @@ footer > div {
   border: 1px solid var(--line);
 }
 
+.profile-gear-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.9rem;
+  border-bottom: 1px solid var(--line);
+}
+
+.profile-gear-row div {
+  display: grid;
+  gap: 0.25rem;
+  min-width: 0;
+}
+
+.profile-gear-row small {
+  overflow: hidden;
+  color: var(--ink-soft);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.profile-gear-row button,
+.profile-gear-form button {
+  border: 1px solid var(--line-strong);
+  color: var(--mint);
+  background: rgba(4, 23, 46, 0.72);
+  cursor: pointer;
+}
+
+.profile-gear-form {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.6rem;
+  margin-top: 0.8rem;
+}
+
+.profile-gear-form input,
+.profile-gear-form button {
+  min-height: 2.9rem;
+  padding: 0.7rem;
+}
+
+.profile-gear-form input {
+  border: 1px solid var(--line-strong);
+  color: var(--ink);
+  background: rgba(1, 17, 36, 0.8);
+}
+
+.profile-gear-form button {
+  grid-column: 1 / -1;
+}
+
 .profile-list {
   display: grid;
   border: 1px solid var(--line);
@@ -3037,6 +3090,23 @@ footer > div {
   color: var(--ink-soft);
   font-size: 0.68rem;
   line-height: 1.55;
+}
+
+.profile-trip-editor-section {
+  margin: 1.35rem 0;
+  padding: 1rem;
+  border: 1px solid rgba(176, 219, 255, 0.22);
+}
+
+.profile-trip-editor-section legend {
+  padding: 0 0.45rem;
+  color: var(--accent);
+  font-weight: 700;
+}
+
+.profile-trip-editor-section > p {
+  margin: 0 0 1rem;
+  color: var(--muted);
 }
 
 .profile-trip-editor-heading {
@@ -3208,6 +3278,11 @@ footer > div {
   margin: 0;
   color: #ff9c8d;
   font-size: 0.7rem;
+}
+
+.account-notice {
+  color: var(--accent-mint);
+  line-height: 1.5;
 }
 
 .account-text-button {
@@ -3529,6 +3604,59 @@ footer > div {
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 0.75rem;
   margin-top: 1.5rem;
+}
+
+.trip-step-indicator {
+  display: flex;
+  gap: 0.6rem;
+  margin: 0 0 1.2rem;
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.trip-step-indicator span {
+  padding: 0.55rem 0.75rem;
+  border: 1px solid var(--line);
+  color: var(--ink-soft);
+}
+
+.trip-step-indicator span.active {
+  border-color: var(--mint);
+  color: var(--mint);
+}
+
+.trip-gear-section {
+  display: grid;
+  gap: 1rem;
+}
+
+.trip-subsection-heading {
+  display: grid;
+  gap: 0.3rem;
+  padding-top: 0.25rem;
+}
+
+.trip-subsection-heading strong {
+  color: var(--mint);
+  font-size: 0.95rem;
+}
+
+.trip-subsection-heading span {
+  color: var(--ink-soft);
+  font-size: 0.72rem;
+}
+
+.trip-back-button {
+  margin: 1rem 0 0;
+  padding: 0.65rem 0;
+  border: 0;
+  color: var(--ink-soft);
+  background: transparent;
+  text-decoration: underline;
+  text-underline-offset: 0.2rem;
+  cursor: pointer;
 }
 
 .trip-field.wide {
@@ -4608,6 +4736,22 @@ footer p { font-size: 0.76rem; }
 
 .wave-power-condition.calm {
   color: var(--seafoam);
+}
+
+.fishability-reasons {
+  margin: 1rem 0 1.5rem;
+  padding: 1rem 1.1rem;
+  border: 1px solid rgba(191, 255, 209, 0.22);
+  background: rgba(3, 26, 51, 0.72);
+}
+
+.fishability-reasons strong {
+  color: var(--mint);
+}
+
+.fishability-reasons p {
+  margin: 0.55rem 0 0;
+  color: var(--ink-soft);
 }
 
 /* One continuous topographic canvas. Sections keep their layout, while the

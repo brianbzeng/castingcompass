@@ -93,6 +93,7 @@ interface ApiOpportunityWindow {
     habitat_score: number;
     seasonality_score: number;
     dynamic_score: number;
+    fishability_score?: number;
   };
   confidence: { level: string };
   explanation_factors: Array<{ label: string; detail: string }>;
@@ -109,7 +110,13 @@ interface ApiOpportunityWindow {
     wind_mph?: number | null;
     swell_feet?: number | null;
     swell_period_seconds?: number | null;
+    swell_direction_degrees?: number | null;
+    swell_direction?: string | null;
     wave_power_kw_m?: number | null;
+    breaking_intensity?: string | null;
+    breaking_wave_height_feet?: number | null;
+    fishability_label?: string | null;
+    fishability_reasons?: string[] | null;
     water_temp_f?: number | null;
     water_temp_source?: string | null;
     ndbc_observed_water_temp_f?: number | null;
@@ -179,6 +186,7 @@ function normalizeApiSnapshot(payload: ApiOpportunityResponse): OpportunitySnaps
       habitatScore: window.components.habitat_score,
       seasonalityScore: window.components.seasonality_score,
       dynamicScore: window.components.dynamic_score,
+      fishabilityScore: window.components.fishability_score ?? window.components.dynamic_score,
       confidence: window.confidence.level,
       rank: window.rank ?? undefined,
       explanationFactors: window.explanation_factors.map((factor) => factor.detail || factor.label),
@@ -192,7 +200,13 @@ function normalizeApiSnapshot(payload: ApiOpportunityResponse): OpportunitySnaps
         windMph: window.conditions?.wind_mph ?? undefined,
         swellFeet: window.conditions?.swell_feet ?? undefined,
         swellPeriodSeconds: window.conditions?.swell_period_seconds ?? undefined,
+        swellDirectionDegrees: window.conditions?.swell_direction_degrees ?? undefined,
+        swellDirection: window.conditions?.swell_direction ?? undefined,
         wavePowerKwM: window.conditions?.wave_power_kw_m ?? undefined,
+        breakingIntensity: window.conditions?.breaking_intensity ?? undefined,
+        breakingWaveHeightFeet: window.conditions?.breaking_wave_height_feet ?? undefined,
+        fishabilityLabel: window.conditions?.fishability_label ?? undefined,
+        fishabilityReasons: window.conditions?.fishability_reasons ?? undefined,
         waterTempF: window.conditions?.water_temp_f ?? undefined,
         waterTempSource: window.conditions?.water_temp_source ?? undefined,
         ndbcObservedWaterTempF: window.conditions?.ndbc_observed_water_temp_f ?? undefined,
@@ -296,6 +310,7 @@ function fallbackSnapshot(): OpportunitySnapshot {
     habitatScore: 76 - index * 5,
     seasonalityScore: 68,
     dynamicScore: 69 - index * 4,
+    fishabilityScore: 66 - index * 3,
     confidence: "low",
     rank: index + 1,
     explanationFactors: ["Accessible casting zone", "Seasonal halibut pattern", "Cached conditions"],
@@ -1827,7 +1842,7 @@ export function OpportunityApp() {
                 <strong>{Math.round(selectedWindow.score)}</strong>
                 <span>Opportunity<br />Score</span>
               </div>
-              <p>Ranks ahead of <strong>{Math.round(selectedWindow.score)}%</strong> of the spots and times currently available.</p>
+              <p>Relative rank among current options, with a practical fishability cap when conditions make the water hard to work.</p>
             </div>
 
             <div className="component-block">
@@ -1835,6 +1850,7 @@ export function OpportunityApp() {
               <MetricBar label="Bottom" value={selectedWindow.habitatScore} note="How fishy the nearby structure looks" />
               <MetricBar label="Time of year" value={selectedWindow.seasonalityScore} note="How this month usually fishes" />
               <MetricBar label="Today’s conditions" value={selectedWindow.dynamicScore} note="Tide, current, wind, surf energy, water temperature, cloud cover, pressure, daylight, and moon phase" />
+              <MetricBar label="Fishability" value={selectedWindow.fishabilityScore} note="Whether you can cast, control the presentation, and comfortably cover water" />
             </div>
 
             {selectedStructureGuides.length > 0 ? (
@@ -1914,7 +1930,23 @@ export function OpportunityApp() {
                   </div>
                 );
               })()}
+              <div className="fishability-condition">
+                <WaveIcon />
+                <span>Practical fishability</span>
+                <strong>{selectedWindow.conditions.fishabilityLabel ? `${selectedWindow.conditions.fishabilityLabel} · ${Math.round(selectedWindow.fishabilityScore)}/100` : `${Math.round(selectedWindow.fishabilityScore)}/100`}</strong>
+                <small>
+                  {isFiniteNumber(selectedWindow.conditions.breakingWaveHeightFeet)
+                    ? `Estimated breaking exposure ${selectedWindow.conditions.breakingWaveHeightFeet.toFixed(1)} ft${selectedWindow.conditions.swellDirection ? ` · swell from ${selectedWindow.conditions.swellDirection}` : ""}`
+                    : "Uses wind, current, surf exposure, beach slope, and expected crowding."}
+                </small>
+              </div>
             </div>
+            {selectedWindow.conditions.fishabilityReasons?.length ? (
+              <div className="fishability-reasons">
+                <strong>Can you fish it effectively?</strong>
+                {selectedWindow.conditions.fishabilityReasons.map((reason) => <p key={reason}>{reason}</p>)}
+              </div>
+            ) : null}
             <TideChart site={selectedSite} window={selectedWindow} />
             {isFiniteNumber(selectedWindow.conditions.ndbcObservedWaterTempF) ? (
               <p className="condition-source-note">
@@ -1998,15 +2030,15 @@ export function OpportunityApp() {
             <span className="eyebrow"><span /> Model note</span>
             <h2 id="method-title">A ranking, not a promise.</h2>
             <p>
-              CastCompass compares reachable casting zones and upcoming two-hour windows. The 0–100 value shows where an option ranks within the current comparison set. It is not a catch probability.
+              CastCompass compares reachable casting zones and upcoming two-hour windows. Before the practical cap, the 0–100 value ranks within the current comparison set. Fishability can lower it when the water is too difficult to work effectively. It is not a catch probability.
             </p>
             <div className="predictor-list" aria-label="Predictors used in the live score">
               <details open>
-                <summary><span>Bottom and habitat</span><b>52% of combined score</b></summary>
+                <summary><span>Bottom and habitat</span><b>44% of combined score</b></summary>
                 <p>Nearby depth, slope, roughness, channel edges, shoreline distance, sediment and structure tags, plus the current curated habitat prior. The trained bathymetry encoder remains in research until it beats the strongest classical baseline.</p>
               </details>
               <details>
-                <summary><span>Time of year</span><b>18% of combined score</b></summary>
+                <summary><span>Time of year</span><b>16% of combined score</b></summary>
                 <p>Monthly California halibut seasonality. This is still a provisional public-data prior while the reproducible RecFIN extract is being finished.</p>
               </details>
               <details>
@@ -2018,8 +2050,8 @@ export function OpportunityApp() {
                 <p>Wind, water temperature, cloud cover, atmospheric-pressure trend, daylight, moon phase and illumination. Moon and pressure stay low-weight to avoid double-counting tides or overstating a weak local signal.</p>
               </details>
               <details>
-                <summary><span>Surf energy</span><b>Safety and fishability constraint</b></summary>
-                <p>Swell height, period and estimated wave power. On exposed water, excessive wave power caps the conditions score even when tide or wind otherwise look favorable.</p>
+                <summary><span>Practical fishability</span><b>20% plus a hard score cap</b></summary>
+                <p>Wind, current, expected crowding, swell height, period, direction, estimated wave power, beach slope, and nearshore exposure estimate whether an angler can cast and control a lure or bait. Difficult or severe surf can cap the final score even when habitat looks excellent.</p>
               </details>
               <details>
                 <summary><span>Expected fishing pressure</span><b>Small access modifier</b></summary>
@@ -2078,6 +2110,7 @@ export function OpportunityApp() {
                     <MetricBar label="Bottom" value={window.habitatScore} note="Structure" />
                     <MetricBar label="Time of year" value={window.seasonalityScore} note="Season" />
                     <MetricBar label="Conditions" value={window.dynamicScore} note="Tide, wind, and swell" />
+                    <MetricBar label="Fishability" value={window.fishabilityScore} note="Casting and presentation" />
                     <button type="button" onClick={() => {
                       setShowCompare(false);
                       openSiteDetail(site.id);

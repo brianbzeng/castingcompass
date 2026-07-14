@@ -35,6 +35,11 @@ interface StoredActiveTrip {
   opportunityScore?: number;
   modelVersion?: string;
   fishingMethod: string;
+  gearProfileId: string;
+  rod: string;
+  reel: string;
+  baitLure: string;
+  rig: string;
   contourCastInfluenced: boolean;
 }
 
@@ -67,9 +72,32 @@ interface FormFields {
   keeperCount: number;
   shortReleasedCount: number;
   fishingMethod: string;
+  gearProfileId: string;
+  rod: string;
+  reel: string;
+  baitLure: string;
+  rig: string;
   contourCastInfluenced: boolean;
+  otherCatchCount: number;
+  otherSpecies: string;
+  shorebreak: string;
+  wadingDepth: string;
+  waterClarity: string;
+  crowding: string;
+  fishabilityRating: string;
+  observedWaveHeightFeet: string;
+  fishabilityNotes: string;
   notes: string;
   consent: boolean;
+}
+
+interface GearProfile {
+  id: string;
+  name: string;
+  rod: string | null;
+  reel: string | null;
+  bait_lure: string | null;
+  rig: string | null;
 }
 
 function localDateTimeValue(value: Date) {
@@ -94,7 +122,21 @@ function freshFields(siteId = ""): FormFields {
     keeperCount: 0,
     shortReleasedCount: 0,
     fishingMethod: "bait",
+    gearProfileId: "",
+    rod: "",
+    reel: "",
+    baitLure: "",
+    rig: "",
     contourCastInfluenced: true,
+    otherCatchCount: 0,
+    otherSpecies: "",
+    shorebreak: "",
+    wadingDepth: "",
+    waterClarity: "",
+    crowding: "",
+    fishabilityRating: "",
+    observedWaveHeightFeet: "",
+    fishabilityNotes: "",
     notes: "",
     consent: false,
   };
@@ -110,10 +152,60 @@ function parseFormDraft(raw: string | null, fallback: FormFields) {
       anglerCount: Number(parsed.anglerCount ?? fallback.anglerCount),
       keeperCount: Number(parsed.keeperCount ?? fallback.keeperCount),
       shortReleasedCount: Number(parsed.shortReleasedCount ?? fallback.shortReleasedCount),
+      otherCatchCount: Number(parsed.otherCatchCount ?? fallback.otherCatchCount),
       consent: Boolean(parsed.consent),
     };
   } catch {
     return fallback;
+  }
+}
+
+function findForecastWindow(snapshot: OpportunitySnapshot, siteId: string, startedAt: string, endedAt?: string) {
+  const start = new Date(startedAt).getTime();
+  const end = endedAt ? new Date(endedAt).getTime() : start;
+  if (!Number.isFinite(start) || !Number.isFinite(end)) return null;
+  const midpoint = (start + end) / 2;
+  const candidates = snapshot.windows.filter((window) => window.siteId === siteId);
+  const overlapping = candidates.filter((window) => {
+    const windowStart = new Date(window.start).getTime();
+    const windowEnd = new Date(window.end).getTime();
+    return windowStart <= end && windowEnd >= start;
+  });
+  const pool = overlapping.length ? overlapping : candidates;
+  const matched = pool.sort((left, right) => {
+    const leftMidpoint = (new Date(left.start).getTime() + new Date(left.end).getTime()) / 2;
+    const rightMidpoint = (new Date(right.start).getTime() + new Date(right.end).getTime()) / 2;
+    return Math.abs(leftMidpoint - midpoint) - Math.abs(rightMidpoint - midpoint);
+  })[0];
+  if (!matched) return null;
+  const matchedMidpoint = (new Date(matched.start).getTime() + new Date(matched.end).getTime()) / 2;
+  return Math.abs(matchedMidpoint - midpoint) <= 6 * 60 * 60 * 1000 ? matched : null;
+}
+
+function forecastFields(window: OpportunityWindow | null, snapshot: OpportunitySnapshot) {
+  if (!window) return {};
+  return {
+    opportunityWindowId: window.id,
+    opportunityScore: window.score,
+    habitatScore: window.habitatScore,
+    seasonalityScore: window.seasonalityScore,
+    conditionsScore: window.dynamicScore,
+    fishabilityScore: window.fishabilityScore,
+    modelVersion: window.modelVersion ?? snapshot.modelVersion,
+    predictionMetadata: JSON.stringify({
+      snapshotGeneratedAt: snapshot.generatedAt,
+      forecastStart: window.start,
+      forecastEnd: window.end,
+      forecastConditions: window.conditions,
+      confidence: window.confidence,
+    }),
+  };
+}
+
+function appendForecastFields(formData: FormData, window: OpportunityWindow | null, snapshot: OpportunitySnapshot) {
+  const fields = forecastFields(window, snapshot);
+  for (const [key, value] of Object.entries(fields)) {
+    if (value !== undefined && value !== null) formData.set(key, String(value));
   }
 }
 
@@ -145,6 +237,11 @@ function parseStoredTrip(raw: string | null): StoredActiveTrip | null {
       opportunityScore: value.opportunityScore,
       modelVersion: value.modelVersion,
       fishingMethod: typeof value.fishingMethod === "string" ? value.fishingMethod : "bait",
+      gearProfileId: typeof value.gearProfileId === "string" ? value.gearProfileId : "",
+      rod: typeof value.rod === "string" ? value.rod : "",
+      reel: typeof value.reel === "string" ? value.reel : "",
+      baitLure: typeof value.baitLure === "string" ? value.baitLure : "",
+      rig: typeof value.rig === "string" ? value.rig : "",
       contourCastInfluenced: typeof value.contourCastInfluenced === "boolean" ? value.contourCastInfluenced : true,
     };
   } catch {
@@ -242,6 +339,20 @@ function appendCompletionFields(formData: FormData, fields: FormFields, photo: F
   formData.set("endedAt", endedAt);
   formData.set("keeperCount", String(fields.keeperCount));
   formData.set("shortReleasedCount", String(fields.shortReleasedCount));
+  formData.set("gearProfileId", fields.gearProfileId);
+  formData.set("rod", fields.rod.trim());
+  formData.set("reel", fields.reel.trim());
+  formData.set("baitLure", fields.baitLure.trim());
+  formData.set("rig", fields.rig.trim());
+  formData.set("otherCatchCount", String(fields.otherCatchCount));
+  formData.set("otherSpecies", fields.otherSpecies.trim());
+  formData.set("shorebreak", fields.shorebreak);
+  formData.set("wadingDepth", fields.wadingDepth);
+  formData.set("waterClarity", fields.waterClarity);
+  formData.set("crowding", fields.crowding);
+  formData.set("fishabilityRating", fields.fishabilityRating);
+  formData.set("observedWaveHeightFeet", fields.observedWaveHeightFeet);
+  formData.set("fishabilityNotes", fields.fishabilityNotes.trim());
   formData.set("notes", fields.notes.trim());
   formData.set("consent", "true");
   formData.set("website", "");
@@ -269,6 +380,8 @@ export function TripReportFeature({ sites, snapshot, request, canSubmit, onRequi
   const [activeTrip, setActiveTrip] = useState<StoredActiveTrip | null>(null);
   const [selectedWindow, setSelectedWindow] = useState<OpportunityWindow | null>(null);
   const [fields, setFields] = useState<FormFields>(() => freshFields());
+  const [formStep, setFormStep] = useState<1 | 2>(1);
+  const [gearProfiles, setGearProfiles] = useState<GearProfile[]>([]);
   const [photo, setPhoto] = useState<File | null>(null);
   const [submitState, setSubmitState] = useState<SubmitState>("idle");
   const [message, setMessage] = useState("");
@@ -293,6 +406,7 @@ export function TripReportFeature({ sites, snapshot, request, canSubmit, onRequi
     const activeElement = document.activeElement;
     openerRef.current = activeElement instanceof HTMLElement ? activeElement : null;
     resetFeedback();
+    setFormStep(1);
     setSelectedWindow(forecastWindow ?? null);
 
     if (nextPanel === "complete" && activeTrip) {
@@ -302,6 +416,11 @@ export function TripReportFeature({ sites, snapshot, request, canSubmit, onRequi
         endedAt: localDateTimeValue(new Date()),
         anglerCount: activeTrip.anglerCount,
         fishingMethod: activeTrip.fishingMethod,
+        gearProfileId: activeTrip.gearProfileId,
+        rod: activeTrip.rod,
+        reel: activeTrip.reel,
+        baitLure: activeTrip.baitLure,
+        rig: activeTrip.rig,
         contourCastInfluenced: activeTrip.contourCastInfluenced,
       };
       setFields(parseFormDraft(window.localStorage.getItem(`${TRIP_DRAFT_PREFIX}complete.${activeTrip.id}`), fallback));
@@ -373,6 +492,18 @@ export function TripReportFeature({ sites, snapshot, request, canSubmit, onRequi
   }, []);
 
   useEffect(() => {
+    if (!canSubmit) return;
+    let active = true;
+    void fetch("/api/gear-profiles", { cache: "no-store" })
+      .then((response) => response.ok ? response.json() : { gearProfiles: [] })
+      .then((body: { gearProfiles?: GearProfile[] }) => {
+        if (active) setGearProfiles(body.gearProfiles ?? []);
+      })
+      .catch(() => undefined);
+    return () => { active = false; };
+  }, [canSubmit, panel]);
+
+  useEffect(() => {
     if (!panel || !dialogRef.current) return;
     const dialog = dialogRef.current;
     const previousOverflow = document.body.style.overflow;
@@ -436,9 +567,21 @@ export function TripReportFeature({ sites, snapshot, request, canSubmit, onRequi
     }
   };
 
-  const updateCount = (key: "anglerCount" | "keeperCount" | "shortReleasedCount", value: string) => {
+  const updateCount = (key: "anglerCount" | "keeperCount" | "shortReleasedCount" | "otherCatchCount", value: string) => {
     const parsed = integerValue(value);
     setFields((current) => ({ ...current, [key]: key === "anglerCount" ? Math.min(12, Math.max(1, parsed)) : parsed }));
+  };
+
+  const applyGearProfile = (profileId: string) => {
+    const profile = gearProfiles.find((candidate) => candidate.id === profileId);
+    setFields((current) => profile ? {
+      ...current,
+      gearProfileId: profile.id,
+      rod: profile.rod ?? "",
+      reel: profile.reel ?? "",
+      baitLure: profile.bait_lure ?? "",
+      rig: profile.rig ?? "",
+    } : { ...current, gearProfileId: "" });
   };
 
   const updateSite = (siteId: string) => {
@@ -463,6 +606,9 @@ export function TripReportFeature({ sites, snapshot, request, canSubmit, onRequi
     setMessage("");
     try {
       const startedAt = isoFromLocalInput(fields.startedAt);
+      const forecastWindow = selectedWindow?.siteId === site.id
+        ? selectedWindow
+        : findForecastWindow(snapshot, site.id, startedAt);
       const response = await fetch("/api/trips/start", {
         method: "POST",
         headers: { "Content-Type": "application/json", Accept: "application/json" },
@@ -473,16 +619,16 @@ export function TripReportFeature({ sites, snapshot, request, canSubmit, onRequi
           mode: site.type.toLowerCase(),
           fishingMethod: fields.fishingMethod,
           method: fields.fishingMethod,
+          gearProfileId: fields.gearProfileId,
+          rod: fields.rod,
+          reel: fields.reel,
+          baitLure: fields.baitLure,
+          rig: fields.rig,
           contourCastInfluenced: fields.contourCastInfluenced,
           reporterKey: anonymousReporterKey(),
           consent: fields.consent,
           website: "",
-          opportunityWindowId: selectedWindow?.id,
-          opportunityScore: selectedWindow?.score,
-          habitatScore: selectedWindow?.habitatScore,
-          seasonalityScore: selectedWindow?.seasonalityScore,
-          conditionsScore: selectedWindow?.dynamicScore,
-          modelVersion: selectedWindow?.modelVersion ?? snapshot.modelVersion,
+          ...forecastFields(forecastWindow, snapshot),
         }),
       });
       const payload = await responsePayload(response);
@@ -498,10 +644,15 @@ export function TripReportFeature({ sites, snapshot, request, canSubmit, onRequi
         startedAt,
         anglerCount: fields.anglerCount,
         mode: site.type.toLowerCase(),
-        opportunityWindowId: selectedWindow?.id,
-        opportunityScore: selectedWindow?.score,
-        modelVersion: selectedWindow?.modelVersion ?? snapshot.modelVersion,
+        opportunityWindowId: forecastWindow?.id,
+        opportunityScore: forecastWindow?.score,
+        modelVersion: forecastWindow?.modelVersion ?? snapshot.modelVersion,
         fishingMethod: fields.fishingMethod,
+        gearProfileId: fields.gearProfileId,
+        rod: fields.rod,
+        reel: fields.reel,
+        baitLure: fields.baitLure,
+        rig: fields.rig,
         contourCastInfluenced: fields.contourCastInfluenced,
       };
       window.localStorage.setItem(ACTIVE_TRIP_KEY, JSON.stringify(stored));
@@ -530,6 +681,11 @@ export function TripReportFeature({ sites, snapshot, request, canSubmit, onRequi
       formData.set("fishingMethod", fields.fishingMethod);
       formData.set("method", fields.fishingMethod);
       formData.set("contourCastInfluenced", String(fields.contourCastInfluenced));
+      appendForecastFields(
+        formData,
+        findForecastWindow(snapshot, activeTrip.siteId, activeTrip.startedAt, isoFromLocalInput(fields.endedAt)),
+        snapshot,
+      );
       const response = await fetch(`/api/trips/${encodeURIComponent(activeTrip.id)}/complete`, {
         method: "POST",
         body: formData,
@@ -570,11 +726,10 @@ export function TripReportFeature({ sites, snapshot, request, canSubmit, onRequi
       formData.set("contourCastInfluenced", String(fields.contourCastInfluenced));
       formData.set("reporterKey", anonymousReporterKey());
       if (referralCodeRef.current) formData.set("referralCode", referralCodeRef.current);
-      if (selectedWindow) {
-        formData.set("opportunityWindowId", selectedWindow.id);
-        formData.set("opportunityScore", String(selectedWindow.score));
-        formData.set("modelVersion", selectedWindow.modelVersion ?? snapshot.modelVersion);
-      }
+      const matchedWindow = selectedWindow?.siteId === site.id
+        ? selectedWindow
+        : findForecastWindow(snapshot, site.id, isoFromLocalInput(fields.startedAt), isoFromLocalInput(fields.endedAt));
+      appendForecastFields(formData, matchedWindow, snapshot);
       const response = await fetch("/api/trips/report", { method: "POST", body: formData });
       await responsePayload(response);
       window.localStorage.removeItem(`${TRIP_DRAFT_PREFIX}past`);
@@ -661,12 +816,13 @@ export function TripReportFeature({ sites, snapshot, request, canSubmit, onRequi
             <span className="eyebrow"><span /> Validation beta</span>
 
             {panel === "start" ? (
-              <form onSubmit={startTrip}>
+              <form onSubmit={formStep === 1 ? (event) => { event.preventDefault(); setFormStep(2); } : startTrip}>
                 <header className="trip-form-heading">
                   <h2 id="trip-modal-title">Start fishing.</h2>
                   <p>We save the chosen forecast now, then ask for the full result when you finish.</p>
                 </header>
-                <div className="trip-field-grid">
+                <div className="trip-step-indicator"><span className={formStep === 1 ? "active" : ""}>1 · Trip</span><span className={formStep === 2 ? "active" : ""}>2 · Gear</span></div>
+                {formStep === 1 ? <div className="trip-field-grid">
                   <SiteCombobox className="trip-field wide" sites={sites} value={fields.siteId} onChange={updateSite} />
                   <label className="trip-field">
                     <span>Start time</span>
@@ -692,12 +848,13 @@ export function TripReportFeature({ sites, snapshot, request, canSubmit, onRequi
                       <option value="no">No — independent trip</option>
                     </select>
                   </label>
-                </div>
-                {selectedWindow ? (
+                </div> : <>
+                <TripGearFields fields={fields} setFields={setFields} gearProfiles={gearProfiles} applyGearProfile={applyGearProfile} />
+                {(selectedWindow ?? findForecastWindow(snapshot, fields.siteId, isoFromLocalInput(fields.startedAt))) ? (
                   <div className="captured-forecast">
                     <span>Forecast captured</span>
-                    <strong>{Math.round(selectedWindow.score)}</strong>
-                    <p>Window {new Date(selectedWindow.start).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}–{new Date(selectedWindow.end).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}</p>
+                    <strong>{Math.round((selectedWindow ?? findForecastWindow(snapshot, fields.siteId, isoFromLocalInput(fields.startedAt)))!.score)}</strong>
+                    <p>The exact forecast window, score components, model version, and conditions are stored with this trip.</p>
                   </div>
                 ) : null}
                 <div className="trip-privacy-note">
@@ -708,8 +865,10 @@ export function TripReportFeature({ sites, snapshot, request, canSubmit, onRequi
                   <input type="checkbox" checked={fields.consent} onChange={(event) => setFields((current) => ({ ...current, consent: event.target.checked }))} required />
                   <span>I own anything I submit and consent to private use of this trip, its result, and any later photo for CastCompass model training and validation.</span>
                 </label>
+                </>}
+                {formStep === 2 ? <button className="trip-back-button" type="button" onClick={() => setFormStep(1)}>← Back to trip details</button> : null}
                 <button className="trip-submit" type="submit" disabled={submitState === "submitting" || Boolean(activeTrip)}>
-                  {activeTrip ? "Finish the active trip first" : submitState === "submitting" ? "Starting…" : "Start trip"}
+                  {activeTrip ? "Finish the active trip first" : formStep === 1 ? "Continue to gear" : submitState === "submitting" ? "Starting…" : "Start trip"}
                   {!activeTrip && submitState !== "submitting" ? <ArrowIcon /> : null}
                 </button>
                 <div className={`trip-form-status ${submitState}`} aria-live="polite">{message}</div>
@@ -722,6 +881,7 @@ export function TripReportFeature({ sites, snapshot, request, canSubmit, onRequi
                   <h2 id="trip-modal-title">Finish the trip.</h2>
                   <p>{activeTrip.siteName} · zero in both catch fields records a complete no-catch trip.</p>
                 </header>
+                <TripGearFields fields={fields} setFields={setFields} gearProfiles={gearProfiles} applyGearProfile={applyGearProfile} includeObservations />
                 <TripCompletionFields fields={fields} setFields={setFields} updateCount={updateCount} photo={photo} photoInputRef={photoInputRef} onPhoto={handlePhoto} />
                 <button className="trip-submit" type="submit" disabled={submitState === "submitting" || submitState === "success"}>
                   {submitState === "submitting" ? "Saving…" : submitState === "success" ? "Report saved" : totalFish === 0 ? "Record no-catch trip" : `Record ${totalFish} halibut`}
@@ -740,12 +900,13 @@ export function TripReportFeature({ sites, snapshot, request, canSubmit, onRequi
             ) : null}
 
             {panel === "past" ? (
-              <form onSubmit={reportPastTrip}>
+              <form onSubmit={formStep === 1 ? (event) => { event.preventDefault(); setFormStep(2); } : reportPastTrip}>
                 <header className="trip-form-heading">
                   <h2 id="trip-modal-title">Log a past trip.</h2>
                   <p>Complete results—including zero fish—help test whether the ranking separates stronger windows from weaker ones.</p>
                 </header>
-                <div className="trip-field-grid">
+                <div className="trip-step-indicator"><span className={formStep === 1 ? "active" : ""}>1 · Trip</span><span className={formStep === 2 ? "active" : ""}>2 · Gear + result</span></div>
+                {formStep === 1 ? <div className="trip-field-grid">
                   <SiteCombobox className="trip-field wide" sites={sites} value={fields.siteId} onChange={updateSite} />
                   <label className="trip-field">
                     <span>Start</span>
@@ -775,10 +936,13 @@ export function TripReportFeature({ sites, snapshot, request, canSubmit, onRequi
                       <option value="no">No — independent trip</option>
                     </select>
                   </label>
-                </div>
+                </div> : <>
+                <TripGearFields fields={fields} setFields={setFields} gearProfiles={gearProfiles} applyGearProfile={applyGearProfile} includeObservations />
                 <TripCompletionFields fields={fields} setFields={setFields} updateCount={updateCount} photo={photo} photoInputRef={photoInputRef} onPhoto={handlePhoto} hideTimes />
+                </>}
+                {formStep === 2 ? <button className="trip-back-button" type="button" onClick={() => setFormStep(1)}>← Back to trip details</button> : null}
                 <button className="trip-submit" type="submit" disabled={submitState === "submitting" || submitState === "success"}>
-                  {submitState === "submitting" ? "Saving…" : submitState === "success" ? "Report saved" : totalFish === 0 ? "Record no-catch trip" : "Submit trip report"}
+                  {formStep === 1 ? "Continue to gear + result" : submitState === "submitting" ? "Saving…" : submitState === "success" ? "Report saved" : totalFish === 0 ? "Record no-catch trip" : "Submit trip report"}
                   {submitState === "idle" || submitState === "error" ? <ArrowIcon /> : null}
                 </button>
                 <div className={`trip-form-status ${submitState}`} aria-live="polite">{message}</div>
@@ -797,11 +961,57 @@ export function TripReportFeature({ sites, snapshot, request, canSubmit, onRequi
 interface TripCompletionFieldsProps {
   fields: FormFields;
   setFields: (updater: (current: FormFields) => FormFields) => void;
-  updateCount: (key: "anglerCount" | "keeperCount" | "shortReleasedCount", value: string) => void;
+  updateCount: (key: "anglerCount" | "keeperCount" | "shortReleasedCount" | "otherCatchCount", value: string) => void;
   photo: File | null;
   photoInputRef: React.RefObject<HTMLInputElement | null>;
   onPhoto: (event: ChangeEvent<HTMLInputElement>) => void;
   hideTimes?: boolean;
+}
+
+function TripGearFields({
+  fields,
+  setFields,
+  gearProfiles,
+  applyGearProfile,
+  includeObservations = false,
+}: {
+  fields: FormFields;
+  setFields: (updater: (current: FormFields) => FormFields) => void;
+  gearProfiles: GearProfile[];
+  applyGearProfile(profileId: string): void;
+  includeObservations?: boolean;
+}) {
+  return (
+    <section className="trip-gear-section">
+      <div className="trip-subsection-heading"><strong>What did you fish?</strong><span>Optional, but useful for comparing methods fairly.</span></div>
+      {gearProfiles.length ? (
+        <label className="trip-field wide"><span>Saved gear preset</span>
+          <select value={fields.gearProfileId} onChange={(event) => applyGearProfile(event.target.value)}>
+            <option value="">Enter gear manually</option>
+            {gearProfiles.map((profile) => <option key={profile.id} value={profile.id}>{profile.name}</option>)}
+          </select>
+        </label>
+      ) : null}
+      <div className="trip-field-grid">
+        <label className="trip-field"><span>Rod <em>optional</em></span><input maxLength={160} value={fields.rod} onChange={(event) => setFields((current) => ({ ...current, rod: event.target.value }))} placeholder="Length, power, model…" /></label>
+        <label className="trip-field"><span>Reel <em>optional</em></span><input maxLength={160} value={fields.reel} onChange={(event) => setFields((current) => ({ ...current, reel: event.target.value }))} placeholder="Size, model, line…" /></label>
+        <label className="trip-field"><span>Bait or lure <em>optional</em></span><input maxLength={200} value={fields.baitLure} onChange={(event) => setFields((current) => ({ ...current, baitLure: event.target.value }))} placeholder="Jerkbait, fluke, shrimp…" /></label>
+        <label className="trip-field"><span>Rig tied <em>optional</em></span><input maxLength={200} value={fields.rig} onChange={(event) => setFields((current) => ({ ...current, rig: event.target.value }))} placeholder="Dropshot, Carolina rig…" /></label>
+      </div>
+      {includeObservations ? <>
+        <div className="trip-subsection-heading"><strong>Could you fish it effectively?</strong><span>Observed conditions help separate fish presence from practical fishability.</span></div>
+        <div className="trip-field-grid">
+          <label className="trip-field"><span>Shorebreak</span><select value={fields.shorebreak} onChange={(event) => setFields((current) => ({ ...current, shorebreak: event.target.value }))}><option value="">Not noted</option><option value="calm">Calm</option><option value="manageable">Manageable</option><option value="difficult">Difficult</option><option value="unfishable">Unfishable</option></select></label>
+          <label className="trip-field"><span>Water reached</span><select value={fields.wadingDepth} onChange={(event) => setFields((current) => ({ ...current, wadingDepth: event.target.value }))}><option value="">Not noted</option><option value="ankle">Ankle</option><option value="knee">Knee</option><option value="thigh">Thigh</option><option value="waist-plus">Waist or higher</option><option value="did-not-wade">Did not wade</option></select></label>
+          <label className="trip-field"><span>Water clarity</span><select value={fields.waterClarity} onChange={(event) => setFields((current) => ({ ...current, waterClarity: event.target.value }))}><option value="">Not noted</option><option value="clear">Clear</option><option value="light-stain">Light stain</option><option value="murky">Murky</option><option value="muddy">Muddy</option></select></label>
+          <label className="trip-field"><span>Crowding</span><select value={fields.crowding} onChange={(event) => setFields((current) => ({ ...current, crowding: event.target.value }))}><option value="">Not noted</option><option value="empty">Empty</option><option value="light">Light</option><option value="moderate">Moderate</option><option value="packed">Packed</option></select></label>
+          <label className="trip-field"><span>Overall fishability</span><select value={fields.fishabilityRating} onChange={(event) => setFields((current) => ({ ...current, fishabilityRating: event.target.value }))}><option value="">Not rated</option><option value="5">5 · Excellent</option><option value="4">4 · Good</option><option value="3">3 · Workable</option><option value="2">2 · Difficult</option><option value="1">1 · Unfishable</option></select></label>
+          <label className="trip-field"><span>Observed waves, ft <em>optional</em></span><input type="number" min="0" max="30" step="0.5" value={fields.observedWaveHeightFeet} onChange={(event) => setFields((current) => ({ ...current, observedWaveHeightFeet: event.target.value }))} /></label>
+        </div>
+        <label className="trip-field wide"><span>Fishability notes <em>optional</em></span><textarea maxLength={500} rows={3} value={fields.fishabilityNotes} onChange={(event) => setFields((current) => ({ ...current, fishabilityNotes: event.target.value }))} placeholder="Steep beach, heavy shorebreak, weeds, snags, room to cast…" /></label>
+      </> : null}
+    </section>
+  );
 }
 
 function TripCompletionFields({
@@ -840,6 +1050,14 @@ function TripCompletionFields({
           Only count a kept fish if it was legal. California halibut must be at least 22 inches total length;
           always confirm the <a href="https://wildlife.ca.gov/Fishing/Ocean/Regulations/Fishing-Map/San-Francisco" target="_blank" rel="noreferrer">current CDFW regulations ↗</a>.
         </small>
+      </fieldset>
+      <fieldset className="catch-fieldset">
+        <legend>Other catch</legend>
+        <p>Non-halibut catch helps distinguish a dead bite from a species-specific miss.</p>
+        <div>
+          <label className="trip-field count-field"><span>Other fish</span><input type="number" min="0" max="100" inputMode="numeric" value={fields.otherCatchCount} onChange={(event) => updateCount("otherCatchCount", event.target.value)} /></label>
+          <label className="trip-field"><span>Species <em>optional</em></span><input maxLength={200} value={fields.otherSpecies} onChange={(event) => setFields((current) => ({ ...current, otherSpecies: event.target.value }))} placeholder="Surf smelt, striped bass…" /></label>
+        </div>
       </fieldset>
       <label className="trip-field wide">
         <span>Notes <em>optional</em></span>

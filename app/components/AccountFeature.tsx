@@ -40,12 +40,31 @@ interface ProfileTrip {
   opportunity_score: number | null;
   angler_count: number;
   notes: string | null;
+  rod: string | null;
+  reel: string | null;
+  bait_lure: string | null;
+  rig: string | null;
+  other_catch_count: number | null;
+  other_species: string | null;
+  observations_json: string | null;
 }
 
 interface ProfileData {
   savedSites: Array<{ site_id: string; created_at: string }>;
   trips: ProfileTrip[];
+  gearProfiles: GearProfile[];
 }
+
+interface GearProfile {
+  id: string;
+  name: string;
+  rod: string | null;
+  reel: string | null;
+  bait_lure: string | null;
+  rig: string | null;
+}
+
+const EMPTY_GEAR = { name: "", rod: "", reel: "", baitLure: "", rig: "" };
 
 interface ProfileTripEditFields {
   siteId: string;
@@ -55,6 +74,19 @@ interface ProfileTripEditFields {
   keeperCount: number;
   shortReleasedCount: number;
   fishingMethod: string;
+  rod: string;
+  reel: string;
+  baitLure: string;
+  rig: string;
+  otherCatchCount: number;
+  otherSpecies: string;
+  shorebreak: string;
+  wadingDepth: string;
+  waterClarity: string;
+  crowding: string;
+  fishabilityRating: string;
+  observedWaveHeightFeet: string;
+  fishabilityNotes: string;
   notes: string;
 }
 
@@ -67,6 +99,12 @@ function localDateTimeValue(value: string | null) {
 }
 
 function editFieldsForTrip(trip: ProfileTrip): ProfileTripEditFields {
+  let observations: Record<string, string | number | null> = {};
+  try {
+    observations = trip.observations_json ? JSON.parse(trip.observations_json) as Record<string, string | number | null> : {};
+  } catch {
+    observations = {};
+  }
   return {
     siteId: trip.site_id,
     startedAt: localDateTimeValue(trip.started_at),
@@ -75,6 +113,19 @@ function editFieldsForTrip(trip: ProfileTrip): ProfileTripEditFields {
     keeperCount: Number(trip.keeper_count ?? 0),
     shortReleasedCount: Number(trip.short_released_count ?? 0),
     fishingMethod: trip.fishing_method ?? "bait",
+    rod: trip.rod ?? "",
+    reel: trip.reel ?? "",
+    baitLure: trip.bait_lure ?? "",
+    rig: trip.rig ?? "",
+    otherCatchCount: Number(trip.other_catch_count ?? 0),
+    otherSpecies: trip.other_species ?? "",
+    shorebreak: String(observations.shorebreak ?? ""),
+    wadingDepth: String(observations.wadingDepth ?? ""),
+    waterClarity: String(observations.waterClarity ?? ""),
+    crowding: String(observations.crowding ?? ""),
+    fishabilityRating: String(observations.fishabilityRating ?? ""),
+    observedWaveHeightFeet: String(observations.observedWaveHeightFeet ?? ""),
+    fishabilityNotes: String(observations.fishabilityNotes ?? ""),
     notes: trip.notes ?? "",
   };
 }
@@ -176,13 +227,16 @@ export function AccountModal({
   const [mode, setMode] = useState<AccountMode>("login");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const [notice, setNotice] = useState("");
   const [challengeId, setChallengeId] = useState("");
+  const [resendCooldown, setResendCooldown] = useState(0);
   const [profile, setProfile] = useState<ProfileData | null>(null);
   const [profileLoading, setProfileLoading] = useState(false);
   const [editingTrip, setEditingTrip] = useState<ProfileTrip | null>(null);
   const [editFields, setEditFields] = useState<ProfileTripEditFields | null>(null);
   const [profileActionBusy, setProfileActionBusy] = useState(false);
   const [profileActionError, setProfileActionError] = useState("");
+  const [gearDraft, setGearDraft] = useState(EMPTY_GEAR);
 
   const loadProfile = useCallback(async () => {
     setProfileLoading(true);
@@ -191,7 +245,7 @@ export function AccountModal({
       if (!response.ok) throw new Error("Profile could not be loaded.");
       setProfile(await response.json() as ProfileData);
     } catch {
-      setProfile({ savedSites: [], trips: [] });
+      setProfile({ savedSites: [], trips: [], gearProfiles: [] });
     } finally {
       setProfileLoading(false);
     }
@@ -217,12 +271,21 @@ export function AccountModal({
     );
   }, [editFields, editingTrip]);
 
+  useEffect(() => {
+    if (resendCooldown <= 0) return;
+    const timer = window.setInterval(() => {
+      setResendCooldown((seconds) => Math.max(0, seconds - 1));
+    }, 1000);
+    return () => window.clearInterval(timer);
+  }, [resendCooldown]);
+
   if (!account.modalOpen) return null;
 
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setBusy(true);
     setError("");
+    setNotice("");
     const form = new FormData(event.currentTarget);
     try {
       const endpoint = mode === "signup"
@@ -248,6 +311,7 @@ export function AccountModal({
       if (!response.ok) throw new Error(body.error?.message ?? "The account request failed.");
       if ((mode === "signup" || mode === "recover") && body.challengeId) {
         setChallengeId(body.challengeId);
+        setResendCooldown(60);
         setMode(mode === "signup" ? "verify" : "reset");
         return;
       }
@@ -255,6 +319,27 @@ export function AccountModal({
       account.closeAccount();
     } catch (submissionError) {
       setError(submissionError instanceof Error ? submissionError.message : "The account request failed.");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const resendCode = async () => {
+    if (!challengeId || resendCooldown > 0 || busy) return;
+    setBusy(true);
+    setError("");
+    try {
+      const response = await fetch("/api/auth/challenge/resend", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ challengeId }),
+      });
+      const body = await response.json() as { retryAfterSeconds?: number; error?: { message?: string } };
+      if (!response.ok) throw new Error(body.error?.message ?? "A new code could not be sent.");
+      setResendCooldown(body.retryAfterSeconds ?? 60);
+      setNotice("A new code was requested. Check spam, promotions, and All Mail too.");
+    } catch (resendError) {
+      setError(resendError instanceof Error ? resendError.message : "A new code could not be sent.");
     } finally {
       setBusy(false);
     }
@@ -328,6 +413,41 @@ export function AccountModal({
     }
   };
 
+  const saveGearProfile = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setProfileActionBusy(true);
+    setProfileActionError("");
+    try {
+      const response = await fetch("/api/gear-profiles", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(gearDraft),
+      });
+      const body = await response.json() as { error?: { message?: string } };
+      if (!response.ok) throw new Error(body.error?.message ?? "The gear preset could not be saved.");
+      setGearDraft(EMPTY_GEAR);
+      await loadProfile();
+    } catch (gearError) {
+      setProfileActionError(gearError instanceof Error ? gearError.message : "The gear preset could not be saved.");
+    } finally {
+      setProfileActionBusy(false);
+    }
+  };
+
+  const deleteGearProfile = async (id: string) => {
+    setProfileActionBusy(true);
+    setProfileActionError("");
+    try {
+      const response = await fetch(`/api/gear-profiles/${encodeURIComponent(id)}`, { method: "DELETE" });
+      if (!response.ok) throw new Error("The gear preset could not be removed.");
+      await loadProfile();
+    } catch (gearError) {
+      setProfileActionError(gearError instanceof Error ? gearError.message : "The gear preset could not be removed.");
+    } finally {
+      setProfileActionBusy(false);
+    }
+  };
+
   return (
     <div className="account-modal-layer" role="presentation" onClick={(event) => {
       if (event.target === event.currentTarget) account.closeAccount();
@@ -366,6 +486,23 @@ export function AccountModal({
                   })}
                 </div>
               ) : <p>No saved locations yet. Open a forecast and tap “Save location.”</p>}
+            </section>
+            <section className="profile-section profile-gear-section">
+              <h3>Gear presets</h3>
+              {profile?.gearProfiles.length ? <div className="profile-list">
+                {profile.gearProfiles.map((gear) => <article className="profile-gear-row" key={gear.id}>
+                  <div><strong>{gear.name}</strong><small>{[gear.rod, gear.reel, gear.bait_lure, gear.rig].filter(Boolean).join(" · ") || "Empty preset"}</small></div>
+                  <button type="button" disabled={profileActionBusy} onClick={() => void deleteGearProfile(gear.id)}>Remove</button>
+                </article>)}
+              </div> : <p>No gear presets yet.</p>}
+              <form className="profile-gear-form" onSubmit={saveGearProfile}>
+                <input aria-label="Preset name" placeholder="Preset name" maxLength={60} value={gearDraft.name} onChange={(event) => setGearDraft((current) => ({ ...current, name: event.target.value }))} required />
+                <input aria-label="Rod" placeholder="Rod" maxLength={160} value={gearDraft.rod} onChange={(event) => setGearDraft((current) => ({ ...current, rod: event.target.value }))} />
+                <input aria-label="Reel" placeholder="Reel" maxLength={160} value={gearDraft.reel} onChange={(event) => setGearDraft((current) => ({ ...current, reel: event.target.value }))} />
+                <input aria-label="Bait or lure" placeholder="Bait or lure" maxLength={200} value={gearDraft.baitLure} onChange={(event) => setGearDraft((current) => ({ ...current, baitLure: event.target.value }))} />
+                <input aria-label="Rig" placeholder="Rig tied" maxLength={200} value={gearDraft.rig} onChange={(event) => setGearDraft((current) => ({ ...current, rig: event.target.value }))} />
+                <button type="submit" disabled={profileActionBusy}>{profileActionBusy ? "Saving…" : "Save gear preset"}</button>
+              </form>
             </section>
             <section className="profile-section">
               <h3>Past trip logs</h3>
@@ -420,6 +557,31 @@ export function AccountModal({
                   <label>Kept<input type="number" min="0" max="25" value={editFields.keeperCount} onChange={(event) => setEditFields((current) => current ? { ...current, keeperCount: Number(event.target.value) } : current)} required /></label>
                   <label>Short / released<input type="number" min="0" max="25" value={editFields.shortReleasedCount} onChange={(event) => setEditFields((current) => current ? { ...current, shortReleasedCount: Number(event.target.value) } : current)} required /></label>
                 </div>
+                <fieldset className="profile-trip-editor-section">
+                  <legend>Gear used</legend>
+                  <p>Add what you remember. Partial setups are still useful.</p>
+                  <div className="profile-trip-editor-grid">
+                    <label>Rod<input maxLength={160} value={editFields.rod} onChange={(event) => setEditFields((current) => current ? { ...current, rod: event.target.value } : current)} placeholder="Length, power, model…" /></label>
+                    <label>Reel<input maxLength={160} value={editFields.reel} onChange={(event) => setEditFields((current) => current ? { ...current, reel: event.target.value } : current)} placeholder="Size, model, line…" /></label>
+                    <label>Bait or lure<input maxLength={200} value={editFields.baitLure} onChange={(event) => setEditFields((current) => current ? { ...current, baitLure: event.target.value } : current)} placeholder="Jerkbait, fluke, shrimp…" /></label>
+                    <label>Rig tied<input maxLength={200} value={editFields.rig} onChange={(event) => setEditFields((current) => current ? { ...current, rig: event.target.value } : current)} placeholder="Dropshot, Carolina rig…" /></label>
+                  </div>
+                </fieldset>
+                <fieldset className="profile-trip-editor-section">
+                  <legend>What the water was actually like</legend>
+                  <p>These observations let the forecast learn when theoretically good water is difficult to fish.</p>
+                  <div className="profile-trip-editor-grid">
+                    <label>Shorebreak<select value={editFields.shorebreak} onChange={(event) => setEditFields((current) => current ? { ...current, shorebreak: event.target.value } : current)}><option value="">Not noted</option><option value="calm">Calm</option><option value="manageable">Manageable</option><option value="difficult">Difficult</option><option value="unfishable">Unfishable</option></select></label>
+                    <label>Water reached<select value={editFields.wadingDepth} onChange={(event) => setEditFields((current) => current ? { ...current, wadingDepth: event.target.value } : current)}><option value="">Not noted</option><option value="ankle">Ankle</option><option value="knee">Knee</option><option value="thigh">Thigh</option><option value="waist-plus">Waist or higher</option><option value="did-not-wade">Did not wade</option></select></label>
+                    <label>Water clarity<select value={editFields.waterClarity} onChange={(event) => setEditFields((current) => current ? { ...current, waterClarity: event.target.value } : current)}><option value="">Not noted</option><option value="clear">Clear</option><option value="light-stain">Light stain</option><option value="murky">Murky</option><option value="muddy">Muddy</option></select></label>
+                    <label>Crowding<select value={editFields.crowding} onChange={(event) => setEditFields((current) => current ? { ...current, crowding: event.target.value } : current)}><option value="">Not noted</option><option value="empty">Empty</option><option value="light">Light</option><option value="moderate">Moderate</option><option value="packed">Packed</option></select></label>
+                    <label>Overall fishability<select value={editFields.fishabilityRating} onChange={(event) => setEditFields((current) => current ? { ...current, fishabilityRating: event.target.value } : current)}><option value="">Not rated</option><option value="5">5 · Excellent</option><option value="4">4 · Good</option><option value="3">3 · Workable</option><option value="2">2 · Difficult</option><option value="1">1 · Unfishable</option></select></label>
+                    <label>Observed waves, ft<input type="number" min="0" max="30" step="0.5" value={editFields.observedWaveHeightFeet} onChange={(event) => setEditFields((current) => current ? { ...current, observedWaveHeightFeet: event.target.value } : current)} /></label>
+                    <label>Other fish caught<input type="number" min="0" max="100" value={editFields.otherCatchCount} onChange={(event) => setEditFields((current) => current ? { ...current, otherCatchCount: Number(event.target.value) } : current)} /></label>
+                    <label>Other species<input maxLength={240} value={editFields.otherSpecies} onChange={(event) => setEditFields((current) => current ? { ...current, otherSpecies: event.target.value } : current)} placeholder="Surf smelt, striped bass…" /></label>
+                  </div>
+                  <label>Fishability notes<textarea rows={3} maxLength={500} value={editFields.fishabilityNotes} onChange={(event) => setEditFields((current) => current ? { ...current, fishabilityNotes: event.target.value } : current)} placeholder="Steep beach, thigh-high wash, weeds, snags…" /></label>
+                </fieldset>
                 <label>Notes<textarea rows={4} maxLength={1000} value={editFields.notes} onChange={(event) => setEditFields((current) => current ? { ...current, notes: event.target.value } : current)} /></label>
                 <small>Your edits are saved in this browser as you type.</small>
                 {profileActionError ? <p className="account-error" role="alert">{profileActionError}</p> : null}
@@ -453,8 +615,14 @@ export function AccountModal({
               {mode === "signup" ? <small>Use at least 10 characters. We’ll email a six-digit code before creating the account.</small> : null}
               {mode === "verify" || mode === "reset" ? <small>The code expires after 15 minutes and can be tried six times.</small> : null}
               {error ? <p className="account-error" role="alert">{error}</p> : null}
+              {notice ? <p className="account-notice" role="status">{notice}</p> : null}
               <button className="account-primary" type="submit" disabled={busy}>{busy ? "Please wait…" : mode === "login" ? "Sign in" : mode === "signup" ? "Email verification code" : mode === "verify" ? "Verify and create account" : mode === "recover" ? "Email reset code" : "Set new password"}</button>
             </form>
+            {mode === "verify" || mode === "reset" ? (
+              <button className="account-text-button" type="button" disabled={busy || resendCooldown > 0} onClick={() => void resendCode()}>
+                {resendCooldown > 0 ? `Send another code in ${resendCooldown}s` : "Send another code"}
+              </button>
+            ) : null}
             {mode === "login" ? <button className="account-text-button" type="button" onClick={() => { setMode("recover"); setError(""); }}>Forgot password?</button> : null}
             {mode === "recover" || mode === "verify" || mode === "reset" ? <button className="account-text-button" type="button" onClick={() => { setMode("login"); setError(""); setChallengeId(""); }}>Back to sign in</button> : null}
           </>

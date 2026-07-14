@@ -68,7 +68,13 @@ export interface Conditions {
   windDirection?: string;
   swellFeet?: number;
   swellPeriodSeconds?: number;
+  swellDirectionDegrees?: number;
+  swellDirection?: string;
   wavePowerKwM?: number;
+  breakingIntensity?: "light" | "workable" | "difficult" | "severe" | string;
+  breakingWaveHeightFeet?: number;
+  fishabilityLabel?: string;
+  fishabilityReasons?: string[];
   waterTempF?: number;
   waterTempSource?: string;
   ndbcObservedWaterTempF?: number;
@@ -96,6 +102,7 @@ export interface OpportunityWindow {
   habitatScore: number;
   seasonalityScore: number;
   dynamicScore: number;
+  fishabilityScore: number;
   confidence: "high" | "medium" | "low" | string;
   rank?: number;
   explanationFactors: string[];

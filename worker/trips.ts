@@ -58,12 +58,20 @@ export interface TripRow {
   mode: string;
   fishing_method: string | null;
   gear: string | null;
+  gear_profile_id: string | null;
+  rod: string | null;
+  reel: string | null;
+  bait_lure: string | null;
+  rig: string | null;
   angler_count: number;
   angler_hours: number | null;
   keeper_count: number | null;
   short_released_count: number | null;
   halibut_encounters: number | null;
   no_catch: number | null;
+  other_catch_count: number | null;
+  other_species: string | null;
+  observations_json: string | null;
   notes: string | null;
   consent: number;
   consent_at: string | null;
@@ -76,6 +84,7 @@ export interface TripRow {
   habitat_score: number | null;
   seasonality_score: number | null;
   conditions_score: number | null;
+  fishability_score: number | null;
   model_version: string | null;
   score_influenced_choice: number | null;
   prediction_metadata_json: string | null;
@@ -102,12 +111,20 @@ interface NewTripRecord {
   mode: string;
   fishingMethod: string | null;
   gear: string | null;
+  gearProfileId: string | null;
+  rod: string | null;
+  reel: string | null;
+  baitLure: string | null;
+  rig: string | null;
   anglerCount: number;
   anglerHours: number | null;
   keeperCount: number | null;
   shortReleasedCount: number | null;
   halibutEncounters: number | null;
   noCatch: boolean | null;
+  otherCatchCount: number | null;
+  otherSpecies: string | null;
+  observationsJson: string | null;
   notes: string | null;
   consent: boolean;
   consentAt: string | null;
@@ -120,6 +137,7 @@ interface NewTripRecord {
   habitatScore: number | null;
   seasonalityScore: number | null;
   conditionsScore: number | null;
+  fishabilityScore: number | null;
   modelVersion: string | null;
   scoreInfluencedChoice: boolean | null;
   predictionMetadataJson: string | null;
@@ -136,12 +154,20 @@ interface CompletionRecord {
   mode: string;
   fishingMethod: string | null;
   gear: string | null;
+  gearProfileId: string | null;
+  rod: string | null;
+  reel: string | null;
+  baitLure: string | null;
+  rig: string | null;
   anglerCount: number;
   anglerHours: number;
   keeperCount: number;
   shortReleasedCount: number;
   halibutEncounters: number;
   noCatch: boolean;
+  otherCatchCount: number;
+  otherSpecies: string | null;
+  observationsJson: string | null;
   notes: string | null;
   consentAt: string;
   scoreInfluencedChoice: boolean | null;
@@ -195,12 +221,20 @@ const CREATE_TRIPS_SQL = `CREATE TABLE IF NOT EXISTS trips (
   mode TEXT NOT NULL,
   fishing_method TEXT,
   gear TEXT,
+  gear_profile_id TEXT,
+  rod TEXT,
+  reel TEXT,
+  bait_lure TEXT,
+  rig TEXT,
   angler_count INTEGER NOT NULL,
   angler_hours REAL,
   keeper_count INTEGER,
   short_released_count INTEGER,
   halibut_encounters INTEGER,
   no_catch INTEGER,
+  other_catch_count INTEGER,
+  other_species TEXT,
+  observations_json TEXT,
   notes TEXT,
   consent INTEGER NOT NULL,
   consent_at TEXT,
@@ -213,6 +247,7 @@ const CREATE_TRIPS_SQL = `CREATE TABLE IF NOT EXISTS trips (
   habitat_score REAL,
   seasonality_score REAL,
   conditions_score REAL,
+  fishability_score REAL,
   model_version TEXT,
   score_influenced_choice INTEGER,
   prediction_metadata_json TEXT,
@@ -242,14 +277,18 @@ const CREATE_INDEX_STATEMENTS = [
 
 const INSERT_TRIP_SQL = `INSERT INTO trips (
   id, user_id, status, source, site_id, started_at, ended_at, mode, fishing_method, gear,
+  gear_profile_id, rod, reel, bait_lure, rig,
   angler_count, angler_hours, keeper_count, short_released_count, halibut_encounters,
-  no_catch, notes, consent, consent_at, moderation_status, reporter_key_hash, referral_code, token_hash,
+  no_catch, other_catch_count, other_species, observations_json, notes, consent, consent_at, moderation_status, reporter_key_hash, referral_code, token_hash,
   opportunity_window_id, opportunity_score, habitat_score, seasonality_score, conditions_score,
-  model_version, score_influenced_choice, prediction_metadata_json, photo_key,
+  fishability_score, model_version, score_influenced_choice, prediction_metadata_json, photo_key,
   photo_content_type, photo_size_bytes, created_at, updated_at, completed_at
 ) VALUES (
-  ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
-  ?, ?, ?, ?, ?, ?, ?
+  ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
+  ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
+  ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
+  ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
+  ?, ?, ?, ?, ?, ?
 )`;
 
 const initializedDatabases = new WeakMap<object, Promise<void>>();
@@ -338,12 +377,20 @@ export function createTripStore(db: D1DatabaseLike): TripStore {
           record.mode,
           record.fishingMethod,
           record.gear,
+          record.gearProfileId,
+          record.rod,
+          record.reel,
+          record.baitLure,
+          record.rig,
           record.anglerCount,
           record.anglerHours,
           record.keeperCount,
           record.shortReleasedCount,
           record.halibutEncounters,
           record.noCatch === null ? null : Number(record.noCatch),
+          record.otherCatchCount,
+          record.otherSpecies,
+          record.observationsJson,
           record.notes,
           Number(record.consent),
           record.consentAt,
@@ -356,6 +403,7 @@ export function createTripStore(db: D1DatabaseLike): TripStore {
           record.habitatScore,
           record.seasonalityScore,
           record.conditionsScore,
+          record.fishabilityScore,
           record.modelVersion,
           record.scoreInfluencedChoice === null ? null : Number(record.scoreInfluencedChoice),
           record.predictionMetadataJson,
@@ -379,8 +427,9 @@ export function createTripStore(db: D1DatabaseLike): TripStore {
       const result = await db
         .prepare(`UPDATE trips SET
           status = 'completed', ended_at = ?, mode = ?, fishing_method = ?, gear = ?,
+          gear_profile_id = ?, rod = ?, reel = ?, bait_lure = ?, rig = ?,
           angler_count = ?, angler_hours = ?, keeper_count = ?, short_released_count = ?,
-          halibut_encounters = ?, no_catch = ?, notes = ?, consent = 1, consent_at = ?,
+          halibut_encounters = ?, no_catch = ?, other_catch_count = ?, other_species = ?, observations_json = ?, notes = ?, consent = 1, consent_at = ?,
           moderation_status = 'pending', score_influenced_choice = ?, photo_key = ?,
           photo_content_type = ?, photo_size_bytes = ?, updated_at = ?, completed_at = ?, token_hash = NULL
         WHERE id = ? AND status = 'active' AND token_hash = ?`)
@@ -389,12 +438,20 @@ export function createTripStore(db: D1DatabaseLike): TripStore {
           completion.mode,
           completion.fishingMethod,
           completion.gear,
+          completion.gearProfileId,
+          completion.rod,
+          completion.reel,
+          completion.baitLure,
+          completion.rig,
           completion.anglerCount,
           completion.anglerHours,
           completion.keeperCount,
           completion.shortReleasedCount,
           completion.halibutEncounters,
           Number(completion.noCatch),
+          completion.otherCatchCount,
+          completion.otherSpecies,
+          completion.observationsJson,
           completion.notes,
           completion.consentAt,
           completion.scoreInfluencedChoice === null ? null : Number(completion.scoreInfluencedChoice),
@@ -514,7 +571,7 @@ export async function handleTripRequest(
         endedAt: null,
         mode: parseMode(body.mode, defaultMode(site)),
         fishingMethod: optionalText(body.method ?? body.fishingMethod, "method", 80),
-        gear: optionalText(body.gear, "gear", 300),
+        ...parseTripDetails(body),
         anglerCount: parseInteger(body.anglerCount, "anglerCount", 1, 12, 1),
         anglerHours: null,
         keeperCount: null,
@@ -584,7 +641,7 @@ export async function handleTripRequest(
           fishingMethod:
             optionalText(form.get("method") ?? form.get("fishingMethod"), "method", 80) ??
             existing.fishing_method,
-          gear: optionalText(form.get("gear"), "gear", 300) ?? existing.gear,
+          ...parseTripDetails(form, existing),
           anglerCount,
           anglerHours: round(durationHours * anglerCount, 2),
           keeperCount,
@@ -659,7 +716,7 @@ export async function handleTripRequest(
           endedAt,
           mode: parseMode(form.get("mode"), defaultMode(site)),
           fishingMethod: optionalText(form.get("method") ?? form.get("fishingMethod"), "method", 80),
-          gear: optionalText(form.get("gear"), "gear", 300),
+          ...parseTripDetails(form),
           anglerCount,
           anglerHours: round(durationHours * anglerCount, 2),
           keeperCount,
@@ -721,12 +778,20 @@ function publicTrip(row: TripRow) {
     mode: row.mode,
     fishingMethod: row.fishing_method,
     gear: row.gear,
+    gearProfileId: row.gear_profile_id,
+    rod: row.rod,
+    reel: row.reel,
+    baitLure: row.bait_lure,
+    rig: row.rig,
     anglerCount: row.angler_count,
     anglerHours: row.angler_hours,
     keeperCount: row.keeper_count,
     shortReleasedCount: row.short_released_count,
     halibutEncounters: row.halibut_encounters,
     noCatch: row.no_catch === null ? null : Boolean(row.no_catch),
+    otherCatchCount: row.other_catch_count,
+    otherSpecies: row.other_species,
+    observations: row.observations_json ? JSON.parse(row.observations_json) : null,
     notes: row.notes,
     consent: Boolean(row.consent),
     moderationStatus: row.moderation_status,
@@ -736,12 +801,38 @@ function publicTrip(row: TripRow) {
     habitatScore: row.habitat_score,
     seasonalityScore: row.seasonality_score,
     conditionsScore: row.conditions_score,
+    fishabilityScore: row.fishability_score,
     modelVersion: row.model_version,
     scoreInfluencedChoice:
       row.score_influenced_choice === null ? null : Boolean(row.score_influenced_choice),
     hasPhoto: Boolean(row.photo_key),
     createdAt: row.created_at,
     updatedAt: row.updated_at,
+  };
+}
+
+function parseTripDetails(source: Record<string, unknown> | FormData, existing?: TripRow) {
+  const value = (key: string) => (source instanceof FormData ? source.get(key) : source[key]);
+  const observations = {
+    shorebreak: optionalText(value("shorebreak"), "shorebreak", 40),
+    wadingDepth: optionalText(value("wadingDepth"), "wadingDepth", 40),
+    waterClarity: optionalText(value("waterClarity"), "waterClarity", 40),
+    crowding: optionalText(value("crowding"), "crowding", 40),
+    fishabilityRating: optionalNumber(value("fishabilityRating"), "fishabilityRating", 1, 5),
+    observedWaveHeightFeet: optionalNumber(value("observedWaveHeightFeet"), "observedWaveHeightFeet", 0, 30),
+    fishabilityNotes: optionalText(value("fishabilityNotes"), "fishabilityNotes", 500),
+  };
+  const hasObservations = Object.values(observations).some((entry) => entry !== null);
+  return {
+    gear: optionalText(value("gear"), "gear", 300) ?? existing?.gear ?? null,
+    gearProfileId: optionalText(value("gearProfileId"), "gearProfileId", 80) ?? existing?.gear_profile_id ?? null,
+    rod: optionalText(value("rod"), "rod", 160) ?? existing?.rod ?? null,
+    reel: optionalText(value("reel"), "reel", 160) ?? existing?.reel ?? null,
+    baitLure: optionalText(value("baitLure"), "baitLure", 200) ?? existing?.bait_lure ?? null,
+    rig: optionalText(value("rig"), "rig", 200) ?? existing?.rig ?? null,
+    otherCatchCount: parseInteger(value("otherCatchCount"), "otherCatchCount", 0, 100, existing?.other_catch_count ?? 0),
+    otherSpecies: optionalText(value("otherSpecies"), "otherSpecies", 200) ?? existing?.other_species ?? null,
+    observationsJson: hasObservations ? JSON.stringify(observations) : existing?.observations_json ?? null,
   };
 }
 
@@ -765,6 +856,7 @@ function parsePrediction(source: Record<string, unknown> | FormData) {
     habitatScore: optionalNumber(value("habitatScore"), "habitatScore", 0, 100),
     seasonalityScore: optionalNumber(value("seasonalityScore"), "seasonalityScore", 0, 100),
     conditionsScore: optionalNumber(value("conditionsScore"), "conditionsScore", 0, 100),
+    fishabilityScore: optionalNumber(value("fishabilityScore"), "fishabilityScore", 0, 100),
     modelVersion: optionalText(value("modelVersion"), "modelVersion", 120),
     scoreInfluencedChoice: optionalBoolean(
       value("scoreInfluencedChoice") ?? value("contourCastInfluenced"),
