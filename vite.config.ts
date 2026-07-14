@@ -17,10 +17,9 @@ const isCodexSeatbeltSandbox = process.env.CODEX_SANDBOX === "seatbelt";
 
 const localBindingConfig = {
   main: "./worker/index.ts",
-  compatibility_flags: ["nodejs_compat"],
   // Sites/local previews need placeholder bindings. The production Wrangler
-  // config already supplies the real bindings, so adding placeholders during
-  // that build creates duplicate `DB` entries in dist/server/wrangler.json.
+  // config already supplies compatibility flags and real bindings, so adding
+  // either here creates duplicate entries in dist/server/wrangler.json.
   d1_databases: d1 && !isCloudflareProductionBuild
     ? [
         {
