@@ -3006,6 +3006,39 @@ footer > div {
   background: rgba(3, 20, 42, 0.66);
 }
 
+.profile-trip-editor-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 140;
+  display: grid;
+  place-items: center;
+  padding: 1rem;
+  background: rgba(1, 8, 19, 0.78);
+  backdrop-filter: blur(10px);
+  animation: fade-in 160ms ease-out;
+}
+
+.profile-trip-editor-modal {
+  width: min(620px, 100%);
+  max-height: calc(100dvh - 2rem);
+  margin: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  background:
+    linear-gradient(rgba(7, 29, 57, 0.94), rgba(5, 23, 47, 0.97)),
+    url("/topography-contours-v2.webp") center / 680px 680px repeat,
+    var(--ocean-deep);
+  box-shadow: 0 34px 100px rgba(1, 7, 18, 0.64);
+  animation: modal-up 220ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.profile-trip-editor-note {
+  margin: 0.75rem 0 0;
+  color: var(--ink-soft);
+  font-size: 0.68rem;
+  line-height: 1.55;
+}
+
 .profile-trip-editor-heading {
   display: flex;
   align-items: start;
@@ -3067,6 +3100,103 @@ footer > div {
   color: var(--ink-soft);
   font-size: 0.62rem;
   text-transform: none;
+}
+
+.site-combobox {
+  position: relative;
+  display: grid;
+  gap: 0.42rem;
+}
+
+.site-combobox > label {
+  color: var(--ink-soft);
+  font-family: var(--font-mono);
+  font-size: 0.55rem;
+  font-weight: 650;
+  letter-spacing: 0.055em;
+  text-transform: uppercase;
+}
+
+.site-combobox-control {
+  position: relative;
+}
+
+.site-combobox-control input {
+  width: 100%;
+  padding-right: 2.5rem !important;
+}
+
+.site-combobox-control > span {
+  position: absolute;
+  top: 50%;
+  right: 0.85rem;
+  color: var(--seafoam);
+  font-size: 1rem;
+  line-height: 1;
+  pointer-events: none;
+  transform: translateY(-55%);
+}
+
+.site-combobox-results {
+  position: absolute;
+  top: calc(100% - 1.1rem);
+  right: 0;
+  left: 0;
+  z-index: 8;
+  max-height: 280px;
+  overflow-y: auto;
+  border: 1px solid var(--line-strong);
+  background: rgba(3, 20, 42, 0.98);
+  box-shadow: 0 24px 50px rgba(1, 7, 18, 0.5);
+}
+
+.site-combobox-results button {
+  display: grid;
+  gap: 0.2rem;
+  width: 100%;
+  padding: 0.72rem 0.8rem;
+  border-bottom: 1px solid var(--line);
+  color: var(--ink);
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+}
+
+.site-combobox-results button:last-of-type {
+  border-bottom: 0;
+}
+
+.site-combobox-results button:hover,
+.site-combobox-results button.active,
+.site-combobox-results button[aria-selected="true"] {
+  color: var(--ocean-deep);
+  background: var(--seafoam);
+}
+
+.site-combobox-results strong {
+  font-size: 0.72rem;
+}
+
+.site-combobox-results small {
+  color: inherit;
+  font-family: var(--font-mono);
+  font-size: 0.5rem;
+  opacity: 0.72;
+  text-transform: uppercase;
+}
+
+.site-combobox-results p {
+  margin: 0;
+  padding: 0.85rem;
+  color: var(--ink-soft);
+  font-size: 0.68rem;
+}
+
+.site-combobox-status {
+  justify-self: end;
+  color: var(--ink-soft);
+  font-family: var(--font-mono);
+  font-size: 0.48rem;
 }
 
 .account-primary:disabled {
@@ -3471,6 +3601,14 @@ footer > div {
   color: var(--ink-soft);
   font-family: var(--font-mono);
   font-size: 0.45rem;
+}
+
+.trip-field.site-combobox {
+  display: grid;
+}
+
+.trip-field.site-combobox > label {
+  font-size: 0.55rem;
 }
 
 .captured-forecast {
@@ -4543,6 +4681,19 @@ footer {
 @media (max-width: 720px) {
   .profile-trip-editor-grid {
     grid-template-columns: 1fr;
+  }
+
+  .profile-trip-editor-layer {
+    place-items: end center;
+    padding: 0;
+  }
+
+  .profile-trip-editor-modal {
+    width: 100%;
+    max-height: 92dvh;
+    border-right: 0;
+    border-bottom: 0;
+    border-left: 0;
   }
 
   .wave-power-condition {

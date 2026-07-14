@@ -600,10 +600,10 @@ const STRUCTURE_IMAGES: Record<string, StructureImage> = {
   },
   "pier-pilings": {
     src: "/structure-guides/pilings.jpg",
-    alt: "Divers inspecting pier pilings below the waterline",
-    credit: "U.S. Navy / Wikimedia Commons",
-    sourceUrl: "https://commons.wikimedia.org/wiki/File:Hotel_Pier_site_visit_130306-N-ZZ999-002.jpg",
-    license: "Public domain",
+    alt: "Concrete pier pilings standing in shallow coastal water",
+    credit: "Sharon Mollerus / Wikimedia Commons",
+    sourceUrl: "https://commons.wikimedia.org/wiki/File:Pier_Pilings_(1495162510).jpg",
+    license: "CC BY 2.0",
   },
   "sand-bar": {
     src: "/structure-guides/sandbar.jpg",

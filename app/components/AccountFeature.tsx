@@ -2,6 +2,7 @@
 
 import { FormEvent, useCallback, useEffect, useState } from "react";
 import { CloseIcon } from "./icons";
+import { SiteCombobox } from "./SiteCombobox";
 import type { FishingSite } from "../types";
 
 export interface AccountUser {
@@ -180,7 +181,6 @@ export function AccountModal({
   const [profileLoading, setProfileLoading] = useState(false);
   const [editingTrip, setEditingTrip] = useState<ProfileTrip | null>(null);
   const [editFields, setEditFields] = useState<ProfileTripEditFields | null>(null);
-  const [editSiteSearch, setEditSiteSearch] = useState("");
   const [profileActionBusy, setProfileActionBusy] = useState(false);
   const [profileActionError, setProfileActionError] = useState("");
 
@@ -270,7 +270,6 @@ export function AccountModal({
       window.localStorage.removeItem(draftKey);
     }
     setProfileActionError("");
-    setEditSiteSearch("");
     setEditingTrip(trip);
     setEditFields(nextFields);
   };
@@ -278,13 +277,16 @@ export function AccountModal({
   const closeTripEdit = () => {
     setEditingTrip(null);
     setEditFields(null);
-    setEditSiteSearch("");
     setProfileActionError("");
   };
 
   const saveTripEdit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!editingTrip || !editFields) return;
+    if (!sites.some((site) => site.id === editFields.siteId)) {
+      setProfileActionError("Choose a fishing location from the matching results.");
+      return;
+    }
     setProfileActionBusy(true);
     setProfileActionError("");
     try {
@@ -325,11 +327,6 @@ export function AccountModal({
       setProfileActionBusy(false);
     }
   };
-
-  const filteredEditSites = sites.filter((site) => {
-    const query = editSiteSearch.trim().toLowerCase();
-    return !query || `${site.name} ${site.region} ${site.type}`.toLowerCase().includes(query);
-  });
 
   return (
     <div className="account-modal-layer" role="presentation" onClick={(event) => {
@@ -397,18 +394,20 @@ export function AccountModal({
               {profileActionError && !editingTrip ? <p className="account-error" role="alert">{profileActionError}</p> : null}
             </section>
             {editingTrip && editFields ? (
-              <form className="profile-trip-editor" onSubmit={saveTripEdit}>
+              <div className="profile-trip-editor-layer" role="presentation" onClick={(event) => {
+                if (event.target === event.currentTarget) closeTripEdit();
+              }}>
+              <form className="profile-trip-editor profile-trip-editor-modal" role="dialog" aria-modal="true" aria-labelledby="profile-trip-editor-title" onSubmit={saveTripEdit}>
                 <div className="profile-trip-editor-heading">
-                  <div><span>Pending trip</span><h3>Edit trip log</h3></div>
+                  <div><span>Pending trip</span><h3 id="profile-trip-editor-title">Edit trip log</h3></div>
                   <button type="button" onClick={closeTripEdit}>Close</button>
                 </div>
-                <label>Search locations<input type="search" value={editSiteSearch} onChange={(event) => setEditSiteSearch(event.target.value)} placeholder="Pier, beach, city…" /></label>
-                <label>Fishing location
-                  <select value={editFields.siteId} onChange={(event) => setEditFields((current) => current ? { ...current, siteId: event.target.value } : current)} required>
-                    {!filteredEditSites.some((site) => site.id === editFields.siteId) ? <option value={editFields.siteId}>{sites.find((site) => site.id === editFields.siteId)?.name ?? editFields.siteId}</option> : null}
-                    {filteredEditSites.map((site) => <option key={site.id} value={site.id}>{site.name}</option>)}
-                  </select>
-                </label>
+                <p className="profile-trip-editor-note">Your saved report is loaded below. Any unfinished edits on this device are restored automatically.</p>
+                <SiteCombobox
+                  sites={sites}
+                  value={editFields.siteId}
+                  onChange={(siteId) => setEditFields((current) => current ? { ...current, siteId } : current)}
+                />
                 <div className="profile-trip-editor-grid">
                   <label>Start<input type="datetime-local" value={editFields.startedAt} onChange={(event) => setEditFields((current) => current ? { ...current, startedAt: event.target.value } : current)} required /></label>
                   <label>Finish<input type="datetime-local" value={editFields.endedAt} onChange={(event) => setEditFields((current) => current ? { ...current, endedAt: event.target.value } : current)} required /></label>
@@ -426,6 +425,7 @@ export function AccountModal({
                 {profileActionError ? <p className="account-error" role="alert">{profileActionError}</p> : null}
                 <button className="account-primary" type="submit" disabled={profileActionBusy}>{profileActionBusy ? "Saving…" : "Save trip changes"}</button>
               </form>
+              </div>
             ) : null}
             <button className="account-primary account-signout" type="button" onClick={() => void account.signOut()}>Sign out</button>
           </>

@@ -11,6 +11,7 @@ import {
 } from "react";
 import type { FishingSite, OpportunitySnapshot, OpportunityWindow, TripReportRequest } from "../types";
 import { ArrowIcon, ClockIcon, CloseIcon } from "./icons";
+import { SiteCombobox } from "./SiteCombobox";
 
 const ACTIVE_TRIP_KEY = "contourcast.active-trip.v1";
 const REPORTER_KEY = "contourcast.reporter-key.v1";
@@ -271,15 +272,10 @@ export function TripReportFeature({ sites, snapshot, request, canSubmit, onRequi
   const [photo, setPhoto] = useState<File | null>(null);
   const [submitState, setSubmitState] = useState<SubmitState>("idle");
   const [message, setMessage] = useState("");
-  const [siteSearch, setSiteSearch] = useState("");
   const [summary, setSummary] = useState<SummaryView | null>(null);
   const [summaryUnavailable, setSummaryUnavailable] = useState(false);
 
   const siteMap = useMemo(() => new Map(sites.map((site) => [site.id, site])), [sites]);
-  const filteredSites = useMemo(() => {
-    const query = siteSearch.trim().toLowerCase();
-    return sites.filter((site) => !query || `${site.name} ${site.region} ${site.type}`.toLowerCase().includes(query));
-  }, [siteSearch, sites]);
   const totalFish = fields.keeperCount + fields.shortReleasedCount;
 
   const resetFeedback = useCallback(() => {
@@ -297,7 +293,6 @@ export function TripReportFeature({ sites, snapshot, request, canSubmit, onRequi
     const activeElement = document.activeElement;
     openerRef.current = activeElement instanceof HTMLElement ? activeElement : null;
     resetFeedback();
-    setSiteSearch("");
     setSelectedWindow(forecastWindow ?? null);
 
     if (nextPanel === "complete" && activeTrip) {
@@ -672,19 +667,7 @@ export function TripReportFeature({ sites, snapshot, request, canSubmit, onRequi
                   <p>We save the chosen forecast now, then ask for the full result when you finish.</p>
                 </header>
                 <div className="trip-field-grid">
-                  <label className="trip-field wide trip-site-search">
-                    <span>Search fishing locations</span>
-                    <input type="search" value={siteSearch} onChange={(event) => setSiteSearch(event.target.value)} placeholder="Pier, beach, city, or shoreline…" autoComplete="off" />
-                  </label>
-                  <label className="trip-field wide">
-                    <span>Fishing location</span>
-                    <select value={fields.siteId} onChange={(event) => updateSite(event.target.value)} required>
-                      <option value="" disabled>Choose a location</option>
-                      {!filteredSites.some((site) => site.id === fields.siteId) && siteMap.get(fields.siteId) ? <option value={fields.siteId}>{siteMap.get(fields.siteId)?.name}</option> : null}
-                      {filteredSites.map((site) => <option key={site.id} value={site.id}>{site.name}</option>)}
-                    </select>
-                    <small>{filteredSites.length} location{filteredSites.length === 1 ? "" : "s"} match</small>
-                  </label>
+                  <SiteCombobox className="trip-field wide" sites={sites} value={fields.siteId} onChange={updateSite} />
                   <label className="trip-field">
                     <span>Start time</span>
                     <input type="datetime-local" value={fields.startedAt} onChange={(event) => setFields((current) => ({ ...current, startedAt: event.target.value }))} required />
@@ -763,19 +746,7 @@ export function TripReportFeature({ sites, snapshot, request, canSubmit, onRequi
                   <p>Complete results—including zero fish—help test whether the ranking separates stronger windows from weaker ones.</p>
                 </header>
                 <div className="trip-field-grid">
-                  <label className="trip-field wide trip-site-search">
-                    <span>Search fishing locations</span>
-                    <input type="search" value={siteSearch} onChange={(event) => setSiteSearch(event.target.value)} placeholder="Pier, beach, city, or shoreline…" autoComplete="off" />
-                  </label>
-                  <label className="trip-field wide">
-                    <span>Fishing location</span>
-                    <select value={fields.siteId} onChange={(event) => updateSite(event.target.value)} required>
-                      <option value="" disabled>Choose a location</option>
-                      {!filteredSites.some((site) => site.id === fields.siteId) && siteMap.get(fields.siteId) ? <option value={fields.siteId}>{siteMap.get(fields.siteId)?.name}</option> : null}
-                      {filteredSites.map((site) => <option key={site.id} value={site.id}>{site.name}</option>)}
-                    </select>
-                    <small>{filteredSites.length} location{filteredSites.length === 1 ? "" : "s"} match</small>
-                  </label>
+                  <SiteCombobox className="trip-field wide" sites={sites} value={fields.siteId} onChange={updateSite} />
                   <label className="trip-field">
                     <span>Start</span>
                     <input type="datetime-local" value={fields.startedAt} onChange={(event) => setFields((current) => ({ ...current, startedAt: event.target.value }))} required />
