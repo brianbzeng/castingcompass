@@ -34,6 +34,7 @@ class SnapshotSourceTests(unittest.TestCase):
                     "sea_surface_temperature": [13.0, None],
                     "wave_height": [1.0, 1.2],
                     "wave_period": [8.0, 8.5],
+                    "wave_direction": [270.0, 275.0],
                     "ocean_current_velocity": [1.852, 0.926],
                     "ocean_current_direction": [45.0, 90.0],
                 }
@@ -44,6 +45,7 @@ class SnapshotSourceTests(unittest.TestCase):
                     "sea_surface_temperature": [14.0, 14.2],
                     "wave_height": [0.5, 0.6],
                     "wave_period": [7.0, 7.5],
+                    "wave_direction": [225.0, 230.0],
                     "ocean_current_velocity": [0.5, 0.75],
                     "ocean_current_direction": [180.0, 225.0],
                 }
@@ -64,14 +66,14 @@ class SnapshotSourceTests(unittest.TestCase):
         self.assertEqual(query["longitude"], ["-122.9600,-122.3900"])
         self.assertEqual(
             query["hourly"],
-            ["sea_surface_temperature,wave_height,wave_period,ocean_current_velocity,ocean_current_direction"],
+            ["sea_surface_temperature,wave_height,wave_period,wave_direction,ocean_current_velocity,ocean_current_direction"],
         )
         self.assertEqual(query["cell_selection"], ["sea"])
         self.assertEqual(results["point-reyes"]["status"], "fresh")
         self.assertEqual(results["point-reyes"]["values"][0][1], 55.4)
         self.assertEqual(results["central-bay"]["values"][0][1], 57.2)
         self.assertEqual(results["point-reyes"]["currentValues"][0][1:], (1.0, 45.0))
-        self.assertEqual(results["central-bay"]["waveValues"][0][1:], (1.6, 7.0))
+        self.assertEqual(results["central-bay"]["waveValues"][0][1:], (1.6, 7.0, 225.0))
 
     def test_sst_for_window_never_invents_a_distant_or_missing_value(self):
         midpoint = datetime(2026, 7, 11, 11, tzinfo=timezone.utc)
