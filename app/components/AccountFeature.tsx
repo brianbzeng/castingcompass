@@ -98,7 +98,7 @@ interface ProfileTripEditFields {
   notes: string;
 }
 
-const PROFILE_TRIP_DRAFT_PREFIX = "castcompass.profile-trip-draft.v1.";
+const PROFILE_TRIP_DRAFT_PREFIX = "castingcompass.profile-trip-draft.v1.";
 
 function localDateTimeValue(value: string | null) {
   const date = value ? new Date(value) : new Date();
@@ -667,7 +667,7 @@ export function AccountModal({
           </>
         ) : (
           <>
-            <span className="eyebrow"><span /> CastCompass beta</span>
+            <span className="eyebrow"><span /> CastingCompass beta</span>
             <h2 id="account-title">{
               mode === "login" ? "Welcome back."
                 : mode === "signup" ? "Create an account."

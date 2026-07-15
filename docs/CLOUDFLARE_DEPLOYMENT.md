@@ -1,17 +1,19 @@
 # Cloudflare deployment
 
-CastCompass deploys as a Cloudflare Worker at
-`https://castcompass.brianbzeng.com`, with the original
-`https://contourcast.brianbzeng.com` address and the normal `workers.dev`
-address left enabled as fallbacks.
+CastingCompass deploys as a Cloudflare Worker at
+`https://castingcompass.com`. The earlier `castcompass.brianbzeng.com`,
+`contourcast.brianbzeng.com`, and normal `workers.dev` addresses remain
+available as migration fallbacks; the two brianbzeng.com hostnames redirect to
+the canonical standalone domain.
 
 ## Resources
 
 - Worker: `contourcast-halibut`
 - D1 binding: `DB`
 - D1 database: `contourcast-trips`
-- Primary custom domain: `castcompass.brianbzeng.com`
-- Legacy custom domain: `contourcast.brianbzeng.com`
+- Primary custom domain: `castingcompass.com`
+- Canonical www redirect: `www.castingcompass.com`
+- Legacy redirects: `castcompass.brianbzeng.com`, `contourcast.brianbzeng.com`
 
 The Cloudflare build deliberately sets `NEXT_PUBLIC_PHOTO_UPLOADS=false`.
 Structured trip reports, catches, and skunks are stored in D1, but the optional

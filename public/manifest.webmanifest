@@ -1,6 +1,6 @@
 {
-  "name": "CastCompass — Halibut Opportunity Planner",
-  "short_name": "CastCompass",
+  "name": "CastingCompass — Halibut Opportunity Planner",
+  "short_name": "CastingCompass",
   "description": "Rank upcoming California halibut windows at public Bay Area shore and pier access.",
   "start_url": "/",
   "display": "standalone",

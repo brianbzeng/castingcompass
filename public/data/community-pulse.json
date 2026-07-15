@@ -60,7 +60,7 @@
     "reviewedAt": "2026-07-11T04:30:00-07:00",
     "coverage": "Current public-project context plus historical pier material; no reliable recent shoreline trend",
     "confidence": "medium",
-    "summary": "Much of the online fishing history refers to Berkeley's closed municipal pier, not the open North Basin shoreline shown in CastCompass. The useful takeaway is structural—riprap, a marina mouth and a dredged edge—while recent public discussion is too limited to call a present-day shore bite.",
+    "summary": "Much of the online fishing history refers to Berkeley's closed municipal pier, not the open North Basin shoreline shown in CastingCompass. The useful takeaway is structural—riprap, a marina mouth and a dredged edge—while recent public discussion is too limited to call a present-day shore bite.",
     "themes": [
       { "label": "Shoreline only", "note": "This location is the public North Basin shore, not the closed municipal pier deck." },
       { "label": "Riprap edge", "note": "Rock wall access borders a shallow exterior flat and marina basin." },

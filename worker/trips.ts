@@ -942,7 +942,7 @@ function assertSameOrigin(request: Request) {
     normalizedOrigin = "";
   }
   if (!normalizedOrigin || normalizedOrigin !== new URL(request.url).origin) {
-    throw new ApiError(403, "invalid_origin", "Trip submissions must come from CastCompass.");
+    throw new ApiError(403, "invalid_origin", "Trip submissions must come from CastingCompass.");
   }
 }
 
@@ -982,7 +982,7 @@ function assertHoneypot(value: unknown) {
 function getSite(siteMap: Map<string, CuratedSite>, value: unknown) {
   const id = requiredText(value, "siteId", 120);
   const site = siteMap.get(id);
-  if (!site) throw new ApiError(422, "invalid_site", "Choose a current CastCompass location.");
+  if (!site) throw new ApiError(422, "invalid_site", "Choose a current CastingCompass location.");
   return site;
 }
 

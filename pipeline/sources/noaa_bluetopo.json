@@ -15,7 +15,7 @@
       "data-quality raster attribute table"
     ],
     "instructions": [
-      "Select tiles intersecting the CastCompass study extent from the official BlueTopo access surface.",
+      "Select tiles intersecting the CastingCompass study extent from the official BlueTopo access surface.",
       "Preserve elevation, uncertainty, and quality bands together.",
       "Record tile version, source survey identifier, resolution, and checksum before mosaicking."
     ]

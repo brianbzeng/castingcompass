@@ -10,6 +10,14 @@
   },
   "routes": [
     {
+      "pattern": "castingcompass.com",
+      "custom_domain": true
+    },
+    {
+      "pattern": "www.castingcompass.com",
+      "custom_domain": true
+    },
+    {
       "pattern": "castcompass.brianbzeng.com",
       "custom_domain": true
     },

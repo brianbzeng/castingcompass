@@ -39,6 +39,6 @@
     "Not for navigation.",
     "The source is high resolution but historical; structure may have changed since collection.",
     "The mapped area does not cover most interior San Francisco Bay shoreline sites.",
-    "A 2 m pixel does not prove that a 2 m feature is reliably identifiable; CastCompass uses a conservative three-cell feature threshold."
+    "A 2 m pixel does not prove that a 2 m feature is reliably identifiable; CastingCompass uses a conservative three-cell feature threshold."
   ]
 }

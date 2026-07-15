@@ -56,7 +56,7 @@ export async function handleDiscussionRequest(
   if (!env.DB) return jsonResponse({ posts: [] });
   const siteId = match[1];
   if (!curatedSites.some((site) => site.id === siteId)) {
-    return jsonResponse({ error: { code: "invalid_site", message: "Choose a current CastCompass location." } }, 404);
+    return jsonResponse({ error: { code: "invalid_site", message: "Choose a current CastingCompass location." } }, 404);
   }
   await initialize(env.DB);
   const rows = await env.DB.prepare(`SELECT id, site_id, summary, gear_summary, technique_tags_json,

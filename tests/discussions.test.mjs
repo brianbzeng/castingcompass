@@ -29,7 +29,7 @@ test("public location discussions expose summaries without raw notes or identity
   assert.doesNotMatch(discussions, /SELECT[^;]*\bnotes\b/s);
   assert.doesNotMatch(discussions, /SELECT[^;]*\baccount_id\b/s);
   assert.match(discussions, /sanitizePublicText/);
-  assert.match(app, /Recent CastCompass trip notes/);
+  assert.match(app, /Recent CastingCompass trip notes/);
   assert.match(app, /raw notes, identity, photos, and exact coordinates remain private/i);
   assert.match(migration, /CREATE TABLE `site_discussion_posts`/);
   assert.match(migration, /UNIQUE INDEX `site_discussion_posts_trip_unique`/);

@@ -24,13 +24,13 @@ async function render(path = "/") {
   );
 }
 
-test("server-renders the CastCompass product shell", async () => {
+test("server-renders the CastingCompass product shell", async () => {
   const response = await render();
   assert.equal(response.status, 200);
   assert.match(response.headers.get("content-type") ?? "", /^text\/html\b/i);
 
   const html = await response.text();
-  assert.match(html, /<title>CastCompass — California halibut opportunity planner(?: · CastCompass)?<\/title>/i);
+  assert.match(html, /<title>CastingCompass — California halibut opportunity planner(?: · CastingCompass)?<\/title>/i);
   assert.match(html, /Find the water/);
   assert.match(html, /California halibut/);
   assert.match(html, /Pick the hours you have/);
@@ -50,7 +50,7 @@ test("ships install and offline assets", async () => {
   ]);
 
   const parsed = JSON.parse(manifest);
-  assert.equal(parsed.name, "CastCompass — Halibut Opportunity Planner");
+  assert.equal(parsed.name, "CastingCompass — Halibut Opportunity Planner");
   assert.equal(parsed.display, "standalone");
   assert.equal(parsed.icons.length, 2);
   assert.match(serviceWorker, /\/data\/opportunities\.json/);

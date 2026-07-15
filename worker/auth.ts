@@ -190,7 +190,7 @@ export async function handleAccountRequest(
         )
         .run();
       try {
-        await sendVerificationEmail(env, email, code, "Confirm your CastCompass account");
+        await sendVerificationEmail(env, email, code, "Confirm your CastingCompass account");
       } catch (error) {
         await db.prepare("DELETE FROM email_challenges WHERE id = ?").bind(id).run();
         throw error;
@@ -260,7 +260,7 @@ export async function handleAccountRequest(
         env,
         challenge.email,
         code,
-        challenge.kind === "signup" ? "Confirm your CastCompass account" : "Reset your CastCompass password",
+        challenge.kind === "signup" ? "Confirm your CastingCompass account" : "Reset your CastingCompass password",
         `${challenge.id}:resend:${Number(challenge.resend_count ?? 0) + 1}`,
       );
       await db.prepare(`UPDATE email_challenges
@@ -293,7 +293,7 @@ export async function handleAccountRequest(
         .bind(id, email, user.id, await sha256(`${id}:${code}`), new Date(timestamp.getTime() + 15 * 60 * 1000).toISOString(), timestamp.toISOString())
         .run();
       try {
-        await sendVerificationEmail(env, email, code, "Reset your CastCompass password");
+        await sendVerificationEmail(env, email, code, "Reset your CastingCompass password");
       } catch (error) {
         await db.prepare("DELETE FROM email_challenges WHERE id = ?").bind(id).run();
         throw error;
@@ -571,7 +571,7 @@ export async function handleAccountRequest(
     assertSameOrigin(request);
     const siteId = match[1];
     if (!curatedSites.some((site) => site.id === siteId)) {
-      return errorResponse(422, "invalid_site", "Choose a current CastCompass location.");
+      return errorResponse(422, "invalid_site", "Choose a current CastingCompass location.");
     }
     if (request.method === "POST") {
       await db.prepare("INSERT OR IGNORE INTO saved_sites (user_id, site_id, created_at) VALUES (?, ?, ?)")
@@ -595,7 +595,7 @@ export async function handleAccountRequest(
 
 function parseProfileTripSite(value: unknown, curatedSites: readonly CuratedSite[]) {
   if (typeof value !== "string" || !curatedSites.some((site) => site.id === value)) {
-    throw new AuthError(422, "invalid_site", "Choose a current CastCompass location.");
+    throw new AuthError(422, "invalid_site", "Choose a current CastingCompass location.");
   }
   return value;
 }
@@ -789,20 +789,20 @@ async function sendVerificationEmail(
   if (!env.RESEND_API_KEY) {
     throw new AuthError(503, "email_not_configured", "Email verification is waiting for the site mail sender to be connected.");
   }
-  const from = env.AUTH_EMAIL_FROM ?? "CastCompass <account@updates.brianbzeng.com>";
+  const from = env.AUTH_EMAIL_FROM ?? "CastingCompass <account@castingcompass.com>";
   const response = await fetch("https://api.resend.com/emails", {
     method: "POST",
     headers: {
       Authorization: `Bearer ${env.RESEND_API_KEY}`,
       "Content-Type": "application/json",
-      "Idempotency-Key": `castcompass/${idempotencyKey}`.slice(0, 256),
+      "Idempotency-Key": `castingcompass/${idempotencyKey}`.slice(0, 256),
     },
     body: JSON.stringify({
       from,
       to: [to],
       subject,
-      text: `Your CastCompass verification code is ${code}. It expires in 15 minutes. If you did not request this, you can ignore this email.`,
-      html: `<div style="font-family:Arial,sans-serif;color:#081a33"><h1>CastCompass</h1><p>Your verification code is:</p><p style="font-size:32px;font-weight:700;letter-spacing:8px">${code}</p><p>This code expires in 15 minutes. If you did not request it, you can ignore this email.</p></div>`,
+      text: `Your CastingCompass verification code is ${code}. It expires in 15 minutes. If you did not request this, you can ignore this email.`,
+      html: `<div style="font-family:Arial,sans-serif;color:#081a33"><h1>CastingCompass</h1><p>Your verification code is:</p><p style="font-size:32px;font-weight:700;letter-spacing:8px">${code}</p><p>This code expires in 15 minutes. If you did not request it, you can ignore this email.</p></div>`,
     }),
   });
   if (!response.ok) {
@@ -815,20 +815,20 @@ async function sendVerificationEmail(
 
 async function sendWelcomeEmail(env: AuthApiEnv, to: string, userId: string) {
   if (!env.RESEND_API_KEY) return;
-  const from = env.AUTH_EMAIL_FROM ?? "CastCompass <account@updates.brianbzeng.com>";
+  const from = env.AUTH_EMAIL_FROM ?? "CastingCompass <account@castingcompass.com>";
   const response = await fetch("https://api.resend.com/emails", {
     method: "POST",
     headers: {
       Authorization: `Bearer ${env.RESEND_API_KEY}`,
       "Content-Type": "application/json",
-      "Idempotency-Key": `castcompass/welcome/${userId}`,
+      "Idempotency-Key": `castingcompass/welcome/${userId}`,
     },
     body: JSON.stringify({
       from,
       to: [to],
-      subject: "Welcome to CastCompass",
-      text: "Welcome to CastCompass. Start by saving a few fishing spots, checking the practical fishability details before you leave, and logging the full trip when you get back—even when it is a skunk. CastCompass is still a work in progress, and complete trip logs are especially valuable right now because they create the real-world backlog needed to test and improve the model. Scores are planning guidance, not catch guarantees. Respect access rules, the water, and current California regulations.",
-      html: `<div style="font-family:Arial,sans-serif;line-height:1.55;color:#081a33;max-width:620px"><h1>Welcome to CastCompass.</h1><p>Save a few fishing spots, check practical fishability before you leave, and log the full trip when you get back, even when it is a skunk.</p><h2>Quick guide</h2><ol><li>Choose the hours you can fish.</li><li>Compare the opportunity and fishability details.</li><li>Save the spot and add your gear.</li><li>Log the result, conditions you observed, and any catch.</li></ol><p><strong>This project is still a work in progress.</strong> Complete trip logs are especially helpful right now because they create the real-world backlog needed to test and improve the model.</p><p>Scores are planning guidance, not catch guarantees. Respect access rules, the water, and current California regulations.</p><p><a href="https://castcompass.brianbzeng.com">Open CastCompass</a></p></div>`,
+      subject: "Welcome to CastingCompass",
+      text: "Welcome to CastingCompass. Start by saving a few fishing spots, checking the practical fishability details before you leave, and logging the full trip when you get back—even when it is a skunk. CastingCompass is still a work in progress, and complete trip logs are especially valuable right now because they create the real-world backlog needed to test and improve the model. Scores are planning guidance, not catch guarantees. Respect access rules, the water, and current California regulations.",
+      html: `<div style="font-family:Arial,sans-serif;line-height:1.55;color:#081a33;max-width:620px"><h1>Welcome to CastingCompass.</h1><p>Save a few fishing spots, check practical fishability before you leave, and log the full trip when you get back, even when it is a skunk.</p><h2>Quick guide</h2><ol><li>Choose the hours you can fish.</li><li>Compare the opportunity and fishability details.</li><li>Save the spot and add your gear.</li><li>Log the result, conditions you observed, and any catch.</li></ol><p><strong>This project is still a work in progress.</strong> Complete trip logs are especially helpful right now because they create the real-world backlog needed to test and improve the model.</p><p>Scores are planning guidance, not catch guarantees. Respect access rules, the water, and current California regulations.</p><p><a href="https://castingcompass.com">Open CastingCompass</a></p></div>`,
     }),
   });
   if (!response.ok) throw new Error(`Welcome email failed with status ${response.status}: ${await response.text()}`);
@@ -875,7 +875,7 @@ function parseCookies(header: string) {
 function assertSameOrigin(request: Request) {
   const origin = request.headers.get("Origin");
   if (!origin || new URL(origin).origin !== new URL(request.url).origin) {
-    throw new AuthError(403, "invalid_origin", "Account changes must come from CastCompass.");
+    throw new AuthError(403, "invalid_origin", "Account changes must come from CastingCompass.");
   }
 }
 

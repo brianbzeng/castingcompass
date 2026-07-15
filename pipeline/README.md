@@ -1,4 +1,4 @@
-# CastCompass geospatial ML pipeline
+# CastingCompass geospatial ML pipeline
 
 This directory contains a reproducible, leakage-aware foundation for learning
 seafloor representations and, once suitable labels exist, modeling

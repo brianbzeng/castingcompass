@@ -8,7 +8,7 @@ const SITE_CREATOR_PLACEHOLDER_DATABASE_ID =
 
 const { d1, r2 } = hostingConfig;
 const isCloudflareProductionBuild =
-  process.env.CASTCOMPASS_CLOUDFLARE_BUILD === "1"
+  process.env.CASTINGCOMPASS_CLOUDFLARE_BUILD === "1"
   || process.env.NODE_ENV === "production"
   || process.argv.some((argument) => argument === "build");
 

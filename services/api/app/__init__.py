@@ -1,1 +1,1 @@
-"""CastCompass API package."""
+"""CastingCompass API package."""

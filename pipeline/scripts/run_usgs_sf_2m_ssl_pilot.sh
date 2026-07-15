@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Reproduce the first official-data CastCompass representation-learning pilot.
+# Reproduce the first official-data CastingCompass representation-learning pilot.
 # This downloads public USGS data and writes only to ignored data/artifact paths.
 
 ROOT_DIR="$(cd "$(dirname "$0")/../.." && pwd)"

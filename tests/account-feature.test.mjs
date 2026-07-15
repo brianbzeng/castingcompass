@@ -45,7 +45,7 @@ test("offers expandable reports and licensed structure examples", () => {
 });
 
 test("keeps unfinished trip entry recoverable and makes locations searchable", () => {
-  assert.match(tripSource, /castcompass\.trip-draft\.v1/);
+  assert.match(tripSource, /castingcompass\.trip-draft\.v1/);
   assert.match(tripSource, /Draft saved on this device as you type/);
   assert.match(tripSource, /SiteCombobox/);
   assert.match(siteComboboxSource, /role="combobox"/);
@@ -60,5 +60,5 @@ test("allows owners to edit or remove pending reports only", () => {
   assert.match(authSource, /request\.method === "DELETE"/);
   assert.match(accountSource, />Edit</);
   assert.match(accountSource, />Remove</);
-  assert.match(accountSource, /castcompass\.profile-trip-draft\.v1/);
+  assert.match(accountSource, /castingcompass\.profile-trip-draft\.v1/);
 });

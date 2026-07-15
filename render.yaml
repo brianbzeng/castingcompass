@@ -10,7 +10,7 @@ services:
       - key: DATABASE_URL
         sync: false
       - key: ALLOWED_ORIGINS
-        value: https://contourcast.brianbzeng.com
+        value: https://castingcompass.com
       - key: DATA_ROOT
         value: /app
       - key: PYTHONUNBUFFERED

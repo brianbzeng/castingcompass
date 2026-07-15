@@ -21,13 +21,13 @@ repository = build_repository()
 def _origins() -> list[str]:
     configured = os.getenv(
         "ALLOWED_ORIGINS",
-        "http://localhost:3000,http://127.0.0.1:3000,https://contourcast.brianbzeng.com",
+        "http://localhost:3000,http://127.0.0.1:3000,https://castingcompass.com",
     )
     return [origin.strip() for origin in configured.split(",") if origin.strip()]
 
 
 app = FastAPI(
-    title="CastCompass API",
+    title="CastingCompass API",
     version=API_VERSION,
     description=(
         "Explainable, relative California-halibut opportunity rankings for public shore and pier sites. "
@@ -63,7 +63,7 @@ async def cache_headers(request: Request, call_next):
             response.headers["Cache-Control"] = "public, max-age=300, stale-while-revalidate=600"
         elif request.url.path.startswith("/v1/sites"):
             response.headers["Cache-Control"] = "public, max-age=3600, stale-while-revalidate=86400"
-        response.headers["X-CastCompass-Data-Source"] = getattr(repository, "source", "unknown")
+        response.headers["X-CastingCompass-Data-Source"] = getattr(repository, "source", "unknown")
     return response
 
 
@@ -73,7 +73,7 @@ async def unavailable_handler(_: Request, exc: DataUnavailableError):
     return JSONResponse(
         status_code=503,
         content={
-            "detail": "The latest verified CastCompass data snapshot is unavailable.",
+            "detail": "The latest verified CastingCompass data snapshot is unavailable.",
             "reason": str(exc),
             "invented_values_used": False,
         },

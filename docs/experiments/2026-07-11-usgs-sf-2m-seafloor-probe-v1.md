@@ -84,7 +84,7 @@ despite the modest class-decision gain: log loss falls from `2.6325` to
 
 ## Decision
 
-Do not promote this encoder into CastCompass scoring. The honest result is:
+Do not promote this encoder into CastingCompass scoring. The honest result is:
 
 - it captures more transferable structure than depth alone;
 - it has not demonstrated a reliable advantage over random convolutional

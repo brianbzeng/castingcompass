@@ -1,4 +1,4 @@
-# CastCompass v1 feasibility report
+# CastingCompass v1 feasibility report
 
 Status: **feasible as an explainable relative opportunity ranking; not feasible as a defensible hour-level catch probability with the currently identified public labels.**
 
@@ -12,7 +12,7 @@ Proceed with a narrow California halibut planning product for public shore, beac
 
 The NOAA San Francisco Bay bathymetry product is detailed enough to derive depth, slope, curvature, roughness, bathymetric position, and channel-edge context. Higher-resolution USGS coverage materially improves the structure ceiling: official products include 4 m central-Bay bathymetry/backscatter, 2 m offshore San Francisco bathymetry/backscatter/seafloor character, and a newer 1 m central-Bay surface in a bathymetric-change release. Those signals can be summarized within reachable casting zones rather than arbitrary offshore pixels.
 
-Feature specificity remains source-limited. CastCompass conservatively requires a structure to span at least three native cells and meet published positional-accuracy constraints. A narrow pipe may be unresolved even at 2 m, while its raised corridor, scour, backscatter response, attached-kelp footprint, or associated habitat edge may be detectable. The model records this distinction instead of treating an interpolated pixel as a measurement.
+Feature specificity remains source-limited. CastingCompass conservatively requires a structure to span at least three native cells and meet published positional-accuracy constraints. A narrow pipe may be unresolved even at 2 m, while its raised corridor, scour, backscatter response, attached-kelp footprint, or associated habitat edge may be detectable. The model records this distinction instead of treating an interpolated pixel as a measurement.
 
 CDFW/CRFS spatial data can support regional California-halibut occurrence and catch-rate evidence, including zero-catch/sample context where released. Its spatial aggregation and minimum-sample rules make it better suited to long-term habitat learning than exact spot claims.
 

@@ -7,7 +7,7 @@
 
 ## Purpose
 
-Verify that CastCompass can train a multiscale deep encoder on real public
+Verify that CastingCompass can train a multiscale deep encoder on real public
 bathymetry while preserving source provenance, physical resolution, geographic
 separation, and an explicit boundary between representation learning and catch
 accuracy.

@@ -14,9 +14,11 @@ import { ArrowIcon, ClockIcon, CloseIcon } from "./icons";
 import { GearCatalogFields } from "./GearCatalogFields";
 import { SiteCombobox } from "./SiteCombobox";
 
-const ACTIVE_TRIP_KEY = "contourcast.active-trip.v1";
-const REPORTER_KEY = "contourcast.reporter-key.v1";
-const TRIP_DRAFT_PREFIX = "castcompass.trip-draft.v1.";
+const ACTIVE_TRIP_KEY = "castingcompass.active-trip.v1";
+const LEGACY_ACTIVE_TRIP_KEY = "contourcast.active-trip.v1";
+const REPORTER_KEY = "castingcompass.reporter-key.v1";
+const LEGACY_REPORTER_KEY = "contourcast.reporter-key.v1";
+const TRIP_DRAFT_PREFIX = "castingcompass.trip-draft.v1.";
 const MAX_PHOTO_BYTES = 5 * 1024 * 1024;
 const ACCEPTED_PHOTO_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
 const PHOTO_UPLOADS_ENABLED = process.env.NEXT_PUBLIC_PHOTO_UPLOADS !== "false";
@@ -286,7 +288,9 @@ function RecentDelta({ value, decimals = 0 }: { value: number; decimals?: number
 }
 
 function anonymousReporterKey() {
-  const existing = window.localStorage.getItem(REPORTER_KEY);
+  const existing =
+    window.localStorage.getItem(REPORTER_KEY) ??
+    window.localStorage.getItem(LEGACY_REPORTER_KEY);
   if (existing) return existing;
   const key = typeof window.crypto?.randomUUID === "function"
     ? window.crypto.randomUUID()
@@ -458,7 +462,10 @@ export function TripReportFeature({ sites, snapshot, request, canSubmit, onRequi
   useEffect(() => {
     if (restoredClientStateRef.current) return;
     restoredClientStateRef.current = true;
-    const stored = parseStoredTrip(window.localStorage.getItem(ACTIVE_TRIP_KEY));
+    const stored = parseStoredTrip(
+      window.localStorage.getItem(ACTIVE_TRIP_KEY) ??
+        window.localStorage.getItem(LEGACY_ACTIVE_TRIP_KEY),
+    );
     const restoreFrame = window.requestAnimationFrame(() => setActiveTrip(stored));
 
     const query = new URL(window.location.href).searchParams;
@@ -657,6 +664,7 @@ export function TripReportFeature({ sites, snapshot, request, canSubmit, onRequi
         contourCastInfluenced: fields.contourCastInfluenced,
       };
       window.localStorage.setItem(ACTIVE_TRIP_KEY, JSON.stringify(stored));
+      window.localStorage.removeItem(LEGACY_ACTIVE_TRIP_KEY);
       window.localStorage.removeItem(`${TRIP_DRAFT_PREFIX}start`);
       setActiveTrip(stored);
       setSubmitState("success");
@@ -693,6 +701,7 @@ export function TripReportFeature({ sites, snapshot, request, canSubmit, onRequi
       });
       await responsePayload(response);
       window.localStorage.removeItem(ACTIVE_TRIP_KEY);
+      window.localStorage.removeItem(LEGACY_ACTIVE_TRIP_KEY);
       window.localStorage.removeItem(`${TRIP_DRAFT_PREFIX}complete.${activeTrip.id}`);
       setActiveTrip(null);
       void refreshSummary(setSummary, setSummaryUnavailable);
@@ -864,7 +873,7 @@ export function TripReportFeature({ sites, snapshot, request, canSubmit, onRequi
                 </div>
                 <label className="consent-field">
                   <input type="checkbox" checked={fields.consent} onChange={(event) => setFields((current) => ({ ...current, consent: event.target.checked }))} required />
-                  <span>I own anything I submit and consent to private use of this trip, its result, and any later photo for CastCompass model training and validation.</span>
+                  <span>I own anything I submit and consent to private use of this trip, its result, and any later photo for CastingCompass model training and validation.</span>
                 </label>
                 </>}
                 {formStep === 2 ? <button className="trip-back-button" type="button" onClick={() => setFormStep(1)}>← Back to trip details</button> : null}

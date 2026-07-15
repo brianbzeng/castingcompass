@@ -15,31 +15,33 @@ const plexMono = IBM_Plex_Mono({
 });
 
 export const metadata: Metadata = {
-  metadataBase: new URL("https://castcompass.brianbzeng.com"),
+  metadataBase: new URL("https://castingcompass.com"),
   title: {
-    default: "CastCompass",
-    template: "%s · CastCompass",
+    default: "CastingCompass",
+    template: "%s · CastingCompass",
   },
   description:
     "An explainable California halibut opportunity planner for public shore, beach, jetty, and pier access around the San Francisco Bay Area.",
-  applicationName: "CastCompass",
+  alternates: { canonical: "https://castingcompass.com" },
+  applicationName: "CastingCompass",
   manifest: "/manifest.webmanifest",
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
-    title: "CastCompass",
+    title: "CastingCompass",
   },
   formatDetection: { telephone: false },
   icons: {
-    icon: "/castcompass-icon.png",
-    shortcut: "/castcompass-icon.png",
+    icon: "/castingcompass-icon.png",
+    shortcut: "/castingcompass-icon.png",
     apple: "/icons/icon-192.png",
   },
   openGraph: {
-    title: "CastCompass",
+    title: "CastingCompass",
     description:
       "Find the strongest upcoming California halibut opportunity windows around the Bay.",
     type: "website",
+    url: "https://castingcompass.com",
     images: [{ url: "/og.png", width: 1200, height: 630 }],
   },
 };

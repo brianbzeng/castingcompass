@@ -1,4 +1,4 @@
-/** Cloudflare Worker entry point for the CastCompass PWA. */
+/** Cloudflare Worker entry point for the CastingCompass PWA. */
 import { handleImageOptimization, DEFAULT_DEVICE_SIZES, DEFAULT_IMAGE_SIZES } from "vinext/server/image-optimization";
 import handler from "vinext/server/app-router-entry";
 import sites from "../public/data/sites.json";
@@ -31,6 +31,17 @@ interface ExecutionContext {
 const worker = {
   async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
     const url = new URL(request.url);
+
+    if ([
+      "www.castingcompass.com",
+      "castcompass.brianbzeng.com",
+      "contourcast.brianbzeng.com",
+    ].includes(url.hostname)) {
+      url.protocol = "https:";
+      url.hostname = "castingcompass.com";
+      url.port = "";
+      return Response.redirect(url.toString(), 308);
+    }
 
     const discussionResponse = await handleDiscussionRequest(request, env, sites);
     if (discussionResponse) return discussionResponse;

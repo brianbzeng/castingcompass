@@ -1,4 +1,4 @@
-# CastCompass architecture
+# CastingCompass architecture
 
 ## Runtime topology
 

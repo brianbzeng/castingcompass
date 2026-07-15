@@ -1,1 +1,1 @@
-"""CastCompass geospatial and machine-learning workflows."""
+"""CastingCompass geospatial and machine-learning workflows."""

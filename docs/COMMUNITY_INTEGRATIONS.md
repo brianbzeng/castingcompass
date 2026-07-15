@@ -2,13 +2,13 @@
 
 ## Current release
 
-CastCompass links users to Google Maps for photos, reviews, Street View,
+CastingCompass links users to Google Maps for photos, reviews, Street View,
 satellite imagery, and directions. Google content is not scraped, copied, or
 stored. Historical fishing discussion in `data/community-pulse.json` is an
 original editorial summary with outbound sources and is never used in the
 Opportunity Score.
 
-The validation beta also accepts first-party CastCompass trip reports. These
+The validation beta also accepts first-party CastingCompass trip reports. These
 are direct, consented submissions rather than imported social content. They
 record a curated access zone, time, effort, fishing method, complete catch or
 no-catch outcome, and an optional verification photo. Reports remain pending
@@ -28,7 +28,7 @@ The raw Places API is less suitable for this interface: Place Details returns
 a limited relevance-sorted review/photo set, invokes paid SKUs, and carries
 strict display, attribution, and caching rules. Store stable Place IDs, not
 review text, photo resources, or copied derivative summaries. A visitor's
-Google login does not grant CastCompass broader access to public Maps reviews.
+Google login does not grant CastingCompass broader access to public Maps reviews.
 
 References:
 
@@ -42,7 +42,7 @@ References:
 Fishbrain does not publish a supported third-party review API, OAuth flow,
 embed SDK, or "Sign in with Fishbrain" integration. A Fishbrain Pro
 subscription is a consumer license; it does not authorize automated access,
-republishing, credential proxying, or commercial crawling. CastCompass must not
+republishing, credential proxying, or commercial crawling. CastingCompass must not
 collect Fishbrain passwords, cookies, or session tokens.
 
 Compliant options are limited to an outbound Fishbrain link, a user-provided
@@ -53,7 +53,7 @@ Reference: [Fishbrain Terms of Service](https://fishbrain.com/policies/terms-of-
 
 ## First-party path now implemented
 
-CastCompass uses structured Trip Reports rather than a generic comment wall:
+CastingCompass uses structured Trip Reports rather than a generic comment wall:
 
 - site, visit time, fishing mode, target species, and catch/no-catch outcome;
 - tide, wind, water clarity, bait or lure, optional note, and optional photo;
@@ -68,5 +68,5 @@ CastCompass uses structured Trip Reports rather than a generic comment wall:
 D1 stores report metadata and R2 stores only processed WebP photo bytes. A
 future account release should add authentication, contributor edit/deletion,
 reporting, and moderation tools. Google sign-in could authenticate a
-CastCompass account, but it must not be described as authorization to crawl
+CastingCompass account, but it must not be described as authorization to crawl
 Google Maps.

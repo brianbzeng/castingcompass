@@ -1125,7 +1125,10 @@ export function OpportunityApp() {
   }, []);
 
   useEffect(() => {
-    if (window.localStorage.getItem("contourcast.respect-water.v1") === "dismissed") return;
+    const respectWaterDismissed =
+      window.localStorage.getItem("castingcompass.respect-water.v1") ??
+      window.localStorage.getItem("contourcast.respect-water.v1");
+    if (respectWaterDismissed === "dismissed") return;
     const frame = window.requestAnimationFrame(() => setShowRespectNotice(true));
     return () => window.cancelAnimationFrame(frame);
   }, []);
@@ -1347,7 +1350,8 @@ export function OpportunityApp() {
 
   const continueFromRespectNotice = useCallback(() => {
     if (rememberRespectNotice) {
-      window.localStorage.setItem("contourcast.respect-water.v1", "dismissed");
+      window.localStorage.setItem("castingcompass.respect-water.v1", "dismissed");
+      window.localStorage.removeItem("contourcast.respect-water.v1");
     }
     setShowRespectNotice(false);
   }, [rememberRespectNotice]);
@@ -1417,9 +1421,9 @@ export function OpportunityApp() {
   return (
     <main className="app-shell">
       <header className="topbar">
-        <a className="brand" href="#top" aria-label="CastCompass home">
+        <a className="brand" href="#top" aria-label="CastingCompass home">
           <span className="brand-icon" aria-hidden="true" />
-          <span>CastCompass</span>
+          <span>CastingCompass</span>
           <em>Bay Area beta</em>
         </a>
         <nav className="desktop-nav" aria-label="Primary navigation">
@@ -1457,7 +1461,7 @@ export function OpportunityApp() {
         </div>
         <div className="work-in-progress-note">
           <strong>Work in progress</strong>
-          <span>CastCompass currently hunts for California halibut only. Every score and condition adjustment is tuned around halibut habitat and behavior.</span>
+          <span>CastingCompass currently hunts for California halibut only. Every score and condition adjustment is tuned around halibut habitat and behavior.</span>
         </div>
         <div className="intro-grid">
           <div>
@@ -1747,7 +1751,7 @@ export function OpportunityApp() {
       </section>
 
       <footer>
-        <a className="brand footer-brand" href="#top"><span className="brand-icon" aria-hidden="true" /><span>CastCompass</span></a>
+        <a className="brand footer-brand" href="#top"><span className="brand-icon" aria-hidden="true" /><span>CastingCompass</span></a>
         <div className="footer-center">
           <p>Planning aid only. Not navigational data, legal advice, or a guarantee of catch.</p>
           <div className="contact-bar" aria-label="Contact Brian Zeng">
@@ -1782,7 +1786,7 @@ export function OpportunityApp() {
               />
               Do not show this reminder again on this device
             </label>
-            <button type="button" onClick={continueFromRespectNotice}>Continue to CastCompass <ArrowIcon /></button>
+            <button type="button" onClick={continueFromRespectNotice}>Continue to CastingCompass <ArrowIcon /></button>
           </section>
         </div>
       ) : null}
@@ -2049,7 +2053,7 @@ export function OpportunityApp() {
               )}
               {discussionPosts.length ? (
                 <div className="location-discussion-feed">
-                  <h4>Recent CastCompass trip notes</h4>
+                  <h4>Recent CastingCompass trip notes</h4>
                   {discussionPosts.map((post) => (
                     <article key={post.id}>
                       <p>{post.summary}</p>
@@ -2060,7 +2064,7 @@ export function OpportunityApp() {
                   ))}
                 </div>
               ) : (
-                <p className="location-discussion-empty">No privacy-reviewed CastCompass trip notes have been posted for this location yet. Useful notes usually appear within about a minute after submission.</p>
+                <p className="location-discussion-empty">No privacy-reviewed CastingCompass trip notes have been posted for this location yet. Useful notes usually appear within about a minute after submission.</p>
               )}
               <small>
                 Static summaries do not change the score. Notes are checked for privacy and relevance before an anonymous summary is posted; raw notes, identity, photos, and exact coordinates remain private.
@@ -2085,7 +2089,7 @@ export function OpportunityApp() {
             <span className="eyebrow"><span /> Model note</span>
             <h2 id="method-title">A ranking, not a promise.</h2>
             <p>
-              CastCompass compares reachable casting zones and upcoming two-hour windows. Before the practical cap, the 0–100 value ranks within the current comparison set. Fishability can lower it when the water is too difficult to work effectively. It is not a catch probability.
+              CastingCompass compares reachable casting zones and upcoming two-hour windows. Before the practical cap, the 0–100 value ranks within the current comparison set. Fishability can lower it when the water is too difficult to work effectively. It is not a catch probability.
             </p>
             <div className="predictor-list" aria-label="Predictors used in the live score">
               <details open>

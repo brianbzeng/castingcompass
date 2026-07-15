@@ -8,8 +8,8 @@ const registrationSource = await readFile(
   "utf8",
 );
 
-test("service worker publishes a new cache and removes prior CastCompass releases", () => {
-  assert.match(workerSource, /CACHE_NAME = "castcompass-v9"/);
+test("service worker publishes a new cache and removes prior CastingCompass releases", () => {
+  assert.match(workerSource, /CACHE_NAME = "castingcompass-v9"/);
   assert.match(workerSource, /CACHE_PREFIXES\.some/);
   assert.match(workerSource, /caches\.delete\(key\)/);
 });

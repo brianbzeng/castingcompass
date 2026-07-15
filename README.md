@@ -1,6 +1,9 @@
-# CastCompass
+# CastingCompass
 
-CastCompass is an installable, mobile-first California halibut opportunity planner for public shore, beach, jetty, and pier access from Point Reyes through San Francisco Bay to Half Moon Bay.
+Live app: [castingcompass.com](https://castingcompass.com) · Source:
+[github.com/brianbzeng/castingcompass](https://github.com/brianbzeng/castingcompass)
+
+CastingCompass is an installable, mobile-first California halibut opportunity planner for public shore, beach, jetty, and pier access from Point Reyes through San Francisco Bay to Half Moon Bay.
 
 It compares reachable casting zones and two-hour windows using three separately visible components:
 
@@ -162,7 +165,7 @@ Cloudflare Git build settings, see [Cloudflare deployment](docs/CLOUDFLARE_DEPLO
 
 ## Safety and interpretation
 
-- CastCompass is a planning aid, not a guarantee of catch.
+- CastingCompass is a planning aid, not a guarantee of catch.
 - Bathymetry is explanatory context, not navigational data.
 - Regulation links are informational; always check official CDFW rules and posted access closures.
 - Current CDFW guidance lists a 22-inch total-length minimum for retained California halibut; the app repeats this as a reminder while linking back to the live regulation page.

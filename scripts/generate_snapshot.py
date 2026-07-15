@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Build the static CastCompass demo snapshot from public forecast endpoints.
+"""Build the static CastingCompass demo snapshot from public forecast endpoints.
 
 The generator is deterministic for a fixed ``--as-of`` timestamp and the same
 upstream responses. Missing upstream values stay null and contribute a neutral
@@ -27,7 +27,7 @@ from zoneinfo import ZoneInfo
 ROOT = Path(__file__).resolve().parents[1]
 SITES_PATH = ROOT / "data" / "sites.json"
 PUBLIC_DATA = ROOT / "public" / "data"
-USER_AGENT = "CastCompass/0.1 (public-data demo; contact: bzeng0000@gmail.com)"
+USER_AGENT = "CastingCompass/0.1 (public-data demo; contact: bzeng0000@gmail.com)"
 PACIFIC = ZoneInfo("America/Los_Angeles")
 
 WEATHER_ANCHORS = {
@@ -84,7 +84,7 @@ OPEN_COAST_REGIONS = {
 # Access pressure is a deliberately small, transparent planning modifier. Google
 # Maps does not expose Popular Times through the Places API, and its terms do not
 # permit scraping those charts into another dataset. These tiers are therefore a
-# CastCompass editorial estimate of how constrained the fishable space usually
+# CastingCompass editorial estimate of how constrained the fishable space usually
 # feels, not a live headcount. Unknown sites default to the middle tier.
 HIGH_PRESSURE_SITES = {
     "fort-baker-pier",
@@ -171,7 +171,7 @@ def next_even_hour(value: datetime) -> datetime:
 def fetch_tides(station: str, start: datetime, end: datetime) -> dict[str, Any]:
     params = {
         "product": "predictions",
-        "application": "CastCompass",
+        "application": "CastingCompass",
         "begin_date": start.strftime("%Y%m%d"),
         "end_date": end.strftime("%Y%m%d"),
         "datum": "MLLW",
@@ -1287,7 +1287,7 @@ def main() -> None:
             "url": "https://www.ncei.noaa.gov/access/metadata/landing-page/bin/iso?id=gov.noaa.ngdc.mgg.dem%3Asan_francisco_bay_P090_2018",
         },
         {
-            "name": "CastCompass expected access-pressure schedule",
+            "name": "CastingCompass expected access-pressure schedule",
             "observedAt": retrieved_at,
             "status": "small score modifier; curated space-and-popularity tiers by time of day, not Google Popular Times or live headcount",
             "url": "https://developers.google.com/maps/documentation/places/web-service/place-details",
@@ -1305,7 +1305,7 @@ def main() -> None:
         "generatedAt": retrieved_at,
         "validFrom": isoformat(start),
         "validThrough": isoformat(end),
-        "modelVersion": "castcompass-hybrid-demo-0.6.0",
+        "modelVersion": "castingcompass-hybrid-demo-0.6.0",
         "status": "demo-public-data-snapshot",
         "species": "california-halibut",
         "scoreDefinition": f"Before the fishability cap, a score of 80 ranks within the current comparison set above 80% of the {len(ordered):,} site/windows. Surf, wind, current, steep shorebreak, or expected crowding can cap the displayed score. It is not an 80% catch probability.",
