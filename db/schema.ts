@@ -177,6 +177,9 @@ export const siteDiscussionPosts = sqliteTable(
     createdAt: text("created_at").notNull(),
     updatedAt: text("updated_at").notNull(),
     reviewModel: text("review_model"),
+    approvedAt: text("approved_at"),
+    approvedBy: text("approved_by"),
+    sourceAiReviewedAt: text("source_ai_reviewed_at"),
   },
   (table) => [
     uniqueIndex("site_discussion_posts_trip_unique").on(table.tripId),
