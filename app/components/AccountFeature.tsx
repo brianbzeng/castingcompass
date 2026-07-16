@@ -145,8 +145,8 @@ function tripReviewLabel(trip: ProfileTrip) {
     try {
       const review = trip.ai_review_json ? JSON.parse(trip.ai_review_json) as { discussion?: { publish?: boolean } } : null;
       return review?.discussion?.publish
-        ? "Privacy review complete · summary posted"
-        : "Privacy review complete · no public summary needed";
+        ? "Discussion draft prepared · public summaries require separate human approval"
+        : "Automated review complete · no public draft proposed";
     } catch {
       return "Privacy review complete";
     }
@@ -653,7 +653,7 @@ export function AccountModal({
                   })}
                 </div>
               ) : <p>No completed trip logs are attached to this account yet.</p>}
-              <small className="profile-review-note">Trip data is saved immediately. Notes are automatically checked for privacy and usefulness; a safe summary usually appears on the location board within about a minute. Pending reports remain editable during the beta.</small>
+              <small className="profile-review-note">Trip data is saved immediately. Automated review may prepare a discussion draft, but nothing is posted without human approval. Pending reports remain editable during the beta.</small>
               {profileActionError && !editingTrip ? <p className="account-error" role="alert">{profileActionError}</p> : null}
             </section>
             {editingTrip && editFields ? (
@@ -731,7 +731,7 @@ export function AccountModal({
                   <label>Fishability notes<textarea rows={3} maxLength={500} value={editFields.fishabilityNotes} onChange={(event) => setEditFields((current) => current ? { ...current, fishabilityNotes: event.target.value } : current)} placeholder="Steep beach, thigh-high wash, weeds, snags…" /></label>
                 </fieldset>
                 <label>Notes<textarea rows={4} maxLength={1000} value={editFields.notes} onChange={(event) => setEditFields((current) => current ? { ...current, notes: event.target.value } : current)} /></label>
-                <small>Changed notes are checked again for privacy and relevance. A safe anonymous summary may update the location discussion; raw notes and identity stay private.</small>
+                <small>Changed notes are checked again for privacy and relevance. A revised discussion draft still requires human approval before publication.</small>
                 <small>Your edits are saved in this browser as you type.</small>
                 {profileActionError ? <p className="account-error" role="alert">{profileActionError}</p> : null}
                 <button className="account-primary" type="submit" disabled={profileActionBusy}>{profileActionBusy ? "Saving…" : "Save trip changes"}</button>

@@ -2085,7 +2085,7 @@ export function OpportunityApp() {
               )}
               {discussionPosts.length ? (
                 <div className="location-discussion-feed">
-                  <h4>Recent CastingCompass trip notes</h4>
+                  <h4>Human-reviewed CastingCompass trip notes</h4>
                   {discussionPosts.map((post) => (
                     <article key={post.id}>
                       <p>{post.summary}</p>
@@ -2096,10 +2096,10 @@ export function OpportunityApp() {
                   ))}
                 </div>
               ) : (
-                <p className="location-discussion-empty">No privacy-reviewed CastingCompass trip notes have been posted for this location yet. Useful notes usually appear within about a minute after submission.</p>
+                <p className="location-discussion-empty">No human-approved CastingCompass trip summaries have been posted for this location yet.</p>
               )}
               <small>
-                Static summaries do not change the score. Notes are checked for privacy and relevance before an anonymous summary is posted; raw notes, identity, photos, and exact coordinates remain private.
+                Static summaries do not change the score. Automated review can prepare a draft, but a human moderator must approve it before publication.
               </small>
             </div>
 

@@ -15,6 +15,7 @@ interface Env extends TripApiEnv {
   ASSETS: AssetFetcher;
   MIMO_API_KEY?: string;
   MIMO_MODEL?: string;
+  PUBLIC_DISCUSSIONS_ENABLED?: string;
 }
 
 interface ExecutionContext {

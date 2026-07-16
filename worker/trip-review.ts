@@ -1,10 +1,16 @@
 import type { CuratedSite, D1DatabaseLike, TripRow } from "./trips";
-import { publishTripDiscussion, type PublicDiscussionDraft } from "./discussions";
 
 interface ReviewEnv {
   DB?: D1DatabaseLike;
   MIMO_API_KEY?: string;
   MIMO_MODEL?: string;
+}
+
+interface PublicDiscussionDraft {
+  publish: boolean;
+  summary: string;
+  gearSummary?: string | null;
+  techniqueTags?: string[];
 }
 
 interface MimoResponse {
@@ -62,7 +68,7 @@ export async function reviewTripWithMimo(env: ReviewEnv, trip: TripRow, sites: r
             role: "system",
             content: `You review California halibut trip reports for data quality and normalize angler gear. Never decide whether a person is truthful and never approve or reject a report. Identify only completeness, internal consistency, impossible numeric/time combinations, and details a human reviewer should check. Do not rank brands or claim one product catches more fish without sufficient aggregate evidence. Normalize recognizable rod, reel, and lure brands/series/models; preserve uncertainty and do not invent a missing model.
 
-If notes contain useful spot context, write a short anonymous discussion summary. Remove names, handles, contact details, exact sub-location clues, and anything unsafe, abusive, or unrelated. The summary may mention the general curated site, time of day, catch or skunk, technique, normalized gear, crowding, clarity, shorebreak, and fishability. Set publish false when notes are empty, cannot be safely anonymized, are off-topic, or need human review.
+If notes contain useful spot context, prepare a short pseudonymous discussion draft for a human moderator. You cannot publish or approve it. Remove names, handles, contact details, exact sub-location clues, and anything unsafe, abusive, or unrelated. The draft may mention the general curated site, time of day, catch or skunk, technique, normalized gear, crowding, clarity, shorebreak, and fishability. Set publish false when notes are empty, cannot be safely minimized, are off-topic, or need human review.
 
 Return JSON only with keys: quality_score (0-100), flags (string array), summary (one sentence), needs_human_review (boolean), gear_analysis ({rod, reel, lure, setup_tags, compatibility_flags, technique_match_summary}; rod/reel/lure each have brand, series, model, confidence), and discussion ({publish, summary, gear_summary, technique_tags}).`,
           },
@@ -95,7 +101,6 @@ Return JSON only with keys: quality_score (0-100), flags (string array), summary
       ai_review_model = ?, ai_reviewed_at = ? WHERE id = ?`)
       .bind(stored, model, new Date().toISOString(), trip.id)
       .run();
-    await publishTripDiscussion(env, trip, discussion, model);
   } catch (error) {
     console.error("Automated trip review failed", error);
     await env.DB.prepare("UPDATE trips SET ai_review_status = 'retry', ai_review_model = ? WHERE id = ?")

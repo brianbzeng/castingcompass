@@ -783,8 +783,8 @@ export function TripReportFeature({ sites, snapshot, request, canSubmit, onRequi
             <button type="button" onClick={openShareableReport}>Log a past trip</button>
           </div>
           <small>
-            Beta · reports are reviewed before model use. Public results never expose exact coordinates,
-            notes, photos, or identity.
+            Beta · reports are reviewed before model use. This public ledger shows aggregate totals only;
+            any separate discussion summary requires human approval and additional safety checks.
           </small>
         </div>
         <div className="validation-ledger" aria-label="Community trip summary">
@@ -960,7 +960,7 @@ export function TripReportFeature({ sites, snapshot, request, canSubmit, onRequi
               </form>
             ) : null}
 
-            <p className="trip-beta-note">Beta · trip data is saved immediately. A useful note may appear only after privacy and relevance checks produce a safe anonymous location summary.</p>
+            <p className="trip-beta-note">Beta · trip data is saved immediately. Automated review may prepare a private draft, but no discussion summary is posted automatically; human approval is required.</p>
             <p className="trip-draft-note">Draft saved on this device as you type.</p>
           </section>
         </div>
@@ -1072,7 +1072,8 @@ function TripCompletionFields({
         <span>Notes <em>optional</em></span>
         <textarea maxLength={1000} rows={4} value={fields.notes} onChange={(event) => setFields((current) => ({ ...current, notes: event.target.value }))} placeholder="Conditions, technique, approximate size, or anything that affected the trip…" />
         <small>{fields.notes.length}/1000</small>
-        <small className="discussion-publish-notice">Notes are checked for privacy and relevance. A short anonymous summary may be posted to this location’s discussion, usually within about a minute. Raw notes, identity, photos, and exact coordinates stay private.</small>
+        <small>Do not include names, contact details, precise locations, access codes, or other private information.</small>
+        <small className="discussion-publish-notice">Automated review may prepare a shortened discussion draft. It is not posted automatically and must be approved by a human moderator before it can appear publicly.</small>
       </label>
       {PHOTO_UPLOADS_ENABLED ? (
         <label className="photo-field">
@@ -1083,7 +1084,7 @@ function TripCompletionFields({
       ) : null}
       <label className="consent-field">
         <input type="checkbox" checked={fields.consent} onChange={(event) => setFields((current) => ({ ...current, consent: event.target.checked }))} required />
-        <span>I confirm this reflects the whole trip, own anything I submit, and consent to the uses described in the <Link href="/terms" target="_blank">Terms</Link> and <Link href="/privacy" target="_blank">Privacy Policy</Link>, including model training and a privacy-reviewed anonymous discussion summary. Raw notes{PHOTO_UPLOADS_ENABLED ? ", photos" : ""}, identity, and exact coordinates stay private.</span>
+        <span>I confirm this reflects the whole trip, own anything I submit, and consent to the uses described in the <Link href="/terms" target="_blank">Terms</Link> and <Link href="/privacy" target="_blank">Privacy Policy</Link>, including model training and preparation of a possible public summary. A summary cannot appear unless a human moderator approves it.</span>
       </label>
     </>
   );

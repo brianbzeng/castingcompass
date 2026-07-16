@@ -2,7 +2,7 @@ import type { CuratedSite, D1DatabaseLike, TripRow } from "./trips";
 
 const SESSION_COOKIE = "cc_session";
 const SESSION_SECONDS = 30 * 24 * 60 * 60;
-export const LEGAL_VERSION = "2026-07-15";
+export const LEGAL_VERSION = "2026-07-16";
 const MINIMUM_ACCOUNT_AGE = 13;
 // Cloudflare Workers currently caps Web Crypto PBKDF2 at 100,000 rounds.
 const PASSWORD_ITERATIONS = 100_000;

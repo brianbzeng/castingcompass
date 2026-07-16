@@ -1,0 +1,76 @@
+# CastingCompass product roadmap
+
+This list is ordered by user harm and launch risk first, followed by measurement,
+validation, expansion, business readiness, and visual polish. An item is complete only
+after its acceptance checks pass in the intended environment.
+
+## P0 — Immediate safety and launch integrity
+
+- [x] Complete the cross-functional baseline audit and establish model-truthfulness rules.
+- [ ] Prevent AI-generated trip summaries from publishing without explicit human approval.
+  Done when the production endpoint defaults off, AI can write only a private draft,
+  legacy rows are quarantined, human approval is auditable, copy is truthful, and live
+  smoke tests pass.
+- [ ] Release production hardening from a clean `origin/main` worktree: central security
+  headers, health/security endpoints, edge abuse controls, sanitized logs, staged migration
+  tests, monitoring, alerts, backup verification, and a restore drill.
+- [ ] Make account privacy promises durable: deletion queue/tombstones for photos and public
+  copies, truthful completion semantics, and an age-only first step before email/password.
+
+## P1 — Evidence, data contracts, discoverability, and scalable foundations
+
+- [ ] Freeze the species-aware observation and model-run contract before new ingestion or
+  recruitment: canonical/versioned taxa or explicit complexes; one primary target per
+  evaluable effort segment; structured per-taxon encounters, retained/released counts, and
+  identification confidence; distinct target-no-encounter versus no-fish outcomes; and a
+  loader that rejects mixed/unexpected taxa and records the target in every artifact.
+- [ ] Freeze the validation protocol before collecting more outcomes: complete targeted
+  trips including skunks, effort and mode, immutable source-separated splits, geographic and
+  temporal holdouts, preregistered baselines, outcome-independent incentives, preserved
+  model version and `scoreInfluencedChoice`, and independent or safely randomized trip
+  selection where possible. Curated site IDs support site × time-window claims only; precise
+  casting-zone research requires separate consent, minimization, access, retention/deletion,
+  and sensitive-location controls.
+- [ ] Acquire reproducible official CDFW/CRFS/RecFIN data—starting with CDFW ds3186
+  all-species/all-effort and ds3185 rockfish/cabezon blocks—and start a prospective first-party
+  cohort. Every snapshot needs its query/export manifest, retrieval date, checksum, license,
+  attribution, dictionary, source version, sampling design, denominator, and spatial/time
+  support. Keep samples separate from expanded estimates, never invent point labels from
+  blocks, and declare training/validation/context permissions per source.
+- [ ] Treat Fishbrain as an optional written-license partnership and Facebook groups as
+  admin-approved prospective recruitment—not scraped retrospective evidence. Licensed social
+  data without complete attempts, no-catch, effort, coverage, and sampling propensity is for
+  discovery, weak supervision, or external trend corroboration only; the independent benchmark
+  remains a source-separated prospective cohort.
+- [ ] Validate the California halibut relative ranking against frozen baselines before broader
+  claims; publish uncertainty, limitations, negative results, and the current all-zero sample
+  constraint. Attempt probability calibration only after a trained occurrence model has a
+  sufficiently representative held-out set of positive and negative outcomes.
+- [ ] Define model promotion, drift, and rollback gates: beat preregistered geographic/time
+  holdout baselines before promotion; monitor by site, season, mode, and taxon; version every
+  release; and require rollback/revalidation when performance or data support drifts.
+- [ ] Establish truthful technical SEO and measurement without promoting unvalidated accuracy:
+  Google Search Console and Bing Webmaster Tools verification, sitemap submission, crawl/index
+  coverage, canonical URLs, metadata, social previews, appropriate structured data, Core Web
+  Vitals, mobile/accessibility checks, and privacy-conscious conversion analytics.
+- [ ] Make infrastructure mobile-ready and scalable with versioned APIs/shared schemas,
+  appropriate mobile authentication, queue-based AI work, staging, bounded retries/costs,
+  and WebKit/offline/safe-area coverage.
+
+## P2 — Species and business expansion
+
+- [ ] Add striped bass as the first new beta using a distinct estuary/migration model.
+- [ ] Define and evaluate explicit shore-relevant rockfish species/complexes next; then model
+  cabezon as its own taxon; then split surfperch into defensible habitat/taxon groups. Each beta
+  needs its own source inventory, model card, validation gate, and current regulation treatment.
+- [ ] Complete business/legal readiness before substantial promotion or revenue: entity/DBA,
+  tax and local-license review, trademark clearance, startup counsel/CPA review, DMCA/UGC
+  posture, and broker quotes for cyber/privacy, technology E&O, general, and media liability.
+
+## P3 — Experience and brand
+
+- [ ] Improve accessibility and interaction quality after core risks are controlled, including
+  keyboard/screen-reader review, zoom/reflow, contrast, reduced motion, and a non-map path.
+- [ ] Refresh visual design, graphics, species art, empty states, social cards, and brand
+  illustration. Artist collaboration is intentionally deferred and can focus on expressive
+  assets while product interaction remains usability-led.

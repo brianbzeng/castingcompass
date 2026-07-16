@@ -7,11 +7,13 @@ const accountPath = new URL("../app/components/AccountFeature.tsx", import.meta.
 const privacyPath = new URL("../app/privacy/page.tsx", import.meta.url);
 const termsPath = new URL("../app/terms/page.tsx", import.meta.url);
 const aiPath = new URL("../app/ai-disclosure/page.tsx", import.meta.url);
+const legalPagePath = new URL("../app/components/LegalPage.tsx", import.meta.url);
 
 test("account creation enforces age eligibility and versioned legal acceptance", async () => {
-  const [auth, account] = await Promise.all([
+  const [auth, account, legalPage] = await Promise.all([
     readFile(authPath, "utf8"),
     readFile(accountPath, "utf8"),
+    readFile(legalPagePath, "utf8"),
   ]);
 
   assert.match(auth, /MINIMUM_ACCOUNT_AGE = 13/);
@@ -22,6 +24,8 @@ test("account creation enforces age eligibility and versioned legal acceptance",
   assert.match(account, /I agree to the/);
   assert.match(account, /Terms of Service/);
   assert.match(account, /Privacy Policy/);
+  assert.match(auth, /LEGAL_VERSION = "2026-07-16"/);
+  assert.match(legalPage, /LEGAL_EFFECTIVE_DATE = "July 16, 2026"/);
 });
 
 test("privacy controls provide export, deletion, and an optional location notice", async () => {

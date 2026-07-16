@@ -35,13 +35,13 @@ export default function TermsPage() {
       </LegalSection>
 
       <LegalSection title="5. Trip reports, photos, and community summaries">
-        <p>You keep ownership of content you submit. You grant CastingCompass a worldwide, non-exclusive, royalty-free license to host, store, reproduce, transform, analyze, and use that content to operate, secure, evaluate, research, and improve the service and its forecasting systems. This license lasts while the content is retained and includes creating de-identified or aggregated datasets and anonymous public summaries.</p>
+        <p>You keep ownership of content you submit. You grant CastingCompass a worldwide, non-exclusive, royalty-free license to host, store, reproduce, transform, analyze, and use that content to operate, secure, evaluate, research, and improve the service and its forecasting systems. This license lasts while the content is retained and includes creating de-identified or aggregated datasets and, after human approval, pseudonymous public summaries.</p>
         <p>You represent that you have the right to submit the content and that it does not violate privacy, intellectual-property, publicity, safety, or other rights. Do not submit private contact information, exact sensitive habitat locations, faces of people without permission, unlawful activity, abusive content, or misleading reports.</p>
-        <p>Trip notes may be automatically reviewed for privacy, safety, relevance, and usefulness. A shortened anonymous summary may appear on a location discussion page. Raw notes, account identity, uploaded photos, and exact device location are not published by that feature. Automated review can make mistakes, and we may edit, withhold, or remove content.</p>
+        <p>Trip notes may be automatically reviewed for privacy, safety, relevance, and usefulness. Automated review may prepare a shortened pseudonymous draft, but it cannot publish or approve that draft. A human moderator must approve a draft before it can appear on a location discussion page. Automated and human review can make mistakes, and we may edit, withhold, or remove content.</p>
       </LegalSection>
 
       <LegalSection title="6. Automated systems and AI">
-        <p>CastingCompass uses automated rules and models to rank fishing options, and a third-party language model may normalize gear information and review trip notes before an anonymous summary is posted. The live score is currently a hybrid planning model, not a fully trained catch-probability model. See the AI and Forecast Disclosure for details.</p>
+        <p>CastingCompass uses automated rules and models to rank fishing options, and a third-party language model may normalize gear information and prepare a possible discussion draft. The model cannot publish the draft; human approval is required. The live score is currently a hybrid planning model, not a fully trained catch-probability model. See the AI and Forecast Disclosure for details.</p>
         <p>You may not use the service to generate or submit deceptive, unlawful, dangerous, or privacy-invasive content, or to probe, scrape, reverse engineer, overload, evade safeguards, or extract non-public data from the service.</p>
       </LegalSection>
 

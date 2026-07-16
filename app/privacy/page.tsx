@@ -32,8 +32,8 @@ export default function PrivacyPage() {
       </LegalSection>
 
       <LegalSection title="4. Automated review and public summaries">
-        <p>Completed trip data may be sent to Xiaomi MiMo for gear normalization and review of notes for privacy, safety, relevance, and usefulness. The review payload can include the curated site, trip time, method, catch totals, gear, fishability observations, forecast/model context, and up to 1,000 characters of notes. It does not include your email address, account ID, uploaded photo, device location, or exact private coordinates.</p>
-        <p>If the review finds useful location context, CastingCompass may publish a short anonymous summary on that curated location’s discussion page. Raw notes, identity, and photos remain private. A public summary can still be imperfect; contact us to request correction or removal.</p>
+        <p>Completed trip data may be sent to Xiaomi MiMo for gear normalization and review of notes for privacy, safety, relevance, and usefulness. The review payload can include the curated site, trip time, method, catch totals, gear, fishability observations, forecast/model context, and up to 1,000 characters of notes. CastingCompass deliberately omits your email address, account ID, uploaded photo, and structured browser-location or coordinate fields. Free-text trip fields are sent as entered and could contain details you type, so do not include names, contact details, exact locations, access codes, or other private information.</p>
+        <p>Automated review may prepare a shortened pseudonymous discussion draft, but it cannot publish or approve the draft. A human moderator must approve a draft before it can appear on the curated location’s discussion page. Public summaries can still be imperfect; contact us to request correction or removal.</p>
       </LegalSection>
 
       <LegalSection title="5. Service providers and disclosures">
