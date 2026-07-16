@@ -9,7 +9,7 @@ const registrationSource = await readFile(
 );
 
 test("service worker publishes a new cache and removes prior CastingCompass releases", () => {
-  assert.match(workerSource, /CACHE_NAME = "castingcompass-v9"/);
+  assert.match(workerSource, /CACHE_NAME = "castingcompass-v10"/);
   assert.match(workerSource, /CACHE_PREFIXES\.some/);
   assert.match(workerSource, /caches\.delete\(key\)/);
 });
