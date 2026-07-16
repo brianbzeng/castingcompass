@@ -11,6 +11,9 @@ after its acceptance checks pass in the intended environment.
   Done when the production endpoint defaults off, AI can write only a private draft,
   legacy rows are quarantined, human approval is auditable, copy is truthful, and live
   smoke tests pass.
+  - [x] Implement and verify the isolated safety commit plus the additive approval release.
+  - [ ] Publish the safety commit first, record its deployment as the rollback floor, apply
+    the migration, publish the approval release, audit all legacy rows, and run live smoke tests.
 - [ ] Release production hardening from a clean `origin/main` worktree: central security
   headers, health/security endpoints, edge abuse controls, sanitized logs, staged migration
   tests, monitoring, alerts, backup verification, and a restore drill.
