@@ -13,8 +13,35 @@ review can write the public table.
 
 1. First deploy and verify a dedicated safety commit with the public endpoint default-off
    and the AI-to-public writer removed. Record its commit and Cloudflare deployment ID as
-   the oldest permitted rollback target.
+   the oldest permitted rollback target. For this release, that source commit is `16db94b`.
+   Build it in its clean worktree, then deploy the Worker **without** running the existing
+   `release:cloudflare` or `deploy:cloudflare` scripts, because both apply migrations first:
+
+   ```sh
+   npm ci
+   npm run build:cloudflare
+   npm run deploy:cloudflare:worker-only
+   npx wrangler deployments list --config wrangler.jsonc
+   ```
+
+   Run the live verifier against every hostname, including the `workers.dev` URL printed by
+   Wrangler:
+
+   ```sh
+   npm run verify:discussion-safety -- \
+     --base-url https://castingcompass.com \
+     --base-url https://www.castingcompass.com \
+     --base-url https://castcompass.brianbzeng.com \
+     --base-url https://contourcast.brianbzeng.com \
+     --base-url https://WORKER_SUBDOMAIN.workers.dev
+   ```
+
 2. Apply the additive approval migration while the feature remains off.
+
+   ```sh
+   npm run migrate:cloudflare:remote
+   ```
+
 3. Confirm every legacy row is quarantined after migration:
 
    ```sql
@@ -27,6 +54,12 @@ review can write the public table.
 
 4. Deploy the full human-gated release while the feature remains off. Verify every location
    endpoint returns an empty `posts` array.
+
+   ```sh
+   npm run build:cloudflare
+   npm run deploy:cloudflare:worker-only
+   npm run verify:discussion-safety -- --base-url https://castingcompass.com
+   ```
 5. If that release fails, redeploy the recorded safety commit. Do not select an older
    dashboard deployment, because it can restore automated publication.
 6. Enabling discussions is a separate release after a synthetic approve/read/reject smoke
