@@ -19,6 +19,7 @@ test("generated Cloudflare configuration has one production D1 binding", () => {
 
 test("generated Cloudflare configuration keeps discussions off and exposes version metadata", () => {
   assert.equal(config.vars?.PUBLIC_DISCUSSIONS_ENABLED, "false");
+  assert.equal(config.vars?.TRIP_PHOTO_UPLOADS_ENABLED, "false");
   assert.equal(config.version_metadata?.binding, "CF_VERSION_METADATA");
 });
 

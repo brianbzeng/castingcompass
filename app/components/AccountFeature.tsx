@@ -10,6 +10,7 @@ import type { FishingSite } from "../types";
 export interface AccountUser {
   id: string;
   email: string;
+  ageEligible: boolean;
   legalAccepted: boolean;
 }
 
@@ -100,6 +101,70 @@ interface ProfileTripEditFields {
 }
 
 const PROFILE_TRIP_DRAFT_PREFIX = "castingcompass.profile-trip-draft.v1.";
+const ACCOUNT_STORAGE_KEYS = new Set([
+  "castingcompass.active-trip.v1",
+  "castingcompass.reporter-key.v1",
+  "contourcast.active-trip.v1",
+  "contourcast.reporter-key.v1",
+]);
+const ACCOUNT_STORAGE_PREFIXES = [
+  "castingcompass.trip-draft.v1.",
+  "castingcompass.profile-trip-draft.v1.",
+  "contourcast.trip-draft.v1.",
+  "contourcast.profile-trip-draft.v1.",
+];
+
+type DeletionStatus = "completed" | "processing" | "needs_attention";
+
+interface DeletionDetails {
+  status: DeletionStatus;
+  scope: "account" | "trip";
+  requestedAt?: string;
+  completedAt?: string;
+  objectsTotal: number;
+  objectsDeleted: number;
+}
+
+function clearCastingCompassAccountStorage() {
+  let cleared = true;
+  for (const storageName of ["localStorage", "sessionStorage"] as const) {
+    try {
+      const storage = window[storageName];
+      const keys = Array.from({ length: storage.length }, (_, index) => storage.key(index)).filter((key): key is string => Boolean(key));
+      for (const key of keys) {
+        if (ACCOUNT_STORAGE_KEYS.has(key) || ACCOUNT_STORAGE_PREFIXES.some((prefix) => key.startsWith(prefix))) {
+          storage.removeItem(key);
+        }
+      }
+    } catch {
+      // A browser can block storage access; server-side deletion must still remain accepted.
+      cleared = false;
+    }
+  }
+  return cleared;
+}
+
+function deletionDetailsFromResponse(body: Record<string, unknown>): DeletionDetails {
+  const nested = body.deletion && typeof body.deletion === "object"
+    ? body.deletion as Record<string, unknown>
+    : body;
+  const reportedStatus = nested.status;
+  if (reportedStatus !== "completed" && reportedStatus !== "processing" && reportedStatus !== "needs_attention") {
+    throw new Error("Deletion status could not be verified.");
+  }
+  if (nested.scope !== "account" && nested.scope !== "trip") {
+    throw new Error("Deletion scope could not be verified.");
+  }
+  const status: DeletionStatus = reportedStatus;
+  return {
+    status,
+    scope: nested.scope,
+    requestedAt: typeof nested.requestedAt === "string" ? nested.requestedAt : undefined,
+    completedAt: typeof nested.completedAt === "string" ? nested.completedAt : undefined,
+    objectsTotal: Number.isFinite(Number(nested.objectsTotal)) ? Math.max(0, Number(nested.objectsTotal)) : 0,
+    objectsDeleted: Number.isFinite(Number(nested.objectsDeleted)) ? Math.max(0, Number(nested.objectsDeleted)) : 0,
+  };
+}
 
 function localDateTimeValue(value: string | null) {
   const date = value ? new Date(value) : new Date();
@@ -213,7 +278,9 @@ export function useAccount(): AccountController {
       return false;
     }
     if (!user.legalAccepted) {
-      openAccount("Confirm your age eligibility and accept the current legal documents before saving locations.");
+      openAccount(user.ageEligible
+        ? "Accept the current legal documents before saving locations."
+        : "Account features are paused. Open your account for privacy support or deletion options.");
       return false;
     }
     const wasSaved = savedSiteIds.has(siteId);
@@ -244,7 +311,7 @@ export function useAccount(): AccountController {
   };
 }
 
-type AccountMode = "login" | "signup" | "verify" | "recover" | "reset";
+type AccountMode = "login" | "signup" | "signupDetails" | "verify" | "recover" | "reset";
 
 export function AccountModal({
   account,
@@ -262,6 +329,8 @@ export function AccountModal({
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   const [challengeId, setChallengeId] = useState("");
+  const [eligibilityProof, setEligibilityProof] = useState("");
+  const [signupAvailable, setSignupAvailable] = useState<boolean | null>(null);
   const [resendCooldown, setResendCooldown] = useState(0);
   const [profile, setProfile] = useState<ProfileData | null>(null);
   const [profileLoading, setProfileLoading] = useState(false);
@@ -269,8 +338,13 @@ export function AccountModal({
   const [editFields, setEditFields] = useState<ProfileTripEditFields | null>(null);
   const [profileActionBusy, setProfileActionBusy] = useState(false);
   const [profileActionError, setProfileActionError] = useState("");
+  const [deletionDetails, setDeletionDetails] = useState<DeletionDetails | null>(null);
+  const [browserAccountStorageCleared, setBrowserAccountStorageCleared] = useState<boolean | null>(null);
+  const [deletionStatusAction, setDeletionStatusAction] = useState<"checking" | "dismissing" | null>(null);
+  const [deletionStatusError, setDeletionStatusError] = useState("");
   const [gearDraft, setGearDraft] = useState(EMPTY_GEAR);
   const reviewRetryRequestedRef = useRef(false);
+  const deletionStatusCheckedRef = useRef(false);
 
   const loadProfile = useCallback(async () => {
     setProfileLoading(true);
@@ -296,6 +370,19 @@ export function AccountModal({
       window.clearTimeout(timer);
     };
   }, [account.modalOpen, account.user, loadProfile, standalone]);
+
+  useEffect(() => {
+    const surfaceVisible = standalone || account.modalOpen;
+    if (!surfaceVisible || account.user || mode !== "signup") return;
+    const controller = new AbortController();
+    fetch("/api/auth/signup/eligibility", { cache: "no-store", signal: controller.signal })
+      .then(async (response) => {
+        const body = await response.json().catch(() => ({})) as { available?: boolean };
+        setSignupAvailable(response.ok && body.available === true);
+      })
+      .catch(() => setSignupAvailable(false));
+    return () => controller.abort();
+  }, [account.modalOpen, account.user, mode, standalone]);
 
   useEffect(() => {
     if (!account.user?.legalAccepted || reviewRetryRequestedRef.current || !profile?.trips.some((trip) => !trip.ai_review_status || trip.ai_review_status === "retry")) return;
@@ -327,6 +414,27 @@ export function AccountModal({
     return () => window.clearInterval(timer);
   }, [resendCooldown]);
 
+  useEffect(() => {
+    const surfaceVisible = standalone || account.modalOpen;
+    if (!surfaceVisible || account.loading || deletionDetails || deletionStatusCheckedRef.current) return;
+    deletionStatusCheckedRef.current = true;
+    const controller = new AbortController();
+    fetch("/api/privacy/deletion-status", { cache: "no-store", signal: controller.signal })
+      .then(async (response) => {
+        if (!response.ok) return;
+        const body = await response.json().catch(() => ({})) as Record<string, unknown>;
+        const resumedDeletionDetails = deletionDetailsFromResponse(body);
+        if (resumedDeletionDetails.scope === "account") {
+          setBrowserAccountStorageCleared(clearCastingCompassAccountStorage());
+        }
+        setDeletionDetails(resumedDeletionDetails);
+      })
+      .catch(() => {
+        // No receipt, an expired receipt, or a transient error should leave the ordinary sign-in screen unchanged.
+      });
+    return () => controller.abort();
+  }, [account.loading, account.modalOpen, account.user, deletionDetails, standalone]);
+
   if (!account.modalOpen && !standalone) return null;
   if (standalone && account.loading) {
     return <main className="profile-page-shell"><p className="profile-page-loading">Loading your fishing profile…</p></main>;
@@ -339,7 +447,7 @@ export function AccountModal({
     setNotice("");
     const form = new FormData(event.currentTarget);
     try {
-      const endpoint = mode === "signup"
+      const endpoint = mode === "signupDetails"
         ? "/api/auth/signup/request"
         : mode === "verify"
           ? "/api/auth/signup/verify"
@@ -352,13 +460,13 @@ export function AccountModal({
         ? { challengeId, code: form.get("code") }
         : mode === "reset"
           ? { challengeId, code: form.get("code"), password: form.get("password") }
-          : mode === "signup"
+          : mode === "signupDetails"
             ? {
+                eligibilityProof,
                 email: form.get("email"),
                 password: form.get("password"),
-                birthDate: form.get("birthDate"),
-                acceptTerms: form.get("acceptTerms") === "on",
-                acceptPrivacy: form.get("acceptPrivacy") === "on",
+                termsAccepted: form.get("termsAccepted") === "on",
+                privacyAccepted: form.get("privacyAccepted") === "on",
               }
             : { email: form.get("email"), password: form.get("password") };
       const response = await fetch(endpoint, {
@@ -368,16 +476,43 @@ export function AccountModal({
       });
       const body = await response.json() as { challengeId?: string; error?: { message?: string } };
       if (!response.ok) throw new Error(body.error?.message ?? "The account request failed.");
-      if ((mode === "signup" || mode === "recover") && body.challengeId) {
+      if ((mode === "signupDetails" || mode === "recover") && body.challengeId) {
         setChallengeId(body.challengeId);
         setResendCooldown(60);
-        setMode(mode === "signup" ? "verify" : "reset");
+        setMode(mode === "signupDetails" ? "verify" : "reset");
         return;
       }
       await account.refresh();
       account.closeAccount();
     } catch (submissionError) {
       setError(submissionError instanceof Error ? submissionError.message : "The account request failed.");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const submitSignupEligibility = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setBusy(true);
+    setError("");
+    setNotice("");
+    const form = new FormData(event.currentTarget);
+    try {
+      const response = await fetch("/api/auth/signup/eligibility", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ birthDate: form.get("birthDate") }),
+      });
+      const body = await response.json().catch(() => ({})) as { eligibilityProof?: string };
+      if (!response.ok || !body.eligibilityProof) {
+        if (response.status === 403) setSignupAvailable(false);
+        throw new Error("Account signup is not available with the information provided.");
+      }
+      setEligibilityProof(body.eligibilityProof);
+      setMode("signupDetails");
+    } catch {
+      setEligibilityProof("");
+      setError("Account signup is not available with the information provided.");
     } finally {
       setBusy(false);
     }
@@ -404,7 +539,7 @@ export function AccountModal({
     }
   };
 
-  const submitEligibility = async (event: FormEvent<HTMLFormElement>) => {
+  const submitLegalAcceptance = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setBusy(true);
     setError("");
@@ -414,16 +549,15 @@ export function AccountModal({
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          birthDate: form.get("birthDate"),
-          acceptTerms: form.get("acceptTerms") === "on",
-          acceptPrivacy: form.get("acceptPrivacy") === "on",
+          termsAccepted: form.get("termsAccepted") === "on",
+          privacyAccepted: form.get("privacyAccepted") === "on",
         }),
       });
       const body = await response.json() as { error?: { message?: string } };
-      if (!response.ok) throw new Error(body.error?.message ?? "Eligibility could not be confirmed.");
+      if (!response.ok) throw new Error(body.error?.message ?? "Legal acceptance could not be saved.");
       await account.refresh();
-    } catch (eligibilityError) {
-      setError(eligibilityError instanceof Error ? eligibilityError.message : "Eligibility could not be confirmed.");
+    } catch (acceptanceError) {
+      setError(acceptanceError instanceof Error ? acceptanceError.message : "Legal acceptance could not be saved.");
     } finally {
       setBusy(false);
     }
@@ -441,14 +575,57 @@ export function AccountModal({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ password: form.get("password"), confirmation: form.get("confirmation") }),
       });
-      const body = await response.json() as { error?: { message?: string } };
+      const body = await response.json() as Record<string, unknown> & { error?: { message?: string } };
       if (!response.ok) throw new Error(body.error?.message ?? "The account could not be deleted.");
+      const nextDeletionDetails = deletionDetailsFromResponse(body);
+      const responseMatchesStatus = response.status === 200
+        ? nextDeletionDetails.status === "completed"
+        : response.status === 202 && nextDeletionDetails.status !== "completed";
+      if (body.deleted !== true || nextDeletionDetails.scope !== "account" || !responseMatchesStatus) {
+        throw new Error("The deletion response could not be verified. Sign-in access may already be removed; contact support before retrying.");
+      }
+      setBrowserAccountStorageCleared(clearCastingCompassAccountStorage());
+      setDeletionDetails(nextDeletionDetails);
       await account.refresh();
-      window.location.assign("/");
     } catch (deleteError) {
       setProfileActionError(deleteError instanceof Error ? deleteError.message : "The account could not be deleted.");
     } finally {
       setProfileActionBusy(false);
+    }
+  };
+
+  const checkDeletionStatus = async () => {
+    setDeletionStatusAction("checking");
+    setDeletionStatusError("");
+    try {
+      const response = await fetch("/api/privacy/deletion-status", { cache: "no-store" });
+      const body = await response.json().catch(() => ({})) as Record<string, unknown> & { error?: { message?: string } };
+      if (!response.ok) throw new Error(body.error?.message ?? "Deletion status is temporarily unavailable.");
+      const nextDeletionDetails = deletionDetailsFromResponse(body);
+      if (deletionDetails && nextDeletionDetails.scope !== deletionDetails.scope) {
+        throw new Error("This receipt does not match the deletion currently shown.");
+      }
+      setDeletionDetails(nextDeletionDetails);
+    } catch (statusError) {
+      setDeletionStatusError(statusError instanceof Error ? statusError.message : "Deletion status is temporarily unavailable.");
+    } finally {
+      setDeletionStatusAction(null);
+    }
+  };
+
+  const dismissDeletionStatus = async () => {
+    setDeletionStatusAction("dismissing");
+    setDeletionStatusError("");
+    try {
+      const response = await fetch("/api/privacy/deletion-status", { method: "DELETE" });
+      if (!response.ok) throw new Error("The deletion-status receipt could not be dismissed.");
+      deletionStatusCheckedRef.current = true;
+      setDeletionDetails(null);
+      setBrowserAccountStorageCleared(null);
+    } catch (statusError) {
+      setDeletionStatusError(statusError instanceof Error ? statusError.message : "The deletion-status receipt could not be dismissed.");
+    } finally {
+      setDeletionStatusAction(null);
     }
   };
 
@@ -509,10 +686,18 @@ export function AccountModal({
     setProfileActionError("");
     try {
       const response = await fetch(`/api/profile/trips/${encodeURIComponent(trip.id)}`, { method: "DELETE" });
-      const body = await response.json() as { error?: { message?: string } };
+      const body = await response.json() as Record<string, unknown> & { error?: { message?: string } };
       if (!response.ok) throw new Error(body.error?.message ?? "The trip log could not be removed.");
+      const nextDeletionDetails = deletionDetailsFromResponse(body);
+      const responseMatchesStatus = response.status === 200
+        ? nextDeletionDetails.status === "completed"
+        : response.status === 202 && nextDeletionDetails.status !== "completed";
+      if (body.deleted !== true || nextDeletionDetails.scope !== "trip" || !responseMatchesStatus) {
+        throw new Error("The trip-deletion response could not be verified. The trip may already be removed; contact support before retrying.");
+      }
       window.localStorage.removeItem(`${PROFILE_TRIP_DRAFT_PREFIX}${trip.id}`);
       await loadProfile();
+      setDeletionDetails(nextDeletionDetails);
     } catch (deleteError) {
       setProfileActionError(deleteError instanceof Error ? deleteError.message : "The trip log could not be removed.");
     } finally {
@@ -565,18 +750,82 @@ export function AccountModal({
         ) : (
           <button className="sheet-close" type="button" onClick={account.closeAccount} aria-label="Close account"><CloseIcon /></button>
         )}
-        {account.user && !account.user.legalAccepted ? (
+        {deletionDetails ? (
+          <>
+            <span className="eyebrow"><span /> Privacy request</span>
+            <h2 id="account-title">{deletionDetails.scope === "account"
+              ? <>Account access<br />removed.</>
+              : <>Trip log<br />removed.</>}</h2>
+            <div aria-live="polite">
+              {deletionDetails.status === "completed" ? (
+                <p>{deletionDetails.scope === "account"
+                  ? "Your account records and any stored trip-photo objects have been removed from the active service."
+                  : "The trip log and any stored photo object have been removed from the active service."}</p>
+              ) : deletionDetails.status === "needs_attention" ? (
+                <p>{deletionDetails.scope === "account"
+                  ? "Your account records have been removed from the active service. Stored trip-photo cleanup is delayed and has been flagged for operator attention."
+                  : "The trip log has been removed. Stored-photo cleanup is delayed and has been flagged for operator attention."}</p>
+              ) : (
+                <p>{deletionDetails.scope === "account"
+                  ? "Your account records have been removed from the active service. Stored trip-photo cleanup is continuing in the background."
+                  : "The trip log has been removed. Stored-photo cleanup is continuing in the background."}</p>
+              )}
+              {deletionDetails.objectsTotal > 0 ? (
+                <p>{Math.min(deletionDetails.objectsDeleted, deletionDetails.objectsTotal)} of {deletionDetails.objectsTotal} stored photo objects removed.</p>
+              ) : null}
+            </div>
+            {deletionDetails.status !== "completed" ? (
+              <button className="account-secondary" type="button" disabled={deletionStatusAction !== null} onClick={() => void checkDeletionStatus()}>
+                {deletionStatusAction === "checking" ? "Checking…" : "Check deletion status"}
+              </button>
+            ) : null}
+            {deletionStatusError ? <p className="account-error" role="alert">{deletionStatusError}</p> : null}
+            {deletionDetails.scope === "account" ? <p><small>{browserAccountStorageCleared === false
+              ? "This browser blocked access to local storage, so CastingCompass could not verify removal of its stored trip drafts and anonymous reporting identifier. Clear site data in your browser settings."
+              : "CastingCompass cleared its browser-stored trip drafts and anonymous reporting identifier. A short-lived, secure status receipt lets this page check any remaining cleanup without restoring account access."}</small></p> : null}
+            <button className="account-primary" type="button" disabled={deletionStatusAction !== null} onClick={() => deletionDetails.scope === "account" ? window.location.assign("/") : void dismissDeletionStatus()}>{deletionDetails.scope === "account" ? "Return to forecast" : deletionStatusAction === "dismissing" ? "Returning…" : "Return to profile"}</button>
+            {deletionDetails.scope === "account" ? <button className="account-text-button" type="button" disabled={deletionStatusAction !== null} onClick={() => void dismissDeletionStatus()}>{deletionStatusAction === "dismissing" ? "Dismissing…" : "Dismiss status and continue"}</button> : null}
+            <small>Dismissing clears this browser’s status receipt. It does not cancel any remaining cleanup or remove the server-side deletion record.</small>
+          </>
+        ) : account.user && !account.user.ageEligible ? (
           <>
             <span className="eyebrow"><span /> Account update</span>
-            <h2 id="account-title">Confirm your<br />eligibility.</h2>
-            <p>CastingCompass accounts are for people age 13 or older. Your birth date is checked once and is not stored.</p>
-            <form onSubmit={submitEligibility}>
-              <label>Birth date<input name="birthDate" type="date" autoComplete="bday" required /></label>
-              <label className="account-consent"><input name="acceptTerms" type="checkbox" required /><span>I agree to the <Link href="/terms" target="_blank">Terms of Service</Link>.</span></label>
-              <label className="account-consent"><input name="acceptPrivacy" type="checkbox" required /><span>I acknowledge the <Link href="/privacy" target="_blank">Privacy Policy</Link>, including the use of service providers and automated review.</span></label>
+            <h2 id="account-title">Account features<br />paused.</h2>
+            <p>This older account has no retained age-eligibility confirmation. CastingCompass will not ask for a birth date alongside an existing account or silently mark it eligible.</p>
+            <p>Email <a href="mailto:bzeng0000@gmail.com">bzeng0000@gmail.com</a> for privacy support. You can also permanently delete the account below with its password.</p>
+            <a className="account-secondary" href="/api/profile/export" download>Download my account records (JSON)</a>
+            <details className="account-delete-details">
+              <summary>Delete account</summary>
+              <form onSubmit={deleteAccount}>
+                <label>Password<input name="password" type="password" autoComplete="current-password" minLength={10} maxLength={128} required /></label>
+                <label>Type DELETE<input name="confirmation" type="text" autoComplete="off" pattern="DELETE" required /></label>
+                <button type="submit" className="account-danger" disabled={profileActionBusy}>{profileActionBusy ? "Deleting…" : "Permanently delete account"}</button>
+              </form>
+            </details>
+            {profileActionError ? <p className="account-error" role="alert">{profileActionError}</p> : null}
+            <button className="account-text-button" type="button" onClick={() => void account.signOut()}>Sign out</button>
+          </>
+        ) : account.user && !account.user.legalAccepted ? (
+          <>
+            <span className="eyebrow"><span /> Account update</span>
+            <h2 id="account-title">Review the<br />current terms.</h2>
+            <p>Your existing age-eligibility confirmation remains in place. Review and accept the current legal documents to resume account features; no birth date is requested again.</p>
+            <form onSubmit={submitLegalAcceptance}>
+              <label className="account-consent"><input name="termsAccepted" type="checkbox" required /><span>I agree to the <Link href="/terms" target="_blank">Terms of Service</Link>.</span></label>
+              <label className="account-consent"><input name="privacyAccepted" type="checkbox" required /><span>I acknowledge the <Link href="/privacy" target="_blank">Privacy Policy</Link>, including the use of service providers and automated review.</span></label>
               {error ? <p className="account-error" role="alert">{error}</p> : null}
-              <button className="account-primary" type="submit" disabled={busy}>{busy ? "Saving…" : "Confirm and continue"}</button>
+              <button className="account-primary" type="submit" disabled={busy}>{busy ? "Saving…" : "Accept and continue"}</button>
             </form>
+            <a className="account-secondary" href="/api/profile/export" download>Download my account records (JSON)</a>
+            <details className="account-delete-details">
+              <summary>Delete account</summary>
+              <form onSubmit={deleteAccount}>
+                <label>Password<input name="password" type="password" autoComplete="current-password" minLength={10} maxLength={128} required /></label>
+                <label>Type DELETE<input name="confirmation" type="text" autoComplete="off" pattern="DELETE" required /></label>
+                <button type="submit" className="account-danger" disabled={profileActionBusy}>{profileActionBusy ? "Deleting…" : "Permanently delete account"}</button>
+              </form>
+            </details>
+            {profileActionError ? <p className="account-error" role="alert">{profileActionError}</p> : null}
             <button className="account-text-button" type="button" onClick={() => void account.signOut()}>Sign out</button>
           </>
         ) : account.user ? (
@@ -740,15 +989,17 @@ export function AccountModal({
             ) : null}
             <section className="profile-section profile-privacy-section">
               <h3>Privacy and account controls</h3>
-              <p>Download a copy of your account data, or permanently delete the account and its linked reports.</p>
+              <p>Download a machine-readable copy of your account records, or permanently remove account access and linked data from the active service.</p>
               <div className="profile-privacy-links">
-                <a className="account-secondary" href="/api/profile/export" download>Download my data</a>
+                <a className="account-secondary" href="/api/profile/export" download>Download my account records (JSON)</a>
                 <Link href="/privacy">Privacy Policy</Link>
                 <Link href="/terms">Terms of Service</Link>
                 <Link href="/ai-disclosure">AI and forecast disclosure</Link>
               </div>
+              <small>The JSON export includes account and consent records, saved locations, gear presets, full trip records, related discussion posts, and a photo manifest. Authenticated photo links appear only for files that are available; photo files are separate downloads and are not inside the JSON file.</small>
               <details className="account-delete-details">
                 <summary>Delete account</summary>
+                <p>Account access and database records are removed first. If stored photo objects need background cleanup, you will receive a secure receipt and can check progress here.</p>
                 <form onSubmit={deleteAccount}>
                   <label>Password<input name="password" type="password" autoComplete="current-password" minLength={10} maxLength={128} required /></label>
                   <label>Type DELETE<input name="confirmation" type="text" autoComplete="off" pattern="DELETE" required /></label>
@@ -763,38 +1014,57 @@ export function AccountModal({
             <span className="eyebrow"><span /> CastingCompass beta</span>
             <h2 id="account-title">{
               mode === "login" ? "Welcome back."
-                : mode === "signup" ? "Create an account."
+                : mode === "signup" || mode === "signupDetails" ? "Create an account."
                   : mode === "verify" ? "Check your email."
                     : mode === "recover" ? "Reset your password."
                       : "Enter your reset code."
             }</h2>
-            <p>{account.modalMessage || "Save locations and contribute trip reports to improve the forecast."}</p>
+            <p>{mode === "signup"
+              ? "Before we collect account details, enter your birth date. It is used only to decide whether signup is available and is not stored."
+              : mode === "signupDetails"
+                ? "Eligibility confirmed. Now enter your account details and review the legal documents."
+                : account.modalMessage || "Save locations and contribute trip reports to improve the forecast."}</p>
             {mode === "login" || mode === "signup" ? (
               <div className="account-tabs" role="tablist" aria-label="Account action">
-                <button type="button" className={mode === "login" ? "active" : ""} onClick={() => { setMode("login"); setError(""); }}>Sign in</button>
-                <button type="button" className={mode === "signup" ? "active" : ""} onClick={() => { setMode("signup"); setError(""); }}>Create account</button>
+                <button type="button" className={mode === "login" ? "active" : ""} onClick={() => { setMode("login"); setEligibilityProof(""); setError(""); }}>Sign in</button>
+                <button type="button" className={mode === "signup" ? "active" : ""} onClick={() => { setMode("signup"); setSignupAvailable(null); setEligibilityProof(""); setError(""); }}>Create account</button>
               </div>
             ) : null}
-            <form onSubmit={submit}>
-              {mode !== "verify" && mode !== "reset" ? <label>Email<input name="email" type="email" autoComplete="email" required maxLength={254} /></label> : null}
-              {mode === "login" || mode === "signup" || mode === "reset" ? <label>{mode === "reset" ? "New password" : "Password"}<input name="password" type="password" autoComplete={mode === "login" ? "current-password" : "new-password"} required minLength={10} maxLength={128} /></label> : null}
-              {mode === "signup" ? <label>Birth date<input name="birthDate" type="date" autoComplete="bday" required /></label> : null}
-              {mode === "signup" ? <label className="account-consent"><input name="acceptTerms" type="checkbox" required /><span>I am 13 or older and agree to the <Link href="/terms" target="_blank">Terms of Service</Link>.</span></label> : null}
-              {mode === "signup" ? <label className="account-consent"><input name="acceptPrivacy" type="checkbox" required /><span>I acknowledge the <Link href="/privacy" target="_blank">Privacy Policy</Link> and <Link href="/ai-disclosure" target="_blank">AI disclosure</Link>.</span></label> : null}
-              {mode === "verify" || mode === "reset" ? <label>Six-digit email code<input name="code" type="text" inputMode="numeric" autoComplete="one-time-code" required minLength={6} maxLength={6} pattern="[0-9]{6}" /></label> : null}
-              {mode === "signup" ? <small>Use at least 10 characters. We’ll email a six-digit code before creating the account.</small> : null}
-              {mode === "verify" || mode === "reset" ? <small>The code expires after 15 minutes and can be tried six times.</small> : null}
-              {error ? <p className="account-error" role="alert">{error}</p> : null}
-              {notice ? <p className="account-notice" role="status">{notice}</p> : null}
-              <button className="account-primary" type="submit" disabled={busy}>{busy ? "Please wait…" : mode === "login" ? "Sign in" : mode === "signup" ? "Email verification code" : mode === "verify" ? "Verify and create account" : mode === "recover" ? "Email reset code" : "Set new password"}</button>
-            </form>
+            {mode === "signup" && signupAvailable === true ? (
+              <form aria-label="Age eligibility" onSubmit={submitSignupEligibility}>
+                <label>Birth date<input name="birthDate" type="date" autoComplete="bday" required /></label>
+                <small>The entered date is not retained. The service keeps only a short-lived eligibility result without your birth date, email, or account details.</small>
+                {error ? <p className="account-error" role="alert">{error}</p> : null}
+                <button className="account-primary" type="submit" disabled={busy}>{busy ? "Checking…" : "Continue"}</button>
+              </form>
+            ) : mode === "signup" ? (
+              <p className={signupAvailable === false ? "account-error" : "account-notice"} role="status">
+                {signupAvailable === false
+                  ? "Account signup is not available from this browser right now."
+                  : "Checking whether account signup is available…"}
+              </p>
+            ) : (
+              <form onSubmit={submit}>
+                {mode !== "verify" && mode !== "reset" ? <label>Email<input name="email" type="email" autoComplete="email" required maxLength={254} /></label> : null}
+                {mode === "login" || mode === "signupDetails" || mode === "reset" ? <label>{mode === "reset" ? "New password" : "Password"}<input name="password" type="password" autoComplete={mode === "login" ? "current-password" : "new-password"} required minLength={10} maxLength={128} /></label> : null}
+                {mode === "signupDetails" ? <label className="account-consent"><input name="termsAccepted" type="checkbox" required /><span>I agree to the <Link href="/terms" target="_blank">Terms of Service</Link>.</span></label> : null}
+                {mode === "signupDetails" ? <label className="account-consent"><input name="privacyAccepted" type="checkbox" required /><span>I acknowledge the <Link href="/privacy" target="_blank">Privacy Policy</Link> and <Link href="/ai-disclosure" target="_blank">AI disclosure</Link>.</span></label> : null}
+                {mode === "verify" || mode === "reset" ? <label>Six-digit email code<input name="code" type="text" inputMode="numeric" autoComplete="one-time-code" required minLength={6} maxLength={6} pattern="[0-9]{6}" /></label> : null}
+                {mode === "signupDetails" ? <small>Use at least 10 characters. We’ll email a six-digit code before creating the account.</small> : null}
+                {mode === "verify" || mode === "reset" ? <small>The code expires after 15 minutes and can be tried six times.</small> : null}
+                {error ? <p className="account-error" role="alert">{error}</p> : null}
+                {notice ? <p className="account-notice" role="status">{notice}</p> : null}
+                <button className="account-primary" type="submit" disabled={busy}>{busy ? "Please wait…" : mode === "login" ? "Sign in" : mode === "signupDetails" ? "Email verification code" : mode === "verify" ? "Verify and create account" : mode === "recover" ? "Email reset code" : "Set new password"}</button>
+              </form>
+            )}
             {mode === "verify" || mode === "reset" ? (
               <button className="account-text-button" type="button" disabled={busy || resendCooldown > 0} onClick={() => void resendCode()}>
                 {resendCooldown > 0 ? `Send another code in ${resendCooldown}s` : "Send another code"}
               </button>
             ) : null}
             {mode === "login" ? <button className="account-text-button" type="button" onClick={() => { setMode("recover"); setError(""); }}>Forgot password?</button> : null}
-            {mode === "recover" || mode === "verify" || mode === "reset" ? <button className="account-text-button" type="button" onClick={() => { setMode("login"); setError(""); setChallengeId(""); }}>Back to sign in</button> : null}
+            {mode === "signupDetails" ? <button className="account-text-button" type="button" onClick={() => { setMode("signup"); setSignupAvailable(null); setEligibilityProof(""); setError(""); }}>Start age check again</button> : null}
+            {mode === "recover" || mode === "verify" || mode === "reset" ? <button className="account-text-button" type="button" onClick={() => { setMode("login"); setEligibilityProof(""); setError(""); setChallengeId(""); }}>Back to sign in</button> : null}
             <p className="account-legal-links"><Link href="/terms">Terms</Link><Link href="/privacy">Privacy</Link><Link href="/ai-disclosure">AI disclosure</Link></p>
           </>
         )}

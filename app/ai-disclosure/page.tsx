@@ -23,7 +23,7 @@ export default function AiDisclosurePage() {
       </LegalSection>
 
       <LegalSection title="Trip-note and gear review">
-        <p>When a signed-in angler completes or edits a trip report, Xiaomi MiMo may review a limited trip payload. It normalizes recognizable rod, reel, lure, and rig names; flags inconsistent or unsafe content; and may prepare a pseudonymous discussion draft. The model cannot publish or approve the draft. A human moderator must approve it before it can appear publicly.</p>
+        <p>When a signed-in angler completes or edits a trip report, Xiaomi MiMo may review a limited trip payload. It normalizes recognizable rod, reel, lure, and rig names; flags inconsistent or unsafe content; and may prepare a pseudonymous discussion draft. A queued review is authorized only after a final deletion-record check. Deletion committed before that point cancels the request; a provider request already authorized or sent before deletion cannot be recalled, although its response cannot restore the deleted trip or publish a post. The model cannot publish or approve the draft. A human moderator must approve it before it can appear publicly.</p>
         <p>Automated review can misunderstand a note or gear product. It does not determine legal guilt, eligibility for a benefit, employment, credit, health care, housing, or another high-impact decision. Users can request correction or removal by contacting <a href="mailto:bzeng0000@gmail.com">bzeng0000@gmail.com</a>.</p>
       </LegalSection>
 

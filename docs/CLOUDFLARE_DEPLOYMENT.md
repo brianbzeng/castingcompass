@@ -15,7 +15,8 @@ the canonical standalone domain.
 - Canonical www redirect: `www.castingcompass.com`
 - Legacy redirects: `castcompass.brianbzeng.com`, `contourcast.brianbzeng.com`
 
-The Cloudflare build deliberately sets `NEXT_PUBLIC_PHOTO_UPLOADS=false` and clears
+The Cloudflare build deliberately sets `NEXT_PUBLIC_PHOTO_UPLOADS=false`, the Worker
+configuration sets `TRIP_PHOTO_UPLOADS_ENABLED=false`, and the build clears
 `NEXT_PUBLIC_API_URL` instead of trusting inherited shell or dashboard values.
 Structured trip reports, catches, and skunks are stored in D1, but the optional
 photo field stays hidden until R2 and Cloudflare Images are enabled on the
@@ -91,12 +92,23 @@ D1 database ID.
 
 ## Enabling verification photos later
 
-1. Enable R2 and Cloudflare Images in the Cloudflare dashboard.
-2. Create a private bucket such as `contourcast-trip-photos`.
-3. Add it to `wrangler.jsonc` with binding `TRIP_PHOTOS`.
-4. Add the Cloudflare Images binding expected by `worker/index.ts`.
-5. Change `build:cloudflare` to set `NEXT_PUBLIC_PHOTO_UPLOADS=true`.
-6. Rebuild and deploy.
+Photo uploads are blocked by the Worker even if a client submits a multipart `photo` and both
+storage bindings exist. Keep that fail-closed gate in place until all of these release blockers
+are complete:
+
+1. Implement and test a database deletion fence or equivalent stable-inventory protocol so a
+   photo write cannot commit after account deletion inventories object locators. The current
+   pre-inventory flow is safe only because uploads are disabled.
+2. Bound each cleanup invocation below the deployed Cloudflare plan's D1-query and subrequest
+   budgets, or capture reviewed evidence that the selected plan safely covers the worst case.
+3. Enable R2 and Cloudflare Images in the Cloudflare dashboard and create a private bucket such
+   as `contourcast-trip-photos`.
+4. Add the private bucket to `wrangler.jsonc` with binding `TRIP_PHOTOS`, add the Cloudflare
+   Images binding expected by `worker/index.ts`, and verify the exact bucket identity.
+5. Pass the object-inventory, retry-alerting, export, deletion, orphan-upload cleanup, and R2
+   restore/deletion drills in [Privacy durability](PRIVACY-DURABILITY.md).
+6. In one reviewed release, set `TRIP_PHOTO_UPLOADS_ENABLED=true` and change
+   `build:cloudflare` to set `NEXT_PUBLIC_PHOTO_UPLOADS=true`; rebuild, test, and deploy.
 
 Raw notes and photos have no public read endpoint. Trip summaries expose totals
 only, and new reports remain pending review.

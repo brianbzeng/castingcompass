@@ -68,7 +68,16 @@ async function withCapturedConsole(method, callback) {
   }
 }
 
-function signupRequest(email) {
+async function signupRequest(d1, email) {
+  const eligibility = await handleAccountRequest(new Request("https://castingcompass.com/api/auth/signup/eligibility", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Origin: "https://castingcompass.com",
+    },
+    body: JSON.stringify({ birthDate: "1990-01-01" }),
+  }), { DB: d1 }, []);
+  const { eligibilityProof } = await eligibility.json();
   return new Request("https://castingcompass.com/api/auth/signup/request", {
     method: "POST",
     headers: {
@@ -78,9 +87,9 @@ function signupRequest(email) {
     body: JSON.stringify({
       email,
       password: "correct-horse-battery-staple",
-      birthDate: "1990-01-01",
-      acceptTerms: true,
-      acceptPrivacy: true,
+      eligibilityProof,
+      termsAccepted: true,
+      privacyAccepted: true,
     }),
   });
 }
@@ -130,6 +139,7 @@ function authDatabase() {
 test("email-provider failures log status metadata but not recipient or provider body", async () => {
   const { d1 } = authDatabase();
   const recipient = "private.angler@example.com";
+  const signup = await signupRequest(d1, recipient);
   const providerBody = `delivery rejected for ${recipient}; api_key=super-secret-value`;
   const originalFetch = globalThis.fetch;
   globalThis.fetch = async () => new Response(providerBody, {
@@ -140,7 +150,7 @@ test("email-provider failures log status metadata but not recipient or provider 
   try {
     const { value: response, entries } = await withCapturedConsole("error", () =>
       handleAccountRequest(
-        signupRequest(recipient),
+        signup,
         { DB: d1, RESEND_API_KEY: "test-key" },
         [],
       ));
@@ -158,13 +168,14 @@ test("email-provider failures log status metadata but not recipient or provider 
 test("accepted email logs omit the recipient", async () => {
   const { d1 } = authDatabase();
   const recipient = "private.angler@example.com";
+  const signup = await signupRequest(d1, recipient);
   const originalFetch = globalThis.fetch;
   globalThis.fetch = async () => Response.json({ id: "email_safe-123" });
 
   try {
     const { value: response, entries } = await withCapturedConsole("log", () =>
       handleAccountRequest(
-        signupRequest(recipient),
+        signup,
         { DB: d1, RESEND_API_KEY: "test-key" },
         [],
       ));
@@ -180,13 +191,14 @@ test("accepted email logs omit the recipient", async () => {
 test("accepted email logs reject untrusted provider receipt text", async () => {
   const { d1 } = authDatabase();
   const recipient = "private.angler@example.com";
+  const signup = await signupRequest(d1, recipient);
   const originalFetch = globalThis.fetch;
   globalThis.fetch = async () => Response.json({ id: `accepted for ${recipient}; bearer-secret` });
 
   try {
     const { value: response, entries } = await withCapturedConsole("log", () =>
       handleAccountRequest(
-        signupRequest(recipient),
+        signup,
         { DB: d1, RESEND_API_KEY: "test-key" },
         [],
       ));
@@ -202,11 +214,20 @@ test("AI-provider failures do not log upstream response bodies", async () => {
   const sqlite = new DatabaseSync(":memory:");
   sqlite.exec(`CREATE TABLE trips (
     id TEXT PRIMARY KEY NOT NULL,
+    status TEXT NOT NULL,
+    site_id TEXT,
     ai_review_status TEXT,
     ai_review_model TEXT,
     ai_review_json TEXT,
     ai_reviewed_at TEXT
-  ); INSERT INTO trips (id) VALUES ('trip_safe');`);
+  );
+  CREATE TABLE privacy_deletion_jobs (
+    id TEXT PRIMARY KEY NOT NULL,
+    scope TEXT NOT NULL,
+    subject_hash TEXT NOT NULL,
+    owner_subject_hash TEXT NOT NULL
+  );
+  INSERT INTO trips (id, status, site_id) VALUES ('trip_safe', 'completed', 'ocean-beach');`);
   const d1 = new D1Adapter(sqlite);
   const originalFetch = globalThis.fetch;
   const providerBody = "model error includes private.angler@example.com and bearer-secret";

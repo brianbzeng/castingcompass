@@ -1,15 +1,29 @@
 import type { CuratedSite, D1DatabaseLike, TripRow } from "./trips";
 
 const SESSION_COOKIE = "cc_session";
+const DELETION_RECEIPT_COOKIE = "cc_deletion_receipt";
+const AGE_INELIGIBLE_COOKIE = "cc_age_ineligible";
 const SESSION_SECONDS = 30 * 24 * 60 * 60;
-export const LEGAL_VERSION = "2026-07-16";
+const DELETION_RECEIPT_SECONDS = 30 * 24 * 60 * 60;
+const AGE_PROOF_SECONDS = 10 * 60;
+const MAX_DELETION_ATTEMPTS = 8;
+export const LEGAL_VERSION = "2026-07-16.2";
+const AGE_GATE_VERSION = `age-13:${LEGAL_VERSION}`;
 const MINIMUM_ACCOUNT_AGE = 13;
 // Cloudflare Workers currently caps Web Crypto PBKDF2 at 100,000 rounds.
 const PASSWORD_ITERATIONS = 100_000;
 
 export interface AuthApiEnv {
   DB?: D1DatabaseLike;
-  TRIP_PHOTOS?: { delete(key: string): Promise<void> };
+  TRIP_PHOTOS?: {
+    delete(key: string): Promise<void>;
+    get?(key: string): Promise<{
+      body?: ReadableStream<Uint8Array>;
+      arrayBuffer?(): Promise<ArrayBuffer>;
+      size?: number;
+      httpMetadata?: { contentType?: string };
+    } | null>;
+  };
   RESEND_API_KEY?: string;
   AUTH_EMAIL_FROM?: string;
 }
@@ -17,6 +31,7 @@ export interface AuthApiEnv {
 export interface AuthUser {
   id: string;
   email: string;
+  ageEligible: boolean;
   legalAccepted: boolean;
 }
 
@@ -123,22 +138,78 @@ const CREATE_GEAR_PROFILES_SQL = `CREATE TABLE IF NOT EXISTS gear_profiles (
   FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 )`;
 
+const CREATE_SIGNUP_AGE_PROOFS_SQL = `CREATE TABLE IF NOT EXISTS signup_age_proofs (
+  token_hash TEXT PRIMARY KEY NOT NULL,
+  confirmed_at TEXT NOT NULL,
+  gate_version TEXT NOT NULL,
+  expires_at TEXT NOT NULL,
+  consumed_at TEXT,
+  created_at TEXT NOT NULL
+)`;
+
+const CREATE_PRIVACY_DELETION_JOBS_SQL = `CREATE TABLE IF NOT EXISTS privacy_deletion_jobs (
+  id TEXT PRIMARY KEY NOT NULL,
+  receipt_hash TEXT NOT NULL UNIQUE,
+  scope TEXT NOT NULL CHECK (scope IN ('account', 'trip')),
+  subject_hash TEXT NOT NULL,
+  owner_subject_hash TEXT NOT NULL,
+  state TEXT NOT NULL CHECK (state IN ('active_data_removed', 'purging', 'completed', 'needs_attention')),
+  objects_total INTEGER NOT NULL DEFAULT 0,
+  objects_deleted INTEGER NOT NULL DEFAULT 0,
+  last_error_code TEXT,
+  requested_at TEXT NOT NULL,
+  active_data_removed_at TEXT,
+  completed_at TEXT,
+  updated_at TEXT NOT NULL
+)`;
+
+const CREATE_PRIVACY_DELETION_TASKS_SQL = `CREATE TABLE IF NOT EXISTS privacy_deletion_tasks (
+  id TEXT PRIMARY KEY NOT NULL,
+  job_id TEXT NOT NULL,
+  object_key TEXT,
+  object_key_hash TEXT NOT NULL,
+  state TEXT NOT NULL CHECK (state IN ('pending', 'leased', 'completed', 'needs_attention')),
+  attempts INTEGER NOT NULL DEFAULT 0,
+  available_at TEXT NOT NULL,
+  lease_expires_at TEXT,
+  lease_token TEXT,
+  last_error_code TEXT,
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL,
+  completed_at TEXT,
+  FOREIGN KEY (job_id) REFERENCES privacy_deletion_jobs(id) ON DELETE CASCADE,
+  UNIQUE (job_id, object_key_hash),
+  CHECK ((state = 'completed' AND object_key IS NULL)
+    OR (state != 'completed' AND object_key IS NOT NULL))
+)`;
+
 async function initialize(db: D1DatabaseLike) {
   let pending = initializedDatabases.get(db as object);
   if (!pending) {
-    pending = db.batch([
-      db.prepare(CREATE_USERS_SQL),
-      db.prepare(CREATE_SESSIONS_SQL),
-      db.prepare(CREATE_SAVED_SITES_SQL),
-      db.prepare(CREATE_AUTH_ATTEMPTS_SQL),
-      db.prepare(CREATE_EMAIL_CHALLENGES_SQL),
-      db.prepare(CREATE_GEAR_PROFILES_SQL),
-      db.prepare("CREATE INDEX IF NOT EXISTS auth_sessions_user_idx ON auth_sessions (user_id, expires_at)"),
-      db.prepare("CREATE INDEX IF NOT EXISTS auth_attempts_email_time_idx ON auth_attempts (email_hash, attempted_at)"),
-      db.prepare("CREATE INDEX IF NOT EXISTS email_challenges_email_time_idx ON email_challenges (email, created_at)"),
-      db.prepare("CREATE UNIQUE INDEX IF NOT EXISTS gear_profiles_user_name_unique ON gear_profiles (user_id, name)"),
-      db.prepare("CREATE INDEX IF NOT EXISTS gear_profiles_user_updated_idx ON gear_profiles (user_id, updated_at)"),
-    ]).then(() => undefined).catch((error) => {
+    pending = (async () => {
+      await db.batch([
+        db.prepare(CREATE_USERS_SQL),
+        db.prepare(CREATE_SESSIONS_SQL),
+        db.prepare(CREATE_SAVED_SITES_SQL),
+        db.prepare(CREATE_AUTH_ATTEMPTS_SQL),
+        db.prepare(CREATE_EMAIL_CHALLENGES_SQL),
+        db.prepare(CREATE_GEAR_PROFILES_SQL),
+        db.prepare(CREATE_SIGNUP_AGE_PROOFS_SQL),
+        db.prepare(CREATE_PRIVACY_DELETION_JOBS_SQL),
+        db.prepare(CREATE_PRIVACY_DELETION_TASKS_SQL),
+      ]);
+      await db.batch([
+        db.prepare("CREATE INDEX IF NOT EXISTS auth_sessions_user_idx ON auth_sessions (user_id, expires_at)"),
+        db.prepare("CREATE INDEX IF NOT EXISTS auth_attempts_email_time_idx ON auth_attempts (email_hash, attempted_at)"),
+        db.prepare("CREATE INDEX IF NOT EXISTS email_challenges_email_time_idx ON email_challenges (email, created_at)"),
+        db.prepare("CREATE UNIQUE INDEX IF NOT EXISTS gear_profiles_user_name_unique ON gear_profiles (user_id, name)"),
+        db.prepare("CREATE INDEX IF NOT EXISTS gear_profiles_user_updated_idx ON gear_profiles (user_id, updated_at)"),
+        db.prepare("CREATE INDEX IF NOT EXISTS signup_age_proofs_expiry_idx ON signup_age_proofs (expires_at, consumed_at)"),
+        db.prepare("CREATE INDEX IF NOT EXISTS privacy_deletion_jobs_state_updated_idx ON privacy_deletion_jobs (state, updated_at)"),
+        db.prepare("CREATE INDEX IF NOT EXISTS privacy_deletion_jobs_owner_state_idx ON privacy_deletion_jobs (owner_subject_hash, state, updated_at)"),
+        db.prepare("CREATE INDEX IF NOT EXISTS privacy_deletion_tasks_retry_idx ON privacy_deletion_tasks (state, available_at, lease_expires_at)"),
+      ]);
+    })().catch((error) => {
       initializedDatabases.delete(db as object);
       throw error;
     });
@@ -156,6 +227,7 @@ export async function getAuthenticatedUser(request: Request, env: AuthApiEnv): P
   const now = new Date().toISOString();
   const row = await env.DB
     .prepare(`SELECT users.id, users.email,
+        CASE WHEN users.age_eligibility_confirmed_at IS NOT NULL THEN 1 ELSE 0 END AS age_eligible,
         CASE WHEN users.age_eligibility_confirmed_at IS NOT NULL
           AND users.terms_version = ? AND users.privacy_version = ?
           THEN 1 ELSE 0 END AS legal_accepted
@@ -164,8 +236,13 @@ export async function getAuthenticatedUser(request: Request, env: AuthApiEnv): P
       WHERE auth_sessions.token_hash = ? AND auth_sessions.expires_at > ?
       LIMIT 1`)
     .bind(LEGAL_VERSION, LEGAL_VERSION, tokenHash, now)
-    .first<{ id: string; email: string; legal_accepted: number }>();
-  return row ? { id: row.id, email: row.email, legalAccepted: Boolean(row.legal_accepted) } : null;
+    .first<{ id: string; email: string; age_eligible: number; legal_accepted: number }>();
+  return row ? {
+    id: row.id,
+    email: row.email,
+    ageEligible: Boolean(row.age_eligible),
+    legalAccepted: Boolean(row.legal_accepted),
+  } : null;
 }
 
 export async function handleAccountRequest(
@@ -180,6 +257,7 @@ export async function handleAccountRequest(
     !url.pathname.startsWith("/api/saved-sites") &&
     !url.pathname.startsWith("/api/gear-profiles") &&
     !url.pathname.startsWith("/api/profile") &&
+    !url.pathname.startsWith("/api/privacy") &&
     !url.pathname.startsWith("/api/profile/reviews/") &&
     !url.pathname.startsWith("/api/profile/trips/")
   ) return null;
@@ -199,14 +277,70 @@ export async function handleAccountRequest(
       return errorResponse(410, "verification_required", "Create accounts through email verification.");
     }
 
+    if (url.pathname === "/api/auth/signup/eligibility") {
+      if (request.method === "GET") {
+        return jsonResponse({
+          available: !parseCookies(request.headers.get("Cookie") ?? "").has(AGE_INELIGIBLE_COOKIE),
+        });
+      }
+      if (request.method !== "POST") return methodNotAllowed("GET, POST");
+      assertSameOrigin(request);
+      if (parseCookies(request.headers.get("Cookie") ?? "").has(AGE_INELIGIBLE_COOKIE)) {
+        return errorResponse(403, "age_restricted", "CastingCompass accounts are not available from this browser right now.");
+      }
+      const body = await readJson(request);
+      assertOnlyFields(body, ["birthDate"]);
+      let confirmedAt: string;
+      try {
+        confirmedAt = evaluateAgeEligibility(body.birthDate);
+      } catch (error) {
+        if (error instanceof AuthError && error.code === "age_restricted") {
+          return errorResponse(error.status, error.code, error.message, ageIneligibleCookie());
+        }
+        throw error;
+      }
+      const proof = randomSecret(32);
+      const createdAt = new Date();
+      const expiresAt = new Date(createdAt.getTime() + AGE_PROOF_SECONDS * 1000);
+      await db.prepare(`INSERT INTO signup_age_proofs
+        (token_hash, confirmed_at, gate_version, expires_at, consumed_at, created_at)
+        VALUES (?, ?, ?, ?, NULL, ?)`)
+        .bind(await sha256(proof), confirmedAt, AGE_GATE_VERSION, expiresAt.toISOString(), createdAt.toISOString())
+        .run();
+      return jsonResponse({
+        eligibilityProof: proof,
+        expiresInMinutes: AGE_PROOF_SECONDS / 60,
+        expiresInSeconds: AGE_PROOF_SECONDS,
+      }, 200, clearAgeIneligibleCookie());
+    }
+
+    if (url.pathname === "/api/privacy/deletion-status") {
+      if (request.method === "DELETE") {
+        assertSameOrigin(request);
+        return jsonResponse({ cleared: true }, 200, clearDeletionReceiptCookie());
+      }
+      if (request.method !== "GET") return methodNotAllowed("GET, DELETE");
+      const receipt = parseCookies(request.headers.get("Cookie") ?? "").get(DELETION_RECEIPT_COOKIE);
+      if (!receipt || !/^[A-Za-z0-9_-]{40,160}$/.test(receipt)) {
+        return errorResponse(404, "deletion_receipt_not_found", "No deletion status receipt was found in this browser.");
+      }
+      const job = await selectDeletionJobByReceipt(db, receipt);
+      if (!job) return errorResponse(404, "deletion_receipt_not_found", "That deletion status receipt is no longer available.");
+      return jsonResponse({ deletion: publicDeletionStatus(job) });
+    }
+
     if (url.pathname === "/api/auth/signup/request") {
       if (request.method !== "POST") return methodNotAllowed("POST");
       assertSameOrigin(request);
       const body = await readJson(request);
+      assertOnlyFields(body, ["eligibilityProof", "email", "password", "termsAccepted", "privacyAccepted"]);
+      if (parseCookies(request.headers.get("Cookie") ?? "").has(AGE_INELIGIBLE_COOKIE)) {
+        return errorResponse(403, "age_restricted", "CastingCompass accounts are not available from this browser right now.");
+      }
+      const ageEligibilityConfirmedAt = await consumeSignupAgeProof(db, body.eligibilityProof);
       const email = parseEmail(body.email);
       const password = parsePassword(body.password);
-      const ageEligibilityConfirmedAt = parseAgeEligibility(body.birthDate);
-      assertLegalAcceptance(body);
+      assertSignupLegalAcceptance(body);
       const existing = await db.prepare("SELECT id FROM users WHERE email = ? LIMIT 1").bind(email).first();
       if (existing) return errorResponse(409, "email_in_use", "An account already uses this email.");
       await assertEmailChallengeAllowed(db, email);
@@ -251,7 +385,12 @@ export async function handleAccountRequest(
         challenge.terms_version !== LEGAL_VERSION || challenge.privacy_version !== LEGAL_VERSION) {
         throw new AuthError(400, "invalid_challenge", "Request a new verification code.");
       }
-      const user: AuthUser = { id: `user_${crypto.randomUUID()}`, email: challenge.email, legalAccepted: true };
+      const user: AuthUser = {
+        id: `user_${crypto.randomUUID()}`,
+        email: challenge.email,
+        ageEligible: true,
+        legalAccepted: true,
+      };
       const timestamp = new Date().toISOString();
       await db.batch([
         db.prepare(`INSERT INTO users (id, email, password_salt, password_hash,
@@ -386,17 +525,30 @@ export async function handleAccountRequest(
 
       const row = await db
         .prepare(`SELECT id, email, password_salt, password_hash,
+          CASE WHEN age_eligibility_confirmed_at IS NOT NULL THEN 1 ELSE 0 END AS age_eligible,
           CASE WHEN age_eligibility_confirmed_at IS NOT NULL AND terms_version = ? AND privacy_version = ?
             THEN 1 ELSE 0 END AS legal_accepted
           FROM users WHERE email = ? LIMIT 1`)
         .bind(LEGAL_VERSION, LEGAL_VERSION, email)
-        .first<{ id: string; email: string; password_salt: string; password_hash: string; legal_accepted: number }>();
+        .first<{
+          id: string;
+          email: string;
+          password_salt: string;
+          password_hash: string;
+          age_eligible: number;
+          legal_accepted: number;
+        }>();
       const valid = row ? await verifyPassword(password, row.password_salt, row.password_hash) : false;
       await db.prepare("INSERT INTO auth_attempts (id, email_hash, attempted_at, successful) VALUES (?, ?, ?, ?)")
         .bind(`attempt_${crypto.randomUUID()}`, emailHash, new Date().toISOString(), Number(valid))
         .run();
       if (!row || !valid) return errorResponse(401, "invalid_credentials", "Email or password is incorrect.");
-      return createSessionResponse(db, request, { id: row.id, email: row.email, legalAccepted: Boolean(row.legal_accepted) });
+      return createSessionResponse(db, request, {
+        id: row.id,
+        email: row.email,
+        ageEligible: Boolean(row.age_eligible),
+        legalAccepted: Boolean(row.legal_accepted),
+      });
     }
 
     if (url.pathname === "/api/auth/logout") {
@@ -414,13 +566,45 @@ export async function handleAccountRequest(
       if (request.method !== "POST") return methodNotAllowed("POST");
       assertSameOrigin(request);
       const body = await readJson(request);
-      const timestamp = parseAgeEligibility(body.birthDate);
-      assertLegalAcceptance(body);
-      await db.prepare(`UPDATE users SET age_eligibility_confirmed_at = ?, terms_accepted_at = ?, terms_version = ?,
+      assertOnlyFields(body, ["termsAccepted", "privacyAccepted"]);
+      assertSignupLegalAcceptance(body);
+      if (!user.ageEligible) {
+        throw new AuthError(428, "age_eligibility_unavailable", "Account features are paused. Contact privacy support or delete the account.");
+      }
+      const timestamp = new Date().toISOString();
+      await db.prepare(`UPDATE users SET terms_accepted_at = ?, terms_version = ?,
         privacy_accepted_at = ?, privacy_version = ?, updated_at = ? WHERE id = ?`)
-        .bind(timestamp, timestamp, LEGAL_VERSION, timestamp, LEGAL_VERSION, timestamp, user.id)
+        .bind(timestamp, LEGAL_VERSION, timestamp, LEGAL_VERSION, timestamp, user.id)
         .run();
       return jsonResponse({ user: { ...user, legalAccepted: true }, legalVersion: LEGAL_VERSION });
+    }
+
+    const exportPhotoMatch = url.pathname.match(/^\/api\/profile\/export\/photos\/(trip_[a-f0-9-]{36})$/);
+    if (exportPhotoMatch) {
+      if (request.method !== "GET") return methodNotAllowed("GET");
+      const trip = await db.prepare(`SELECT id, photo_key, photo_content_type
+        FROM trips WHERE id = ? AND user_id = ? LIMIT 1`)
+        .bind(exportPhotoMatch[1], user.id)
+        .first<{ id: string; photo_key: string | null; photo_content_type: string | null }>();
+      if (!trip?.photo_key) return errorResponse(404, "photo_not_found", "That trip has no stored photo.");
+      if (!env.TRIP_PHOTOS?.get) {
+        return errorResponse(503, "photo_storage_unavailable", "The stored photo cannot be exported right now.");
+      }
+      const object = await env.TRIP_PHOTOS.get(trip.photo_key);
+      if (!object) return errorResponse(404, "photo_object_missing", "The stored photo could not be found.");
+      const body = object.body ?? (object.arrayBuffer ? await object.arrayBuffer() : null);
+      if (!body) return errorResponse(503, "photo_storage_unavailable", "The stored photo cannot be exported right now.");
+      const contentType = safePhotoContentType(object.httpMetadata?.contentType ?? trip.photo_content_type);
+      const headers = new Headers({
+        "Content-Type": contentType,
+        "Content-Disposition": `attachment; filename="${trip.id}.${photoFileExtension(contentType)}"`,
+        "Cache-Control": "no-store",
+      });
+      if (object.size !== undefined) headers.set("Content-Length", String(object.size));
+      return new Response(body, {
+        status: 200,
+        headers,
+      });
     }
 
     if (url.pathname === "/api/profile/export") {
@@ -434,22 +618,45 @@ export async function handleAccountRequest(
         db.prepare(`SELECT id, name, rod, reel, bait_lure, rig, created_at, updated_at
           FROM gear_profiles WHERE user_id = ? ORDER BY updated_at DESC`)
           .bind(user.id).all<Record<string, unknown>>(),
-        db.prepare(`SELECT id, source, site_id, started_at, ended_at, mode, fishing_method, gear_profile_id,
-          rod, reel, bait_lure, rig, angler_count, angler_hours, keeper_count, short_released_count,
-          halibut_encounters, no_catch, other_catch_count, other_species, observations_json, notes,
-          moderation_status, opportunity_window_id, opportunity_score, habitat_score, seasonality_score,
+        db.prepare(`SELECT id, status, source, site_id, started_at, ended_at, mode, fishing_method,
+          gear, gear_profile_id, rod, reel, bait_lure, rig, angler_count, angler_hours,
+          keeper_count, short_released_count, halibut_encounters, no_catch, other_catch_count,
+          other_species, observations_json, notes, consent, consent_at, moderation_status,
+          referral_code, opportunity_window_id, opportunity_score, habitat_score, seasonality_score,
           conditions_score, fishability_score, model_version, score_influenced_choice,
           prediction_metadata_json, photo_content_type, photo_size_bytes, created_at, updated_at,
-          completed_at, ai_review_status, ai_review_json, ai_review_model, ai_reviewed_at
+          completed_at, ai_review_status, ai_review_json, ai_review_model, ai_reviewed_at,
+          CASE WHEN photo_key IS NULL THEN 0 ELSE 1 END AS has_photo, photo_key
           FROM trips WHERE user_id = ? ORDER BY created_at DESC`)
           .bind(user.id).all<Record<string, unknown>>(),
       ]);
+      const tripRows = trips.results ?? [];
+      const tripReports = tripRows.map((trip) => {
+        const exportedTrip = { ...trip };
+        delete exportedTrip.photo_key;
+        return exportedTrip;
+      });
+      const discussionRows = await db.prepare(`SELECT site_discussion_posts.id, site_discussion_posts.trip_id,
+          site_discussion_posts.site_id, site_discussion_posts.summary, site_discussion_posts.gear_summary,
+          site_discussion_posts.technique_tags_json, site_discussion_posts.observed_at,
+          site_discussion_posts.created_at, site_discussion_posts.updated_at,
+          site_discussion_posts.review_model, site_discussion_posts.approved_at,
+          site_discussion_posts.source_ai_reviewed_at
+        FROM site_discussion_posts
+        JOIN trips ON trips.id = site_discussion_posts.trip_id
+        WHERE trips.user_id = ? ORDER BY site_discussion_posts.created_at DESC`)
+        .bind(user.id).all<Record<string, unknown>>();
+      const photoManifest = await Promise.all(tripRows
+        .filter((trip) => typeof trip.photo_key === "string" && trip.photo_key)
+        .map((trip) => buildPhotoExportManifest(env, trip)));
       return jsonResponse({
         exportedAt: new Date().toISOString(),
         account,
         savedSites: saved.results ?? [],
         gearProfiles: gear.results ?? [],
-        tripReports: trips.results ?? [],
+        tripReports,
+        discussionPosts: discussionRows.results ?? [],
+        photos: photoManifest,
       }, 200, undefined, { "Content-Disposition": `attachment; filename="castingcompass-data-${new Date().toISOString().slice(0, 10)}.json"` });
     }
 
@@ -467,7 +674,26 @@ export async function handleAccountRequest(
       }
       const photos = await db.prepare("SELECT photo_key FROM trips WHERE user_id = ? AND photo_key IS NOT NULL")
         .bind(user.id).all<{ photo_key: string }>();
+      const ownerSubjectHash = await sha256(`account:${user.id}`);
+      const pendingPhotos = await db.prepare(`SELECT privacy_deletion_tasks.object_key
+        FROM privacy_deletion_tasks
+        JOIN privacy_deletion_jobs ON privacy_deletion_jobs.id = privacy_deletion_tasks.job_id
+        WHERE privacy_deletion_jobs.owner_subject_hash = ?
+          AND privacy_deletion_tasks.state != 'completed' AND privacy_deletion_tasks.object_key IS NOT NULL`)
+        .bind(ownerSubjectHash).all<{ object_key: string }>();
+      const photoKeys = [...new Set([
+        ...(photos.results ?? []).map((photo) => photo.photo_key),
+        ...(pendingPhotos.results ?? []).map((photo) => photo.object_key),
+      ])];
+      const deletion = await prepareDeletionJob("account", user.id, user.id, photoKeys);
       await db.batch([
+        deletion.jobStatement(db),
+        ...deletion.taskStatements(db),
+        db.prepare(`UPDATE privacy_deletion_tasks SET state = 'pending', available_at = ?,
+          lease_expires_at = NULL, lease_token = NULL, last_error_code = NULL, updated_at = ?
+          WHERE state = 'needs_attention' AND object_key IS NOT NULL
+            AND job_id IN (SELECT id FROM privacy_deletion_jobs WHERE owner_subject_hash = ?)`)
+          .bind(deletion.requestedAt, deletion.requestedAt, ownerSubjectHash),
         db.prepare("DELETE FROM site_discussion_posts WHERE trip_id IN (SELECT id FROM trips WHERE user_id = ?)").bind(user.id),
         db.prepare("DELETE FROM trips WHERE user_id = ?").bind(user.id),
         db.prepare("DELETE FROM saved_sites WHERE user_id = ?").bind(user.id),
@@ -477,12 +703,23 @@ export async function handleAccountRequest(
         db.prepare("DELETE FROM auth_attempts WHERE email_hash = ?").bind(await sha256(user.email)),
         db.prepare("DELETE FROM users WHERE id = ?").bind(user.id),
       ]);
-      await Promise.all((photos.results ?? []).map((photo) => env.TRIP_PHOTOS?.delete(photo.photo_key).catch(() => undefined)));
-      return jsonResponse({ deleted: true }, 200, clearSessionCookie(request));
+      const status = await deletionStatusAfterCommit(env, deletion);
+      return jsonResponse(
+        { deleted: true, deletion: status },
+        status.status === "completed" ? 200 : 202,
+        [
+          clearSessionCookie(request),
+          clearReporterCookie(),
+          clearAgeIneligibleCookie(),
+          deletionReceiptCookie(deletion.receipt),
+        ],
+      );
     }
 
     if (!user.legalAccepted) {
-      return errorResponse(428, "legal_acceptance_required", "Confirm that you are 13 or older and accept the current Terms and Privacy Policy to continue.");
+      return user.ageEligible
+        ? errorResponse(428, "legal_acceptance_required", "Accept the current Terms and Privacy Policy to continue.")
+        : errorResponse(428, "age_eligibility_unavailable", "This legacy account is paused because no prior age-eligibility confirmation is available. Export or delete it from Profile, or contact privacy support.");
     }
 
     if (url.pathname === "/api/profile/reviews/retry") {
@@ -597,11 +834,20 @@ export async function handleAccountRequest(
       }
 
       if (request.method === "DELETE") {
-        await db.prepare("DELETE FROM trips WHERE id = ? AND user_id = ? AND moderation_status = 'pending'")
-          .bind(tripId, user.id)
-          .run();
-        if (trip.photo_key) await env.TRIP_PHOTOS?.delete(trip.photo_key).catch(() => undefined);
-        return jsonResponse({ deleted: true, tripId });
+        const deletion = await prepareDeletionJob("trip", tripId, user.id, trip.photo_key ? [trip.photo_key] : []);
+        await db.batch([
+          deletion.jobStatement(db),
+          ...deletion.taskStatements(db),
+          db.prepare("DELETE FROM site_discussion_posts WHERE trip_id = ?").bind(tripId),
+          db.prepare("DELETE FROM trips WHERE id = ? AND user_id = ?")
+            .bind(tripId, user.id),
+        ]);
+        const status = await deletionStatusAfterCommit(env, deletion);
+        return jsonResponse(
+          { deleted: true, deletion: status },
+          status.status === "completed" ? 200 : 202,
+          deletionReceiptCookie(deletion.receipt),
+        );
       }
 
       if (request.method === "PATCH") {
@@ -790,8 +1036,349 @@ export function unauthorizedResponse() {
   return errorResponse(401, "authentication_required", "Sign in to submit a trip report or save a location.");
 }
 
-export function legalAcceptanceRequiredResponse() {
-  return errorResponse(428, "legal_acceptance_required", "Confirm that you are 13 or older and accept the current Terms and Privacy Policy to continue.");
+export function legalAcceptanceRequiredResponse(ageEligible = true) {
+  return ageEligible
+    ? errorResponse(428, "legal_acceptance_required", "Accept the current Terms and Privacy Policy to continue.")
+    : errorResponse(428, "age_eligibility_unavailable", "This legacy account is paused because no prior age-eligibility confirmation is available. Export or delete it from Profile, or contact privacy support.");
+}
+
+interface PrivacyDeletionJobRow {
+  scope: "account" | "trip";
+  state: "active_data_removed" | "purging" | "completed" | "needs_attention";
+  objects_total: number;
+  objects_deleted: number;
+  requested_at: string;
+  completed_at: string | null;
+}
+
+async function prepareDeletionJob(
+  scope: PrivacyDeletionJobRow["scope"],
+  stableSubjectId: string,
+  ownerStableId: string,
+  objectKeys: string[],
+) {
+  const id = `deletion_${crypto.randomUUID()}`;
+  const receipt = randomSecret(32);
+  const timestamp = new Date().toISOString();
+  const uniqueKeys = [...new Set(objectKeys)];
+  const tasks = await Promise.all(uniqueKeys.map(async (objectKey) => ({
+    id: `deletion_task_${crypto.randomUUID()}`,
+    objectKey,
+    objectKeyHash: await sha256(objectKey),
+  })));
+  const subjectHash = await sha256(`${scope}:${stableSubjectId}`);
+  const ownerSubjectHash = await sha256(`account:${ownerStableId}`);
+  const receiptHash = await sha256(receipt);
+  const completed = tasks.length === 0;
+  return {
+    id,
+    receipt,
+    scope,
+    requestedAt: timestamp,
+    objectsTotal: tasks.length,
+    jobStatement: (db: D1DatabaseLike) => db.prepare(`INSERT INTO privacy_deletion_jobs
+      (id, receipt_hash, scope, subject_hash, owner_subject_hash, state, objects_total, objects_deleted,
+        last_error_code, requested_at, active_data_removed_at, completed_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, 0, NULL, ?, ?, ?, ?)`)
+      .bind(
+        id,
+        receiptHash,
+        scope,
+        subjectHash,
+        ownerSubjectHash,
+        completed ? "completed" : "active_data_removed",
+        tasks.length,
+        timestamp,
+        timestamp,
+        completed ? timestamp : null,
+        timestamp,
+      ),
+    taskStatements: (db: D1DatabaseLike) => tasks.map((task) => db.prepare(`INSERT INTO privacy_deletion_tasks
+      (id, job_id, object_key, object_key_hash, state, attempts, available_at, lease_expires_at,
+        lease_token, last_error_code, created_at, updated_at, completed_at)
+      VALUES (?, ?, ?, ?, 'pending', 0, ?, NULL, NULL, NULL, ?, ?, NULL)`)
+      .bind(task.id, id, task.objectKey, task.objectKeyHash, timestamp, timestamp, timestamp)),
+  };
+}
+
+async function deletionStatusAfterCommit(
+  env: AuthApiEnv,
+  deletion: {
+    id: string;
+    receipt: string;
+    scope: "account" | "trip";
+    requestedAt: string;
+    objectsTotal: number;
+  },
+) {
+  const fallback = {
+    status: deletion.objectsTotal === 0 ? "completed" as const : "processing" as const,
+    scope: deletion.scope,
+    requestedAt: deletion.requestedAt,
+    completedAt: deletion.objectsTotal === 0 ? deletion.requestedAt : null,
+    objectsTotal: deletion.objectsTotal,
+    objectsDeleted: 0,
+  };
+  try {
+    await processPrivacyDeletionTasks(env, deletion.id);
+    const job = env.DB ? await selectDeletionJobByReceipt(env.DB, deletion.receipt) : null;
+    return job ? publicDeletionStatus(job) : fallback;
+  } catch (error) {
+    console.error("Post-commit deletion cleanup deferred", safeErrorContext(error));
+    return fallback;
+  }
+}
+
+async function selectDeletionJobByReceipt(db: D1DatabaseLike, receipt: string) {
+  return db.prepare(`SELECT scope, state, objects_total, objects_deleted, requested_at, completed_at
+    FROM privacy_deletion_jobs WHERE receipt_hash = ? LIMIT 1`)
+    .bind(await sha256(receipt))
+    .first<PrivacyDeletionJobRow>();
+}
+
+function publicDeletionStatus(job: PrivacyDeletionJobRow) {
+  const status = job.state === "completed"
+    ? "completed"
+    : job.state === "needs_attention" ? "needs_attention" : "processing";
+  return {
+    status,
+    scope: job.scope,
+    requestedAt: job.requested_at,
+    completedAt: job.completed_at,
+    objectsTotal: Number(job.objects_total),
+    objectsDeleted: Number(job.objects_deleted),
+  };
+}
+
+interface PrivacyDeletionTaskRow {
+  id: string;
+  job_id: string;
+  object_key: string | null;
+  object_key_hash: string;
+  state: "pending" | "leased";
+  attempts: number;
+}
+
+export async function processPrivacyDeletionTasks(env: AuthApiEnv, onlyJobId?: string) {
+  if (!env.DB) return 0;
+  const db = env.DB;
+  await initialize(db);
+  const now = new Date();
+  const nowIso = now.toISOString();
+  const query = onlyJobId
+    ? `SELECT id, job_id, object_key, object_key_hash, state, attempts FROM privacy_deletion_tasks
+       WHERE job_id = ?
+         AND ((state = 'pending' AND available_at <= ?)
+           OR (state = 'leased' AND (lease_expires_at IS NULL OR lease_expires_at <= ?)))
+       ORDER BY created_at LIMIT 50`
+    : `SELECT id, job_id, object_key, object_key_hash, state, attempts FROM privacy_deletion_tasks
+       WHERE (state = 'pending' AND available_at <= ?)
+         OR (state = 'leased' AND (lease_expires_at IS NULL OR lease_expires_at <= ?))
+       ORDER BY available_at, created_at LIMIT 50`;
+  const statement = db.prepare(query);
+  const rows = onlyJobId
+    ? await statement.bind(onlyJobId, nowIso, nowIso).all<PrivacyDeletionTaskRow>()
+    : await statement.bind(nowIso, nowIso).all<PrivacyDeletionTaskRow>();
+  const tasks = rows.results ?? [];
+  if (!tasks.length) {
+    await reconcileDeletionJobs(db);
+    return 0;
+  }
+
+  const jobIds = new Set(tasks.map((task) => task.job_id));
+  const runnableTasks: PrivacyDeletionTaskRow[] = [];
+  for (const task of tasks) {
+    if (task.state === "leased" && Number(task.attempts) >= MAX_DELETION_ATTEMPTS) {
+      await db.prepare(`UPDATE privacy_deletion_tasks
+        SET state = 'needs_attention', lease_expires_at = NULL, lease_token = NULL,
+          last_error_code = 'photo_delete_lease_expired', updated_at = ?
+        WHERE id = ? AND state = 'leased' AND attempts >= ?
+          AND (lease_expires_at IS NULL OR lease_expires_at <= ?)`)
+        .bind(nowIso, task.id, MAX_DELETION_ATTEMPTS, nowIso).run();
+      continue;
+    }
+    if (task.object_key) {
+      runnableTasks.push(task);
+      continue;
+    }
+    await db.prepare(`UPDATE privacy_deletion_tasks
+      SET state = 'needs_attention', attempts = CASE WHEN attempts < ? THEN ? ELSE attempts END,
+        lease_expires_at = NULL, lease_token = NULL,
+        last_error_code = 'photo_locator_missing', updated_at = ?
+      WHERE id = ? AND state != 'completed'`)
+      .bind(MAX_DELETION_ATTEMPTS, MAX_DELETION_ATTEMPTS, nowIso, task.id).run();
+  }
+  if (!runnableTasks.length) {
+    for (const jobId of jobIds) await refreshDeletionJobStatus(db, jobId);
+    await reconcileDeletionJobs(db);
+    return 0;
+  }
+  if (!env.TRIP_PHOTOS) {
+    const retryAt = new Date(now.getTime() + 60 * 60 * 1000).toISOString();
+    await db.batch([
+      ...runnableTasks.map((task) => db.prepare(`UPDATE privacy_deletion_tasks
+        SET state = 'needs_attention', available_at = ?, lease_expires_at = NULL, lease_token = NULL,
+          last_error_code = 'photo_storage_unavailable', updated_at = ? WHERE id = ? AND state != 'completed'
+          AND (state != 'leased' OR lease_expires_at IS NULL OR lease_expires_at <= ?)`)
+        .bind(retryAt, nowIso, task.id, nowIso)),
+      ...[...jobIds].map((jobId) => db.prepare(`UPDATE privacy_deletion_jobs
+        SET state = 'needs_attention', last_error_code = 'photo_storage_unavailable', updated_at = ?
+        WHERE id = ? AND state != 'completed'`).bind(nowIso, jobId)),
+    ]);
+    await reconcileDeletionJobs(db);
+    return 0;
+  }
+
+  let completed = 0;
+  for (const task of runnableTasks) {
+    const leaseExpiresAt = new Date(Date.now() + 5 * 60 * 1000).toISOString();
+    const leaseToken = randomSecret(24);
+    const claimed = await db.prepare(`UPDATE privacy_deletion_tasks
+      SET state = 'leased', attempts = attempts + 1, lease_expires_at = ?, lease_token = ?, updated_at = ?
+      WHERE id = ?
+        AND ((state = 'pending' AND available_at <= ?)
+          OR (state = 'leased' AND (lease_expires_at IS NULL OR lease_expires_at <= ?)))`)
+      .bind(leaseExpiresAt, leaseToken, nowIso, task.id, nowIso, nowIso)
+      .run();
+    if (Number(claimed.meta?.changes ?? 0) !== 1) continue;
+    await db.prepare("UPDATE privacy_deletion_jobs SET state = 'purging', last_error_code = NULL, updated_at = ? WHERE id = ? AND state != 'completed'")
+      .bind(nowIso, task.job_id).run();
+    try {
+      await env.TRIP_PHOTOS.delete(task.object_key as string);
+      const finishedAt = new Date().toISOString();
+      const finalized = await db.prepare(`UPDATE privacy_deletion_tasks SET state = 'completed', object_key = NULL,
+        lease_expires_at = NULL, lease_token = NULL, last_error_code = NULL,
+        completed_at = ?, updated_at = ?
+        WHERE id = ? AND state = 'leased' AND lease_token = ?`)
+        .bind(finishedAt, finishedAt, task.id, leaseToken).run();
+      if (Number(finalized.meta?.changes ?? 0) === 1) completed += 1;
+    } catch {
+      const attempts = Number(task.attempts) + 1;
+      const backoffSeconds = Math.min(6 * 60 * 60, 30 * (2 ** Math.min(attempts - 1, 10)));
+      const retryAt = new Date(Date.now() + backoffSeconds * 1000).toISOString();
+      await db.prepare(`UPDATE privacy_deletion_tasks
+        SET state = CASE WHEN attempts >= ? THEN 'needs_attention' ELSE 'pending' END,
+        available_at = ?, lease_expires_at = NULL,
+        lease_token = NULL, last_error_code = 'photo_delete_failed', updated_at = ?
+        WHERE id = ? AND state = 'leased' AND lease_token = ?`)
+        .bind(MAX_DELETION_ATTEMPTS, retryAt, new Date().toISOString(), task.id, leaseToken).run();
+    }
+  }
+
+  for (const jobId of jobIds) await refreshDeletionJobStatus(db, jobId);
+  await reconcileDeletionJobs(db);
+  return completed;
+}
+
+async function refreshDeletionJobStatus(db: D1DatabaseLike, jobId: string) {
+  const timestamp = new Date().toISOString();
+  await db.prepare(`UPDATE privacy_deletion_jobs SET
+      objects_deleted = (SELECT COUNT(*) FROM privacy_deletion_tasks
+        WHERE job_id = privacy_deletion_jobs.id AND state = 'completed'),
+      state = CASE
+        WHEN (SELECT COUNT(*) FROM privacy_deletion_tasks WHERE job_id = privacy_deletion_jobs.id) = objects_total
+          AND NOT EXISTS (SELECT 1 FROM privacy_deletion_tasks
+            WHERE job_id = privacy_deletion_jobs.id AND state != 'completed')
+          THEN 'completed'
+        WHEN (SELECT COUNT(*) FROM privacy_deletion_tasks WHERE job_id = privacy_deletion_jobs.id) != objects_total
+          THEN 'needs_attention'
+        WHEN EXISTS (SELECT 1 FROM privacy_deletion_tasks
+          WHERE job_id = privacy_deletion_jobs.id AND state = 'needs_attention')
+          THEN 'needs_attention'
+        ELSE 'active_data_removed'
+      END,
+      last_error_code = CASE
+        WHEN (SELECT COUNT(*) FROM privacy_deletion_tasks WHERE job_id = privacy_deletion_jobs.id) = objects_total
+          AND NOT EXISTS (SELECT 1 FROM privacy_deletion_tasks
+            WHERE job_id = privacy_deletion_jobs.id AND state != 'completed')
+          THEN NULL
+        WHEN (SELECT COUNT(*) FROM privacy_deletion_tasks WHERE job_id = privacy_deletion_jobs.id) != objects_total
+          THEN 'task_ledger_incomplete'
+        WHEN EXISTS (SELECT 1 FROM privacy_deletion_tasks
+          WHERE job_id = privacy_deletion_jobs.id AND state = 'needs_attention')
+          THEN 'photo_delete_incomplete'
+        ELSE NULL
+      END,
+      completed_at = CASE
+        WHEN (SELECT COUNT(*) FROM privacy_deletion_tasks WHERE job_id = privacy_deletion_jobs.id) = objects_total
+          AND NOT EXISTS (SELECT 1 FROM privacy_deletion_tasks
+            WHERE job_id = privacy_deletion_jobs.id AND state != 'completed')
+          THEN COALESCE(completed_at, ?)
+        ELSE NULL
+      END,
+      updated_at = ?
+    WHERE id = ?`)
+    .bind(timestamp, timestamp, jobId)
+    .run();
+}
+
+async function reconcileDeletionJobs(db: D1DatabaseLike, onlyJobId?: string) {
+  const rows = onlyJobId
+    ? await db.prepare("SELECT id FROM privacy_deletion_jobs WHERE id = ? AND state != 'completed' LIMIT 1")
+      .bind(onlyJobId).all<{ id: string }>()
+    : await db.prepare(`SELECT id FROM privacy_deletion_jobs
+      WHERE state != 'completed'
+        OR objects_deleted != objects_total
+        OR (SELECT COUNT(*) FROM privacy_deletion_tasks
+          WHERE job_id = privacy_deletion_jobs.id) != objects_total
+        OR EXISTS (SELECT 1 FROM privacy_deletion_tasks
+          WHERE job_id = privacy_deletion_jobs.id AND state != 'completed')
+      ORDER BY updated_at LIMIT 100`)
+      .all<{ id: string }>();
+  for (const job of rows.results ?? []) await refreshDeletionJobStatus(db, job.id);
+}
+
+async function buildPhotoExportManifest(env: AuthApiEnv, trip: Record<string, unknown>) {
+  const tripId = String(trip.id);
+  const contentType = safePhotoContentType(trip.photo_content_type);
+  const sizeBytes = typeof trip.photo_size_bytes === "number" ? trip.photo_size_bytes : null;
+  if (!env.TRIP_PHOTOS?.get) {
+    return {
+      tripId,
+      contentType,
+      sizeBytes,
+      availability: "unavailable",
+      downloadPath: null,
+      reason: "photo_storage_unavailable",
+    };
+  }
+  try {
+    const object = await env.TRIP_PHOTOS.get(String(trip.photo_key));
+    if (!object) {
+      return { tripId, contentType, sizeBytes, availability: "missing", downloadPath: null, reason: "photo_object_missing" };
+    }
+    await object.body?.cancel().catch(() => undefined);
+    return {
+      tripId,
+      contentType: safePhotoContentType(object.httpMetadata?.contentType ?? contentType),
+      sizeBytes: object.size ?? sizeBytes,
+      availability: "downloadable",
+      downloadPath: `/api/profile/export/photos/${tripId}`,
+      reason: null,
+    };
+  } catch {
+    return {
+      tripId,
+      contentType,
+      sizeBytes,
+      availability: "temporarily_unavailable",
+      downloadPath: null,
+      reason: "photo_storage_error",
+    };
+  }
+}
+
+function photoFileExtension(contentType: string) {
+  if (contentType === "image/jpeg") return "jpg";
+  if (contentType === "image/png") return "png";
+  if (contentType === "image/webp") return "webp";
+  return "bin";
+}
+
+function safePhotoContentType(value: unknown) {
+  return value === "image/jpeg" || value === "image/png" || value === "image/webp"
+    ? value
+    : "application/octet-stream";
 }
 
 export async function cleanupAuthData(env: AuthApiEnv) {
@@ -800,21 +1387,39 @@ export async function cleanupAuthData(env: AuthApiEnv) {
   const now = new Date();
   const expiredChallengeCutoff = new Date(now.getTime() - 24 * 60 * 60 * 1000).toISOString();
   const attemptCutoff = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000).toISOString();
+  const proofCutoff = new Date(now.getTime() - 24 * 60 * 60 * 1000).toISOString();
+  const tombstoneCutoff = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000).toISOString();
   await env.DB.batch([
     env.DB.prepare("DELETE FROM auth_sessions WHERE expires_at <= ?").bind(now.toISOString()),
     env.DB.prepare("DELETE FROM email_challenges WHERE expires_at <= ?").bind(expiredChallengeCutoff),
     env.DB.prepare("DELETE FROM auth_attempts WHERE attempted_at < ?").bind(attemptCutoff),
+    env.DB.prepare("DELETE FROM signup_age_proofs WHERE expires_at < ? OR (consumed_at IS NOT NULL AND consumed_at < ?)")
+      .bind(proofCutoff, proofCutoff),
+    env.DB.prepare(`DELETE FROM privacy_deletion_jobs
+      WHERE state = 'completed' AND completed_at < ?
+        AND objects_deleted = objects_total
+        AND (SELECT COUNT(*) FROM privacy_deletion_tasks
+          WHERE job_id = privacy_deletion_jobs.id) = objects_total
+        AND NOT EXISTS (SELECT 1 FROM privacy_deletion_tasks
+          WHERE job_id = privacy_deletion_jobs.id AND state != 'completed')`).bind(tombstoneCutoff),
   ]);
+  await processPrivacyDeletionTasks(env);
 }
 
 async function selectUserForSession(db: D1DatabaseLike, userId: string) {
   const row = await db.prepare(`SELECT id, email,
+    CASE WHEN age_eligibility_confirmed_at IS NOT NULL THEN 1 ELSE 0 END AS age_eligible,
     CASE WHEN age_eligibility_confirmed_at IS NOT NULL AND terms_version = ? AND privacy_version = ?
       THEN 1 ELSE 0 END AS legal_accepted
     FROM users WHERE id = ? LIMIT 1`)
     .bind(LEGAL_VERSION, LEGAL_VERSION, userId)
-    .first<{ id: string; email: string; legal_accepted: number }>();
-  return row ? { id: row.id, email: row.email, legalAccepted: Boolean(row.legal_accepted) } : null;
+    .first<{ id: string; email: string; age_eligible: number; legal_accepted: number }>();
+  return row ? {
+    id: row.id,
+    email: row.email,
+    ageEligible: Boolean(row.age_eligible),
+    legalAccepted: Boolean(row.legal_accepted),
+  } : null;
 }
 
 async function createSessionResponse(db: D1DatabaseLike, request: Request, user: AuthUser, status = 200) {
@@ -837,6 +1442,26 @@ function clearSessionCookie(request: Request) {
   return `${SESSION_COOKIE}=; Path=/; Max-Age=0; HttpOnly; SameSite=Lax${secure}`;
 }
 
+function deletionReceiptCookie(receipt: string) {
+  return `${DELETION_RECEIPT_COOKIE}=${receipt}; Path=/api/privacy/deletion-status; Max-Age=${DELETION_RECEIPT_SECONDS}; HttpOnly; SameSite=Lax; Secure`;
+}
+
+function clearDeletionReceiptCookie() {
+  return `${DELETION_RECEIPT_COOKIE}=; Path=/api/privacy/deletion-status; Max-Age=0; HttpOnly; SameSite=Lax; Secure`;
+}
+
+function ageIneligibleCookie() {
+  return `${AGE_INELIGIBLE_COOKIE}=1; Path=/api/auth/signup; Max-Age=${24 * 60 * 60}; HttpOnly; SameSite=Lax; Secure`;
+}
+
+function clearAgeIneligibleCookie() {
+  return `${AGE_INELIGIBLE_COOKIE}=; Path=/api/auth/signup; Max-Age=0; HttpOnly; SameSite=Lax; Secure`;
+}
+
+function clearReporterCookie() {
+  return "cc_reporter=; Path=/; Max-Age=0; HttpOnly; SameSite=Strict; Secure";
+}
+
 function parseEmail(value: unknown) {
   if (typeof value !== "string") throw new AuthError(422, "invalid_email", "Enter a valid email address.");
   const email = value.trim().toLowerCase();
@@ -853,13 +1478,40 @@ function parsePassword(value: unknown) {
   return value;
 }
 
-function assertLegalAcceptance(body: Record<string, unknown>) {
-  if (body.acceptTerms !== true || body.acceptPrivacy !== true) {
-    throw new AuthError(422, "legal_acceptance_required", "Accept the Terms of Service and Privacy Policy to create or continue using an account.");
+function assertSignupLegalAcceptance(body: Record<string, unknown>) {
+  if (body.termsAccepted !== true || body.privacyAccepted !== true) {
+    throw new AuthError(422, "legal_acceptance_required", "Accept the Terms of Service and Privacy Policy to create an account.");
   }
 }
 
-function parseAgeEligibility(value: unknown) {
+function assertOnlyFields(body: Record<string, unknown>, allowed: string[]) {
+  const allowedFields = new Set(allowed);
+  if (Object.keys(body).some((field) => !allowedFields.has(field))) {
+    throw new AuthError(422, "unexpected_fields", "Send only the fields required for this account step.");
+  }
+}
+
+async function consumeSignupAgeProof(db: D1DatabaseLike, value: unknown) {
+  const proof = typeof value === "string" ? value : "";
+  if (!/^[A-Za-z0-9_-]{40,160}$/.test(proof)) {
+    throw new AuthError(422, "eligibility_proof_required", "Confirm age eligibility before entering account details.");
+  }
+  const consumedAt = new Date().toISOString();
+  const tokenHash = await sha256(proof);
+  const result = await db.prepare(`UPDATE signup_age_proofs SET consumed_at = ?
+    WHERE token_hash = ? AND consumed_at IS NULL AND expires_at > ? AND gate_version = ?`)
+    .bind(consumedAt, tokenHash, consumedAt, AGE_GATE_VERSION)
+    .run();
+  if (Number(result.meta?.changes ?? 0) !== 1) {
+    throw new AuthError(410, "eligibility_proof_expired", "Age eligibility expired or was already used. Start the age step again.");
+  }
+  const row = await db.prepare("SELECT confirmed_at FROM signup_age_proofs WHERE token_hash = ? LIMIT 1")
+    .bind(tokenHash).first<{ confirmed_at: string }>();
+  if (!row?.confirmed_at) throw new Error("Consumed eligibility proof could not be read");
+  return row.confirmed_at;
+}
+
+export function evaluateAgeEligibility(value: unknown, now = new Date()) {
   if (typeof value !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(value)) {
     throw new AuthError(422, "invalid_birth_date", "Enter a valid birth date.");
   }
@@ -868,17 +1520,36 @@ function parseAgeEligibility(value: unknown) {
   if (birthDate.getUTCFullYear() !== year || birthDate.getUTCMonth() !== month - 1 || birthDate.getUTCDate() !== day) {
     throw new AuthError(422, "invalid_birth_date", "Enter a valid birth date.");
   }
-  const today = new Date();
-  let age = today.getUTCFullYear() - year;
-  if (today.getUTCMonth() < month - 1 || (today.getUTCMonth() === month - 1 && today.getUTCDate() < day)) age -= 1;
+  // Account eligibility follows the product's California calendar, not UTC,
+  // so a birthday does not arrive several hours early on the West Coast.
+  const today = losAngelesCalendarDate(now);
+  const dateOrder = year - today.year || month - today.month || day - today.day;
+  if (dateOrder > 0 || today.year - year > 120) {
+    throw new AuthError(422, "invalid_birth_date", "Enter a valid birth date.");
+  }
+  let age = today.year - year;
+  if (today.month < month || (today.month === month && today.day < day)) age -= 1;
   if (age < MINIMUM_ACCOUNT_AGE) {
     throw new AuthError(403, "age_restricted", "CastingCompass accounts are available only to people age 13 or older.");
   }
-  if (age > 120 || birthDate.getTime() > today.getTime()) {
+  if (age > 120) {
     throw new AuthError(422, "invalid_birth_date", "Enter a valid birth date.");
   }
   // The birth date is deliberately not retained. Only this eligibility timestamp is stored.
-  return today.toISOString();
+  return now.toISOString();
+}
+
+function losAngelesCalendarDate(date: Date) {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: "America/Los_Angeles",
+    year: "numeric",
+    month: "numeric",
+    day: "numeric",
+  }).formatToParts(date);
+  const values = Object.fromEntries(parts
+    .filter((part) => part.type === "year" || part.type === "month" || part.type === "day")
+    .map((part) => [part.type, Number(part.value)]));
+  return { year: values.year, month: values.month, day: values.day };
 }
 
 async function hashPassword(password: string, salt: string) {
@@ -1097,10 +1768,12 @@ function errorResponse(status: number, code: string, message: string, cookie?: s
   return jsonResponse({ error: { code, message } }, status, cookie, headers);
 }
 
-function jsonResponse(body: unknown, status = 200, cookie?: string, extraHeaders?: HeadersInit) {
+function jsonResponse(body: unknown, status = 200, cookie?: string | string[], extraHeaders?: HeadersInit) {
   const headers = new Headers(extraHeaders);
   headers.set("Content-Type", "application/json; charset=utf-8");
   headers.set("Cache-Control", "no-store");
-  if (cookie) headers.append("Set-Cookie", cookie);
+  if (cookie) {
+    for (const value of Array.isArray(cookie) ? cookie : [cookie]) headers.append("Set-Cookie", value);
+  }
   return new Response(JSON.stringify(body), { status, headers });
 }

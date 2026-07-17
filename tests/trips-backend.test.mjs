@@ -243,6 +243,7 @@ test("past reports re-encode photos and the summary exposes validation totals", 
   const store = new MemoryTripStore();
   const storedObjects = new Map();
   const env = {
+    TRIP_PHOTO_UPLOADS_ENABLED: "true",
     IMAGES: {
       input() {
         return {
@@ -277,6 +278,20 @@ test("past reports re-encode photos and the summary exposes validation totals", 
   form.set("consent", "true");
   form.set("reporterKey", "another-anonymous-device-key-1234");
   form.set("contourCastInfluenced", "false");
+  form.set("predictionMetadata", JSON.stringify({
+    snapshotGeneratedAt: "2026-07-11T17:00:00.000Z",
+    forecastStart: "2026-07-11T18:00:00.000Z",
+    forecastEnd: "2026-07-11T20:00:00.000Z",
+    confidence: "medium",
+    latitude: 37.7,
+    email: "private@example.com",
+    forecastConditions: {
+      windMph: 12,
+      currentDirection: "SW",
+      longitude: -122.4,
+      accountId: "private-account",
+    },
+  }));
   form.set("website", "");
   form.set(
     "photo",
@@ -300,6 +315,13 @@ test("past reports re-encode photos and the summary exposes validation totals", 
   const storedPhoto = [...storedObjects.values()][0];
   assert.equal(storedPhoto.options.httpMetadata.contentType, "image/webp");
   assert.equal(storedPhoto.options.customMetadata.privacy, "exif-stripped");
+  assert.deepEqual(JSON.parse(store.trips.get(reported.id).prediction_metadata_json), {
+    snapshotGeneratedAt: "2026-07-11T17:00:00.000Z",
+    forecastStart: "2026-07-11T18:00:00.000Z",
+    forecastEnd: "2026-07-11T20:00:00.000Z",
+    confidence: "medium",
+    forecastConditions: { windMph: 12, currentDirection: "SW" },
+  });
 
   const summaryResponse = await handleTripRequest(
     new Request(`${ORIGIN}/api/trips/summary`),
@@ -323,6 +345,73 @@ test("past reports re-encode photos and the summary exposes validation totals", 
       sitesCovered: 1,
     },
   });
+});
+
+test("photo uploads fail closed at the Worker even when storage bindings exist", async () => {
+  const store = new MemoryTripStore();
+  let imageCalls = 0;
+  let storageCalls = 0;
+  const form = new FormData();
+  form.set("siteId", "crissy-field");
+  form.set("startedAt", "2026-07-10T15:00:00.000Z");
+  form.set("endedAt", "2026-07-10T18:00:00.000Z");
+  form.set("keeperCount", "0");
+  form.set("shortReleasedCount", "0");
+  form.set("consent", "true");
+  form.set("reporterKey", "server-photo-gate-device-key-1234");
+  form.set("website", "");
+  form.set("photo", new File([
+    new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
+  ], "catch.png", { type: "image/png" }));
+
+  const response = await handleTripRequest(
+    multipartRequest("/api/trips/report", form),
+    {
+      IMAGES: {
+        input() {
+          imageCalls += 1;
+          throw new Error("disabled uploads must not reach image processing");
+        },
+      },
+      TRIP_PHOTOS: {
+        async put() { storageCalls += 1; },
+        async delete() { storageCalls += 1; },
+      },
+    },
+    SITES,
+    { store, now: () => new Date("2026-07-11T18:00:00.000Z") },
+  );
+
+  assert.equal(response.status, 503);
+  assert.equal((await response.json()).error.code, "photo_uploads_disabled");
+  assert.equal(imageCalls, 0);
+  assert.equal(storageCalls, 0);
+  assert.equal(store.trips.size, 0);
+});
+
+test("prediction metadata enforces its raw 4 KB limit before minimization", async () => {
+  const store = new MemoryTripStore();
+  const form = new FormData();
+  form.set("siteId", "crissy-field");
+  form.set("startedAt", "2026-07-10T15:00:00.000Z");
+  form.set("endedAt", "2026-07-10T18:00:00.000Z");
+  form.set("keeperCount", "0");
+  form.set("shortReleasedCount", "0");
+  form.set("consent", "true");
+  form.set("reporterKey", "oversized-metadata-device-key-1234");
+  form.set("predictionMetadata", JSON.stringify({ ignored: "x".repeat(5000) }));
+  form.set("website", "");
+
+  const response = await handleTripRequest(
+    multipartRequest("/api/trips/report", form),
+    {},
+    SITES,
+    { store, now: () => new Date("2026-07-11T18:00:00.000Z") },
+  );
+
+  assert.equal(response.status, 422);
+  assert.equal((await response.json()).error.code, "invalid_prediction_metadata");
+  assert.equal(store.trips.size, 0);
 });
 
 test("honeypot submissions are rejected without persistence", async () => {

@@ -40,6 +40,7 @@ export interface TripApiEnv {
   DB?: D1DatabaseLike;
   TRIP_PHOTOS?: R2BucketLike;
   IMAGES?: ImageBindingLike;
+  TRIP_PHOTO_UPLOADS_ENABLED?: string;
 }
 
 export interface CuratedSite {
@@ -264,7 +265,8 @@ const CREATE_TRIPS_SQL = `CREATE TABLE IF NOT EXISTS trips (
   CONSTRAINT trips_status_check CHECK (status in ('active', 'completed')),
   CONSTRAINT trips_source_check CHECK (source in ('live', 'past_report')),
   CONSTRAINT trips_moderation_status_check CHECK (moderation_status in ('pending', 'approved', 'rejected')),
-  CONSTRAINT trips_angler_count_check CHECK (angler_count between 1 and 12)
+  CONSTRAINT trips_angler_count_check CHECK (angler_count between 1 and 12),
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL
 )`;
 
 const CREATE_INDEX_STATEMENTS = [
@@ -316,16 +318,13 @@ export function createTripStore(db: D1DatabaseLike): TripStore {
   const initialize = async () => {
     let pending = initializedDatabases.get(db as object);
     if (!pending) {
-      pending = db
-        .batch([
-          db.prepare(CREATE_TRIPS_SQL),
-          ...CREATE_INDEX_STATEMENTS.map((statement) => db.prepare(statement)),
-        ])
-        .then(() => undefined)
-        .catch((error) => {
-          initializedDatabases.delete(db as object);
-          throw error;
-        });
+      pending = (async () => {
+        await db.batch([db.prepare(CREATE_TRIPS_SQL)]);
+        await db.batch(CREATE_INDEX_STATEMENTS.map((statement) => db.prepare(statement)));
+      })().catch((error) => {
+        initializedDatabases.delete(db as object);
+        throw error;
+      });
       initializedDatabases.set(db as object, pending);
     }
     await pending;
@@ -844,9 +843,12 @@ function parsePrediction(source: Record<string, unknown> | FormData) {
   let predictionMetadataJson: string | null = null;
   if (metadata !== null && metadata !== undefined && metadata !== "") {
     try {
+      const rawMetadata = typeof metadata === "string" ? metadata : JSON.stringify(metadata);
+      if (typeof rawMetadata !== "string" || rawMetadata.length > 4096) throw new Error("too long");
       const parsed = typeof metadata === "string" ? JSON.parse(metadata) : metadata;
-      predictionMetadataJson = JSON.stringify(parsed);
-      if (predictionMetadataJson.length > 4096) throw new Error("too long");
+      const minimized = minimizeForecastMetadata(parsed);
+      if (!minimized) throw new Error("invalid shape");
+      predictionMetadataJson = JSON.stringify(minimized);
     } catch {
       throw new ApiError(422, "invalid_prediction_metadata", "predictionMetadata must be valid JSON under 4 KB.");
     }
@@ -870,6 +872,9 @@ function parsePrediction(source: Record<string, unknown> | FormData) {
 
 async function processPhoto(entry: FormDataEntryValue | null, tripId: string, env: TripApiEnv) {
   if (entry === null || entry === "") return null;
+  if (env.TRIP_PHOTO_UPLOADS_ENABLED?.trim().toLowerCase() !== "true") {
+    throw new ApiError(503, "photo_uploads_disabled", "Photo uploads are not enabled.");
+  }
   if (typeof entry === "string") {
     throw new ApiError(422, "invalid_photo", "photo must be an uploaded image.");
   }
@@ -916,6 +921,87 @@ async function processPhoto(entry: FormDataEntryValue | null, tripId: string, en
     customMetadata: { tripId, privacy: "exif-stripped" },
   });
   return { key, contentType: "image/webp", size: bytes.byteLength };
+}
+
+export function minimizeForecastMetadata(value: unknown) {
+  if (!isRecord(value)) return null;
+
+  const minimized: Record<string, unknown> = {};
+  addBoundedText(minimized, "snapshotGeneratedAt", value.snapshotGeneratedAt, 40);
+  addBoundedText(minimized, "forecastStart", value.forecastStart, 40);
+  addBoundedText(minimized, "forecastEnd", value.forecastEnd, 40);
+  if (value.confidence === "low" || value.confidence === "medium" || value.confidence === "high") {
+    minimized.confidence = value.confidence;
+  }
+
+  if (isRecord(value.forecastConditions)) {
+    const source = value.forecastConditions;
+    const conditions: Record<string, unknown> = {};
+    addBoundedText(conditions, "tideStage", source.tideStage, 40);
+    addNumber(conditions, "tideChangeFeet", source.tideChangeFeet, -20, 20);
+    if (Array.isArray(source.tideLevelsFeet)) {
+      const levels = source.tideLevelsFeet
+        .filter((entry): entry is number => typeof entry === "number" && Number.isFinite(entry))
+        .slice(0, 4)
+        .map((entry) => Math.max(-20, Math.min(30, entry)));
+      if (levels.length) conditions.tideLevelsFeet = levels;
+    }
+    addNumber(conditions, "currentKnots", source.currentKnots, 0, 20);
+    addNumber(conditions, "currentDirectionDegrees", source.currentDirectionDegrees, 0, 360);
+    addBoundedText(conditions, "currentDirection", source.currentDirection, 12);
+    addNumber(conditions, "windMph", source.windMph, 0, 200);
+    addBoundedText(conditions, "windDirection", source.windDirection, 12);
+    addNumber(conditions, "swellFeet", source.swellFeet, 0, 100);
+    addNumber(conditions, "swellPeriodSeconds", source.swellPeriodSeconds, 0, 60);
+    addNumber(conditions, "swellDirectionDegrees", source.swellDirectionDegrees, 0, 360);
+    addBoundedText(conditions, "swellDirection", source.swellDirection, 12);
+    addNumber(conditions, "wavePowerKwM", source.wavePowerKwM, 0, 1_000);
+    addBoundedText(conditions, "breakingIntensity", source.breakingIntensity, 24);
+    addNumber(conditions, "breakingWaveHeightFeet", source.breakingWaveHeightFeet, 0, 100);
+    addBoundedText(conditions, "fishabilityLabel", source.fishabilityLabel, 30);
+    if (Array.isArray(source.fishabilityReasons)) {
+      const reasons = source.fishabilityReasons
+        .filter((entry): entry is string => typeof entry === "string")
+        .map((entry) => entry.trim().slice(0, 240))
+        .filter(Boolean)
+        .slice(0, 6);
+      if (reasons.length) conditions.fishabilityReasons = reasons;
+    }
+    addNumber(conditions, "waterTempF", source.waterTempF, -20, 150);
+    addBoundedText(conditions, "waterTempSource", source.waterTempSource, 80);
+    addNumber(conditions, "ndbcObservedWaterTempF", source.ndbcObservedWaterTempF, -20, 150);
+    addBoundedText(conditions, "ndbcObservedAt", source.ndbcObservedAt, 40);
+    if (typeof source.daylight === "boolean") conditions.daylight = source.daylight;
+    addNumber(conditions, "cloudCoverPct", source.cloudCoverPct, 0, 100);
+    addNumber(conditions, "pressureHpa", source.pressureHpa, 800, 1_200);
+    addNumber(conditions, "pressureTrendHpa3h", source.pressureTrendHpa3h, -100, 100);
+    addBoundedText(conditions, "pressureObservedAt", source.pressureObservedAt, 40);
+    addBoundedText(conditions, "moonPhase", source.moonPhase, 40);
+    addNumber(conditions, "moonIlluminationPct", source.moonIlluminationPct, 0, 100);
+    addBoundedText(conditions, "fishingPressure", source.fishingPressure, 24);
+    addNumber(conditions, "fishingPressurePct", source.fishingPressurePct, 0, 100);
+    addNumber(conditions, "accessAdjustmentPoints", source.accessAdjustmentPoints, -100, 100);
+    addBoundedText(conditions, "fishingPressureBasis", source.fishingPressureBasis, 160);
+    addBoundedText(conditions, "summary", source.summary, 300);
+    minimized.forecastConditions = conditions;
+  }
+
+  return minimized;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === "object" && !Array.isArray(value);
+}
+
+function addBoundedText(target: Record<string, unknown>, key: string, value: unknown, maximum: number) {
+  if (typeof value !== "string") return;
+  const text = value.trim().slice(0, maximum);
+  if (text) target[key] = text;
+}
+
+function addNumber(target: Record<string, unknown>, key: string, value: unknown, minimum: number, maximum: number) {
+  if (typeof value !== "number" || !Number.isFinite(value)) return;
+  target[key] = Math.max(minimum, Math.min(maximum, value));
 }
 
 function matchesImageSignature(bytes: Uint8Array, type: string) {

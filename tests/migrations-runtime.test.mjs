@@ -81,6 +81,7 @@ test("the complete migration chain applies atomically and produces the runtime s
     "0006_moderated_location_discussions.sql",
     "0007_legal_acceptance.sql",
     "0009_human_discussion_approval.sql",
+    "0010_privacy_durability.sql",
   ]);
 
   const sqlite = new DatabaseSync(":memory:");
@@ -90,7 +91,7 @@ test("the complete migration chain applies atomically and produces the runtime s
   assert.deepEqual(
     sqlite.prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%' ORDER BY name").all()
       .map((row) => row.name),
-    ["auth_attempts", "auth_sessions", "email_challenges", "gear_profiles", "saved_sites", "site_discussion_posts", "trips", "users"],
+    ["auth_attempts", "auth_sessions", "email_challenges", "gear_profiles", "privacy_deletion_jobs", "privacy_deletion_tasks", "saved_sites", "signup_age_proofs", "site_discussion_posts", "trips", "users"],
   );
   assert.ok(columns(sqlite, "trips").includes("user_id"));
   assert.ok(columns(sqlite, "trips").includes("ai_reviewed_at"));
@@ -101,6 +102,15 @@ test("the complete migration chain applies atomically and produces the runtime s
     columns(sqlite, "site_discussion_posts").slice(-3),
     ["approved_at", "approved_by", "source_ai_reviewed_at"],
   );
+  assert.ok(columns(sqlite, "signup_age_proofs").includes("consumed_at"));
+  assert.ok(columns(sqlite, "privacy_deletion_jobs").includes("owner_subject_hash"));
+  assert.ok(columns(sqlite, "privacy_deletion_tasks").includes("object_key_hash"));
+  const tripOwnershipForeignKeys = sqlite.prepare(`SELECT COUNT(*) AS count
+    FROM pragma_foreign_key_list('trips')
+    WHERE "table" = 'users' AND "from" = 'user_id' AND upper(on_delete) = 'SET NULL'`).get().count;
+  assert.equal(tripOwnershipForeignKeys, 1);
+  const privacyAudit = await readFile(new URL("../scripts/privacy-post-migration-audit.sql", import.meta.url), "utf8");
+  assert.match(privacyAudit, /trip_user_ownership_foreign_keys/);
   assert.equal(sqlite.prepare("PRAGMA foreign_key_check").all().length, 0);
   assert.equal(sqlite.prepare("PRAGMA integrity_check").get().integrity_check, "ok");
 });

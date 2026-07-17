@@ -29,13 +29,21 @@ class ReviewError extends Error {
   }
 }
 
-export async function reviewTripWithMimo(env: ReviewEnv, trip: TripRow, sites: readonly CuratedSite[]) {
-  if (!env.DB || !env.MIMO_API_KEY || trip.status !== "completed") return;
+export async function reviewTripWithMimo(env: ReviewEnv, tripOrId: TripRow | string, sites: readonly CuratedSite[]) {
+  if (!env.DB || !env.MIMO_API_KEY) return;
+  const tripId = typeof tripOrId === "string" ? tripOrId : tripOrId.id;
   const model = env.MIMO_MODEL ?? "mimo-v2.5";
-  const site = sites.find((candidate) => candidate.id === trip.site_id);
-  await env.DB.prepare("UPDATE trips SET ai_review_status = 'processing' WHERE id = ?")
-    .bind(trip.id)
+  const claimed = await env.DB.prepare(`UPDATE trips SET ai_review_status = 'processing'
+    WHERE id = ? AND status = 'completed'
+      AND (ai_review_status IS NULL OR ai_review_status = 'queued' OR ai_review_status = 'retry')`)
+    .bind(tripId)
     .run();
+  if (Number(claimed.meta?.changes ?? 0) !== 1) return;
+  const trip = await env.DB.prepare(`SELECT * FROM trips
+    WHERE id = ? AND status = 'completed' AND ai_review_status = 'processing' LIMIT 1`)
+    .bind(tripId).first<TripRow>();
+  if (!trip) return;
+  const site = sites.find((candidate) => candidate.id === trip.site_id);
 
   const safeTrip = {
     siteId: trip.site_id,
@@ -59,11 +67,11 @@ export async function reviewTripWithMimo(env: ReviewEnv, trip: TripRow, sites: r
     otherSpecies: trip.other_species,
     observedFishability: safeJson(trip.observations_json),
     forecastFishabilityScore: trip.fishability_score,
-    forecastMetadata: safeJson(trip.prediction_metadata_json),
     notes: trip.notes?.slice(0, 1000) ?? null,
   };
 
   try {
+    if (await deletionRequestedBeforeDispatch(env.DB, trip)) return;
     const response = await fetch("https://api.xiaomimimo.com/v1/chat/completions", {
       method: "POST",
       headers: {
@@ -111,7 +119,7 @@ Return JSON only with keys: quality_score (0-100), flags (string array), summary
       discussion,
     });
     await env.DB.prepare(`UPDATE trips SET ai_review_status = 'reviewed', ai_review_json = ?,
-      ai_review_model = ?, ai_reviewed_at = ? WHERE id = ?`)
+      ai_review_model = ?, ai_reviewed_at = ? WHERE id = ? AND ai_review_status = 'processing'`)
       .bind(stored, model, new Date().toISOString(), trip.id)
       .run();
   } catch (error) {
@@ -120,22 +128,41 @@ Return JSON only with keys: quality_score (0-100), flags (string array), summary
       code: error instanceof ReviewError ? error.code : "review_failed",
       status: error instanceof ReviewError ? error.status : undefined,
     });
-    await env.DB.prepare("UPDATE trips SET ai_review_status = 'retry', ai_review_model = ? WHERE id = ?")
+    await env.DB.prepare(`UPDATE trips SET ai_review_status = 'retry', ai_review_model = ?
+      WHERE id = ? AND ai_review_status = 'processing'`)
       .bind(model, trip.id)
       .run();
   }
 }
 
+async function deletionRequestedBeforeDispatch(db: D1DatabaseLike, trip: TripRow) {
+  const tripSubjectHash = await sha256(`trip:${trip.id}`);
+  const ownerSubjectHash = trip.user_id ? await sha256(`account:${trip.user_id}`) : null;
+  const tombstone = ownerSubjectHash
+    ? await db.prepare(`SELECT 1 AS requested FROM privacy_deletion_jobs
+        WHERE (scope = 'trip' AND subject_hash = ?)
+          OR (scope = 'account' AND owner_subject_hash = ?) LIMIT 1`)
+      .bind(tripSubjectHash, ownerSubjectHash).first<{ requested: number }>()
+    : await db.prepare("SELECT 1 AS requested FROM privacy_deletion_jobs WHERE scope = 'trip' AND subject_hash = ? LIMIT 1")
+      .bind(tripSubjectHash).first<{ requested: number }>();
+  return Boolean(tombstone);
+}
+
+async function sha256(value: string) {
+  const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(value));
+  return Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, "0")).join("");
+}
+
 export async function reviewTripBacklog(env: ReviewEnv, sites: readonly CuratedSite[], limit = 10) {
   if (!env.DB || !env.MIMO_API_KEY) return 0;
-  const rows = await env.DB.prepare(`SELECT * FROM trips
+  const rows = await env.DB.prepare(`SELECT id FROM trips
     WHERE status = 'completed' AND (ai_review_status IS NULL OR ai_review_status = 'retry')
     ORDER BY COALESCE(completed_at, ended_at, started_at) ASC
     LIMIT ?`)
     .bind(limit)
-    .all<TripRow>();
+    .all<{ id: string }>();
   const trips = rows.results ?? [];
-  for (const trip of trips) await reviewTripWithMimo(env, trip, sites);
+  for (const trip of trips) await reviewTripWithMimo(env, trip.id, sites);
   return trips.length;
 }
 

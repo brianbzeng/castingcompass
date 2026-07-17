@@ -28,6 +28,12 @@ after its acceptance checks pass in the intended environment.
     attach the production evidence required by `docs/PRODUCTION-OPERATIONS.md`.
 - [ ] Make account privacy promises durable: deletion queue/tombstones for photos and public
   copies, truthful completion semantics, and an age-only first step before email/password.
+  - [x] Implement and locally verify single-use age proofs, consent-safe reacceptance,
+    authenticated export, atomic active-data removal, durable object cleanup, aggregate
+    receipts, retry/lease safety, restore suppression, and operator recovery guidance.
+  - [ ] Apply and audit the production migration, verify the exact private R2 binding and
+    zero-photo invariant, exercise deletion/export/retry fixtures, deploy the age-proof edge
+    ceiling and alerts, complete the restore replay drill, and obtain provider/counsel review.
 
 ## P1 — Evidence, data contracts, discoverability, and scalable foundations
 

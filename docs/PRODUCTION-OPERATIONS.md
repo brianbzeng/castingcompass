@@ -16,7 +16,8 @@ Configure Cloudflare rate-limiting rules ahead of the Worker, beginning in log-o
 the plan supports it. Review legitimate beta traffic before selecting final thresholds.
 At minimum, cover:
 
-- email-producing mutations: `/api/auth/signup/request`,
+- age-proof and email-producing mutations: `/api/auth/signup/eligibility`,
+  `/api/auth/signup/request`,
   `/api/auth/challenge/resend`, and `/api/auth/password/request`;
 - credential and code checks: `/api/auth/login`, `/api/auth/signup/verify`, and
   `/api/auth/password/reset`;
@@ -28,6 +29,9 @@ tokens server-side, bind them to the expected hostname and action, reject missin
 wrong-action tokens, and keep a kill switch. Test the browser, installed PWA, accessibility,
 and future mobile clients before enforcing it. Never implement a global D1 limiter keyed by
 raw IP/user-agent values; that turns abusive traffic into high-cardinality database writes.
+The age-proof endpoint also needs a tested edge ceiling before launch: otherwise eligible
+requests can create unbounded short-lived D1 rows without sending email. Exercise the rule
+against normal multi-step signup and measure both blocked requests and proof-table growth.
 
 ## Monitoring and alerting
 
@@ -77,11 +81,53 @@ authentication/session revocation behavior, and application reads. Record only a
 evidence, then destroy the drill copy. R2/photo backup is out of scope while uploads remain
 disabled; add a separate private-object restore drill before enabling photos.
 
+### Privacy deletion ledger and restore suppression
+
+The `privacy_deletion_jobs` and `privacy_deletion_tasks` tables are operational privacy
+controls, not ordinary application history. A point-in-time restore can resurrect account
+rows while also rolling these controls back. Never restore D1 and immediately return it to
+service.
+
+Before any production restore:
+
+1. Stop application writes, scheduled AI review, and deletion workers.
+2. Preserve an encrypted, access-restricted copy of the current deletion-job/task ledger.
+   Record only its checksum and aggregate counts in the incident record.
+3. Restore into an isolated database first. Reapply every current account/trip tombstone,
+   preserve every unresolved object task, and remove any linked public discussion rows.
+4. Prove that no restored user or trip matches a current tombstone, unresolved R2 cleanup
+   remains queued, foreign-key and integrity checks pass, and aggregate deletion counts agree.
+5. Obtain a second-person review of the privacy audit before routing any traffic to the
+   restored database.
+
+Completed tombstones are retained for 90 days. The maximum production backup and Time Travel
+window must therefore be documented and kept shorter than 90 days. If any recoverable copy can
+outlive the tombstone window, lengthen tombstone retention before taking that copy. A restore
+drill is not complete until this replay procedure has been exercised with a deleted account,
+a linked public discussion row, and both completed and pending photo tasks.
+
+Photo uploads remain disabled in the reviewed production build. Before enabling them, bind and
+verify the intended private R2 bucket, inventory D1 photo locators against that bucket without
+logging keys, exercise export and deletion through the Worker binding, alert on aged
+`processing` jobs using `requested_at` (not the reconciliation-heartbeat `updated_at`) and on
+every `needs_attention` job, and test an R2 object restore/deletion replay. A binding to
+an empty or wrong bucket can make a delete call succeed against the wrong storage location, so
+bucket identity is release evidence—not a configuration assumption.
+
+Enabling the browser control or adding an R2 binding is not sufficient authorization. The
+Worker must retain an explicit server-side upload gate that defaults off. Before switching it
+on, implement and test a D1-serialized account-deletion fence: block new trip/photo writes,
+then take the complete photo inventory, durably queue every locator, and only then remove active
+rows. Include an interleaving test where an upload reaches the attach step during deletion and
+prove that the object is either attached to a live trip or durably queued for cleanup.
+
 ## Production evidence checklist
 
 - [ ] Release came from a clean worktree at the reviewed immutable commit.
 - [ ] Deployment ID and Worker version ID were recorded; exactly one version has `100%` traffic.
 - [ ] Production migration preflight, Time Travel bookmark, migration, and postflight passed.
+- [ ] Privacy pre/postflight counts match; the missing-age and legal-reacceptance cohorts have
+      an explicit support decision, while export and account deletion remain available.
 - [ ] Canonical, redirect-alias, and `workers.dev` smoke checks passed.
 - [ ] Health and security endpoints return the expected content and hardening headers.
 - [ ] GitHub dependency/Dependabot review has no untriaged high or critical production
@@ -94,4 +140,11 @@ disabled; add a separate private-object restore drill before enabling photos.
 - [ ] Exception, 5xx, CPU, D1, uptime, and volume alerts delivered a test notification.
 - [ ] A recent encrypted D1 export exists with a tested retention/deletion procedure.
 - [ ] A non-production restore drill passed and its aggregate evidence is recorded.
+- [ ] The backup/Time Travel window is shorter than the 90-day deletion-tombstone window.
+- [ ] A restore drill preserved the current deletion ledger and proved that deleted account,
+      trip, public-discussion, and pending-photo records could not reappear in service.
+- [ ] The production photo-locator audit is zero while uploads are disabled, or the intended
+      R2 bucket binding, deletion retries, aged-job alert, and authenticated export were tested.
+- [ ] Deletion receipts, retry exhaustion, operator requeue, aged-job alerting, and restore
+      suppression were exercised without placing identifiers or object locators in evidence.
 - [ ] The public-discussion kill switch and safe Worker rollback were exercised.

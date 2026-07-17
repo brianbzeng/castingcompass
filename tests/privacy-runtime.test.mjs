@@ -1,0 +1,1112 @@
+import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
+import { DatabaseSync } from "node:sqlite";
+import test from "node:test";
+import { cleanupAuthData, LEGAL_VERSION, evaluateAgeEligibility, handleAccountRequest, processPrivacyDeletionTasks } from "../worker/auth.ts";
+import { createTripStore } from "../worker/trips.ts";
+import { reviewTripWithMimo } from "../worker/trip-review.ts";
+
+const MIGRATIONS = [
+  "0000_unique_tusk.sql",
+  "0001_accounts_and_saved_sites.sql",
+  "0002_profile_trip_ownership.sql",
+  "0003_email_verification_and_recovery.sql",
+  "0004_advisory_trip_review.sql",
+  "0005_fishability_and_gear.sql",
+  "0006_moderated_location_discussions.sql",
+  "0007_legal_acceptance.sql",
+  "0009_human_discussion_approval.sql",
+  "0010_privacy_durability.sql",
+];
+
+class D1StatementAdapter {
+  constructor(owner, query, statement) {
+    this.owner = owner;
+    this.query = query;
+    this.statement = statement;
+    this.values = [];
+  }
+
+  bind(...values) {
+    this.values = values;
+    return this;
+  }
+
+  async first() {
+    this.owner.assertQueryAllowed(this.query);
+    return this.statement.get(...this.values) ?? null;
+  }
+
+  async all() {
+    this.owner.assertQueryAllowed(this.query);
+    return { results: this.statement.all(...this.values) };
+  }
+
+  async run() {
+    this.owner.assertQueryAllowed(this.query);
+    const result = this.statement.run(...this.values);
+    return { success: true, meta: { changes: Number(result.changes) } };
+  }
+}
+
+class TransactionalD1Adapter {
+  constructor(sqlite) {
+    this.sqlite = sqlite;
+    this.failQuerySubstring = null;
+    this.failOnceQuerySubstring = null;
+    this.failAfterAccountDeletion = false;
+    this.postCommitFailureActive = false;
+  }
+
+  prepare(query) {
+    return new D1StatementAdapter(this, query, this.sqlite.prepare(query));
+  }
+
+  assertQueryAllowed(query) {
+    if (this.failQuerySubstring && query.includes(this.failQuerySubstring)) throw new Error("injected D1 failure");
+    if (this.failOnceQuerySubstring && query.includes(this.failOnceQuerySubstring)) {
+      this.failOnceQuerySubstring = null;
+      throw new Error("injected one-time D1 failure");
+    }
+    if (this.postCommitFailureActive && query.includes("FROM privacy_deletion_tasks")) {
+      throw new Error("injected post-commit D1 failure");
+    }
+  }
+
+  async batch(statements) {
+    this.sqlite.exec("BEGIN IMMEDIATE");
+    try {
+      const results = [];
+      for (const statement of statements) results.push(await statement.run());
+      this.sqlite.exec("COMMIT");
+      if (this.failAfterAccountDeletion && statements.some((statement) => statement.query.includes("DELETE FROM users"))) {
+        this.postCommitFailureActive = true;
+      }
+      return results;
+    } catch (error) {
+      this.sqlite.exec("ROLLBACK");
+      throw error;
+    }
+  }
+}
+
+async function database() {
+  const sqlite = new DatabaseSync(":memory:");
+  sqlite.exec("PRAGMA foreign_keys = ON");
+  for (const migration of MIGRATIONS) {
+    const sql = await readFile(new URL(`../drizzle/${migration}`, import.meta.url), "utf8");
+    sqlite.exec(sql.replaceAll("--> statement-breakpoint", ""));
+  }
+  return { sqlite, d1: new TransactionalD1Adapter(sqlite) };
+}
+
+function request(path, { method = "GET", body, cookie, origin = method !== "GET" } = {}) {
+  const headers = new Headers();
+  if (body !== undefined) headers.set("Content-Type", "application/json");
+  if (cookie) headers.set("Cookie", cookie);
+  if (origin) headers.set("Origin", "https://castingcompass.com");
+  return new Request(`https://castingcompass.com${path}`, {
+    method,
+    headers,
+    body: body === undefined ? undefined : JSON.stringify(body),
+  });
+}
+
+async function sha256(value) {
+  const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(value));
+  return Buffer.from(digest).toString("hex");
+}
+
+function decodeBase64Url(value) {
+  return Buffer.from(value.replaceAll("-", "+").replaceAll("_", "/"), "base64");
+}
+
+async function passwordHash(password, salt) {
+  const key = await crypto.subtle.importKey("raw", new TextEncoder().encode(password), "PBKDF2", false, ["deriveBits"]);
+  const bits = await crypto.subtle.deriveBits({
+    name: "PBKDF2",
+    hash: "SHA-256",
+    salt: decodeBase64Url(salt),
+    iterations: 100_000,
+  }, key, 256);
+  return Buffer.from(bits).toString("base64url");
+}
+
+async function addUser(sqlite, suffix = "1") {
+  const id = `user_${suffix}`;
+  const email = `angler-${suffix}@example.com`;
+  const password = "correct-horse-battery-staple";
+  const salt = Buffer.alloc(18, Number(suffix.replace(/\D/g, "")) || 1).toString("base64url");
+  const timestamp = new Date().toISOString();
+  sqlite.prepare(`INSERT INTO users (id, email, password_salt, password_hash,
+      age_eligibility_confirmed_at, terms_accepted_at, terms_version,
+      privacy_accepted_at, privacy_version, created_at, updated_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
+    .run(id, email, salt, await passwordHash(password, salt), timestamp, timestamp, LEGAL_VERSION,
+      timestamp, LEGAL_VERSION, timestamp, timestamp);
+  const token = Buffer.alloc(32, Number(suffix.replace(/\D/g, "")) || 1).toString("base64url");
+  sqlite.prepare("INSERT INTO auth_sessions (token_hash, user_id, expires_at, created_at) VALUES (?, ?, ?, ?)")
+    .run(await sha256(token), id, new Date(Date.now() + 86_400_000).toISOString(), timestamp);
+  return { id, email, password, token, cookie: `cc_session=${token}` };
+}
+
+function addTrip(sqlite, user, {
+  id = `trip_${crypto.randomUUID()}`,
+  photoKey = null,
+  moderation = "pending",
+} = {}) {
+  const timestamp = "2026-07-01T12:00:00.000Z";
+  sqlite.prepare(`INSERT INTO trips (
+      id, user_id, status, source, site_id, started_at, ended_at, mode, fishing_method, gear,
+      angler_count, angler_hours, keeper_count, short_released_count, halibut_encounters,
+      no_catch, notes, consent, consent_at, moderation_status, reporter_key_hash, referral_code,
+      token_hash, opportunity_window_id, opportunity_score, habitat_score, seasonality_score,
+      conditions_score, model_version, score_influenced_choice, prediction_metadata_json,
+      photo_key, photo_content_type, photo_size_bytes, created_at, updated_at, completed_at,
+      gear_profile_id, rod, reel, bait_lure, rig, other_catch_count, other_species,
+      observations_json, fishability_score, ai_review_status, ai_review_json, ai_review_model, ai_reviewed_at
+    ) VALUES (?, ?, 'completed', 'past_report', 'ocean-beach', ?, ?, 'shore', 'artificial-lure', 'legacy gear',
+      1, 2.5, 1, 2, 3, 0, 'User trip notes', 1, ?, ?, 'reporter-secret', 'friend-code',
+      'trip-token-secret', 'window-1', 72, 80, 70, 66, 'model-v1', 1, '{"forecast":"snapshot"}',
+      ?, 'image/jpeg', 4, ?, ?, ?, 'gear_1', 'Rod A', 'Reel B', 'Swimbait', 'Drop shot',
+      1, 'surfperch', '{"waterClarity":"clear"}', 64, 'reviewed', '{"qualityScore":88}',
+      'mimo-test', ?)`)
+    .run(id, user.id, timestamp, timestamp, timestamp, moderation, photoKey,
+      timestamp, timestamp, timestamp, timestamp);
+  return id;
+}
+
+function addDiscussion(sqlite, tripId) {
+  sqlite.prepare(`INSERT INTO site_discussion_posts (
+      id, trip_id, site_id, summary, gear_summary, technique_tags_json, observed_at,
+      created_at, updated_at, review_model, approved_at, approved_by, source_ai_reviewed_at)
+    VALUES (?, ?, 'ocean-beach', 'Public-safe summary', 'Medium setup', '["swimbait"]',
+      '2026-07-01', '2026-07-02', '2026-07-03', 'mimo-test', '2026-07-04',
+      'operator-private-identity', '2026-07-03')`)
+    .run(`post_${tripId}`, tripId);
+}
+
+async function addDeletionTombstone(sqlite, { scope, subjectId, ownerId, suffix }) {
+  const timestamp = new Date().toISOString();
+  sqlite.prepare(`INSERT INTO privacy_deletion_jobs (
+      id, receipt_hash, scope, subject_hash, owner_subject_hash, state, objects_total,
+      objects_deleted, requested_at, active_data_removed_at, completed_at, updated_at)
+    VALUES (?, ?, ?, ?, ?, 'completed', 0, 0, ?, ?, ?, ?)`)
+    .run(
+      `deletion_manual_${suffix}`,
+      await sha256(`receipt:${suffix}`),
+      scope,
+      await sha256(`${scope}:${subjectId}`),
+      await sha256(`account:${ownerId}`),
+      timestamp,
+      timestamp,
+      timestamp,
+      timestamp,
+    );
+}
+
+function receiptFrom(response) {
+  const cookies = response.headers.getSetCookie?.() ?? [response.headers.get("set-cookie") ?? ""];
+  const joined = cookies.join(",");
+  return joined.match(/cc_deletion_receipt=([A-Za-z0-9_-]+)/)?.[1] ?? null;
+}
+
+function losAngelesDateParts(date = new Date()) {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: "America/Los_Angeles",
+    year: "numeric",
+    month: "numeric",
+    day: "numeric",
+  }).formatToParts(date);
+  return Object.fromEntries(parts
+    .filter((part) => ["year", "month", "day"].includes(part.type))
+    .map((part) => [part.type, Number(part.value)]));
+}
+
+function isoDate({ year, month, day }) {
+  return `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+}
+
+test("age eligibility is isolated, one-use, non-retaining, and fail-closed", async () => {
+  const { sqlite, d1 } = await database();
+  const eligible = await handleAccountRequest(request("/api/auth/signup/eligibility", {
+    method: "POST",
+    body: { birthDate: "2000-01-01" },
+  }), { DB: d1 }, []);
+  assert.equal(eligible?.status, 200);
+  const proof = (await eligible.json()).eligibilityProof;
+  assert.equal(typeof proof, "string");
+  assert.match(eligible.headers.get("set-cookie") ?? "", /cc_age_ineligible=;.*Secure/);
+  const proofRow = sqlite.prepare("SELECT * FROM signup_age_proofs").get();
+  assert.deepEqual(Object.keys(proofRow).sort(), ["confirmed_at", "consumed_at", "created_at", "expires_at", "gate_version", "token_hash"].sort());
+  assert.doesNotMatch(JSON.stringify(proofRow), /2000-01-01|example\.com|password/i);
+
+  const originalFetch = globalThis.fetch;
+  let emailCalls = 0;
+  globalThis.fetch = async () => {
+    emailCalls += 1;
+    return Response.json({ id: "email-safe" });
+  };
+  try {
+    const signupBody = {
+      eligibilityProof: proof,
+      email: "eligible@example.com",
+      password: "correct-horse-battery-staple",
+      termsAccepted: true,
+      privacyAccepted: true,
+    };
+    const signup = await handleAccountRequest(request("/api/auth/signup/request", { method: "POST", body: signupBody }), {
+      DB: d1,
+      RESEND_API_KEY: "test",
+    }, []);
+    assert.equal(signup?.status, 200);
+    assert.equal(emailCalls, 1);
+    const replay = await handleAccountRequest(request("/api/auth/signup/request", {
+      method: "POST",
+      body: { ...signupBody, email: "different@example.com" },
+    }), { DB: d1, RESEND_API_KEY: "test" }, []);
+    assert.equal(replay?.status, 410);
+    assert.equal(emailCalls, 1);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+
+  const beforeRejected = sqlite.prepare("SELECT COUNT(*) AS count FROM signup_age_proofs").get().count;
+  const year = new Date().getUTCFullYear();
+  const underage = await handleAccountRequest(request("/api/auth/signup/eligibility", {
+    method: "POST",
+    body: { birthDate: `${year - 5}-01-01` },
+  }), { DB: d1 }, []);
+  assert.equal(underage?.status, 403);
+  assert.match(underage.headers.get("set-cookie") ?? "", /cc_age_ineligible=1;.*HttpOnly;.*SameSite=Lax;.*Secure/);
+  const future = await handleAccountRequest(request("/api/auth/signup/eligibility", {
+    method: "POST",
+    body: { birthDate: `${year + 1}-01-01` },
+  }), { DB: d1 }, []);
+  assert.equal(future?.status, 422);
+  assert.doesNotMatch(future.headers.get("set-cookie") ?? "", /cc_age_ineligible=1/);
+  const invalid = await handleAccountRequest(request("/api/auth/signup/eligibility", {
+    method: "POST",
+    body: { birthDate: "2020-02-31" },
+  }), { DB: d1 }, []);
+  assert.equal(invalid?.status, 422);
+  const unexpected = await handleAccountRequest(request("/api/auth/signup/eligibility", {
+    method: "POST",
+    body: { birthDate: "2000-01-01", email: "too-early@example.com" },
+  }), { DB: d1 }, []);
+  assert.equal(unexpected?.status, 422);
+  assert.equal(sqlite.prepare("SELECT COUNT(*) AS count FROM signup_age_proofs").get().count, beforeRejected);
+
+  const blocked = await handleAccountRequest(request("/api/auth/signup/eligibility", {
+    method: "POST",
+    cookie: "cc_age_ineligible=1",
+    body: { birthDate: "2000-01-01" },
+  }), { DB: d1 }, []);
+  assert.equal(blocked?.status, 403);
+  const blockedStatus = await handleAccountRequest(request("/api/auth/signup/eligibility", {
+    cookie: "cc_age_ineligible=1",
+  }), { DB: d1 }, []);
+  assert.deepEqual(await blockedStatus.json(), { available: false });
+  const availableStatus = await handleAccountRequest(request("/api/auth/signup/eligibility"), { DB: d1 }, []);
+  assert.deepEqual(await availableStatus.json(), { available: true });
+
+  const fresh = await handleAccountRequest(request("/api/auth/signup/eligibility", {
+    method: "POST",
+    body: { birthDate: "2000-01-01" },
+  }), { DB: d1 }, []);
+  const freshProof = (await fresh.json()).eligibilityProof;
+  const markerBlockedSignup = await handleAccountRequest(request("/api/auth/signup/request", {
+    method: "POST",
+    cookie: "cc_age_ineligible=1",
+    body: {
+      eligibilityProof: freshProof,
+      email: "blocked@example.com",
+      password: "correct-horse-battery-staple",
+      termsAccepted: true,
+      privacyAccepted: true,
+    },
+  }), { DB: d1 }, []);
+  assert.equal(markerBlockedSignup?.status, 403);
+  assert.equal(sqlite.prepare("SELECT consumed_at FROM signup_age_proofs WHERE token_hash = ?").get(await sha256(freshProof)).consumed_at, null);
+
+  const validationProofResponse = await handleAccountRequest(request("/api/auth/signup/eligibility", {
+    method: "POST",
+    body: { birthDate: "2000-01-01" },
+  }), { DB: d1 }, []);
+  const validationProof = (await validationProofResponse.json()).eligibilityProof;
+  const invalidCredentialStage = await handleAccountRequest(request("/api/auth/signup/request", {
+    method: "POST",
+    body: {
+      eligibilityProof: validationProof,
+      email: "not-an-email",
+      password: "correct-horse-battery-staple",
+      termsAccepted: true,
+      privacyAccepted: true,
+    },
+  }), { DB: d1 }, []);
+  assert.equal(invalidCredentialStage?.status, 422);
+  const consumedAfterValidationFailure = await handleAccountRequest(request("/api/auth/signup/request", {
+    method: "POST",
+    body: {
+      eligibilityProof: validationProof,
+      email: "now-valid@example.com",
+      password: "correct-horse-battery-staple",
+      termsAccepted: true,
+      privacyAccepted: true,
+    },
+  }), { DB: d1 }, []);
+  assert.equal(consumedAfterValidationFailure?.status, 410);
+
+  sqlite.prepare("UPDATE signup_age_proofs SET expires_at = '2000-01-01' WHERE token_hash = ?").run(await sha256(freshProof));
+  const expired = await handleAccountRequest(request("/api/auth/signup/request", {
+    method: "POST",
+    body: {
+      eligibilityProof: freshProof,
+      email: "expired@example.com",
+      password: "correct-horse-battery-staple",
+      termsAccepted: true,
+      privacyAccepted: true,
+    },
+  }), { DB: d1 }, []);
+  assert.equal(expired?.status, 410);
+});
+
+test("age eligibility uses the California calendar at the exact birthday boundary", async () => {
+  const { d1 } = await database();
+  const today = losAngelesDateParts();
+  const birthdayToday = { ...today, year: today.year - 13 };
+  const tomorrowDate = new Date(Date.UTC(today.year, today.month - 1, today.day + 1));
+  const birthdayTomorrow = {
+    year: tomorrowDate.getUTCFullYear() - 13,
+    month: tomorrowDate.getUTCMonth() + 1,
+    day: tomorrowDate.getUTCDate(),
+  };
+  const dayOf = await handleAccountRequest(request("/api/auth/signup/eligibility", {
+    method: "POST",
+    body: { birthDate: isoDate(birthdayToday) },
+  }), { DB: d1 }, []);
+  assert.equal(dayOf?.status, 200);
+  const dayBefore = await handleAccountRequest(request("/api/auth/signup/eligibility", {
+    method: "POST",
+    body: { birthDate: isoDate(birthdayTomorrow) },
+  }), { DB: d1 }, []);
+  assert.equal(dayBefore?.status, 403);
+  assert.throws(
+    () => evaluateAgeEligibility("2013-07-17", new Date("2026-07-17T06:59:59.000Z")),
+    (error) => error?.code === "age_restricted",
+  );
+  assert.equal(
+    evaluateAgeEligibility("2013-07-17", new Date("2026-07-17T07:00:00.000Z")),
+    "2026-07-17T07:00:00.000Z",
+  );
+});
+
+test("legal reacceptance preserves prior age eligibility and legacy accounts fail closed with rights intact", async () => {
+  const { sqlite, d1 } = await database();
+  const user = await addUser(sqlite, "9");
+  const ageConfirmedAt = "2025-01-02T03:04:05.000Z";
+  sqlite.prepare(`UPDATE users SET age_eligibility_confirmed_at = ?, terms_version = 'old', privacy_version = 'old'
+    WHERE id = ?`).run(ageConfirmedAt, user.id);
+  const session = await handleAccountRequest(request("/api/auth/session", { cookie: user.cookie }), { DB: d1 }, []);
+  assert.deepEqual(await session.json(), {
+    user: { id: user.id, email: user.email, ageEligible: true, legalAccepted: false },
+  });
+  const reaccepted = await handleAccountRequest(request("/api/auth/eligibility", {
+    method: "POST",
+    cookie: user.cookie,
+    body: { termsAccepted: true, privacyAccepted: true },
+  }), { DB: d1 }, []);
+  assert.equal(reaccepted?.status, 200);
+  assert.equal(sqlite.prepare("SELECT age_eligibility_confirmed_at FROM users WHERE id = ?").get(user.id).age_eligibility_confirmed_at, ageConfirmedAt);
+
+  const legacy = await addUser(sqlite, "10");
+  sqlite.prepare(`UPDATE users SET age_eligibility_confirmed_at = NULL, terms_version = 'old', privacy_version = 'old'
+    WHERE id = ?`).run(legacy.id);
+  const legacySession = await handleAccountRequest(request("/api/auth/session", { cookie: legacy.cookie }), { DB: d1 }, []);
+  assert.deepEqual(await legacySession.json(), {
+    user: { id: legacy.id, email: legacy.email, ageEligible: false, legalAccepted: false },
+  });
+  const legacyReaccept = await handleAccountRequest(request("/api/auth/eligibility", {
+    method: "POST",
+    cookie: legacy.cookie,
+    body: { termsAccepted: true, privacyAccepted: true },
+  }), { DB: d1 }, []);
+  assert.equal(legacyReaccept?.status, 428);
+  const legacyDob = await handleAccountRequest(request("/api/auth/eligibility", {
+    method: "POST",
+    cookie: legacy.cookie,
+    body: { birthDate: "2000-01-01", termsAccepted: true, privacyAccepted: true },
+  }), { DB: d1 }, []);
+  assert.equal(legacyDob?.status, 422);
+  const legacyExport = await handleAccountRequest(request("/api/profile/export", { cookie: legacy.cookie }), { DB: d1 }, []);
+  assert.equal(legacyExport?.status, 200);
+});
+
+test("account deletion transaction removes public/account rows and completes successful object purge", async () => {
+  const { sqlite, d1 } = await database();
+  const user = await addUser(sqlite);
+  const tripId = addTrip(sqlite, user, { photoKey: "private/photo.jpg" });
+  addDiscussion(sqlite, tripId);
+  sqlite.prepare("INSERT INTO saved_sites (user_id, site_id, created_at) VALUES (?, 'ocean-beach', '2026-07-01')").run(user.id);
+  sqlite.prepare(`INSERT INTO gear_profiles (id, user_id, name, created_at, updated_at)
+    VALUES ('gear_saved', ?, 'Surf setup', '2026-07-01', '2026-07-01')`).run(user.id);
+  const deletedKeys = [];
+  const response = await handleAccountRequest(request("/api/profile", {
+    method: "DELETE",
+    cookie: user.cookie,
+    body: { confirmation: "DELETE", password: user.password },
+  }), { DB: d1, TRIP_PHOTOS: { delete: async (key) => deletedKeys.push(key) } }, []);
+  assert.equal(response?.status, 200);
+  const payload = await response.json();
+  assert.deepEqual(payload.deletion.status, "completed");
+  assert.equal(payload.deleted, true);
+  assert.deepEqual(deletedKeys, ["private/photo.jpg"]);
+  assert.equal(sqlite.prepare("SELECT COUNT(*) AS count FROM users").get().count, 0);
+  assert.equal(sqlite.prepare("SELECT COUNT(*) AS count FROM trips").get().count, 0);
+  assert.equal(sqlite.prepare("SELECT COUNT(*) AS count FROM site_discussion_posts").get().count, 0);
+  assert.equal(sqlite.prepare("SELECT COUNT(*) AS count FROM saved_sites").get().count, 0);
+  const task = sqlite.prepare("SELECT state, object_key, object_key_hash FROM privacy_deletion_tasks").get();
+  assert.equal(task.state, "completed");
+  assert.equal(task.object_key, null);
+  assert.equal(typeof task.object_key_hash, "string");
+  const cookies = (response.headers.getSetCookie?.() ?? [response.headers.get("set-cookie") ?? ""]).join("\n");
+  assert.match(cookies, /cc_session=;.*Max-Age=0/);
+  assert.match(cookies, /cc_reporter=;.*SameSite=Strict; Secure/);
+  assert.match(cookies, /cc_age_ineligible=;.*Max-Age=0/);
+  assert.match(cookies, /cc_deletion_receipt=.*HttpOnly; SameSite=Lax; Secure/);
+  const receipt = receiptFrom(response);
+  assert.ok(receipt);
+  const status = await handleAccountRequest(request("/api/privacy/deletion-status", {
+    cookie: `cc_deletion_receipt=${receipt}`,
+  }), { DB: d1 }, []);
+  assert.equal(status?.status, 200);
+  assert.deepEqual((await status.json()).deletion.status, "completed");
+  const cleared = await handleAccountRequest(request("/api/privacy/deletion-status", {
+    method: "DELETE",
+    cookie: `cc_deletion_receipt=${receipt}`,
+  }), { DB: d1 }, []);
+  assert.equal(cleared?.status, 200);
+  assert.match(cleared.headers.get("set-cookie") ?? "", /cc_deletion_receipt=;.*Max-Age=0/);
+});
+
+test("trip writes serialize safely on both sides of account deletion and fallback DDL keeps ownership foreign keys", async () => {
+  const { sqlite, d1 } = await database();
+  const user = await addUser(sqlite, "19");
+  const writeBeforeDeletion = addTrip(sqlite, user);
+  assert.equal(sqlite.prepare("SELECT COUNT(*) AS count FROM trips WHERE id = ?").get(writeBeforeDeletion).count, 1);
+
+  const deletion = await handleAccountRequest(request("/api/profile", {
+    method: "DELETE",
+    cookie: user.cookie,
+    body: { confirmation: "DELETE", password: user.password },
+  }), { DB: d1 }, []);
+  assert.equal(deletion?.status, 200);
+  assert.equal(sqlite.prepare("SELECT COUNT(*) AS count FROM trips WHERE id = ?").get(writeBeforeDeletion).count, 0);
+  assert.throws(() => addTrip(sqlite, user), /FOREIGN KEY constraint failed/);
+  assert.equal(sqlite.prepare("SELECT COUNT(*) AS count FROM trips WHERE user_id = ?").get(user.id).count, 0);
+
+  const fallbackSqlite = new DatabaseSync(":memory:");
+  fallbackSqlite.exec("PRAGMA foreign_keys = ON; CREATE TABLE users (id TEXT PRIMARY KEY NOT NULL)");
+  const fallbackD1 = new TransactionalD1Adapter(fallbackSqlite);
+  await createTripStore(fallbackD1).initialize();
+  const foreignKeys = fallbackSqlite.prepare("PRAGMA foreign_key_list(trips)").all();
+  assert.ok(foreignKeys.some((key) => key.table === "users" && key.from === "user_id" && key.on_delete === "SET NULL"));
+});
+
+test("missing storage and retry failures stay truthful until an idempotent purge succeeds", async () => {
+  const { sqlite, d1 } = await database();
+  const user = await addUser(sqlite, "2");
+  addTrip(sqlite, user, { photoKey: "private/retry.jpg" });
+  const missingBinding = await handleAccountRequest(request("/api/profile", {
+    method: "DELETE",
+    cookie: user.cookie,
+    body: { confirmation: "DELETE", password: user.password },
+  }), { DB: d1 }, []);
+  assert.equal(missingBinding?.status, 202);
+  assert.equal((await missingBinding.json()).deletion.status, "needs_attention");
+  assert.equal(sqlite.prepare("SELECT COUNT(*) AS count FROM users WHERE id = ?").get(user.id).count, 0);
+  assert.equal(sqlite.prepare("SELECT object_key FROM privacy_deletion_tasks").get().object_key, "private/retry.jpg");
+
+  sqlite.prepare(`UPDATE privacy_deletion_tasks SET state = 'pending', available_at = '2000-01-01',
+    lease_expires_at = NULL, lease_token = NULL, last_error_code = NULL WHERE state = 'needs_attention'`).run();
+  let attempts = 0;
+  await processPrivacyDeletionTasks({
+    DB: d1,
+    TRIP_PHOTOS: {
+      delete: async () => {
+        attempts += 1;
+        if (attempts === 1) throw new Error("temporary failure");
+      },
+    },
+  });
+  assert.equal(sqlite.prepare("SELECT state FROM privacy_deletion_jobs").get().state, "active_data_removed");
+  sqlite.prepare("UPDATE privacy_deletion_tasks SET available_at = '2000-01-01'").run();
+  await processPrivacyDeletionTasks({ DB: d1, TRIP_PHOTOS: { delete: async () => { attempts += 1; } } });
+  const job = sqlite.prepare("SELECT state, objects_total, objects_deleted FROM privacy_deletion_jobs").get();
+  assert.equal(job.state, "completed");
+  assert.equal(job.objects_total, 1);
+  assert.equal(job.objects_deleted, 1);
+  assert.equal(sqlite.prepare("SELECT object_key FROM privacy_deletion_tasks").get().object_key, null);
+});
+
+test("account deletion adopts unresolved photo tasks from an earlier trip deletion", async () => {
+  const { sqlite, d1 } = await database();
+  const user = await addUser(sqlite, "3");
+  const tripId = addTrip(sqlite, user, { photoKey: "private/orphan-chain.jpg" });
+  addDiscussion(sqlite, tripId);
+  const tripDelete = await handleAccountRequest(request(`/api/profile/trips/${tripId}`, {
+    method: "DELETE",
+    cookie: user.cookie,
+  }), { DB: d1 }, []);
+  assert.equal(tripDelete?.status, 202);
+  assert.equal((await tripDelete.json()).deletion.status, "needs_attention");
+  assert.equal(sqlite.prepare("SELECT COUNT(*) AS count FROM trips WHERE id = ?").get(tripId).count, 0);
+  assert.equal(sqlite.prepare("SELECT COUNT(*) AS count FROM site_discussion_posts WHERE trip_id = ?").get(tripId).count, 0);
+  sqlite.prepare("UPDATE privacy_deletion_tasks SET attempts = 8 WHERE job_id IN (SELECT id FROM privacy_deletion_jobs WHERE scope = 'trip')").run();
+
+  const noPhotoTripId = addTrip(sqlite, user);
+  addDiscussion(sqlite, noPhotoTripId);
+  const noPhotoDelete = await handleAccountRequest(request(`/api/profile/trips/${noPhotoTripId}`, {
+    method: "DELETE",
+    cookie: user.cookie,
+  }), { DB: d1 }, []);
+  assert.equal(noPhotoDelete?.status, 200);
+  assert.equal((await noPhotoDelete.json()).deletion.status, "completed");
+  assert.equal(sqlite.prepare("SELECT COUNT(*) AS count FROM site_discussion_posts WHERE trip_id = ?").get(noPhotoTripId).count, 0);
+
+  const deleted = [];
+  const accountDelete = await handleAccountRequest(request("/api/profile", {
+    method: "DELETE",
+    cookie: user.cookie,
+    body: { confirmation: "DELETE", password: user.password },
+  }), { DB: d1, TRIP_PHOTOS: { delete: async (key) => deleted.push(key) } }, []);
+  assert.equal(accountDelete?.status, 200);
+  const accountStatus = (await accountDelete.json()).deletion;
+  assert.equal(accountStatus.status, "completed");
+  assert.equal(accountStatus.objectsTotal, 1);
+  assert.deepEqual(deleted, ["private/orphan-chain.jpg"]);
+  const adoptedTask = sqlite.prepare(`SELECT privacy_deletion_tasks.state, privacy_deletion_tasks.attempts
+    FROM privacy_deletion_tasks JOIN privacy_deletion_jobs
+      ON privacy_deletion_jobs.id = privacy_deletion_tasks.job_id
+    WHERE privacy_deletion_jobs.scope = 'trip' AND privacy_deletion_jobs.objects_total = 1`).get();
+  assert.equal(adoptedTask.state, "pending");
+  assert.equal(adoptedTask.attempts, 8, "account adoption must preserve cumulative retry evidence");
+  assert.deepEqual(
+    sqlite.prepare("SELECT scope, state, objects_total, objects_deleted FROM privacy_deletion_jobs").all()
+      .map((row) => ({ ...row }))
+      .sort((left, right) => `${left.scope}:${left.objects_total}`.localeCompare(`${right.scope}:${right.objects_total}`)),
+    [
+      { scope: "account", state: "completed", objects_total: 1, objects_deleted: 1 },
+      { scope: "trip", state: "completed", objects_total: 0, objects_deleted: 0 },
+      { scope: "trip", state: "active_data_removed", objects_total: 1, objects_deleted: 0 },
+    ],
+  );
+  assert.equal(sqlite.prepare("SELECT COUNT(*) AS count FROM privacy_deletion_tasks WHERE object_key IS NOT NULL").get().count, 1);
+
+  await processPrivacyDeletionTasks({ DB: d1, TRIP_PHOTOS: { delete: async (key) => deleted.push(key) } });
+  assert.deepEqual(deleted, ["private/orphan-chain.jpg", "private/orphan-chain.jpg"]);
+  assert.equal(sqlite.prepare(`SELECT privacy_deletion_tasks.attempts
+    FROM privacy_deletion_tasks JOIN privacy_deletion_jobs
+      ON privacy_deletion_jobs.id = privacy_deletion_tasks.job_id
+    WHERE privacy_deletion_jobs.scope = 'trip' AND privacy_deletion_jobs.objects_total = 1`).get().attempts, 9);
+  assert.equal(sqlite.prepare("SELECT COUNT(*) AS count FROM privacy_deletion_jobs WHERE state != 'completed'").get().count, 0);
+  assert.equal(sqlite.prepare("SELECT COUNT(*) AS count FROM privacy_deletion_tasks WHERE object_key IS NOT NULL").get().count, 0);
+});
+
+test("object deletion retries are bounded and retain the locator for operator attention", async () => {
+  const { sqlite, d1 } = await database();
+  const user = await addUser(sqlite, "8");
+  addTrip(sqlite, user, { photoKey: "private/exhausted.jpg" });
+  let deleteCalls = 0;
+  const env = {
+    DB: d1,
+    TRIP_PHOTOS: {
+      delete: async () => {
+        deleteCalls += 1;
+        throw new Error("persistent object-store failure");
+      },
+    },
+  };
+  const response = await handleAccountRequest(request("/api/profile", {
+    method: "DELETE",
+    cookie: user.cookie,
+    body: { confirmation: "DELETE", password: user.password },
+  }), env, []);
+  assert.equal(response?.status, 202);
+  for (let attempt = 1; attempt < 8; attempt += 1) {
+    sqlite.prepare("UPDATE privacy_deletion_tasks SET available_at = '2000-01-01'").run();
+    await processPrivacyDeletionTasks(env);
+  }
+  const task = sqlite.prepare("SELECT state, attempts, object_key FROM privacy_deletion_tasks").get();
+  assert.equal(task.state, "needs_attention");
+  assert.equal(task.attempts, 8);
+  assert.equal(task.object_key, "private/exhausted.jpg");
+  assert.equal(sqlite.prepare("SELECT state FROM privacy_deletion_jobs").get().state, "needs_attention");
+  assert.equal(deleteCalls, 8);
+  sqlite.prepare("UPDATE privacy_deletion_tasks SET available_at = '2000-01-01'").run();
+  await processPrivacyDeletionTasks(env);
+  assert.equal(deleteCalls, 8);
+  sqlite.prepare(`UPDATE privacy_deletion_tasks SET state = 'pending', available_at = '2000-01-01',
+    lease_expires_at = NULL, lease_token = NULL, last_error_code = NULL WHERE state = 'needs_attention'`).run();
+  await processPrivacyDeletionTasks({ DB: d1, TRIP_PHOTOS: { delete: async () => { deleteCalls += 1; } } });
+  assert.equal(deleteCalls, 9);
+  assert.equal(sqlite.prepare("SELECT state FROM privacy_deletion_tasks").get().state, "completed");
+  assert.equal(sqlite.prepare("SELECT state FROM privacy_deletion_jobs").get().state, "completed");
+});
+
+test("a stale selection cannot bypass another worker's retry backoff", async () => {
+  const { sqlite, d1 } = await database();
+  const user = await addUser(sqlite, "18");
+  addTrip(sqlite, user, { photoKey: "private/backoff-race.jpg" });
+  await handleAccountRequest(request("/api/profile", {
+    method: "DELETE",
+    cookie: user.cookie,
+    body: { confirmation: "DELETE", password: user.password },
+  }), { DB: d1 }, []);
+  sqlite.prepare(`UPDATE privacy_deletion_tasks SET state = 'pending', available_at = '2000-01-01',
+    lease_expires_at = NULL, lease_token = NULL, last_error_code = NULL`).run();
+
+  const originalPrepare = d1.prepare.bind(d1);
+  let pauseSelection = true;
+  let announceSelected;
+  const selected = new Promise((resolve) => { announceSelected = resolve; });
+  let releaseSelection;
+  const selectionGate = new Promise((resolve) => { releaseSelection = resolve; });
+  d1.prepare = (query) => {
+    const statement = originalPrepare(query);
+    if (pauseSelection && query.includes("SELECT id, job_id, object_key, object_key_hash")) {
+      pauseSelection = false;
+      const originalAll = statement.all.bind(statement);
+      statement.all = async () => {
+        const rows = await originalAll();
+        announceSelected();
+        await selectionGate;
+        return rows;
+      };
+    }
+    return statement;
+  };
+
+  let staleCalls = 0;
+  try {
+    const staleRun = processPrivacyDeletionTasks({
+      DB: d1,
+      TRIP_PHOTOS: { delete: async () => { staleCalls += 1; } },
+    });
+    await selected;
+
+    let failingCalls = 0;
+    await processPrivacyDeletionTasks({
+      DB: d1,
+      TRIP_PHOTOS: { delete: async () => {
+        failingCalls += 1;
+        throw new Error("transient storage failure");
+      } },
+    });
+    assert.equal(failingCalls, 1);
+
+    releaseSelection();
+    await staleRun;
+    assert.equal(staleCalls, 0, "the stale row must be rechecked against available_at when claimed");
+    const task = sqlite.prepare("SELECT state, attempts, available_at FROM privacy_deletion_tasks").get();
+    assert.equal(task.state, "pending");
+    assert.equal(task.attempts, 1);
+    assert.ok(new Date(task.available_at).getTime() > Date.now());
+  } finally {
+    d1.prepare = originalPrepare;
+  }
+});
+
+test("lease ownership prevents a stale successful worker from completing a newer lease", async () => {
+  const { sqlite, d1 } = await database();
+  const user = await addUser(sqlite, "11");
+  addTrip(sqlite, user, { photoKey: "private/lease-race.jpg" });
+  await handleAccountRequest(request("/api/profile", {
+    method: "DELETE",
+    cookie: user.cookie,
+    body: { confirmation: "DELETE", password: user.password },
+  }), { DB: d1 }, []);
+  sqlite.prepare(`UPDATE privacy_deletion_tasks SET state = 'pending', available_at = '2000-01-01',
+    lease_expires_at = NULL, lease_token = NULL WHERE state = 'needs_attention'`).run();
+
+  let announceStarted;
+  const started = new Promise((resolve) => { announceStarted = resolve; });
+  let releaseStale;
+  const staleGate = new Promise((resolve) => { releaseStale = resolve; });
+  let staleCalls = 0;
+  const staleRun = processPrivacyDeletionTasks({
+    DB: d1,
+    TRIP_PHOTOS: {
+      delete: async () => {
+        staleCalls += 1;
+        announceStarted();
+        await staleGate;
+      },
+    },
+  });
+  await started;
+
+  let newerCalls = 0;
+  await processPrivacyDeletionTasks({
+    DB: d1,
+    TRIP_PHOTOS: { delete: async () => { newerCalls += 1; } },
+  });
+  assert.equal(newerCalls, 0, "an unexpired lease must not be stolen");
+  sqlite.prepare("UPDATE privacy_deletion_tasks SET lease_expires_at = '2000-01-01'").run();
+  let announceNewerStarted;
+  const newerStarted = new Promise((resolve) => { announceNewerStarted = resolve; });
+  let releaseNewer;
+  const newerGate = new Promise((resolve) => { releaseNewer = resolve; });
+  const newerRun = processPrivacyDeletionTasks({
+    DB: d1,
+    TRIP_PHOTOS: { delete: async () => {
+      newerCalls += 1;
+      announceNewerStarted();
+      await newerGate;
+    } },
+  });
+  await newerStarted;
+  releaseStale();
+  await staleRun;
+  assert.equal(staleCalls, 1);
+  assert.equal(newerCalls, 1);
+  const duringNewerLease = sqlite.prepare("SELECT state, object_key, attempts FROM privacy_deletion_tasks").get();
+  assert.equal(duringNewerLease.state, "leased");
+  assert.equal(duringNewerLease.object_key, "private/lease-race.jpg");
+  assert.equal(duringNewerLease.attempts, 2);
+
+  releaseNewer();
+  await newerRun;
+  const task = sqlite.prepare("SELECT state, object_key FROM privacy_deletion_tasks").get();
+  assert.equal(task.state, "completed");
+  assert.equal(task.object_key, null);
+  assert.equal(sqlite.prepare("SELECT state FROM privacy_deletion_jobs").get().state, "completed");
+});
+
+test("an expired final-attempt lease fails closed without an unbounded object call", async () => {
+  const { sqlite, d1 } = await database();
+  const user = await addUser(sqlite, "12");
+  addTrip(sqlite, user, { photoKey: "private/final-lease.jpg" });
+  await handleAccountRequest(request("/api/profile", {
+    method: "DELETE",
+    cookie: user.cookie,
+    body: { confirmation: "DELETE", password: user.password },
+  }), { DB: d1 }, []);
+  sqlite.prepare(`UPDATE privacy_deletion_tasks SET state = 'leased', attempts = 8,
+    available_at = '2000-01-01', lease_expires_at = '2000-01-01', lease_token = 'abandoned-final-lease',
+    last_error_code = NULL WHERE state = 'needs_attention'`).run();
+  let calls = 0;
+  await processPrivacyDeletionTasks({
+    DB: d1,
+    TRIP_PHOTOS: { delete: async () => { calls += 1; } },
+  });
+  assert.equal(calls, 0);
+  const task = sqlite.prepare("SELECT state, attempts, object_key, last_error_code FROM privacy_deletion_tasks").get();
+  assert.equal(task.state, "needs_attention");
+  assert.equal(task.attempts, 8);
+  assert.equal(task.object_key, "private/final-lease.jpg");
+  assert.equal(task.last_error_code, "photo_delete_lease_expired");
+  assert.equal(sqlite.prepare("SELECT state FROM privacy_deletion_jobs").get().state, "needs_attention");
+});
+
+test("a corrupted runnable task without an object locator fails closed for manual attention", async () => {
+  const { sqlite, d1 } = await database();
+  const user = await addUser(sqlite, "13");
+  addTrip(sqlite, user, { photoKey: "private/corrupt.jpg" });
+  await handleAccountRequest(request("/api/profile", {
+    method: "DELETE",
+    cookie: user.cookie,
+    body: { confirmation: "DELETE", password: user.password },
+  }), { DB: d1 }, []);
+  sqlite.exec("PRAGMA ignore_check_constraints = ON");
+  sqlite.prepare(`UPDATE privacy_deletion_tasks SET state = 'pending', object_key = NULL,
+    available_at = '2000-01-01', attempts = 12 WHERE state = 'needs_attention'`).run();
+  let calls = 0;
+  await processPrivacyDeletionTasks({
+    DB: d1,
+    TRIP_PHOTOS: { delete: async () => { calls += 1; } },
+  });
+  assert.equal(calls, 0);
+  const task = sqlite.prepare("SELECT state, attempts, last_error_code FROM privacy_deletion_tasks").get();
+  assert.equal(task.state, "needs_attention");
+  assert.equal(task.attempts, 12, "fail-closed locator handling must preserve cumulative retry evidence");
+  assert.equal(task.last_error_code, "photo_locator_missing");
+  assert.equal(sqlite.prepare("SELECT state FROM privacy_deletion_jobs").get().state, "needs_attention");
+});
+
+test("task-ledger gaps cannot complete or purge deletion evidence", async () => {
+  const { sqlite, d1 } = await database();
+  const timestamp = "2026-07-01T00:00:00.000Z";
+  sqlite.prepare(`INSERT INTO privacy_deletion_jobs (
+      id, receipt_hash, scope, subject_hash, owner_subject_hash, state, objects_total,
+      objects_deleted, last_error_code, requested_at, active_data_removed_at, completed_at, updated_at)
+    VALUES ('deletion_missing_task', 'receipt-missing-task', 'account', 'subject-missing-task',
+      'owner-missing-task', 'active_data_removed', 1, 0, NULL, ?, ?, NULL, ?)`)
+    .run(timestamp, timestamp, timestamp);
+
+  await processPrivacyDeletionTasks({ DB: d1 });
+  const incomplete = sqlite.prepare(`SELECT state, objects_total, objects_deleted, last_error_code, completed_at
+    FROM privacy_deletion_jobs WHERE id = 'deletion_missing_task'`).get();
+  assert.deepEqual({ ...incomplete }, {
+    state: "needs_attention",
+    objects_total: 1,
+    objects_deleted: 0,
+    last_error_code: "task_ledger_incomplete",
+    completed_at: null,
+  });
+
+  sqlite.prepare(`INSERT INTO privacy_deletion_jobs (
+      id, receipt_hash, scope, subject_hash, owner_subject_hash, state, objects_total,
+      objects_deleted, last_error_code, requested_at, active_data_removed_at, completed_at, updated_at)
+    VALUES ('deletion_corrupt_completed', 'receipt-corrupt-completed', 'trip', 'subject-corrupt-completed',
+      'owner-corrupt-completed', 'completed', 1, 1, NULL, '2000-01-01T00:00:00.000Z',
+      '2000-01-01T00:00:00.000Z', '2000-01-01T00:00:00.000Z', '2000-01-01T00:00:00.000Z')`).run();
+  sqlite.prepare(`INSERT INTO privacy_deletion_tasks (
+      id, job_id, object_key, object_key_hash, state, attempts, available_at,
+      lease_expires_at, lease_token, last_error_code, created_at, updated_at, completed_at)
+    VALUES ('deletion_task_corrupt_completed', 'deletion_corrupt_completed', 'private/restore-risk.jpg',
+      'hash-restore-risk', 'pending', 0, '2099-01-01T00:00:00.000Z', NULL, NULL, NULL,
+      '2000-01-01T00:00:00.000Z', '2000-01-01T00:00:00.000Z', NULL)`).run();
+
+  await cleanupAuthData({ DB: d1 });
+  assert.equal(sqlite.prepare(`SELECT COUNT(*) AS count FROM privacy_deletion_jobs
+    WHERE id = 'deletion_corrupt_completed'`).get().count, 1);
+  assert.equal(sqlite.prepare(`SELECT state FROM privacy_deletion_jobs
+    WHERE id = 'deletion_corrupt_completed'`).get().state, "active_data_removed");
+  const retained = sqlite.prepare(`SELECT state, object_key FROM privacy_deletion_tasks
+    WHERE id = 'deletion_task_corrupt_completed'`).get();
+  assert.equal(retained.state, "pending");
+  assert.equal(retained.object_key, "private/restore-risk.jpg");
+});
+
+test("transaction failures roll back deletion, while post-commit cleanup failures return a durable 202 receipt", async () => {
+  const first = await database();
+  const user = await addUser(first.sqlite, "4");
+  const tripId = addTrip(first.sqlite, user, { photoKey: "private/atomic.jpg" });
+  addDiscussion(first.sqlite, tripId);
+  first.d1.failQuerySubstring = "DELETE FROM users";
+  const rolledBack = await handleAccountRequest(request("/api/profile", {
+    method: "DELETE",
+    cookie: user.cookie,
+    body: { confirmation: "DELETE", password: user.password },
+  }), { DB: first.d1, TRIP_PHOTOS: { delete: async () => undefined } }, []);
+  assert.equal(rolledBack?.status, 500);
+  assert.equal(first.sqlite.prepare("SELECT COUNT(*) AS count FROM users WHERE id = ?").get(user.id).count, 1);
+  assert.equal(first.sqlite.prepare("SELECT COUNT(*) AS count FROM trips WHERE id = ?").get(tripId).count, 1);
+  assert.equal(first.sqlite.prepare("SELECT COUNT(*) AS count FROM site_discussion_posts WHERE trip_id = ?").get(tripId).count, 1);
+  assert.equal(first.sqlite.prepare("SELECT COUNT(*) AS count FROM privacy_deletion_jobs").get().count, 0);
+
+  const second = await database();
+  const user2 = await addUser(second.sqlite, "5");
+  addTrip(second.sqlite, user2, { photoKey: "private/post-commit.jpg" });
+  second.d1.failAfterAccountDeletion = true;
+  const deferred = await handleAccountRequest(request("/api/profile", {
+    method: "DELETE",
+    cookie: user2.cookie,
+    body: { confirmation: "DELETE", password: user2.password },
+  }), { DB: second.d1, TRIP_PHOTOS: { delete: async () => undefined } }, []);
+  assert.equal(deferred?.status, 202);
+  assert.equal((await deferred.json()).deletion.status, "processing");
+  assert.ok(receiptFrom(deferred));
+  assert.equal(second.sqlite.prepare("SELECT COUNT(*) AS count FROM users WHERE id = ?").get(user2.id).count, 0);
+  assert.equal(second.sqlite.prepare("SELECT COUNT(*) AS count FROM privacy_deletion_jobs").get().count, 1);
+});
+
+test("export includes user data and downloadable photos without internal locators or moderator identity", async () => {
+  const { sqlite, d1 } = await database();
+  const user = await addUser(sqlite, "6");
+  const tripId = addTrip(sqlite, user, { photoKey: "private/export.jpg" });
+  addDiscussion(sqlite, tripId);
+  sqlite.prepare("INSERT INTO saved_sites (user_id, site_id, created_at) VALUES (?, 'ocean-beach', '2026-07-01')").run(user.id);
+  sqlite.prepare(`INSERT INTO gear_profiles (id, user_id, name, rod, created_at, updated_at)
+    VALUES ('gear_export', ?, 'Export rig', 'Rod C', '2026-07-01', '2026-07-02')`).run(user.id);
+  const bytes = new Uint8Array([1, 2, 3, 4]);
+  const bucket = {
+    delete: async () => undefined,
+    get: async () => ({
+      body: new ReadableStream({ start(controller) { controller.enqueue(bytes); controller.close(); } }),
+      size: bytes.byteLength,
+      httpMetadata: { contentType: "text/html" },
+    }),
+  };
+  const exported = await handleAccountRequest(request("/api/profile/export", { cookie: user.cookie }), {
+    DB: d1,
+    TRIP_PHOTOS: bucket,
+  }, []);
+  assert.equal(exported?.status, 200);
+  const payload = await exported.json();
+  assert.equal(payload.account.terms_version, LEGAL_VERSION);
+  assert.equal(payload.tripReports[0].consent, 1);
+  assert.equal(payload.tripReports[0].observations_json, '{"waterClarity":"clear"}');
+  assert.equal(payload.tripReports[0].ai_review_model, "mimo-test");
+  assert.equal(payload.discussionPosts[0].summary, "Public-safe summary");
+  assert.equal(payload.photos[0].availability, "downloadable");
+  assert.equal(payload.photos[0].downloadPath, `/api/profile/export/photos/${tripId}`);
+  const serialized = JSON.stringify(payload);
+  assert.doesNotMatch(serialized, /private\/export\.jpg|reporter-secret|trip-token-secret|operator-private-identity|approved_by|photo_key|reporter_key_hash|token_hash/);
+
+  const download = await handleAccountRequest(request(`/api/profile/export/photos/${tripId}`, { cookie: user.cookie }), {
+    DB: d1,
+    TRIP_PHOTOS: bucket,
+  }, []);
+  assert.equal(download?.status, 200);
+  assert.equal(download.headers.get("Content-Type"), "application/octet-stream");
+  assert.match(download.headers.get("Content-Disposition") ?? "", /attachment; filename="trip_[a-f0-9-]{36}\.bin"/);
+  assert.deepEqual(new Uint8Array(await download.arrayBuffer()), bytes);
+
+  const withoutBinding = await handleAccountRequest(request("/api/profile/export", { cookie: user.cookie }), { DB: d1 }, []);
+  assert.equal((await withoutBinding.json()).photos[0].reason, "photo_storage_unavailable");
+});
+
+test("AI provider payload omits hostile legacy forecast metadata at the egress boundary", async () => {
+  const { sqlite, d1 } = await database();
+  const user = await addUser(sqlite, "20");
+  const tripId = addTrip(sqlite, user);
+  sqlite.prepare(`UPDATE trips SET ai_review_status = NULL, prediction_metadata_json = ? WHERE id = ?`)
+    .run(JSON.stringify({
+      snapshotGeneratedAt: "2026-07-01T00:00:00.000Z",
+      latitude: 37.7749,
+      email: "private-person@example.com",
+      forecastConditions: {
+        longitude: -122.4194,
+        accountId: "account-secret-123",
+        nested: { coordinates: [37.7749, -122.4194] },
+      },
+    }), tripId);
+
+  let providerBody = "";
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async (_input, init) => {
+    providerBody = String(init?.body ?? "");
+    return Response.json({
+      choices: [{ message: { content: JSON.stringify({
+        quality_score: 90,
+        flags: [],
+        summary: "Complete report.",
+        needs_human_review: false,
+        gear_analysis: {},
+        discussion: { publish: false, summary: "", technique_tags: [] },
+      }) } }],
+    });
+  };
+  try {
+    await reviewTripWithMimo({ DB: d1, MIMO_API_KEY: "test" }, tripId, [{ id: "ocean-beach", type: "Beach" }]);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+
+  assert.ok(providerBody);
+  const outbound = JSON.parse(providerBody);
+  const tripPayload = JSON.parse(outbound.messages.at(-1).content);
+  assert.equal("forecastMetadata" in tripPayload, false);
+  assert.doesNotMatch(providerBody, /latitude|longitude|coordinates|private-person@example\.com|account-secret-123|37\.7749|122\.4194/);
+});
+
+test("AI review suppresses dispatch after a committed tombstone and cannot resurrect after authorized dispatch", async () => {
+  const { sqlite, d1 } = await database();
+  const user = await addUser(sqlite, "7");
+  const tripId = addTrip(sqlite, user);
+  sqlite.prepare("UPDATE trips SET ai_review_status = NULL WHERE id = ?").run(tripId);
+  sqlite.prepare("DELETE FROM trips WHERE id = ?").run(tripId);
+  let calls = 0;
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async () => {
+    calls += 1;
+    return Response.json({ choices: [] });
+  };
+  try {
+    await reviewTripWithMimo({ DB: d1, MIMO_API_KEY: "test" }, tripId, [{ id: "ocean-beach" }]);
+    assert.equal(calls, 0);
+
+    const tripId2 = addTrip(sqlite, user);
+    sqlite.prepare("UPDATE trips SET ai_review_status = NULL WHERE id = ?").run(tripId2);
+    const originalPrepare = d1.prepare.bind(d1);
+    let deleteAfterClaim = true;
+    d1.prepare = (query) => {
+      const statement = originalPrepare(query);
+      if (deleteAfterClaim && query.includes("SELECT * FROM trips") && query.includes("ai_review_status = 'processing'")) {
+        const originalFirst = statement.first.bind(statement);
+        statement.first = async () => {
+          deleteAfterClaim = false;
+          sqlite.prepare("DELETE FROM trips WHERE id = ?").run(tripId2);
+          return originalFirst();
+        };
+      }
+      return statement;
+    };
+    await reviewTripWithMimo({ DB: d1, MIMO_API_KEY: "test" }, tripId2, [{ id: "ocean-beach" }]);
+    assert.equal(calls, 0);
+
+    d1.prepare = originalPrepare;
+    const tripA = addTrip(sqlite, user);
+    const tripB = addTrip(sqlite, user);
+    sqlite.prepare("UPDATE trips SET ai_review_status = NULL WHERE id IN (?, ?)").run(tripA, tripB);
+    await addDeletionTombstone(sqlite, { scope: "trip", subjectId: tripA, ownerId: user.id, suffix: "trip-a" });
+    await reviewTripWithMimo({ DB: d1, MIMO_API_KEY: "test" }, tripB, [{ id: "ocean-beach" }]);
+    assert.equal(calls, 1, "a trip tombstone must not block later trips for the same account");
+
+    const tripId3 = addTrip(sqlite, user);
+    sqlite.prepare("UPDATE trips SET ai_review_status = NULL WHERE id = ?").run(tripId3);
+    let tombstoneBeforeDispatch = true;
+    d1.prepare = (query) => {
+      const statement = originalPrepare(query);
+      if (tombstoneBeforeDispatch && query.includes("FROM privacy_deletion_jobs")) {
+        const originalFirst = statement.first.bind(statement);
+        statement.first = async () => {
+          tombstoneBeforeDispatch = false;
+          await addDeletionTombstone(sqlite, {
+            scope: "trip",
+            subjectId: tripId3,
+            ownerId: user.id,
+            suffix: "before-dispatch",
+          });
+          return originalFirst();
+        };
+      }
+      return statement;
+    };
+    await reviewTripWithMimo({ DB: d1, MIMO_API_KEY: "test" }, tripId3, [{ id: "ocean-beach" }]);
+    assert.equal(calls, 1, "a committed deletion tombstone before dispatch must suppress the provider request");
+
+    d1.prepare = originalPrepare;
+    const tripId4 = addTrip(sqlite, user);
+    sqlite.prepare("UPDATE trips SET ai_review_status = NULL WHERE id = ?").run(tripId4);
+    globalThis.fetch = async () => {
+      calls += 1;
+      sqlite.prepare("DELETE FROM trips WHERE id = ?").run(tripId4);
+      return Response.json({
+        choices: [{ message: { content: JSON.stringify({
+          quality_score: 90,
+          flags: [],
+          summary: "Complete report.",
+          needs_human_review: false,
+          gear_analysis: {},
+          discussion: { publish: true, summary: "Candidate", technique_tags: [] },
+        }) } }],
+      });
+    };
+    await reviewTripWithMimo({ DB: d1, MIMO_API_KEY: "test" }, tripId4, [{ id: "ocean-beach" }]);
+    assert.equal(calls, 2, "authorization before deletion may dispatch an already-entering provider request");
+    assert.equal(sqlite.prepare("SELECT COUNT(*) AS count FROM trips WHERE id = ?").get(tripId4).count, 0);
+    assert.equal(sqlite.prepare("SELECT COUNT(*) AS count FROM site_discussion_posts WHERE trip_id = ?").get(tripId4).count, 0);
+  } finally {
+    d1.prepare = TransactionalD1Adapter.prototype.prepare.bind(d1);
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("privacy migration is idempotent and contains restore-match hashes and owner index", async () => {
+  const { sqlite } = await database();
+  const migration = await readFile(new URL("../drizzle/0010_privacy_durability.sql", import.meta.url), "utf8");
+  sqlite.exec(migration.replaceAll("--> statement-breakpoint", ""));
+  const jobColumns = sqlite.prepare("PRAGMA table_info(privacy_deletion_jobs)").all().map((column) => column.name);
+  assert.ok(jobColumns.includes("subject_hash"));
+  assert.ok(jobColumns.includes("owner_subject_hash"));
+  assert.ok(jobColumns.includes("completed_at"));
+  const taskColumns = sqlite.prepare("PRAGMA table_info(privacy_deletion_tasks)").all().map((column) => column.name);
+  assert.ok(taskColumns.includes("lease_token"));
+  const taskDefinition = sqlite.prepare("SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'privacy_deletion_tasks'").get().sql;
+  assert.match(taskDefinition, /privacy_deletion_tasks_locator_check/);
+  const indexes = sqlite.prepare("PRAGMA index_list(privacy_deletion_jobs)").all().map((index) => index.name);
+  assert.ok(indexes.includes("privacy_deletion_jobs_owner_state_idx"));
+});

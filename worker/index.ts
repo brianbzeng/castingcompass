@@ -59,9 +59,9 @@ async function routeRequest(request: Request, env: Env, ctx: ExecutionContext): 
   if (discussionResponse) return discussionResponse;
 
   const accountResponse = await handleAccountRequest(request, env, sites, {
-    onTripUpdated: (trip) => ctx.waitUntil(reviewTripWithMimo(env, trip, sites)),
+    onTripUpdated: (trip) => ctx.waitUntil(reviewTripWithMimo(env, trip.id, sites)),
     onTripsReviewRequested: (trips) => {
-      for (const trip of trips) ctx.waitUntil(reviewTripWithMimo(env, trip, sites));
+      for (const trip of trips) ctx.waitUntil(reviewTripWithMimo(env, trip.id, sites));
     },
   });
   if (accountResponse) return accountResponse;
@@ -73,12 +73,12 @@ async function routeRequest(request: Request, env: Env, ctx: ExecutionContext): 
     return unauthorizedResponse();
   }
   if (protectedTripMutation && !authenticatedUser?.legalAccepted) {
-    return legalAcceptanceRequiredResponse();
+    return legalAcceptanceRequiredResponse(authenticatedUser?.ageEligible ?? false);
   }
 
   const tripResponse = await handleTripRequest(request, env, sites, {
     accountId: authenticatedUser?.id ?? null,
-    onTripCompleted: (trip) => ctx.waitUntil(reviewTripWithMimo(env, trip, sites)),
+    onTripCompleted: (trip) => ctx.waitUntil(reviewTripWithMimo(env, trip.id, sites)),
   });
   if (tripResponse) return tripResponse;
 

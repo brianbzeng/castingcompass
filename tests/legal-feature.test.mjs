@@ -17,15 +17,19 @@ test("account creation enforces age eligibility and versioned legal acceptance",
   ]);
 
   assert.match(auth, /MINIMUM_ACCOUNT_AGE = 13/);
-  assert.match(auth, /parseAgeEligibility\(body\.birthDate\)/);
-  assert.match(auth, /assertLegalAcceptance\(body\)/);
+  assert.match(auth, /evaluateAgeEligibility\(body\.birthDate\)/);
+  assert.match(auth, /assertSignupLegalAcceptance\(body\)/);
+  assert.match(auth, /ageEligible: Boolean\(row\.age_eligible\)/);
   assert.match(auth, /age_eligibility_confirmed_at/);
   assert.doesNotMatch(auth, /birth_date\s+TEXT|INSERT INTO [^(]+\([^)]*birth_date/);
   assert.match(account, /I agree to the/);
   assert.match(account, /Terms of Service/);
   assert.match(account, /Privacy Policy/);
-  assert.match(auth, /LEGAL_VERSION = "2026-07-16"/);
+  assert.match(account, /submitLegalAcceptance/);
+  assert.match(account, /Account features<br \/>paused/);
+  assert.match(auth, /LEGAL_VERSION = "2026-07-16\.2"/);
   assert.match(legalPage, /LEGAL_EFFECTIVE_DATE = "July 16, 2026"/);
+  assert.match(legalPage, /LEGAL_DOCUMENT_VERSION = "2026-07-16\.2"/);
 });
 
 test("privacy controls provide export, deletion, and an optional location notice", async () => {
@@ -36,7 +40,7 @@ test("privacy controls provide export, deletion, and an optional location notice
 
   assert.match(auth, /\/api\/profile\/export/);
   assert.match(auth, /request\.method === "DELETE"/);
-  assert.match(account, /Download my data/);
+  assert.match(account, /Download my account records \(JSON\)/);
   assert.match(account, /Delete account/);
 });
 
@@ -47,10 +51,12 @@ test("public legal pages separate forecast limitations, privacy, and automated r
     readFile(aiPath, "utf8"),
   ]);
 
-  assert.match(privacy, /birth date itself is not stored/);
+  assert.match(privacy, /entered birth date is not retained/);
   assert.match(privacy, /do not currently sell or share personal information/);
+  assert.match(privacy, /request already authorized or sent before the deletion transaction cannot be recalled/);
   assert.match(terms, /It does not mean an 80% chance of catching a fish/);
   assert.match(terms, /not navigational data/);
   assert.match(ai, /hybrid ranking system/);
   assert.match(ai, /not a catch probability/);
+  assert.match(ai, /response cannot restore the deleted trip or publish a post/);
 });

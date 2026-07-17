@@ -31,7 +31,7 @@ export default function TermsPage() {
 
       <LegalSection title="4. Accounts and security">
         <p>Provide accurate account information, keep your password private, and notify us if you suspect unauthorized access. You are responsible for activity through your account. Email verification confirms control of an address but does not verify identity.</p>
-        <p>You may download your account data or permanently delete your account from the Profile page. Deletion removes saved locations, gear presets, linked trip reports, stored trip photos, and linked public discussion summaries from active service systems, subject to short-lived backups, security logs, legal obligations, and technical limitations.</p>
+        <p>You may download your account records or permanently delete your account from the Profile page. An accepted deletion request immediately removes account access, saved locations, gear presets, linked trip reports, and linked public discussion summaries from the active database. Stored trip-photo objects may require background cleanup; a secure deletion receipt reports whether that cleanup is completed, processing, or needs operator attention. Limited backup copies, security logs, pseudonymous deletion records, and information required by law may remain for their stated operational or legal retention periods.</p>
       </LegalSection>
 
       <LegalSection title="5. Trip reports, photos, and community summaries">

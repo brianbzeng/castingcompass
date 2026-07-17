@@ -75,6 +75,76 @@ export const emailChallenges = sqliteTable(
   ],
 );
 
+export const signupAgeProofs = sqliteTable(
+  "signup_age_proofs",
+  {
+    tokenHash: text("token_hash").primaryKey(),
+    confirmedAt: text("confirmed_at").notNull(),
+    gateVersion: text("gate_version").notNull(),
+    expiresAt: text("expires_at").notNull(),
+    consumedAt: text("consumed_at"),
+    createdAt: text("created_at").notNull(),
+  },
+  (table) => [index("signup_age_proofs_expiry_idx").on(table.expiresAt, table.consumedAt)],
+);
+
+export const privacyDeletionJobs = sqliteTable(
+  "privacy_deletion_jobs",
+  {
+    id: text("id").primaryKey(),
+    receiptHash: text("receipt_hash").notNull(),
+    scope: text("scope").notNull(),
+    subjectHash: text("subject_hash").notNull(),
+    ownerSubjectHash: text("owner_subject_hash").notNull(),
+    state: text("state").notNull(),
+    objectsTotal: integer("objects_total").notNull().default(0),
+    objectsDeleted: integer("objects_deleted").notNull().default(0),
+    lastErrorCode: text("last_error_code"),
+    requestedAt: text("requested_at").notNull(),
+    activeDataRemovedAt: text("active_data_removed_at"),
+    completedAt: text("completed_at"),
+    updatedAt: text("updated_at").notNull(),
+  },
+  (table) => [
+    uniqueIndex("privacy_deletion_jobs_receipt_unique").on(table.receiptHash),
+    index("privacy_deletion_jobs_state_updated_idx").on(table.state, table.updatedAt),
+    index("privacy_deletion_jobs_owner_state_idx").on(table.ownerSubjectHash, table.state, table.updatedAt),
+    check("privacy_deletion_jobs_scope_check", sql`${table.scope} in ('account', 'trip')`),
+    check(
+      "privacy_deletion_jobs_state_check",
+      sql`${table.state} in ('active_data_removed', 'purging', 'completed', 'needs_attention')`,
+    ),
+  ],
+);
+
+export const privacyDeletionTasks = sqliteTable(
+  "privacy_deletion_tasks",
+  {
+    id: text("id").primaryKey(),
+    jobId: text("job_id").notNull().references(() => privacyDeletionJobs.id, { onDelete: "cascade" }),
+    objectKey: text("object_key"),
+    objectKeyHash: text("object_key_hash").notNull(),
+    state: text("state").notNull(),
+    attempts: integer("attempts").notNull().default(0),
+    availableAt: text("available_at").notNull(),
+    leaseExpiresAt: text("lease_expires_at"),
+    leaseToken: text("lease_token"),
+    lastErrorCode: text("last_error_code"),
+    createdAt: text("created_at").notNull(),
+    updatedAt: text("updated_at").notNull(),
+    completedAt: text("completed_at"),
+  },
+  (table) => [
+    uniqueIndex("privacy_deletion_tasks_job_object_unique").on(table.jobId, table.objectKeyHash),
+    index("privacy_deletion_tasks_retry_idx").on(table.state, table.availableAt, table.leaseExpiresAt),
+    check("privacy_deletion_tasks_state_check", sql`${table.state} in ('pending', 'leased', 'completed', 'needs_attention')`),
+    check(
+      "privacy_deletion_tasks_locator_check",
+      sql`((${table.state} = 'completed' and ${table.objectKey} is null) or (${table.state} != 'completed' and ${table.objectKey} is not null))`,
+    ),
+  ],
+);
+
 export const gearProfiles = sqliteTable(
   "gear_profiles",
   {

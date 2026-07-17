@@ -77,6 +77,12 @@ function database() {
       source_ai_reviewed_at TEXT,
       FOREIGN KEY (trip_id) REFERENCES trips(id) ON DELETE CASCADE
     );
+    CREATE TABLE privacy_deletion_jobs (
+      id TEXT PRIMARY KEY NOT NULL,
+      scope TEXT NOT NULL,
+      subject_hash TEXT NOT NULL,
+      owner_subject_hash TEXT NOT NULL
+    );
   `);
   return { sqlite, d1: new D1Adapter(sqlite) };
 }
@@ -237,7 +243,7 @@ test("the public discussion route rejects mutations", async () => {
 
 test("AI review stores a private candidate and cannot write a public post", async () => {
   const { sqlite, d1 } = database();
-  addTrip(sqlite, "ai-draft", { moderation: "pending" });
+  addTrip(sqlite, "ai-draft", { moderation: "pending", aiReviewStatus: null });
   const originalFetch = globalThis.fetch;
   globalThis.fetch = async () => new Response(JSON.stringify({
     choices: [{ message: { content: JSON.stringify({
