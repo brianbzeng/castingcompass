@@ -13,6 +13,8 @@ path so security fixes are not frozen out.
 | --- | --- | --- |
 | Node build runtime | `.node-version`, GitHub CI, and snapshot automation select Node `22.23.1`; `engines.node` accepts only that patched 22.x floor through the next major boundary | Cloudflare must be verified to honor the file on the exact build; GitHub/Cloudflare host images are mutable services |
 | Python test runtime | `.python-version` and every GitHub workflow select Python `3.12.13` | Python 3.12 is security-fixes-only; a tested feature-series upgrade is still required before its support ends |
+| API container runtime | The API Dockerfile selects the official `python:3.12.13-slim-bookworm` multi-platform image by immutable index digest | The pinned OS/Python image needs weekly reviewed Docker updates; the container is not the current Cloudflare Worker production path |
+| Exercised Python graphs | FastAPI runtime/test and pipeline CI use exact transitive versions from source-bound locks with committed SHA-256 distribution hashes; CI and the API image require hashes and reject source distributions | The package index, pip implementation, host kernel/libc, and wheel contents remain external; optional Geo/PyTorch platforms need separate locks |
 | Worker runtime contract | `wrangler.jsonc` fixes `compatibility_date` and the reviewed compatibility flags | Cloudflare implements the runtime; a date pin needs deliberate compatibility review and periodic advancement |
 | Direct npm packages | Every direct production and development dependency uses an exact version in `package.json` | A package version can still be malicious or vulnerable; review source/provenance, advisories, licenses, and install scripts |
 | Transitive npm tree | `package-lock.json` records exact versions, registry locations, and integrity hashes; CI and release use `npm ci` | Registry availability and npm/client behavior remain external; the hosted runner itself is not bit-for-bit pinned |
@@ -38,6 +40,15 @@ The web job deliberately orders its gates as follows:
 4. regenerate the production CycloneDX document in memory and require an exact match with the
    committed SBOM and lockfile hash;
 5. lint, typecheck, build, run all runtime/attack tests, and exercise the mobile browser suite.
+
+The API and pipeline jobs install only the committed CPython 3.12 locks with pip's
+all-or-nothing `--require-hashes` mode and `--only-binary=:all:`. The API job runs its tests;
+the pipeline lock also pins Ruff and the validation-compatible numerical/cryptographic graph
+before lint, unit tests, and the deterministic smoke workflow. The pip caches are keyed to the
+lock files rather than the range/source inputs. The API Dockerfile uses the runtime-only lock,
+excluding pytest/httpx, plus the exact Python patch/image digest. Hash checking proves that
+downloaded bytes match a committed distribution hash; it does not prove that a package or wheel
+is benign.
 
 The dependency-review job separately compares the base and head dependency graphs on pull
 requests targeting the default branch. GitHub builds that graph from the default branch, so
@@ -70,6 +81,35 @@ in `package-lock.json`, the complete-tree audit, and dependency review. Python a
 build/service components are not yet represented in one combined signed SBOM; that is an open
 gate below.
 
+## Python lock workflow
+
+`services/api/requirements.txt` is the runtime update input, while
+`services/api/requirements-test.in` adds the exact test-only dependencies without putting them
+in the API image.
+`pipeline/requirements-ci.in` composes the smoke ranges with the validation protocol's exact
+overlap constraints, fixes the reviewed pandas behavior, and pins the CI-only Ruff version.
+The generated FastAPI runtime/test locks and `pipeline/requirements-ci.lock` contain exact
+transitive versions and SHA-256 hashes for universal CPython 3.12 wheel resolution.
+
+The repository checker binds each generated lock to SHA-256 digests of every source/constraint
+file, rejects non-exact or unhashed requirements, and runs before dependency audits in the main
+security command. To update intentionally, use exactly the generator version enforced by the
+script, inspect the source, resolved-version, marker, and hash changes, then run both isolated
+pip installs and their test suites:
+
+```sh
+node scripts/generate-python-locks.mjs --write
+npm run security:python-locks
+python -m pip install --only-binary=:all: --require-hashes -r services/api/requirements-test.lock
+python -m pip install --only-binary=:all: --require-hashes -r pipeline/requirements-ci.lock
+```
+
+The generator uses `uv 0.10.11` only to resolve and record the reviewed lock update; CI and the
+API image install with pip and do not trust or execute uv. Re-running the generator with
+unchanged inputs must be byte-identical. Dependabot monitors the API and pipeline source files,
+and Docker updates monitor the API image, but every generated change still needs the review and
+tests above.
+
 Primary references:
 
 - [npm SBOM command](https://docs.npmjs.com/cli/commands/npm-sbom/)
@@ -87,14 +127,22 @@ Dependabot proposes npm, Python, and GitHub Action updates weekly. For every upd
 2. For npm, change the direct pin/override deliberately, regenerate `package-lock.json` with
    the reviewed npm toolchain, run `npm ci`, regenerate the SBOM, and inspect unexpected
    transitive additions/removals. Do not run an unreviewed blanket force-fix.
-3. For GitHub Actions, resolve the reviewed release tag to its commit, use the full commit SHA,
+3. For Python, update the direct source or constraint deliberately, regenerate with the exact
+   checked generator, inspect every resolved version/hash/marker, install into fresh CPython
+   3.12 environments using pip hash and binary-only mode, and run the complete API/pipeline
+   suites. Never hand-edit a hash to make a failed install pass.
+4. For the API base image, verify the official image identity, exact Python patch, multi-platform
+   index digest, upstream source revision, OS advisories, and both amd64/arm64 manifests before
+   updating the digest. Build and smoke the image; a tag alone is not immutable.
+5. For GitHub Actions, resolve the reviewed release tag to its commit, use the full commit SHA,
    and preserve the human-readable version comment.
-4. Run secret scanning, both audits, SBOM verification, lint, typecheck, all tests, build,
-   mobile tests, Python tests, release verifiers, and the Wrangler dry-run as applicable.
-5. Release from the immutable reviewed commit through the guarded workflow. Keep migrations,
+6. Run secret scanning, Python lock verification, both npm audits, SBOM verification, lint,
+   typecheck, all tests, build, mobile tests, Python tests, release verifiers, and the Wrangler
+   dry-run as applicable.
+7. Release from the immutable reviewed commit through the guarded workflow. Keep migrations,
    runtime-config activation, and dependency publication separate when rollback boundaries
    differ.
-6. Record the owner and next review date for any accepted advisory or deprecated component.
+8. Record the owner and next review date for any accepted advisory or deprecated component.
    An acceptance needs scope/exploitability evidence, compensating controls, a deadline, and a
    retest—not merely the label “development only.”
 
@@ -118,13 +166,18 @@ allowlist. Before enabling strict allowlisting, pin one npm CLI version across l
 Cloudflare builds, approve only exact reviewed package versions, prove the required native
 binaries still install on Linux and macOS, and fail on every newly introduced hook.
 
-## Python and artifact-provenance open gates
+Python CI and the API image reject source distributions, preventing package build backends and
+arbitrary source-build hooks from running during those installs. Wheels can still contain
+malicious code and startup behavior; exact hashes and binary-only policy are integrity and
+surface-reduction controls, not a sandbox or trust guarantee.
 
-- The API's direct Python dependencies are exact pins, but their transitive wheels are not yet
-  locked with local SHA-256 hashes. Pipeline requirements deliberately use compatible ranges
-  and are also not a reproducible lock. Build reviewed per-platform lock files and enforce
-  pip `--require-hashes`/binary policy before calling Python builds reproducible. Pip documents
-  that hash checking is all-or-nothing and requires every transitive dependency to be pinned.
+## Optional Python and artifact-provenance open gates
+
+- The exercised FastAPI runtime/test and pipeline CI paths now use exact transitive versions and
+  SHA-256 hashes, but the optional Geo/PyTorch research stack remains open. It spans large,
+  platform/backend-specific rasterio, pyproj, Torch CPU/CUDA/MPS, and system-library builds;
+  create separately tested locks for each approved platform/backend before treating those
+  research environments as reproducible. Do not force one misleading universal lock onto them.
 - The committed npm SBOM is not a combined Python/OS/Worker inventory. Produce those additional
   inventories, bind them to the release commit, and reconcile license/advisory ownership.
 - GitHub and Cloudflare builds are not yet signed deployment provenance. Generate and verify an
@@ -136,8 +189,9 @@ binaries still install on Linux and macOS, and fail on every newly introduced ho
 - Make dependency review, secret scanning, audit, SBOM verification, and full CI required checks
   in repository rules and capture production evidence.
 
-Until those gates pass, the parent roadmap item covering reproducible builds, complete version
-locks, signed SBOM/provenance, key custody, and restore-tested backups remains open.
+Until those gates pass, the parent roadmap item covering all-platform reproducible builds,
+complete version locks, signed SBOM/provenance, key custody, and restore-tested backups remains
+open.
 
 Additional primary references:
 

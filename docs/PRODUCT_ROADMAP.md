@@ -118,9 +118,15 @@ after its acceptance checks pass in the intended environment.
       action commits; remediate the known npm advisory tree to zero; add high/production-
       moderate audit gates, pull-request dependency review, a deterministic CycloneDX
       production SBOM bound to the package-lock hash, and an owner/deadline/update runbook.
-      Hashed Python transitive locks, install-script enforcement, combined/signed SBOM and build
-      attestations, repository required-check settings, production evidence, key custody, and
-      restore drills remain open.
+      Optional Geo/PyTorch platform locks, cross-platform npm install-script allowlisting,
+      combined/signed SBOM and build attestations, repository required-check settings,
+      production evidence, key custody, and restore drills remain open.
+    - [x] Lock the exercised FastAPI and pipeline CI Python graphs to exact transitive versions
+      and committed SHA-256 distribution hashes, bind lock metadata to its source inputs, keep
+      test-only packages out of the API image, enforce pip
+      all-or-nothing hash checking and binary-only installs in CI/API containers, pin the API
+      Python base image by patch and multi-platform digest, and schedule Docker updates. The
+      optional Geo/PyTorch stack and signed deployment provenance remain open.
     - [x] Locally inventory all six Worker runtime secrets, extend named-secret scanning and
       ignored local Wrangler secret files, define environment/purpose/backup-key separation,
       document D1 managed-encryption and application-controlled AES-256-GCM boundaries, and

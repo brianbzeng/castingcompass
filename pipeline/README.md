@@ -350,7 +350,7 @@ and checkpoint path:
 
 ```bash
 python3 -m venv --system-site-packages .venv-geo-deep
-.venv-geo-deep/bin/pip install -r pipeline/requirements-geo-deep.txt
+.venv-geo-deep/bin/python -m pip install -r pipeline/requirements-geo-deep.txt
 PYTHON_BIN=.venv-geo-deep/bin/python \
   pipeline/scripts/run_usgs_sf_2m_ssl_pilot.sh
 ```

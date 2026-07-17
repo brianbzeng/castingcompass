@@ -222,9 +222,10 @@ prove that the object is either attached to a live trip or durably queued for cl
       an explicit support decision, while export and account deletion remain available.
 - [ ] Canonical, redirect-alias, and `workers.dev` smoke checks passed.
 - [ ] Health and security endpoints return the expected content and hardening headers.
-- [ ] The release used the reviewed Node/Python versions; `npm ci`, secret scanning, both audit
-      thresholds, dependency review, and deterministic SBOM verification passed at the exact
-      commit. The recorded SBOM lock hash matches that commit.
+- [ ] The release used the reviewed Node/Python versions and pinned API container digest;
+      `npm ci`, secret scanning, exact-input Python lock verification, binary-only hash-checked
+      Python installs, both npm audit thresholds, dependency review, and deterministic SBOM
+      verification passed at the exact commit. The recorded SBOM/lock hashes match that commit.
 - [ ] GitHub dependency/Dependabot review has no untriaged high or critical advisory; accepted
       development findings have reachability evidence, an owner, and a deadline.
 - [ ] The six runtime secret bindings, distinct opaque key IDs, named custodians/reviewers,

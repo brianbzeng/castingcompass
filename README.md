@@ -86,7 +86,7 @@ The generator never substitutes invented ocean/weather values. Missing sources r
 ```bash
 python3 -m venv .venv
 source .venv/bin/activate
-pip install -r services/api/requirements.txt
+python -m pip install --only-binary=:all: --require-hashes -r services/api/requirements-test.lock
 uvicorn services.api.app.main:app --reload --port 8000
 ```
 
@@ -110,7 +110,7 @@ docker compose up --build
 ```bash
 python3 -m venv .pipeline-venv
 source .pipeline-venv/bin/activate
-pip install -r pipeline/requirements-smoke.txt
+python -m pip install --only-binary=:all: --require-hashes -r pipeline/requirements-ci.lock
 python3 -m unittest discover -s pipeline/tests -v
 python3 -m pipeline.contourcast.cli smoke --output-dir /tmp/contourcast-smoke --seed 42
 ```
