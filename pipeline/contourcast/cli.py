@@ -462,16 +462,21 @@ def main(argv: Sequence[str] | None = None) -> int:
             )
         )
     elif args.command == "seal-validation-finalization":
+        seal_validation_finalization(
+            protocol_path=args.protocol,
+            output_path=args.output,
+            label_free_evidence_path=args.label_free_evidence,
+            opportunity_ledger_path=args.opportunity_ledger,
+            candidate_predictions_path=args.predictions,
+            census_export_path=args.census_export,
+            manifest_chain_paths=args.manifest_chain,
+        )
         _print(
-            seal_validation_finalization(
-                protocol_path=args.protocol,
-                output_path=args.output,
-                label_free_evidence_path=args.label_free_evidence,
-                opportunity_ledger_path=args.opportunity_ledger,
-                candidate_predictions_path=args.predictions,
-                census_export_path=args.census_export,
-                manifest_chain_paths=args.manifest_chain,
-            )
+            {
+                "status": "sealed",
+                "manifest_path": str(args.output),
+                "manifest_role": "finalization",
+            }
         )
     elif args.command == "seal-validation-label-lock":
         _print(

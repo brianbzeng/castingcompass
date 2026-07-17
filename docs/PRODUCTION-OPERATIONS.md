@@ -267,7 +267,10 @@ prove that the object is either attached to a live trip or durably queued for cl
       Python installs, both npm audit thresholds, dependency review, and deterministic SBOM
       verification passed at the exact commit. The recorded SBOM/lock hashes match that commit.
 - [ ] GitHub dependency/Dependabot review has no untriaged high or critical advisory; accepted
-      development findings have reachability evidence, an owner, and a deadline.
+      development findings have reachability evidence, an owner, and a deadline. Live `main`
+      protection still requires the exact API, pipeline, web, and dependency-review checks;
+      secret-scanning push protection and private reporting remain enabled; and the CodeQL
+      analysis plus alert list were reviewed at the immutable release commit.
 - [ ] The seven runtime secret bindings, distinct opaque key IDs, named custodians/reviewers,
       least-privilege account roles, MFA, recovery, revocation, and environment separation were
       verified without placing values in evidence.

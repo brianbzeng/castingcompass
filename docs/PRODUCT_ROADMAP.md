@@ -120,8 +120,15 @@ after its acceptance checks pass in the intended environment.
       moderate audit gates, pull-request dependency review, a deterministic CycloneDX
       production SBOM bound to the package-lock hash, and an owner/deadline/update runbook.
       Optional Geo/PyTorch platform locks, cross-platform npm install-script allowlisting,
-      combined/signed SBOM and build attestations, repository required-check settings,
-      production evidence, key custody, and restore drills remain open.
+      combined/signed SBOM and build attestations, production evidence, key custody, and restore
+      drills remain open.
+    - [x] Enable live `main` protection with pull requests, strict GitHub Actions checks,
+      resolved conversations, administrator enforcement, and force-push/deletion denial; enable
+      Dependabot security updates, secret-scanning push protection, private vulnerability
+      reporting, and GitHub-managed CodeQL for Actions, JavaScript/TypeScript, and Python. The
+      initial CodeQL findings were individually reviewed: the public test-protocol identifier
+      was documented as a test-only false positive, while biased verification-code generation
+      and overly broad CLI output were remediated and regression-tested.
     - [x] Lock the exercised FastAPI and pipeline CI Python graphs to exact transitive versions
       and committed SHA-256 distribution hashes, bind lock metadata to its source inputs, keep
       test-only packages out of the API image, enforce pip
@@ -131,8 +138,9 @@ after its acceptance checks pass in the intended environment.
     - [x] Locally remediate the dependency-graph alerts by upgrading the validation/CI graph to
       `cryptography` 48.0.1 and the API test graph to `pytest` 9.0.3; regenerate the source-bound
       hashed locks and pass isolated Python 3.12.13 installs, query-plan checks, API tests,
-      pipeline lint/tests, and the deterministic smoke workflow. Default-branch alert closure
-      remains dependent on merging the reviewed change.
+      pipeline lint/tests, and the deterministic smoke workflow. The patched files are on the
+      default branch; Dependabot alert `#2` had not refreshed after the merge and must close from
+      a fresh dependency-graph evaluation rather than being manually hidden as proof.
     - [x] Locally inventory all seven Worker runtime secrets, extend named-secret scanning and
       ignored local Wrangler secret files, define environment/purpose/backup-key separation,
       document D1 managed-encryption and application-controlled AES-256-GCM boundaries, and

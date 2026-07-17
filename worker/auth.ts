@@ -2390,9 +2390,21 @@ async function sendWelcomeEmail(env: AuthApiEnv, to: string, userId: string) {
   });
 }
 
-function randomCode() {
-  const values = crypto.getRandomValues(new Uint32Array(1));
-  return String(values[0] % 1_000_000).padStart(6, "0");
+const VERIFICATION_CODE_SPACE = 1_000_000;
+const UINT32_SPACE = 2 ** 32;
+const UNBIASED_VERIFICATION_CODE_LIMIT =
+  Math.floor(UINT32_SPACE / VERIFICATION_CODE_SPACE) * VERIFICATION_CODE_SPACE;
+
+function secureRandomUint32() {
+  return crypto.getRandomValues(new Uint32Array(1))[0];
+}
+
+export function randomCode(randomUint32: () => number = secureRandomUint32) {
+  let value: number;
+  do {
+    value = randomUint32();
+  } while (value >= UNBIASED_VERIFICATION_CODE_LIMIT);
+  return String(value % VERIFICATION_CODE_SPACE).padStart(6, "0");
 }
 
 function randomSecret(length: number) {

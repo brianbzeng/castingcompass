@@ -890,6 +890,7 @@ def write_census(
         "protocol_id": protocol["protocol_id"],
         "protocol_version": protocol["protocol_version"],
         "activation_manifest_sha256": canonical_sha256(activation),
+        # This is a public, schema-fixed protocol identifier, not query text or a credential.
         "query_id": protocol["recruitment"]["trusted_export_query_id"],
         "generated_at": generated_at,
         "query_watermark_start_at": protocol["enrollment"]["start_at"],
