@@ -5899,3 +5899,182 @@ footer {
     font-size: clamp(2.8rem, 15vw, 4.7rem);
   }
 }
+
+/* Honest, indeterminate route loading and safe render-error recovery. */
+.route-state-page {
+  display: grid;
+  grid-template-rows: auto 1fr;
+  min-height: 100dvh;
+}
+
+.route-state-header {
+  display: flex;
+  align-items: center;
+  width: min(1100px, calc(100% - 2rem));
+  min-height: 76px;
+  margin: 0 auto;
+  border-bottom: 1px solid var(--line);
+}
+
+.route-state-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+  color: var(--ink);
+  font-size: 1.05rem;
+  font-weight: 820;
+  letter-spacing: -0.04em;
+}
+
+.route-state-brand svg {
+  width: 32px;
+  height: 32px;
+  color: var(--seafoam);
+}
+
+.route-state-card {
+  align-self: center;
+  width: min(760px, calc(100% - 2rem));
+  margin: clamp(2rem, 8vw, 6rem) auto;
+  padding: clamp(1.5rem, 5vw, 4rem);
+  border: 1px solid var(--line-strong);
+  background: rgba(4, 22, 45, 0.88);
+  box-shadow: 0 28px 90px rgba(0, 5, 15, 0.32);
+}
+
+.route-state-eyebrow {
+  margin: 0;
+  color: var(--seafoam);
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.route-state-card h1 {
+  max-width: 13ch;
+  margin: 0.8rem 0 1rem;
+  color: var(--ink);
+  font-size: clamp(2.6rem, 7vw, 5.4rem);
+  font-weight: 590;
+  letter-spacing: -0.06em;
+  line-height: 0.94;
+}
+
+.route-state-copy {
+  max-width: 58ch;
+  margin: 0;
+  color: var(--ink-soft);
+  font-size: 0.95rem;
+  line-height: 1.72;
+}
+
+.route-loading-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.75rem;
+  margin-top: 2rem;
+}
+
+.route-loading-line,
+.route-loading-panel {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  background: rgba(15, 54, 91, 0.58);
+}
+
+.route-loading-line::after,
+.route-loading-panel::after {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    105deg,
+    transparent 20%,
+    rgba(168, 216, 242, 0.12) 45%,
+    transparent 70%
+  );
+  content: "";
+  transform: translateX(-100%);
+  animation: route-loading-shimmer 1.6s ease-in-out infinite;
+}
+
+.route-loading-line {
+  grid-column: 1 / -1;
+  width: 68%;
+  height: 12px;
+  border-radius: 100px;
+}
+
+.route-loading-line-wide {
+  width: 92%;
+}
+
+.route-loading-panel {
+  min-height: 112px;
+}
+
+@keyframes route-loading-shimmer {
+  to {
+    transform: translateX(100%);
+  }
+}
+
+.route-state-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-top: 1.8rem;
+}
+
+.route-state-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 46px;
+  padding: 0.8rem 1rem;
+  border: 1px solid var(--line-strong);
+  font-size: 0.78rem;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.route-state-action-primary {
+  border-color: var(--lime);
+  color: var(--ocean-deep);
+  background: var(--lime);
+}
+
+.route-state-action-secondary {
+  color: var(--seafoam);
+  background: rgba(14, 48, 85, 0.58);
+}
+
+.route-state-action:focus-visible,
+.route-state-brand:focus-visible {
+  outline: 3px solid var(--seafoam);
+  outline-offset: 4px;
+}
+
+@media (max-width: 640px) {
+  .route-state-card {
+    width: calc(100% - 1rem);
+    margin: 0.5rem auto 1rem;
+  }
+
+  .route-state-card h1 {
+    font-size: clamp(2.6rem, 14vw, 4.4rem);
+  }
+
+  .route-loading-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .route-loading-panel {
+    min-height: 70px;
+  }
+
+  .route-state-action {
+    width: 100%;
+  }
+}
