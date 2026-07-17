@@ -79,14 +79,22 @@ test("third-party GitHub Actions are pinned to immutable commits", () => {
   }
 });
 
-test("production release scripts cannot apply migrations implicitly", () => {
+test("production release scripts cannot apply migrations implicitly or bypass the staged wrapper", () => {
   const packageJson = JSON.parse(readFileSync("package.json", "utf8"));
-  for (const name of ["deploy:cloudflare", "deploy:cloudflare:worker-only", "release:cloudflare"]) {
+  for (const name of [
+    "deploy:cloudflare",
+    "deploy:cloudflare:worker-only",
+    "release:cloudflare",
+    "release:cloudflare:maintenance",
+  ]) {
     const command = packageJson.scripts[name];
     assert.equal(typeof command, "string", `${name} must exist`);
     assert.doesNotMatch(command, /\bmigrations\s+apply\b/, `${name} must be Worker-only`);
   }
-  assert.match(packageJson.scripts["migrate:cloudflare:remote"], /\bmigrations\s+apply\b/);
+  assert.match(packageJson.scripts["migrate:cloudflare:remote"], /integrated-release\.mjs apply/);
+  assert.doesNotMatch(packageJson.scripts["migrate:cloudflare:remote"], /\bwrangler\b/);
+  assert.doesNotMatch(packageJson.scripts["migrate:cloudflare:remote"], /confirm-(primary|bookmark)/);
+  assert.doesNotMatch(packageJson.scripts["reconcile:cloudflare:0007"], /confirm-(primary|bookmark)/);
 });
 
 test("every deploy entry point verifies an operator-supplied immutable commit", () => {
@@ -100,7 +108,17 @@ test("every deploy entry point verifies an operator-supplied immutable commit", 
     scripts["release:cloudflare"],
     /verify:release-checkout.*build:cloudflare.*wrangler deploy/,
   );
-  assert.match(scripts["migrate:cloudflare:remote"], /verify:release-checkout/);
+  assert.match(scripts["release:cloudflare:maintenance"], /verify:release-checkout.*build:cloudflare.*wrangler deploy/);
+  assert.match(scripts["migrate:cloudflare:remote"], /integrated-release\.mjs apply/);
+  assert.match(scripts["reconcile:cloudflare:0007"], /integrated-release\.mjs reconcile-0007/);
+});
+
+test("release maintenance is default-off and suppresses scheduled database work", () => {
+  const config = readFileSync("wrangler.jsonc", "utf8");
+  const worker = readFileSync("worker/index.ts", "utf8");
+  assert.match(config, /"RELEASE_MAINTENANCE_MODE"\s*:\s*"false"/);
+  assert.match(worker, /if \(releaseMaintenanceEnabled\(env\)\) return;/);
+  assert.match(worker, /releaseMaintenanceResponse\(request, env\)/);
 });
 
 test("Cloudflare builds override every public environment input", () => {

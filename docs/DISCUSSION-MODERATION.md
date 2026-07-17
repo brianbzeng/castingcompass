@@ -85,57 +85,23 @@ review can write the public table.
      --redirect-base-url https://contourcast.brianbzeng.com
    ```
 
-2. Preflight the additive approval migration while the safety Worker is live and the feature
-   remains off. Capture the legacy row count, inspect the complete remote pending-migration
-   set, confirm that D1 reports the production storage backend, and record the current Time
-   Travel bookmark. Return to the full release worktree and reverify it before these commands:
+2. Continue with the authoritative [integrated production release](INTEGRATED-RELEASE.md).
+   Production has the `0007` legal columns but not its ledger entry, and `0009` through `0015`
+   are all pending. The old assumption that `0009` is the only pending migration is false.
+   Do not run raw `wrangler d1 migrations apply`, and do not use `--file` for a read-only
+   audit because remote D1 returns only a batch summary rather than the selected audit rows.
 
-   ```sh
-   cd /ABSOLUTE/PATH/TO/FULL_RELEASE_WORKTREE
-   npm run verify:release-checkout
-   ./node_modules/.bin/wrangler d1 execute contourcast-trips --remote --config wrangler.jsonc \
-     --file scripts/discussion-pre-migration-audit.sql --json
-   ./node_modules/.bin/wrangler d1 migrations list contourcast-trips --remote --config wrangler.jsonc
-   ./node_modules/.bin/wrangler d1 info contourcast-trips --config wrangler.jsonc --json
-   ./node_modules/.bin/wrangler d1 time-travel info contourcast-trips --config wrangler.jsonc --json
-   ```
+3. The integrated runbook records the Time Travel bookmark, verifies the exact drift,
+   reconciles `0007`, applies only one reviewed migration at a time, deploys and verifies a
+   maintenance bridge before the schema becomes incompatible with the older Worker, audits
+   the complete final schema, and publishes the same reviewed release with maintenance off.
+   Its postflight requires all discussion rows to remain without approval metadata.
 
-   Stop if the pending set is empty, omits `0009_human_discussion_approval.sql`, or contains
-   any other migration. Do not let `migrations apply` reconcile an unexpected production
-   ledger implicitly. Review and repair that discrepancy in a separate change. The D1 info
-   result must report the production backend, and the pre-migration bookmark must be copied
-   exactly into the private release record before continuing.
-
-3. Apply the migration, prove no migration remains pending, and run the post-migration audit:
-
-   ```sh
-   npm run migrate:cloudflare:remote
-   ./node_modules/.bin/wrangler d1 migrations list contourcast-trips --remote --config wrangler.jsonc
-   ./node_modules/.bin/wrangler d1 execute contourcast-trips --remote --config wrangler.jsonc \
-     --file scripts/discussion-post-migration-audit.sql --json
-   ```
-
-   Accept only when there are no pending migrations, `approval_columns_found` and
-   `nullable_text_approval_columns` both equal `3`, `total_discussion_rows` and
-   `fully_quarantined_rows` both equal the recorded pre-migration legacy row count, and
-   `rows_with_any_approval_metadata`, `partially_populated_approval_rows`, and
-   `publicly_eligible_rows` all equal `0`. Preserve the command output with the bookmark and
-   release identifiers.
-
-4. Prove the full human-gated release checkout is clean and at its reviewed immutable commit,
-   then deploy it while the feature remains off. Record the new deployment ID and version ID,
-   and confirm the deployment again has exactly one version receiving `100%` of traffic.
-
-   ```sh
-   npm run release:cloudflare
-   ./node_modules/.bin/wrangler deployments status --config wrangler.jsonc --json
-   ```
-
-   Repeat the all-host verifier command from step 1, adding
-   `--expected-worker-version-id FULL_VERSION_ID` with the exact version from deployment
-   status. Every direct host's health response must identify that version, every direct
-   location endpoint must return an empty `posts` array with `Cache-Control: no-store`, and
-   every redirect alias must still return the exact canonical `308` response.
+4. Repeat the all-host verifier command from step 1 with
+   `--expected-worker-version-id FULL_VERSION_ID`. Every direct host's health response must
+   identify that version, every direct location endpoint must return an empty `posts` array
+   with `Cache-Control: no-store`, and every redirect alias must return the exact canonical
+   `308` response.
 
    Then run a real containment smoke test with photos disabled. Record the total public-row
    count, submit one unmistakably synthetic completed trip through the production product,
@@ -148,22 +114,12 @@ review can write the public table.
    `428 legal_acceptance_required` for a protected mutation and that accepting the current
    documents restores access.
 
-5. If the full release fails, route `100%` of traffic to the recorded safety Worker version
-   and verify the deployment status and all hosts again:
+5. Before `0011`, the recorded safety Worker is the rollback floor. After `0011`, keep the
+   verified full-release maintenance version at `100%` and fix forward; the older Worker can
+   no longer complete trips under the species-contract guards. A D1 Time Travel restore
+   overwrites current data and requires a separate incident decision, a continuing write
+   freeze, an impact review, and explicit authorization.
 
-   ```sh
-   ./node_modules/.bin/wrangler versions deploy SAFETY_VERSION_ID@100% --config wrangler.jsonc -y
-   ./node_modules/.bin/wrangler deployments status --config wrangler.jsonc --json
-   ```
-
-   If the recorded version is unavailable, redeploy source commit
-   `e2c612246fadfdb231e481c405fa72e502458ed1` only from the verified clean safety worktree.
-   Do not deploy its parent because it reintroduces vulnerable build tools and inherited
-   public-API build configuration. Do not select an older dashboard deployment, because it
-   can restore automated publication. The approval migration is additive and the safety Worker
-   does not require a database rollback. A D1 Time Travel restore overwrites current database
-   state; never perform one as part of an ordinary Worker rollback. It requires a separate
-   incident decision, a write freeze, an impact review, and explicit authorization.
 6. Enabling discussions is a separate release after a synthetic approve/read/reject smoke
    test, vendor safeguards, distinct public-summary consent, truthful reporter status and
    correction/removal controls, moderator access controls, and an incident kill-switch drill.
@@ -171,13 +127,13 @@ review can write the public table.
 ## Private release evidence record
 
 Store the record outside the repository. It must include the UTC timestamp and operator; the
-safety and full source commits; both deployment IDs and Worker version IDs; the observed
-`100%` traffic assignments; the exact direct and redirect host list; live-verifier output;
-the pre-migration legacy row count; the complete pending-migration output before and after;
-the D1 backend version; the pre-migration Time Travel bookmark; migration output; and the
-post-migration audit output. Do not include raw notes, emails, session values, API tokens, or
-other user data. Include the automatic-deployment pause evidence and the aggregate synthetic
-containment result without its note or account identifier.
+safety and full source commits; safety, maintenance, and final deployment IDs and Worker
+version IDs; the observed `100%` traffic assignments; the exact direct and redirect host list;
+live-verifier output; the D1 backend version; preflight and postflight aggregate hashes; the
+pre-migration Time Travel bookmark; and every reconciliation/migration result. Do not include
+raw notes, emails, session values, API tokens, or other user data. Include the
+automatic-deployment pause evidence and the aggregate synthetic containment result without
+its note or account identifier.
 
 ## Human review checklist
 

@@ -3,6 +3,7 @@ import type { D1DatabaseLike } from "./trips";
 interface SecurityEnv {
   DB?: D1DatabaseLike;
   CF_VERSION_METADATA?: { id?: string };
+  RELEASE_MAINTENANCE_MODE?: string;
 }
 
 export const API_MUTATION_BODY_LIMIT = 64 * 1024;
@@ -72,6 +73,7 @@ export async function healthResponse(request: Request, env: SecurityEnv): Promis
     status: databaseAvailable ? "ok" : "degraded",
     service: "castingcompass-web",
     workerVersionId,
+    releaseMaintenance: releaseMaintenanceEnabled(env),
   });
   return new Response(request.method === "HEAD" ? null : body, {
     status,
@@ -80,6 +82,29 @@ export async function healthResponse(request: Request, env: SecurityEnv): Promis
       "Cache-Control": "no-store",
     },
   });
+}
+
+/**
+ * During a schema bridge, keep static guidance available but stop every API
+ * handler before it can read or write a version-dependent table. Missing is
+ * normal for historical Workers; any configured value other than exact
+ * "false" fails safe into maintenance.
+ */
+export function releaseMaintenanceEnabled(env?: SecurityEnv): boolean {
+  return env?.RELEASE_MAINTENANCE_MODE !== undefined && env.RELEASE_MAINTENANCE_MODE !== "false";
+}
+
+export function releaseMaintenanceResponse(request: Request, env?: SecurityEnv): Response | null {
+  const url = new URL(request.url);
+  if (!releaseMaintenanceEnabled(env) || !url.pathname.startsWith("/api/") || url.pathname === "/api/health") {
+    return null;
+  }
+  return jsonError(
+    503,
+    "release_maintenance",
+    "CastingCompass is briefly read-only while a database release completes. Please retry shortly.",
+    { "Retry-After": "300" },
+  );
 }
 
 function safeWorkerVersionId(value: unknown) {

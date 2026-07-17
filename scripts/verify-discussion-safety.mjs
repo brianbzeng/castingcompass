@@ -16,13 +16,33 @@ function forbidPattern(source, pattern, label) {
 
 export async function verifySourceSafety(root = DEFAULT_ROOT) {
   const read = (path) => readFile(resolve(root, path), "utf8");
-  const [wrangler, review, discussions, security, migration, runbook, deployment, postMigrationAudit, packageJson] = await Promise.all([
+  const [
+    wrangler,
+    review,
+    discussions,
+    security,
+    worker,
+    migration,
+    runbook,
+    integratedRunbook,
+    integratedRelease,
+    integratedPreflight,
+    reconciliation,
+    deployment,
+    postMigrationAudit,
+    packageJson,
+  ] = await Promise.all([
     read("wrangler.jsonc"),
     read("worker/trip-review.ts"),
     read("worker/discussions.ts"),
     read("worker/security.ts"),
+    read("worker/index.ts"),
     read("drizzle/0009_human_discussion_approval.sql"),
     read("docs/DISCUSSION-MODERATION.md"),
+    read("docs/INTEGRATED-RELEASE.md"),
+    read("scripts/integrated-release.mjs"),
+    read("scripts/integrated-release-preflight.sql"),
+    read("scripts/reconcile-0007-legal-migration.sql"),
     read("docs/CLOUDFLARE_DEPLOYMENT.md"),
     read("scripts/discussion-post-migration-audit.sql"),
     read("package.json"),
@@ -45,16 +65,22 @@ export async function verifySourceSafety(root = DEFAULT_ROOT) {
     requirePattern(runbook, /oldest permitted rollback target/, "safe rollback floor is documented"),
     requirePattern(runbook, /e2c612246fadfdb231e481c405fa72e502458ed1/, "patched safety-floor commit is pinned"),
     requirePattern(runbook, /moderation_status = 'pending'/, "approval occurs while the trip remains hidden"),
-    requirePattern(runbook, /d1 migrations list[\s\S]*--remote/, "remote pending migrations are inspected before apply"),
-    requirePattern(runbook, /d1 time-travel info/, "pre-migration Time Travel bookmark is recorded"),
-    requirePattern(runbook, /exactly one version[\s\S]*100%/i, "deployed Worker version must receive all traffic"),
-    requirePattern(runbook, /disable Cloudflare Git-connected automatic deployments/i, "automatic deployment is paused before rollout"),
-    requirePattern(runbook, /export RELEASE_COMMIT=FULL_RELEASE_COMMIT[\s\S]*npm ci[\s\S]*verify:release-checkout/, "full release provenance precedes D1 work"),
+    requirePattern(integratedRunbook, /d1 time-travel info/, "pre-migration Time Travel bookmark is recorded"),
+    requirePattern(integratedRunbook, /exactly one version[\s\S]*100%/i, "deployed Worker version must receive all traffic"),
+    requirePattern(integratedRunbook, /Disable Cloudflare Git-connected automatic deployments/i, "automatic deployment is paused before rollout"),
+    requirePattern(integratedRunbook, /export RELEASE_COMMIT=FULL_40_CHARACTER_RELEASE_COMMIT[\s\S]*npm ci[\s\S]*verify:release-checkout/, "full release provenance precedes D1 work"),
     requirePattern(runbook, /real containment smoke test[\s\S]*total public-row count is unchanged/i, "synthetic AI containment is verified"),
     requirePattern(runbook, /expected-worker-version-id FULL_VERSION_ID/, "live checks bind the full release version"),
+    requirePattern(wrangler, /"RELEASE_MAINTENANCE_MODE"\s*:\s*"false"/, "release maintenance defaults off"),
+    requirePattern(worker, /releaseMaintenanceResponse\(request, env\)/, "maintenance blocks APIs before routing"),
+    requirePattern(worker, /if \(releaseMaintenanceEnabled\(env\)\) return;/, "maintenance suppresses scheduled work"),
+    requirePattern(integratedRelease, /migrations_pattern:\s*`drizzle\/\$\{targetMigration\}`/, "staged config exposes one exact migration"),
+    requirePattern(integratedRelease, /verifyReleaseCheckout/, "integrated migration wrapper verifies release provenance"),
+    requirePattern(integratedPreflight, /legal_columns_exact/, "integrated preflight verifies legal-column drift"),
+    requirePattern(reconciliation, /INSERT INTO d1_migrations\(name\)/, "0007 ledger reconciliation is explicit"),
     requirePattern(deployment, /must not run migrations automatically/i, "production deployment guidance separates schema changes"),
     requirePattern(packageJson, /"release:cloudflare"\s*:\s*"[^"]*verify:release-checkout[^"]*build:cloudflare[^"]*wrangler deploy/, "release rebuilds before deployment"),
-    requirePattern(packageJson, /"migrate:cloudflare:remote"\s*:\s*"[^"]*verify:release-checkout[^"]*migrations apply/, "migration requires release provenance"),
+    requirePattern(packageJson, /"migrate:cloudflare:remote"\s*:\s*"[^"]*integrated-release\.mjs apply/, "migration uses the guarded staged wrapper"),
     requirePattern(postMigrationAudit, /approval_columns_found/, "post-migration approval schema is audited"),
     requirePattern(postMigrationAudit, /rows_with_any_approval_metadata/, "legacy approval metadata is audited"),
   ];
@@ -121,6 +147,9 @@ export async function verifyLiveSafety({
         throw new Error(
           `${healthLabel}: expected Worker version ${expectedWorkerVersionId}, received ${healthPayload.workerVersionId ?? "none"}`,
         );
+      }
+      if (healthPayload.releaseMaintenance !== false) {
+        throw new Error(`${healthLabel}: expected release maintenance to be off`);
       }
     }
     await Promise.all(siteIds.map(async (siteId) => {

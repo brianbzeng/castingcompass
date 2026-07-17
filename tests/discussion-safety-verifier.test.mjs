@@ -11,7 +11,8 @@ test("discussion safety source preflight covers the release invariants", async (
   assert.ok(checks.includes("patched safety-floor commit is pinned"));
   assert.ok(checks.includes("full release provenance precedes D1 work"));
   assert.ok(checks.includes("release rebuilds before deployment"));
-  assert.ok(checks.includes("migration requires release provenance"));
+  assert.ok(checks.includes("migration uses the guarded staged wrapper"));
+  assert.ok(checks.includes("maintenance suppresses scheduled work"));
 });
 
 test("live verifier checks every site plus mutation and invalid-site behavior", async () => {
@@ -88,6 +89,7 @@ test("live verifier binds direct-host behavior to the recorded Worker version", 
         status: "ok",
         service: "castingcompass-web",
         workerVersionId: "version-123",
+        releaseMaintenance: false,
       }), { status: 200, headers: { "Cache-Control": "no-store" } });
     }
     if ((init.method ?? "GET") !== "GET") {
@@ -117,6 +119,26 @@ test("live verifier binds direct-host behavior to the recorded Worker version", 
       fetchImpl,
     }),
     /expected Worker version version-other, received version-123/,
+  );
+
+  await assert.rejects(
+    verifyLiveSafety({
+      baseUrls: ["https://castingcompass.test"],
+      expectedWorkerVersionId: "version-123",
+      siteIds: ["site-a"],
+      fetchImpl: async (input, init = {}) => {
+        const url = new URL(input);
+        if (url.pathname === "/api/health") {
+          return new Response(JSON.stringify({
+            status: "ok",
+            workerVersionId: "version-123",
+            releaseMaintenance: true,
+          }), { status: 200, headers: { "Cache-Control": "no-store" } });
+        }
+        return fetchImpl(input, init);
+      },
+    }),
+    /expected release maintenance to be off/,
   );
 });
 

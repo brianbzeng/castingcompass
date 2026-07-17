@@ -9,6 +9,8 @@ import {
   guardRequestBody,
   hardenResponse,
   healthResponse,
+  releaseMaintenanceEnabled,
+  releaseMaintenanceResponse,
 } from "../worker/security.ts";
 
 const ORIGIN = "https://castingcompass.com";
@@ -44,6 +46,7 @@ test("health endpoint reports D1 readiness, Worker version, and supports HEAD", 
     status: "ok",
     service: "castingcompass-web",
     workerVersionId: "version-123",
+    releaseMaintenance: false,
   });
   assert.equal(get?.headers.get("Cache-Control"), "no-store");
 
@@ -57,6 +60,7 @@ test("health endpoint reports D1 readiness, Worker version, and supports HEAD", 
     status: "degraded",
     service: "castingcompass-web",
     workerVersionId: null,
+    releaseMaintenance: false,
   });
 
   const post = await healthResponse(new Request(`${ORIGIN}/api/health`, { method: "POST" }), { DB: okDatabase() });
@@ -64,6 +68,33 @@ test("health endpoint reports D1 readiness, Worker version, and supports HEAD", 
   assert.equal(post?.headers.get("Allow"), "GET, HEAD");
 
   assert.equal(await healthResponse(new Request(`${ORIGIN}/api/other`), { DB: okDatabase() }), null);
+});
+
+test("release maintenance stops APIs before handlers while preserving health and pages", async () => {
+  const enabled = { RELEASE_MAINTENANCE_MODE: "true" };
+  assert.equal(releaseMaintenanceEnabled(enabled), true);
+  assert.equal(releaseMaintenanceEnabled({ RELEASE_MAINTENANCE_MODE: "invalid" }), true);
+  assert.equal(releaseMaintenanceEnabled({ RELEASE_MAINTENANCE_MODE: "false" }), false);
+  assert.equal(releaseMaintenanceEnabled({}), false);
+  assert.equal(releaseMaintenanceEnabled(undefined), false);
+  assert.equal(releaseMaintenanceResponse(new Request(`${ORIGIN}/privacy`), undefined), null);
+
+  const response = releaseMaintenanceResponse(
+    new Request(`${ORIGIN}/api/trips/trip_123/complete`, { method: "POST", body: "large-body-not-read" }),
+    enabled,
+  );
+  assert.equal(response?.status, 503);
+  assert.equal(response?.headers.get("Retry-After"), "300");
+  assert.equal(response?.headers.get("Cache-Control"), "no-store");
+  assert.equal((await response?.json()).error.code, "release_maintenance");
+  assert.equal(releaseMaintenanceResponse(new Request(`${ORIGIN}/api/health`), enabled), null);
+  assert.equal(releaseMaintenanceResponse(new Request(`${ORIGIN}/privacy`), enabled), null);
+
+  const health = await healthResponse(new Request(`${ORIGIN}/api/health`), {
+    ...enabled,
+    DB: okDatabase(),
+  });
+  assert.equal((await health?.json()).releaseMaintenance, true);
 });
 
 test("mutation limits are narrow for JSON routes and allow photo multipart routes", () => {

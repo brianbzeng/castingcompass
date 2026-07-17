@@ -13,8 +13,13 @@ after its acceptance checks pass in the intended environment.
   smoke tests pass.
   - [x] Implement and verify the patched isolated safety-floor commit plus the additive
     approval release.
+  - [x] Audit the live D1 ledger/schema without reading user rows and locally verify the
+    integrated release path: exact `0007` drift reconciliation, one-file migration staging,
+    a default-off API/scheduled-work maintenance bridge, aggregate pre/postflight checks,
+    immutable checkout binding, and rollback boundaries. Production remains unchanged.
   - [ ] Publish the safety commit first, record its deployment as the rollback floor, apply
-    the migration, publish the approval release, audit all legacy rows, and run live smoke tests.
+    the approved integrated migration sequence, publish the approval release, audit all legacy
+    rows, and run live smoke tests using `docs/INTEGRATED-RELEASE.md`.
 - [ ] Release production hardening from a clean worktree at the reviewed immutable commit:
   Worker and static-asset security
   headers, health/security endpoints, edge abuse controls, sanitized logs, staged migration
@@ -31,6 +36,9 @@ after its acceptance checks pass in the intended environment.
     account-abuse flows, including exact action/hostname binding, staged-toggle recovery,
     privacy-minimized provider requests, mobile/accessibility coverage, and provider-independent
     privacy-rights routes.
+  - [x] Implement and locally verify the schema-release maintenance bridge, exact staged D1
+    wrapper, primary-ledger pre/post checks, live maintenance verifier, and post-`0011`
+    fix-forward boundary required to release the accumulated migrations safely.
   - [ ] Deploy the reviewed release, configure and test edge rate limits, create the production
     Turnstile widget and activate it through a separate reviewed change, deliver test alerts,
     create an encrypted backup, complete a non-production restore drill, and attach the

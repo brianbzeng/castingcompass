@@ -28,8 +28,10 @@ Production Worker deployments and production schema changes are separate operati
 production deploy command must not run migrations automatically. In the current release,
 `release:cloudflare`, `deploy:cloudflare`, and `deploy:cloudflare:worker-only` are all
 Worker-only and all rebuild with the production environment before publishing.
-`migrate:cloudflare:remote` is the separately reviewed schema operation; it also requires the
-same verified `RELEASE_COMMIT` before it can mutate D1.
+`migrate:cloudflare:remote` is a separately reviewed, one-file schema operation; the guarded
+wrapper also requires the same verified `RELEASE_COMMIT`, an exact migration filename, the
+exact primary ledger prefix, and confirmation that a Time Travel bookmark was stored before
+it can mutate D1. Never invoke raw `wrangler d1 migrations apply` against production.
 
 For a Worker-only release, authenticate Wrangler and provide the exact reviewed commit in
 `RELEASE_COMMIT`. The release and deploy entry points fail before publishing unless the
@@ -46,12 +48,14 @@ npm run release:cloudflare
 Record the Cloudflare deployment ID and Worker version ID, and confirm that exactly one
 version receives `100%` of traffic. Keep release evidence outside the repository.
 
-For a release with a D1 change, write a change-specific sequence that deploys a
+For a release with a D1 change, use a change-specific sequence that deploys a
 backward-compatible safety Worker first, records a D1 Time Travel bookmark, inspects the
 complete remote pending-migration set, applies only the reviewed migration, audits the live
 schema and data invariants, and then deploys the final Worker. Never assume that the remote
-migration ledger matches the files in the checkout. The human-gated discussion release uses
-the stricter sequence in [Discussion moderation](DISCUSSION-MODERATION.md).
+migration ledger matches the files in the checkout. The current multi-migration release uses
+the authoritative [integrated production release](INTEGRATED-RELEASE.md), including its
+maintenance bridge; the human-approval smoke tests remain in
+[Discussion moderation](DISCUSSION-MODERATION.md).
 
 Repository checks do not prove dashboard controls or recovery readiness. Complete the
 [production operations gate](PRODUCTION-OPERATIONS.md) before marking hardening finished.

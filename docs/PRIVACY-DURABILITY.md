@@ -28,35 +28,25 @@ captured aggregate, non-sensitive evidence.
 
 ## Migration sequence
 
-Use the immutable release verifier and the locally installed pinned Wrangler. Do not use a
-package runner that can download a different tool. Record aggregate output only.
+Migration `0010_privacy_durability.sql` is part of the authoritative
+[integrated production release](INTEGRATED-RELEASE.md). Use its immutable release verifier,
+read-only aggregate preflight, Time Travel evidence, explicit `0007` reconciliation, and
+one-file migration wrapper. Do not run raw `wrangler d1 migrations apply`, and do not pass a
+read-only audit to Wrangler with `--file`: remote D1 returns a batch summary instead of the
+selected rows. Record aggregate output only.
 
-1. Disable automatic deployments and pause scheduled production changes.
-2. Verify the exact reviewed release commit, install its lockfile, and export
-   `RELEASE_COMMIT` before any remote D1 command.
-3. Run the pre-migration audit and record its aggregate row counts:
-
-   ```sh
-   ./node_modules/.bin/wrangler d1 execute contourcast-trips --remote \
-     --config wrangler.jsonc --file scripts/privacy-pre-migration-audit.sql --json
-   ```
-
-4. Record a D1 Time Travel bookmark, apply migrations through the guarded package script,
-   prove no migration remains pending, then run:
-
-   ```sh
-   ./node_modules/.bin/wrangler d1 execute contourcast-trips --remote \
-     --config wrangler.jsonc --file scripts/privacy-post-migration-audit.sql --json
-   ```
-
-5. The six application row counts plus the aggregate missing-age and legal-reacceptance counts
-   must exactly match the pre-migration values. Before rollout, record an explicit support or
-   migration decision for every aggregate cohort with no retained age confirmation; those
-   accounts will be paused, but export and deletion remain available without reacceptance.
-   A fresh migration must report 6 age-proof columns, 13 deletion-job columns, 13
-   deletion-task columns, one owner lookup index, exactly one `trips.user_id` → `users.id`
-   foreign key with `ON DELETE SET NULL`, zero new-table rows, zero forbidden age/identity
-   columns, zero foreign key violations, and `integrity_check = ok`. Stop on any mismatch.
+The integrated preflight captures the six application row counts, missing-age and
+legal-acceptance cohorts, zero-photo invariant, schema boundary, and foreign-key state before
+any mutation. Its final postflight covers the accumulated approval, privacy, species, and
+validation release. Before rollout, record an explicit support or
+migration decision for every aggregate cohort with no retained age confirmation; those
+accounts will be paused, but export and deletion remain available without reacceptance.
+A fresh migration must report 6 age-proof columns, 13 deletion-job columns, 13
+deletion-task columns, one owner lookup index, exactly one `trips.user_id` → `users.id`
+foreign key with `ON DELETE SET NULL`, zero new-table rows, zero forbidden age/identity
+columns, and zero foreign key violations. Remote D1 does not authorize
+`PRAGMA integrity_check`; the complete migration chain and isolated restore must report
+`integrity_check = ok` in local/restore verification. Stop on any mismatch.
 
 ## Production behavior checks
 

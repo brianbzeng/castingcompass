@@ -6,7 +6,14 @@ import { handleTripRequest, type TripApiEnv } from "./trips";
 import { cleanupAuthData, getAuthenticatedUser, handleAccountRequest, legalAcceptanceRequiredResponse, unauthorizedResponse } from "./auth";
 import { reviewTripBacklog, reviewTripWithMimo } from "./trip-review";
 import { handleDiscussionRequest } from "./discussions";
-import { canonicalRedirect, guardRequestBody, hardenResponse, healthResponse } from "./security";
+import {
+  canonicalRedirect,
+  guardRequestBody,
+  hardenResponse,
+  healthResponse,
+  releaseMaintenanceEnabled,
+  releaseMaintenanceResponse,
+} from "./security";
 import { handleTurnstileConfigRequest, type TurnstileEnv } from "./turnstile";
 
 interface AssetFetcher {
@@ -18,6 +25,7 @@ interface Env extends TripApiEnv, TurnstileEnv {
   MIMO_API_KEY?: string;
   MIMO_MODEL?: string;
   PUBLIC_DISCUSSIONS_ENABLED?: string;
+  RELEASE_MAINTENANCE_MODE?: string;
 }
 
 interface ExecutionContext {
@@ -36,6 +44,9 @@ const worker = {
     const redirect = canonicalRedirect(request);
     if (redirect) return hardenResponse(redirect, request);
 
+    const maintenance = releaseMaintenanceResponse(request, env);
+    if (maintenance) return hardenResponse(maintenance, request);
+
     const guarded = await guardRequestBody(request);
     if (guarded.response) return hardenResponse(guarded.response, request);
 
@@ -45,6 +56,7 @@ const worker = {
   },
 
   async scheduled(_controller: unknown, env: Env, ctx: ExecutionContext) {
+    if (releaseMaintenanceEnabled(env)) return;
     ctx.waitUntil(reviewTripBacklog(env, sites));
     ctx.waitUntil(cleanupAuthData(env));
   },
