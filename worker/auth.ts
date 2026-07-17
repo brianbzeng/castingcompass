@@ -13,6 +13,7 @@ import {
   type TurnstileEnv,
 } from "./turnstile.ts";
 import { logEvent } from "./observability.ts";
+import { API_ROUTE_PATTERNS } from "./route-policy.ts";
 
 const SESSION_COOKIE = "__Host-cc_session";
 const LEGACY_SESSION_COOKIE = "cc_session";
@@ -722,7 +723,7 @@ export async function handleAccountRequest(
       return jsonResponse({ user: { ...user, legalAccepted: true }, legalVersion: LEGAL_VERSION });
     }
 
-    const exportPhotoMatch = url.pathname.match(/^\/api\/profile\/export\/photos\/(trip_[a-f0-9-]{36})$/);
+    const exportPhotoMatch = url.pathname.match(API_ROUTE_PATTERNS.profileExportPhoto);
     if (exportPhotoMatch) {
       if (request.method !== "GET") return methodNotAllowed("GET");
       const trip = await db.prepare(`SELECT id, photo_key, photo_content_type
@@ -990,7 +991,7 @@ export async function handleAccountRequest(
       return methodNotAllowed("GET, POST");
     }
 
-    const gearProfileMatch = url.pathname.match(/^\/api\/gear-profiles\/(gear_[a-f0-9-]{36})$/);
+    const gearProfileMatch = url.pathname.match(API_ROUTE_PATTERNS.gearProfile);
     if (gearProfileMatch) {
       assertSameOrigin(request);
       const id = gearProfileMatch[1];
@@ -1016,7 +1017,7 @@ export async function handleAccountRequest(
       return methodNotAllowed("PATCH, DELETE");
     }
 
-    const profileTripMatch = url.pathname.match(/^\/api\/profile\/trips\/(trip_[a-f0-9-]{36})$/);
+    const profileTripMatch = url.pathname.match(API_ROUTE_PATTERNS.profileTrip);
     if (profileTripMatch) {
       assertSameOrigin(request);
       const tripId = profileTripMatch[1];
@@ -1329,7 +1330,7 @@ export async function handleAccountRequest(
       return jsonResponse({ siteIds: (rows.results ?? []).map((row) => row.site_id) });
     }
 
-    const match = url.pathname.match(/^\/api\/saved-sites\/([a-z0-9-]+)$/);
+    const match = url.pathname.match(API_ROUTE_PATTERNS.savedSite);
     if (!match) return errorResponse(404, "not_found", "Account route not found.");
     assertSameOrigin(request);
     const siteId = match[1];
