@@ -17,6 +17,18 @@ import {
   type AttestedOpportunity,
   type OpportunityAttestationStatus,
 } from "./validation.ts";
+import {
+  buildFeasibilityCancellationEvent,
+  buildFeasibilityCompletionEvent,
+  buildFeasibilityStartEvent,
+  feasibilityPilotEnabled,
+  resolveFeasibilityContext,
+  type FeasibilityEventRecord,
+  type FeasibilityRuntimeEnv,
+  type SafeCancellationReason,
+  type StoredFeasibilityActivation,
+  type StoredFeasibilityStart,
+} from "./validation-feasibility.ts";
 
 const MAX_PHOTO_BYTES = 5 * 1024 * 1024;
 const MAX_MULTIPART_BYTES = MAX_PHOTO_BYTES + 1024 * 1024;
@@ -81,7 +93,7 @@ interface ImageBindingLike {
   };
 }
 
-export interface TripApiEnv {
+export interface TripApiEnv extends FeasibilityRuntimeEnv {
   DB?: D1DatabaseLike;
   ASSETS?: AssetFetcherLike;
   TRIP_PHOTOS?: R2BucketLike;
@@ -421,7 +433,11 @@ interface ValidationCollectionIdentity {
 export interface TripStore {
   initialize(): Promise<void>;
   assertSubmissionAllowed(reporterKeyHash: string, now: Date): Promise<void>;
-  insertTrip(record: NewTripRecord, validation?: ValidationPersistenceBundle): Promise<TripRow>;
+  insertTrip(
+    record: NewTripRecord,
+    validation?: ValidationPersistenceBundle,
+    feasibilityStart?: FeasibilityEventRecord | null,
+  ): Promise<TripRow>;
   getTrip(id: string): Promise<TripRow | null>;
   getValidationEnrollment?(tripId: string): Promise<StoredValidationEnrollment | null>;
   getForecastImpression?(tripId: string): Promise<StoredForecastImpression | null>;
@@ -429,12 +445,21 @@ export interface TripStore {
     participantGroupId: string,
     activation: ValidationActivationRecord,
   ): Promise<StoredRecruitmentEvent | null>;
+  getFeasibilityActivation?(activationId: string): Promise<StoredFeasibilityActivation | null>;
+  getFeasibilityStart?(tripId: string): Promise<StoredFeasibilityStart | null>;
   completeTrip(
     id: string,
     tokenHash: string,
     completion: CompletionRecord,
     provenance?: ValidationProvenanceRecord,
+    feasibilityTerminal?: FeasibilityEventRecord | null,
   ): Promise<TripRow | null>;
+  cancelTrip?(
+    id: string,
+    tokenHash: string,
+    timestamp: string,
+    feasibilityTerminal: FeasibilityEventRecord | null,
+  ): Promise<boolean>;
   getSummary(now: Date): Promise<TripSummary>;
 }
 
@@ -1082,6 +1107,23 @@ const INSERT_VALIDATION_PROVENANCE_SQL = `INSERT INTO trip_validation_provenance
   ${VALIDATION_PROVENANCE_COLUMNS.join(", ")}
 ) VALUES (${VALIDATION_PROVENANCE_COLUMNS.map(() => "?").join(", ")})`;
 
+const FEASIBILITY_EVENT_COLUMNS = [
+  "event_id", "activation_id", "trip_id", "event_type", "event_contract_version",
+  "source_record_sha256", "participant_group_id", "recruitment_frame_id",
+  "recruitment_source_id", "selection_method", "score_influenced_choice",
+  "study_consent_version", "study_consented_at", "target_taxon_id", "site_id",
+  "geographic_panel", "mode", "segment_start_at", "segment_end_at", "angler_count",
+  "effort_minutes", "target_encountered", "target_encounter_count", "target_retained_count",
+  "target_released_count", "identification_confidence", "scoring_system_kind",
+  "scoring_system_version", "scoring_system_sha256", "opportunity_score",
+  "opportunity_window_id", "snapshot_sha256", "terminal_reason", "previous_event_sha256",
+  "event_at", "event_sha256",
+] as const;
+
+const INSERT_FEASIBILITY_EVENT_SQL = `INSERT INTO validation_feasibility_events (
+  ${FEASIBILITY_EVENT_COLUMNS.join(", ")}
+) VALUES (${FEASIBILITY_EVENT_COLUMNS.map(() => "?").join(", ")})`;
+
 const initializedDatabases = new WeakMap<object, Promise<void>>();
 
 export class RateLimitError extends Error {
@@ -1337,7 +1379,7 @@ export function createTripStore(db: D1DatabaseLike): TripStore {
       }
     },
 
-    async insertTrip(record, validation) {
+    async insertTrip(record, validation, feasibilityStart) {
       const statements = [db.prepare(INSERT_TRIP_SQL).bind(
           record.id,
           record.userId,
@@ -1399,6 +1441,7 @@ export function createTripStore(db: D1DatabaseLike): TripStore {
         statements.push(prepareForecastImpressionInsert(db, validation.impression));
       }
       if (validation) statements.push(prepareValidationProvenanceInsert(db, validation.provenance));
+      if (feasibilityStart) statements.push(prepareFeasibilityEventInsert(db, feasibilityStart));
       await db.batch(statements);
 
       const inserted = await getTrip(record.id);
@@ -1407,6 +1450,30 @@ export function createTripStore(db: D1DatabaseLike): TripStore {
     },
 
     getTrip,
+
+    async getFeasibilityActivation(activationId) {
+      return db.prepare(`SELECT id, protocol_id, protocol_version, protocol_sha256,
+          activation_commitment_sha256, activation_manifest_sha256, site_catalog_sha256,
+          scoring_system_kind, scoring_system_version, scoring_system_sha256,
+          worker_version_id, study_consent_version, start_at, end_at,
+          preregistered_at, receipt_verified_at, status
+        FROM validation_feasibility_activations WHERE id = ? LIMIT 1`)
+        .bind(activationId)
+        .first<StoredFeasibilityActivation>();
+    },
+
+    async getFeasibilityStart(tripId) {
+      return db.prepare(`SELECT activation_id, trip_id, event_sha256, source_record_sha256,
+          participant_group_id, recruitment_frame_id, recruitment_source_id, selection_method,
+          score_influenced_choice, study_consent_version, study_consented_at, target_taxon_id,
+          site_id, geographic_panel, mode, segment_start_at, angler_count,
+          scoring_system_kind, scoring_system_version, scoring_system_sha256,
+          opportunity_score, opportunity_window_id, snapshot_sha256
+        FROM validation_feasibility_events
+        WHERE trip_id = ? AND event_type = 'started' LIMIT 1`)
+        .bind(tripId)
+        .first<StoredFeasibilityStart>();
+    },
 
     async getValidationEnrollment(tripId) {
       return db.prepare(`SELECT collection_contract_version, source_role, cohort_id,
@@ -1460,7 +1527,7 @@ export function createTripStore(db: D1DatabaseLike): TripStore {
         .first<StoredForecastImpression>();
     },
 
-    async completeTrip(id, tokenHash, completion, provenance) {
+    async completeTrip(id, tokenHash, completion, provenance, feasibilityTerminal) {
       const update = db.prepare(`UPDATE trips SET
           status = 'completed',
           opportunity_window_id = CASE WHEN mode = ? THEN opportunity_window_id ELSE NULL END,
@@ -1529,16 +1596,43 @@ export function createTripStore(db: D1DatabaseLike): TripStore {
           tokenHash,
         );
 
-      const results = provenance
-        ? await db.batch([
-            update,
-            prepareConditionalCompletionProvenanceInsert(db, provenance, completion.updatedAt),
-          ])
+      const terminalStatements = [update];
+      if (provenance) {
+        terminalStatements.push(
+          prepareConditionalCompletionProvenanceInsert(db, provenance, completion.updatedAt),
+        );
+      }
+      if (feasibilityTerminal) {
+        terminalStatements.push(
+          prepareConditionalFeasibilityEventInsert(
+            db,
+            feasibilityTerminal,
+            "completed",
+            completion.updatedAt,
+          ),
+        );
+      }
+      const results = terminalStatements.length > 1
+        ? await db.batch(terminalStatements)
         : [await update.run()];
       const result = results[0] as { meta?: { changes?: number } } | undefined;
 
       if (Number(result?.meta?.changes ?? 0) !== 1) return null;
       return getTrip(id);
+    },
+
+    async cancelTrip(id, tokenHash, timestamp, feasibilityTerminal) {
+      const update = db.prepare(`UPDATE trips SET token_hash = NULL, updated_at = ?
+        WHERE id = ? AND status = 'active' AND token_hash = ?`)
+        .bind(timestamp, id, tokenHash);
+      const results = feasibilityTerminal
+        ? await db.batch([
+            update,
+            prepareConditionalFeasibilityEventInsert(db, feasibilityTerminal, "safe_canceled", timestamp),
+          ])
+        : [await update.run()];
+      const result = results[0] as { meta?: { changes?: number } } | undefined;
+      return Number(result?.meta?.changes ?? 0) === 1;
     },
 
     async getSummary(now) {
@@ -1693,6 +1787,69 @@ function validationProvenanceBindings(record: ValidationProvenanceRecord) {
 
 function prepareValidationProvenanceInsert(db: D1DatabaseLike, record: ValidationProvenanceRecord) {
   return db.prepare(INSERT_VALIDATION_PROVENANCE_SQL).bind(...validationProvenanceBindings(record));
+}
+
+function feasibilityEventBindings(record: FeasibilityEventRecord): unknown[] {
+  return [
+    record.eventId,
+    record.activationId,
+    record.tripId,
+    record.eventType,
+    record.eventContractVersion,
+    record.sourceRecordSha256,
+    record.participantGroupId,
+    record.recruitmentFrameId,
+    record.recruitmentSourceId,
+    record.selectionMethod,
+    Number(record.scoreInfluencedChoice),
+    record.studyConsentVersion,
+    record.studyConsentedAt,
+    record.targetTaxonId,
+    record.siteId,
+    record.geographicPanel,
+    record.mode,
+    record.segmentStartAt,
+    record.segmentEndAt,
+    record.anglerCount,
+    record.effortMinutes,
+    record.targetEncountered === null ? null : Number(record.targetEncountered),
+    record.targetEncounterCount,
+    record.targetRetainedCount,
+    record.targetReleasedCount,
+    record.identificationConfidence,
+    record.scoringSystemKind,
+    record.scoringSystemVersion,
+    record.scoringSystemSha256,
+    record.opportunityScore,
+    record.opportunityWindowId,
+    record.snapshotSha256,
+    record.terminalReason,
+    record.previousEventSha256,
+    record.eventAt,
+    record.eventSha256,
+  ];
+}
+
+function prepareFeasibilityEventInsert(db: D1DatabaseLike, record: FeasibilityEventRecord) {
+  return db.prepare(INSERT_FEASIBILITY_EVENT_SQL).bind(...feasibilityEventBindings(record));
+}
+
+function prepareConditionalFeasibilityEventInsert(
+  db: D1DatabaseLike,
+  record: FeasibilityEventRecord,
+  terminalType: "completed" | "safe_canceled",
+  timestamp: string,
+) {
+  const bindings = feasibilityEventBindings(record);
+  const completedCondition = terminalType === "completed"
+    ? "status = 'completed' AND completed_at = ?"
+    : "status = 'active' AND updated_at = ?";
+  return db.prepare(`INSERT INTO validation_feasibility_events (
+      ${FEASIBILITY_EVENT_COLUMNS.join(", ")}
+    ) SELECT ${bindings.map(() => "?").join(", ")}
+    WHERE EXISTS (
+      SELECT 1 FROM trips WHERE id = ? AND token_hash IS NULL AND ${completedCondition}
+    )`).bind(...bindings, record.tripId, timestamp);
 }
 
 function prepareConditionalCompletionProvenanceInsert(
@@ -2296,6 +2453,51 @@ export async function handleTripRequest(
         siteId: site.id,
         startedAt,
       });
+      let feasibilityStart: FeasibilityEventRecord | null = null;
+      if (feasibilityPilotEnabled(env) && optionalBoolean(body.studyConsent, "studyConsent") === true) {
+        const studyConsentVersion = optionalText(body.studyConsentVersion, "studyConsentVersion", 200);
+        if (!studyConsentVersion) {
+          throw new ApiError(
+            422,
+            "study_consent_version_required",
+            "The active study consent version is required for pilot participation.",
+          );
+        }
+        const activationId = env.VALIDATION_FEASIBILITY_ACTIVATION_ID?.trim();
+        if (!activationId || !store.getFeasibilityActivation || !attestation.opportunity || !options.accountId) {
+          throw new ApiError(503, "validation_pilot_unavailable", "The validation pilot is not available right now.");
+        }
+        const storedActivation = await store.getFeasibilityActivation(activationId);
+        const context = await resolveFeasibilityContext({
+          env,
+          activation: storedActivation,
+          accountId: options.accountId,
+          opportunity: attestation.status === "verified" ? attestation.opportunity : null,
+          timestamp,
+          studyConsent: true,
+          studyConsentVersion,
+        });
+        if (!context) {
+          throw new ApiError(503, "validation_pilot_unavailable", "The validation pilot is not available right now.");
+        }
+        feasibilityStart = await buildFeasibilityStartEvent({
+          context,
+          tripId: id,
+          opportunity: attestation.opportunity,
+          siteId: site.id,
+          mode,
+          anglerCount: parseInteger(body.anglerCount, "anglerCount", 1, 12, 1),
+          scoreInfluencedChoice,
+          timestamp,
+        });
+        if (!feasibilityStart) {
+          throw new ApiError(
+            422,
+            "validation_pilot_ineligible_trip",
+            "This trip is outside the active validation pilot contract.",
+          );
+        }
+      }
       const activation = validationActivation(env, startedAt, timestamp, attestation.opportunity);
       const eligibleRecruitmentCandidate = Boolean(
         activation && attestation.status === "verified" && attestation.opportunity &&
@@ -2363,9 +2565,40 @@ export async function handleTripRequest(
         createdAt: timestamp,
         updatedAt: timestamp,
         completedAt: null,
-      }, validation);
+      }, validation, feasibilityStart);
 
       return jsonResponse({ trip: publicTrip(trip), token }, 201, reporter.setCookie);
+    }
+
+    const cancellationMatch = url.pathname.match(/^\/api\/trips\/([^/]+)\/cancel$/);
+    if (cancellationMatch) {
+      assertContentType(request, "application/json");
+      assertBodySize(request, 16 * 1024);
+      const body = await readJsonObject(request);
+      const id = cancellationMatch[1];
+      if (!/^trip_[a-f0-9-]{36}$/.test(id)) {
+        throw new ApiError(404, "trip_not_found", "The active trip could not be found.");
+      }
+      const token = requiredText(body.token, "token", 160);
+      if (!/^[A-Za-z0-9_-]{40,160}$/.test(token)) {
+        throw new ApiError(404, "trip_not_found", "The active trip could not be found.");
+      }
+      const reason = parseSafeCancellationReason(body.reason);
+      const existing = await store.getTrip(id);
+      if (!existing || existing.status !== "active" || !store.cancelTrip) {
+        throw new ApiError(404, "trip_not_found", "The active trip could not be found.");
+      }
+      const timestamp = now.toISOString();
+      const feasibilityStart = await (store.getFeasibilityStart?.(id) ?? Promise.resolve(null));
+      const feasibilityTerminal = feasibilityStart
+        ? await buildFeasibilityCancellationEvent({ start: feasibilityStart, timestamp, reason })
+        : null;
+      if (feasibilityStart && !feasibilityTerminal) {
+        throw new ApiError(409, "validation_pilot_terminal_invalid", "The pilot cancellation could not be reconciled.");
+      }
+      const canceled = await store.cancelTrip(id, await sha256(token), timestamp, feasibilityTerminal);
+      if (!canceled) throw new ApiError(404, "trip_not_found", "The active trip could not be found.");
+      return jsonResponse({ canceled: true, id, reason });
     }
 
     const completionMatch = url.pathname.match(/^\/api\/trips\/([^/]+)\/complete$/);
@@ -2438,6 +2671,27 @@ export async function handleTripRequest(
         enrollment: validationEnrollment,
         impression: forecastImpression,
       });
+      const feasibilityStart = await (store.getFeasibilityStart?.(id) ?? Promise.resolve(null));
+      if (feasibilityStart && mode !== feasibilityStart.mode) {
+        throw new ApiError(
+          422,
+          "validation_pilot_mode_immutable",
+          "The fishing mode cannot change after a validation-pilot attempt starts.",
+        );
+      }
+      const feasibilityTerminal = feasibilityStart
+        ? await buildFeasibilityCompletionEvent({
+            start: feasibilityStart,
+            timestamp: completionTimestamp,
+            anglerCount,
+            targetEncounterCount: speciesObservation.targetEncounterCount,
+            targetRetainedCount: keeperCount,
+            targetReleasedCount: shortReleasedCount,
+          })
+        : null;
+      if (feasibilityStart && !feasibilityTerminal) {
+        throw new ApiError(409, "validation_pilot_terminal_invalid", "The pilot completion could not be reconciled.");
+      }
       const uploaded = await processPhoto(form.get("photo"), id, env);
 
       try {
@@ -2461,7 +2715,7 @@ export async function handleTripRequest(
           photoContentType: uploaded?.contentType ?? null,
           photoSizeBytes: uploaded?.size ?? null,
           updatedAt: completionTimestamp,
-        }, completionProvenance);
+        }, completionProvenance, feasibilityTerminal);
 
         if (!completed) {
           throw new ApiError(404, "trip_not_found", "The active trip could not be found.");
@@ -3005,6 +3259,18 @@ function optionalBoolean(value: unknown, field: string): boolean | null {
   if (value === "true" || value === "1" || value === "on") return true;
   if (value === "false" || value === "0" || value === "off") return false;
   throw new ApiError(422, `invalid_${field}`, `${field} must be true or false.`);
+}
+
+function parseSafeCancellationReason(value: unknown): SafeCancellationReason {
+  const reason = requiredText(value, "reason", 40);
+  if (!["weather", "water_safety", "access", "health", "personal", "other"].includes(reason)) {
+    throw new ApiError(
+      422,
+      "invalid_reason",
+      "reason must be weather, water_safety, access, health, personal, or other.",
+    );
+  }
+  return reason as SafeCancellationReason;
 }
 
 function assertConsent(value: unknown) {

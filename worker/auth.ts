@@ -641,7 +641,7 @@ export async function handleAccountRequest(
         delete exportedTrip.photo_key;
         return exportedTrip;
       });
-      const [discussionRows, forecastImpressionRows, validationProvenanceRows] = await Promise.all([
+      const [discussionRows, forecastImpressionRows, validationProvenanceRows, validationFeasibilityRows] = await Promise.all([
         db.prepare(`SELECT site_discussion_posts.id, site_discussion_posts.trip_id,
             site_discussion_posts.site_id, site_discussion_posts.summary, site_discussion_posts.gear_summary,
             site_discussion_posts.technique_tags_json, site_discussion_posts.observed_at,
@@ -660,6 +660,10 @@ export async function handleAccountRequest(
           JOIN trips ON trips.id = trip_validation_provenance.trip_id
           WHERE trips.user_id = ? ORDER BY trip_validation_provenance.created_at ASC`)
           .bind(user.id).all<Record<string, unknown>>(),
+        db.prepare(`SELECT validation_feasibility_events.* FROM validation_feasibility_events
+          JOIN trips ON trips.id = validation_feasibility_events.trip_id
+          WHERE trips.user_id = ? ORDER BY validation_feasibility_events.sequence ASC`)
+          .bind(user.id).all<Record<string, unknown>>(),
       ]);
       const photoManifest = await Promise.all(tripRows
         .filter((trip) => typeof trip.photo_key === "string" && trip.photo_key)
@@ -672,6 +676,7 @@ export async function handleAccountRequest(
         tripReports,
         forecastImpressions: forecastImpressionRows.results ?? [],
         validationProvenance: validationProvenanceRows.results ?? [],
+        validationFeasibilityEvents: validationFeasibilityRows.results ?? [],
         discussionPosts: discussionRows.results ?? [],
         photos: photoManifest,
       }, 200, undefined, { "Content-Disposition": `attachment; filename="castingcompass-data-${new Date().toISOString().slice(0, 10)}.json"` });

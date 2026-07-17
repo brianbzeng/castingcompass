@@ -204,6 +204,7 @@ test("the complete migration chain applies atomically and produces the runtime s
     "0010_privacy_durability.sql",
     "0011_species_aware_observations.sql",
     "0012_validation_protocol.sql",
+    "0013_validation_feasibility_pilot.sql",
   ]);
 
   const sqlite = new DatabaseSync(":memory:");
@@ -213,7 +214,7 @@ test("the complete migration chain applies atomically and produces the runtime s
   assert.deepEqual(
     sqlite.prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%' ORDER BY name").all()
       .map((row) => row.name),
-    ["auth_attempts", "auth_sessions", "email_challenges", "forecast_impressions", "gear_profiles", "privacy_deletion_jobs", "privacy_deletion_tasks", "saved_sites", "signup_age_proofs", "site_discussion_posts", "trip_validation_provenance", "trips", "users"],
+    ["auth_attempts", "auth_sessions", "email_challenges", "forecast_impressions", "gear_profiles", "privacy_deletion_jobs", "privacy_deletion_tasks", "saved_sites", "signup_age_proofs", "site_discussion_posts", "trip_validation_provenance", "trips", "users", "validation_feasibility_activations", "validation_feasibility_events", "validation_feasibility_privacy_removals"],
   );
   assert.ok(columns(sqlite, "trips").includes("user_id"));
   assert.ok(columns(sqlite, "trips").includes("ai_reviewed_at"));

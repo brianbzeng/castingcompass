@@ -5,6 +5,7 @@ import test from "node:test";
 import { cleanupAuthData, LEGAL_VERSION, evaluateAgeEligibility, handleAccountRequest, processPrivacyDeletionTasks } from "../worker/auth.ts";
 import { createTripStore, handleTripRequest } from "../worker/trips.ts";
 import { reviewTripWithMimo } from "../worker/trip-review.ts";
+import { buildFeasibilityReconciliationExport } from "../worker/validation-feasibility-export.ts";
 
 const MIGRATIONS = [
   "0000_unique_tusk.sql",
@@ -19,6 +20,7 @@ const MIGRATIONS = [
   "0010_privacy_durability.sql",
   "0011_species_aware_observations.sql",
   "0012_validation_protocol.sql",
+  "0013_validation_feasibility_pilot.sql",
 ];
 
 class D1StatementAdapter {
@@ -126,6 +128,7 @@ const PRIVACY_TEST_SCORING_SHA = "c".repeat(64);
 
 function privacyTestAssets({
   windowId = "ocean-beach--20260710T1000Z",
+  siteId = "ocean-beach",
   start = "2026-07-10T10:00:00Z",
   end = "2026-07-10T12:00:00Z",
 } = {}) {
@@ -133,7 +136,7 @@ function privacyTestAssets({
     schema_version: "castingcompass.opportunity-attestation-index/1.0.0",
     generated_at: "2026-07-10T09:00:00Z",
     snapshot_sha256: "a".repeat(64),
-    site_catalog_sha256: "b".repeat(64),
+    site_catalog_sha256: "b0378742f40cca598c57d845fb683ab9b36068cdd69de541aeb3e45d93c31860",
     target_taxon_id: "california-halibut",
     taxon_catalog_version: "castingcompass.taxa/1.0.0",
     observation_contract_version: "castingcompass.observation/2.0.0",
@@ -144,7 +147,7 @@ function privacyTestAssets({
     scoring_system_sha256: PRIVACY_TEST_SCORING_SHA,
     windows: [[
       windowId,
-      "ocean-beach",
+      siteId,
       start,
       end,
       81,
@@ -1237,6 +1240,192 @@ test("private export preserves immutable validation lineage without accepting ev
   const serialized = JSON.stringify(payload);
   assert.doesNotMatch(serialized, new RegExp(reporterKey));
   assert.doesNotMatch(serialized, /reporter_key_hash|token_hash|score-visible-first-party|prospective-score-visible-self-selected|"cohort_role"/);
+});
+
+test("feasibility pilot start, completion, safe cancellation, export, and privacy removal are atomic", async () => {
+  const { sqlite, d1 } = await database();
+  const user = await addUser(sqlite, "feasibility");
+  const siteId = "ocean-beach-north";
+  const windowId = `${siteId}--20260721T1000Z`;
+  const activationId = "feasibility-activation-test-v2";
+  const studyConsentVersion = "castingcompass.validation-feasibility-consent/2.0.0";
+  sqlite.prepare(`INSERT INTO validation_feasibility_activations (
+      id, protocol_id, protocol_version, protocol_sha256, activation_commitment_sha256,
+      activation_manifest_sha256, site_catalog_sha256, scoring_system_kind,
+      scoring_system_version, scoring_system_sha256, worker_version_id,
+      study_consent_version, start_at, end_at, preregistered_at, receipt_verified_at,
+      status, created_at
+    ) VALUES (?, 'california-halibut-collection-feasibility-v2', '2.0.0', ?, ?, ?, ?,
+      'heuristic-configuration', ?, ?, 'worker-feasibility-test', ?, ?, ?, ?, ?,
+      'sealed-before-enrollment', ?)`)
+    .run(
+      activationId,
+      "8ff0d7bd009ed8eb10f328347d58d0b63d0b6c822b08351cc5c2760d41de13ed",
+      "e".repeat(64),
+      "d".repeat(64),
+      "b0378742f40cca598c57d845fb683ab9b36068cdd69de541aeb3e45d93c31860",
+      `heuristic-california-halibut-${PRIVACY_TEST_SCORING_SHA}`,
+      PRIVACY_TEST_SCORING_SHA,
+      studyConsentVersion,
+      "2026-07-20T00:00:00.000Z",
+      "2026-10-18T00:00:00.000Z",
+      "2026-07-19T00:00:00.000Z",
+      "2026-07-19T01:00:00.000Z",
+      "2026-07-18T00:00:00.000Z",
+    );
+
+  const env = {
+    DB: d1,
+    ASSETS: privacyTestAssets({
+      windowId,
+      siteId,
+      start: "2026-07-21T10:00:00Z",
+      end: "2026-07-21T12:00:00Z",
+    }),
+    VALIDATION_FEASIBILITY_ENABLED: "true",
+    VALIDATION_FEASIBILITY_ACTIVATION_ID: activationId,
+    VALIDATION_FEASIBILITY_ACTIVATION_MANIFEST_SHA256: "d".repeat(64),
+    VALIDATION_FEASIBILITY_COMMITMENT_SHA256: "e".repeat(64),
+    VALIDATION_PARTICIPANT_HMAC_SECRET: "feasibility-test-secret-with-at-least-32-bytes",
+    CF_VERSION_METADATA: { id: "worker-feasibility-test" },
+  };
+  const sites = [{ id: siteId, type: "Beach" }];
+
+  const startTrip = async (timestamp, suffix) => {
+    const response = await handleTripRequest(new Request("https://castingcompass.com/api/trips/start", {
+      method: "POST",
+      headers: { Origin: "https://castingcompass.com", "Content-Type": "application/json" },
+      body: JSON.stringify({
+        siteId,
+        startedAt: timestamp,
+        mode: "beach",
+        anglerCount: 1,
+        consent: true,
+        primaryTargetConfirmed: true,
+        scoreInfluencedChoice: true,
+        studyConsent: true,
+        studyConsentVersion,
+        reporterKey: `feasibility-reporter-${suffix}-12345678901234567890`,
+        opportunityWindowId: windowId,
+        website: "",
+      }),
+    }), env, sites, { accountId: user.id, now: () => new Date(timestamp) });
+    assert.equal(response?.status, 201, JSON.stringify(await response?.clone().json()));
+    return response.json();
+  };
+
+  const first = await startTrip("2026-07-21T10:15:00.000Z", "complete");
+  let events = sqlite.prepare(`SELECT * FROM validation_feasibility_events
+    WHERE trip_id = ? ORDER BY sequence`).all(first.trip.id);
+  assert.equal(events.length, 1);
+  assert.equal(events[0].event_type, "started");
+  assert.match(events[0].participant_group_id, /^participant-[a-f0-9]{64}$/);
+  assert.equal(events[0].study_consent_version, studyConsentVersion);
+
+  const completion = new FormData();
+  completion.set("token", first.token);
+  completion.set("mode", "beach");
+  completion.set("anglerCount", "1");
+  completion.set("keeperCount", "0");
+  completion.set("shortReleasedCount", "0");
+  completion.set("otherCatchCount", "0");
+  completion.set("consent", "true");
+  completion.set("primaryTargetConfirmed", "true");
+  completion.set("completeAttempt", "true");
+  completion.set("website", "");
+  const completedResponse = await handleTripRequest(new Request(
+    `https://castingcompass.com/api/trips/${first.trip.id}/complete`,
+    { method: "POST", headers: { Origin: "https://castingcompass.com" }, body: completion },
+  ), env, sites, { accountId: user.id, now: () => new Date("2026-07-21T11:15:00.000Z") });
+  assert.equal(completedResponse?.status, 200, JSON.stringify(await completedResponse?.clone().json()));
+  events = sqlite.prepare(`SELECT * FROM validation_feasibility_events
+    WHERE trip_id = ? ORDER BY sequence`).all(first.trip.id);
+  assert.deepEqual(events.map((event) => event.event_type), ["started", "completed"]);
+  assert.equal(events[1].previous_event_sha256, events[0].event_sha256);
+  assert.equal(events[1].target_encountered, 0);
+
+  const second = await startTrip("2026-07-21T10:30:00.000Z", "cancel");
+  const canceledResponse = await handleTripRequest(new Request(
+    `https://castingcompass.com/api/trips/${second.trip.id}/cancel`,
+    {
+      method: "POST",
+      headers: { Origin: "https://castingcompass.com", "Content-Type": "application/json" },
+      body: JSON.stringify({ token: second.token, reason: "water_safety" }),
+    },
+  ), env, sites, { accountId: user.id, now: () => new Date("2026-07-21T10:45:00.000Z") });
+  assert.equal(canceledResponse?.status, 200, JSON.stringify(await canceledResponse?.clone().json()));
+  const canceledEvents = sqlite.prepare(`SELECT * FROM validation_feasibility_events
+    WHERE trip_id = ? ORDER BY sequence`).all(second.trip.id);
+  assert.deepEqual(canceledEvents.map((event) => event.event_type), ["started", "safe_canceled"]);
+  assert.equal(canceledEvents[1].terminal_reason, "water_safety");
+  assert.equal(sqlite.prepare("SELECT token_hash FROM trips WHERE id = ?").get(second.trip.id).token_hash, null);
+
+  const replay = await handleTripRequest(new Request(
+    `https://castingcompass.com/api/trips/${second.trip.id}/cancel`,
+    {
+      method: "POST",
+      headers: { Origin: "https://castingcompass.com", "Content-Type": "application/json" },
+      body: JSON.stringify({ token: second.token, reason: "water_safety" }),
+    },
+  ), env, sites, { accountId: user.id, now: () => new Date("2026-07-21T10:46:00.000Z") });
+  assert.equal(replay?.status, 404);
+  assert.equal(sqlite.prepare(`SELECT COUNT(*) AS count FROM validation_feasibility_events
+    WHERE trip_id = ?`).get(second.trip.id).count, 2);
+
+  const exported = await handleAccountRequest(
+    request("/api/profile/export", { cookie: user.cookie }),
+    env,
+    sites,
+  );
+  assert.equal(exported?.status, 200);
+  const exportPayload = await exported.json();
+  assert.equal(exportPayload.validationFeasibilityEvents.length, 4);
+  assert.doesNotMatch(JSON.stringify(exportPayload.validationFeasibilityEvents), new RegExp(user.id));
+  assert.doesNotMatch(JSON.stringify(exportPayload.validationFeasibilityEvents), new RegExp(user.email));
+
+  const reconciliationExport = await buildFeasibilityReconciliationExport({
+    db: d1,
+    activationId,
+    snapshotAndRestorePassed: true,
+    exportedAt: "2026-10-18T00:00:00.000Z",
+  });
+  assert.equal(reconciliationExport.candidatePerformanceComputed, false);
+  assert.equal(reconciliationExport.privateRawRowsPublished, false);
+  assert.equal(reconciliationExport.eventCount, 4);
+  assert.equal(reconciliationExport.reconciliation.startedAttempts, 2);
+  assert.equal(reconciliationExport.reconciliation.completedAttempts, 1);
+  assert.equal(reconciliationExport.reconciliation.safeCanceledAttempts, 1);
+  assert.equal(reconciliationExport.reconciliation.reconciliationRate, 1);
+  assert.equal(reconciliationExport.reconciliation.completionRateExcludingSafeCancellations, 1);
+
+  assert.throws(() => sqlite.prepare("DELETE FROM validation_feasibility_events WHERE event_id = ?")
+    .run(canceledEvents[0].event_id), /may be removed only with their trip privacy deletion/);
+  assert.throws(() => sqlite.prepare("UPDATE validation_feasibility_activations SET status = status WHERE id = ?")
+    .run(activationId), /immutable/);
+  sqlite.prepare("DELETE FROM trips WHERE id = ?").run(second.trip.id);
+  assert.equal(sqlite.prepare(`SELECT COUNT(*) AS count FROM validation_feasibility_events
+    WHERE trip_id = ?`).get(second.trip.id).count, 0);
+  const removal = sqlite.prepare(`SELECT removed_event_count, removed_started_attempt_count,
+      removed_completed_attempt_count, removed_safe_canceled_attempt_count
+    FROM validation_feasibility_privacy_removals WHERE activation_id = ?`).get(activationId);
+  assert.deepEqual({ ...removal }, {
+    removed_event_count: 2,
+    removed_started_attempt_count: 1,
+    removed_completed_attempt_count: 0,
+    removed_safe_canceled_attempt_count: 1,
+  });
+  const postDeletionExport = await buildFeasibilityReconciliationExport({
+    db: d1,
+    activationId,
+    snapshotAndRestorePassed: true,
+    exportedAt: "2026-10-18T00:00:01.000Z",
+  });
+  assert.equal(postDeletionExport.eventCount, 2);
+  assert.equal(postDeletionExport.reconciliation.startedAttempts, 2);
+  assert.equal(postDeletionExport.reconciliation.retainedStartedAttempts, 1);
+  assert.equal(postDeletionExport.reconciliation.removedStartedAttempts, 1);
+  assert.equal(postDeletionExport.reconciliation.removedSafeCanceledAttempts, 1);
+  assert.equal(postDeletionExport.reconciliation.reconciliationRate, 1);
 });
 
 test("profile edits recompute valid v2 evidence, reject overrides, and never promote legacy rows", async () => {

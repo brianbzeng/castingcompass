@@ -92,8 +92,8 @@ Do not collect v2-eligible rows until every item below has evidence:
       immutable release identity, and activation chronology.
 - [ ] Implement the server-authoritative start, completion, cancellation,
       correction, and recruitment-source capture contract.
-- [ ] Implement the privacy-safe deletion-linked participant token.
-- [ ] Implement the append-only event ledger and exact started-attempt
+- [x] Implement the privacy-safe deletion-linked participant token.
+- [x] Implement the append-only event ledger and exact started-attempt
       reconciliation export.
 - [ ] Configure encrypted daily snapshots, checksums, least-privilege access,
       retention, and complete a restore/deletion-replay test.

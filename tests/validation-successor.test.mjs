@@ -340,7 +340,7 @@ test("freezes non-adaptive feasibility gates and a separate confirmatory handoff
   );
 });
 
-test("documents v1 as inactive and leaves every production successor gate open", async () => {
+test("documents v1 as inactive, records local ledger progress, and leaves activation closed", async () => {
   const [v1, successor, roadmap, pipelineReadme, modelCard, architecture] = await Promise.all([
     readFile(new URL("docs/VALIDATION-PROTOCOL.md", root), "utf8"),
     readFile(new URL("docs/VALIDATION-SUCCESSOR.md", root), "utf8"),
@@ -355,9 +355,12 @@ test("documents v1 as inactive and leaves every production successor gate open",
   assert.match(successor, /Candidate score\/outcome associations[^.]+are not\s+computed/is);
   assert.match(successor, /- \[x\] Freeze and test the local protocol and activation schemas/);
   assert.match(successor, /- \[ \] Implement the server-authoritative start/);
+  assert.match(successor, /- \[x\] Implement the privacy-safe deletion-linked participant token/);
+  assert.match(successor, /- \[x\] Implement the append-only event ledger/);
   assert.match(successor, /- \[ \] Submit the exact protocol artifact to OSF/);
   assert.match(roadmap, /- \[x\] Freeze and locally verify the v2 successor schemas/);
-  assert.match(roadmap, /- \[ \] Implement the v2 capture ledger/);
+  assert.match(roadmap, /- \[x\] Locally implement and verify the default-off v2 start\/completion\/safe-cancellation/);
+  assert.match(roadmap, /- \[ \] Add append-only correction handling/);
   assert.match(successor, /No post-outcome change may reclassify pilot rows as confirmatory evidence/i);
   assert.match(pipelineReadme, /Historical v1 site-window validation — do not activate/);
   assert.match(pipelineReadme, /No command below satisfies those gates/);

@@ -65,8 +65,13 @@ after its acceptance checks pass in the intended environment.
     complete starts and outcomes including skunks, source labeling, privacy-minimized fields,
     append-only corrections, encrypted snapshots/restores, fixed feasibility gates, no
     candidate-performance analysis, and permanent exclusion of pilot rows from confirmation.
-  - [ ] Implement the v2 capture ledger, deletion-linked participant grouping, exact start/
-    completion/cancellation reconciliation, encrypted snapshot/restore path, and runtime fixtures;
+  - [x] Locally implement and verify the default-off v2 start/completion/safe-cancellation
+    ledger, activation- and account-bound HMAC participant grouping, private account export,
+    exact retained/deleted-start reconciliation, append-only/identity guards, and transactional
+    runtime fixtures. This records no email, raw account ID, coordinates, notes, photos, IP, or
+    user agent in the pilot ledger and computes no candidate-performance result.
+  - [ ] Add append-only correction handling and outcome-independent direct/community recruitment
+    source capture; configure the encrypted snapshot/restore path and operator audit evidence;
     complete legal/privacy/data-steward review; externally preregister the exact artifact; then
     seal and deploy a valid activation manifest before the first pilot-eligible row.
   - [ ] If the pilot passes, freeze and preregister a separate confirmatory protocol with a fixed

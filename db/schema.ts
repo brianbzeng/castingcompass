@@ -778,6 +778,135 @@ export const tripValidationProvenance = sqliteTable(
   ],
 );
 
+export const validationFeasibilityActivations = sqliteTable(
+  "validation_feasibility_activations",
+  {
+    id: text("id").primaryKey(),
+    protocolId: text("protocol_id").notNull(),
+    protocolVersion: text("protocol_version").notNull(),
+    protocolSha256: text("protocol_sha256").notNull(),
+    activationCommitmentSha256: text("activation_commitment_sha256").notNull(),
+    activationManifestSha256: text("activation_manifest_sha256").notNull(),
+    siteCatalogSha256: text("site_catalog_sha256").notNull(),
+    scoringSystemKind: text("scoring_system_kind").notNull(),
+    scoringSystemVersion: text("scoring_system_version").notNull(),
+    scoringSystemSha256: text("scoring_system_sha256").notNull(),
+    workerVersionId: text("worker_version_id").notNull(),
+    studyConsentVersion: text("study_consent_version").notNull(),
+    startAt: text("start_at").notNull(),
+    endAt: text("end_at").notNull(),
+    preregisteredAt: text("preregistered_at").notNull(),
+    receiptVerifiedAt: text("receipt_verified_at").notNull(),
+    status: text("status").notNull(),
+    createdAt: text("created_at").notNull(),
+  },
+  (table) => [
+    uniqueIndex("validation_feasibility_activation_commitment_unique").on(table.activationCommitmentSha256),
+    uniqueIndex("validation_feasibility_activation_manifest_unique").on(table.activationManifestSha256),
+    check(
+      "validation_feasibility_activation_protocol_check",
+      sql`${table.protocolId} = 'california-halibut-collection-feasibility-v2'
+        and ${table.protocolVersion} = '2.0.0'
+        and ${table.protocolSha256} = '8ff0d7bd009ed8eb10f328347d58d0b63d0b6c822b08351cc5c2760d41de13ed'
+        and ${table.siteCatalogSha256} = 'b0378742f40cca598c57d845fb683ab9b36068cdd69de541aeb3e45d93c31860'`,
+    ),
+    check(
+      "validation_feasibility_activation_status_check",
+      sql`${table.status} = 'sealed-before-enrollment'`,
+    ),
+    check(
+      "validation_feasibility_activation_time_check",
+      sql`julianday(${table.endAt}) > julianday(${table.startAt})
+        and julianday(${table.endAt}) - julianday(${table.startAt}) between 90 and 365
+        and julianday(${table.createdAt}) <= julianday(${table.preregisteredAt})
+        and julianday(${table.preregisteredAt}) <= julianday(${table.receiptVerifiedAt})
+        and julianday(${table.receiptVerifiedAt}) < julianday(${table.startAt})`,
+    ),
+  ],
+);
+
+export const validationFeasibilityEvents = sqliteTable(
+  "validation_feasibility_events",
+  {
+    sequence: integer("sequence").primaryKey({ autoIncrement: true }),
+    eventId: text("event_id").notNull(),
+    activationId: text("activation_id").notNull().references(() => validationFeasibilityActivations.id, { onDelete: "restrict" }),
+    tripId: text("trip_id").notNull().references(() => trips.id, { onDelete: "cascade" }),
+    eventType: text("event_type").notNull(),
+    eventContractVersion: text("event_contract_version").notNull(),
+    sourceRecordSha256: text("source_record_sha256").notNull(),
+    participantGroupId: text("participant_group_id").notNull(),
+    recruitmentFrameId: text("recruitment_frame_id").notNull(),
+    recruitmentSourceId: text("recruitment_source_id").notNull(),
+    selectionMethod: text("selection_method").notNull(),
+    scoreInfluencedChoice: integer("score_influenced_choice", { mode: "boolean" }).notNull(),
+    studyConsentVersion: text("study_consent_version").notNull(),
+    studyConsentedAt: text("study_consented_at").notNull(),
+    targetTaxonId: text("target_taxon_id").notNull(),
+    siteId: text("site_id").notNull(),
+    geographicPanel: text("geographic_panel").notNull(),
+    mode: text("mode").notNull(),
+    segmentStartAt: text("segment_start_at").notNull(),
+    segmentEndAt: text("segment_end_at"),
+    anglerCount: integer("angler_count").notNull(),
+    effortMinutes: real("effort_minutes"),
+    targetEncountered: integer("target_encountered", { mode: "boolean" }),
+    targetEncounterCount: integer("target_encounter_count"),
+    targetRetainedCount: integer("target_retained_count"),
+    targetReleasedCount: integer("target_released_count"),
+    identificationConfidence: text("identification_confidence"),
+    scoringSystemKind: text("scoring_system_kind").notNull(),
+    scoringSystemVersion: text("scoring_system_version").notNull(),
+    scoringSystemSha256: text("scoring_system_sha256").notNull(),
+    opportunityScore: integer("opportunity_score").notNull(),
+    opportunityWindowId: text("opportunity_window_id").notNull(),
+    snapshotSha256: text("snapshot_sha256").notNull(),
+    terminalReason: text("terminal_reason"),
+    previousEventSha256: text("previous_event_sha256"),
+    eventAt: text("event_at").notNull(),
+    eventSha256: text("event_sha256").notNull(),
+  },
+  (table) => [
+    uniqueIndex("validation_feasibility_event_id_unique").on(table.eventId),
+    uniqueIndex("validation_feasibility_event_hash_unique").on(table.eventSha256),
+    uniqueIndex("validation_feasibility_trip_event_unique").on(table.tripId, table.eventType),
+    index("validation_feasibility_activation_sequence_idx").on(table.activationId, table.sequence),
+    index("validation_feasibility_participant_event_idx").on(table.participantGroupId, table.eventAt),
+    check(
+      "validation_feasibility_event_type_check",
+      sql`${table.eventType} in ('started', 'completed', 'safe_canceled')`,
+    ),
+    check(
+      "validation_feasibility_event_population_check",
+      sql`${table.targetTaxonId} = 'california-halibut'
+        and ${table.mode} in ('shore', 'beach', 'pier', 'jetty')
+        and ${table.geographicPanel} in ('north-coast', 'golden-gate-sf-coast', 'north-east-bay', 'central-south-bay', 'san-mateo-coast')
+        and ${table.anglerCount} between 1 and 12`,
+    ),
+  ],
+);
+
+export const validationFeasibilityPrivacyRemovals = sqliteTable(
+  "validation_feasibility_privacy_removals",
+  {
+    activationId: text("activation_id").notNull().references(() => validationFeasibilityActivations.id, { onDelete: "restrict" }),
+    removalDay: text("removal_day").notNull(),
+    removedEventCount: integer("removed_event_count").notNull().default(0),
+    removedStartedAttemptCount: integer("removed_started_attempt_count").notNull().default(0),
+    removedCompletedAttemptCount: integer("removed_completed_attempt_count").notNull().default(0),
+    removedSafeCanceledAttemptCount: integer("removed_safe_canceled_attempt_count").notNull().default(0),
+    firstRemovedAt: text("first_removed_at").notNull(),
+    lastRemovedAt: text("last_removed_at").notNull(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.activationId, table.removalDay] }),
+    check(
+      "validation_feasibility_privacy_removal_counts_check",
+      sql`${table.removedEventCount} = ${table.removedStartedAttemptCount} + ${table.removedCompletedAttemptCount} + ${table.removedSafeCanceledAttemptCount}`,
+    ),
+  ],
+);
+
 export const siteDiscussionPosts = sqliteTable(
   "site_discussion_posts",
   {
