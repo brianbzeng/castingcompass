@@ -33,7 +33,7 @@ test("CI fixes runner versions and enforces dependency review, audits, and SBOM 
   const ci = await readFile(new URL(".github/workflows/ci.yml", root), "utf8");
   const refresh = await readFile(new URL(".github/workflows/refresh-snapshot.yml", root), "utf8");
   assert.doesNotMatch(`${ci}\n${refresh}`, /ubuntu-latest|node-version:\s*22\s*$|python-version:\s*["']?3\.12["']?\s*$/m);
-  assert.equal((`${ci}\n${refresh}`.match(/node-version:\s*22\.23\.1/g) ?? []).length, 2);
+  assert.equal((`${ci}\n${refresh}`.match(/node-version:\s*22\.23\.1/g) ?? []).length, 3);
   assert.equal((`${ci}\n${refresh}`.match(/python-version:\s*["']3\.12\.13["']/g) ?? []).length, 3);
   assert.match(ci, /actions\/dependency-review-action@a1d282b36b6f3519aa1f3fc636f609c47dddb294/);
   assert.match(ci, /fail-on-severity:\s*high/);
@@ -114,8 +114,9 @@ test("the supply-chain runbook closes exercised Python locks but keeps optional 
   assert.match(policy, /optional Geo\/PyTorch[\s\S]+remains open/i);
   assert.match(policy, /not yet signed deployment provenance/i);
   assert.match(policy, /stacked successor PRs[\s\S]+do not falsely report a dependency-review pass/i);
-  assert.match(policy, /directory-local `services\/api\/\.python-version`[\s\S]+`pipeline\/\.python-version`/i);
+  assert.match(policy, /directory-local `services\/api\/\.python-version`[\s\S]+not a control over GitHub's[\s\S]+hosted resolver/i);
   assert.match(policy, /byte-identical transport mirror[\s\S]+managed parser/i);
-  assert.match(policy, /require successful evaluation on[\s\S]+Python 3\.12\.13/i);
+  assert.match(policy, /exact GitHub Python dependency snapshot[\s\S]+null version/i);
+  assert.match(policy, /user submissions[\s\S]+highest-priority dependency evidence/i);
   assert.match(policy, /parent roadmap item[\s\S]+remains\s+open/i);
 });

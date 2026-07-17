@@ -12,10 +12,10 @@ path so security fixes are not frozen out.
 | Boundary | Repository control | Remaining external dependency |
 | --- | --- | --- |
 | Node build runtime | `.node-version`, GitHub CI, and snapshot automation select Node `22.23.1`; `engines.node` accepts only that patched 22.x floor through the next major boundary | Cloudflare must be verified to honor the file on the exact build; GitHub/Cloudflare host images are mutable services |
-| Python test runtime | `.python-version` and every GitHub workflow select Python `3.12.13` | Python 3.12 is security-fixes-only; a tested feature-series upgrade is still required before its support ends |
+| Python test runtime | `.python-version` and every checked-in GitHub test workflow select Python `3.12.13` | GitHub's separate hosted Dependabot resolver used Python 3.14.5; Python 3.12 is security-fixes-only, so a tested feature-series upgrade is still required before its support ends |
 | API container runtime | The API Dockerfile selects the official `python:3.12.13-slim-bookworm` multi-platform image by immutable index digest | The pinned OS/Python image needs weekly reviewed Docker updates; the container is not the current Cloudflare Worker production path |
 | Exercised Python graphs | FastAPI runtime/test and pipeline CI use exact transitive versions from source-bound locks with committed SHA-256 distribution hashes; CI and the API image require hashes and reject source distributions | The package index, pip implementation, host kernel/libc, and wheel contents remain external; optional Geo/PyTorch platforms need separate locks |
-| Managed Python dependency graph | Directory-local `.python-version` files bind GitHub's API and pipeline jobs to Python `3.12.13`; the pipeline exposes a byte-identical `.txt` constraint mirror that GitHub's parser can follow, and repository checks bind both representations into the generated lock | GitHub still owns the parser and hosted resolver; after each relevant merge, require a successful managed graph run and verify alert closure rather than dismissing stale alerts |
+| GitHub Python dependency graph | A main-only job waits for the tested API/pipeline locks, then submits exact versioned PyPI package URLs for all three exercised graphs; user submissions take precedence over incomplete managed/static parses | GitHub owns storage, precedence, and alert refresh; verify the accepted snapshot and alert state after each relevant merge rather than treating a successful upload as the final receipt |
 | Worker runtime contract | `wrangler.jsonc` fixes `compatibility_date` and the reviewed compatibility flags | Cloudflare implements the runtime; a date pin needs deliberate compatibility review and periodic advancement |
 | Direct npm packages | Every direct production and development dependency uses an exact version in `package.json` | A package version can still be malicious or vulnerable; review source/provenance, advisories, licenses, and install scripts |
 | Transitive npm tree | `package-lock.json` records exact versions, registry locations, and integrity hashes; CI and release use `npm ci` | Registry availability and npm/client behavior remain external; the hosted runner itself is not bit-for-bit pinned |
@@ -98,10 +98,11 @@ overlap constraints, fixes the reviewed pandas behavior, and pins the CI-only Ru
 The generated FastAPI runtime/test locks and `pipeline/requirements-ci.lock` contain exact
 transitive versions and SHA-256 hashes for universal CPython 3.12 wheel resolution.
 
-GitHub's managed Python jobs resolve each configured package directory independently. The
-directory-local `services/api/.python-version` and `pipeline/.python-version` files therefore
-mirror the canonical root `.python-version`; the generator rejects any byte or version drift
-between them. The validation protocol remains canonically frozen in
+The directory-local `services/api/.python-version` and `pipeline/.python-version` files mirror
+the canonical root `.python-version` for local tools started inside those directories; the
+generator rejects any byte or version drift between them. They are not a control over GitHub's
+hosted resolver: the post-merge managed job log showed Python 3.14.5 even with those files
+present. The validation protocol remains canonically frozen in
 `pipeline/requirements-validation.lock`, while `pipeline/requirements-validation.txt` is a
 byte-identical transport mirror because the managed parser follows `.in` and `.txt` constraint
 files but not a `.lock` constraint suffix. `pipeline/requirements-ci.in` points to that mirror,
@@ -125,16 +126,42 @@ The generator uses `uv 0.10.11` only to resolve and record the reviewed lock upd
 API image install with pip and do not trust or execute uv. Re-running the generator with
 unchanged inputs must be byte-identical. Dependabot monitors the API and pipeline source files,
 and Docker updates monitor the API image, but every generated change still needs the review and
-tests above. A green local install is not proof that GitHub ingested the graph: after merging a
-Python input/lock change, inspect the managed Dependabot job, require successful evaluation on
-Python 3.12.13, and confirm affected alerts close from refreshed graph evidence. Never manually
-dismiss a stale alert merely to make the dashboard appear green.
+tests above. The managed version-update job is useful advisory evidence but is not the tested
+Python runtime contract and may use a newer hosted interpreter. Never manually dismiss a stale
+alert merely to make the dashboard appear green.
+
+## Exact GitHub Python dependency snapshot
+
+GitHub's managed graph completed after the Psycopg and constraint fixes, but its repository
+SBOM still exposed Python packages such as `pytest` and `psycopg` with a null version. The CI
+`dependency-submission` job corrects that evidence gap only after the hash-required API and
+pipeline jobs pass on a push to `main`. It parses the committed locks without importing package
+code and submits three exact versioned manifests: API runtime, API tests, and pipeline CI. The
+runtime manifest is scoped as runtime; test and pipeline packages are scoped as development;
+direct relationships come from the reviewed source inputs and every other locked package is
+marked indirect.
+
+That job alone receives `contents: write`, the permission GitHub requires for dependency
+snapshot creation. It checks out without persisted credentials, runs only repository-owned code
+from the already-merged commit, accepts only the canonical repository and `refs/heads/main`,
+uses a bounded HTTPS response, and never prints the token. GitHub documents user submissions as
+the highest-priority dependency evidence for a manifest, ahead of Dependabot graph jobs,
+automatic submissions, and static parsing. After every relevant merge, require all of:
+
+1. the API and pipeline tests passed for the exact commit;
+2. the dependency-submission job returned a successful snapshot receipt for that commit;
+3. the repository dependency graph shows exact, non-null versions from that detector; and
+4. affected Dependabot alerts closed automatically from the refreshed evidence.
+
+Until all four receipts exist, the graph/alert item remains externally open.
 
 Primary references:
 
 - [npm SBOM command](https://docs.npmjs.com/cli/commands/npm-sbom/)
 - [npm clean-install behavior](https://docs.npmjs.com/cli/commands/npm-ci/)
 - [GitHub dependency review](https://docs.github.com/en/code-security/concepts/supply-chain-security/dependency-review)
+- [GitHub dependency graph evidence priority](https://docs.github.com/en/code-security/concepts/supply-chain-security/dependency-graph-data)
+- [GitHub dependency submission endpoint](https://docs.github.com/en/rest/dependency-graph/dependency-submission)
 - [GitHub artifact attestations](https://docs.github.com/en/actions/how-tos/secure-your-work/use-artifact-attestations/use-artifact-attestations)
 
 ## Reviewed dependency update procedure

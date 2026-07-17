@@ -145,12 +145,19 @@ after its acceptance checks pass in the intended environment.
     - [x] Locally repair the managed Python graph inputs after GitHub's job evidence showed two
       ingestion failures: its per-directory API resolver selected Python 3.14 and could not use
       the old `psycopg-binary` wheel, while its pipeline parser would not follow a `.lock`
-      constraint suffix. Add machine-checked directory-local Python 3.12.13 selectors, preserve
-      the canonical frozen validation lock behind a byte-identical parser-readable `.txt`
-      mirror, group the Psycopg family, upgrade it to the reviewed 3.3 releases, regenerate all
-      source-bound hashed locks, and pass isolated API/pipeline verification. A successful
-      post-merge GitHub graph run and automatic alert `#2` closure remain external evidence;
-      neither is marked complete by this local result.
+      constraint suffix. Preserve the canonical frozen validation lock behind a byte-identical
+      parser-readable `.txt` mirror, group the Psycopg family, upgrade it to the reviewed 3.3
+      releases, regenerate all source-bound hashed locks, and pass isolated API/pipeline
+      verification. The post-merge API managed job then completed, but its hosted resolver used
+      Python 3.14.5 despite the directory-local selectors and the repository graph still showed
+      null Python versions, so those selectors are documented only as local-tool mirrors. The
+      slower pipeline managed run remains separate provider evidence until its final receipt.
+    - [x] Locally add and attack-test a main-only, post-API/pipeline dependency-submission job
+      that converts all three exact hashed Python locks into versioned PyPI package URLs, scopes
+      runtime versus development graphs, records direct versus indirect relationships, rejects
+      non-main or incomplete commit identity, and holds its required write permission only in
+      the isolated submission job. A successful post-merge snapshot receipt, exact non-null
+      provider graph, and automatic Dependabot alert `#2` closure remain external evidence.
     - [x] Locally inventory all seven Worker runtime secrets, extend named-secret scanning and
       ignored local Wrangler secret files, define environment/purpose/backup-key separation,
       document D1 managed-encryption and application-controlled AES-256-GCM boundaries, and

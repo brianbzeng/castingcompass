@@ -64,3 +64,21 @@ jobs:
       - run: python -m ruff check services/api pipeline scripts
       - run: python -m unittest discover -s pipeline/tests -v
       - run: python -m pipeline.contourcast.cli smoke --output-dir /tmp/contourcast-smoke --seed 42 --observations 160
+
+  dependency-submission:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: [api, pipeline]
+    permissions:
+      contents: write
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 22.23.1
+      - run: node scripts/generate-python-locks.mjs --check
+      - run: node scripts/submit-python-dependency-snapshot.mjs --submit
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
