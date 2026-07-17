@@ -116,16 +116,14 @@ after its acceptance checks pass in the intended environment.
   Google Search Console and Bing Webmaster Tools verification, sitemap submission, crawl/index
   coverage, canonical URLs, metadata, social previews, appropriate structured data, Core Web
   Vitals, mobile/accessibility checks, and privacy-conscious conversion analytics.
-  - [ ] Implement and locally verify the crawl foundation: owner-supplied Google/Bing
-    verification values, a real XML sitemap and robots reference, self-canonical public routes,
-    `noindex` for account-only surfaces, truthful metadata/social cards, and narrowly appropriate
-    structured data. The current live sitemap is missing and route canonicals collapse to `/`.
-  - [ ] After an approved deployment, submit the sitemap in the already-created Google and Bing
-    dashboards, request/index the canonical public pages, inspect exclusions and crawl errors, and
-    record the first coverage baseline without assuming that verification guarantees ranking.
-  - [ ] Establish Core Web Vitals, mobile, accessibility, and privacy-conscious funnel baselines;
-    define conversions before enabling analytics, avoid precise-location or trip-content capture,
-    and document consent/retention behavior for any measurement vendor.
+  - [x] Implement and locally verify the four-page crawl set, self-canonicals, route-specific
+    social metadata, `/profile` noindex, robots/sitemap files, narrow `WebSite` JSON-LD, and
+    a dashboard/runbook that keeps heuristic ranking claims truthful.
+  - [ ] Deploy the reviewed crawl foundation after P0 and verify every canonical/redirect host.
+  - [ ] Verify the Google domain property through DNS, import or verify Bing, submit the sitemap,
+    inspect the four public URLs, confirm `/profile` noindex, and record initial coverage.
+  - [ ] Establish real-user Core Web Vitals and privacy-reviewed funnel baselines without
+    collecting precise location, trip content, account identifiers, or free text.
 - [ ] Make infrastructure mobile-ready and scalable with versioned APIs/shared schemas,
   appropriate mobile authentication, queue-based AI work, staging, bounded retries/costs,
   and WebKit/offline/safe-area coverage.

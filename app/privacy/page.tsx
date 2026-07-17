@@ -1,9 +1,28 @@
 import type { Metadata } from "next";
 import { LegalPage, LegalSection } from "../components/LegalPage";
 
+const PAGE_URL = "https://castingcompass.com/privacy";
+const PAGE_TITLE = "Privacy Policy · CastingCompass";
+const PAGE_DESCRIPTION = "How CastingCompass collects, uses, shares, retains, and protects information.";
+
 export const metadata: Metadata = {
   title: "Privacy Policy",
-  description: "How CastingCompass collects, uses, shares, and protects information.",
+  description: PAGE_DESCRIPTION,
+  alternates: { canonical: PAGE_URL },
+  openGraph: {
+    title: PAGE_TITLE,
+    description: PAGE_DESCRIPTION,
+    type: "website",
+    url: PAGE_URL,
+    siteName: "CastingCompass",
+    images: [{ url: "/og.png", width: 1200, height: 630, alt: "CastingCompass — California Halibut Opportunity Planner" }],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: PAGE_TITLE,
+    description: PAGE_DESCRIPTION,
+    images: [{ url: "/og.png", alt: "CastingCompass — California Halibut Opportunity Planner" }],
+  },
 };
 
 export default function PrivacyPage() {

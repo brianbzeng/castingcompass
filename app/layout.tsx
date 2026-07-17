@@ -22,7 +22,6 @@ export const metadata: Metadata = {
   },
   description:
     "An explainable California halibut opportunity planner for public shore, beach, jetty, and pier access around the San Francisco Bay Area.",
-  alternates: { canonical: "https://castingcompass.com" },
   applicationName: "CastingCompass",
   manifest: "/manifest.webmanifest",
   appleWebApp: {
@@ -37,14 +36,6 @@ export const metadata: Metadata = {
     ],
     shortcut: "/castingcompass-icon.png",
     apple: [{ url: "/icons/icon-192.png", type: "image/png", sizes: "192x192" }],
-  },
-  openGraph: {
-    title: "CastingCompass",
-    description:
-      "Find the strongest upcoming California halibut opportunity windows around the Bay.",
-    type: "website",
-    url: "https://castingcompass.com",
-    images: [{ url: "/og.png", width: 1200, height: 630 }],
   },
 };
 
