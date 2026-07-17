@@ -76,6 +76,13 @@ async function prepareGearMutation(page: Page) {
   return { modal, gear };
 }
 
+async function prepareSignOut(page: Page) {
+  await page.locator(".account-button").click();
+  const modal = page.locator(".account-modal");
+  await expect(modal.getByRole("heading", { name: "Your fishing profile." })).toBeVisible();
+  return { modal, controls: modal.locator(".account-signout-controls") };
+}
+
 test.beforeEach(async ({ page }, testInfo) => {
   const testTitle = testInfo.titlePath.join(" ");
   if (testTitle.includes("failed lazy route dependency")) {
@@ -100,6 +107,11 @@ test.beforeEach(async ({ page }, testInfo) => {
     testTitle.includes("failed gear creation stays ambiguous") ||
     testTitle.includes("rejected gear creation remains correctable") ||
     testTitle.includes("failed gear removal stays ambiguous");
+  const signOutRecoveryTest = testTitle.includes("sign-out pauses while offline") ||
+    testTitle.includes("slow sign-out stays unconfirmed") ||
+    testTitle.includes("malformed sign-out receipt stays unresolved") ||
+    testTitle.includes("session check confirms sign-out") ||
+    testTitle.includes("session check permits a retry");
   let profileAttempts = 0;
   await page.route("**/api/auth/session", (route) => route.fulfill({
     status: 200,
@@ -117,10 +129,12 @@ test.beforeEach(async ({ page }, testInfo) => {
                 ? { id: "user_trip_edit", email: "tripedittest@example.com", ageEligible: true, legalAccepted: true }
                 : gearMutationRecoveryTest
                   ? { id: "user_gear_recovery", email: "geartest@example.com", ageEligible: true, legalAccepted: true }
+                  : signOutRecoveryTest
+                    ? { id: "user_signout_recovery", email: "signouttest@example.com", ageEligible: true, legalAccepted: true }
         : null,
     }),
   }));
-  if (profileRecoveryTest || tripRecoveryTest || accountDeletionRecoveryTest || tripDeletionRecoveryTest || tripEditRecoveryTest || gearMutationRecoveryTest) {
+  if (profileRecoveryTest || tripRecoveryTest || accountDeletionRecoveryTest || tripDeletionRecoveryTest || tripEditRecoveryTest || gearMutationRecoveryTest || signOutRecoveryTest) {
     await page.route("**/api/saved-sites", (route) => route.fulfill({
       status: 200,
       contentType: "application/json",
@@ -228,6 +242,18 @@ test.beforeEach(async ({ page }, testInfo) => {
           rig: "Jighead",
         }],
       }),
+    }));
+  }
+  if (signOutRecoveryTest) {
+    await page.route("**/api/profile", (route) => route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({ savedSites: [], trips: [], gearProfiles: [] }),
+    }));
+    await page.route("**/api/auth/turnstile-config", (route) => route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({ turnstile: { enabled: false, available: false, siteKey: null } }),
     }));
   }
   await page.route("**/api/privacy/deletion-status", (route) => route.fulfill({
@@ -746,6 +772,121 @@ test.describe("gear mutation recovery", () => {
     await expect(gear.getByRole("button", { name: "Verify gear removal before retrying" })).toBeDisabled();
     await expect(gear.getByRole("button", { name: "Verify gear status before retrying" })).toBeDisabled();
     expect(removalAttempts).toBe(1);
+  });
+});
+
+test.describe("sign-out recovery", () => {
+  test.use({ serviceWorkers: "block" });
+
+  test("sign-out pauses while offline and never submits automatically", async ({ page, context }) => {
+    let signOutAttempts = 0;
+    await page.route("**/api/auth/logout", (route) => {
+      signOutAttempts += 1;
+      return route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ signedOut: true, user: null }),
+      });
+    });
+
+    const { controls } = await prepareSignOut(page);
+    await context.setOffline(true);
+    await expect(controls.getByRole("button", { name: "Reconnect to sign out" })).toBeDisabled();
+
+    await context.setOffline(false);
+    await expect(controls.getByRole("button", { name: "Sign out" })).toBeEnabled();
+    await page.waitForTimeout(100);
+    expect(signOutAttempts).toBe(0);
+  });
+
+  test("slow sign-out stays unconfirmed until the exact receipt arrives", async ({ page }) => {
+    await page.route("**/api/auth/logout", async (route) => {
+      await new Promise((resolve) => setTimeout(resolve, 6_000));
+      return route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ signedOut: true, user: null }),
+      });
+    });
+
+    const { modal, controls } = await prepareSignOut(page);
+    await controls.getByRole("button", { name: "Sign out" }).click();
+    const status = controls.getByRole("status");
+    await expect(status).toContainText("sign-out is not confirmed yet", { timeout: 5_500 });
+    await expect(status.locator("i")).toBeVisible();
+    await expect(controls.getByRole("button", { name: "Signing out…" })).toBeDisabled();
+    await expect(modal.getByRole("heading", { name: "Welcome back." })).toBeVisible({ timeout: 8_000 });
+    await expect(controls).toBeHidden();
+  });
+
+  test("malformed sign-out receipt stays unresolved and preserves local account state", async ({ page, context }) => {
+    let signOutAttempts = 0;
+    await page.route("**/api/auth/logout", (route) => {
+      signOutAttempts += 1;
+      return route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ user: null }),
+      });
+    });
+
+    const { modal, controls } = await prepareSignOut(page);
+    await controls.getByRole("button", { name: "Sign out" }).click();
+    const alert = controls.getByRole("alert");
+    await expect(alert).toContainText("Your session may still be active");
+    await expect(alert).toContainText("check sign-out status first");
+    await expect(controls.getByRole("button", { name: "Sign-out status unresolved" })).toBeDisabled();
+    await expect(controls.getByRole("button", { name: "Check sign-out status" })).toBeEnabled();
+    await expect(modal.getByText("signouttest@example.com")).toBeVisible();
+    await context.setOffline(true);
+    await expect(controls.getByRole("button", { name: "Reconnect to check sign-out status" })).toBeDisabled();
+    await context.setOffline(false);
+    await expect(controls.getByRole("button", { name: "Check sign-out status" })).toBeEnabled();
+    expect(signOutAttempts).toBe(1);
+  });
+
+  test("session check confirms sign-out after a dropped mutation response without replay", async ({ page }) => {
+    let signOutAttempts = 0;
+    await page.route("**/api/auth/logout", (route) => {
+      signOutAttempts += 1;
+      return route.abort("connectionfailed");
+    });
+
+    const { modal, controls } = await prepareSignOut(page);
+    await controls.getByRole("button", { name: "Sign out" }).click();
+    await expect(controls.getByRole("button", { name: "Check sign-out status" })).toBeEnabled();
+    await page.route("**/api/auth/session", (route) => route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({ user: null }),
+    }));
+    await controls.getByRole("button", { name: "Check sign-out status" }).click();
+    await expect(modal.getByRole("heading", { name: "Welcome back." })).toBeVisible();
+    await expect(controls).toBeHidden();
+    expect(signOutAttempts).toBe(1);
+  });
+
+  test("session check permits a retry only when the server confirms the session is active", async ({ page }) => {
+    let signOutAttempts = 0;
+    await page.route("**/api/auth/logout", (route) => {
+      signOutAttempts += 1;
+      return route.abort("connectionfailed");
+    });
+
+    const { controls } = await prepareSignOut(page);
+    await controls.getByRole("button", { name: "Sign out" }).click();
+    await expect(controls.getByRole("button", { name: "Check sign-out status" })).toBeEnabled();
+    await page.route("**/api/auth/session", (route) => route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        user: { id: "user_signout_recovery", email: "signouttest@example.com", ageEligible: true, legalAccepted: true },
+      }),
+    }));
+    await controls.getByRole("button", { name: "Check sign-out status" }).click();
+    await expect(controls.getByRole("alert")).toContainText("session is still active");
+    await expect(controls.getByRole("button", { name: "Retry sign out" })).toBeEnabled();
+    expect(signOutAttempts).toBe(1);
   });
 });
 

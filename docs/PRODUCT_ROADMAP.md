@@ -355,6 +355,9 @@ after its acceptance checks pass in the intended environment.
     but block submission, lock submitted fields, require matching creation/removal receipts, and
     block conflicting gear writes after an ambiguous outcome until the profile is refreshed and
     reconciled. Never discard a creation draft without authoritative confirmation.
+  - [x] Make sign-out fail safe: do not imply that the secure server session ended while offline
+    or after a dropped or unverifiable response, require an exact server receipt, and use an
+    explicit read-only session check before permitting a retry after an ambiguous outcome.
   - [ ] Add operation-specific progress, timeout, retry, cancellation, and reconnection states
     only where the underlying API can report them truthfully; retain authoritative confirmation
     for account, trip, privacy, and other privileged writes.

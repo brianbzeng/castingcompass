@@ -699,7 +699,7 @@ export async function handleAccountRequest(
         await db.batch(await Promise.all(tokens.map(async ({ token }) =>
           db.prepare("DELETE FROM auth_sessions WHERE token_hash = ?").bind(await sha256(token)))));
       }
-      return jsonResponse({ user: null }, 200, clearSessionCookies(request));
+      return jsonResponse({ signedOut: true, user: null }, 200, clearSessionCookies(request));
     }
 
     const user = await getAuthenticatedUser(request, env);
