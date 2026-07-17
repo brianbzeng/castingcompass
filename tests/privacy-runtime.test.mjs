@@ -521,6 +521,54 @@ test("legal reacceptance preserves prior age eligibility and legacy accounts fai
   assert.equal(legacyExport?.status, 200);
 });
 
+test("per-record authorization denies cross-account reads and mutations", async () => {
+  const { sqlite, d1 } = await database();
+  const owner = await addUser(sqlite, "31");
+  const otherAccount = await addUser(sqlite, "32");
+  const tripId = addTrip(sqlite, owner, { photoKey: "private/owner-only.jpg" });
+  const gearId = `gear_${crypto.randomUUID()}`;
+  const timestamp = new Date().toISOString();
+  sqlite.prepare(`INSERT INTO gear_profiles
+      (id, user_id, name, rod, reel, bait_lure, rig, created_at, updated_at)
+    VALUES (?, ?, 'Owner setup', 'Owner rod', 'Owner reel', 'Owner lure', 'Owner rig', ?, ?)`)
+    .run(gearId, owner.id, timestamp, timestamp);
+
+  const photoRead = await handleAccountRequest(request(`/api/profile/export/photos/${tripId}`, {
+    cookie: otherAccount.cookie,
+  }), { DB: d1 }, []);
+  assert.equal(photoRead?.status, 404);
+  assert.equal((await photoRead?.json()).error.code, "photo_not_found");
+
+  const tripDelete = await handleAccountRequest(request(`/api/profile/trips/${tripId}`, {
+    method: "DELETE",
+    cookie: otherAccount.cookie,
+  }), { DB: d1 }, []);
+  assert.equal(tripDelete?.status, 404);
+  assert.equal((await tripDelete?.json()).error.code, "trip_not_found");
+
+  const gearDelete = await handleAccountRequest(request(`/api/gear-profiles/${gearId}`, {
+    method: "DELETE",
+    cookie: otherAccount.cookie,
+  }), { DB: d1 }, []);
+  assert.equal(gearDelete?.status, 404);
+  assert.equal((await gearDelete?.json()).error.code, "gear_profile_not_found");
+
+  const otherExport = await handleAccountRequest(request("/api/profile/export", {
+    cookie: otherAccount.cookie,
+  }), { DB: d1 }, []);
+  assert.equal(otherExport?.status, 200);
+  const serializedExport = JSON.stringify(await otherExport?.json());
+  assert.doesNotMatch(serializedExport, new RegExp(owner.id));
+  assert.doesNotMatch(serializedExport, new RegExp(owner.email));
+  assert.doesNotMatch(serializedExport, new RegExp(tripId));
+  assert.doesNotMatch(serializedExport, new RegExp(gearId));
+
+  assert.equal(sqlite.prepare("SELECT COUNT(*) AS count FROM trips WHERE id = ? AND user_id = ?")
+    .get(tripId, owner.id).count, 1);
+  assert.equal(sqlite.prepare("SELECT COUNT(*) AS count FROM gear_profiles WHERE id = ? AND user_id = ?")
+    .get(gearId, owner.id).count, 1);
+});
+
 test("account deletion transaction removes public/account rows and completes successful object purge", async () => {
   const { sqlite, d1 } = await database();
   const user = await addUser(sqlite);

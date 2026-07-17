@@ -72,6 +72,9 @@ after its acceptance checks pass in the intended environment.
     cross-account tests. Because D1/SQLite has no native PostgreSQL-style row-level security,
     require an equivalent per-record ownership/role predicate in the data-access layer and test
     that omitted or mismatched identity fails closed.
+    - [x] Document the current matrix and locally verify that a second authenticated account
+      cannot read an owner's photo/export data or delete the owner's trip/gear. Approval of
+      future moderator, support, and operator roles remains open.
   - [ ] Verify strict schema/size/type validation, contextual output encoding, safe database
     binding, upload signature and metadata checks, and AI prompt-injection boundaries. Model
     instructions and user content remain data, never authority; models receive no ambient
