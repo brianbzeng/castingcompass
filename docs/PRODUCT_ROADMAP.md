@@ -58,18 +58,21 @@ after its acceptance checks pass in the intended environment.
   - [x] Freeze and locally verify the strict human/machine preregistration, exact 46-site
     geography, absolute time blocks, fixed-interval census, frozen recruitment provenance,
     baseline/metric/sample/promotion gates, private-manifest contract, adversarial semantic
-    tests, and narrow ordinal claim boundary.
-  - [ ] Before the first eligible row, deploy and seal production activation evidence for the
-    species migration, a full signed server-authoritative pre-outcome impression/assignment
-    payload and tamper-evident issuance log, primary recruitment or safe
-    randomization, consented privacy-safe server-authoritative study-stable participant grouping
-    across sessions/devices, legal consent/retention alignment, private access/deletion/restore controls,
-    the outcome-blind append-only split manifest, an externally anchored/allowlisted Ed25519
-    signer/exporter whose activation commitment is tamper-evidently published before enrollment,
-    a pinned evaluator image with the exact dependency lock, actual independent recomputation,
-    and a fresh one-time publication authorization after final deletion reconciliation. Same-key
-    signatures prove consistency—not server provenance or independence. Never backdate activation
-    or treat a local draft as publishable evidence.
+    tests, and narrow ordinal claim boundary. The audit concluded that v1 must not activate
+    because its bespoke external transparency-log and independent-publication services do not exist.
+  - [x] Freeze and locally verify the v2 successor schemas and operational-pilot contract:
+    externally timestamped read-only preregistration, immutable release/Worker identity,
+    complete starts and outcomes including skunks, source labeling, privacy-minimized fields,
+    append-only corrections, encrypted snapshots/restores, fixed feasibility gates, no
+    candidate-performance analysis, and permanent exclusion of pilot rows from confirmation.
+  - [ ] Implement the v2 capture ledger, deletion-linked participant grouping, exact start/
+    completion/cancellation reconciliation, encrypted snapshot/restore path, and runtime fixtures;
+    complete legal/privacy/data-steward review; externally preregister the exact artifact; then
+    seal and deploy a valid activation manifest before the first pilot-eligible row.
+  - [ ] If the pilot passes, freeze and preregister a separate confirmatory protocol with a fixed
+    candidate and baselines, source-separated development and locked test data, geographic/time
+    holdouts, clustered uncertainty, minimum support, and promotion/drift/rollback gates. Never
+    backdate activation or treat pilot/product rows as confirmatory evidence.
 - [ ] Acquire reproducible official CDFW/CRFS/RecFIN data—starting with CDFW ds3186
   all-species/all-effort and ds3185 rockfish/cabezon blocks—and start a prospective first-party
   cohort. Every snapshot needs its query/export manifest, retrieval date, checksum, license,

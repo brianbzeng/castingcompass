@@ -22,6 +22,7 @@
     "security": "npm run security:secrets",
     "security:secrets": "node scripts/check-secrets.mjs",
     "verify:discussion-safety": "node scripts/verify-discussion-safety.mjs",
+    "verify:validation-successor": "node scripts/verify-validation-successor.mjs",
     "data:refresh": "PYTHONPATH=. python3 scripts/generate_snapshot.py && PYTHONPATH=. python3 scripts/generate_opportunity_attestations.py",
     "api:test": "python3 -m pytest services/api/tests -q"
   },

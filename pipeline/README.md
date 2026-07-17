@@ -24,7 +24,22 @@ python3 -m unittest discover -s pipeline/tests -v
 Any numbers under the smoke output are synthetic plumbing-test results, not
 habitat, fishing, or model-quality claims.
 
-## Private prospective site-window validation
+## Historical v1 site-window validation — do not activate
+
+The commands in this section are retained to reproduce and test the frozen v1
+design. They are **not** the production activation path. V1 depends on an
+external per-event transparency-log verifier and independent publication
+service that do not exist, so its activation is permanently closed. The current
+successor is the non-performance collection pilot in
+`docs/VALIDATION-SUCCESSOR.md`. Verify its local contracts with:
+
+```bash
+npm run verify:validation-successor
+```
+
+V2 still requires runtime capture, privacy/legal/data-steward approval, an OSF
+registration, storage/restore evidence, and a sealed activation manifest before
+the first eligible row. No command below satisfies those gates.
 
 The first-party validation path is separate from terrain-point ingestion. It
 can evaluate only the frozen California-halibut curated-site by authoritative

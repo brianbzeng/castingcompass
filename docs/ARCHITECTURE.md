@@ -125,8 +125,9 @@ the migration plus aggregate pre/post audits before v2 collection is enabled.
 ## Validation-governance boundary
 
 The observation contract answers whether a row is internally coherent. It does
-not decide whether the row is admissible confirmatory evidence. The frozen
-validation preregistration adds a second, fail-closed boundary:
+not decide whether the row is admissible study evidence. Historical v1 modeled
+the following confirmatory boundary, but it must not activate because its
+external proof and independent-publication services do not exist:
 
 ```mermaid
 flowchart LR
@@ -141,26 +142,40 @@ flowchart LR
     COMPARE --> REPORT["Pass, negative, or inconclusive report"]
 ```
 
-`docs/VALIDATION-PROTOCOL.md` is the human contract;
+`docs/VALIDATION-PROTOCOL.md` is the historical human contract;
 `validation/protocols/california-halibut-site-window-v1.json` is the frozen
-machine preregistration; and
+but inactive machine preregistration; and
 `contracts/validation-split-manifest.schema.json` constrains the private
-activation/assignment chain. The protocol supports only an ordinal
+v1 activation/assignment chain. The design could support only an ordinal
 California-halibut site × two-hour-window claim. Site rows remain site rows;
 no exact coordinate is collected or inferred.
 
-Local schema/test completion does not activate production. Before any primary
-row can exist, production must deploy the species migration, server-bound
-impression/assignment evidence, precommit or safe-randomization flow, aligned
-legal consent and retention, private access/deletion/restore controls, and a
-sealed outcome-blind activation manifest. Any row before that point is
-exploratory.
+The current successor adds a smaller operational boundary:
 
-The prospective frame assigns an immutable pre-outcome recruitment source from
-three frozen IDs and includes every eligible accepted row through the fixed
-interval. The pooled primary analysis is accompanied by recruitment-source,
-selection-design, and source-by-design reporting; outcome-adaptive quotas,
-post-hoc subsampling, and arrival-order exclusions are prohibited.
+```mermaid
+flowchart LR
+    ROW["Valid complete observation v2"] --> PILOT["V2 feasibility pilot"]
+    START["Server start and terminal reconciliation"] --> PILOT
+    ACT["OSF receipt plus sealed activation"] --> PILOT
+    PILOT --> FEAS["Completeness, support, bias, and privacy diagnostics"]
+    FEAS --> NEXT["Separate confirmatory preregistration or stop"]
+```
+
+`docs/VALIDATION-SUCCESSOR.md` and
+`validation/protocols/california-halibut-collection-feasibility-v2.json` freeze
+that pilot. It cannot compute candidate performance or promote a model, and its
+rows are permanently excluded from a later confirmatory test. Local schema/test
+completion does not activate production. V2 first needs server start/completion/
+cancellation capture, deletion-linked participant grouping, append-only
+corrections, encrypted snapshot/restore evidence, legal/privacy/data-steward
+approval, an externally timestamped read-only registration, and a sealed
+activation deployed before the first eligible row.
+
+Historical v1's prospective frame assigned an immutable pre-outcome recruitment
+source from three frozen IDs and included every eligible accepted row through
+its fixed interval. Those rules are preserved only as inactive design history.
+V2 retains the same source IDs for feasibility reporting but performs no pooled
+candidate analysis.
 
 ## Score flow
 
@@ -199,5 +214,7 @@ Stale or missing values are not silently imputed as live observations. The API c
 - Public summary responses expose aggregate totals only. Raw notes and photos have no public read endpoint, and pending reports do not automatically influence the score.
 - Secrets live in Render/Supabase/hosting environment variables, not the repository.
 - CORS is explicit.
-- No private catch coordinates or user accounts exist in v1.
+- No private catch coordinates enter the study export. Accounts exist, but raw
+  account IDs and resettable reporter/device identifiers are excluded from v2;
+  only a privacy-safe deletion-linked participant group is permitted.
 - Authentication, report deletion/editing, moderation tooling, Stripe, alerts, and personal logs remain future work.

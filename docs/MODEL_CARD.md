@@ -91,15 +91,20 @@ candidate set and sampling support make those metrics identifiable. Folds
 containing one occurrence class or no rank variation return null for the
 affected metrics rather than inventing values.
 
-The frozen first-party site × two-hour-window design is separate from the
-point-terrain benchmark above. `docs/VALIDATION-PROTOCOL.md` and
-`validation/protocols/california-halibut-site-window-v1.json` preregister a
-prospective primary cohort, absolute temporal holdouts, a fixed 46-site/five-
-panel geography, development-only baseline selection, paired clustered
-uncertainty, conservative support and promotion gates, and the exact ordinal
-claim boundary. It is a fixed-interval census with frozen pre-outcome recruitment
-sources and required source/selection-design stratification. Site-supported trip
-rows are never converted to point labels.
+The historical v1 first-party site × two-hour-window design is separate from
+the point-terrain benchmark above. `docs/VALIDATION-PROTOCOL.md` and
+`validation/protocols/california-halibut-site-window-v1.json` preserve its
+prospective cohort, holdouts, baseline selection, clustered uncertainty, and
+ordinal claim boundary, but v1 must not activate because its external proof and
+independent-publication services do not exist.
+
+`docs/VALIDATION-SUCCESSOR.md` instead freezes a prospective collection-
+feasibility pilot. It can report completeness, missingness, source/support,
+concentration, privacy reconciliation, and unstratified encounter prevalence.
+It is prohibited from computing score/outcome association, comparing a
+candidate with a baseline, calibrating probability, or promoting a model. Pilot
+rows can never enter a future confirmatory test. Site-supported trip rows are
+never converted to point labels.
 
 ## Required ablations
 
@@ -172,11 +177,14 @@ A model is eligible for a future `candidate` stage only after:
 
 No automatic production promotion is implemented.
 
-For any run claiming evidence under the frozen site-window protocol, the
-protocol file, private label-blind split manifest, data snapshot, and prediction
-snapshot must be hashed run inputs. A locally frozen protocol is not an active
-production cohort: activation must be sealed and deployed before the first
-eligible row, and locked-test outcomes cannot influence baseline selection,
+No run may claim evidence under historical v1 or the v2 feasibility pilot. V1
+is not activatable, and v2 intentionally produces no candidate-performance
+result. A future model-validation run needs a separate externally timestamped
+confirmatory protocol, fixed candidate and baselines, source-separated
+development and locked test inputs, geographic/time holdouts, participant-
+clustered uncertainty, minimum support, and promotion/drift/rollback gates.
+That protocol and every hashed input must be sealed and deployed before its
+first eligible row; locked-test outcomes cannot influence baseline selection,
 feature work, or candidate configuration.
 
 ## Limitations and risks

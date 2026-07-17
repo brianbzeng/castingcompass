@@ -206,12 +206,13 @@ use, then fixed before inspecting test results.
 
 That scaffold applies to exact-point terrain experiments. First-party
 CastingCompass trips deliberately retain curated `site` support and cannot
-enter the point loader. The separately frozen site-window protocol uses the
-public site catalog's fixed SHA-256, 46 sites assigned once to five named
-geographic panels, and four absolute time blocks. It never invents a site
-centroid, weakens point-model eligibility, or treats a whole trip spanning
-multiple windows as one two-hour label. Pre-freeze, pre-activation, past, and
-legacy rows remain exploratory regardless of structural validity.
+enter the point loader. Historical v1 preserves a fixed site-catalog SHA-256,
+46 sites assigned once to five named panels, and four absolute time blocks, but
+it is not activatable. The v2 successor uses the same curated site support only
+for a collection-feasibility pilot. Neither design invents a site centroid,
+weakens point-model eligibility, or treats a whole trip spanning multiple
+windows as a point label. Pre-freeze, pre-activation, past, and legacy rows
+remain product-observational only regardless of structural validity.
 
 Prospective rows additionally retain the frozen recruitment-frame ID, one of
 three allowed pre-outcome source IDs, recruitment event time/hash, and—only for
@@ -246,10 +247,13 @@ Every real-data run must preserve:
 - terrain configuration and fixed channel order;
 - observation eligibility counts and rejected-row reasons;
 - geographic split seed/count/buffer;
-- when the site-window protocol is claimed, the preregistration hash, private
-  outcome-blind split-manifest hash, activation identity, source/cohort role,
-  recruitment frame/source/event identity, site-catalog hash, absolute time
-  block, and prediction-snapshot hash;
+- for the v2 feasibility pilot, the externally registered protocol hash,
+  activation identity, immutable release/Worker/scoring identity, recruitment
+  source/event identity, site-catalog hash, exact interval, started-attempt
+  reconciliation, and encrypted snapshot checksum;
+- for a later confirmatory study, its separate preregistration, activation,
+  outcome-blind split identity, fixed candidate/baselines, and locked input
+  hashes required by that future protocol;
 - Git revision, Python runtime, input hashes, experiment version, model version,
   target scope, catalog version, and observation contract version from
   `run_metadata.json`.
@@ -263,11 +267,11 @@ python3 -m pipeline.contourcast.cli smoke --output-dir /tmp/contourcast-smoke
 Synthetic fixture metrics are labeled `synthetic_fixture` and are not real-data
 results.
 
-The private validation manifest must never contain raw email, account ID,
-reporter hash, notes, photos, or exact coordinates. It is an append-only hash
-chain whose assignments are created without outcomes and are not regenerated
-after labels are opened. Deletion and withdrawal must be reconciled through
-future snapshots and derived private artifacts before evaluation.
+No study export may contain raw email, account ID, resettable reporter hash,
+notes, photos, IP address, user agent, or exact coordinates. V2 uses a privacy-
+safe deletion-linked participant group, append-only corrections, and daily
+encrypted checksummed snapshots. Deletion and withdrawal must be reconciled
+before a feasibility report. Candidate performance is not evaluated on v2.
 
 ## Current results
 

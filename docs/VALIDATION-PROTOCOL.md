@@ -9,6 +9,12 @@
 
 **Production status:** not activated
 
+**Successor decision (2026-07-17):** do not activate v1. The locally frozen
+`california-halibut-collection-feasibility-v2` protocol supersedes it for any
+future activation. V2 is an operational collection pilot, makes no model-
+performance claim, and requires a later, separately preregistered confirmatory
+study. See `docs/VALIDATION-SUCCESSOR.md`.
+
 The machine-readable preregistration is
 `validation/protocols/california-halibut-site-window-v1.json`. Its byte hash is
 anchored by the later Git commit that contains it; the file does not contain a
