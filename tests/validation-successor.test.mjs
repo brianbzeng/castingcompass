@@ -253,6 +253,23 @@ test("operator verifier accepts the frozen protocol while leaving activation clo
   assert.equal(result.activationVerified, false);
 });
 
+test("documents the local 730-day storage candidate without opening the activation gate", async () => {
+  const [storage, successor, roadmap] = await Promise.all([
+    readFile(new URL("docs/VALIDATION-STORAGE.md", root), "utf8"),
+    readFile(new URL("docs/VALIDATION-SUCCESSOR.md", root), "utf8"),
+    readFile(new URL("docs/PRODUCT_ROADMAP.md", root), "utf8"),
+  ]);
+  assert.match(storage, /tested technical candidate, not an approved policy/i);
+  assert.match(storage, /technical_validation_snapshot_restore_passed: true/);
+  assert.match(storage, /governance_approval_recorded: false/);
+  assert.match(storage, /validation_snapshot_and_restore_gate_passed: false/);
+  assert.match(successor, /- \[x\] Implement and locally verify a separate 730-day/);
+  assert.match(successor, /- \[ \] Configure encrypted daily snapshots/);
+  assert.match(successor, /- \[ \] Obtain privacy\/legal\/data-steward approval/);
+  assert.match(roadmap, /- \[x\] Locally implement and verify the separate 730-day/);
+  assert.match(roadmap, /- \[ \] Approve the 730-day validation-only snapshot/);
+});
+
 test("operator verifier accepts a complete externally committed activation wrapper", async () => {
   const protocolBytes = await readFile(
     new URL("validation/protocols/california-halibut-collection-feasibility-v2.json", root),
@@ -359,7 +376,7 @@ test("documents v1 as inactive, records local ledger progress, and leaves activa
   assert.match(successor, /- \[x\] Implement the privacy-safe deletion-linked participant token/);
   assert.match(successor, /- \[x\] Implement the append-only event ledger/);
   assert.match(successor, /- \[ \] Submit the exact protocol artifact to OSF/);
-  assert.match(successor, /89-day full-D1 operational drill[^.]+does not\s+satisfy this 730-day validation gate/is);
+  assert.match(successor, /89-day full-D1 operational path\s+remains separate and cannot satisfy this gate/is);
   assert.match(roadmap, /- \[x\] Freeze and locally verify the v2 successor schemas/);
   assert.match(roadmap, /- \[x\] Locally implement and verify the default-off v2 start\/completion\/safe-cancellation/);
   assert.match(roadmap, /- \[x\] Locally implement and verify append-only correction handling/);
@@ -369,6 +386,6 @@ test("documents v1 as inactive, records local ledger progress, and leaves activa
   assert.match(pipelineReadme, /No command below satisfies those gates/);
   assert.match(modelCard, /No run may claim evidence under historical v1 or the v2 feasibility pilot/);
   assert.match(architecture, /V2 retains the same source IDs for feasibility reporting but performs no pooled\s+candidate analysis/);
-  assert.match(storage, /Do not solve this by silently\s+retaining full account exports or raw identifiers for 730 days/i);
+  assert.match(storage, /Do not solve\s+this by silently retaining full account exports or broader account data for 730 days/i);
   assert.match(storage, /validation_snapshot_and_restore_gate_passed: false/);
 });

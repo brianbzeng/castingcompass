@@ -26,6 +26,7 @@ const MIGRATIONS = [
   "0012_validation_protocol.sql",
   "0013_validation_feasibility_pilot.sql",
   "0014_validation_feasibility_recruitment_and_corrections.sql",
+  "0015_validation_snapshot_suppression.sql",
 ];
 
 class D1StatementAdapter {
@@ -1592,6 +1593,7 @@ test("feasibility pilot start, completion, safe cancellation, export, and privac
   assert.equal(exportPayload.validationFeasibilityRecruitment.length, 1);
   assert.equal(exportPayload.validationFeasibilityCorrections.length, 3);
   assert.equal("user_id" in exportPayload.validationFeasibilityRecruitment[0], false);
+  assert.equal("snapshot_suppression_sha256" in exportPayload.validationFeasibilityEvents[0], false);
   assert.doesNotMatch(JSON.stringify(exportPayload.validationFeasibilityEvents), new RegExp(user.id));
   assert.doesNotMatch(JSON.stringify(exportPayload.validationFeasibilityEvents), new RegExp(user.email));
 
@@ -1631,6 +1633,13 @@ test("feasibility pilot start, completion, safe cancellation, export, and privac
     removed_completed_attempt_count: 0,
     removed_safe_canceled_attempt_count: 1,
   });
+  const canceledSuppressions = sqlite.prepare(`SELECT suppression_kind, suppressed_event_type,
+      suppression_subject_sha256, source_event_sha256
+    FROM validation_feasibility_snapshot_suppressions ORDER BY sequence`).all();
+  assert.deepEqual(canceledSuppressions.map((row) => row.suppressed_event_type), ["started", "safe_canceled"]);
+  assert.ok(canceledSuppressions.every((row) => row.suppression_kind === "trip"));
+  assert.equal(new Set(canceledSuppressions.map((row) => row.suppression_subject_sha256)).size, 1);
+  assert.ok(canceledSuppressions.every((row) => /^[a-f0-9]{64}$/.test(row.source_event_sha256)));
   const postDeletionExport = await buildFeasibilityReconciliationExport({
     db: d1,
     activationId,
@@ -1677,6 +1686,21 @@ test("feasibility pilot start, completion, safe cancellation, export, and privac
   assert.equal(sqlite.prepare("SELECT COUNT(*) AS count FROM validation_feasibility_recruitment_events").get().count, 0);
   assert.equal(sqlite.prepare(`SELECT SUM(removed_recruitment_count) AS count
     FROM validation_feasibility_recruitment_removals WHERE activation_id = ?`).get(activationId).count, 2);
+  const allSuppressions = sqlite.prepare(`SELECT suppression_kind, suppressed_event_type,
+      suppression_subject_sha256, source_event_sha256
+    FROM validation_feasibility_snapshot_suppressions ORDER BY sequence`).all();
+  assert.equal(allSuppressions.length, 8);
+  assert.equal(allSuppressions.filter((row) => row.suppression_kind === "participant").length, 2);
+  assert.equal(allSuppressions.filter((row) => row.suppression_kind === "trip").length, 6);
+  assert.doesNotMatch(JSON.stringify(allSuppressions), new RegExp(`${user.id}|${directUser.id}|${first.trip.id}|${direct.trip.id}`));
+  assert.throws(() => sqlite.prepare(`UPDATE validation_feasibility_snapshot_suppressions
+    SET removed_at = removed_at`).run(), /immutable/);
+  assert.throws(() => sqlite.prepare("DELETE FROM validation_feasibility_snapshot_suppressions").run(), /outlive retained snapshots/);
+  assert.throws(() => sqlite.prepare(`INSERT INTO validation_feasibility_snapshot_suppressions (
+      suppression_id, activation_id, suppression_kind, suppression_subject_sha256,
+      suppressed_event_type, source_event_sha256, removed_at
+    ) VALUES (?, ?, 'participant', ?, 'participant', ?, strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`)
+    .run(`fsuppress_${"a".repeat(31)}z`, activationId, "c".repeat(64), "f".repeat(64)), /CHECK constraint/);
 });
 
 test("profile edits recompute valid v2 evidence, reject overrides, and never promote legacy rows", async () => {

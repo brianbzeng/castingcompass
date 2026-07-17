@@ -1131,7 +1131,7 @@ const FEASIBILITY_EVENT_COLUMNS = [
   "target_released_count", "identification_confidence", "scoring_system_kind",
   "scoring_system_version", "scoring_system_sha256", "opportunity_score",
   "opportunity_window_id", "snapshot_sha256", "terminal_reason", "previous_event_sha256",
-  "event_at", "event_sha256",
+  "event_at", "event_sha256", "snapshot_suppression_sha256",
 ] as const;
 
 const INSERT_FEASIBILITY_EVENT_SQL = `INSERT INTO validation_feasibility_events (
@@ -1142,7 +1142,7 @@ const FEASIBILITY_RECRUITMENT_COLUMNS = [
   "event_id", "activation_id", "user_id", "participant_group_id", "event_contract_version",
   "recruitment_frame_id", "recruitment_source_id", "selection_method", "recruited_at",
   "campaign_id", "invite_issued_at", "invite_expires_at", "community_approval_sha256",
-  "event_sha256", "created_at",
+  "event_sha256", "created_at", "snapshot_suppression_sha256",
 ] as const;
 
 const INSERT_FEASIBILITY_RECRUITMENT_SQL = `INSERT INTO validation_feasibility_recruitment_events (
@@ -1494,7 +1494,7 @@ export function createTripStore(db: D1DatabaseLike): TripStore {
       return db.prepare(`SELECT event_id, activation_id, user_id, participant_group_id,
           event_contract_version, recruitment_frame_id, recruitment_source_id,
           selection_method, recruited_at, campaign_id, invite_issued_at, invite_expires_at,
-          community_approval_sha256, event_sha256, created_at
+          community_approval_sha256, event_sha256, created_at, snapshot_suppression_sha256
         FROM validation_feasibility_recruitment_events
         WHERE activation_id = ? AND participant_group_id = ? LIMIT 1`)
         .bind(activationId, participantGroupId)
@@ -1517,7 +1517,7 @@ export function createTripStore(db: D1DatabaseLike): TripStore {
           score_influenced_choice, study_consent_version, study_consented_at, target_taxon_id,
           site_id, geographic_panel, mode, segment_start_at, angler_count,
           scoring_system_kind, scoring_system_version, scoring_system_sha256,
-          opportunity_score, opportunity_window_id, snapshot_sha256
+          opportunity_score, opportunity_window_id, snapshot_sha256, snapshot_suppression_sha256
         FROM validation_feasibility_events
         WHERE trip_id = ? AND event_type = 'started' LIMIT 1`)
         .bind(tripId)
@@ -1876,6 +1876,7 @@ function feasibilityEventBindings(record: FeasibilityEventRecord): unknown[] {
     record.previousEventSha256,
     record.eventAt,
     record.eventSha256,
+    record.snapshotSuppressionSha256,
   ];
 }
 
@@ -1903,6 +1904,7 @@ function prepareFeasibilityRecruitmentInsert(
     record.communityApprovalSha256,
     record.eventSha256,
     record.createdAt,
+    record.snapshotSuppressionSha256,
   );
 }
 

@@ -861,6 +861,7 @@ export const validationFeasibilityEvents = sqliteTable(
     opportunityScore: integer("opportunity_score").notNull(),
     opportunityWindowId: text("opportunity_window_id").notNull(),
     snapshotSha256: text("snapshot_sha256").notNull(),
+    snapshotSuppressionSha256: text("snapshot_suppression_sha256").notNull(),
     terminalReason: text("terminal_reason"),
     previousEventSha256: text("previous_event_sha256"),
     eventAt: text("event_at").notNull(),
@@ -971,6 +972,7 @@ export const validationFeasibilityRecruitmentEvents = sqliteTable(
     inviteIssuedAt: text("invite_issued_at"),
     inviteExpiresAt: text("invite_expires_at"),
     communityApprovalSha256: text("community_approval_sha256"),
+    snapshotSuppressionSha256: text("snapshot_suppression_sha256").notNull(),
     eventSha256: text("event_sha256").notNull(),
     createdAt: text("created_at").notNull(),
   },
@@ -1064,6 +1066,51 @@ export const validationFeasibilityCorrectionRemovals = sqliteTable(
     lastRemovedAt: text("last_removed_at").notNull(),
   },
   (table) => [primaryKey({ columns: [table.activationId, table.removalDay] })],
+);
+
+export const validationFeasibilitySnapshotSuppressions = sqliteTable(
+  "validation_feasibility_snapshot_suppressions",
+  {
+    sequence: integer("sequence").primaryKey({ autoIncrement: true }),
+    suppressionId: text("suppression_id").notNull(),
+    activationId: text("activation_id").notNull().references(() => validationFeasibilityActivations.id, { onDelete: "restrict" }),
+    suppressionKind: text("suppression_kind").notNull(),
+    suppressionSubjectSha256: text("suppression_subject_sha256").notNull(),
+    suppressedEventType: text("suppressed_event_type").notNull(),
+    sourceEventSha256: text("source_event_sha256").notNull(),
+    removedAt: text("removed_at").notNull(),
+  },
+  (table) => [
+    uniqueIndex("validation_feasibility_snapshot_suppression_id_unique").on(table.suppressionId),
+    uniqueIndex("validation_feasibility_snapshot_suppression_subject_event_unique").on(
+      table.activationId,
+      table.suppressionKind,
+      table.suppressionSubjectSha256,
+      table.suppressedEventType,
+    ),
+    uniqueIndex("validation_feasibility_snapshot_suppression_source_event_unique").on(
+      table.activationId,
+      table.suppressionKind,
+      table.suppressedEventType,
+      table.sourceEventSha256,
+    ),
+    check(
+      "validation_feasibility_snapshot_suppression_identity_check",
+      sql`${table.suppressionId} glob 'fsuppress_*'
+        and length(${table.suppressionId}) = 42
+        and substr(${table.suppressionId}, 11) not glob '*[^a-f0-9]*'
+        and length(${table.suppressionSubjectSha256}) = 64
+        and ${table.suppressionSubjectSha256} not glob '*[^a-f0-9]*'
+        and length(${table.sourceEventSha256}) = 64
+        and ${table.sourceEventSha256} not glob '*[^a-f0-9]*'`,
+    ),
+    check(
+      "validation_feasibility_snapshot_suppression_kind_check",
+      sql`(${table.suppressionKind} = 'participant' and ${table.suppressedEventType} = 'participant')
+        or (${table.suppressionKind} = 'trip'
+          and ${table.suppressedEventType} in ('started', 'completed', 'safe_canceled'))`,
+    ),
+  ],
 );
 
 export const siteDiscussionPosts = sqliteTable(

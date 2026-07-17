@@ -84,12 +84,18 @@ after its acceptance checks pass in the intended environment.
     immutable campaign sealed by D1 server time before activation; an HMAC invitation alone is
     not treated as proof of issue time. First-source-wins, account export/deletion, correction
     chaining, source-separated reconciliation, and adversarial mutation/timing cases are covered.
-  - [ ] Approve and implement the separate 730-day validation-only snapshot and deletion-
-    suppression policy. The verified 89-day full-D1 operational restore path cannot satisfy
-    this gate without contradicting the current 90-day deletion-tombstone boundary. Then
-    configure production storage/operator evidence; complete legal/privacy/data-steward review;
-    externally preregister the exact artifact; and seal/deploy a valid activation manifest
-    before the first pilot-eligible row.
+  - [x] Locally implement and verify the separate 730-day validation-only technical candidate:
+    privacy-minimized encrypted projections, immutable opaque suppression capture on deletion,
+    cumulative suppression/aggregate-removal artifacts, strict retention-class separation,
+    frozen-hash verification, deletion replay, and aggregate-only evidence. The drill computes
+    no candidate performance and deliberately records governance approval and the overall
+    activation storage gate as false.
+  - [ ] Approve the 730-day validation-only snapshot and deletion-suppression policy; configure
+    production key custody, least-privilege storage, daily schedules/alerts, retention deletion,
+    and operator evidence; complete a witnessed production-shaped restore/deletion-replay drill;
+    complete legal/privacy/data-steward review; externally preregister the exact artifact; and
+    seal/deploy a valid activation manifest before the first pilot-eligible row. The 89-day
+    full-D1 operational restore remains a separate artifact class and cannot satisfy this gate.
   - [ ] If the pilot passes, freeze and preregister a separate confirmatory protocol with a fixed
     candidate and baselines, source-separated development and locked test data, geographic/time
     holdouts, clustered uncertainty, minimum support, and promotion/drift/rollback gates. Never

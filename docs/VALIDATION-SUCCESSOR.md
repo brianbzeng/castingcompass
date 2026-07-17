@@ -97,9 +97,14 @@ Do not collect v2-eligible rows until every item below has evidence:
       reconciliation export.
 - [ ] Configure encrypted daily snapshots, checksums, least-privilege access,
       retention, and complete a restore/deletion-replay test.
-      The local 89-day full-D1 operational drill is verified, but it deliberately does not
-      satisfy this 730-day validation gate until a privacy-approved validation-only snapshot
-      and deletion-suppression policy exists.
+  - [x] Implement and locally verify a separate 730-day validation-only technical candidate
+        with privacy-minimized projections, immutable opaque suppression capture, cumulative
+        aggregate removal evidence, strict artifact-class checks, and no candidate-performance
+        computation.
+  - [ ] Obtain privacy/legal/data-steward approval, configure production key custody/access and
+        daily schedules, retention-test real artifacts, and complete a witnessed
+        production-shaped restore/deletion-replay drill. The 89-day full-D1 operational path
+        remains separate and cannot satisfy this gate.
 - [ ] Complete legal, privacy, study-consent, and data-steward review.
 - [ ] Submit the exact protocol artifact to OSF and retain the read-only receipt,
       registration timestamp, URL/DOI or embargo identifier, and protocol hash;

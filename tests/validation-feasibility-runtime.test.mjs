@@ -95,6 +95,7 @@ function storedStart(event) {
     opportunity_score: event.opportunityScore,
     opportunity_window_id: event.opportunityWindowId,
     snapshot_sha256: event.snapshotSha256,
+    snapshot_suppression_sha256: event.snapshotSuppressionSha256,
   };
 }
 

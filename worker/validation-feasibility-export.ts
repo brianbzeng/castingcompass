@@ -71,6 +71,7 @@ const EVENT_EXPORT_SQL = `SELECT
   opportunity_score AS opportunityScore,
   opportunity_window_id AS opportunityWindowId,
   snapshot_sha256 AS snapshotSha256,
+  snapshot_suppression_sha256 AS snapshotSuppressionSha256,
   terminal_reason AS terminalReason,
   previous_event_sha256 AS previousEventSha256,
   event_at AS eventAt,

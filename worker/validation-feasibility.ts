@@ -23,6 +23,10 @@ export const FEASIBILITY_COMMUNITY_SOURCE_ID = "admin-approved-community-prospec
 export const FEASIBILITY_DIRECT_SELECTION_METHOD = "direct_precommitment" as const;
 
 const PARTICIPANT_DOMAIN = "castingcompass.validation-feasibility-participant/2.0.0";
+const PARTICIPANT_SNAPSHOT_SUPPRESSION_DOMAIN =
+  "castingcompass.validation-feasibility-participant-suppression/2.0.0";
+const TRIP_SNAPSHOT_SUPPRESSION_DOMAIN =
+  "castingcompass.validation-feasibility-trip-suppression/2.0.0";
 const SOURCE_RECORD_DOMAIN = "castingcompass.validation-feasibility-source/2.0.0";
 const SHA256_PATTERN = /^[a-f0-9]{64}$/;
 const PARTICIPANT_PATTERN = /^participant-[a-f0-9]{64}$/;
@@ -200,6 +204,7 @@ export interface FeasibilityRecruitmentRecord {
   inviteIssuedAt: string | null;
   inviteExpiresAt: string | null;
   communityApprovalSha256: string | null;
+  snapshotSuppressionSha256: string;
   eventSha256: string;
   createdAt: string;
 }
@@ -218,6 +223,7 @@ export interface StoredFeasibilityRecruitment {
   invite_issued_at: string | null;
   invite_expires_at: string | null;
   community_approval_sha256: string | null;
+  snapshot_suppression_sha256: string;
   event_sha256: string;
   created_at: string;
 }
@@ -255,6 +261,7 @@ export interface FeasibilityEventRecord {
   opportunityScore: number;
   opportunityWindowId: string;
   snapshotSha256: string;
+  snapshotSuppressionSha256: string;
   terminalReason: SafeCancellationReason | null;
   previousEventSha256: string | null;
   eventAt: string;
@@ -285,6 +292,7 @@ export interface StoredFeasibilityStart {
   opportunity_score: number;
   opportunity_window_id: string;
   snapshot_sha256: string;
+  snapshot_suppression_sha256: string;
 }
 
 export interface FeasibilityCorrectionRecord {
@@ -553,6 +561,14 @@ async function recruitmentEventSha256(record: Omit<FeasibilityRecruitmentRecord,
   return sha256(canonicalJson(recruitmentEventPayload(record)));
 }
 
+export async function verifyFeasibilityRecruitmentHash(
+  record: Omit<FeasibilityRecruitmentRecord, "userId">,
+) {
+  const { eventSha256, ...unsigned } = record;
+  return SHA256_PATTERN.test(eventSha256) &&
+    await sha256(canonicalJson(recruitmentEventPayload(unsigned))) === eventSha256;
+}
+
 async function storedRecruitmentRecord(
   row: StoredFeasibilityRecruitment,
   accountId: string,
@@ -565,6 +581,7 @@ async function storedRecruitmentRecord(
     row.event_contract_version !== FEASIBILITY_RECRUITMENT_EVENT_CONTRACT_VERSION ||
     row.recruitment_frame_id !== FEASIBILITY_RECRUITMENT_FRAME_ID ||
     !PARTICIPANT_PATTERN.test(row.participant_group_id) || !SHA256_PATTERN.test(row.event_sha256) ||
+    !SHA256_PATTERN.test(row.snapshot_suppression_sha256) ||
     ![FEASIBILITY_ORGANIC_SOURCE_ID, FEASIBILITY_DIRECT_SOURCE_ID, FEASIBILITY_COMMUNITY_SOURCE_ID]
       .includes(row.recruitment_source_id as FeasibilityRecruitmentSourceId) ||
     ![FEASIBILITY_SELECTION_METHOD, FEASIBILITY_DIRECT_SELECTION_METHOD]
@@ -584,6 +601,7 @@ async function storedRecruitmentRecord(
     inviteIssuedAt: row.invite_issued_at,
     inviteExpiresAt: row.invite_expires_at,
     communityApprovalSha256: row.community_approval_sha256,
+    snapshotSuppressionSha256: row.snapshot_suppression_sha256,
     eventSha256: row.event_sha256,
     createdAt: row.created_at,
   };
@@ -621,8 +639,9 @@ export async function resolveFeasibilityRecruitment(input: {
       })
     : null;
   if (input.recruitmentToken && !tokenPayload) return null;
+  const eventId = `frecruit_${crypto.randomUUID()}`;
   const unsigned: Omit<FeasibilityRecruitmentRecord, "eventSha256"> = {
-    eventId: `frecruit_${crypto.randomUUID()}`,
+    eventId,
     activationId: input.activation.id,
     userId: input.accountId,
     participantGroupId: input.participantGroupId,
@@ -635,6 +654,9 @@ export async function resolveFeasibilityRecruitment(input: {
     inviteIssuedAt: tokenPayload?.issued_at ?? null,
     inviteExpiresAt: tokenPayload?.expires_at ?? null,
     communityApprovalSha256: tokenPayload?.community_approval_sha256 ?? null,
+    snapshotSuppressionSha256: await sha256(
+      `${PARTICIPANT_SNAPSHOT_SUPPRESSION_DOMAIN}\u0000${input.activation.id}\u0000${input.participantGroupId}\u0000${eventId}`,
+    ),
     createdAt: input.timestamp,
   };
   return {
@@ -801,8 +823,9 @@ export async function buildFeasibilityStartEvent(input: {
     strictTimestamp(input.timestamp) === null
   ) return null;
   const sourceRecordSha256 = await sha256(`${SOURCE_RECORD_DOMAIN}\u0000${input.context.activation.id}\u0000${input.tripId}`);
+  const eventId = `fevent_${crypto.randomUUID()}`;
   return finishEvent({
-    eventId: `fevent_${crypto.randomUUID()}`,
+    eventId,
     activationId: input.context.activation.id,
     tripId: input.tripId,
     eventType: "started",
@@ -834,6 +857,9 @@ export async function buildFeasibilityStartEvent(input: {
     opportunityScore: input.opportunity.opportunityScore,
     opportunityWindowId: input.opportunity.windowId,
     snapshotSha256: input.opportunity.snapshotSha256,
+    snapshotSuppressionSha256: await sha256(
+      `${TRIP_SNAPSHOT_SUPPRESSION_DOMAIN}\u0000${input.context.activation.id}\u0000${input.tripId}\u0000${eventId}`,
+    ),
     terminalReason: null,
     previousEventSha256: null,
     eventAt: input.timestamp,
@@ -846,7 +872,8 @@ function storedStartIdentity(start: StoredFeasibilityStart) {
     !SHA256_PATTERN.test(start.event_sha256) ||
     !SHA256_PATTERN.test(start.source_record_sha256) ||
     !SHA256_PATTERN.test(start.scoring_system_sha256) ||
-    !SHA256_PATTERN.test(start.snapshot_sha256)
+    !SHA256_PATTERN.test(start.snapshot_sha256) ||
+    !SHA256_PATTERN.test(start.snapshot_suppression_sha256)
   ) return null;
   return {
     activationId: start.activation_id,
@@ -871,6 +898,7 @@ function storedStartIdentity(start: StoredFeasibilityStart) {
     opportunityScore: start.opportunity_score,
     opportunityWindowId: start.opportunity_window_id,
     snapshotSha256: start.snapshot_sha256,
+    snapshotSuppressionSha256: start.snapshot_suppression_sha256,
     previousEventSha256: start.event_sha256,
   } as const;
 }

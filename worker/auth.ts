@@ -723,6 +723,11 @@ export async function handleAccountRequest(
       const photoManifest = await Promise.all(tripRows
         .filter((trip) => typeof trip.photo_key === "string" && trip.photo_key)
         .map((trip) => buildPhotoExportManifest(env, trip)));
+      const exportedFeasibilityEvents = (validationFeasibilityRows.results ?? []).map((row) => {
+        const exported = { ...row };
+        delete exported.snapshot_suppression_sha256;
+        return exported;
+      });
       return jsonResponse({
         exportedAt: new Date().toISOString(),
         account,
@@ -731,7 +736,7 @@ export async function handleAccountRequest(
         tripReports,
         forecastImpressions: forecastImpressionRows.results ?? [],
         validationProvenance: validationProvenanceRows.results ?? [],
-        validationFeasibilityEvents: validationFeasibilityRows.results ?? [],
+        validationFeasibilityEvents: exportedFeasibilityEvents,
         validationFeasibilityRecruitment: validationFeasibilityRecruitmentRows.results ?? [],
         validationFeasibilityCorrections: validationFeasibilityCorrectionRows.results ?? [],
         discussionPosts: discussionRows.results ?? [],
@@ -956,7 +961,8 @@ export async function handleAccountRequest(
               score_influenced_choice, study_consent_version, study_consented_at, target_taxon_id,
               site_id, geographic_panel, mode, segment_start_at, angler_count,
               scoring_system_kind, scoring_system_version, scoring_system_sha256,
-              opportunity_score, opportunity_window_id, snapshot_sha256
+              opportunity_score, opportunity_window_id, snapshot_sha256,
+              snapshot_suppression_sha256
             FROM validation_feasibility_events
             WHERE trip_id = ? AND event_type = 'started' LIMIT 1`)
             .bind(tripId).first<StoredFeasibilityStart>(),

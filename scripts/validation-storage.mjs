@@ -25,12 +25,26 @@ import { pathToFileURL } from "node:url";
 import { DatabaseSync } from "node:sqlite";
 
 import { buildFeasibilityReconciliationExport } from "../worker/validation-feasibility-export.ts";
+import {
+  FEASIBILITY_CORRECTION_CONTRACT_VERSION,
+  FEASIBILITY_EVENT_CONTRACT_VERSION,
+  FEASIBILITY_RECRUITMENT_EVENT_CONTRACT_VERSION,
+  reconcileFeasibilityEvents,
+  verifyFeasibilityCorrectionHash,
+  verifyFeasibilityEventHash,
+  verifyFeasibilityRecruitmentHash,
+} from "../worker/validation-feasibility.ts";
 
 export const STORAGE_ARTIFACT_VERSION = "castingcompass.operational-storage-artifact/1.0.0";
 export const STORAGE_MANIFEST_VERSION = "castingcompass.operational-storage-manifest/1.0.0";
 export const PRIVACY_LEDGER_VERSION = "castingcompass.operational-privacy-ledger/1.0.0";
 export const STORAGE_AUDIT_VERSION = "castingcompass.operational-storage-audit/1.0.0";
 export const RESTORE_EVIDENCE_VERSION = "castingcompass.operational-restore-evidence/1.0.0";
+export const VALIDATION_SNAPSHOT_VERSION = "castingcompass.validation-ledger-snapshot/2.0.0";
+export const VALIDATION_SUPPRESSION_LEDGER_VERSION =
+  "castingcompass.validation-suppression-ledger/2.0.0";
+export const VALIDATION_RESTORE_EVIDENCE_VERSION =
+  "castingcompass.validation-ledger-restore-evidence/2.0.0";
 
 const MAGIC = Buffer.from("CCV2BK1\n", "ascii");
 const AUTH_TAG_BYTES = 16;
@@ -42,9 +56,15 @@ const OPERATIONAL_RETENTION_DAYS = 89;
 const VALIDATION_RETENTION_DAYS = 730;
 const DAY_MILLISECONDS = 86_400_000;
 const SHA256_PATTERN = /^[a-f0-9]{64}$/u;
+const SUPPRESSION_ID_PATTERN = /^fsuppress_[a-f0-9]{32}$/u;
 const ID_PATTERN = /^[a-z0-9]+(?:[._-][a-z0-9]+)*$/u;
 const ROLE_PATTERN = /^[a-z][a-z0-9-]{2,50}$/u;
-const ARTIFACT_KINDS = new Set(["d1-sql-export", "privacy-deletion-ledger"]);
+const ARTIFACT_RETENTION_DAYS = new Map([
+  ["d1-sql-export", OPERATIONAL_RETENTION_DAYS],
+  ["privacy-deletion-ledger", OPERATIONAL_RETENTION_DAYS],
+  ["validation-ledger-snapshot", VALIDATION_RETENTION_DAYS],
+  ["validation-suppression-ledger", VALIDATION_RETENTION_DAYS],
+]);
 const RECONCILIATION_INTEGRITY_GATES = new Set([
   "invalid_event_hash",
   "duplicate_start_event",
@@ -66,6 +86,76 @@ const TASK_COLUMNS = [
   "available_at", "lease_expires_at", "lease_token", "last_error_code",
   "created_at", "updated_at", "completed_at",
 ];
+const VALIDATION_ACTIVATION_COLUMNS = [
+  "id", "protocol_id", "protocol_version", "protocol_sha256", "activation_commitment_sha256",
+  "activation_manifest_sha256", "site_catalog_sha256", "scoring_system_kind",
+  "scoring_system_version", "scoring_system_sha256", "worker_version_id",
+  "study_consent_version", "start_at", "end_at", "preregistered_at", "receipt_verified_at",
+  "status", "created_at",
+];
+const VALIDATION_CAMPAIGN_COLUMNS = [
+  "activation_id", "campaign_id", "recruitment_source_id", "selection_method",
+  "invite_issued_at", "invite_expires_at", "community_approval_sha256",
+  "token_payload_sha256", "sealed_at",
+];
+const VALIDATION_RECRUITMENT_COLUMNS = [
+  "event_id", "activation_id", "participant_group_id", "event_contract_version",
+  "recruitment_frame_id", "recruitment_source_id", "selection_method", "recruited_at",
+  "campaign_id", "invite_issued_at", "invite_expires_at", "community_approval_sha256",
+  "event_sha256", "created_at", "snapshot_suppression_sha256",
+];
+const VALIDATION_EVENT_COLUMNS = [
+  "event_id", "activation_id", "trip_id", "event_type", "event_contract_version",
+  "source_record_sha256", "participant_group_id", "recruitment_frame_id",
+  "recruitment_source_id", "selection_method", "score_influenced_choice",
+  "study_consent_version", "study_consented_at", "target_taxon_id", "site_id",
+  "geographic_panel", "mode", "segment_start_at", "segment_end_at", "angler_count",
+  "effort_minutes", "target_encountered", "target_encounter_count", "target_retained_count",
+  "target_released_count", "identification_confidence", "scoring_system_kind",
+  "scoring_system_version", "scoring_system_sha256", "opportunity_score",
+  "opportunity_window_id", "snapshot_sha256", "terminal_reason", "previous_event_sha256",
+  "event_at", "event_sha256", "snapshot_suppression_sha256",
+];
+const VALIDATION_CORRECTION_COLUMNS = [
+  "correction_id", "activation_id", "trip_id", "correction_contract_version",
+  "root_completion_event_sha256", "previous_event_sha256", "correction_reason",
+  "analytical_status", "site_id", "geographic_panel", "mode", "segment_start_at",
+  "segment_end_at", "angler_count", "effort_minutes", "target_encountered",
+  "target_encounter_count", "target_retained_count", "target_released_count",
+  "identification_confidence", "corrected_at", "event_sha256",
+];
+const VALIDATION_PRIVACY_REMOVAL_COLUMNS = [
+  "activation_id", "removal_day", "removed_event_count", "removed_started_attempt_count",
+  "removed_completed_attempt_count", "removed_safe_canceled_attempt_count",
+  "first_removed_at", "last_removed_at",
+];
+const VALIDATION_RECRUITMENT_REMOVAL_COLUMNS = [
+  "activation_id", "removal_day", "removed_recruitment_count", "removed_organic_count",
+  "removed_direct_count", "removed_community_count", "first_removed_at", "last_removed_at",
+];
+const VALIDATION_CORRECTION_REMOVAL_COLUMNS = [
+  "activation_id", "removal_day", "removed_correction_count", "first_removed_at", "last_removed_at",
+];
+const VALIDATION_SUPPRESSION_COLUMNS = [
+  "suppression_id", "activation_id", "suppression_kind", "suppression_subject_sha256",
+  "suppressed_event_type", "source_event_sha256", "removed_at",
+];
+const VALIDATION_FORBIDDEN_SNAPSHOT_KEYS = new Set([
+  "user_id",
+  "email",
+  "password_hash",
+  "password_salt",
+  "object_key",
+  "receipt_hash",
+  "notes",
+  "photo_key",
+  "ip",
+  "ip_address",
+  "user_agent",
+  "latitude",
+  "longitude",
+  "coordinates",
+]);
 
 function canonicalJson(value) {
   if (value === null || typeof value === "boolean" || typeof value === "number" || typeof value === "string") {
@@ -147,9 +237,9 @@ function readKey(path) {
   return key;
 }
 
-function retentionUntil(createdAt) {
+function retentionUntil(createdAt, retentionDays) {
   return new Date(
-    new Date(createdAt).getTime() + (OPERATIONAL_RETENTION_DAYS * DAY_MILLISECONDS),
+    new Date(createdAt).getTime() + (retentionDays * DAY_MILLISECONDS),
   ).toISOString();
 }
 
@@ -157,7 +247,8 @@ function encryptPayload({ plaintext, artifactKind, activationId, key, keyId, cre
   if (!Buffer.isBuffer(plaintext) || plaintext.byteLength === 0 || plaintext.byteLength > MAX_PLAINTEXT_BYTES) {
     throw new Error("Snapshot plaintext has an invalid size");
   }
-  if (!ARTIFACT_KINDS.has(artifactKind)) throw new Error("Snapshot artifact kind is invalid");
+  const retentionDays = ARTIFACT_RETENTION_DAYS.get(artifactKind);
+  if (!retentionDays) throw new Error("Snapshot artifact kind is invalid");
   strictIdentifier(activationId, "Activation ID");
   strictIdentifier(keyId, "Key ID");
   strictTimestamp(createdAt, "Snapshot creation time");
@@ -169,8 +260,8 @@ function encryptPayload({ plaintext, artifactKind, activationId, key, keyId, cre
     algorithm: "aes-256-gcm",
     key_id: keyId,
     created_at: createdAt,
-    retention_days: OPERATIONAL_RETENTION_DAYS,
-    retention_until: retentionUntil(createdAt),
+    retention_days: retentionDays,
+    retention_until: retentionUntil(createdAt, retentionDays),
     nonce_base64url: nonce.toString("base64url"),
     plaintext_bytes: plaintext.byteLength,
   };
@@ -213,16 +304,17 @@ function parseManifest(path) {
     "schema_version", "artifact_kind", "activation_id", "artifact_filename", "algorithm",
     "key_id", "created_at", "retention_days", "retention_until", "encrypted_bytes", "encrypted_sha256",
   ], "Storage manifest");
-  if (manifest.schema_version !== STORAGE_MANIFEST_VERSION || !ARTIFACT_KINDS.has(manifest.artifact_kind)) {
+  const expectedRetentionDays = ARTIFACT_RETENTION_DAYS.get(manifest.artifact_kind);
+  if (manifest.schema_version !== STORAGE_MANIFEST_VERSION || !expectedRetentionDays) {
     throw new Error("Storage manifest contract is unsupported");
   }
   strictIdentifier(manifest.activation_id, "Manifest activation ID");
   strictIdentifier(manifest.key_id, "Manifest key ID");
   strictTimestamp(manifest.created_at, "Manifest creation time");
   strictTimestamp(manifest.retention_until, "Manifest retention time");
-  if (manifest.retention_days !== OPERATIONAL_RETENTION_DAYS ||
-      manifest.retention_until !== retentionUntil(manifest.created_at)) {
-    throw new Error("Operational storage retention must remain shorter than the 90-day tombstone window");
+  if (manifest.retention_days !== expectedRetentionDays ||
+      manifest.retention_until !== retentionUntil(manifest.created_at, expectedRetentionDays)) {
+    throw new Error("Storage manifest retention does not match its artifact class");
   }
   if (manifest.algorithm !== "aes-256-gcm") throw new Error("Storage manifest algorithm is unsupported");
   if (!Number.isInteger(manifest.encrypted_bytes) || manifest.encrypted_bytes <= 0) {
@@ -310,7 +402,14 @@ function verifyAuditEvent(event, expectedSequence, expectedPrevious, expectedNot
   strictIdentifier(event.operator_role, "Storage audit operator role", ROLE_PATTERN);
   strictTimestamp(event.event_at, "Storage audit time");
   if (expectedNotBefore && event.event_at < expectedNotBefore) throw new Error("Storage audit chronology is invalid");
-  if (!["snapshot_sealed", "privacy_ledger_sealed", "restore_drill_completed"].includes(event.event_type)) {
+  if (![
+    "snapshot_sealed",
+    "privacy_ledger_sealed",
+    "restore_drill_completed",
+    "validation_snapshot_sealed",
+    "validation_suppression_sealed",
+    "validation_restore_drill_completed",
+  ].includes(event.event_type)) {
     throw new Error("Storage audit event type is invalid");
   }
   if (!SHA256_PATTERN.test(event.artifact_sha256) || !SHA256_PATTERN.test(event.event_sha256)) {
@@ -504,6 +603,757 @@ export function sealPrivacyLedger(input) {
   return { manifest, auditEvent };
 }
 
+function validationRows(database, table, columns, activationId, orderBy) {
+  if (!tableExists(database, table)) throw new Error(`D1 export lacks required validation table ${table}`);
+  return database.prepare(
+    `SELECT ${columns.join(", ")} FROM ${table} WHERE activation_id = ? ORDER BY ${orderBy}`,
+  ).all(activationId);
+}
+
+function assertValidationSnapshotMinimized(value) {
+  if (Array.isArray(value)) {
+    for (const item of value) assertValidationSnapshotMinimized(item);
+    return;
+  }
+  if (!value || typeof value !== "object") return;
+  for (const [key, child] of Object.entries(value)) {
+    if (VALIDATION_FORBIDDEN_SNAPSHOT_KEYS.has(key)) {
+      throw new Error(`Validation snapshot contains prohibited field ${key}`);
+    }
+    assertValidationSnapshotMinimized(child);
+  }
+}
+
+function extractValidationSnapshot(database, activationId, capturedAt) {
+  for (const table of [
+    "validation_feasibility_activations",
+    "validation_feasibility_recruitment_campaigns",
+    "validation_feasibility_recruitment_events",
+    "validation_feasibility_events",
+    "validation_feasibility_corrections",
+    "validation_feasibility_privacy_removals",
+    "validation_feasibility_recruitment_removals",
+    "validation_feasibility_correction_removals",
+    "validation_feasibility_snapshot_suppressions",
+  ]) {
+    if (!tableExists(database, table)) throw new Error(`D1 export lacks required validation table ${table}`);
+  }
+  const activation = database.prepare(
+    `SELECT ${VALIDATION_ACTIVATION_COLUMNS.join(", ")}
+      FROM validation_feasibility_activations WHERE id = ? LIMIT 1`,
+  ).get(activationId);
+  if (!activation) throw new Error("D1 export lacks the requested validation activation");
+  const snapshot = {
+    schema_version: VALIDATION_SNAPSHOT_VERSION,
+    activation_id: activationId,
+    captured_at: capturedAt,
+    activation,
+    campaigns: validationRows(
+      database,
+      "validation_feasibility_recruitment_campaigns",
+      VALIDATION_CAMPAIGN_COLUMNS,
+      activationId,
+      "campaign_id",
+    ),
+    recruitment_events: validationRows(
+      database,
+      "validation_feasibility_recruitment_events",
+      VALIDATION_RECRUITMENT_COLUMNS,
+      activationId,
+      "sequence",
+    ),
+    events: validationRows(
+      database,
+      "validation_feasibility_events",
+      VALIDATION_EVENT_COLUMNS,
+      activationId,
+      "sequence",
+    ),
+    corrections: validationRows(
+      database,
+      "validation_feasibility_corrections",
+      VALIDATION_CORRECTION_COLUMNS,
+      activationId,
+      "sequence",
+    ),
+    privacy_removals: validationRows(
+      database,
+      "validation_feasibility_privacy_removals",
+      VALIDATION_PRIVACY_REMOVAL_COLUMNS,
+      activationId,
+      "removal_day",
+    ),
+    recruitment_removals: validationRows(
+      database,
+      "validation_feasibility_recruitment_removals",
+      VALIDATION_RECRUITMENT_REMOVAL_COLUMNS,
+      activationId,
+      "removal_day",
+    ),
+    correction_removals: validationRows(
+      database,
+      "validation_feasibility_correction_removals",
+      VALIDATION_CORRECTION_REMOVAL_COLUMNS,
+      activationId,
+      "removal_day",
+    ),
+    suppressions: validationRows(
+      database,
+      "validation_feasibility_snapshot_suppressions",
+      VALIDATION_SUPPRESSION_COLUMNS,
+      activationId,
+      "sequence",
+    ),
+  };
+  assertValidationSnapshotMinimized(snapshot);
+  return snapshot;
+}
+
+function extractValidationSuppressionLedger(database, activationId, capturedAt) {
+  const ledger = {
+    schema_version: VALIDATION_SUPPRESSION_LEDGER_VERSION,
+    activation_id: activationId,
+    captured_at: capturedAt,
+    suppressions: validationRows(
+      database,
+      "validation_feasibility_snapshot_suppressions",
+      VALIDATION_SUPPRESSION_COLUMNS,
+      activationId,
+      "sequence",
+    ),
+    privacy_removals: validationRows(
+      database,
+      "validation_feasibility_privacy_removals",
+      VALIDATION_PRIVACY_REMOVAL_COLUMNS,
+      activationId,
+      "removal_day",
+    ),
+    recruitment_removals: validationRows(
+      database,
+      "validation_feasibility_recruitment_removals",
+      VALIDATION_RECRUITMENT_REMOVAL_COLUMNS,
+      activationId,
+      "removal_day",
+    ),
+    correction_removals: validationRows(
+      database,
+      "validation_feasibility_correction_removals",
+      VALIDATION_CORRECTION_REMOVAL_COLUMNS,
+      activationId,
+      "removal_day",
+    ),
+  };
+  assertValidationSnapshotMinimized(ledger);
+  return ledger;
+}
+
+function sealValidationProjection(input, artifactKind, eventType, extract) {
+  if (input.destroyPlaintext !== true) {
+    throw new Error("Validation storage sealing requires explicit plaintext destruction");
+  }
+  assertPrivateFile(input.inputPath, "Validation D1 SQL export");
+  strictTimestamp(input.createdAt, "Validation storage creation time");
+  const sqlBytes = readFileSync(input.inputPath);
+  const database = executeSqlExport(sqlBytes);
+  let projection;
+  try {
+    projection = extract(database, input.activationId, input.createdAt);
+  } finally {
+    database.close();
+    sqlBytes.fill(0);
+  }
+  const payload = Buffer.from(canonicalJson(projection), "utf8");
+  const manifest = writeSealedArtifact({
+    payload,
+    artifactKind,
+    activationId: input.activationId,
+    keyPath: input.keyPath,
+    keyId: input.keyId,
+    createdAt: input.createdAt,
+    artifactPath: input.artifactPath,
+    manifestPath: input.manifestPath,
+  });
+  const auditEvent = appendAuditEvent({
+    auditPath: input.auditPath,
+    activationId: input.activationId,
+    eventType,
+    artifactSha256: manifest.encrypted_sha256,
+    eventAt: input.createdAt,
+    operatorRole: input.operatorRole,
+  });
+  unlinkSync(input.inputPath);
+  payload.fill(0);
+  return { manifest, auditEvent };
+}
+
+export function sealValidationLedgerSnapshot(input) {
+  return sealValidationProjection(
+    input,
+    "validation-ledger-snapshot",
+    "validation_snapshot_sealed",
+    extractValidationSnapshot,
+  );
+}
+
+export function sealValidationSuppressionLedger(input) {
+  return sealValidationProjection(
+    input,
+    "validation-suppression-ledger",
+    "validation_suppression_sealed",
+    extractValidationSuppressionLedger,
+  );
+}
+
+function parseJsonArtifact(bytes, name) {
+  try {
+    return JSON.parse(bytes.toString("utf8"));
+  } catch {
+    throw new Error(`${name} artifact is not valid JSON`);
+  }
+}
+
+function validationRowArray(value, columns, name, activationId) {
+  if (!Array.isArray(value)) throw new Error(`${name} rows are invalid`);
+  for (const row of value) {
+    exactKeys(row, columns, name);
+    if (row.activation_id !== activationId) throw new Error(`${name} crossed activation boundaries`);
+  }
+  return value;
+}
+
+function validationSha256(value, name, { nullable = false } = {}) {
+  if (nullable && value === null) return;
+  if (typeof value !== "string" || !SHA256_PATTERN.test(value)) {
+    throw new Error(`${name} is invalid`);
+  }
+}
+
+function validationInteger(value, name) {
+  if (!Number.isSafeInteger(value) || value < 0) throw new Error(`${name} is invalid`);
+}
+
+function validateValidationRemovalRows(rows, countColumns, name, capturedAt) {
+  for (const row of rows) {
+    if (typeof row.removal_day !== "string" || !/^\d{4}-\d{2}-\d{2}$/u.test(row.removal_day)) {
+      throw new Error(`${name} day is invalid`);
+    }
+    strictTimestamp(row.first_removed_at, `${name} first removal time`);
+    strictTimestamp(row.last_removed_at, `${name} last removal time`);
+    if (row.first_removed_at > row.last_removed_at) throw new Error(`${name} chronology is invalid`);
+    if (capturedAt && row.last_removed_at > capturedAt) throw new Error(`${name} contains a future removal`);
+    for (const column of countColumns) validationInteger(row[column], `${name} ${column}`);
+  }
+}
+
+function validateValidationSuppressions(rows, capturedAt, name) {
+  const ids = new Set();
+  const subjects = new Set();
+  const sources = new Set();
+  for (const row of rows) {
+    strictIdentifier(row.suppression_id, `${name} ID`, SUPPRESSION_ID_PATTERN);
+    if (ids.has(row.suppression_id)) throw new Error(`${name} IDs are not unique`);
+    ids.add(row.suppression_id);
+    validationSha256(row.suppression_subject_sha256, `${name} subject`);
+    validationSha256(row.source_event_sha256, `${name} source event`);
+    strictTimestamp(row.removed_at, `${name} removal time`);
+    if (row.removed_at > capturedAt) throw new Error(`${name} contains a future removal`);
+    const validKind = row.suppression_kind === "participant"
+      ? row.suppressed_event_type === "participant"
+      : row.suppression_kind === "trip" &&
+        ["started", "completed", "safe_canceled"].includes(row.suppressed_event_type);
+    if (!validKind) throw new Error(`${name} kind is invalid`);
+    const subjectKey = [
+      row.activation_id,
+      row.suppression_kind,
+      row.suppression_subject_sha256,
+      row.suppressed_event_type,
+    ].join("\u0000");
+    if (subjects.has(subjectKey)) throw new Error(`${name} subjects are not unique`);
+    subjects.add(subjectKey);
+    const sourceKey = [
+      row.activation_id,
+      row.suppression_kind,
+      row.suppressed_event_type,
+      row.source_event_sha256,
+    ].join("\u0000");
+    if (sources.has(sourceKey)) throw new Error(`${name} source events are not unique`);
+    sources.add(sourceKey);
+  }
+}
+
+function validateValidationSnapshotRows(snapshot) {
+  const activation = exactKeys(
+    snapshot.activation,
+    VALIDATION_ACTIVATION_COLUMNS,
+    "Validation activation",
+  );
+  if (activation.id !== snapshot.activation_id) throw new Error("Validation activation identity is invalid");
+  for (const column of [
+    "protocol_sha256", "activation_commitment_sha256", "activation_manifest_sha256",
+    "site_catalog_sha256", "scoring_system_sha256",
+  ]) validationSha256(activation[column], `Validation activation ${column}`);
+  for (const column of [
+    "start_at", "end_at", "preregistered_at", "receipt_verified_at", "created_at",
+  ]) strictTimestamp(activation[column], `Validation activation ${column}`);
+  if (activation.start_at >= activation.end_at || snapshot.captured_at < activation.start_at) {
+    throw new Error("Validation snapshot must be captured at or after the sealed activation begins");
+  }
+
+  for (const campaign of snapshot.campaigns) {
+    strictIdentifier(campaign.campaign_id, "Validation campaign ID");
+    validationSha256(campaign.community_approval_sha256, "Validation campaign approval", { nullable: true });
+    validationSha256(campaign.token_payload_sha256, "Validation campaign token payload");
+    for (const column of ["invite_issued_at", "invite_expires_at", "sealed_at"]) {
+      strictTimestamp(campaign[column], `Validation campaign ${column}`);
+    }
+    if (campaign.sealed_at > snapshot.captured_at) throw new Error("Validation campaign postdates its snapshot");
+  }
+  for (const recruitment of snapshot.recruitment_events) {
+    if (recruitment.event_contract_version !== FEASIBILITY_RECRUITMENT_EVENT_CONTRACT_VERSION) {
+      throw new Error("Unexpected feasibility recruitment contract version");
+    }
+    validationSha256(recruitment.event_sha256, "Validation recruitment event hash");
+    validationSha256(recruitment.snapshot_suppression_sha256, "Validation recruitment suppression subject");
+    for (const column of ["recruited_at", "created_at"]) {
+      strictTimestamp(recruitment[column], `Validation recruitment ${column}`);
+    }
+    if (recruitment.created_at > snapshot.captured_at || recruitment.recruited_at > snapshot.captured_at) {
+      throw new Error("Validation recruitment postdates its snapshot");
+    }
+  }
+  for (const event of snapshot.events) {
+    if (event.event_contract_version !== FEASIBILITY_EVENT_CONTRACT_VERSION ||
+        !["started", "completed", "safe_canceled"].includes(event.event_type)) {
+      throw new Error("Unexpected feasibility event contract");
+    }
+    for (const column of [
+      "source_record_sha256", "scoring_system_sha256", "snapshot_sha256",
+      "event_sha256", "snapshot_suppression_sha256",
+    ]) validationSha256(event[column], `Validation event ${column}`);
+    validationSha256(event.previous_event_sha256, "Validation event previous hash", { nullable: true });
+    strictTimestamp(event.segment_start_at, "Validation event segment start");
+    strictTimestamp(event.event_at, "Validation event time");
+    if (event.segment_end_at !== null) strictTimestamp(event.segment_end_at, "Validation event segment end");
+    if (event.event_at > snapshot.captured_at || event.segment_start_at > snapshot.captured_at ||
+        (event.segment_end_at !== null && event.segment_end_at > snapshot.captured_at)) {
+      throw new Error("Validation event postdates its snapshot");
+    }
+    if (![0, 1].includes(event.score_influenced_choice) ||
+        ![null, 0, 1].includes(event.target_encountered)) {
+      throw new Error("Validation event boolean encoding is invalid");
+    }
+  }
+  const startSuppressionByTrip = new Map(
+    snapshot.events
+      .filter((event) => event.event_type === "started")
+      .map((event) => [event.trip_id, event.snapshot_suppression_sha256]),
+  );
+  for (const event of snapshot.events) {
+    if (event.event_type !== "started" &&
+        startSuppressionByTrip.get(event.trip_id) !== event.snapshot_suppression_sha256) {
+      throw new Error("Validation terminal event suppression identity does not match its start");
+    }
+  }
+  for (const correction of snapshot.corrections) {
+    if (correction.correction_contract_version !== FEASIBILITY_CORRECTION_CONTRACT_VERSION) {
+      throw new Error("Unexpected feasibility correction contract version");
+    }
+    for (const column of ["root_completion_event_sha256", "previous_event_sha256", "event_sha256"]) {
+      validationSha256(correction[column], `Validation correction ${column}`);
+    }
+    for (const column of ["segment_start_at", "segment_end_at", "corrected_at"]) {
+      strictTimestamp(correction[column], `Validation correction ${column}`);
+    }
+    if (correction.corrected_at > snapshot.captured_at) {
+      throw new Error("Validation correction postdates its snapshot");
+    }
+    if (![0, 1].includes(correction.target_encountered)) {
+      throw new Error("Validation correction boolean encoding is invalid");
+    }
+  }
+  validateValidationRemovalRows(snapshot.privacy_removals, [
+    "removed_event_count", "removed_started_attempt_count", "removed_completed_attempt_count",
+    "removed_safe_canceled_attempt_count",
+  ], "Validation privacy removal", snapshot.captured_at);
+  validateValidationRemovalRows(snapshot.recruitment_removals, [
+    "removed_recruitment_count", "removed_organic_count", "removed_direct_count",
+    "removed_community_count",
+  ], "Validation recruitment removal", snapshot.captured_at);
+  validateValidationRemovalRows(
+    snapshot.correction_removals,
+    ["removed_correction_count"],
+    "Validation correction removal",
+    snapshot.captured_at,
+  );
+  validateValidationSuppressions(snapshot.suppressions, snapshot.captured_at, "Validation snapshot suppression");
+}
+
+function parseValidationSnapshot(bytes, expectedActivationId, expectedCapturedAt) {
+  const snapshot = exactKeys(parseJsonArtifact(bytes, "Validation snapshot"), [
+    "schema_version", "activation_id", "captured_at", "activation", "campaigns",
+    "recruitment_events", "events", "corrections", "privacy_removals",
+    "recruitment_removals", "correction_removals", "suppressions",
+  ], "Validation snapshot");
+  if (snapshot.schema_version !== VALIDATION_SNAPSHOT_VERSION ||
+      snapshot.activation_id !== expectedActivationId) {
+    throw new Error("Validation snapshot contract does not match the restore drill");
+  }
+  strictTimestamp(snapshot.captured_at, "Validation snapshot capture time");
+  if (snapshot.captured_at !== expectedCapturedAt) {
+    throw new Error("Validation snapshot capture time does not match its manifest");
+  }
+  snapshot.campaigns = validationRowArray(
+    snapshot.campaigns,
+    VALIDATION_CAMPAIGN_COLUMNS,
+    "Validation campaign",
+    expectedActivationId,
+  );
+  snapshot.recruitment_events = validationRowArray(
+    snapshot.recruitment_events,
+    VALIDATION_RECRUITMENT_COLUMNS,
+    "Validation recruitment",
+    expectedActivationId,
+  );
+  snapshot.events = validationRowArray(
+    snapshot.events,
+    VALIDATION_EVENT_COLUMNS,
+    "Validation event",
+    expectedActivationId,
+  );
+  snapshot.corrections = validationRowArray(
+    snapshot.corrections,
+    VALIDATION_CORRECTION_COLUMNS,
+    "Validation correction",
+    expectedActivationId,
+  );
+  snapshot.privacy_removals = validationRowArray(
+    snapshot.privacy_removals,
+    VALIDATION_PRIVACY_REMOVAL_COLUMNS,
+    "Validation privacy removal",
+    expectedActivationId,
+  );
+  snapshot.recruitment_removals = validationRowArray(
+    snapshot.recruitment_removals,
+    VALIDATION_RECRUITMENT_REMOVAL_COLUMNS,
+    "Validation recruitment removal",
+    expectedActivationId,
+  );
+  snapshot.correction_removals = validationRowArray(
+    snapshot.correction_removals,
+    VALIDATION_CORRECTION_REMOVAL_COLUMNS,
+    "Validation correction removal",
+    expectedActivationId,
+  );
+  snapshot.suppressions = validationRowArray(
+    snapshot.suppressions,
+    VALIDATION_SUPPRESSION_COLUMNS,
+    "Validation snapshot suppression",
+    expectedActivationId,
+  );
+  assertValidationSnapshotMinimized(snapshot);
+  validateValidationSnapshotRows(snapshot);
+  return snapshot;
+}
+
+function parseValidationSuppressionLedger(bytes, expectedActivationId, expectedCapturedAt) {
+  const ledger = exactKeys(parseJsonArtifact(bytes, "Validation suppression ledger"), [
+    "schema_version", "activation_id", "captured_at", "suppressions", "privacy_removals",
+    "recruitment_removals", "correction_removals",
+  ], "Validation suppression ledger");
+  if (ledger.schema_version !== VALIDATION_SUPPRESSION_LEDGER_VERSION ||
+      ledger.activation_id !== expectedActivationId) {
+    throw new Error("Validation suppression contract does not match the restore drill");
+  }
+  strictTimestamp(ledger.captured_at, "Validation suppression capture time");
+  if (ledger.captured_at !== expectedCapturedAt) {
+    throw new Error("Validation suppression capture time does not match its manifest");
+  }
+  ledger.suppressions = validationRowArray(
+    ledger.suppressions,
+    VALIDATION_SUPPRESSION_COLUMNS,
+    "Validation suppression",
+    expectedActivationId,
+  );
+  ledger.privacy_removals = validationRowArray(
+    ledger.privacy_removals,
+    VALIDATION_PRIVACY_REMOVAL_COLUMNS,
+    "Validation privacy removal",
+    expectedActivationId,
+  );
+  ledger.recruitment_removals = validationRowArray(
+    ledger.recruitment_removals,
+    VALIDATION_RECRUITMENT_REMOVAL_COLUMNS,
+    "Validation recruitment removal",
+    expectedActivationId,
+  );
+  ledger.correction_removals = validationRowArray(
+    ledger.correction_removals,
+    VALIDATION_CORRECTION_REMOVAL_COLUMNS,
+    "Validation correction removal",
+    expectedActivationId,
+  );
+  assertValidationSnapshotMinimized(ledger);
+  validateValidationRemovalRows(ledger.privacy_removals, [
+    "removed_event_count", "removed_started_attempt_count", "removed_completed_attempt_count",
+    "removed_safe_canceled_attempt_count",
+  ], "Validation privacy removal", ledger.captured_at);
+  validateValidationRemovalRows(ledger.recruitment_removals, [
+    "removed_recruitment_count", "removed_organic_count", "removed_direct_count",
+    "removed_community_count",
+  ], "Validation recruitment removal", ledger.captured_at);
+  validateValidationRemovalRows(
+    ledger.correction_removals,
+    ["removed_correction_count"],
+    "Validation correction removal",
+    ledger.captured_at,
+  );
+  validateValidationSuppressions(ledger.suppressions, ledger.captured_at, "Validation suppression");
+  return ledger;
+}
+
+function camelCaseValidationRow(row) {
+  return Object.fromEntries(Object.entries(row).map(([key, value]) => [
+    key.replace(/_([a-z0-9])/gu, (_match, character) => character.toUpperCase()),
+    value,
+  ]));
+}
+
+function validationEventRecord(row) {
+  const event = camelCaseValidationRow(row);
+  return {
+    ...event,
+    eventContractVersion: FEASIBILITY_EVENT_CONTRACT_VERSION,
+    scoreInfluencedChoice: Boolean(event.scoreInfluencedChoice),
+    targetEncountered: event.targetEncountered === null ? null : Boolean(event.targetEncountered),
+  };
+}
+
+function validationCorrectionRecord(row) {
+  const correction = camelCaseValidationRow(row);
+  return {
+    ...correction,
+    correctionContractVersion: FEASIBILITY_CORRECTION_CONTRACT_VERSION,
+    targetEncountered: Boolean(correction.targetEncountered),
+  };
+}
+
+function validationRecruitmentRecord(row) {
+  return {
+    ...camelCaseValidationRow(row),
+    eventContractVersion: FEASIBILITY_RECRUITMENT_EVENT_CONTRACT_VERSION,
+  };
+}
+
+function sumValidationRemovalRows(rows, column) {
+  return rows.reduce((sum, row) => {
+    const next = sum + row[column];
+    if (!Number.isSafeInteger(next)) throw new Error("Validation removal totals exceed safe integer bounds");
+    return next;
+  }, 0);
+}
+
+function suppressionFingerprint(row) {
+  return [
+    row.suppression_kind,
+    row.suppression_subject_sha256,
+    row.suppressed_event_type,
+    row.source_event_sha256,
+  ].join("\u0000");
+}
+
+function suppressionSubjectFingerprint(row) {
+  return [
+    row.suppression_kind,
+    row.suppression_subject_sha256,
+    row.suppressed_event_type,
+  ].join("\u0000");
+}
+
+function suppressionSourceFingerprint(row) {
+  return [row.suppression_kind, row.suppressed_event_type, row.source_event_sha256].join("\u0000");
+}
+
+function validateSuppressionContinuity(snapshot, ledger) {
+  if (ledger.captured_at < snapshot.captured_at) {
+    throw new Error("Validation suppression ledger predates its snapshot");
+  }
+  const currentByFingerprint = new Map(
+    ledger.suppressions.map((row) => [suppressionFingerprint(row), row]),
+  );
+  for (const suppression of snapshot.suppressions) {
+    const current = currentByFingerprint.get(suppressionFingerprint(suppression));
+    if (!current || canonicalJson(current) !== canonicalJson(suppression)) {
+      throw new Error("Validation suppression ledger is not cumulative from the snapshot");
+    }
+  }
+
+  const eventSuppressions = ledger.suppressions.filter((row) => row.suppression_kind === "trip");
+  const participantSuppressions = ledger.suppressions.filter((row) => row.suppression_kind === "participant");
+  const privacyTotals = {
+    removedEvents: sumValidationRemovalRows(ledger.privacy_removals, "removed_event_count"),
+    removedStartedAttempts: sumValidationRemovalRows(
+      ledger.privacy_removals,
+      "removed_started_attempt_count",
+    ),
+    removedCompletedAttempts: sumValidationRemovalRows(
+      ledger.privacy_removals,
+      "removed_completed_attempt_count",
+    ),
+    removedSafeCanceledAttempts: sumValidationRemovalRows(
+      ledger.privacy_removals,
+      "removed_safe_canceled_attempt_count",
+    ),
+  };
+  const recruitmentTotals = {
+    removedRecruitments: sumValidationRemovalRows(
+      ledger.recruitment_removals,
+      "removed_recruitment_count",
+    ),
+    removedOrganic: sumValidationRemovalRows(ledger.recruitment_removals, "removed_organic_count"),
+    removedDirect: sumValidationRemovalRows(ledger.recruitment_removals, "removed_direct_count"),
+    removedCommunity: sumValidationRemovalRows(
+      ledger.recruitment_removals,
+      "removed_community_count",
+    ),
+  };
+  const correctionTotals = {
+    removedCorrections: sumValidationRemovalRows(
+      ledger.correction_removals,
+      "removed_correction_count",
+    ),
+  };
+  const suppressionCounts = {
+    events: eventSuppressions.length,
+    started: eventSuppressions.filter((row) => row.suppressed_event_type === "started").length,
+    completed: eventSuppressions.filter((row) => row.suppressed_event_type === "completed").length,
+    safeCanceled: eventSuppressions.filter((row) => row.suppressed_event_type === "safe_canceled").length,
+    participants: participantSuppressions.length,
+  };
+  if (
+    privacyTotals.removedEvents < suppressionCounts.events ||
+    privacyTotals.removedStartedAttempts < suppressionCounts.started ||
+    privacyTotals.removedCompletedAttempts < suppressionCounts.completed ||
+    privacyTotals.removedSafeCanceledAttempts < suppressionCounts.safeCanceled ||
+    recruitmentTotals.removedRecruitments < suppressionCounts.participants ||
+    privacyTotals.removedStartedAttempts + privacyTotals.removedCompletedAttempts +
+      privacyTotals.removedSafeCanceledAttempts !== privacyTotals.removedEvents ||
+    recruitmentTotals.removedOrganic + recruitmentTotals.removedDirect +
+      recruitmentTotals.removedCommunity !== recruitmentTotals.removedRecruitments ||
+    privacyTotals.removedCompletedAttempts + privacyTotals.removedSafeCanceledAttempts >
+      privacyTotals.removedStartedAttempts
+  ) {
+    throw new Error("Validation suppression and aggregate removal ledgers do not reconcile");
+  }
+  return { privacyTotals, recruitmentTotals, correctionTotals, suppressionCounts };
+}
+
+function suppressionIndexes(rows) {
+  return {
+    exact: new Set(rows.map(suppressionFingerprint)),
+    subjects: new Map(rows.map((row) => [suppressionSubjectFingerprint(row), row.source_event_sha256])),
+    sources: new Map(rows.map((row) => [suppressionSourceFingerprint(row), row.suppression_subject_sha256])),
+  };
+}
+
+function rowSuppressed(row, kind, eventType, indexes) {
+  const candidate = {
+    suppression_kind: kind,
+    suppression_subject_sha256: row.snapshot_suppression_sha256,
+    suppressed_event_type: eventType,
+    source_event_sha256: row.event_sha256,
+  };
+  if (indexes.exact.has(suppressionFingerprint(candidate))) return true;
+  if (indexes.subjects.has(suppressionSubjectFingerprint(candidate)) ||
+      indexes.sources.has(suppressionSourceFingerprint(candidate))) {
+    throw new Error("Validation suppression identity does not match its snapshot source row");
+  }
+  return false;
+}
+
+async function verifyValidationSnapshotIntegrity(snapshot) {
+  const recruitments = snapshot.recruitment_events.map(validationRecruitmentRecord);
+  const events = snapshot.events.map(validationEventRecord);
+  const corrections = snapshot.corrections.map(validationCorrectionRecord);
+  const [recruitmentHashes, eventHashes, correctionHashes] = await Promise.all([
+    Promise.all(recruitments.map((record) => verifyFeasibilityRecruitmentHash(record))),
+    Promise.all(events.map((record) => verifyFeasibilityEventHash(record))),
+    Promise.all(corrections.map((record) => verifyFeasibilityCorrectionHash(record))),
+  ]);
+  if (recruitmentHashes.includes(false) || eventHashes.includes(false) || correctionHashes.includes(false)) {
+    throw new Error("Validation snapshot contains an invalid frozen event hash");
+  }
+  const snapshotReconciliation = await reconcileFeasibilityEvents({
+    events,
+    corrections,
+    privacyRemovals: {
+      removedStartedAttempts: sumValidationRemovalRows(
+        snapshot.privacy_removals,
+        "removed_started_attempt_count",
+      ),
+      removedCompletedAttempts: sumValidationRemovalRows(
+        snapshot.privacy_removals,
+        "removed_completed_attempt_count",
+      ),
+      removedSafeCanceledAttempts: sumValidationRemovalRows(
+        snapshot.privacy_removals,
+        "removed_safe_canceled_attempt_count",
+      ),
+    },
+    snapshotAndRestorePassed: true,
+  });
+  if (snapshotReconciliation.failedGates.some((gate) => RECONCILIATION_INTEGRITY_GATES.has(gate))) {
+    throw new Error("Validation snapshot failed frozen-ledger integrity checks");
+  }
+  return { recruitments, events, corrections };
+}
+
+function applyValidationSuppressions(records, suppressions) {
+  const indexes = suppressionIndexes(suppressions);
+  const suppressedTripIds = new Set();
+  const retainedEvents = [];
+  const suppressedEvents = [];
+  for (let index = 0; index < records.events.length; index += 1) {
+    const row = records.events[index];
+    const stored = records.eventRows[index];
+    if (rowSuppressed(stored, "trip", row.eventType, indexes)) {
+      suppressedEvents.push(row);
+      if (row.eventType === "started") suppressedTripIds.add(row.tripId);
+    } else {
+      retainedEvents.push(row);
+    }
+  }
+  const retainedRecruitments = [];
+  const suppressedRecruitments = [];
+  for (let index = 0; index < records.recruitments.length; index += 1) {
+    const row = records.recruitments[index];
+    const stored = records.recruitmentRows[index];
+    if (rowSuppressed(stored, "participant", "participant", indexes)) {
+      suppressedRecruitments.push(row);
+    } else {
+      retainedRecruitments.push(row);
+    }
+  }
+  const snapshotStartTripIds = new Set(
+    records.events.filter((event) => event.eventType === "started").map((event) => event.tripId),
+  );
+  for (const correction of records.corrections) {
+    if (!snapshotStartTripIds.has(correction.tripId)) {
+      throw new Error("Validation snapshot contains a correction without a started attempt");
+    }
+  }
+  const retainedCorrections = records.corrections.filter(
+    (correction) => !suppressedTripIds.has(correction.tripId),
+  );
+  return {
+    retainedEvents,
+    retainedRecruitments,
+    retainedCorrections,
+    suppressedEvents,
+    suppressedRecruitments,
+    suppressedCorrections: records.corrections.length - retainedCorrections.length,
+  };
+}
+
 function parsePrivacyLedger(bytes, expectedActivationId) {
   let parsed;
   try {
@@ -669,6 +1519,142 @@ function requiredAuditArtifact(events, eventType, checksum, activationId) {
     event.artifact_sha256 === checksum && event.activation_id === activationId);
 }
 
+export async function runValidationRestoreDrill(input) {
+  if (input.destroyRestored !== true) {
+    throw new Error("Validation restore drill requires destruction of decrypted projections");
+  }
+  strictIdentifier(input.activationId, "Validation restore activation ID");
+  strictIdentifier(input.operatorRole, "Validation restore operator role", ROLE_PATTERN);
+  strictTimestamp(input.completedAt, "Validation restore completion time");
+  assertOutputAvailable(input.evidencePath, "Validation restore evidence");
+  let snapshotArtifact;
+  let suppressionArtifact;
+  let evidenceCore;
+  try {
+    snapshotArtifact = decryptArtifact({
+      artifactPath: input.snapshotArtifactPath,
+      manifestPath: input.snapshotManifestPath,
+      keyPath: input.snapshotKeyPath,
+      expectedKind: "validation-ledger-snapshot",
+      expectedActivationId: input.activationId,
+    });
+    suppressionArtifact = decryptArtifact({
+      artifactPath: input.suppressionArtifactPath,
+      manifestPath: input.suppressionManifestPath,
+      keyPath: input.suppressionKeyPath,
+      expectedKind: "validation-suppression-ledger",
+      expectedActivationId: input.activationId,
+    });
+    const auditEvents = verifyStorageAuditLog(input.auditPath);
+    if (!requiredAuditArtifact(
+      auditEvents,
+      "validation_snapshot_sealed",
+      snapshotArtifact.manifest.encrypted_sha256,
+      input.activationId,
+    ) || !requiredAuditArtifact(
+      auditEvents,
+      "validation_suppression_sealed",
+      suppressionArtifact.manifest.encrypted_sha256,
+      input.activationId,
+    )) {
+      throw new Error("Validation restore inputs are missing from the verified storage audit chain");
+    }
+    const snapshot = parseValidationSnapshot(
+      snapshotArtifact.plaintext,
+      input.activationId,
+      snapshotArtifact.manifest.created_at,
+    );
+    const suppressionLedger = parseValidationSuppressionLedger(
+      suppressionArtifact.plaintext,
+      input.activationId,
+      suppressionArtifact.manifest.created_at,
+    );
+    if (input.completedAt < suppressionLedger.captured_at) {
+      throw new Error("Validation restore completion predates its suppression ledger");
+    }
+    const totals = validateSuppressionContinuity(snapshot, suppressionLedger);
+    const verified = await verifyValidationSnapshotIntegrity(snapshot);
+    const projection = applyValidationSuppressions({
+      ...verified,
+      eventRows: snapshot.events,
+      recruitmentRows: snapshot.recruitment_events,
+    }, suppressionLedger.suppressions);
+    const reconciliation = await reconcileFeasibilityEvents({
+      events: projection.retainedEvents,
+      corrections: projection.retainedCorrections,
+      privacyRemovals: totals.privacyTotals,
+      snapshotAndRestorePassed: true,
+    });
+    if (reconciliation.failedGates.some((gate) => RECONCILIATION_INTEGRITY_GATES.has(gate))) {
+      throw new Error("Suppressed validation snapshot failed reconciliation integrity checks");
+    }
+    evidenceCore = {
+      schema_version: VALIDATION_RESTORE_EVIDENCE_VERSION,
+      activation_id: input.activationId,
+      drill_completed_at: input.completedAt,
+      snapshot_encrypted_sha256: snapshotArtifact.manifest.encrypted_sha256,
+      suppression_ledger_encrypted_sha256: suppressionArtifact.manifest.encrypted_sha256,
+      snapshot_retention_days: snapshotArtifact.manifest.retention_days,
+      suppression_ledger_retention_days: suppressionArtifact.manifest.retention_days,
+      snapshot_retention_until: snapshotArtifact.manifest.retention_until,
+      suppression_ledger_retention_until: suppressionArtifact.manifest.retention_until,
+      snapshot_capture_after_activation_end: snapshot.captured_at >= snapshot.activation.end_at,
+      retained_recruitment_count: projection.retainedRecruitments.length,
+      retained_event_count: projection.retainedEvents.length,
+      retained_correction_count: projection.retainedCorrections.length,
+      suppressed_snapshot_recruitment_count: projection.suppressedRecruitments.length,
+      suppressed_snapshot_event_count: projection.suppressedEvents.length,
+      suppressed_snapshot_started_attempt_count: projection.suppressedEvents.filter(
+        (event) => event.eventType === "started",
+      ).length,
+      suppressed_snapshot_completed_attempt_count: projection.suppressedEvents.filter(
+        (event) => event.eventType === "completed",
+      ).length,
+      suppressed_snapshot_safe_canceled_attempt_count: projection.suppressedEvents.filter(
+        (event) => event.eventType === "safe_canceled",
+      ).length,
+      suppressed_snapshot_correction_count: projection.suppressedCorrections,
+      cumulative_suppression_count: suppressionLedger.suppressions.length,
+      aggregate_removed_event_count: totals.privacyTotals.removedEvents,
+      aggregate_removed_started_attempt_count: totals.privacyTotals.removedStartedAttempts,
+      aggregate_removed_completed_attempt_count: totals.privacyTotals.removedCompletedAttempts,
+      aggregate_removed_safe_canceled_attempt_count: totals.privacyTotals.removedSafeCanceledAttempts,
+      aggregate_removed_recruitment_count: totals.recruitmentTotals.removedRecruitments,
+      aggregate_removed_correction_count: totals.correctionTotals.removedCorrections,
+      reconciliation_status: reconciliation.status,
+      reconciliation_failed_gates: reconciliation.failedGates,
+      reconciliation_snapshot_restore_gate_passed: reconciliation.snapshotAndRestorePassed,
+      technical_validation_snapshot_restore_passed: true,
+      governance_approval_recorded: false,
+      validation_snapshot_and_restore_gate_passed: false,
+      validation_snapshot_gate_blocker: "730-day-validation-snapshot-suppression-governance-not-approved",
+      candidate_performance_computed: reconciliation.candidatePerformanceComputed,
+      private_raw_rows_published: false,
+      plaintext_artifacts_retained: false,
+      restored_projection_retained: false,
+    };
+  } finally {
+    snapshotArtifact?.plaintext.fill(0);
+    suppressionArtifact?.plaintext.fill(0);
+  }
+  const evidencePayloadSha256 = sha256(canonicalJson(evidenceCore));
+  const auditEvent = appendAuditEvent({
+    auditPath: input.auditPath,
+    activationId: input.activationId,
+    eventType: "validation_restore_drill_completed",
+    artifactSha256: evidencePayloadSha256,
+    eventAt: input.completedAt,
+    operatorRole: input.operatorRole,
+  });
+  const evidence = {
+    ...evidenceCore,
+    evidence_payload_sha256: evidencePayloadSha256,
+    audit_event_sha256: auditEvent.event_sha256,
+  };
+  atomicWrite(input.evidencePath, `${canonicalJson(evidence)}\n`);
+  return evidence;
+}
+
 export async function runOperationalRestoreDrill(input) {
   if (input.destroyRestored !== true) throw new Error("Restore drill requires destruction of the isolated restored database");
   strictIdentifier(input.activationId, "Restore activation ID");
@@ -819,7 +1805,12 @@ function required(args, name) {
 async function main() {
   const [command, ...argv] = process.argv.slice(2);
   const args = parseArguments(argv);
-  if (command === "seal-snapshot" || command === "seal-ledger") {
+  if ([
+    "seal-snapshot",
+    "seal-ledger",
+    "seal-validation-snapshot",
+    "seal-validation-suppression",
+  ].includes(command)) {
     const input = {
       inputPath: required(args, "input"),
       artifactPath: required(args, "artifact"),
@@ -832,9 +1823,13 @@ async function main() {
       operatorRole: required(args, "operator-role"),
       destroyPlaintext: args.has("destroy-plaintext"),
     };
-    const result = command === "seal-snapshot"
-      ? sealOperationalSnapshot(input)
-      : sealPrivacyLedger(input);
+    const seal = new Map([
+      ["seal-snapshot", sealOperationalSnapshot],
+      ["seal-ledger", sealPrivacyLedger],
+      ["seal-validation-snapshot", sealValidationLedgerSnapshot],
+      ["seal-validation-suppression", sealValidationSuppressionLedger],
+    ]).get(command);
+    const result = seal(input);
     process.stdout.write(`${JSON.stringify({
       encryptedSha256: result.manifest.encrypted_sha256,
       auditEventSha256: result.auditEvent.event_sha256,
@@ -865,12 +1860,39 @@ async function main() {
     })}\n`);
     return;
   }
+  if (command === "restore-validation-drill") {
+    const result = await runValidationRestoreDrill({
+      activationId: required(args, "activation-id"),
+      snapshotArtifactPath: required(args, "snapshot-artifact"),
+      snapshotManifestPath: required(args, "snapshot-manifest"),
+      snapshotKeyPath: required(args, "snapshot-key-file"),
+      suppressionArtifactPath: required(args, "suppression-artifact"),
+      suppressionManifestPath: required(args, "suppression-manifest"),
+      suppressionKeyPath: required(args, "suppression-key-file"),
+      auditPath: required(args, "audit-log"),
+      evidencePath: required(args, "evidence"),
+      completedAt: new Date().toISOString(),
+      operatorRole: required(args, "operator-role"),
+      destroyRestored: args.has("destroy-restored"),
+    });
+    process.stdout.write(`${JSON.stringify({
+      technicalValidationSnapshotRestorePassed: result.technical_validation_snapshot_restore_passed,
+      governanceApprovalRecorded: result.governance_approval_recorded,
+      validationSnapshotGatePassed: result.validation_snapshot_and_restore_gate_passed,
+      evidencePayloadSha256: result.evidence_payload_sha256,
+      auditEventSha256: result.audit_event_sha256,
+    })}\n`);
+    return;
+  }
   if (command === "verify-audit") {
     const events = verifyStorageAuditLog(required(args, "audit-log"));
     process.stdout.write(`${JSON.stringify({ events: events.length, head: events.at(-1)?.event_sha256 ?? null })}\n`);
     return;
   }
-  throw new Error("Usage: validation-storage.mjs seal-snapshot|seal-ledger|restore-drill|verify-audit [options]");
+  throw new Error(
+    "Usage: validation-storage.mjs seal-snapshot|seal-ledger|seal-validation-snapshot|" +
+    "seal-validation-suppression|restore-drill|restore-validation-drill|verify-audit [options]",
+  );
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1])).href) {

@@ -1,8 +1,9 @@
 # Operational backup and validation-storage boundary
 
-This runbook covers the repository's local encrypted D1 backup and isolated restore-drill
-tooling. It does **not** claim that a production backup exists, that production key custody is
-approved, or that the v2 feasibility pilot's 730-day validation-snapshot gate has passed.
+This runbook covers the repository's local encrypted D1 backup, privacy-replay, and
+validation-only restore-drill tooling. It does **not** claim that a production backup exists,
+that production key custody is approved, that the 730-day policy has governance approval, or
+that the v2 feasibility pilot's storage activation gate has passed.
 
 ## Two retention classes must stay separate
 
@@ -13,16 +14,24 @@ value. This keeps an operational copy inside the current tombstone window.
 
 The frozen v2 pilot separately requires daily validation snapshots retained for 730 days.
 Extending a full D1 export to 730 days would contradict the current deletion/restore promise.
-Therefore this tool records
-`validation_snapshot_and_restore_gate_passed: false` even after a successful operational
-restore drill.
+The tool therefore has a separate 730-day artifact class containing only the sealed activation,
+campaign provenance, privacy-minimized recruitment/events/corrections, aggregate removal
+ledgers, and opaque deletion-suppression digests. It excludes account IDs, email, credentials,
+object locators, receipts, notes, photos, IP/user-agent data, and coordinates. The manifest and
+artifact parsers reject an 89-day/730-day class substitution.
 
-Before v2 activation, the data steward, privacy reviewer, and legal reviewer must approve a
-long-lived validation-only snapshot and deletion-suppression design. It must either retain a
-privacy-minimized suppression index for at least as long as every recoverable validation copy,
-or make every affected historical snapshot reliably deletable/rekeyable. It must prove that a
-deleted participant's rows cannot reappear from any retained copy. Do not solve this by silently
-retaining full account exports or raw identifiers for 730 days.
+Migration `0015_validation_snapshot_suppression.sql` supplies opaque, immutable suppression
+records when a recruitment or validation event is deleted. A current suppression artifact is
+cumulative and retained for the same 730 days. The local validation drill authenticates both
+artifacts, verifies every frozen event hash, rejects non-cumulative or mismatched suppression
+records, removes matching recruitment/events and their corrections, reconciles current
+aggregate removals, computes no candidate performance, and emits aggregate-only evidence.
+
+This is a tested technical candidate, not an approved policy. Before v2 activation, the data
+steward, privacy reviewer, and legal reviewer must decide whether retaining these encrypted,
+privacy-minimized validation rows and suppression digests for 730 days is compatible with the
+study notice, deletion promise, key custody, access model, and incident response. Do not solve
+this by silently retaining full account exports or broader account data for 730 days.
 
 ## Local cryptographic contract
 
@@ -131,6 +140,72 @@ The evidence file contains aggregate counts and checksums only. A named second r
 verify the source manifests, key-custody record, retention deadline, empty work directory,
 aggregate evidence, and audit head before the operational restore drill is accepted.
 
+## Exercise the 730-day validation-only technical candidate
+
+Do not run this workflow against production until migration `0015` is applied and the data
+steward, privacy reviewer, and legal reviewer approve the policy and key/access controls. The
+commands below document the tested operator interface; they do not grant that approval.
+
+For each required daily recovery point, export D1 to a private temporary file and immediately
+seal only the requested activation's validation projection:
+
+```sh
+WRANGLER_LOG_PATH=/PRIVATE/OPERATIONS/wrangler.log \
+  ./node_modules/.bin/wrangler d1 export contourcast-trips --remote \
+  --config wrangler.jsonc --output /PRIVATE/OPERATIONS/validation-snapshot-source.sql
+
+node scripts/validation-storage.mjs seal-validation-snapshot \
+  --input /PRIVATE/OPERATIONS/validation-snapshot-source.sql \
+  --artifact /PRIVATE/OPERATIONS/validation-snapshot.ccv2 \
+  --manifest /PRIVATE/OPERATIONS/validation-snapshot.manifest.json \
+  --key-file /PRIVATE/KEY-CUSTODY/validation-snapshot.key \
+  --key-id REPLACE_WITH_APPROVED_VALIDATION_KEY_ID \
+  --activation-id REPLACE_WITH_SEALED_V2_ACTIVATION_ID \
+  --audit-log /PRIVATE/OPERATIONS/storage-audit.ndjson \
+  --operator-role data-steward \
+  --destroy-plaintext
+```
+
+Immediately before a restore drill, export the current D1 state separately and seal its
+cumulative opaque suppressions plus current aggregate removal ledgers. The temporary full
+export is deleted after the minimized artifact is durable:
+
+```sh
+WRANGLER_LOG_PATH=/PRIVATE/OPERATIONS/wrangler.log \
+  ./node_modules/.bin/wrangler d1 export contourcast-trips --remote \
+  --config wrangler.jsonc --output /PRIVATE/OPERATIONS/validation-suppression-source.sql
+
+node scripts/validation-storage.mjs seal-validation-suppression \
+  --input /PRIVATE/OPERATIONS/validation-suppression-source.sql \
+  --artifact /PRIVATE/OPERATIONS/validation-suppression.ccv2 \
+  --manifest /PRIVATE/OPERATIONS/validation-suppression.manifest.json \
+  --key-file /PRIVATE/KEY-CUSTODY/validation-suppression.key \
+  --key-id REPLACE_WITH_APPROVED_SUPPRESSION_KEY_ID \
+  --activation-id REPLACE_WITH_SEALED_V2_ACTIVATION_ID \
+  --audit-log /PRIVATE/OPERATIONS/storage-audit.ndjson \
+  --operator-role privacy-reviewer \
+  --destroy-plaintext
+
+node scripts/validation-storage.mjs restore-validation-drill \
+  --activation-id REPLACE_WITH_SEALED_V2_ACTIVATION_ID \
+  --snapshot-artifact /PRIVATE/OPERATIONS/validation-snapshot.ccv2 \
+  --snapshot-manifest /PRIVATE/OPERATIONS/validation-snapshot.manifest.json \
+  --snapshot-key-file /PRIVATE/KEY-CUSTODY/validation-snapshot.key \
+  --suppression-artifact /PRIVATE/OPERATIONS/validation-suppression.ccv2 \
+  --suppression-manifest /PRIVATE/OPERATIONS/validation-suppression.manifest.json \
+  --suppression-key-file /PRIVATE/KEY-CUSTODY/validation-suppression.key \
+  --audit-log /PRIVATE/OPERATIONS/storage-audit.ndjson \
+  --evidence /PRIVATE/OPERATIONS/validation-restore-evidence.json \
+  --operator-role data-steward \
+  --destroy-restored
+```
+
+Successful local evidence sets `technical_validation_snapshot_restore_passed: true`,
+`candidate_performance_computed: false`, and `governance_approval_recorded: false`. It keeps
+`validation_snapshot_and_restore_gate_passed: false` until the external approvals, production
+configuration, and witnessed production-shaped acceptance drill are complete. Never publish
+the encrypted artifacts, manifests, audit log, or raw validation rows.
+
 ## Still required outside the repository
 
 - approve production key generation, custody, rotation, recovery, and destruction;
@@ -138,6 +213,9 @@ aggregate evidence, and audit head before the operational restore drill is accep
 - record the D1 Time Travel window and keep it shorter than the current tombstone window;
 - exercise the drill against a production-shaped non-production target with deleted account,
   trip, discussion, completed object task, and unresolved object task fixtures;
-- obtain the required second-person review; and
-- separately approve and implement the 730-day validation-only snapshot/suppression policy
-  before marking the v2 activation storage gate complete.
+- obtain the required second-person review;
+- approve the 730-day validation-only snapshot/suppression policy and production controls;
+- create and retention-test actual 730-day validation artifacts with separately custodied keys;
+- schedule and monitor daily snapshot/suppression capture, missed-run alerts, and expiration;
+- witness a production-shaped validation restore/deletion-replay drill and archive its reviewed
+  aggregate evidence before marking the v2 activation storage gate complete.
