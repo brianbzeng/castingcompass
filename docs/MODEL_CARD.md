@@ -4,7 +4,7 @@
 bathymetry self-supervised pretraining implemented; catch heads remain
 untrained; no catch performance measured.
 
-**Version:** 0.2.0
+**Version:** 0.3.0
 
 ## Model purpose
 
@@ -106,15 +106,46 @@ they must not be slipped into the terrain-only benchmark.
 
 ## Version and promotion contract
 
-Each run writes:
+`contracts/model-run.schema.json` freezes the structural
+`castingcompass.model-run/2.0.0` envelope. Content identity is enforced
+separately by `verify_run_record_integrity`; schema validation alone is not an
+integrity or promotion check. Each actual `run_metadata.json` writes:
 
-- immutable input file paths, byte sizes, and SHA-256 hashes;
+- resolved input file paths, byte sizes, and SHA-256 hashes;
 - full configuration and dataset kind;
 - Git revision and Python/platform runtime;
-- a content-derived `experiment_version`;
-- a content-derived `model_version`;
+- the taxon-catalog and, for labeled runs, observation-contract versions;
+- either a named `target_scope` and matching `target_taxon_id`, or explicit
+  `target-agnostic` / `null` scope for approved unlabeled terrain and seafloor
+  pretraining/probe runs;
+- content-derived `experiment_version` and `model_version` values with the
+  target slug and a full 64-character SHA-256 digest;
 - status (`unrun`, `running`, `completed`, or `failed`);
 - metrics artifact location and an explicit note describing result scope.
+
+The version seed includes command, dataset kind, contract versions, target
+scope, configuration, input digests, and a clean commit or content-derived dirty
+source-state identifier. Changing any of that material changes the resulting
+identifier. Final model/checkpoint bytes retain separate SHA-256 artifact hashes
+that promotion checks rehash. A target-specific run cannot use an
+unknown, unresolved, mixed, or generic target. `synthetic-target` is limited to
+synthetic tests; labeled production runs are currently limited to
+`california-halibut`. Existing terrain-only self-supervised work remains
+truthfully target-agnostic rather than being relabeled as halibut work.
+
+Completed checkpoint and metrics artifacts repeat the same target scope and
+model version. Loaders fail closed on missing/mismatched target or contract
+identity. `legacy_unverified` observations are ineligible for fitting,
+evaluation, calibration, and promotion.
+
+`contracts/opportunity.schema.json` freezes compact emitted window identity at
+`castingcompass.opportunity/2.0.0`. Every public window carries the target and
+all contract versions plus the scoring-system kind, version, and SHA-256. The
+current public hybrid score is explicitly `heuristic-configuration`, not a
+trained model. Its displayed score remains a relative 0–100 opportunity rank
+and `calibrated_probability` is not claimed. A future `trained-model` window
+must name a target-specific model-run version and pass the same equality checks
+through the static snapshot and API path.
 
 A model is eligible for a future `candidate` stage only after:
 

@@ -61,4 +61,12 @@ test("allows owners to edit or remove pending reports only", () => {
   assert.match(accountSource, />Edit</);
   assert.match(accountSource, />Remove</);
   assert.match(accountSource, /castingcompass\.profile-trip-draft\.v1/);
+  assert.match(accountSource, /not a structured v2 observation/);
+  assert.match(accountSource, /does not silently convert older counts/);
+  assert.match(accountSource, /valid observation contract means a report is internally structured, not that it has been admitted to model training/);
+  assert.match(authSource, /hasServerControlledObservationFields\(body\)/);
+  assert.match(authSource, /trip\.contract_status === "valid"/);
+  assert.match(accountSource, /Changing the location, start, finish, or fishing mode clears/);
+  assert.match(authSource, /forecastAttributionChanged/);
+  assert.match(authSource, /moderation_status = 'pending'/);
 });

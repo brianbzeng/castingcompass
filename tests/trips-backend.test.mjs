@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { handleTripRequest } from "../worker/trips.ts";
+import { buildSpeciesObservationContract, handleTripRequest } from "../worker/trips.ts";
 
 const ORIGIN = "https://contourcast.example";
 const SITES = [
@@ -39,6 +39,7 @@ class MemoryTripStore {
   async completeTrip(id, tokenHash, completion) {
     const row = this.trips.get(id);
     if (!row || row.status !== "active" || row.token_hash !== tokenHash) return null;
+    const forecastAttributionCleared = row.mode !== completion.mode;
     Object.assign(row, {
       status: "completed",
       ended_at: completion.endedAt,
@@ -51,12 +52,36 @@ class MemoryTripStore {
       short_released_count: completion.shortReleasedCount,
       halibut_encounters: completion.halibutEncounters,
       no_catch: Number(completion.noCatch),
+      other_catch_count: completion.otherCatchCount,
+      other_species: completion.otherSpecies,
+      observations_json: completion.observationsJson,
+      observation_contract_version: completion.observationContractVersion,
+      taxon_catalog_version: completion.taxonCatalogVersion,
+      target_taxon_id: completion.targetTaxonId,
+      contract_status: completion.contractStatus,
+      taxon_observations_json: completion.taxonObservationsJson,
+      outcome_class: completion.outcomeClass,
+      target_encounter_count: completion.targetEncounterCount,
+      any_fish_encounter_count: completion.anyFishEncounterCount,
+      target_identification_confidence: completion.targetIdentificationConfidence,
       notes: completion.notes,
       consent: 1,
       consent_at: completion.consentAt,
       moderation_status: "pending",
       score_influenced_choice:
-        completion.scoreInfluencedChoice === null ? null : Number(completion.scoreInfluencedChoice),
+        forecastAttributionCleared || completion.scoreInfluencedChoice === null
+          ? null
+          : Number(completion.scoreInfluencedChoice),
+      ...(forecastAttributionCleared ? {
+        opportunity_window_id: null,
+        opportunity_score: null,
+        habitat_score: null,
+        seasonality_score: null,
+        conditions_score: null,
+        fishability_score: null,
+        model_version: null,
+        prediction_metadata_json: null,
+      } : {}),
       photo_key: completion.photoKey,
       photo_content_type: completion.photoContentType,
       photo_size_bytes: completion.photoSizeBytes,
@@ -69,7 +94,11 @@ class MemoryTripStore {
 
   async getSummary(now) {
     const rows = [...this.trips.values()].filter(
-      (trip) => trip.status === "completed" && trip.consent === 1 && trip.moderation_status !== "rejected",
+      (trip) => trip.status === "completed" && trip.consent === 1 && trip.moderation_status !== "rejected"
+        && trip.contract_status === "valid"
+        && trip.observation_contract_version === "castingcompass.observation/2.0.0"
+        && trip.taxon_catalog_version === "castingcompass.taxa/1.0.0"
+        && trip.target_taxon_id === "california-halibut",
     );
     const cutoff = now.getTime() - 24 * 60 * 60 * 1000;
     const recentRows = rows.filter((trip) => new Date(trip.completed_at).getTime() >= cutoff);
@@ -111,6 +140,18 @@ function recordToRow(record) {
     short_released_count: record.shortReleasedCount,
     halibut_encounters: record.halibutEncounters,
     no_catch: record.noCatch === null ? null : Number(record.noCatch),
+    other_catch_count: record.otherCatchCount,
+    other_species: record.otherSpecies,
+    observations_json: record.observationsJson,
+    observation_contract_version: record.observationContractVersion,
+    taxon_catalog_version: record.taxonCatalogVersion,
+    target_taxon_id: record.targetTaxonId,
+    contract_status: record.contractStatus,
+    taxon_observations_json: record.taxonObservationsJson,
+    outcome_class: record.outcomeClass,
+    target_encounter_count: record.targetEncounterCount,
+    any_fish_encounter_count: record.anyFishEncounterCount,
+    target_identification_confidence: record.targetIdentificationConfidence,
     notes: record.notes,
     consent: Number(record.consent),
     consent_at: record.consentAt,
@@ -203,6 +244,10 @@ test("start and complete persist privacy-safe validation fields", async () => {
   assert.equal(started.trip.mode, "pier");
   assert.equal(started.trip.fishingMethod, "bait");
   assert.equal(started.trip.referralCode, "bay-area-anglers");
+  assert.equal(started.trip.targetTaxonId, "california-halibut");
+  assert.equal(started.trip.contractStatus, null);
+  assert.equal(started.trip.observationContractVersion, null);
+  assert.equal(started.trip.outcomeClass, null);
   assert.equal("reporterKey" in started.trip, false);
 
   const storedActive = store.trips.get(started.trip.id);
@@ -226,10 +271,32 @@ test("start and complete persist privacy-safe validation fields", async () => {
     { store, now: () => new Date("2026-07-11T18:01:00.000Z") },
   );
   assert.equal(completedResponse.status, 200);
-  const completed = (await completedResponse.json()).trip;
+  const completedPayload = await completedResponse.json();
+  const completed = completedPayload.trip;
+  assert.equal(completedPayload.forecastAttributionCleared, false);
+  assert.equal(completed.opportunityWindowId, "window-123");
+  assert.equal(completed.opportunityScore, 84);
+  assert.equal(completed.modelVersion, "model-0.2");
   assert.equal(completed.anglerHours, 4);
   assert.equal(completed.halibutEncounters, 3);
   assert.equal(completed.noCatch, false);
+  assert.equal(completed.observationContractVersion, "castingcompass.observation/2.0.0");
+  assert.equal(completed.taxonCatalogVersion, "castingcompass.taxa/1.0.0");
+  assert.equal(completed.targetTaxonId, "california-halibut");
+  assert.equal(completed.contractStatus, "valid");
+  assert.equal(completed.outcomeClass, "target_encountered");
+  assert.equal(completed.targetEncounterCount, 3);
+  assert.equal(completed.anyFishEncounterCount, 3);
+  assert.equal(completed.targetIdentificationConfidence, "self_reported");
+  assert.deepEqual(completed.taxonObservations, [{
+    taxon_id: "california-halibut",
+    encounter_count: 3,
+    retained_count: 1,
+    released_count: 2,
+    disposition_unknown_count: 0,
+    identification_confidence: "self_reported",
+    identification_basis: "angler-report",
+  }]);
   assert.equal(completed.moderationStatus, "pending");
 
   const persisted = store.trips.get(started.trip.id);
@@ -237,6 +304,123 @@ test("start and complete persist privacy-safe validation fields", async () => {
   assert.equal("latitude" in persisted, false);
   assert.equal("ip" in persisted, false);
   assert.equal("social_identity" in persisted, false);
+});
+
+test("non-target catch is not mislabeled as no-fish and remains taxonomically unresolved", async () => {
+  const store = new MemoryTripStore();
+  const form = new FormData();
+  form.set("siteId", "crissy-field");
+  form.set("startedAt", "2026-07-10T15:00:00.000Z");
+  form.set("endedAt", "2026-07-10T18:00:00.000Z");
+  form.set("keeperCount", "0");
+  form.set("shortReleasedCount", "0");
+  form.set("otherCatchCount", "2");
+  form.set("otherSpecies", "surfperch");
+  form.set("consent", "true");
+  form.set("reporterKey", "non-target-device-key-1234567890");
+  form.set("website", "");
+
+  const response = await handleTripRequest(
+    multipartRequest("/api/trips/report", form),
+    {},
+    SITES,
+    { store, now: () => new Date("2026-07-11T18:00:00.000Z") },
+  );
+
+  assert.equal(response.status, 201);
+  const trip = (await response.json()).trip;
+  assert.equal(trip.noCatch, false);
+  assert.equal(trip.outcomeClass, "non_target_only");
+  assert.equal(trip.targetEncounterCount, 0);
+  assert.equal(trip.anyFishEncounterCount, 2);
+  assert.equal(trip.targetIdentificationConfidence, "not_observed");
+  assert.deepEqual(trip.taxonObservations, [
+    {
+      taxon_id: "california-halibut",
+      encounter_count: 0,
+      retained_count: 0,
+      released_count: 0,
+      disposition_unknown_count: 0,
+      identification_confidence: "not_observed",
+      identification_basis: "not-observed",
+    },
+    {
+      taxon_id: "unresolved-fish",
+      encounter_count: 2,
+      retained_count: 0,
+      released_count: 0,
+      disposition_unknown_count: 2,
+      identification_confidence: "unresolved",
+      identification_basis: "unresolved",
+    },
+  ]);
+});
+
+test("server controls species target, versions, and structured outcomes", async () => {
+  const store = new MemoryTripStore();
+  const snakeOverride = await handleTripRequest(
+    jsonRequest("/api/trips/start", {
+      siteId: "oyster-point",
+      consent: true,
+      reporterKey: "server-contract-device-key-1234",
+      target_taxon_id: "unresolved-fish",
+    }),
+    {},
+    SITES,
+    { store },
+  );
+  assert.equal(snakeOverride.status, 422);
+  assert.equal((await snakeOverride.json()).error.code, "observation_contract_override_forbidden");
+
+  const form = new FormData();
+  form.set("siteId", "crissy-field");
+  form.set("startedAt", "2026-07-10T15:00:00.000Z");
+  form.set("endedAt", "2026-07-10T18:00:00.000Z");
+  form.set("keeperCount", "0");
+  form.set("shortReleasedCount", "0");
+  form.set("consent", "true");
+  form.set("reporterKey", "server-contract-device-key-5678");
+  form.set("taxonObservations", "[]");
+  form.set("temporal_precision", "exact");
+  const camelOverride = await handleTripRequest(
+    multipartRequest("/api/trips/report", form),
+    {},
+    SITES,
+    { store, now: () => new Date("2026-07-11T18:00:00.000Z") },
+  );
+  assert.equal(camelOverride.status, 422);
+  assert.equal((await camelOverride.json()).error.code, "observation_contract_override_forbidden");
+
+  const nestedSourceOverride = await handleTripRequest(
+    jsonRequest("/api/trips/start", {
+      siteId: "oyster-point",
+      consent: true,
+      reporterKey: "server-contract-device-key-9012",
+      source: { data_kind: "synthetic-fixture", complete_attempt: true },
+    }),
+    {},
+    SITES,
+    { store },
+  );
+  assert.equal(nestedSourceOverride.status, 422);
+  assert.equal((await nestedSourceOverride.json()).error.code, "observation_contract_override_forbidden");
+  assert.equal(store.trips.size, 0);
+});
+
+test("current reports are bounded and exact precision requires an explicit trusted signal", () => {
+  const base = {
+    tripId: "trip_00000000-0000-4000-8000-000000000001",
+    siteId: "crissy-field",
+    startedAt: "2026-07-10T15:00:00.000Z",
+    endedAt: "2026-07-10T18:00:00.000Z",
+    mode: "beach",
+    anglerHours: 3,
+    keeperCount: 0,
+    shortReleasedCount: 0,
+    otherCatchCount: 0,
+  };
+  assert.equal(buildSpeciesObservationContract(base).temporal_support.precision, "bounded");
+  assert.equal(buildSpeciesObservationContract({ ...base, temporalPrecision: "exact" }).temporal_support.precision, "exact");
 });
 
 test("past reports re-encode photos and the summary exposes validation totals", async () => {
@@ -309,6 +493,10 @@ test("past reports re-encode photos and the summary exposes validation totals", 
   assert.equal(response.status, 201);
   const reported = (await response.json()).trip;
   assert.equal(reported.noCatch, true);
+  assert.equal(reported.outcomeClass, "no_fish");
+  assert.equal(reported.targetEncounterCount, 0);
+  assert.equal(reported.anyFishEncounterCount, 0);
+  assert.equal(reported.targetIdentificationConfidence, "not_observed");
   assert.equal(reported.hasPhoto, true);
   assert.equal(reported.scoreInfluencedChoice, false);
   assert.equal(storedObjects.size, 1);

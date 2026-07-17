@@ -1407,7 +1407,7 @@ export function OpportunityApp() {
 
   const openTripReport = useCallback((mode: "start" | "past", siteId?: string, window?: OpportunityWindow) => {
     if (!account.user) {
-      account.openAccount("Sign in before submitting a trip report. Complete trips and skunks are tied to an account so the training data can be checked without making it public.");
+      account.openAccount("Sign in before submitting a trip report. Complete trips and skunks are tied to an account so reports can be reviewed privately before any separate decision about model evidence.");
       return;
     }
     tripReportRequestKey.current += 1;
@@ -1755,7 +1755,7 @@ export function OpportunityApp() {
         snapshot={snapshot}
         request={tripReportRequest}
         canSubmit={Boolean(account.user?.legalAccepted)}
-        onRequireLogin={() => account.openAccount("Sign in before submitting a trip report. Complete trips and skunks are tied to an account so the training data can be checked without making it public.")}
+        onRequireLogin={() => account.openAccount("Sign in before submitting a trip report. Complete trips and skunks are tied to an account so reports can be reviewed privately before any separate decision about model evidence.")}
       />
 
       <section className="source-section" id="sources">

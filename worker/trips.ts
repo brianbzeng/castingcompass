@@ -1,3 +1,12 @@
+import {
+  assertObservationContract,
+  CALIFORNIA_HALIBUT_TAXON_ID,
+  deriveObservationOutcomeClass,
+  OBSERVATION_CONTRACT_VERSION,
+  TAXON_CATALOG_VERSION,
+  UNRESOLVED_FISH_TAXON_ID,
+} from "../shared/species-contract.ts";
+
 const MAX_PHOTO_BYTES = 5 * 1024 * 1024;
 const MAX_MULTIPART_BYTES = MAX_PHOTO_BYTES + 1024 * 1024;
 const REPORTER_COOKIE = "cc_reporter";
@@ -73,6 +82,15 @@ export interface TripRow {
   other_catch_count: number | null;
   other_species: string | null;
   observations_json: string | null;
+  observation_contract_version: string | null;
+  taxon_catalog_version: string | null;
+  target_taxon_id: string;
+  contract_status: "valid" | "legacy_unverified" | "rejected" | null;
+  taxon_observations_json: string | null;
+  outcome_class: "target_encountered" | "non_target_only" | "no_fish" | null;
+  target_encounter_count: number | null;
+  any_fish_encounter_count: number | null;
+  target_identification_confidence: string | null;
   notes: string | null;
   consent: number;
   consent_at: string | null;
@@ -126,6 +144,15 @@ interface NewTripRecord {
   otherCatchCount: number | null;
   otherSpecies: string | null;
   observationsJson: string | null;
+  observationContractVersion: string | null;
+  taxonCatalogVersion: string | null;
+  targetTaxonId: string;
+  contractStatus: "valid" | "legacy_unverified" | "rejected" | null;
+  taxonObservationsJson: string | null;
+  outcomeClass: "target_encountered" | "non_target_only" | "no_fish" | null;
+  targetEncounterCount: number | null;
+  anyFishEncounterCount: number | null;
+  targetIdentificationConfidence: string | null;
   notes: string | null;
   consent: boolean;
   consentAt: string | null;
@@ -169,6 +196,15 @@ interface CompletionRecord {
   otherCatchCount: number;
   otherSpecies: string | null;
   observationsJson: string | null;
+  observationContractVersion: string;
+  taxonCatalogVersion: string;
+  targetTaxonId: string;
+  contractStatus: "valid";
+  taxonObservationsJson: string;
+  outcomeClass: "target_encountered" | "non_target_only" | "no_fish";
+  targetEncounterCount: number;
+  anyFishEncounterCount: number;
+  targetIdentificationConfidence: string;
   notes: string | null;
   consentAt: string;
   scoreInfluencedChoice: boolean | null;
@@ -236,6 +272,15 @@ const CREATE_TRIPS_SQL = `CREATE TABLE IF NOT EXISTS trips (
   other_catch_count INTEGER,
   other_species TEXT,
   observations_json TEXT,
+  observation_contract_version TEXT,
+  taxon_catalog_version TEXT,
+  target_taxon_id TEXT NOT NULL DEFAULT 'california-halibut',
+  contract_status TEXT,
+  taxon_observations_json TEXT,
+  outcome_class TEXT,
+  target_encounter_count INTEGER,
+  any_fish_encounter_count INTEGER,
+  target_identification_confidence TEXT,
   notes TEXT,
   consent INTEGER NOT NULL,
   consent_at TEXT,
@@ -266,6 +311,116 @@ const CREATE_TRIPS_SQL = `CREATE TABLE IF NOT EXISTS trips (
   CONSTRAINT trips_source_check CHECK (source in ('live', 'past_report')),
   CONSTRAINT trips_moderation_status_check CHECK (moderation_status in ('pending', 'approved', 'rejected')),
   CONSTRAINT trips_angler_count_check CHECK (angler_count between 1 and 12),
+  CONSTRAINT trips_contract_status_check CHECK (contract_status IS NULL OR contract_status in ('valid', 'legacy_unverified', 'rejected')),
+  CONSTRAINT trips_outcome_class_check CHECK (outcome_class IS NULL OR outcome_class in ('target_encountered', 'non_target_only', 'no_fish')),
+  CONSTRAINT trips_target_encounter_count_check CHECK (target_encounter_count IS NULL OR target_encounter_count >= 0),
+  CONSTRAINT trips_any_fish_encounter_count_check CHECK (any_fish_encounter_count IS NULL OR any_fish_encounter_count >= 0),
+  CONSTRAINT trips_target_identification_confidence_check CHECK (target_identification_confidence IS NULL OR target_identification_confidence in ('verified', 'self_reported', 'uncertain', 'unresolved', 'not_observed')),
+  CONSTRAINT trips_target_taxon_check CHECK (target_taxon_id = 'california-halibut'),
+  CONSTRAINT trips_species_contract_coherence_check CHECK (
+    (status != 'completed' OR contract_status IS NOT NULL)
+    AND (contract_status IS NOT NULL OR (
+      observation_contract_version IS NULL
+      AND taxon_catalog_version IS NULL
+      AND taxon_observations_json IS NULL
+      AND outcome_class IS NULL
+      AND target_encounter_count IS NULL
+      AND any_fish_encounter_count IS NULL
+      AND target_identification_confidence IS NULL
+    ))
+    AND (contract_status != 'legacy_unverified' OR (
+      observation_contract_version IS NULL
+      AND taxon_catalog_version IS NULL
+      AND taxon_observations_json IS NULL
+      AND outcome_class IS NULL
+      AND target_encounter_count IS NULL
+      AND any_fish_encounter_count IS NULL
+      AND target_identification_confidence IS NULL
+    ))
+    AND (contract_status != 'valid' OR (
+      status = 'completed'
+      AND observation_contract_version = 'castingcompass.observation/2.0.0'
+      AND taxon_catalog_version = 'castingcompass.taxa/1.0.0'
+      AND target_taxon_id = 'california-halibut'
+      AND typeof(angler_count) = 'integer'
+      AND angler_count BETWEEN 1 AND 12
+      AND typeof(angler_hours) IN ('integer', 'real')
+      AND angler_hours > 0
+      AND angler_hours <= 432
+      AND typeof(keeper_count) = 'integer'
+      AND typeof(short_released_count) = 'integer'
+      AND typeof(halibut_encounters) = 'integer'
+      AND typeof(no_catch) = 'integer'
+      AND typeof(other_catch_count) = 'integer'
+      AND typeof(target_encounter_count) = 'integer'
+      AND typeof(any_fish_encounter_count) = 'integer'
+      AND keeper_count BETWEEN 0 AND 25
+      AND short_released_count BETWEEN 0 AND 25
+      AND keeper_count + short_released_count <= 40
+      AND other_catch_count BETWEEN 0 AND 100
+      AND no_catch IN (0, 1)
+      AND typeof(mode) = 'text'
+      AND mode IN ('shore', 'beach', 'pier', 'jetty', 'kayak', 'boat', 'other')
+      AND typeof(started_at) = 'text'
+      AND typeof(ended_at) = 'text'
+      AND length(started_at) = 24
+      AND length(ended_at) = 24
+      AND strftime('%Y-%m-%dT%H:%M:%fZ', started_at) = started_at
+      AND strftime('%Y-%m-%dT%H:%M:%fZ', ended_at) = ended_at
+      AND julianday(ended_at) > julianday(started_at)
+      AND taxon_observations_json IS NOT NULL
+      AND json_valid(taxon_observations_json) = 1
+      AND outcome_class IS NOT NULL
+      AND target_encounter_count IS NOT NULL
+      AND any_fish_encounter_count IS NOT NULL
+      AND target_identification_confidence IS NOT NULL
+      AND target_encounter_count = keeper_count + short_released_count
+      AND halibut_encounters = target_encounter_count
+      AND any_fish_encounter_count = target_encounter_count + other_catch_count
+      AND target_encounter_count <= any_fish_encounter_count
+      AND target_identification_confidence = CASE
+        WHEN target_encounter_count > 0 THEN 'self_reported'
+        ELSE 'not_observed'
+      END
+      AND no_catch = CASE WHEN any_fish_encounter_count = 0 THEN 1 ELSE 0 END
+      AND outcome_class = CASE
+        WHEN target_encounter_count > 0 THEN 'target_encountered'
+        WHEN any_fish_encounter_count > 0 THEN 'non_target_only'
+        ELSE 'no_fish'
+      END
+      AND taxon_observations_json = CASE
+        WHEN other_catch_count > 0 THEN json_array(
+          json_object(
+            'taxon_id', 'california-halibut',
+            'encounter_count', target_encounter_count,
+            'retained_count', keeper_count,
+            'released_count', short_released_count,
+            'disposition_unknown_count', 0,
+            'identification_confidence', target_identification_confidence,
+            'identification_basis', CASE WHEN target_encounter_count > 0 THEN 'angler-report' ELSE 'not-observed' END
+          ),
+          json_object(
+            'taxon_id', 'unresolved-fish',
+            'encounter_count', other_catch_count,
+            'retained_count', 0,
+            'released_count', 0,
+            'disposition_unknown_count', other_catch_count,
+            'identification_confidence', 'unresolved',
+            'identification_basis', 'unresolved'
+          )
+        )
+        ELSE json_array(json_object(
+          'taxon_id', 'california-halibut',
+          'encounter_count', target_encounter_count,
+          'retained_count', keeper_count,
+          'released_count', short_released_count,
+          'disposition_unknown_count', 0,
+          'identification_confidence', target_identification_confidence,
+          'identification_basis', CASE WHEN target_encounter_count > 0 THEN 'angler-report' ELSE 'not-observed' END
+        ))
+      END
+    ))
+  ),
   FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL
 )`;
 
@@ -275,13 +430,25 @@ const CREATE_INDEX_STATEMENTS = [
   "CREATE INDEX IF NOT EXISTS trips_reporter_created_idx ON trips (reporter_key_hash, created_at)",
   "CREATE INDEX IF NOT EXISTS trips_referral_created_idx ON trips (referral_code, created_at)",
   "CREATE INDEX IF NOT EXISTS trips_user_completed_idx ON trips (user_id, completed_at)",
+  "CREATE INDEX IF NOT EXISTS trips_contract_target_completed_idx ON trips (contract_status, target_taxon_id, completed_at)",
+  `CREATE TRIGGER IF NOT EXISTS trips_completed_contract_insert_guard
+    BEFORE INSERT ON trips
+    WHEN NEW.status = 'completed' AND NEW.contract_status IS NULL
+    BEGIN SELECT RAISE(ABORT, 'completed trips require an explicit contract status'); END`,
+  `CREATE TRIGGER IF NOT EXISTS trips_completed_contract_update_guard
+    BEFORE UPDATE OF status, contract_status ON trips
+    WHEN NEW.status = 'completed' AND NEW.contract_status IS NULL
+    BEGIN SELECT RAISE(ABORT, 'completed trips require an explicit contract status'); END`,
 ];
 
 const INSERT_TRIP_SQL = `INSERT INTO trips (
   id, user_id, status, source, site_id, started_at, ended_at, mode, fishing_method, gear,
   gear_profile_id, rod, reel, bait_lure, rig,
   angler_count, angler_hours, keeper_count, short_released_count, halibut_encounters,
-  no_catch, other_catch_count, other_species, observations_json, notes, consent, consent_at, moderation_status, reporter_key_hash, referral_code, token_hash,
+  no_catch, other_catch_count, other_species, observations_json, observation_contract_version,
+  taxon_catalog_version, target_taxon_id, contract_status, taxon_observations_json, outcome_class,
+  target_encounter_count, any_fish_encounter_count, target_identification_confidence,
+  notes, consent, consent_at, moderation_status, reporter_key_hash, referral_code, token_hash,
   opportunity_window_id, opportunity_score, habitat_score, seasonality_score, conditions_score,
   fishability_score, model_version, score_influenced_choice, prediction_metadata_json, photo_key,
   photo_content_type, photo_size_bytes, created_at, updated_at, completed_at
@@ -290,7 +457,8 @@ const INSERT_TRIP_SQL = `INSERT INTO trips (
   ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
   ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
   ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
-  ?, ?, ?, ?, ?, ?
+  ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
+  ?, ?, ?, ?, ?
 )`;
 
 const initializedDatabases = new WeakMap<object, Promise<void>>();
@@ -312,6 +480,190 @@ class ApiError extends Error {
     this.status = status;
     this.code = code;
   }
+}
+
+const SERVER_CONTROLLED_OBSERVATION_FIELDS = [
+  "observationContract",
+  "observation_contract",
+  "observationContractVersion",
+  "observation_contract_version",
+  "contractVersion",
+  "contract_version",
+  "contractStatus",
+  "contract_status",
+  "taxonCatalogVersion",
+  "taxon_catalog_version",
+  "targetTaxonId",
+  "target_taxon_id",
+  "primaryTargetTaxonId",
+  "primary_target_taxon_id",
+  "targetSpecies",
+  "target_species",
+  "taxonId",
+  "taxon_id",
+  "speciesId",
+  "species_id",
+  "species",
+  "target",
+  "taxonObservations",
+  "taxon_observations",
+  "taxonObservationsJson",
+  "taxon_observations_json",
+  "outcomeClass",
+  "outcome_class",
+  "targetEncounterCount",
+  "target_encounter_count",
+  "anyFishEncounterCount",
+  "any_fish_encounter_count",
+  "targetIdentificationConfidence",
+  "target_identification_confidence",
+  "identificationConfidence",
+  "identification_confidence",
+  "identificationBasis",
+  "identification_basis",
+  "encounterCount",
+  "encounter_count",
+  "retainedCount",
+  "retained_count",
+  "releasedCount",
+  "released_count",
+  "dispositionUnknownCount",
+  "disposition_unknown_count",
+  "observationId",
+  "observation_id",
+  "effortSegmentId",
+  "effort_segment_id",
+  "targetEffort",
+  "target_effort",
+  "targetEffortValue",
+  "target_effort_value",
+  "temporalPrecision",
+  "temporal_precision",
+  "temporalSupport",
+  "temporal_support",
+  "spatialSupport",
+  "spatial_support",
+  "supportId",
+  "support_id",
+  "crs",
+  "x",
+  "y",
+  "source",
+  "sourceId",
+  "source_id",
+  "sourceRecordId",
+  "source_record_id",
+  "dataKind",
+  "data_kind",
+  "completeAttempt",
+  "complete_attempt",
+  "expandedEstimate",
+  "expanded_estimate",
+] as const;
+
+export function hasServerControlledObservationFields(source: Record<string, unknown> | FormData) {
+  return SERVER_CONTROLLED_OBSERVATION_FIELDS.some((field) =>
+    source instanceof FormData
+      ? source.has(field)
+      : Object.prototype.hasOwnProperty.call(source, field));
+}
+
+interface SpeciesObservationInput {
+  tripId: string;
+  siteId: string;
+  startedAt: string;
+  endedAt: string;
+  mode: string;
+  anglerHours: number;
+  keeperCount: number;
+  shortReleasedCount: number;
+  otherCatchCount: number;
+  temporalPrecision?: "exact" | "bounded";
+}
+
+export function buildSpeciesObservationContract(input: SpeciesObservationInput) {
+  const targetEncounterCount = input.keeperCount + input.shortReleasedCount;
+  const targetIdentificationConfidence = targetEncounterCount > 0 ? "self_reported" : "not_observed";
+  const taxonObservations = [
+    {
+      taxon_id: CALIFORNIA_HALIBUT_TAXON_ID,
+      encounter_count: targetEncounterCount,
+      retained_count: input.keeperCount,
+      released_count: input.shortReleasedCount,
+      disposition_unknown_count: 0,
+      identification_confidence: targetIdentificationConfidence,
+      identification_basis: targetEncounterCount > 0 ? "angler-report" : "not-observed",
+    },
+    ...(input.otherCatchCount > 0
+      ? [{
+          taxon_id: UNRESOLVED_FISH_TAXON_ID,
+          encounter_count: input.otherCatchCount,
+          retained_count: 0,
+          released_count: 0,
+          disposition_unknown_count: input.otherCatchCount,
+          identification_confidence: "unresolved",
+          identification_basis: "unresolved",
+        }]
+      : []),
+  ];
+  const outcomeClass = deriveObservationOutcomeClass(taxonObservations, CALIFORNIA_HALIBUT_TAXON_ID);
+  const observation = {
+    contract_version: OBSERVATION_CONTRACT_VERSION,
+    taxon_catalog_version: TAXON_CATALOG_VERSION,
+    contract_status: "valid",
+    observation_id: input.tripId,
+    effort_segment_id: `${input.tripId}:full-trip`,
+    primary_target_taxon_id: CALIFORNIA_HALIBUT_TAXON_ID,
+    source: {
+      source_id: "castingcompass-trip-log",
+      source_record_id: input.tripId,
+      data_kind: "complete-effort-segment",
+      complete_attempt: true,
+      expanded_estimate: false,
+    },
+    target_effort: {
+      value: input.anglerHours,
+      unit: "angler-hours",
+      mode: input.mode,
+    },
+    temporal_support: {
+      start_at: input.startedAt,
+      end_at: input.endedAt,
+      precision: input.temporalPrecision ?? "bounded",
+    },
+    spatial_support: {
+      kind: "site",
+      support_id: input.siteId,
+    },
+    taxon_observations: taxonObservations,
+    outcome_class: outcomeClass,
+  } as const;
+
+  assertObservationContract(observation, { environment: "production" });
+  return observation;
+}
+
+export function buildSpeciesObservationFields(input: SpeciesObservationInput) {
+  const observation = buildSpeciesObservationContract(input);
+  const targetObservation = observation.taxon_observations.find(
+    (row) => row.taxon_id === CALIFORNIA_HALIBUT_TAXON_ID,
+  );
+  if (!targetObservation) throw new Error("Validated observation is missing its target row");
+  const anyFishEncounterCount = observation.taxon_observations.reduce(
+    (total, row) => total + row.encounter_count,
+    0,
+  );
+  return {
+    observationContractVersion: OBSERVATION_CONTRACT_VERSION,
+    taxonCatalogVersion: TAXON_CATALOG_VERSION,
+    targetTaxonId: CALIFORNIA_HALIBUT_TAXON_ID,
+    contractStatus: "valid" as const,
+    taxonObservationsJson: JSON.stringify(observation.taxon_observations),
+    outcomeClass: observation.outcome_class,
+    targetEncounterCount: targetObservation.encounter_count,
+    anyFishEncounterCount,
+    targetIdentificationConfidence: targetObservation.identification_confidence,
+  };
 }
 
 export function createTripStore(db: D1DatabaseLike): TripStore {
@@ -390,6 +742,15 @@ export function createTripStore(db: D1DatabaseLike): TripStore {
           record.otherCatchCount,
           record.otherSpecies,
           record.observationsJson,
+          record.observationContractVersion,
+          record.taxonCatalogVersion,
+          record.targetTaxonId,
+          record.contractStatus,
+          record.taxonObservationsJson,
+          record.outcomeClass,
+          record.targetEncounterCount,
+          record.anyFishEncounterCount,
+          record.targetIdentificationConfidence,
           record.notes,
           Number(record.consent),
           record.consentAt,
@@ -425,14 +786,38 @@ export function createTripStore(db: D1DatabaseLike): TripStore {
     async completeTrip(id, tokenHash, completion) {
       const result = await db
         .prepare(`UPDATE trips SET
-          status = 'completed', ended_at = ?, mode = ?, fishing_method = ?, gear = ?,
+          status = 'completed',
+          opportunity_window_id = CASE WHEN mode = ? THEN opportunity_window_id ELSE NULL END,
+          opportunity_score = CASE WHEN mode = ? THEN opportunity_score ELSE NULL END,
+          habitat_score = CASE WHEN mode = ? THEN habitat_score ELSE NULL END,
+          seasonality_score = CASE WHEN mode = ? THEN seasonality_score ELSE NULL END,
+          conditions_score = CASE WHEN mode = ? THEN conditions_score ELSE NULL END,
+          fishability_score = CASE WHEN mode = ? THEN fishability_score ELSE NULL END,
+          model_version = CASE WHEN mode = ? THEN model_version ELSE NULL END,
+          prediction_metadata_json = CASE WHEN mode = ? THEN prediction_metadata_json ELSE NULL END,
+          score_influenced_choice = CASE WHEN mode = ? THEN ? ELSE NULL END,
+          ended_at = ?, mode = ?, fishing_method = ?, gear = ?,
           gear_profile_id = ?, rod = ?, reel = ?, bait_lure = ?, rig = ?,
           angler_count = ?, angler_hours = ?, keeper_count = ?, short_released_count = ?,
-          halibut_encounters = ?, no_catch = ?, other_catch_count = ?, other_species = ?, observations_json = ?, notes = ?, consent = 1, consent_at = ?,
-          moderation_status = 'pending', score_influenced_choice = ?, photo_key = ?,
+          halibut_encounters = ?, no_catch = ?, other_catch_count = ?, other_species = ?, observations_json = ?,
+          observation_contract_version = ?, taxon_catalog_version = ?, target_taxon_id = ?,
+          contract_status = ?, taxon_observations_json = ?, outcome_class = ?,
+          target_encounter_count = ?, any_fish_encounter_count = ?, target_identification_confidence = ?,
+          notes = ?, consent = 1, consent_at = ?,
+          moderation_status = 'pending', photo_key = ?,
           photo_content_type = ?, photo_size_bytes = ?, updated_at = ?, completed_at = ?, token_hash = NULL
         WHERE id = ? AND status = 'active' AND token_hash = ?`)
         .bind(
+          completion.mode,
+          completion.mode,
+          completion.mode,
+          completion.mode,
+          completion.mode,
+          completion.mode,
+          completion.mode,
+          completion.mode,
+          completion.mode,
+          completion.scoreInfluencedChoice === null ? null : Number(completion.scoreInfluencedChoice),
           completion.endedAt,
           completion.mode,
           completion.fishingMethod,
@@ -451,9 +836,17 @@ export function createTripStore(db: D1DatabaseLike): TripStore {
           completion.otherCatchCount,
           completion.otherSpecies,
           completion.observationsJson,
+          completion.observationContractVersion,
+          completion.taxonCatalogVersion,
+          completion.targetTaxonId,
+          completion.contractStatus,
+          completion.taxonObservationsJson,
+          completion.outcomeClass,
+          completion.targetEncounterCount,
+          completion.anyFishEncounterCount,
+          completion.targetIdentificationConfidence,
           completion.notes,
           completion.consentAt,
-          completion.scoreInfluencedChoice === null ? null : Number(completion.scoreInfluencedChoice),
           completion.photoKey,
           completion.photoContentType,
           completion.photoSizeBytes,
@@ -484,8 +877,18 @@ export function createTripStore(db: D1DatabaseLike): TripStore {
           COALESCE(SUM(CASE WHEN completed_at >= ? THEN halibut_encounters ELSE 0 END), 0) AS recent_halibut_encounters,
           COUNT(DISTINCT CASE WHEN completed_at >= ? THEN site_id END) AS recent_sites_covered
         FROM trips
-        WHERE status = 'completed' AND consent = 1 AND moderation_status != 'rejected'`)
-        .bind(cutoff, cutoff, cutoff, cutoff)
+        WHERE status = 'completed' AND consent = 1 AND moderation_status != 'rejected'
+          AND contract_status = 'valid' AND observation_contract_version = ?
+          AND taxon_catalog_version = ? AND target_taxon_id = ?`)
+        .bind(
+          cutoff,
+          cutoff,
+          cutoff,
+          cutoff,
+          OBSERVATION_CONTRACT_VERSION,
+          TAXON_CATALOG_VERSION,
+          CALIFORNIA_HALIBUT_TAXON_ID,
+        )
         .first<{
           completed_trips: number;
           no_catch_trips: number;
@@ -551,6 +954,7 @@ export async function handleTripRequest(
       const body = await readJsonObject(request);
       assertHoneypot(body.website);
       assertConsent(body.consent);
+      assertNoObservationContractOverride(body);
 
       const reporter = await getOrCreateReporter(request, body.reporterKey);
       await store.assertSubmissionAllowed(reporter.hash, now);
@@ -577,6 +981,15 @@ export async function handleTripRequest(
         shortReleasedCount: null,
         halibutEncounters: null,
         noCatch: null,
+        observationContractVersion: null,
+        taxonCatalogVersion: null,
+        targetTaxonId: CALIFORNIA_HALIBUT_TAXON_ID,
+        contractStatus: null,
+        taxonObservationsJson: null,
+        outcomeClass: null,
+        targetEncounterCount: null,
+        anyFishEncounterCount: null,
+        targetIdentificationConfidence: null,
         notes: null,
         consent: true,
         consentAt: timestamp,
@@ -602,6 +1015,7 @@ export async function handleTripRequest(
       assertBodySize(request, MAX_MULTIPART_BYTES);
       const form = await request.formData();
       assertHoneypot(form.get("website"));
+      assertNoObservationContractOverride(form);
       const id = completionMatch[1];
       if (!/^trip_[a-f0-9-]{36}$/.test(id)) {
         throw new ApiError(404, "trip_not_found", "The active trip could not be found.");
@@ -630,23 +1044,40 @@ export async function handleTripRequest(
       if (keeperCount + shortReleasedCount > 40) {
         throw new ApiError(422, "invalid_counts", "Combined halibut encounters cannot exceed 40.");
       }
+      const details = parseTripDetails(form, existing);
+      assertOtherSpeciesCountConsistency(details.otherCatchCount, details.otherSpecies);
+      const mode = parseMode(form.get("mode"), existing.mode);
+      const forecastAttributionCleared = mode !== existing.mode;
+      const anglerHours = round(durationHours * anglerCount, 2);
+      const speciesObservation = buildSpeciesObservationFields({
+        tripId: existing.id,
+        siteId: existing.site_id,
+        startedAt: existing.started_at,
+        endedAt,
+        mode,
+        anglerHours,
+        keeperCount,
+        shortReleasedCount,
+        otherCatchCount: details.otherCatchCount,
+      });
       if (form.has("consent")) assertConsent(form.get("consent"));
       const uploaded = await processPhoto(form.get("photo"), id, env);
 
       try {
         const completed = await store.completeTrip(id, await sha256(token), {
           endedAt,
-          mode: parseMode(form.get("mode"), existing.mode),
+          mode,
           fishingMethod:
             optionalText(form.get("method") ?? form.get("fishingMethod"), "method", 80) ??
             existing.fishing_method,
-          ...parseTripDetails(form, existing),
+          ...details,
           anglerCount,
-          anglerHours: round(durationHours * anglerCount, 2),
+          anglerHours,
           keeperCount,
           shortReleasedCount,
           halibutEncounters: keeperCount + shortReleasedCount,
-          noCatch: keeperCount + shortReleasedCount === 0,
+          noCatch: speciesObservation.anyFishEncounterCount === 0,
+          ...speciesObservation,
           notes: optionalText(form.get("notes"), "notes", 1000),
           consentAt: now.toISOString(),
           scoreInfluencedChoice:
@@ -667,7 +1098,7 @@ export async function handleTripRequest(
           throw new ApiError(404, "trip_not_found", "The active trip could not be found.");
         }
         options.onTripCompleted?.(completed);
-        return jsonResponse({ trip: publicTrip(completed) });
+        return jsonResponse({ trip: publicTrip(completed), forecastAttributionCleared });
       } catch (error) {
         if (uploaded) await env.TRIP_PHOTOS?.delete(uploaded.key).catch(() => undefined);
         throw error;
@@ -680,6 +1111,7 @@ export async function handleTripRequest(
       const form = await request.formData();
       assertHoneypot(form.get("website"));
       assertConsent(form.get("consent"));
+      assertNoObservationContractOverride(form);
 
       const reporter = await getOrCreateReporter(request, form.get("reporterKey"));
       await store.assertSubmissionAllowed(reporter.hash, now);
@@ -702,6 +1134,21 @@ export async function handleTripRequest(
 
       const id = `trip_${crypto.randomUUID()}`;
       const timestamp = now.toISOString();
+      const mode = parseMode(form.get("mode"), defaultMode(site));
+      const details = parseTripDetails(form);
+      assertOtherSpeciesCountConsistency(details.otherCatchCount, details.otherSpecies);
+      const anglerHours = round(durationHours * anglerCount, 2);
+      const speciesObservation = buildSpeciesObservationFields({
+        tripId: id,
+        siteId: site.id,
+        startedAt,
+        endedAt,
+        mode,
+        anglerHours,
+        keeperCount,
+        shortReleasedCount,
+        otherCatchCount: details.otherCatchCount,
+      });
       const uploaded = await processPhoto(form.get("photo"), id, env);
 
       try {
@@ -713,15 +1160,16 @@ export async function handleTripRequest(
           siteId: site.id,
           startedAt,
           endedAt,
-          mode: parseMode(form.get("mode"), defaultMode(site)),
+          mode,
           fishingMethod: optionalText(form.get("method") ?? form.get("fishingMethod"), "method", 80),
-          ...parseTripDetails(form),
+          ...details,
           anglerCount,
-          anglerHours: round(durationHours * anglerCount, 2),
+          anglerHours,
           keeperCount,
           shortReleasedCount,
           halibutEncounters: keeperCount + shortReleasedCount,
-          noCatch: keeperCount + shortReleasedCount === 0,
+          noCatch: speciesObservation.anyFishEncounterCount === 0,
+          ...speciesObservation,
           notes: optionalText(form.get("notes"), "notes", 1000),
           consent: true,
           consentAt: timestamp,
@@ -792,7 +1240,16 @@ function publicTrip(row: TripRow) {
     noCatch: row.no_catch === null ? null : Boolean(row.no_catch),
     otherCatchCount: row.other_catch_count,
     otherSpecies: row.other_species,
-    observations: row.observations_json ? JSON.parse(row.observations_json) : null,
+    observations: safeJsonValue(row.observations_json),
+    observationContractVersion: row.observation_contract_version,
+    taxonCatalogVersion: row.taxon_catalog_version,
+    targetTaxonId: row.target_taxon_id,
+    contractStatus: row.contract_status,
+    taxonObservations: safeJsonValue(row.taxon_observations_json),
+    outcomeClass: row.outcome_class,
+    targetEncounterCount: row.target_encounter_count,
+    anyFishEncounterCount: row.any_fish_encounter_count,
+    targetIdentificationConfidence: row.target_identification_confidence,
     notes: row.notes,
     consent: Boolean(row.consent),
     moderationStatus: row.moderation_status,
@@ -868,6 +1325,15 @@ function parsePrediction(source: Record<string, unknown> | FormData) {
     ),
     predictionMetadataJson,
   };
+}
+
+function safeJsonValue(value: string | null) {
+  if (!value) return null;
+  try {
+    return JSON.parse(value) as unknown;
+  } catch {
+    return null;
+  }
 }
 
 async function processPhoto(entry: FormDataEntryValue | null, tripId: string, env: TripApiEnv) {
@@ -1064,6 +1530,26 @@ async function readJsonObject(request: Request): Promise<Record<string, unknown>
 function assertHoneypot(value: unknown) {
   if (value !== null && value !== undefined && String(value).trim() !== "") {
     throw new ApiError(422, "invalid_submission", "The trip submission could not be accepted.");
+  }
+}
+
+function assertNoObservationContractOverride(source: Record<string, unknown> | FormData) {
+  if (hasServerControlledObservationFields(source)) {
+    throw new ApiError(
+      422,
+      "observation_contract_override_forbidden",
+      "The trip target and observation contract are controlled by CastingCompass.",
+    );
+  }
+}
+
+function assertOtherSpeciesCountConsistency(otherCatchCount: number, otherSpecies: string | null) {
+  if (otherCatchCount === 0 && otherSpecies) {
+    throw new ApiError(
+      422,
+      "invalid_other_species",
+      "Enter an other-fish count when describing a non-halibut catch.",
+    );
   }
 }
 

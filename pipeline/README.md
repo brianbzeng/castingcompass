@@ -75,43 +75,47 @@ optical kelp/surf layers can be appended with an explicit availability mask.
 Missing coverage is therefore observable to the model rather than silently
 median-filled.
 
-Export CRFS sample data or estimates from the official RecFIN warehouse. Keep
-the raw file and query parameters. A column map is a JSON object from canonical
-name to export column, for example:
+Export complete-effort CRFS sample records from the official source and keep
+the raw file and query parameters. Before pipeline ingestion, transform each
+complete effort segment into one canonical observation v2 JSON object. Flat
+catch-only CSVs and expanded estimates are rejected because they cannot supply
+truthful zero-catch effort or one-row-per-attempt labels. A JSONL row has this
+shape (abbreviated only by having one zero-count target row):
 
 ```json
-{
-  "event_id": "SOURCE_SAMPLE_ID",
-  "species": "COMMON_NAME",
-  "catch_count": "OBSERVED_CATCH",
-  "effort_hours": "ANGLER_HOURS",
-  "sample_weight": "SAMPLES"
-}
+{"contract_version":"castingcompass.observation/2.0.0","taxon_catalog_version":"castingcompass.taxa/1.0.0","contract_status":"valid","observation_id":"crfs:sample-123","effort_segment_id":"crfs:effort-123","primary_target_taxon_id":"california-halibut","source":{"source_id":"cdfw_crfs","source_record_id":"sample-123","data_kind":"complete-effort-segment","complete_attempt":true,"expanded_estimate":false},"target_effort":{"value":2.5,"unit":"angler-hours","mode":"shore"},"temporal_support":{"start_at":"2026-06-01T15:00:00Z","end_at":"2026-06-01T17:30:00Z","precision":"exact"},"spatial_support":{"kind":"site","support_id":"crfs-site-123"},"taxon_observations":[{"taxon_id":"california-halibut","encounter_count":0,"retained_count":0,"released_count":0,"disposition_unknown_count":0,"identification_confidence":"not_observed","identification_basis":"not-observed"}],"outcome_class":"no_fish"}
 ```
 
 ```bash
 python3 -m pipeline.contourcast.cli ingest-observations \
-  --input data/raw/recfin_export.csv \
+  --input data/canonical/crfs_observations.jsonl \
   --output data/processed/observations.csv \
   --source-id cdfw_crfs \
-  --column-map data/raw/column_map.json \
+  --primary-target-taxon-id california-halibut \
   --expected-sha256 'REPLACE_WITH_REAL_SHA256'
 ```
 
-Area-level rows are retained for aggregate analysis but receive
-`terrain_model_eligible=false`. Only legitimately released point coordinates in
-the raster's exact projected CRS may enter patch models.
+Every record must declare the same primary target. Per-taxon rows distinguish
+`target_encountered`, `non_target_only`, and `no_fish`; unresolved non-target
+fish remain `unresolved-fish` rather than being promoted to a named species.
+Area/site rows and bounded-time rows are retained for descriptive analysis but
+receive `terrain_model_eligible=false`. Only exact-time, legitimately released
+point coordinates in the raster's exact projected CRS may enter patch models.
+The flattened `sample_weight` is always `1.0` per complete effort segment; it
+is never a survey expansion weight.
 
 ```bash
 python3 -m pipeline.contourcast.cli validate \
   --bathymetry data/processed/bathymetry.npz \
-  --observations data/processed/observations.csv
+  --observations data/processed/observations.csv \
+  --target-taxon-id california-halibut
 
 python3 -m pipeline.contourcast.cli evaluate-baselines \
   --terrain data/processed/terrain.npz \
   --observations data/processed/observations.csv \
   --output-dir artifacts/real-baseline-v1 \
   --dataset-kind real_observations \
+  --target-taxon-id california-halibut \
   --splits 5 \
   --buffer-m 250
 ```

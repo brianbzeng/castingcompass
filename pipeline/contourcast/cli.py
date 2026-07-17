@@ -56,7 +56,7 @@ def build_parser() -> argparse.ArgumentParser:
     observations.add_argument("--input", required=True, type=_path)
     observations.add_argument("--output", required=True, type=_path)
     observations.add_argument("--source-id", required=True)
-    observations.add_argument("--column-map", type=_path)
+    observations.add_argument("--primary-target-taxon-id", required=True)
     observations.add_argument("--expected-sha256")
 
     terrain = subcommands.add_parser("derive-terrain")
@@ -139,12 +139,14 @@ def build_parser() -> argparse.ArgumentParser:
     validate = subcommands.add_parser("validate")
     validate.add_argument("--bathymetry", required=True, type=_path)
     validate.add_argument("--observations", required=True, type=_path)
+    validate.add_argument("--target-taxon-id", required=True)
 
     evaluate = subcommands.add_parser("evaluate-baselines")
     evaluate.add_argument("--terrain", required=True, type=_path)
     evaluate.add_argument("--observations", required=True, type=_path)
     evaluate.add_argument("--output-dir", required=True, type=_path)
     evaluate.add_argument("--dataset-kind", default="real_observations")
+    evaluate.add_argument("--target-taxon-id", required=True)
     evaluate.add_argument("--patch-size", type=int, default=17)
     evaluate.add_argument("--splits", type=int, default=5)
     evaluate.add_argument("--buffer-m", type=float, default=250.0)
@@ -186,7 +188,7 @@ def main(argv: Sequence[str] | None = None) -> int:
                 args.input,
                 args.output,
                 source_id=args.source_id,
-                column_map_path=args.column_map,
+                primary_target_taxon_id=args.primary_target_taxon_id,
                 expected_sha256=args.expected_sha256,
             )
         )
@@ -305,7 +307,11 @@ def main(argv: Sequence[str] | None = None) -> int:
         )
     elif args.command == "validate":
         grid = load_grid(args.bathymetry)
-        frame = load_model_observations(args.observations, grid.crs)
+        frame = load_model_observations(
+            args.observations,
+            grid.crs,
+            expected_target_taxon_id=args.target_taxon_id,
+        )
         _print(
             {
                 "status": "valid",
@@ -321,6 +327,7 @@ def main(argv: Sequence[str] | None = None) -> int:
                 args.observations,
                 args.output_dir,
                 dataset_kind=args.dataset_kind,
+                target_taxon_id=args.target_taxon_id,
                 patch_size=args.patch_size,
                 n_splits=args.splits,
                 buffer_m=args.buffer_m,

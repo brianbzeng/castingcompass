@@ -71,6 +71,57 @@ flowchart TB
     GATE -->|"versioned artifact + metrics"| API
 ```
 
+## Species-contract boundary
+
+The cross-language boundary is machine-readable and version locked:
+
+```mermaid
+flowchart LR
+    TAXA["taxa/1.0.0 closed catalog"] --> OBS["observation/2.0.0 complete effort segment"]
+    OBS --> FLAT["validated model table"]
+    TAXA --> RUN["model-run/2.0.0 target or target-agnostic scope"]
+    FLAT --> RUN
+    RUN --> ART["target-stamped metrics and checkpoints"]
+    ART --> OPP["opportunity/2.0.0 emitted window"]
+    OPP --> STATIC["compact static snapshot"]
+    OPP --> API2["normalized API response"]
+```
+
+`contracts/taxa.json` is the canonical catalog. Strictly compiled JSON schemas
+freeze structural observation, run-metadata, and emitted-opportunity envelopes;
+semantic validators remain mandatory for cross-field arithmetic, uniqueness,
+environment, chronology, and content-identity rules. TypeScript and Python
+helpers expose the same IDs and eligibility semantics. TypeScript owns reusable
+record validators; Python applies fail-closed observation validation in its
+ingestion and model-loading boundaries. One shared positive/adversarial fixture
+corpus must pass with the same semantic result in both runtimes.
+The contract currently permits California halibut as the only production model
+target, unresolved fish as an observation-only bucket, and a test-only
+synthetic target.
+
+Each observation represents one complete targeted effort segment, not one
+catch. It always includes the primary target row, so target misses with other
+fish (`non_target_only`) stay distinct from trips with no fish (`no_fish`).
+Catch-only exports, expanded estimates, generic targets, mixed targets, and
+count/outcome mismatches stop at ingestion. Launch-v2 point observations are
+limited to explicitly approved projected CRSs. Point-model eligibility
+additionally requires exact temporal support, an exact match to the expected
+model grid CRS, finite point coordinates, and a valid v2 contract.
+
+Model metadata is either target-specific or explicitly target-agnostic for the
+approved unlabeled terrain/probe workflows. Target and contract identity enter
+the content-derived version seed and are repeated in downstream artifacts.
+Public opportunity windows use a compact flat identity rather than duplicating
+a nested object across every window. The identity distinguishes the current
+`heuristic-configuration` from a future `trained-model`, and the static and API
+paths validate the same target, versions, scoring version, and scoring hash.
+
+The additive species migration preserves historical trip rows as
+`legacy_unverified`; it does not infer confidence or reconstruct per-taxon
+dispositions that were never collected. Those rows remain user-visible and
+deletable but cannot enter modeling or validation. Production rollout requires
+the migration plus aggregate pre/post audits before v2 collection is enabled.
+
 ## Score flow
 
 1. `HabitatScore` comes from the promoted spatial model. In the current demo it is a labeled curated proxy, not a trained-model output.

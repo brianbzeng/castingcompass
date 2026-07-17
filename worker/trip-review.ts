@@ -64,7 +64,16 @@ export async function reviewTripWithMimo(env: ReviewEnv, tripOrId: TripRow | str
     halibutEncounters: trip.halibut_encounters,
     noCatch: Boolean(trip.no_catch),
     otherCatchCount: trip.other_catch_count,
-    otherSpecies: trip.other_species,
+    reportedOtherSpeciesLabel: trip.other_species,
+    observationContractVersion: trip.observation_contract_version,
+    taxonCatalogVersion: trip.taxon_catalog_version,
+    primaryTargetTaxonId: trip.target_taxon_id,
+    contractStatus: trip.contract_status,
+    taxonObservations: safeJson(trip.taxon_observations_json),
+    outcomeClass: trip.outcome_class,
+    targetEncounterCount: trip.target_encounter_count,
+    anyFishEncounterCount: trip.any_fish_encounter_count,
+    targetIdentificationConfidence: trip.target_identification_confidence,
     observedFishability: safeJson(trip.observations_json),
     forecastFishabilityScore: trip.fishability_score,
     notes: trip.notes?.slice(0, 1000) ?? null,
@@ -86,7 +95,7 @@ export async function reviewTripWithMimo(env: ReviewEnv, tripOrId: TripRow | str
         messages: [
           {
             role: "system",
-            content: `You review California halibut trip reports for data quality and normalize angler gear. Never decide whether a person is truthful and never approve or reject a report. Identify only completeness, internal consistency, impossible numeric/time combinations, and details a human reviewer should check. Do not rank brands or claim one product catches more fish without sufficient aggregate evidence. Normalize recognizable rod, reel, and lure brands/series/models; preserve uncertainty and do not invent a missing model.
+            content: `You review California halibut trip reports for data quality and normalize angler gear. Never decide whether a person is truthful and never approve or reject a report. Identify only completeness, internal consistency, impossible numeric/time combinations, and details a human reviewer should check. Do not rank brands or claim one product catches more fish without sufficient aggregate evidence. Normalize recognizable rod, reel, and lure brands/series/models; preserve uncertainty and do not invent a missing model. The server-controlled structured observation fields are authoritative only when contractStatus is valid. Treat legacy_unverified or missing structured evidence as non-model evidence, and do not infer a species identity from reportedOtherSpeciesLabel.
 
 If notes contain useful spot context, prepare a short pseudonymous discussion draft for a human moderator. You cannot publish or approve it. Remove names, handles, contact details, exact sub-location clues, and anything unsafe, abusive, or unrelated. The draft may mention the general curated site, time of day, catch or skunk, technique, normalized gear, crowding, clarity, shorebreak, and fishability. Set publish false when notes are empty, cannot be safely minimized, are off-topic, or need human review.
 

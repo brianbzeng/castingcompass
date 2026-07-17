@@ -191,6 +191,15 @@ export const trips = sqliteTable(
     otherCatchCount: integer("other_catch_count"),
     otherSpecies: text("other_species"),
     observationsJson: text("observations_json"),
+    observationContractVersion: text("observation_contract_version"),
+    taxonCatalogVersion: text("taxon_catalog_version"),
+    targetTaxonId: text("target_taxon_id").notNull().default("california-halibut"),
+    contractStatus: text("contract_status"),
+    taxonObservationsJson: text("taxon_observations_json"),
+    outcomeClass: text("outcome_class"),
+    targetEncounterCount: integer("target_encounter_count"),
+    anyFishEncounterCount: integer("any_fish_encounter_count"),
+    targetIdentificationConfidence: text("target_identification_confidence"),
     notes: text("notes"),
     consent: integer("consent", { mode: "boolean" }).notNull(),
     consentAt: text("consent_at"),
@@ -226,11 +235,147 @@ export const trips = sqliteTable(
       sql`${table.moderationStatus} in ('pending', 'approved', 'rejected')`,
     ),
     check("trips_angler_count_check", sql`${table.anglerCount} between 1 and 12`),
+    check(
+      "trips_contract_status_check",
+      sql`${table.contractStatus} is null or ${table.contractStatus} in ('valid', 'legacy_unverified', 'rejected')`,
+    ),
+    check(
+      "trips_outcome_class_check",
+      sql`${table.outcomeClass} is null or ${table.outcomeClass} in ('target_encountered', 'non_target_only', 'no_fish')`,
+    ),
+    check(
+      "trips_target_encounter_count_check",
+      sql`${table.targetEncounterCount} is null or ${table.targetEncounterCount} >= 0`,
+    ),
+    check(
+      "trips_any_fish_encounter_count_check",
+      sql`${table.anyFishEncounterCount} is null or ${table.anyFishEncounterCount} >= 0`,
+    ),
+    check(
+      "trips_target_identification_confidence_check",
+      sql`${table.targetIdentificationConfidence} is null or ${table.targetIdentificationConfidence} in ('verified', 'self_reported', 'uncertain', 'unresolved', 'not_observed')`,
+    ),
+    check("trips_target_taxon_check", sql`${table.targetTaxonId} = 'california-halibut'`),
+    check(
+      "trips_species_contract_coherence_check",
+      sql`(
+        ${table.status} != 'completed' or ${table.contractStatus} is not null
+      ) and (
+        ${table.contractStatus} is not null or (
+          ${table.observationContractVersion} is null
+          and ${table.taxonCatalogVersion} is null
+          and ${table.taxonObservationsJson} is null
+          and ${table.outcomeClass} is null
+          and ${table.targetEncounterCount} is null
+          and ${table.anyFishEncounterCount} is null
+          and ${table.targetIdentificationConfidence} is null
+        )
+      ) and (
+        ${table.contractStatus} != 'legacy_unverified' or (
+          ${table.observationContractVersion} is null
+          and ${table.taxonCatalogVersion} is null
+          and ${table.taxonObservationsJson} is null
+          and ${table.outcomeClass} is null
+          and ${table.targetEncounterCount} is null
+          and ${table.anyFishEncounterCount} is null
+          and ${table.targetIdentificationConfidence} is null
+        )
+      ) and (
+        ${table.contractStatus} != 'valid' or (
+          ${table.status} = 'completed'
+          and ${table.observationContractVersion} = 'castingcompass.observation/2.0.0'
+          and ${table.taxonCatalogVersion} = 'castingcompass.taxa/1.0.0'
+          and ${table.targetTaxonId} = 'california-halibut'
+          and typeof(${table.anglerCount}) = 'integer'
+          and ${table.anglerCount} between 1 and 12
+          and typeof(${table.anglerHours}) in ('integer', 'real')
+          and ${table.anglerHours} > 0
+          and ${table.anglerHours} <= 432
+          and typeof(${table.keeperCount}) = 'integer'
+          and typeof(${table.shortReleasedCount}) = 'integer'
+          and typeof(${table.halibutEncounters}) = 'integer'
+          and typeof(${table.noCatch}) = 'integer'
+          and typeof(${table.otherCatchCount}) = 'integer'
+          and typeof(${table.targetEncounterCount}) = 'integer'
+          and typeof(${table.anyFishEncounterCount}) = 'integer'
+          and ${table.keeperCount} between 0 and 25
+          and ${table.shortReleasedCount} between 0 and 25
+          and ${table.keeperCount} + ${table.shortReleasedCount} <= 40
+          and ${table.otherCatchCount} between 0 and 100
+          and ${table.noCatch} in (0, 1)
+          and typeof(${table.mode}) = 'text'
+          and ${table.mode} in ('shore', 'beach', 'pier', 'jetty', 'kayak', 'boat', 'other')
+          and typeof(${table.startedAt}) = 'text'
+          and typeof(${table.endedAt}) = 'text'
+          and length(${table.startedAt}) = 24
+          and length(${table.endedAt}) = 24
+          and strftime('%Y-%m-%dT%H:%M:%fZ', ${table.startedAt}) = ${table.startedAt}
+          and strftime('%Y-%m-%dT%H:%M:%fZ', ${table.endedAt}) = ${table.endedAt}
+          and julianday(${table.endedAt}) > julianday(${table.startedAt})
+          and ${table.taxonObservationsJson} is not null
+          and json_valid(${table.taxonObservationsJson}) = 1
+          and ${table.outcomeClass} is not null
+          and ${table.targetEncounterCount} is not null
+          and ${table.anyFishEncounterCount} is not null
+          and ${table.targetIdentificationConfidence} is not null
+          and ${table.targetEncounterCount} = ${table.keeperCount} + ${table.shortReleasedCount}
+          and ${table.halibutEncounters} = ${table.targetEncounterCount}
+          and ${table.anyFishEncounterCount} = ${table.targetEncounterCount} + ${table.otherCatchCount}
+          and ${table.targetEncounterCount} <= ${table.anyFishEncounterCount}
+          and ${table.targetIdentificationConfidence} = case
+            when ${table.targetEncounterCount} > 0 then 'self_reported'
+            else 'not_observed'
+          end
+          and ${table.noCatch} = case when ${table.anyFishEncounterCount} = 0 then 1 else 0 end
+          and ${table.outcomeClass} = case
+            when ${table.targetEncounterCount} > 0 then 'target_encountered'
+            when ${table.anyFishEncounterCount} > 0 then 'non_target_only'
+            else 'no_fish'
+          end
+          and ${table.taxonObservationsJson} = case
+            when ${table.otherCatchCount} > 0 then json_array(
+              json_object(
+                'taxon_id', 'california-halibut',
+                'encounter_count', ${table.targetEncounterCount},
+                'retained_count', ${table.keeperCount},
+                'released_count', ${table.shortReleasedCount},
+                'disposition_unknown_count', 0,
+                'identification_confidence', ${table.targetIdentificationConfidence},
+                'identification_basis', case when ${table.targetEncounterCount} > 0 then 'angler-report' else 'not-observed' end
+              ),
+              json_object(
+                'taxon_id', 'unresolved-fish',
+                'encounter_count', ${table.otherCatchCount},
+                'retained_count', 0,
+                'released_count', 0,
+                'disposition_unknown_count', ${table.otherCatchCount},
+                'identification_confidence', 'unresolved',
+                'identification_basis', 'unresolved'
+              )
+            )
+            else json_array(json_object(
+              'taxon_id', 'california-halibut',
+              'encounter_count', ${table.targetEncounterCount},
+              'retained_count', ${table.keeperCount},
+              'released_count', ${table.shortReleasedCount},
+              'disposition_unknown_count', 0,
+              'identification_confidence', ${table.targetIdentificationConfidence},
+              'identification_basis', case when ${table.targetEncounterCount} > 0 then 'angler-report' else 'not-observed' end
+            ))
+          end
+        )
+      )`,
+    ),
     index("trips_status_started_idx").on(table.status, table.startedAt),
     index("trips_site_started_idx").on(table.siteId, table.startedAt),
     index("trips_reporter_created_idx").on(table.reporterKeyHash, table.createdAt),
     index("trips_referral_created_idx").on(table.referralCode, table.createdAt),
     index("trips_user_completed_idx").on(table.userId, table.completedAt),
+    index("trips_contract_target_completed_idx").on(
+      table.contractStatus,
+      table.targetTaxonId,
+      table.completedAt,
+    ),
   ],
 );
 

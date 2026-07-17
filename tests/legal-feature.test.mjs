@@ -59,4 +59,5 @@ test("public legal pages separate forecast limitations, privacy, and automated r
   assert.match(ai, /hybrid ranking system/);
   assert.match(ai, /not a catch probability/);
   assert.match(ai, /response cannot restore the deleted trip or publish a post/);
+  assert.match(ai, /Trip reports do not change the current score or enter model evaluation automatically/);
 });

@@ -26,10 +26,17 @@ test("active reports are recoverable without collecting social identity or GPS",
   assert.doesNotMatch(source, /facebookHandle|latitude|longitude/);
 });
 
-test("trip UX treats zero catch and photo validation as first-class states", async () => {
+test("trip UX distinguishes no fish, target encounters, and unresolved non-target catch", async () => {
   const source = await readFile(featurePath, "utf8");
 
-  assert.match(source, /Record no-catch trip/);
+  assert.match(source, /Record no-fish trip/);
+  assert.match(source, /California halibut is the fixed observation target/);
+  assert.match(source, /unresolved non-target fish/);
+  assert.match(source, /anyFishEncounters = targetEncounters \+ fields\.otherCatchCount/);
+  assert.match(source, /nothing enters training automatically/);
+  assert.match(source, /Model use requires a separate validation protocol/);
+  assert.match(source, /Trip reports do not change the current score/);
+  assert.doesNotMatch(source, /same validation value as a catch/);
   assert.match(source, /image\/jpeg,image\/png,image\/webp/);
   assert.match(source, /MAX_PHOTO_BYTES = 5 \* 1024 \* 1024/);
   assert.match(source, /role="dialog"/);
@@ -47,6 +54,7 @@ test("trip entry points are present in the top bar, forecast detail, and validat
   assert.match(app, /<TripReportFeature/);
   assert.match(app, /sites=\{sites\}/);
   assert.match(app, /canSubmit=\{Boolean\(account\.user\?\.legalAccepted\)\}/);
+  assert.doesNotMatch(app, /training data can be checked/);
   assert.match(feature, /id="validation"/);
   assert.match(feature, /The skunks/);
   assert.match(app, /22 inches total length/);

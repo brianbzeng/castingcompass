@@ -1,4 +1,5 @@
-import type { CuratedSite, D1DatabaseLike, TripRow } from "./trips";
+import { buildSpeciesObservationFields, hasServerControlledObservationFields } from "./trips.ts";
+import type { CuratedSite, D1DatabaseLike, TripRow } from "./trips.ts";
 
 const SESSION_COOKIE = "cc_session";
 const DELETION_RECEIPT_COOKIE = "cc_deletion_receipt";
@@ -621,7 +622,10 @@ export async function handleAccountRequest(
         db.prepare(`SELECT id, status, source, site_id, started_at, ended_at, mode, fishing_method,
           gear, gear_profile_id, rod, reel, bait_lure, rig, angler_count, angler_hours,
           keeper_count, short_released_count, halibut_encounters, no_catch, other_catch_count,
-          other_species, observations_json, notes, consent, consent_at, moderation_status,
+          other_species, observations_json, observation_contract_version, taxon_catalog_version,
+          target_taxon_id, contract_status, taxon_observations_json, outcome_class,
+          target_encounter_count, any_fish_encounter_count, target_identification_confidence,
+          notes, consent, consent_at, moderation_status,
           referral_code, opportunity_window_id, opportunity_score, habitat_score, seasonality_score,
           conditions_score, fishability_score, model_version, score_influenced_choice,
           prediction_metadata_json, photo_content_type, photo_size_bytes, created_at, updated_at,
@@ -751,6 +755,9 @@ export async function handleAccountRequest(
         db.prepare(`SELECT id, source, site_id, started_at, ended_at, mode, fishing_method,
           angler_count, angler_hours, keeper_count, short_released_count, halibut_encounters,
           no_catch, other_catch_count, other_species, observations_json, notes, moderation_status,
+          observation_contract_version, taxon_catalog_version, target_taxon_id, contract_status,
+          taxon_observations_json, outcome_class, target_encounter_count, any_fish_encounter_count,
+          target_identification_confidence,
           opportunity_score, fishability_score, model_version, gear_profile_id, rod, reel,
           bait_lure, rig, ai_review_status, ai_review_json, ai_review_model, ai_reviewed_at, completed_at
           FROM trips
@@ -824,10 +831,19 @@ export async function handleAccountRequest(
     if (profileTripMatch) {
       assertSameOrigin(request);
       const tripId = profileTripMatch[1];
-      const trip = await db.prepare(`SELECT id, user_id, moderation_status, photo_key
+      const trip = await db.prepare(`SELECT id, user_id, site_id, started_at, ended_at, mode, moderation_status, photo_key,
+          observation_contract_version, taxon_catalog_version,
+          target_taxon_id, contract_status, taxon_observations_json, outcome_class,
+          target_encounter_count, any_fish_encounter_count, target_identification_confidence
         FROM trips WHERE id = ? AND user_id = ? AND status = 'completed' LIMIT 1`)
         .bind(tripId, user.id)
-        .first<{ id: string; user_id: string; moderation_status: string; photo_key: string | null }>();
+        .first<Pick<TripRow,
+          "id" | "user_id" | "site_id" | "started_at" | "ended_at" | "mode" | "moderation_status" | "photo_key" |
+          "observation_contract_version" |
+          "taxon_catalog_version" | "target_taxon_id" | "contract_status" |
+          "taxon_observations_json" | "outcome_class" | "target_encounter_count" |
+          "any_fish_encounter_count" | "target_identification_confidence"
+        >>();
       if (!trip) return errorResponse(404, "trip_not_found", "That trip log could not be found.");
       if (trip.moderation_status !== "pending") {
         return errorResponse(409, "trip_reviewed", "Reviewed trip logs can no longer be changed.");
@@ -835,13 +851,18 @@ export async function handleAccountRequest(
 
       if (request.method === "DELETE") {
         const deletion = await prepareDeletionJob("trip", tripId, user.id, trip.photo_key ? [trip.photo_key] : []);
-        await db.batch([
-          deletion.jobStatement(db),
-          ...deletion.taskStatements(db),
-          db.prepare("DELETE FROM site_discussion_posts WHERE trip_id = ?").bind(tripId),
-          db.prepare("DELETE FROM trips WHERE id = ? AND user_id = ?")
+        const deletionResults = await db.batch([
+          deletion.jobStatementForPendingTrip(db, tripId, user.id),
+          ...deletion.taskStatementsForPendingTrip(db, tripId, user.id),
+          db.prepare(`DELETE FROM site_discussion_posts WHERE trip_id = ?
+            AND EXISTS (SELECT 1 FROM trips WHERE id = ? AND user_id = ? AND moderation_status = 'pending')`)
+            .bind(tripId, tripId, user.id),
+          db.prepare("DELETE FROM trips WHERE id = ? AND user_id = ? AND moderation_status = 'pending'")
             .bind(tripId, user.id),
         ]);
+        if (mutationChanges(deletionResults.at(-1)) !== 1) {
+          return errorResponse(409, "trip_reviewed", "Reviewed trip logs can no longer be changed.");
+        }
         const status = await deletionStatusAfterCommit(env, deletion);
         return jsonResponse(
           { deleted: true, deletion: status },
@@ -852,9 +873,17 @@ export async function handleAccountRequest(
 
       if (request.method === "PATCH") {
         const body = await readJson(request);
+        if (hasServerControlledObservationFields(body)) {
+          throw new AuthError(
+            422,
+            "observation_contract_override_forbidden",
+            "The trip target and observation contract are controlled by CastingCompass.",
+          );
+        }
         const siteId = parseProfileTripSite(body.siteId, curatedSites);
         const startedAt = parseProfileTripDate(body.startedAt, "start time");
         const endedAt = parseProfileTripDate(body.endedAt, "finish time");
+        const mode = parseProfileTripMode(body.mode ?? trip.mode);
         const durationHours = (new Date(endedAt).getTime() - new Date(startedAt).getTime()) / 3_600_000;
         if (!Number.isFinite(durationHours) || durationHours < (1 / 60) || durationHours > 36) {
           throw new AuthError(422, "invalid_duration", "Trip duration must be between 1 minute and 36 hours.");
@@ -883,26 +912,70 @@ export async function handleAccountRequest(
         const rig = parseProfileTripText(body.rig, "rig", 200, false);
         const otherCatchCount = parseProfileTripInteger(body.otherCatchCount ?? 0, "other fish caught", 0, 100);
         const otherSpecies = parseProfileTripText(body.otherSpecies, "other species", 240, false);
+        if (otherCatchCount === 0 && otherSpecies) {
+          throw new AuthError(422, "invalid_other_species", "Enter an other-fish count when describing a non-halibut catch.");
+        }
         const observations = parseProfileTripObservations(body);
         const notes = parseProfileTripText(body.notes, "notes", 1000, false);
         const timestamp = new Date().toISOString();
-        await db.prepare(`UPDATE trips SET site_id = ?, started_at = ?, ended_at = ?, fishing_method = ?,
+        const anglerHours = Math.round(durationHours * anglerCount * 100) / 100;
+        const forecastAttributionChanged = siteId !== trip.site_id
+          || startedAt !== trip.started_at
+          || endedAt !== trip.ended_at
+          || mode !== trip.mode;
+        const speciesObservation = trip.contract_status === "valid"
+          ? buildSpeciesObservationFields({
+              tripId,
+              siteId,
+              startedAt,
+              endedAt,
+              mode,
+              anglerHours,
+              keeperCount,
+              shortReleasedCount,
+              otherCatchCount,
+            })
+          : {
+              observationContractVersion: trip.observation_contract_version,
+              taxonCatalogVersion: trip.taxon_catalog_version,
+              targetTaxonId: trip.target_taxon_id,
+              contractStatus: trip.contract_status,
+              taxonObservationsJson: trip.taxon_observations_json,
+              outcomeClass: trip.outcome_class,
+              targetEncounterCount: trip.target_encounter_count,
+              anyFishEncounterCount: trip.any_fish_encounter_count,
+              targetIdentificationConfidence: trip.target_identification_confidence,
+            };
+        const noCatch = trip.contract_status === "valid"
+          ? speciesObservation.anyFishEncounterCount === 0
+          : keeperCount + shortReleasedCount + otherCatchCount === 0;
+        const forecastInvalidation = forecastAttributionChanged
+          ? `opportunity_window_id = NULL, opportunity_score = NULL, habitat_score = NULL,
+             seasonality_score = NULL, conditions_score = NULL, fishability_score = NULL,
+             model_version = NULL, score_influenced_choice = NULL, prediction_metadata_json = NULL,`
+          : "";
+        const updateResult = await db.prepare(`UPDATE trips SET site_id = ?, started_at = ?, ended_at = ?, mode = ?, fishing_method = ?,
           angler_count = ?, angler_hours = ?, keeper_count = ?, short_released_count = ?,
           halibut_encounters = ?, no_catch = ?, gear_profile_id = ?, rod = ?, reel = ?, bait_lure = ?, rig = ?,
           other_catch_count = ?, other_species = ?, observations_json = ?, notes = ?, updated_at = ?, completed_at = ?,
+          ${forecastInvalidation}
+          observation_contract_version = ?, taxon_catalog_version = ?, target_taxon_id = ?, contract_status = ?,
+          taxon_observations_json = ?, outcome_class = ?, target_encounter_count = ?, any_fish_encounter_count = ?,
+          target_identification_confidence = ?,
           ai_review_status = 'retry', ai_review_json = NULL, ai_reviewed_at = NULL
           WHERE id = ? AND user_id = ? AND moderation_status = 'pending'`)
           .bind(
             siteId,
             startedAt,
             endedAt,
+            mode,
             fishingMethod,
             anglerCount,
-            Math.round(durationHours * anglerCount * 100) / 100,
+            anglerHours,
             keeperCount,
             shortReleasedCount,
             keeperCount + shortReleasedCount,
-            Number(keeperCount + shortReleasedCount === 0),
+            Number(noCatch),
             gearProfileId,
             rod,
             reel,
@@ -914,15 +987,27 @@ export async function handleAccountRequest(
             notes,
             timestamp,
             endedAt,
+            speciesObservation.observationContractVersion,
+            speciesObservation.taxonCatalogVersion,
+            speciesObservation.targetTaxonId,
+            speciesObservation.contractStatus,
+            speciesObservation.taxonObservationsJson,
+            speciesObservation.outcomeClass,
+            speciesObservation.targetEncounterCount,
+            speciesObservation.anyFishEncounterCount,
+            speciesObservation.targetIdentificationConfidence,
             tripId,
             user.id,
           )
           .run();
+        if (Number(updateResult.meta?.changes ?? 0) !== 1) {
+          return errorResponse(409, "trip_reviewed", "Reviewed trip logs can no longer be changed.");
+        }
         const updatedTrip = await db.prepare("SELECT * FROM trips WHERE id = ? AND user_id = ? LIMIT 1")
           .bind(tripId, user.id)
           .first<TripRow>();
         if (updatedTrip) options.onTripUpdated?.(updatedTrip);
-        return jsonResponse({ updated: true, tripId });
+        return jsonResponse({ updated: true, tripId, forecastAttributionCleared: forecastAttributionChanged });
       }
 
       return methodNotAllowed("PATCH, DELETE");
@@ -980,6 +1065,14 @@ function parseProfileTripDate(value: unknown, label: string) {
     throw new AuthError(422, "invalid_date", `Enter a valid ${label}.`);
   }
   return date.toISOString();
+}
+
+function parseProfileTripMode(value: unknown) {
+  const allowed = new Set(["shore", "beach", "pier", "jetty", "kayak", "boat", "other"]);
+  if (typeof value !== "string" || !allowed.has(value)) {
+    throw new AuthError(422, "invalid_mode", "Choose a supported fishing mode.");
+  }
+  return value;
 }
 
 function parseProfileTripInteger(value: unknown, label: string, minimum: number, maximum: number) {
@@ -1093,12 +1186,45 @@ async function prepareDeletionJob(
         completed ? timestamp : null,
         timestamp,
       ),
+    jobStatementForPendingTrip: (db: D1DatabaseLike, tripId: string, userId: string) => db.prepare(`INSERT INTO privacy_deletion_jobs
+      (id, receipt_hash, scope, subject_hash, owner_subject_hash, state, objects_total, objects_deleted,
+        last_error_code, requested_at, active_data_removed_at, completed_at, updated_at)
+      SELECT ?, ?, ?, ?, ?, ?, ?, 0, NULL, ?, ?, ?, ?
+      WHERE EXISTS (SELECT 1 FROM trips WHERE id = ? AND user_id = ? AND moderation_status = 'pending')`)
+      .bind(
+        id,
+        receiptHash,
+        scope,
+        subjectHash,
+        ownerSubjectHash,
+        completed ? "completed" : "active_data_removed",
+        tasks.length,
+        timestamp,
+        timestamp,
+        completed ? timestamp : null,
+        timestamp,
+        tripId,
+        userId,
+      ),
     taskStatements: (db: D1DatabaseLike) => tasks.map((task) => db.prepare(`INSERT INTO privacy_deletion_tasks
       (id, job_id, object_key, object_key_hash, state, attempts, available_at, lease_expires_at,
         lease_token, last_error_code, created_at, updated_at, completed_at)
       VALUES (?, ?, ?, ?, 'pending', 0, ?, NULL, NULL, NULL, ?, ?, NULL)`)
       .bind(task.id, id, task.objectKey, task.objectKeyHash, timestamp, timestamp, timestamp)),
+    taskStatementsForPendingTrip: (db: D1DatabaseLike, tripId: string, userId: string) => tasks.map((task) => db.prepare(`INSERT INTO privacy_deletion_tasks
+      (id, job_id, object_key, object_key_hash, state, attempts, available_at, lease_expires_at,
+        lease_token, last_error_code, created_at, updated_at, completed_at)
+      SELECT ?, ?, ?, ?, 'pending', 0, ?, NULL, NULL, NULL, ?, ?, NULL
+      WHERE EXISTS (SELECT 1 FROM trips WHERE id = ? AND user_id = ? AND moderation_status = 'pending')`)
+      .bind(task.id, id, task.objectKey, task.objectKeyHash, timestamp, timestamp, timestamp, tripId, userId)),
   };
+}
+
+function mutationChanges(result: unknown) {
+  if (!result || typeof result !== "object") return 0;
+  const meta = (result as { meta?: { changes?: unknown } }).meta;
+  const changes = Number(meta?.changes ?? 0);
+  return Number.isFinite(changes) ? changes : 0;
 }
 
 async function deletionStatusAfterCommit(

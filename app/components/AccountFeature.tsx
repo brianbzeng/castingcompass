@@ -52,6 +52,15 @@ interface ProfileTrip {
   other_catch_count: number | null;
   other_species: string | null;
   observations_json: string | null;
+  observation_contract_version: string | null;
+  taxon_catalog_version: string | null;
+  target_taxon_id: string;
+  contract_status: "valid" | "legacy_unverified" | "rejected" | null;
+  taxon_observations_json: string | null;
+  outcome_class: "target_encountered" | "non_target_only" | "no_fish" | null;
+  target_encounter_count: number | null;
+  any_fish_encounter_count: number | null;
+  target_identification_confidence: string | null;
   ai_review_status: string | null;
   ai_review_json: string | null;
   ai_review_model: string | null;
@@ -77,6 +86,7 @@ const EMPTY_GEAR = { name: "", rod: "", reel: "", baitLure: "", rig: "" };
 
 interface ProfileTripEditFields {
   siteId: string;
+  mode: string;
   gearProfileId: string;
   startedAt: string;
   endedAt: string;
@@ -181,6 +191,7 @@ function editFieldsForTrip(trip: ProfileTrip): ProfileTripEditFields {
   }
   return {
     siteId: trip.site_id,
+    mode: trip.mode,
     gearProfileId: trip.gear_profile_id ?? "",
     startedAt: localDateTimeValue(trip.started_at),
     endedAt: localDateTimeValue(trip.ended_at),
@@ -885,11 +896,20 @@ export function AccountModal({
                 <div className="profile-list">
                   {profile.trips.map((trip) => {
                     const site = sites.find((candidate) => candidate.id === trip.site_id);
-                    const encounters = Number(trip.halibut_encounters ?? 0);
+                    const targetEncounters = Number(trip.target_encounter_count ?? trip.halibut_encounters ?? 0);
+                    const anyFishEncounters = Number(trip.any_fish_encounter_count ?? 0);
+                    const nonTargetEncounters = Math.max(0, anyFishEncounters - targetEncounters);
+                    const resultLabel = trip.contract_status !== "valid"
+                      ? "Legacy report · not a structured v2 observation"
+                      : trip.outcome_class === "target_encountered"
+                        ? `${targetEncounters} California halibut encounter${targetEncounters === 1 ? "" : "s"}`
+                        : trip.outcome_class === "non_target_only"
+                          ? `0 California halibut · ${nonTargetEncounters} unresolved non-target fish`
+                          : "No fish encountered";
                     return (
                       <article className="profile-trip" key={trip.id}>
                         <div><strong>{site?.name ?? trip.site_id}</strong><span>{new Date(trip.started_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}</span></div>
-                        <p>{encounters > 0 ? `${encounters} halibut encounter${encounters === 1 ? "" : "s"}` : "Skunk logged"} · {Number(trip.angler_hours ?? 0).toFixed(1)} angler-hours</p>
+                        <p>{resultLabel} · {Number(trip.angler_hours ?? 0).toFixed(1)} angler-hours</p>
                         <small>{tripReviewLabel(trip)}</small>
                         {trip.moderation_status === "pending" ? (
                           <div className="profile-trip-actions">
@@ -924,6 +944,11 @@ export function AccountModal({
                   <label>Start<input type="datetime-local" value={editFields.startedAt} onChange={(event) => setEditFields((current) => current ? { ...current, startedAt: event.target.value } : current)} required /></label>
                   <label>Finish<input type="datetime-local" value={editFields.endedAt} onChange={(event) => setEditFields((current) => current ? { ...current, endedAt: event.target.value } : current)} required /></label>
                   <label>Anglers<input type="number" min="1" max="12" value={editFields.anglerCount} onChange={(event) => setEditFields((current) => current ? { ...current, anglerCount: Number(event.target.value) } : current)} required /></label>
+                  <label>Fishing mode
+                    <select value={editFields.mode} onChange={(event) => setEditFields((current) => current ? { ...current, mode: event.target.value } : current)}>
+                      <option value="shore">Shore</option><option value="beach">Beach</option><option value="pier">Pier</option><option value="jetty">Jetty</option><option value="kayak">Kayak</option><option value="boat">Boat</option><option value="other">Other</option>
+                    </select>
+                  </label>
                   <label>Fishing method
                     <select value={editFields.fishingMethod} onChange={(event) => setEditFields((current) => current ? { ...current, fishingMethod: event.target.value } : current)}>
                       <option value="bait">Bait</option><option value="artificial-lure">Artificial lure</option><option value="both">Bait + lure</option><option value="other">Other</option>
@@ -932,6 +957,10 @@ export function AccountModal({
                   <label>Kept<input type="number" min="0" max="25" value={editFields.keeperCount} onChange={(event) => setEditFields((current) => current ? { ...current, keeperCount: Number(event.target.value) } : current)} required /></label>
                   <label>Short / released<input type="number" min="0" max="25" value={editFields.shortReleasedCount} onChange={(event) => setEditFields((current) => current ? { ...current, shortReleasedCount: Number(event.target.value) } : current)} required /></label>
                 </div>
+                <small>{editingTrip.contract_status === "valid"
+                  ? "California halibut is the fixed observation target. Saving recomputes the structured validation outcome; other-fish counts remain unresolved unless reviewed against stronger identification evidence. A valid contract does not by itself admit the report to model training."
+                  : "This legacy report remains outside the structured v2 observation set after ordinary edits. CastingCompass does not silently convert older counts into a validated structured observation."}</small>
+                <small>Changing the location, start, finish, or fishing mode clears the report’s saved forecast and model attribution instead of pairing the result with a forecast it no longer matches.</small>
                 <fieldset className="profile-trip-editor-section">
                   <legend>Gear used</legend>
                   <p>Add what you remember. Partial setups are still useful.</p>
@@ -966,7 +995,7 @@ export function AccountModal({
                 </fieldset>
                 <fieldset className="profile-trip-editor-section">
                   <legend>What the water was actually like</legend>
-                  <p>These observations let the forecast learn when theoretically good water is difficult to fish.</p>
+                  <p>These observations document when theoretically good water was difficult to fish. Any later model use requires the separate validation protocol.</p>
                   <div className="profile-trip-editor-grid">
                     <label>Shorebreak<select value={editFields.shorebreak} onChange={(event) => setEditFields((current) => current ? { ...current, shorebreak: event.target.value } : current)}><option value="">Not noted</option><option value="calm">Calm</option><option value="manageable">Manageable</option><option value="difficult">Difficult</option><option value="unfishable">Unfishable</option></select></label>
                     <label>Water reached<select value={editFields.wadingDepth} onChange={(event) => setEditFields((current) => current ? { ...current, wadingDepth: event.target.value } : current)}><option value="">Not noted</option><option value="ankle">Ankle</option><option value="knee">Knee</option><option value="thigh">Thigh</option><option value="waist-plus">Waist or higher</option><option value="did-not-wade">Did not wade</option></select></label>
@@ -996,7 +1025,7 @@ export function AccountModal({
                 <Link href="/terms">Terms of Service</Link>
                 <Link href="/ai-disclosure">AI and forecast disclosure</Link>
               </div>
-              <small>The JSON export includes account and consent records, saved locations, gear presets, full trip records, related discussion posts, and a photo manifest. Authenticated photo links appear only for files that are available; photo files are separate downloads and are not inside the JSON file.</small>
+              <small>The JSON export includes account and consent records, saved locations, gear presets, full trip records, related discussion posts, and a photo manifest. A valid observation contract means a report is internally structured, not that it has been admitted to model training. Authenticated photo links appear only for files that are available; photo files are separate downloads and are not inside the JSON file.</small>
               <details className="account-delete-details">
                 <summary>Delete account</summary>
                 <p>Account access and database records are removed first. If stored photo objects need background cleanup, you will receive a secure receipt and can check progress here.</p>

@@ -32,7 +32,7 @@ export default function AiDisclosurePage() {
       </LegalSection>
 
       <LegalSection title="How to interpret explanations">
-        <p>Component scores and explanation text describe the inputs that influenced the ranking. They are not proof of causation. Conditions such as tide and weather can be correlated with each other, and a high score can still produce a skunk. The model is evaluated using aggregated trip outcomes and fishability observations, not individual anecdotes alone.</p>
+        <p>Component scores and explanation text describe the inputs that influenced the ranking. They are not proof of causation. Conditions such as tide and weather can be correlated with each other, and a high score can still produce a skunk. Trip reports do not change the current score or enter model evaluation automatically; any future use requires the separate validation protocol.</p>
       </LegalSection>
 
       <LegalSection title="Regulatory approach">

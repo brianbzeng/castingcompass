@@ -395,7 +395,8 @@ export function TripReportFeature({ sites, snapshot, request, canSubmit, onRequi
   const [summaryUnavailable, setSummaryUnavailable] = useState(false);
 
   const siteMap = useMemo(() => new Map(sites.map((site) => [site.id, site])), [sites]);
-  const totalFish = fields.keeperCount + fields.shortReleasedCount;
+  const targetEncounters = fields.keeperCount + fields.shortReleasedCount;
+  const anyFishEncounters = targetEncounters + fields.otherCatchCount;
 
   const resetFeedback = useCallback(() => {
     setSubmitState("idle");
@@ -707,9 +708,11 @@ export function TripReportFeature({ sites, snapshot, request, canSubmit, onRequi
       setActiveTrip(null);
       void refreshSummary(setSummary, setSummaryUnavailable);
       setSubmitState("success");
-      setMessage(totalFish === 0
-        ? "No-catch trip recorded. That result is essential for honest validation and is pending review."
-        : "Trip recorded and pending review. Thanks for helping validate the ranking.");
+      setMessage(anyFishEncounters === 0
+        ? "No-fish trip recorded. That result is essential for honest validation and is pending review."
+        : targetEncounters === 0
+          ? "Non-target fish recorded with zero California halibut. The complete result is pending review."
+        : "Trip recorded and pending review. Thanks for helping build the evaluation backlog.");
     } catch (error) {
       setSubmitState("error");
       setMessage(error instanceof Error ? error.message : "The trip could not be completed.");
@@ -746,8 +749,10 @@ export function TripReportFeature({ sites, snapshot, request, canSubmit, onRequi
       window.localStorage.removeItem(`${TRIP_DRAFT_PREFIX}past`);
       void refreshSummary(setSummary, setSummaryUnavailable);
       setSubmitState("success");
-      setMessage(totalFish === 0
-        ? "No-catch trip recorded and pending review. It carries the same validation value as a catch."
+      setMessage(anyFishEncounters === 0
+        ? "No-fish trip recorded and pending review. Complete misses are necessary to measure how often ranked windows do not produce fish."
+        : targetEncounters === 0
+          ? "Non-target fish recorded with zero California halibut. The complete result is pending review."
         : "Past trip recorded and pending review. Thank you.");
     } catch (error) {
       setSubmitState("error");
@@ -775,7 +780,7 @@ export function TripReportFeature({ sites, snapshot, request, canSubmit, onRequi
           <span className="eyebrow"><span /> Community trip log beta</span>
           <h2>The skunks<br />count, too.</h2>
           <p>
-            Any complete trip helps build the dataset for future model training and evaluation. Location,
+            Any complete trip helps build a structured backlog for future evaluation. Location,
             time, effort, method, catches, whether it’s a skunk or not are useful and genuinely appreciated.
           </p>
           <div className="validation-actions">
@@ -783,7 +788,7 @@ export function TripReportFeature({ sites, snapshot, request, canSubmit, onRequi
             <button type="button" onClick={openShareableReport}>Log a past trip</button>
           </div>
           <small>
-            Beta · reports are reviewed before model use. This public ledger shows aggregate totals only;
+            Beta · a separate validation protocol decides whether a report can become model evidence; nothing enters training automatically. This public ledger shows aggregate totals only;
             any separate discussion summary requires human approval and additional safety checks.
           </small>
         </div>
@@ -802,7 +807,7 @@ export function TripReportFeature({ sites, snapshot, request, canSubmit, onRequi
           ) : (
             <div className="ledger-empty">
               <strong>{summaryUnavailable ? "Trip totals coming online" : "Loading trip totals…"}</strong>
-              <p>Community totals appear here. A trip never changes the score before it is reviewed.</p>
+              <p>Community totals appear here. Trip reports do not change the current score; any future model use requires the separate validation protocol.</p>
             </div>
           )}
           <p className="ledger-method">
@@ -874,7 +879,7 @@ export function TripReportFeature({ sites, snapshot, request, canSubmit, onRequi
                 </div>
                 <label className="consent-field">
                   <input type="checkbox" checked={fields.consent} onChange={(event) => setFields((current) => ({ ...current, consent: event.target.checked }))} required />
-                  <span>I own anything I submit and consent to the private use described in the <Link href="/terms" target="_blank">Terms</Link> and <Link href="/privacy" target="_blank">Privacy Policy</Link>, including model training and validation.</span>
+                  <span>I own anything I submit and consent to the private use described in the <Link href="/terms" target="_blank">Terms</Link> and <Link href="/privacy" target="_blank">Privacy Policy</Link>, including storage in a structured evaluation backlog. Any later model use requires the separate validation protocol.</span>
                 </label>
                 </>}
                 {formStep === 2 ? <button className="trip-back-button" type="button" onClick={() => setFormStep(1)}>← Back to trip details</button> : null}
@@ -890,12 +895,20 @@ export function TripReportFeature({ sites, snapshot, request, canSubmit, onRequi
               <form onSubmit={completeTrip}>
                 <header className="trip-form-heading">
                   <h2 id="trip-modal-title">Finish the trip.</h2>
-                  <p>{activeTrip.siteName} · zero in both catch fields records a complete no-catch trip.</p>
+                  <p>{activeTrip.siteName} · California halibut is the fixed target. Zero in every fish-count field records a no-fish trip.</p>
                 </header>
                 <TripGearFields fields={fields} setFields={setFields} gearProfiles={gearProfiles} applyGearProfile={applyGearProfile} includeObservations />
                 <TripCompletionFields fields={fields} setFields={setFields} updateCount={updateCount} photo={photo} photoInputRef={photoInputRef} onPhoto={handlePhoto} />
                 <button className="trip-submit" type="submit" disabled={submitState === "submitting" || submitState === "success"}>
-                  {submitState === "submitting" ? "Saving…" : submitState === "success" ? "Report saved" : totalFish === 0 ? "Record no-catch trip" : `Record ${totalFish} halibut`}
+                  {submitState === "submitting"
+                    ? "Saving…"
+                    : submitState === "success"
+                      ? "Report saved"
+                      : anyFishEncounters === 0
+                        ? "Record no-fish trip"
+                        : targetEncounters > 0
+                          ? `Record ${targetEncounters} halibut`
+                          : `Record ${fields.otherCatchCount} non-target fish`}
                   {submitState === "idle" || submitState === "error" ? <ArrowIcon /> : null}
                 </button>
                 <div className={`trip-form-status ${submitState}`} aria-live="polite">{message}</div>
@@ -953,7 +966,7 @@ export function TripReportFeature({ sites, snapshot, request, canSubmit, onRequi
                 </>}
                 {formStep === 2 ? <button className="trip-back-button" type="button" onClick={() => setFormStep(1)}>← Back to trip details</button> : null}
                 <button className="trip-submit" type="submit" disabled={submitState === "submitting" || submitState === "success"}>
-                  {formStep === 1 ? "Continue to gear + result" : submitState === "submitting" ? "Saving…" : submitState === "success" ? "Report saved" : totalFish === 0 ? "Record no-catch trip" : "Submit trip report"}
+                  {formStep === 1 ? "Continue to gear + result" : submitState === "submitting" ? "Saving…" : submitState === "success" ? "Report saved" : anyFishEncounters === 0 ? "Record no-fish trip" : "Submit trip report"}
                   {submitState === "idle" || submitState === "error" ? <ArrowIcon /> : null}
                 </button>
                 <div className={`trip-form-status ${submitState}`} aria-live="polite">{message}</div>
@@ -1044,7 +1057,7 @@ function TripCompletionFields({
       ) : null}
       <fieldset className="catch-fieldset">
         <legend>California halibut result</legend>
-        <p>Leave both at zero when no halibut were caught.</p>
+        <p>California halibut is the fixed observation target. Leave both at zero when none were encountered.</p>
         <div>
           <label className="trip-field count-field">
             <span>Kept</span>
@@ -1062,7 +1075,7 @@ function TripCompletionFields({
       </fieldset>
       <fieldset className="catch-fieldset">
         <legend>Other catch</legend>
-        <p>Non-halibut catch helps distinguish a dead bite from a species-specific miss.</p>
+        <p>Non-halibut catch helps distinguish no fish from a target-specific miss. The count is stored as unresolved non-target fish; an optional species label remains an unverified angler report.</p>
         <div>
           <label className="trip-field count-field"><span>Other fish</span><input type="number" min="0" max="100" inputMode="numeric" value={fields.otherCatchCount} onChange={(event) => updateCount("otherCatchCount", event.target.value)} /></label>
           <label className="trip-field"><span>Species <em>optional</em></span><input maxLength={200} value={fields.otherSpecies} onChange={(event) => setFields((current) => ({ ...current, otherSpecies: event.target.value }))} placeholder="Surf smelt, striped bass…" /></label>
@@ -1084,7 +1097,7 @@ function TripCompletionFields({
       ) : null}
       <label className="consent-field">
         <input type="checkbox" checked={fields.consent} onChange={(event) => setFields((current) => ({ ...current, consent: event.target.checked }))} required />
-        <span>I confirm this reflects the whole trip, own anything I submit, and consent to the uses described in the <Link href="/terms" target="_blank">Terms</Link> and <Link href="/privacy" target="_blank">Privacy Policy</Link>, including model training and preparation of a possible public summary. A summary cannot appear unless a human moderator approves it.</span>
+        <span>I confirm this reflects the whole trip, own anything I submit, and consent to the uses described in the <Link href="/terms" target="_blank">Terms</Link> and <Link href="/privacy" target="_blank">Privacy Policy</Link>, including structured evaluation and preparation of a possible public summary. Model use requires a separate validation protocol, and a summary cannot appear unless a human moderator approves it.</span>
       </label>
     </>
   );

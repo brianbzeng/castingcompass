@@ -3,7 +3,7 @@ import { readFile } from "node:fs/promises";
 import { DatabaseSync } from "node:sqlite";
 import test from "node:test";
 import { cleanupAuthData, LEGAL_VERSION, evaluateAgeEligibility, handleAccountRequest, processPrivacyDeletionTasks } from "../worker/auth.ts";
-import { createTripStore } from "../worker/trips.ts";
+import { createTripStore, handleTripRequest } from "../worker/trips.ts";
 import { reviewTripWithMimo } from "../worker/trip-review.ts";
 
 const MIGRATIONS = [
@@ -17,6 +17,7 @@ const MIGRATIONS = [
   "0007_legal_acceptance.sql",
   "0009_human_discussion_approval.sql",
   "0010_privacy_durability.sql",
+  "0011_species_aware_observations.sql",
 ];
 
 class D1StatementAdapter {
@@ -56,6 +57,8 @@ class TransactionalD1Adapter {
     this.failOnceQuerySubstring = null;
     this.failAfterAccountDeletion = false;
     this.postCommitFailureActive = false;
+    this.beforeOnceQuerySubstring = null;
+    this.beforeOnceQuery = null;
   }
 
   prepare(query) {
@@ -63,6 +66,12 @@ class TransactionalD1Adapter {
   }
 
   assertQueryAllowed(query) {
+    if (this.beforeOnceQuerySubstring && query.includes(this.beforeOnceQuerySubstring)) {
+      const callback = this.beforeOnceQuery;
+      this.beforeOnceQuerySubstring = null;
+      this.beforeOnceQuery = null;
+      callback?.();
+    }
     if (this.failQuerySubstring && query.includes(this.failQuerySubstring)) throw new Error("injected D1 failure");
     if (this.failOnceQuerySubstring && query.includes(this.failOnceQuerySubstring)) {
       this.failOnceQuerySubstring = null;
@@ -164,13 +173,14 @@ function addTrip(sqlite, user, {
       conditions_score, model_version, score_influenced_choice, prediction_metadata_json,
       photo_key, photo_content_type, photo_size_bytes, created_at, updated_at, completed_at,
       gear_profile_id, rod, reel, bait_lure, rig, other_catch_count, other_species,
-      observations_json, fishability_score, ai_review_status, ai_review_json, ai_review_model, ai_reviewed_at
+      observations_json, fishability_score, ai_review_status, ai_review_json, ai_review_model,
+      ai_reviewed_at, contract_status
     ) VALUES (?, ?, 'completed', 'past_report', 'ocean-beach', ?, ?, 'shore', 'artificial-lure', 'legacy gear',
       1, 2.5, 1, 2, 3, 0, 'User trip notes', 1, ?, ?, 'reporter-secret', 'friend-code',
       'trip-token-secret', 'window-1', 72, 80, 70, 66, 'model-v1', 1, '{"forecast":"snapshot"}',
       ?, 'image/jpeg', 4, ?, ?, ?, 'gear_1', 'Rod A', 'Reel B', 'Swimbait', 'Drop shot',
       1, 'surfperch', '{"waterClarity":"clear"}', 64, 'reviewed', '{"qualityScore":88}',
-      'mimo-test', ?)`)
+      'mimo-test', ?, 'legacy_unverified')`)
     .run(id, user.id, timestamp, timestamp, timestamp, moderation, photoKey,
       timestamp, timestamp, timestamp, timestamp);
   return id;
@@ -939,6 +949,9 @@ test("export includes user data and downloadable photos without internal locator
   assert.equal(payload.tripReports[0].consent, 1);
   assert.equal(payload.tripReports[0].observations_json, '{"waterClarity":"clear"}');
   assert.equal(payload.tripReports[0].ai_review_model, "mimo-test");
+  assert.equal(payload.tripReports[0].target_taxon_id, "california-halibut");
+  assert.equal(payload.tripReports[0].contract_status, "legacy_unverified");
+  assert.equal(payload.tripReports[0].taxon_observations_json, null);
   assert.equal(payload.discussionPosts[0].summary, "Public-safe summary");
   assert.equal(payload.photos[0].availability, "downloadable");
   assert.equal(payload.photos[0].downloadPath, `/api/profile/export/photos/${tripId}`);
@@ -956,6 +969,319 @@ test("export includes user data and downloadable photos without internal locator
 
   const withoutBinding = await handleAccountRequest(request("/api/profile/export", { cookie: user.cookie }), { DB: d1 }, []);
   assert.equal((await withoutBinding.json()).photos[0].reason, "photo_storage_unavailable");
+});
+
+test("profile edits recompute valid v2 evidence, reject overrides, and never promote legacy rows", async () => {
+  const { sqlite, d1 } = await database();
+  const user = await addUser(sqlite, "26");
+  const sites = [{ id: "ocean-beach", type: "Beach" }];
+  const form = new FormData();
+  form.set("siteId", "ocean-beach");
+  form.set("startedAt", "2026-07-10T15:00:00.000Z");
+  form.set("endedAt", "2026-07-10T18:00:00.000Z");
+  form.set("keeperCount", "1");
+  form.set("shortReleasedCount", "0");
+  form.set("otherCatchCount", "0");
+  form.set("opportunityWindowId", "window-profile-edit");
+  form.set("opportunityScore", "73");
+  form.set("habitatScore", "78");
+  form.set("seasonalityScore", "68");
+  form.set("conditionsScore", "71");
+  form.set("fishabilityScore", "66");
+  form.set("modelVersion", "model-profile-edit-v1");
+  form.set("scoreInfluencedChoice", "true");
+  form.set("predictionMetadata", JSON.stringify({
+    snapshotGeneratedAt: "2026-07-10T14:00:00.000Z",
+    forecastStart: "2026-07-10T15:00:00.000Z",
+    forecastEnd: "2026-07-10T18:00:00.000Z",
+    confidence: "medium",
+  }));
+  form.set("consent", "true");
+  form.set("reporterKey", "profile-edit-device-key-123456789");
+  form.set("website", "");
+  const created = await handleTripRequest(new Request("https://castingcompass.com/api/trips/report", {
+    method: "POST",
+    headers: { Origin: "https://castingcompass.com" },
+    body: form,
+  }), { DB: d1 }, sites, {
+    accountId: user.id,
+    now: () => new Date("2026-07-11T18:00:00.000Z"),
+  });
+  assert.equal(created?.status, 201);
+  const tripId = (await created.json()).trip.id;
+
+  const editBody = {
+    siteId: "ocean-beach",
+    mode: "beach",
+    startedAt: "2026-07-10T15:00:00.000Z",
+    endedAt: "2026-07-10T18:00:00.000Z",
+    anglerCount: 1,
+    keeperCount: 0,
+    shortReleasedCount: 0,
+    fishingMethod: "artificial-lure",
+    gearProfileId: "",
+    rod: "",
+    reel: "",
+    baitLure: "",
+    rig: "",
+    otherCatchCount: 3,
+    otherSpecies: "surfperch",
+    shorebreak: "",
+    wadingDepth: "",
+    waterClarity: "",
+    crowding: "",
+    fishabilityRating: "",
+    observedWaveHeightFeet: "",
+    fishabilityNotes: "",
+    notes: "",
+  };
+  const edited = await handleAccountRequest(request(`/api/profile/trips/${tripId}`, {
+    method: "PATCH",
+    cookie: user.cookie,
+    body: editBody,
+  }), { DB: d1 }, sites);
+  assert.equal(edited?.status, 200);
+  const row = sqlite.prepare(`SELECT no_catch, observation_contract_version, taxon_catalog_version,
+      target_taxon_id, contract_status, taxon_observations_json, outcome_class,
+      target_encounter_count, any_fish_encounter_count, target_identification_confidence
+    FROM trips WHERE id = ?`).get(tripId);
+  assert.deepEqual({ ...row }, {
+    no_catch: 0,
+    observation_contract_version: "castingcompass.observation/2.0.0",
+    taxon_catalog_version: "castingcompass.taxa/1.0.0",
+    target_taxon_id: "california-halibut",
+    contract_status: "valid",
+    taxon_observations_json: JSON.stringify([
+      {
+        taxon_id: "california-halibut",
+        encounter_count: 0,
+        retained_count: 0,
+        released_count: 0,
+        disposition_unknown_count: 0,
+        identification_confidence: "not_observed",
+        identification_basis: "not-observed",
+      },
+      {
+        taxon_id: "unresolved-fish",
+        encounter_count: 3,
+        retained_count: 0,
+        released_count: 0,
+        disposition_unknown_count: 3,
+        identification_confidence: "unresolved",
+        identification_basis: "unresolved",
+      },
+    ]),
+    outcome_class: "non_target_only",
+    target_encounter_count: 0,
+    any_fish_encounter_count: 3,
+    target_identification_confidence: "not_observed",
+  });
+  assert.deepEqual({ ...sqlite.prepare(`SELECT opportunity_window_id, opportunity_score,
+      habitat_score, seasonality_score, conditions_score, fishability_score, model_version,
+      score_influenced_choice, prediction_metadata_json FROM trips WHERE id = ?`).get(tripId) }, {
+    opportunity_window_id: "window-profile-edit",
+    opportunity_score: 73,
+    habitat_score: 78,
+    seasonality_score: 68,
+    conditions_score: 71,
+    fishability_score: 66,
+    model_version: "model-profile-edit-v1",
+    score_influenced_choice: 1,
+    prediction_metadata_json: JSON.stringify({
+      snapshotGeneratedAt: "2026-07-10T14:00:00.000Z",
+      forecastStart: "2026-07-10T15:00:00.000Z",
+      forecastEnd: "2026-07-10T18:00:00.000Z",
+      confidence: "medium",
+    }),
+  });
+
+  const attributionEdit = await handleAccountRequest(request(`/api/profile/trips/${tripId}`, {
+    method: "PATCH",
+    cookie: user.cookie,
+    body: { ...editBody, mode: "shore" },
+  }), { DB: d1 }, sites);
+  assert.equal(attributionEdit?.status, 200);
+  assert.equal((await attributionEdit.json()).forecastAttributionCleared, true);
+  assert.deepEqual({ ...sqlite.prepare(`SELECT mode, opportunity_window_id, opportunity_score,
+      habitat_score, seasonality_score, conditions_score, fishability_score, model_version,
+      score_influenced_choice, prediction_metadata_json FROM trips WHERE id = ?`).get(tripId) }, {
+    mode: "shore",
+    opportunity_window_id: null,
+    opportunity_score: null,
+    habitat_score: null,
+    seasonality_score: null,
+    conditions_score: null,
+    fishability_score: null,
+    model_version: null,
+    score_influenced_choice: null,
+    prediction_metadata_json: null,
+  });
+
+  const override = await handleAccountRequest(request(`/api/profile/trips/${tripId}`, {
+    method: "PATCH",
+    cookie: user.cookie,
+    body: {
+      ...editBody,
+      target_taxon_id: "unresolved-fish",
+      taxonObservations: [],
+      temporalPrecision: "exact",
+      spatial_support: { kind: "point", x: 1, y: 2 },
+    },
+  }), { DB: d1 }, sites);
+  assert.equal(override?.status, 422);
+  assert.equal((await override.json()).error.code, "observation_contract_override_forbidden");
+  assert.equal(sqlite.prepare("SELECT outcome_class FROM trips WHERE id = ?").get(tripId).outcome_class, "non_target_only");
+
+  const legacyTripId = addTrip(sqlite, user);
+  sqlite.prepare("UPDATE trips SET contract_status = 'legacy_unverified' WHERE id = ?").run(legacyTripId);
+  const legacyEdit = await handleAccountRequest(request(`/api/profile/trips/${legacyTripId}`, {
+    method: "PATCH",
+    cookie: user.cookie,
+    body: { ...editBody, keeperCount: 2, otherCatchCount: 0, otherSpecies: "" },
+  }), { DB: d1 }, sites);
+  assert.equal(legacyEdit?.status, 200);
+  assert.deepEqual({ ...sqlite.prepare(`SELECT contract_status, observation_contract_version,
+      taxon_observations_json, outcome_class, target_encounter_count, any_fish_encounter_count,
+      target_identification_confidence FROM trips WHERE id = ?`).get(legacyTripId) }, {
+    contract_status: "legacy_unverified",
+    observation_contract_version: null,
+    taxon_observations_json: null,
+    outcome_class: null,
+    target_encounter_count: null,
+    any_fish_encounter_count: null,
+    target_identification_confidence: null,
+  });
+});
+
+test("active completion clears forecast attribution atomically when fishing mode changes", async () => {
+  const { sqlite, d1 } = await database();
+  const sites = [{ id: "ocean-beach", type: "Beach" }];
+  const startResponse = await handleTripRequest(new Request("https://castingcompass.com/api/trips/start", {
+    method: "POST",
+    headers: { Origin: "https://castingcompass.com", "Content-Type": "application/json" },
+    body: JSON.stringify({
+      siteId: "ocean-beach",
+      startedAt: "2026-07-10T10:00:00.000Z",
+      mode: "pier",
+      anglerCount: 1,
+      consent: true,
+      reporterKey: "mode-change-device-key-123456789",
+      website: "",
+      opportunityWindowId: "window-mode-start",
+      opportunityScore: 81,
+      habitatScore: 78,
+      seasonalityScore: 74,
+      conditionsScore: 72,
+      fishabilityScore: 69,
+      modelVersion: "model-mode-start-v1",
+      scoreInfluencedChoice: true,
+      predictionMetadata: {
+        snapshotGeneratedAt: "2026-07-10T09:00:00.000Z",
+        forecastStart: "2026-07-10T10:00:00.000Z",
+        forecastEnd: "2026-07-10T12:00:00.000Z",
+        confidence: "medium",
+      },
+    }),
+  }), { DB: d1 }, sites, { now: () => new Date("2026-07-10T10:00:00.000Z") });
+  assert.equal(startResponse?.status, 201);
+  const started = await startResponse.json();
+
+  const form = new FormData();
+  form.set("token", started.token);
+  form.set("endedAt", "2026-07-10T12:00:00.000Z");
+  form.set("mode", "shore");
+  form.set("anglerCount", "1");
+  form.set("keeperCount", "0");
+  form.set("shortReleasedCount", "0");
+  form.set("otherCatchCount", "0");
+  form.set("scoreInfluencedChoice", "true");
+  form.set("consent", "true");
+  form.set("website", "");
+  const completionResponse = await handleTripRequest(new Request(
+    `https://castingcompass.com/api/trips/${started.trip.id}/complete`,
+    { method: "POST", headers: { Origin: "https://castingcompass.com" }, body: form },
+  ), { DB: d1 }, sites, { now: () => new Date("2026-07-10T12:00:00.000Z") });
+  assert.equal(completionResponse?.status, 200);
+  const completed = await completionResponse.json();
+  assert.equal(completed.forecastAttributionCleared, true);
+  assert.equal(completed.trip.mode, "shore");
+  assert.equal(completed.trip.contractStatus, "valid");
+  assert.equal(completed.trip.opportunityWindowId, null);
+  assert.equal(completed.trip.opportunityScore, null);
+  assert.equal(completed.trip.modelVersion, null);
+  assert.equal(completed.trip.scoreInfluencedChoice, null);
+  assert.deepEqual({ ...sqlite.prepare(`SELECT opportunity_window_id, opportunity_score,
+      habitat_score, seasonality_score, conditions_score, fishability_score, model_version,
+      score_influenced_choice, prediction_metadata_json FROM trips WHERE id = ?`).get(started.trip.id) }, {
+    opportunity_window_id: null,
+    opportunity_score: null,
+    habitat_score: null,
+    seasonality_score: null,
+    conditions_score: null,
+    fishability_score: null,
+    model_version: null,
+    score_influenced_choice: null,
+    prediction_metadata_json: null,
+  });
+});
+
+test("pending-only profile mutation loses cleanly to a concurrent moderator decision", async () => {
+  const { sqlite, d1 } = await database();
+  const user = await addUser(sqlite, "27");
+  const sites = [{ id: "ocean-beach", type: "Beach" }];
+  const editTripId = addTrip(sqlite, user);
+  let updateCallbacks = 0;
+  d1.beforeOnceQuerySubstring = "UPDATE trips SET site_id";
+  d1.beforeOnceQuery = () => sqlite.prepare("UPDATE trips SET moderation_status = 'approved' WHERE id = ?").run(editTripId);
+  const racedPatch = await handleAccountRequest(request(`/api/profile/trips/${editTripId}`, {
+    method: "PATCH",
+    cookie: user.cookie,
+    body: {
+      siteId: "ocean-beach",
+      mode: "shore",
+      startedAt: "2026-07-01T09:30:00.000Z",
+      endedAt: "2026-07-01T12:00:00.000Z",
+      anglerCount: 1,
+      keeperCount: 1,
+      shortReleasedCount: 2,
+      fishingMethod: "artificial-lure",
+      gearProfileId: "",
+      rod: "Rod A",
+      reel: "Reel B",
+      baitLure: "Swimbait",
+      rig: "Drop shot",
+      otherCatchCount: 1,
+      otherSpecies: "surfperch",
+      shorebreak: "",
+      wadingDepth: "",
+      waterClarity: "clear",
+      crowding: "",
+      fishabilityRating: "",
+      observedWaveHeightFeet: "",
+      fishabilityNotes: "",
+      notes: "changed",
+    },
+  }), { DB: d1 }, sites, { onTripUpdated: () => { updateCallbacks += 1; } });
+  assert.equal(racedPatch?.status, 409);
+  assert.equal((await racedPatch.json()).error.code, "trip_reviewed");
+  assert.equal(updateCallbacks, 0);
+  assert.deepEqual({ ...sqlite.prepare("SELECT moderation_status, notes FROM trips WHERE id = ?").get(editTripId) }, {
+    moderation_status: "approved",
+    notes: "User trip notes",
+  });
+
+  const deleteTripId = addTrip(sqlite, user, { photoKey: "private/raced-delete.jpg" });
+  d1.beforeOnceQuerySubstring = "INSERT INTO privacy_deletion_jobs";
+  d1.beforeOnceQuery = () => sqlite.prepare("UPDATE trips SET moderation_status = 'approved' WHERE id = ?").run(deleteTripId);
+  const racedDelete = await handleAccountRequest(request(`/api/profile/trips/${deleteTripId}`, {
+    method: "DELETE",
+    cookie: user.cookie,
+  }), { DB: d1, TRIP_PHOTOS: { delete: async () => undefined } }, sites);
+  assert.equal(racedDelete?.status, 409);
+  assert.equal((await racedDelete.json()).error.code, "trip_reviewed");
+  assert.equal(sqlite.prepare("SELECT moderation_status FROM trips WHERE id = ?").get(deleteTripId).moderation_status, "approved");
+  assert.equal(sqlite.prepare("SELECT COUNT(*) AS count FROM privacy_deletion_jobs WHERE scope = 'trip'").get().count, 0);
+  assert.equal(sqlite.prepare("SELECT COUNT(*) AS count FROM privacy_deletion_tasks").get().count, 0);
 });
 
 test("AI provider payload omits hostile legacy forecast metadata at the egress boundary", async () => {
@@ -999,6 +1325,11 @@ test("AI provider payload omits hostile legacy forecast metadata at the egress b
   const outbound = JSON.parse(providerBody);
   const tripPayload = JSON.parse(outbound.messages.at(-1).content);
   assert.equal("forecastMetadata" in tripPayload, false);
+  assert.equal(tripPayload.primaryTargetTaxonId, "california-halibut");
+  assert.equal(tripPayload.contractStatus, "legacy_unverified");
+  assert.equal(tripPayload.taxonObservations, null);
+  assert.equal(tripPayload.reportedOtherSpeciesLabel, "surfperch");
+  assert.match(outbound.messages[0].content, /legacy_unverified or missing structured evidence as non-model evidence/);
   assert.doesNotMatch(providerBody, /latitude|longitude|coordinates|private-person@example\.com|account-secret-123|37\.7749|122\.4194/);
 });
 

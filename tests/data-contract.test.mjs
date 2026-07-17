@@ -46,7 +46,26 @@ test("publishes every two-hour window across the 72-hour snapshot", async () => 
   let windowsWithPressure = 0;
   let windowsWithWavePower = 0;
 
+  assert.equal(snapshot.target_taxon_id, "california-halibut");
+  assert.equal(snapshot.species, snapshot.target_taxon_id);
+  assert.equal(snapshot.taxon_catalog_version, "castingcompass.taxa/1.0.0");
+  assert.equal(snapshot.observation_contract_version, "castingcompass.observation/2.0.0");
+  assert.equal(snapshot.model_run_contract_version, "castingcompass.model-run/2.0.0");
+  assert.equal(snapshot.opportunity_contract_version, "castingcompass.opportunity/2.0.0");
+  assert.equal(snapshot.scoring_system_kind, "heuristic-configuration");
+  assert.match(snapshot.scoring_system_sha256, /^[a-f0-9]{64}$/);
+  assert.equal(snapshot.modelVersion, snapshot.scoring_system_version);
+
   for (const window of snapshot.windows) {
+    assert.equal(window.target_taxon_id, snapshot.target_taxon_id);
+    assert.equal(window.species, window.target_taxon_id);
+    assert.equal(window.taxon_catalog_version, snapshot.taxon_catalog_version);
+    assert.equal(window.observation_contract_version, snapshot.observation_contract_version);
+    assert.equal(window.model_run_contract_version, snapshot.model_run_contract_version);
+    assert.equal(window.opportunity_contract_version, snapshot.opportunity_contract_version);
+    assert.equal(window.scoring_system_kind, snapshot.scoring_system_kind);
+    assert.equal(window.scoring_system_sha256, snapshot.scoring_system_sha256);
+    assert.equal(window.modelVersion, snapshot.scoring_system_version);
     bySite.set(window.siteId, (bySite.get(window.siteId) ?? 0) + 1);
     assert.equal(new Date(window.end).getTime() - new Date(window.start).getTime(), 2 * 60 * 60 * 1000);
     for (const value of [window.score, window.habitatScore, window.seasonalityScore, window.dynamicScore]) {
@@ -93,4 +112,20 @@ test("publishes original community context separately from the score", async () 
     assert.ok(pulse.themes.length >= 2);
     assert.ok(pulse.sources.every((source) => /^https:\/\//.test(source.url)));
   }
+});
+
+test("database opportunity references bind target and exact model identity", async () => {
+  const schema = await readFile(new URL("infra/schema.sql", root), "utf8");
+  assert.match(
+    schema,
+    /UNIQUE\s*\(\s*id,\s*target_taxon_id,\s*model_version\s*\)/s,
+  );
+  assert.match(
+    schema,
+    /FOREIGN KEY\s*\(\s*model_run_id,\s*target_taxon_id,\s*model_version\s*\)\s*REFERENCES public\.model_runs\s*\(\s*id,\s*target_taxon_id,\s*model_version\s*\)/s,
+  );
+  assert.match(
+    schema,
+    /'heuristic-'\s*\|\|\s*target_taxon_id\s*\|\|\s*'-'\s*\|\|\s*scoring_system_sha256/s,
+  );
 });

@@ -42,6 +42,12 @@ after its acceptance checks pass in the intended environment.
   evaluable effort segment; structured per-taxon encounters, retained/released counts, and
   identification confidence; distinct target-no-encounter versus no-fish outcomes; and a
   loader that rejects mixed/unexpected taxa and records the target in every artifact.
+  - [x] Implement and locally verify the closed catalog, cross-runtime schemas/validators,
+    complete-attempt loader, trip persistence, target-stamped run/artifact identity, and
+    compact static/API opportunity identity.
+  - [ ] Apply and audit the production migration, confirm all historical rows are
+    `legacy_unverified` and model-excluded, deploy the versioned snapshot/API, and preserve
+    the frozen contract in the first approved ingestion manifest.
 - [ ] Freeze the validation protocol before collecting more outcomes: complete targeted
   trips including skunks, effort and mode, immutable source-separated splits, geographic and
   temporal holdouts, preregistered baselines, outcome-independent incentives, preserved
