@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { assertNewPasswordAllowed, parseNewPassword } from "../worker/auth.ts";
+import { assertNewPasswordAllowed, parseNewPassword, randomCode } from "../worker/auth.ts";
 
 async function sha1(value) {
   const digest = await crypto.subtle.digest("SHA-1", new TextEncoder().encode(value));
@@ -19,6 +19,20 @@ test("new passwords use length, not character-class composition rules", () => {
     () => parseNewPassword("x".repeat(129)),
     (error) => error?.status === 422 && error?.code === "invalid_password",
   );
+});
+
+test("six-digit verification codes reject the biased uint32 tail", () => {
+  assert.equal(randomCode(() => 0), "000000");
+  assert.equal(randomCode(() => 999_999), "999999");
+  assert.equal(randomCode(() => 4_293_999_999), "999999");
+
+  const values = [0xffff_ffff, 123_456];
+  let calls = 0;
+  assert.equal(randomCode(() => {
+    calls += 1;
+    return values.shift() ?? 0;
+  }), "123456");
+  assert.equal(calls, 2);
 });
 
 test("context-specific passwords fail before any provider request", async () => {

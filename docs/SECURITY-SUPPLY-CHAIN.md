@@ -20,9 +20,11 @@ path so security fixes are not frozen out.
 | Transitive npm tree | `package-lock.json` records exact versions, registry locations, and integrity hashes; CI and release use `npm ci` | Registry availability and npm/client behavior remain external; the hosted runner itself is not bit-for-bit pinned |
 | Known npm advisories | Compatible Babel and YAML fixes are forced; the deprecated Drizzle loader's vulnerable esbuild is overridden to tested `0.25.12`; the resulting complete npm tree currently audits clean | Replace the deprecated `@esbuild-kit` loader path when Drizzle removes it; do not leave the override indefinitely without tests |
 | GitHub Actions | Every `uses:` reference is a full immutable commit SHA; runner labels are fixed to `ubuntu-24.04` rather than `ubuntu-latest` | GitHub updates the image behind that label; a release still records the workflow run and source commit |
-| Pull-request dependency changes | The SHA-pinned GitHub dependency-review action rejects newly introduced high/critical runtime or development advisories on release PRs targeting the default branch | GitHub builds the graph from the default branch, so stacked PRs cannot supply this evidence; make the release check required in repository rules |
+| Default-branch integrity | Live `main` protection requires pull requests, strict successful `api`, `pipeline`, `web`, and `dependency-review` checks from the GitHub Actions app plus the `CodeQL` result from the GitHub Advanced Security app, resolved review conversations, and applies to the owner; force-pushes and branch deletion are disabled | This is provider-side configuration rather than source code; verify it again for the exact release and preserve a separate emergency-access procedure |
+| Pull-request dependency changes | The SHA-pinned GitHub dependency-review action rejects newly introduced high/critical runtime or development advisories on release PRs targeting the default branch, and the live `main` protection requires that check | GitHub builds the graph from the default branch, so stacked PRs cannot supply this evidence; the complete-tree audit and SBOM remain mandatory |
+| Static analysis | GitHub-managed CodeQL default setup scans Actions, JavaScript/TypeScript, and Python; the Advanced Security `CodeQL` merge result is required on `main`, and findings are reviewed individually rather than bulk-dismissed | GitHub controls the analyzer/runtime and its default query updates; release evidence still records the alert state and each dismissal rationale |
 | Production npm SBOM | `security/sbom.cdx.json` is a deterministic CycloneDX 1.5 inventory of the lock-resolved production graph, including cross-platform optional variants, and embeds the SHA-256 of `package-lock.json` | It is repository evidence, not a signed deployment attestation or proof of the platform-specific bytes Cloudflare actually ran |
-| Secrets | Repository secret scanning and provider-pattern tests run before dependency installation in CI | Provider-side secret scanning, rotation, IAM, and incident drills require account evidence |
+| Secrets and private reporting | Repository secret scanning and provider-pattern tests run before dependency installation in CI; GitHub secret scanning, push protection, and private vulnerability reporting are enabled | GitHub's extra non-provider-pattern and validity-check options were unavailable in the current account configuration; rotation, IAM, and incident drills still require provider evidence |
 
 The exact Node release is the current patched release selected for the maintained 22.x line,
 not a claim that Node 22 should remain forever. Python 3.12.13 is a security-only source
@@ -54,9 +56,13 @@ The dependency-review job separately compares the base and head dependency graph
 requests targeting the default branch. GitHub builds that graph from the default branch, so
 stacked successor PRs rely on the mandatory complete-tree/production audits and SBOM gate;
 they do not falsely report a dependency-review pass. The release check must block newly
-introduced high/critical advisories in runtime or development scope. Both jobs need to be
-required in GitHub repository rules before they are production evidence. The release runbook
-repeats all repository security checks from the immutable checkout.
+introduced high/critical advisories in runtime or development scope. Live `main` protection
+requires dependency review plus the API, pipeline, web, and Advanced Security `CodeQL` results,
+uses strict up-to-date branch checks, applies to administrators, requires pull requests and
+resolved conversations, and blocks force-pushes/deletion. GitHub-managed CodeQL runs across
+Actions, JavaScript/TypeScript, and Python. Its required merge result and alert list must both be
+reviewed. The release runbook repeats all repository security checks from the immutable checkout
+and re-verifies the provider-side settings.
 
 ## Deterministic SBOM workflow
 
@@ -186,8 +192,9 @@ surface-reduction controls, not a sandbox or trust guarantee.
 - The deprecated Drizzle loader override is tested but remains technical debt. Replace it when
   a reviewed Drizzle release removes the dependency; do not delete the override while the
   vulnerable nested esbuild would return.
-- Make dependency review, secret scanning, audit, SBOM verification, and full CI required checks
-  in repository rules and capture production evidence.
+- Preserve and re-verify the live `main` required checks, secret-scanning/push-protection,
+  private-reporting, Dependabot-security-update, and CodeQL settings; retain the reviewed
+  sole-owner emergency-access procedure without weakening ordinary merges.
 
 Until those gates pass, the parent roadmap item covering all-platform reproducible builds,
 complete version locks, signed SBOM/provenance, key custody, and restore-tested backups remains

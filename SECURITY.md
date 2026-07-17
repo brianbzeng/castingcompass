@@ -10,7 +10,9 @@ deployments are not supported.
 
 ## Report a vulnerability
 
-Email **bzeng0000@gmail.com** with the subject `CastingCompass security report`.
+Use GitHub's **Report a vulnerability** button in this repository's Security tab so the report
+and follow-up stay private. If that interface is unavailable, email
+**bzeng0000@gmail.com** with the subject `CastingCompass security report`.
 Please include:
 
 - the affected URL or component;
