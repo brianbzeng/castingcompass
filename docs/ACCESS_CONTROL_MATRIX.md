@@ -1,8 +1,8 @@
 # CastingCompass access-control matrix
 
 Status: reviewed implementation baseline, not production activation evidence  
-Last reviewed source: `c064d07412721f98facef267c527c6ceb29d1f90` plus the
-cross-account regression test introduced with this document
+Last reviewed source: `9ee519f11362811b8ffa44ddca5e0c8974884c04` plus the
+executable route inventory introduced with this revision
 
 CastingCompass uses Cloudflare D1/SQLite, which does not provide PostgreSQL-style
 native row-level security. The required equivalent is a deny-by-default server
@@ -58,6 +58,26 @@ output never grants authority.
 7. Record only pseudonymous, redacted authorization outcomes in production logs;
    never record cookies, tokens, passwords, raw prompts, trip notes, photo data,
    precise location, or full account identifiers.
+
+## Executable route inventory
+
+`worker/route-policy.ts` is the source-controlled API inventory. Every route records
+its stable identifier, path template, accepted methods, actor boundary, handler,
+same-origin requirement, current-legal-acceptance requirement, and extra abuse-limit
+classes. Dynamic path patterns are imported by both the inventory and the route
+handlers so their object shapes cannot drift independently.
+
+The Worker returns a generic, non-cacheable `404` for any `/api/` path that is not
+in the inventory. A newly written handler therefore remains unreachable until its
+security policy is reviewed. Known paths with unsupported methods still reach their
+handler's explicit `405` response. The rate limiter consumes the same inventory and
+retains a generic read/write ceiling for unclassified probes before they are denied.
+
+`tests/route-policy-runtime.test.mjs` machine-checks unique route identities, actor,
+CSRF/legal and abuse metadata, representative dynamic resources, malformed and
+lookalike paths, every exact route branch in the Worker handlers, and the central
+trip-owner gate. Object-level ownership and cross-account behavior remain covered by
+the runtime privacy and trip suites.
 
 ## Open gates
 

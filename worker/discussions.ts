@@ -1,4 +1,5 @@
 import type { CuratedSite, D1DatabaseLike } from "./trips";
+import { API_ROUTE_PATTERNS } from "./route-policy.ts";
 
 interface DiscussionEnv {
   DB?: D1DatabaseLike;
@@ -45,7 +46,7 @@ export async function handleDiscussionRequest(
   curatedSites: readonly CuratedSite[],
 ): Promise<Response | null> {
   const url = new URL(request.url);
-  const match = url.pathname.match(/^\/api\/discussions\/([a-z0-9-]+)$/);
+  const match = url.pathname.match(API_ROUTE_PATTERNS.discussion);
   if (!match) return null;
   if (request.method !== "GET") {
     return jsonResponse({ error: { code: "method_not_allowed", message: "Use GET for this endpoint." } }, 405, { Allow: "GET" });

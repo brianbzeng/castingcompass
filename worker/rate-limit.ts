@@ -1,4 +1,5 @@
 import { logEvent } from "./observability.ts";
+import { rateLimitClassesForRequest, type RequestLimitClass } from "./route-policy.ts";
 
 interface RateLimitResult {
   success: boolean;
@@ -19,26 +20,7 @@ export interface RateLimitEnv {
   AI_PROVIDER_RATE_LIMITER?: RateLimiterBinding;
 }
 
-type RequestLimitClass = "auth" | "email" | "write" | "sensitive" | "read";
-
-const API_PREFIX = "/api/";
 const RATE_LIMIT_WINDOW_SECONDS = 60;
-const MUTATION_METHODS = new Set(["POST", "PUT", "PATCH", "DELETE"]);
-const AUTH_ABUSE_PATHS = new Set([
-  "/api/auth/signup/eligibility",
-  "/api/auth/signup/request",
-  "/api/auth/signup/verify",
-  "/api/auth/challenge/resend",
-  "/api/auth/password/request",
-  "/api/auth/password/reset",
-  "/api/auth/login",
-]);
-const EMAIL_PRODUCING_PATHS = new Set([
-  "/api/auth/signup/request",
-  "/api/auth/signup/verify",
-  "/api/auth/challenge/resend",
-  "/api/auth/password/request",
-]);
 
 export async function enforceRequestRateLimit(request: Request, env: RateLimitEnv): Promise<Response | null> {
   const classes = requestLimitClasses(request);
@@ -92,26 +74,7 @@ export async function aiProviderRateLimitAllowed(env: RateLimitEnv) {
 }
 
 export function requestLimitClasses(request: Request): RequestLimitClass[] {
-  const url = new URL(request.url);
-  const classes = new Set<RequestLimitClass>();
-  if (!url.pathname.startsWith(API_PREFIX) || url.pathname === "/api/health") return [];
-
-  if (request.method === "GET" || request.method === "HEAD") classes.add("read");
-  if (request.method === "POST" && AUTH_ABUSE_PATHS.has(url.pathname)) classes.add("auth");
-  if (request.method === "POST" && EMAIL_PRODUCING_PATHS.has(url.pathname)) classes.add("email");
-  if (isSensitiveOperation(request, url.pathname)) classes.add("sensitive");
-  if (MUTATION_METHODS.has(request.method) && !AUTH_ABUSE_PATHS.has(url.pathname)) classes.add("write");
-  return [...classes];
-}
-
-function isSensitiveOperation(request: Request, pathname: string) {
-  if (request.method === "GET" && pathname === "/api/profile/export") return true;
-  if (request.method === "GET" && /^\/api\/profile\/export\/photos\/trip_[a-f0-9-]{36}$/.test(pathname)) {
-    return true;
-  }
-  if (request.method === "POST" && pathname === "/api/profile/reviews/retry") return true;
-  if (request.method === "DELETE" && pathname === "/api/profile") return true;
-  return request.method === "DELETE" && /^\/api\/profile\/trips\/trip_[a-f0-9-]{36}$/.test(pathname);
+  return rateLimitClassesForRequest(request);
 }
 
 function rateLimitMode(env: RateLimitEnv) {

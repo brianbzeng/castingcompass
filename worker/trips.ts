@@ -35,6 +35,7 @@ import {
   type StoredFeasibilityStart,
 } from "./validation-feasibility.ts";
 import { logEvent } from "./observability.ts";
+import { API_ROUTE_PATTERNS } from "./route-policy.ts";
 
 const MAX_PHOTO_BYTES = 5 * 1024 * 1024;
 const MAX_MULTIPART_BYTES = MAX_PHOTO_BYTES + 1024 * 1024;
@@ -2836,7 +2837,7 @@ export async function handleTripRequest(
       }, 201, reporter.setCookie);
     }
 
-    const cancellationMatch = url.pathname.match(/^\/api\/trips\/([^/]+)\/cancel$/);
+    const cancellationMatch = url.pathname.match(API_ROUTE_PATTERNS.tripCancel);
     if (cancellationMatch) {
       assertContentType(request, "application/json");
       assertBodySize(request, 16 * 1024);
@@ -2868,7 +2869,7 @@ export async function handleTripRequest(
       return jsonResponse({ canceled: true, id, reason });
     }
 
-    const completionMatch = url.pathname.match(/^\/api\/trips\/([^/]+)\/complete$/);
+    const completionMatch = url.pathname.match(API_ROUTE_PATTERNS.tripComplete);
     if (completionMatch) {
       assertContentType(request, "multipart/form-data");
       assertBodySize(request, MAX_MULTIPART_BYTES);

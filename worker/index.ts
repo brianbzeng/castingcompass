@@ -17,6 +17,7 @@ import {
 } from "./security";
 import { handleTurnstileConfigRequest, type TurnstileEnv } from "./turnstile";
 import { enforceRequestRateLimit, type RateLimitEnv } from "./rate-limit";
+import { apiRoutePolicyForRequest, isKnownApiPath } from "./route-policy";
 import {
   attachRequestId,
   internalErrorResponse,
@@ -96,6 +97,13 @@ async function handleFetchRequest(request: Request, env: Env, ctx: ExecutionCont
 
 async function routeRequest(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
   const url = new URL(request.url);
+  const apiPolicy = apiRoutePolicyForRequest(request);
+  if (url.pathname.startsWith("/api/") && !apiPolicy && !isKnownApiPath(url.pathname)) {
+    return new Response(JSON.stringify({ error: { code: "not_found", message: "API route not found." } }), {
+      status: 404,
+      headers: { "Content-Type": "application/json; charset=utf-8", "Cache-Control": "no-store" },
+    });
+  }
 
   const turnstileConfig = handleTurnstileConfigRequest(request, env);
   if (turnstileConfig) return turnstileConfig;
@@ -115,8 +123,7 @@ async function routeRequest(request: Request, env: Env, ctx: ExecutionContext): 
   });
   if (accountResponse) return accountResponse;
 
-  const protectedTripMutation = url.pathname.startsWith("/api/trips/") &&
-    url.pathname !== "/api/trips/summary" && request.method !== "GET";
+  const protectedTripMutation = apiPolicy?.handler === "trips" && apiPolicy.authorization === "owner";
   const authenticatedUser = protectedTripMutation ? await getAuthenticatedUser(request, env) : null;
   if (protectedTripMutation && !authenticatedUser) {
     return unauthorizedResponse();

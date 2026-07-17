@@ -2,9 +2,10 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 
-const [review, discussions, worker, app, migration] = await Promise.all([
+const [review, discussions, routePolicy, worker, app, migration] = await Promise.all([
   readFile(new URL("../worker/trip-review.ts", import.meta.url), "utf8"),
   readFile(new URL("../worker/discussions.ts", import.meta.url), "utf8"),
+  readFile(new URL("../worker/route-policy.ts", import.meta.url), "utf8"),
   readFile(new URL("../worker/index.ts", import.meta.url), "utf8"),
   readFile(new URL("../app/components/OpportunityApp.tsx", import.meta.url), "utf8"),
   readFile(new URL("../drizzle/0006_moderated_location_discussions.sql", import.meta.url), "utf8"),
@@ -27,7 +28,8 @@ test("MiMo strictly validates gear and prepares a bounded human-gated discussion
 
 test("public location discussions expose summaries without raw notes or identity", () => {
   assert.match(worker, /handleDiscussionRequest/);
-  assert.match(discussions, /\/api\\\/discussions/);
+  assert.match(discussions, /API_ROUTE_PATTERNS\.discussion/);
+  assert.match(routePolicy, /discussion: \/\^\\\/api\\\/discussions/);
   assert.match(discussions, /SELECT post\.id AS id, post\.site_id AS site_id/);
   assert.match(discussions, /post\.summary AS summary, post\.gear_summary AS gear_summary/);
   assert.doesNotMatch(discussions, /SELECT[^;]*\bnotes\b/s);
