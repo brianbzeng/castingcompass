@@ -55,8 +55,97 @@ after its acceptance checks pass in the intended environment.
   - [ ] Apply and audit the production migration, verify the exact private R2 binding and
     zero-photo invariant, exercise deletion/export/retry fixtures, deploy the age-proof edge
     ceiling and alerts, complete the restore replay drill, and obtain provider/counsel review.
+- [ ] Complete a defense-in-depth security and authorization review before growth, validation
+  activation, or broader AI use. Treat every browser, API, uploaded file, model input, model
+  output, webhook, and provider response as untrusted; a checklist or nominal layer count is
+  not completion without attack-specific tests and production evidence.
+  - [ ] Map the owner's security-layer reference images into the threat model when the original
+    attachments are available, reconcile them with the existing controls, and record each
+    control's owner, evidence, alert, recovery path, and residual risk.
+  - [ ] Keep session credentials out of `localStorage`: verify `HttpOnly`, `Secure`, appropriately
+    scoped `SameSite` cookies, rotation, expiry, revocation, fixation resistance, CSRF defenses,
+    and enumeration-safe login/recovery behavior. Client-side session or admin checks may guide
+    the interface but must never grant access.
+  - [ ] Define and approve a deny-by-default access-control matrix for anonymous users, account
+    owners, moderators, support, operators, and administrators. Enforce it server-side on every
+    route and object lookup, with privilege-escalation, insecure direct-object reference, and
+    cross-account tests. Because D1/SQLite has no native PostgreSQL-style row-level security,
+    require an equivalent per-record ownership/role predicate in the data-access layer and test
+    that omitted or mismatched identity fails closed.
+  - [ ] Verify strict schema/size/type validation, contextual output encoding, safe database
+    binding, upload signature and metadata checks, and AI prompt-injection boundaries. Model
+    instructions and user content remain data, never authority; models receive no ambient
+    secrets or unrestricted tools, outputs must match narrow schemas, and no model output can
+    publish or mutate privileged state without a separately authorized server action.
+  - [ ] Verify endpoint-specific rate limits and abuse ceilings for login, recovery, signup,
+    uploads, exports, deletion, reports, and AI routes. Adopt length-based password rules that
+    allow password managers/passphrases, block breached/common passwords using a privacy-safe
+    lookup, reject account-derived patterns, and avoid arbitrary composition rules that reduce
+    usability without improving security.
+  - [ ] Verify encryption in transit and at rest, key separation/rotation/recovery, least
+    privilege, secret scanning, dependency/runtime/action version locks, reproducible builds,
+    an SBOM, vulnerability-response ownership, and restore-tested backups. Pinning must include
+    a scheduled reviewed update path so security fixes are not frozen out.
+  - [ ] Exercise the attack surface in an isolated staging environment with authorized load,
+    stress, and penetration tests; remediate critical/high findings and retest before production
+    promotion. Never aim stress or intrusive security testing at production user data.
+- [ ] Complete the privacy lifecycle and deletion policy before broader account recruitment.
+  Maintain a data inventory and cascade map covering primary rows, public copies, objects,
+  queues, logs, analytics, exports, derived artifacts, and backups; make deletion retries and
+  restore suppression observable and auditable without retaining raw deleted content.
+  - [ ] Decide with privacy/counsel review whether an ordinary account closure may offer a
+    clearly disclosed 30-day recovery window. If adopted, revoke access immediately, isolate
+    recovery data from active/public use, automatically hard-delete it at day 30, and let a
+    verified erasure request bypass recovery. Do not silently weaken the existing immediate
+    active-data removal and durable public/object cleanup promises.
+  - [ ] Publish and drill GDPR/UK GDPR/CCPA-style access, correction, portability, deletion,
+    objection, and appeal workflows; verify identity proportionately, meet applicable response
+    clocks, inventory processors and transfers, minimize logs, and document lawful retention
+    exceptions rather than claiming universal compliance without review.
+- [ ] Provide a safe maintenance experience on every production hostname: a branded,
+  accessible maintenance page for browsers; non-cacheable `503` API responses with bounded
+  `Retry-After`; operator-only health diagnostics; no write paths that bypass maintenance; and
+  tested activation, recovery, and stale-service-worker behavior.
 
 ## P1 — Evidence, data contracts, discoverability, and scalable foundations
+
+- [ ] Establish privacy-preserving production observability and an operator console before
+  scaling traffic. Evaluate Cloudflare-native logs/analytics and focused vendors such as
+  PostHog by data fit, searchability, alerting, cost, retention, residency, deletion support,
+  access controls, and lock-in; analytics is not a substitute for error logging or an audit
+  ledger.
+  - [ ] Emit structured, schema-versioned events with UTC timestamp, severity, release, route,
+    request/trace ID, outcome, latency, and a rotating pseudonymous account reference only when
+    necessary. Never log passwords, tokens, cookies, precise location, trip notes, photo data,
+    raw prompt content, or other high-risk fields. Development debug logs must be gated and
+    production logs redacted, sampled, access-controlled, retained briefly, and deletion-aware.
+  - [ ] Centralize searchable errors and aggregate operational summaries; correlate browser,
+    Worker, queue, D1, R2, AI-provider, deployment, and scheduled-job failures; add actionable
+    alerts, runbook links, acknowledgement/escalation, and synthetic checks. Prove alert delivery
+    and incident reconstruction using non-sensitive fixtures.
+  - [ ] Build a least-privilege, MFA-protected operator dashboard for health, deployments,
+    request/error trends, queues, backup/restore evidence, privacy jobs, security events, and
+    immutable change history. Keep future financial reporting as a separately authorized data
+    domain with accounting-grade source records and reconciliation, not values inferred from
+    application logs.
+- [ ] Make the data and execution paths measurably scalable before a traffic campaign.
+  - [ ] Inventory every production query, capture representative `EXPLAIN QUERY PLAN` evidence,
+    add only workload-justified indexes, bound scans/pagination, eliminate N+1 patterns, verify
+    cross-account predicates, and regression-test query latency and migration cost.
+  - [ ] Publish a cache matrix by asset/data class with owner, privacy classification, cache key,
+    TTL, invalidation trigger, stale policy, and failure behavior. Never share-cache personalized
+    or authenticated responses; test purge, version skew, offline/service-worker upgrades, and
+    correctness during snapshot rollover.
+  - [ ] Queue only slow or retryable side effects such as AI generation, media processing,
+    notifications, cleanup, and aggregation. Keep authorization and consistency-critical writes
+    synchronous; require idempotency keys, deduplication, bounded retry/backoff, dead-letter
+    handling, cost ceilings, progress state, cancellation where safe, and operator replay tools.
+  - [ ] Use Cloudflare's managed D1 binding lifecycle instead of inventing a traditional SQL
+    connection pool. If a future database/provider supports pooling, size and monitor it against
+    concurrency limits and failure modes before adoption.
+  - [ ] Define performance budgets and run isolated load, soak, spike, and failure-injection
+    tests with production-shaped synthetic data. Record saturation points, tail latency, error
+    rates, queue depth, database contention, cache effectiveness, cost, and a safe rollback plan.
 
 - [ ] Freeze the species-aware observation and model-run contract before new ingestion or
   recruitment: canonical/versioned taxa or explicit complexes; one primary target per
@@ -157,11 +246,28 @@ after its acceptance checks pass in the intended environment.
 - [ ] Complete business/legal readiness before substantial promotion or revenue: entity/DBA,
   tax and local-license review, trademark clearance, startup counsel/CPA review, DMCA/UGC
   posture, and broker quotes for cyber/privacy, technology E&O, general, and media liability.
+- [ ] Preserve authorship and business records: maintain dated design/decision notes, source and
+  asset provenance, license/assignment records, contributor agreements, release hashes, and
+  archived public artifacts. Have counsel distinguish automatic copyright protection,
+  registration strategy, trademark/brand protection, patent/trade-secret questions, and third-
+  party or AI-assisted material. Surface the evidence in the operator console without exposing
+  private keys, personal data, or privileged legal material.
 
 ## P3 — Experience and brand
 
 - [ ] Improve accessibility and interaction quality after core risks are controlled, including
   keyboard/screen-reader review, zoom/reflow, contrast, reduced motion, and a non-map path.
+- [ ] Add a branded, accessible `404` page with a clear return-to-home action, useful navigation,
+  correct `404` status, noindex behavior, and offline/service-worker coverage.
+- [ ] Add honest loading and recovery states after the underlying operations are bounded:
+  route-appropriate skeletons, immediate acknowledgement, progressive status for slow work,
+  inline retry/cancel where safe, and carefully scoped optimistic updates that roll back on
+  failure. Do not display fake precision or let optimistic UI imply a privileged write succeeded.
+- [ ] Improve trip-photo upload states with accessible visual emphasis (including the requested
+  glow plus a copy/state change, not color alone), thumbnail, file type, size, validation result,
+  and per-file progress/retry/cancel. Multiple files receive independent state and progress;
+  indeterminate progress is used when byte progress is unavailable, and completed uploads remain
+  distinguishable from files that are merely selected or locally previewed.
 - [ ] Refresh visual design, graphics, species art, empty states, social cards, and brand
   illustration. Artist collaboration is intentionally deferred and can focus on expressive
   assets while product interaction remains usability-led.
