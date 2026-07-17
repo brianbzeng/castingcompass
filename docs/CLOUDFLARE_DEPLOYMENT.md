@@ -66,6 +66,8 @@ maintenance bridge; the human-approval smoke tests remain in
 
 Repository checks do not prove dashboard controls or recovery readiness. Complete the
 [production operations gate](PRODUCTION-OPERATIONS.md) before marking hardening finished.
+The runtime secret inventory, managed-encryption boundary, separation rules, and reviewed
+rotation procedure are in [Key custody and encryption](KEY-CUSTODY-AND-ENCRYPTION.md).
 
 ## Cloudflare Git integration
 

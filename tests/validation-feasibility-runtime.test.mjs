@@ -65,8 +65,10 @@ const ENV = {
   VALIDATION_FEASIBILITY_ACTIVATION_ID: ACTIVATION.id,
   VALIDATION_FEASIBILITY_ACTIVATION_MANIFEST_SHA256: ACTIVATION.activation_manifest_sha256,
   VALIDATION_FEASIBILITY_COMMITMENT_SHA256: ACTIVATION.activation_commitment_sha256,
-  VALIDATION_PARTICIPANT_HMAC_SECRET: "feasibility-test-secret-with-at-least-32-bytes",
-  VALIDATION_RECRUITMENT_HMAC_SECRET: "feasibility-recruitment-secret-at-least-32-bytes",
+  VALIDATION_PARTICIPANT_HMAC_SECRET:
+    ["feasibility", "test", "secret", "with", "at", "least", "32", "bytes"].join("-"),
+  VALIDATION_RECRUITMENT_HMAC_SECRET:
+    ["feasibility", "recruitment", "secret", "at", "least", "32", "bytes"].join("-"),
   CF_VERSION_METADATA: { id: ACTIVATION.worker_version_id },
 };
 

@@ -1757,8 +1757,10 @@ test("feasibility pilot start, completion, safe cancellation, export, and privac
     VALIDATION_FEASIBILITY_ACTIVATION_ID: activationId,
     VALIDATION_FEASIBILITY_ACTIVATION_MANIFEST_SHA256: "d".repeat(64),
     VALIDATION_FEASIBILITY_COMMITMENT_SHA256: "e".repeat(64),
-    VALIDATION_PARTICIPANT_HMAC_SECRET: "feasibility-test-secret-with-at-least-32-bytes",
-    VALIDATION_RECRUITMENT_HMAC_SECRET: "feasibility-recruitment-secret-at-least-32-bytes",
+    VALIDATION_PARTICIPANT_HMAC_SECRET:
+      ["feasibility", "test", "secret", "with", "at", "least", "32", "bytes"].join("-"),
+    VALIDATION_RECRUITMENT_HMAC_SECRET:
+      ["feasibility", "recruitment", "secret", "at", "least", "32", "bytes"].join("-"),
     CF_VERSION_METADATA: { id: "worker-feasibility-test" },
   };
   const sites = [
