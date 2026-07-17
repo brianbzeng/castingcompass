@@ -6,12 +6,48 @@ import {
   TAXON_CATALOG_VERSION,
   UNRESOLVED_FISH_TAXON_ID,
 } from "../shared/species-contract.ts";
+import {
+  DEFAULT_INCENTIVE_POLICY_ID,
+  DEFAULT_VALIDATION_COHORT_ID,
+  OPPORTUNITY_ATTESTATION_INDEX_VERSION,
+  TRIP_VALIDATION_CONSENT_VERSION,
+  VALIDATION_COLLECTION_CONTRACT_VERSION,
+  verifyOpportunityAttestation,
+  type AssetFetcherLike,
+  type AttestedOpportunity,
+  type OpportunityAttestationStatus,
+} from "./validation.ts";
 
 const MAX_PHOTO_BYTES = 5 * 1024 * 1024;
 const MAX_MULTIPART_BYTES = MAX_PHOTO_BYTES + 1024 * 1024;
 const REPORTER_COOKIE = "cc_reporter";
 const ALLOWED_IMAGE_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
 const ALLOWED_MODES = new Set(["shore", "beach", "pier", "jetty", "kayak", "boat", "other"]);
+const VALIDATION_ELIGIBLE_MODES = new Set(["shore", "beach", "pier", "jetty"]);
+const VALIDATION_PROTOCOL_ID = "california-halibut-site-window-v1";
+const VALIDATION_SECONDARY_COHORT_ID =
+  "california-halibut-site-window-observational-secondary-v1" as const;
+const VALIDATION_ENROLLMENT_START_MS = Date.parse("2026-08-01T00:00:00.000Z");
+const VALIDATION_ENROLLMENT_END_EXCLUSIVE_MS = Date.parse("2027-08-01T00:00:00.000Z");
+// datetime-local inputs round to a minute; requests within this bound are bound to server receipt time.
+const MAX_LIVE_START_CLOCK_SKEW_MS = 90 * 1_000;
+const SHA256_PATTERN = /^[a-f0-9]{64}$/;
+const STRICT_UTC_TIMESTAMP_PATTERN = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{3})?Z$/;
+const RECRUITMENT_FRAME_ID = "california-halibut-site-window-recruitment-v1" as const;
+const RECRUITMENT_EVENT_CONTRACT_VERSION = "castingcompass.recruitment-event/1.0.0" as const;
+const ORGANIC_RECRUITMENT_SOURCE_ID = "castingcompass-organic-product" as const;
+const VALIDATION_PARTICIPANT_TOKEN_DOMAIN = "castingcompass.validation-participant/1.0.0" as const;
+const VALIDATION_SOURCE_RECORD_DOMAIN = "castingcompass.validation-source-record/1.0.0" as const;
+const VALIDATION_EFFORT_SEGMENT_DOMAIN = "castingcompass.validation-effort-segment/1.0.0" as const;
+const VALIDATION_ASSIGNMENT_DOMAIN = "castingcompass.validation-assignment/1.0.0" as const;
+const VALIDATION_COMPLETION_EVENT_CONTRACT_VERSION =
+  "castingcompass.validation-completion-event/1.0.0" as const;
+const VALIDATION_EFFORT_UNIT = "whole-trip-group-attempt" as const;
+const ALLOWED_RECRUITMENT_SOURCE_IDS = new Set([
+  ORGANIC_RECRUITMENT_SOURCE_ID,
+  "direct-opt-in-research-invite",
+  "admin-approved-community-prospective",
+]);
 
 export interface D1PreparedStatementLike {
   bind(...values: unknown[]): D1PreparedStatementLike;
@@ -47,9 +83,17 @@ interface ImageBindingLike {
 
 export interface TripApiEnv {
   DB?: D1DatabaseLike;
+  ASSETS?: AssetFetcherLike;
   TRIP_PHOTOS?: R2BucketLike;
   IMAGES?: ImageBindingLike;
   TRIP_PHOTO_UPLOADS_ENABLED?: string;
+  /** Enables only organic score-visible observational-secondary collection; never primary evidence. */
+  VALIDATION_OBSERVATIONAL_SECONDARY_ENABLED?: string;
+  VALIDATION_COHORT_ID?: string;
+  VALIDATION_PROTOCOL_ID?: string;
+  VALIDATION_ACTIVATION_MANIFEST_SHA256?: string;
+  VALIDATION_ACTIVATED_AT?: string;
+  VALIDATION_ACTIVATION_SCORING_SHA256?: string;
 }
 
 export interface CuratedSite {
@@ -207,7 +251,6 @@ interface CompletionRecord {
   targetIdentificationConfidence: string;
   notes: string | null;
   consentAt: string;
-  scoreInfluencedChoice: boolean | null;
   photoKey: string | null;
   photoContentType: string | null;
   photoSizeBytes: number | null;
@@ -231,12 +274,167 @@ interface TripSummary {
   };
 }
 
+interface ForecastImpressionRecord extends AttestedOpportunity {
+  id: string;
+  tripId: string;
+  attestedAt: string;
+}
+
+interface ValidationProvenanceRecord {
+  id: string;
+  tripId: string;
+  eventType: "enrollment" | "completion" | "retrospective_submission" | "evidence_exclusion";
+  collectionContractVersion: string;
+  validationProtocolId: string | null;
+  activationManifestSha256: string | null;
+  activatedAt: string | null;
+  activationScoringSystemSha256: string | null;
+  cohortId: string;
+  sourceRole: "context_only" | "prospective_secondary";
+  participantGroupId: string | null;
+  recruitmentFrameId: string | null;
+  recruitmentSourceId: string;
+  recruitmentEventContractVersion: string | null;
+  recruitmentEventAt: string | null;
+  recruitmentEventSha256: string | null;
+  communityApprovalSha256: string | null;
+  assignmentId: string | null;
+  sourceRecordSha256: string | null;
+  effortSegmentId: string | null;
+  effortUnit: typeof VALIDATION_EFFORT_UNIT | null;
+  attemptCount: 1 | null;
+  targetTaxonId: typeof CALIFORNIA_HALIBUT_TAXON_ID | null;
+  segmentStartAt: string | null;
+  segmentEndAt: string | null;
+  modeAtCompletion: string | null;
+  anglerCount: number | null;
+  durationMilliseconds: number | null;
+  personMilliseconds: number | null;
+  completionEventContractVersion: typeof VALIDATION_COMPLETION_EVENT_CONTRACT_VERSION | null;
+  completionEventAt: string | null;
+  completionConsentVersion: typeof TRIP_VALIDATION_CONSENT_VERSION | null;
+  completionConsentedAt: string | null;
+  completionPrimaryTargetConfirmed: boolean | null;
+  completionCompleteAttemptConfirmed: boolean | null;
+  completionEventSha256: string | null;
+  incentivePolicyId: string;
+  selectionMethod: "organic_score_visible" | "organic_unverified" | "retrospective_self_report";
+  targetIntent: "california-halibut-primary-full-trip";
+  primaryTargetConfirmed: boolean;
+  completeAttemptConfirmed: boolean | null;
+  modeAtEnrollment: string | null;
+  consentVersion: string | null;
+  consentedAt: string | null;
+  scoreInfluencedChoice: boolean | null;
+  attestationStatus:
+    | OpportunityAttestationStatus
+    | "not_applicable_retrospective"
+    | "invalidated_after_edit";
+  forecastImpressionId: string | null;
+  completionAttestedAt: string | null;
+  evidenceStatus: "context_only" | "secondary_pending_review";
+  exclusionReason: string | null;
+  createdAt: string;
+}
+
+interface ValidationPersistenceBundle {
+  impression: ForecastImpressionRecord | null;
+  provenance: ValidationProvenanceRecord;
+}
+
+interface StoredValidationEnrollment {
+  collection_contract_version: string;
+  source_role: "context_only" | "prospective_secondary";
+  cohort_id: string;
+  validation_protocol_id: string | null;
+  activation_manifest_sha256: string | null;
+  activated_at: string | null;
+  activation_scoring_system_sha256: string | null;
+  participant_group_id: string | null;
+  recruitment_frame_id: string | null;
+  recruitment_source_id: string;
+  recruitment_event_contract_version: string | null;
+  recruitment_event_at: string | null;
+  recruitment_event_sha256: string | null;
+  community_approval_sha256: string | null;
+  assignment_id: string | null;
+  source_record_sha256: string | null;
+  effort_segment_id: string | null;
+  effort_unit: string | null;
+  attempt_count: number | null;
+  target_taxon_id: string | null;
+  segment_start_at: string | null;
+  incentive_policy_id: string;
+  selection_method: "organic_score_visible" | "organic_unverified";
+  target_intent: "california-halibut-primary-full-trip";
+  primary_target_confirmed: number;
+  complete_attempt_confirmed: number | null;
+  mode_at_enrollment: string | null;
+  consent_version: string | null;
+  consented_at: string | null;
+  score_influenced_choice: number | null;
+  forecast_impression_id: string | null;
+  attestation_status: string;
+}
+
+interface StoredForecastImpression {
+  id: string;
+  window_start: string;
+  window_end: string;
+  site_id: string;
+}
+
+interface StoredRecruitmentEvent {
+  participant_group_id: string;
+  recruitment_frame_id: string;
+  recruitment_source_id: string;
+  recruitment_event_contract_version: string;
+  recruitment_event_at: string;
+  recruitment_event_sha256: string;
+  community_approval_sha256: string | null;
+}
+
+interface RecruitmentEventRecord {
+  participantGroupId: string;
+  recruitmentFrameId: string;
+  recruitmentSourceId: string;
+  recruitmentEventContractVersion: string;
+  recruitmentEventAt: string;
+  recruitmentEventSha256: string;
+  communityApprovalSha256: string | null;
+}
+
+interface ValidationActivationRecord {
+  protocolId: string;
+  cohortId: string;
+  manifestSha256: string;
+  activatedAt: string;
+  scoringSystemSha256: string;
+}
+
+interface ValidationCollectionIdentity {
+  assignmentId: string;
+  sourceRecordSha256: string;
+  effortSegmentId: string;
+}
+
 export interface TripStore {
   initialize(): Promise<void>;
   assertSubmissionAllowed(reporterKeyHash: string, now: Date): Promise<void>;
-  insertTrip(record: NewTripRecord): Promise<TripRow>;
+  insertTrip(record: NewTripRecord, validation?: ValidationPersistenceBundle): Promise<TripRow>;
   getTrip(id: string): Promise<TripRow | null>;
-  completeTrip(id: string, tokenHash: string, completion: CompletionRecord): Promise<TripRow | null>;
+  getValidationEnrollment?(tripId: string): Promise<StoredValidationEnrollment | null>;
+  getForecastImpression?(tripId: string): Promise<StoredForecastImpression | null>;
+  getRecruitmentEvent?(
+    participantGroupId: string,
+    activation: ValidationActivationRecord,
+  ): Promise<StoredRecruitmentEvent | null>;
+  completeTrip(
+    id: string,
+    tokenHash: string,
+    completion: CompletionRecord,
+    provenance?: ValidationProvenanceRecord,
+  ): Promise<TripRow | null>;
   getSummary(now: Date): Promise<TripSummary>;
 }
 
@@ -424,6 +622,299 @@ const CREATE_TRIPS_SQL = `CREATE TABLE IF NOT EXISTS trips (
   FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL
 )`;
 
+const CREATE_FORECAST_IMPRESSIONS_SQL = `CREATE TABLE IF NOT EXISTS forecast_impressions (
+  id TEXT PRIMARY KEY NOT NULL,
+  trip_id TEXT NOT NULL UNIQUE,
+  attestation_index_version TEXT NOT NULL,
+  snapshot_sha256 TEXT NOT NULL,
+  site_catalog_sha256 TEXT NOT NULL,
+  target_taxon_id TEXT NOT NULL CHECK (target_taxon_id = 'california-halibut'),
+  taxon_catalog_version TEXT NOT NULL,
+  observation_contract_version TEXT NOT NULL,
+  model_run_contract_version TEXT NOT NULL,
+  opportunity_contract_version TEXT NOT NULL,
+  scoring_system_kind TEXT NOT NULL,
+  scoring_system_version TEXT NOT NULL,
+  scoring_system_sha256 TEXT NOT NULL,
+  window_id TEXT NOT NULL,
+  site_id TEXT NOT NULL,
+  window_start TEXT NOT NULL,
+  window_end TEXT NOT NULL,
+  opportunity_score REAL NOT NULL CHECK (opportunity_score BETWEEN 0 AND 100),
+  habitat_score REAL NOT NULL CHECK (habitat_score BETWEEN 0 AND 100),
+  seasonality_score REAL NOT NULL CHECK (seasonality_score BETWEEN 0 AND 100),
+  conditions_score REAL NOT NULL CHECK (conditions_score BETWEEN 0 AND 100),
+  fishability_score REAL NOT NULL CHECK (fishability_score BETWEEN 0 AND 100),
+  attested_at TEXT NOT NULL,
+  FOREIGN KEY (trip_id) REFERENCES trips(id) ON DELETE CASCADE,
+  UNIQUE (id, trip_id),
+  CHECK (attestation_index_version = 'castingcompass.opportunity-attestation-index/1.0.0'
+    AND target_taxon_id = 'california-halibut'
+    AND taxon_catalog_version = 'castingcompass.taxa/1.0.0'
+    AND observation_contract_version = 'castingcompass.observation/2.0.0'
+    AND model_run_contract_version = 'castingcompass.model-run/2.0.0'
+    AND opportunity_contract_version = 'castingcompass.opportunity/2.0.0'
+    AND scoring_system_kind = 'heuristic-configuration'
+    AND scoring_system_version = 'heuristic-' || target_taxon_id || '-' || scoring_system_sha256),
+  CHECK (length(snapshot_sha256) = 64 AND snapshot_sha256 NOT GLOB '*[^a-f0-9]*'),
+  CHECK (length(site_catalog_sha256) = 64 AND site_catalog_sha256 NOT GLOB '*[^a-f0-9]*'),
+  CHECK (length(scoring_system_sha256) = 64 AND scoring_system_sha256 NOT GLOB '*[^a-f0-9]*'),
+  CHECK (length(window_start) = 24
+    AND strftime('%Y-%m-%dT%H:%M:%fZ', window_start) = window_start
+    AND length(window_end) = 24
+    AND strftime('%Y-%m-%dT%H:%M:%fZ', window_end) = window_end
+    AND length(attested_at) = 24
+    AND strftime('%Y-%m-%dT%H:%M:%fZ', attested_at) = attested_at
+    AND julianday(window_end) > julianday(window_start)
+    AND abs((julianday(window_end) - julianday(window_start)) * 24.0 - 2.0) < 0.000001)
+)`;
+
+const CREATE_TRIP_VALIDATION_PROVENANCE_SQL = `CREATE TABLE IF NOT EXISTS trip_validation_provenance (
+  id TEXT PRIMARY KEY NOT NULL,
+  trip_id TEXT NOT NULL,
+  event_type TEXT NOT NULL CHECK (event_type IN ('enrollment', 'completion', 'retrospective_submission', 'evidence_exclusion', 'legacy_context')),
+  collection_contract_version TEXT NOT NULL,
+  validation_protocol_id TEXT,
+  activation_manifest_sha256 TEXT,
+  activated_at TEXT,
+  activation_scoring_system_sha256 TEXT,
+  cohort_id TEXT NOT NULL,
+  source_role TEXT NOT NULL CHECK (source_role IN ('context_only', 'prospective_secondary')),
+  participant_group_id TEXT,
+  recruitment_frame_id TEXT,
+  recruitment_source_id TEXT NOT NULL,
+  recruitment_event_contract_version TEXT,
+  recruitment_event_at TEXT,
+  recruitment_event_sha256 TEXT,
+  community_approval_sha256 TEXT,
+  assignment_id TEXT,
+  source_record_sha256 TEXT,
+  effort_segment_id TEXT,
+  effort_unit TEXT,
+  attempt_count INTEGER,
+  target_taxon_id TEXT,
+  segment_start_at TEXT,
+  segment_end_at TEXT,
+  mode_at_completion TEXT,
+  angler_count INTEGER,
+  duration_milliseconds INTEGER,
+  person_milliseconds INTEGER,
+  completion_event_contract_version TEXT,
+  completion_event_at TEXT,
+  completion_consent_version TEXT,
+  completion_consented_at TEXT,
+  completion_primary_target_confirmed INTEGER,
+  completion_complete_attempt_confirmed INTEGER,
+  completion_event_sha256 TEXT,
+  incentive_policy_id TEXT NOT NULL,
+  selection_method TEXT NOT NULL CHECK (selection_method IN ('organic_score_visible', 'organic_unverified', 'retrospective_self_report', 'legacy_unknown')),
+  target_intent TEXT NOT NULL CHECK (target_intent IN ('california-halibut-primary-full-trip', 'legacy_unknown')),
+  primary_target_confirmed INTEGER CHECK (primary_target_confirmed IS NULL OR primary_target_confirmed IN (0, 1)),
+  complete_attempt_confirmed INTEGER CHECK (complete_attempt_confirmed IS NULL OR complete_attempt_confirmed IN (0, 1)),
+  mode_at_enrollment TEXT CHECK (mode_at_enrollment IS NULL OR mode_at_enrollment IN ('shore', 'beach', 'pier', 'jetty', 'kayak', 'boat', 'other')),
+  consent_version TEXT,
+  consented_at TEXT,
+  score_influenced_choice INTEGER CHECK (score_influenced_choice IS NULL OR score_influenced_choice IN (0, 1)),
+  attestation_status TEXT NOT NULL CHECK (attestation_status IN ('verified', 'unverified_missing', 'unverified_mismatch', 'unverified_asset', 'not_applicable_retrospective', 'invalidated_after_edit', 'legacy_unverified')),
+  forecast_impression_id TEXT,
+  completion_attested_at TEXT,
+  evidence_status TEXT NOT NULL CHECK (evidence_status IN ('context_only', 'secondary_pending_review')),
+  exclusion_reason TEXT,
+  created_at TEXT NOT NULL,
+  FOREIGN KEY (trip_id) REFERENCES trips(id) ON DELETE CASCADE,
+  FOREIGN KEY (forecast_impression_id, trip_id) REFERENCES forecast_impressions(id, trip_id) ON DELETE CASCADE,
+  CHECK (
+    (validation_protocol_id IS NULL
+      AND activation_manifest_sha256 IS NULL
+      AND activated_at IS NULL
+      AND activation_scoring_system_sha256 IS NULL)
+    OR
+    (validation_protocol_id = 'california-halibut-site-window-v1'
+      AND length(activation_manifest_sha256) = 64
+      AND activation_manifest_sha256 NOT GLOB '*[^a-f0-9]*'
+      AND activated_at IS NOT NULL
+      AND length(activated_at) = 24
+      AND strftime('%Y-%m-%dT%H:%M:%fZ', activated_at) = activated_at
+      AND length(activation_scoring_system_sha256) = 64
+      AND activation_scoring_system_sha256 NOT GLOB '*[^a-f0-9]*'
+      AND activated_at < '2026-08-01T00:00:00.000Z'
+      AND julianday(activated_at) < julianday(created_at))
+  ),
+  CHECK ((attestation_status = 'verified' AND forecast_impression_id IS NOT NULL)
+    OR (attestation_status != 'verified' AND forecast_impression_id IS NULL)),
+  CHECK (collection_contract_version = 'castingcompass.validation-collection/1.0.0'
+    AND length(created_at) = 24
+    AND strftime('%Y-%m-%dT%H:%M:%fZ', created_at) = created_at
+    AND (consented_at IS NULL OR (length(consented_at) = 24
+      AND strftime('%Y-%m-%dT%H:%M:%fZ', consented_at) = consented_at))
+    AND (completion_attested_at IS NULL OR (length(completion_attested_at) = 24
+      AND strftime('%Y-%m-%dT%H:%M:%fZ', completion_attested_at) = completion_attested_at))),
+  CHECK ((participant_group_id IS NULL
+      AND recruitment_frame_id IS NULL
+      AND recruitment_event_contract_version IS NULL
+      AND recruitment_event_at IS NULL
+      AND recruitment_event_sha256 IS NULL
+      AND community_approval_sha256 IS NULL)
+    OR (length(participant_group_id) = 76
+      AND substr(participant_group_id, 1, 12) = 'participant-'
+      AND substr(participant_group_id, 13) NOT GLOB '*[^a-f0-9]*'
+      AND recruitment_frame_id = 'california-halibut-site-window-recruitment-v1'
+      AND recruitment_source_id IN ('castingcompass-organic-product', 'direct-opt-in-research-invite', 'admin-approved-community-prospective')
+      AND recruitment_event_contract_version = 'castingcompass.recruitment-event/1.0.0'
+      AND length(recruitment_event_at) = 24
+      AND strftime('%Y-%m-%dT%H:%M:%fZ', recruitment_event_at) = recruitment_event_at
+      AND julianday(recruitment_event_at) <= julianday(created_at)
+      AND length(recruitment_event_sha256) = 64
+      AND recruitment_event_sha256 NOT GLOB '*[^a-f0-9]*'
+      AND ((recruitment_source_id = 'admin-approved-community-prospective'
+          AND length(community_approval_sha256) = 64
+          AND community_approval_sha256 NOT GLOB '*[^a-f0-9]*')
+        OR (recruitment_source_id != 'admin-approved-community-prospective'
+          AND community_approval_sha256 IS NULL)))),
+  CHECK ((assignment_id IS NULL
+      AND source_record_sha256 IS NULL
+      AND effort_segment_id IS NULL
+      AND effort_unit IS NULL
+      AND attempt_count IS NULL
+      AND target_taxon_id IS NULL
+      AND segment_start_at IS NULL)
+    OR (length(assignment_id) = 75
+      AND substr(assignment_id, 1, 11) = 'assignment-'
+      AND substr(assignment_id, 12) NOT GLOB '*[^a-f0-9]*'
+      AND length(source_record_sha256) = 64
+      AND source_record_sha256 NOT GLOB '*[^a-f0-9]*'
+      AND length(effort_segment_id) = 71
+      AND substr(effort_segment_id, 1, 7) = 'effort-'
+      AND substr(effort_segment_id, 8) NOT GLOB '*[^a-f0-9]*'
+      AND effort_unit = 'whole-trip-group-attempt'
+      AND attempt_count = 1
+      AND target_taxon_id = 'california-halibut'
+      AND length(segment_start_at) = 24
+      AND strftime('%Y-%m-%dT%H:%M:%fZ', segment_start_at) = segment_start_at)),
+  CHECK ((segment_end_at IS NULL
+      AND mode_at_completion IS NULL
+      AND angler_count IS NULL
+      AND duration_milliseconds IS NULL
+      AND person_milliseconds IS NULL
+      AND completion_event_contract_version IS NULL
+      AND completion_event_at IS NULL
+      AND completion_consent_version IS NULL
+      AND completion_consented_at IS NULL
+      AND completion_primary_target_confirmed IS NULL
+      AND completion_complete_attempt_confirmed IS NULL
+      AND completion_event_sha256 IS NULL)
+    OR (assignment_id IS NOT NULL
+      AND length(segment_end_at) = 24
+      AND strftime('%Y-%m-%dT%H:%M:%fZ', segment_end_at) = segment_end_at
+      AND julianday(segment_end_at) > julianday(segment_start_at)
+      AND mode_at_completion IN ('shore', 'beach', 'pier', 'jetty', 'kayak', 'boat', 'other')
+      AND angler_count BETWEEN 1 AND 12
+      AND duration_milliseconds BETWEEN 60000 AND 129600000
+      AND CAST(ROUND((julianday(segment_end_at) - julianday(segment_start_at)) * 86400000.0) AS INTEGER) = duration_milliseconds
+      AND person_milliseconds = duration_milliseconds * angler_count
+      AND completion_event_contract_version = 'castingcompass.validation-completion-event/1.0.0'
+      AND length(completion_event_at) = 24
+      AND strftime('%Y-%m-%dT%H:%M:%fZ', completion_event_at) = completion_event_at
+      AND julianday(completion_event_at) >= julianday(segment_end_at)
+      AND completion_consent_version = 'castingcompass.trip-validation-consent/1.0.0'
+      AND completion_consented_at = completion_event_at
+      AND completion_primary_target_confirmed = 1
+      AND completion_complete_attempt_confirmed = 1
+      AND length(completion_event_sha256) = 64
+      AND completion_event_sha256 NOT GLOB '*[^a-f0-9]*'
+      AND completion_event_at = completion_attested_at
+      AND completion_consent_version = consent_version
+      AND completion_consented_at = consented_at
+      AND completion_primary_target_confirmed = primary_target_confirmed
+      AND completion_complete_attempt_confirmed = complete_attempt_confirmed)),
+  CHECK ((source_role = 'prospective_secondary'
+      AND validation_protocol_id IS NOT NULL
+      AND participant_group_id IS NOT NULL
+      AND recruitment_frame_id = 'california-halibut-site-window-recruitment-v1'
+      AND recruitment_event_contract_version = 'castingcompass.recruitment-event/1.0.0'
+      AND recruitment_event_sha256 IS NOT NULL
+      AND assignment_id IS NOT NULL
+      AND source_record_sha256 IS NOT NULL
+      AND effort_segment_id IS NOT NULL
+      AND effort_unit = 'whole-trip-group-attempt'
+      AND attempt_count = 1
+      AND target_taxon_id = 'california-halibut'
+      AND segment_start_at IS NOT NULL
+      AND cohort_id = 'california-halibut-site-window-observational-secondary-v1'
+      AND incentive_policy_id = 'none-v1'
+      AND selection_method = 'organic_score_visible'
+      AND target_intent = 'california-halibut-primary-full-trip'
+      AND primary_target_confirmed = 1
+      AND score_influenced_choice IS NOT NULL
+      AND mode_at_enrollment IN ('shore', 'beach', 'pier', 'jetty')
+      AND attestation_status = 'verified'
+      AND evidence_status = 'secondary_pending_review')
+    OR (source_role = 'context_only' AND evidence_status = 'context_only')),
+  CHECK (event_type != 'enrollment' OR source_role != 'context_only' OR participant_group_id IS NULL),
+  CHECK (event_type != 'enrollment' OR segment_end_at IS NULL),
+  CHECK (event_type != 'completion' OR assignment_id IS NULL OR completion_event_sha256 IS NOT NULL),
+  CHECK ((event_type = 'enrollment'
+      AND primary_target_confirmed = 1
+      AND complete_attempt_confirmed IS NULL
+      AND consent_version = 'castingcompass.trip-validation-consent/1.0.0'
+      AND consented_at IS NOT NULL
+      AND completion_attested_at IS NULL)
+    OR (event_type = 'completion'
+      AND primary_target_confirmed = 1
+      AND complete_attempt_confirmed = 1
+      AND consent_version = 'castingcompass.trip-validation-consent/1.0.0'
+      AND consented_at = created_at
+      AND completion_attested_at = created_at)
+    OR (event_type = 'retrospective_submission'
+      AND validation_protocol_id IS NULL
+      AND source_role = 'context_only'
+      AND selection_method = 'retrospective_self_report'
+      AND primary_target_confirmed = 1
+      AND complete_attempt_confirmed = 1
+      AND attestation_status = 'not_applicable_retrospective'
+      AND consented_at = created_at
+      AND completion_attested_at = created_at)
+    OR (event_type = 'evidence_exclusion'
+      AND validation_protocol_id IS NULL
+      AND activation_manifest_sha256 IS NULL
+      AND activated_at IS NULL
+      AND activation_scoring_system_sha256 IS NULL
+      AND source_role = 'context_only'
+      AND participant_group_id IS NULL
+      AND recruitment_frame_id IS NULL
+      AND recruitment_event_contract_version IS NULL
+      AND recruitment_event_at IS NULL
+      AND recruitment_event_sha256 IS NULL
+      AND community_approval_sha256 IS NULL
+      AND assignment_id IS NULL
+      AND source_record_sha256 IS NULL
+      AND effort_segment_id IS NULL
+      AND effort_unit IS NULL
+      AND attempt_count IS NULL
+      AND target_taxon_id IS NULL
+      AND segment_start_at IS NULL
+      AND segment_end_at IS NULL
+      AND mode_at_completion IS NULL
+      AND angler_count IS NULL
+      AND duration_milliseconds IS NULL
+      AND person_milliseconds IS NULL
+      AND completion_event_contract_version IS NULL
+      AND completion_event_at IS NULL
+      AND completion_consent_version IS NULL
+      AND completion_consented_at IS NULL
+      AND completion_primary_target_confirmed IS NULL
+      AND completion_complete_attempt_confirmed IS NULL
+      AND completion_event_sha256 IS NULL
+      AND attestation_status = 'invalidated_after_edit'
+      AND forecast_impression_id IS NULL
+      AND completion_attested_at IS NULL
+      AND evidence_status = 'context_only'
+      AND exclusion_reason IN ('post_completion_profile_edit', 'trusted_review_exclusion'))
+    OR (event_type = 'legacy_context'
+      AND source_role = 'context_only'
+      AND evidence_status = 'context_only'))
+)`;
+
 const CREATE_INDEX_STATEMENTS = [
   "CREATE INDEX IF NOT EXISTS trips_status_started_idx ON trips (status, started_at)",
   "CREATE INDEX IF NOT EXISTS trips_site_started_idx ON trips (site_id, started_at)",
@@ -431,6 +922,105 @@ const CREATE_INDEX_STATEMENTS = [
   "CREATE INDEX IF NOT EXISTS trips_referral_created_idx ON trips (referral_code, created_at)",
   "CREATE INDEX IF NOT EXISTS trips_user_completed_idx ON trips (user_id, completed_at)",
   "CREATE INDEX IF NOT EXISTS trips_contract_target_completed_idx ON trips (contract_status, target_taxon_id, completed_at)",
+  "CREATE INDEX IF NOT EXISTS forecast_impressions_window_idx ON forecast_impressions (window_id, site_id, window_start)",
+  "CREATE INDEX IF NOT EXISTS trip_validation_provenance_trip_created_idx ON trip_validation_provenance (trip_id, created_at)",
+  "CREATE INDEX IF NOT EXISTS trip_validation_provenance_cohort_role_idx ON trip_validation_provenance (collection_contract_version, validation_protocol_id, cohort_id, source_role, evidence_status)",
+  "CREATE INDEX IF NOT EXISTS trip_validation_provenance_participant_recruitment_idx ON trip_validation_provenance (participant_group_id, recruitment_event_at)",
+  `CREATE TRIGGER IF NOT EXISTS forecast_impressions_append_only_guard
+    BEFORE UPDATE ON forecast_impressions
+    BEGIN SELECT RAISE(ABORT, 'forecast impressions are append-only'); END`,
+  `CREATE TRIGGER IF NOT EXISTS trip_validation_provenance_append_only_guard
+    BEFORE UPDATE ON trip_validation_provenance
+    BEGIN SELECT RAISE(ABORT, 'trip validation provenance is append-only'); END`,
+  `CREATE TRIGGER IF NOT EXISTS trip_validation_recruitment_event_immutable_guard
+    BEFORE INSERT ON trip_validation_provenance
+    WHEN NEW.participant_group_id IS NOT NULL AND EXISTS (
+      SELECT 1 FROM trip_validation_provenance AS prior
+      WHERE prior.participant_group_id = NEW.participant_group_id
+        AND prior.recruitment_event_sha256 IS NOT NULL
+        AND (prior.recruitment_frame_id IS NOT NEW.recruitment_frame_id
+          OR prior.recruitment_source_id IS NOT NEW.recruitment_source_id
+          OR prior.recruitment_event_contract_version IS NOT NEW.recruitment_event_contract_version
+          OR prior.recruitment_event_at IS NOT NEW.recruitment_event_at
+          OR prior.recruitment_event_sha256 IS NOT NEW.recruitment_event_sha256
+          OR prior.community_approval_sha256 IS NOT NEW.community_approval_sha256)
+    )
+    BEGIN SELECT RAISE(ABORT, 'participant recruitment event is immutable'); END`,
+  `CREATE TRIGGER IF NOT EXISTS forecast_impressions_trip_identity_guard
+    BEFORE INSERT ON forecast_impressions
+    WHEN NOT EXISTS (
+      SELECT 1 FROM trips
+      WHERE id = NEW.trip_id AND site_id = NEW.site_id
+        AND julianday(started_at) >= julianday(NEW.window_start)
+        AND julianday(started_at) < julianday(NEW.window_end)
+    )
+    BEGIN SELECT RAISE(ABORT, 'forecast impression does not match trip site and start window'); END`,
+  `CREATE TRIGGER IF NOT EXISTS trip_validation_activation_identity_guard
+    BEFORE INSERT ON trip_validation_provenance
+    WHEN NEW.validation_protocol_id IS NOT NULL AND NOT EXISTS (
+      SELECT 1 FROM forecast_impressions
+      WHERE id = NEW.forecast_impression_id AND trip_id = NEW.trip_id
+        AND scoring_system_sha256 = NEW.activation_scoring_system_sha256
+    )
+    BEGIN SELECT RAISE(ABORT, 'validation activation does not match forecast impression'); END`,
+  `CREATE TRIGGER IF NOT EXISTS trip_validation_completion_identity_guard
+    BEFORE INSERT ON trip_validation_provenance
+    WHEN NEW.event_type = 'completion' AND NEW.assignment_id IS NOT NULL AND NOT EXISTS (
+      SELECT 1 FROM trip_validation_provenance AS enrollment
+      WHERE enrollment.trip_id = NEW.trip_id AND enrollment.event_type = 'enrollment'
+        AND enrollment.source_role = 'prospective_secondary'
+        AND enrollment.assignment_id = NEW.assignment_id
+        AND enrollment.source_record_sha256 = NEW.source_record_sha256
+        AND enrollment.effort_segment_id = NEW.effort_segment_id
+        AND enrollment.participant_group_id = NEW.participant_group_id
+        AND enrollment.validation_protocol_id = NEW.validation_protocol_id
+        AND enrollment.activation_manifest_sha256 = NEW.activation_manifest_sha256
+        AND enrollment.activated_at = NEW.activated_at
+        AND enrollment.activation_scoring_system_sha256 = NEW.activation_scoring_system_sha256
+        AND enrollment.cohort_id = NEW.cohort_id
+        AND enrollment.incentive_policy_id = NEW.incentive_policy_id
+        AND enrollment.recruitment_frame_id = NEW.recruitment_frame_id
+        AND enrollment.recruitment_source_id = NEW.recruitment_source_id
+        AND enrollment.recruitment_event_contract_version = NEW.recruitment_event_contract_version
+        AND enrollment.recruitment_event_at = NEW.recruitment_event_at
+        AND enrollment.recruitment_event_sha256 = NEW.recruitment_event_sha256
+        AND enrollment.community_approval_sha256 IS NEW.community_approval_sha256
+        AND enrollment.forecast_impression_id = NEW.forecast_impression_id
+        AND enrollment.effort_unit = NEW.effort_unit
+        AND enrollment.attempt_count = NEW.attempt_count
+        AND enrollment.target_taxon_id = NEW.target_taxon_id
+        AND enrollment.segment_start_at = NEW.segment_start_at
+        AND enrollment.selection_method = NEW.selection_method
+        AND enrollment.target_intent = NEW.target_intent
+        AND enrollment.primary_target_confirmed = NEW.primary_target_confirmed
+        AND enrollment.mode_at_enrollment = NEW.mode_at_enrollment
+        AND enrollment.score_influenced_choice = NEW.score_influenced_choice
+    )
+    BEGIN SELECT RAISE(ABORT, 'completion event does not match immutable enrollment identity'); END`,
+  `CREATE TRIGGER IF NOT EXISTS trip_validation_secondary_eligibility_guard
+    BEFORE INSERT ON trip_validation_provenance
+    WHEN NEW.source_role = 'prospective_secondary' AND NOT EXISTS (
+      SELECT 1 FROM trips AS t
+      JOIN forecast_impressions AS f
+        ON f.id = NEW.forecast_impression_id AND f.trip_id = t.id
+      WHERE t.id = NEW.trip_id
+        AND t.started_at >= '2026-08-01T00:00:00.000Z'
+        AND t.started_at < '2027-08-01T00:00:00.000Z'
+        AND julianday(NEW.activated_at) < julianday(t.started_at)
+        AND t.site_id = f.site_id
+        AND t.started_at = NEW.segment_start_at
+        AND julianday(t.started_at) >= julianday(f.window_start)
+        AND julianday(t.started_at) < julianday(f.window_end)
+        AND (NEW.event_type != 'completion' OR (
+          t.status = 'completed' AND t.mode = NEW.mode_at_enrollment
+          AND t.mode = NEW.mode_at_completion
+          AND t.ended_at = NEW.segment_end_at
+          AND t.angler_count = NEW.angler_count
+          AND t.target_taxon_id = NEW.target_taxon_id
+          AND julianday(t.ended_at) <= julianday(f.window_end)
+        ))
+    )
+    BEGIN SELECT RAISE(ABORT, 'secondary evidence row is outside its activated site-window envelope'); END`,
   `CREATE TRIGGER IF NOT EXISTS trips_completed_contract_insert_guard
     BEFORE INSERT ON trips
     WHEN NEW.status = 'completed' AND NEW.contract_status IS NULL
@@ -460,6 +1050,37 @@ const INSERT_TRIP_SQL = `INSERT INTO trips (
   ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
   ?, ?, ?, ?, ?
 )`;
+
+const INSERT_FORECAST_IMPRESSION_SQL = `INSERT INTO forecast_impressions (
+  id, trip_id, attestation_index_version, snapshot_sha256, site_catalog_sha256,
+  target_taxon_id, taxon_catalog_version, observation_contract_version,
+  model_run_contract_version, opportunity_contract_version, scoring_system_kind,
+  scoring_system_version, scoring_system_sha256, window_id, site_id, window_start,
+  window_end, opportunity_score, habitat_score, seasonality_score, conditions_score,
+  fishability_score, attested_at
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
+
+const VALIDATION_PROVENANCE_COLUMNS = [
+  "id", "trip_id", "event_type", "collection_contract_version", "validation_protocol_id",
+  "activation_manifest_sha256", "activated_at", "activation_scoring_system_sha256",
+  "cohort_id", "source_role", "participant_group_id", "recruitment_frame_id",
+  "recruitment_source_id", "recruitment_event_contract_version", "recruitment_event_at",
+  "recruitment_event_sha256", "community_approval_sha256",
+  "assignment_id", "source_record_sha256", "effort_segment_id", "effort_unit",
+  "attempt_count", "target_taxon_id", "segment_start_at", "segment_end_at",
+  "mode_at_completion", "angler_count", "duration_milliseconds", "person_milliseconds",
+  "completion_event_contract_version", "completion_event_at", "completion_consent_version",
+  "completion_consented_at", "completion_primary_target_confirmed",
+  "completion_complete_attempt_confirmed", "completion_event_sha256",
+  "incentive_policy_id", "selection_method", "target_intent", "primary_target_confirmed",
+  "complete_attempt_confirmed", "mode_at_enrollment", "consent_version", "consented_at",
+  "score_influenced_choice", "attestation_status", "forecast_impression_id",
+  "completion_attested_at", "evidence_status", "exclusion_reason", "created_at",
+] as const;
+
+const INSERT_VALIDATION_PROVENANCE_SQL = `INSERT INTO trip_validation_provenance (
+  ${VALIDATION_PROVENANCE_COLUMNS.join(", ")}
+) VALUES (${VALIDATION_PROVENANCE_COLUMNS.map(() => "?").join(", ")})`;
 
 const initializedDatabases = new WeakMap<object, Promise<void>>();
 
@@ -555,8 +1176,6 @@ const SERVER_CONTROLLED_OBSERVATION_FIELDS = [
   "source_record_id",
   "dataKind",
   "data_kind",
-  "completeAttempt",
-  "complete_attempt",
   "expandedEstimate",
   "expanded_estimate",
 ] as const;
@@ -671,7 +1290,11 @@ export function createTripStore(db: D1DatabaseLike): TripStore {
     let pending = initializedDatabases.get(db as object);
     if (!pending) {
       pending = (async () => {
-        await db.batch([db.prepare(CREATE_TRIPS_SQL)]);
+        await db.batch([
+          db.prepare(CREATE_TRIPS_SQL),
+          db.prepare(CREATE_FORECAST_IMPRESSIONS_SQL),
+          db.prepare(CREATE_TRIP_VALIDATION_PROVENANCE_SQL),
+        ]);
         await db.batch(CREATE_INDEX_STATEMENTS.map((statement) => db.prepare(statement)));
       })().catch((error) => {
         initializedDatabases.delete(db as object);
@@ -714,10 +1337,8 @@ export function createTripStore(db: D1DatabaseLike): TripStore {
       }
     },
 
-    async insertTrip(record) {
-      await db
-        .prepare(INSERT_TRIP_SQL)
-        .bind(
+    async insertTrip(record, validation) {
+      const statements = [db.prepare(INSERT_TRIP_SQL).bind(
           record.id,
           record.userId,
           record.status,
@@ -773,8 +1394,12 @@ export function createTripStore(db: D1DatabaseLike): TripStore {
           record.createdAt,
           record.updatedAt,
           record.completedAt,
-        )
-        .run();
+        )];
+      if (validation?.impression) {
+        statements.push(prepareForecastImpressionInsert(db, validation.impression));
+      }
+      if (validation) statements.push(prepareValidationProvenanceInsert(db, validation.provenance));
+      await db.batch(statements);
 
       const inserted = await getTrip(record.id);
       if (!inserted) throw new Error("Trip insert did not return a record");
@@ -783,9 +1408,60 @@ export function createTripStore(db: D1DatabaseLike): TripStore {
 
     getTrip,
 
-    async completeTrip(id, tokenHash, completion) {
-      const result = await db
-        .prepare(`UPDATE trips SET
+    async getValidationEnrollment(tripId) {
+      return db.prepare(`SELECT collection_contract_version, source_role, cohort_id,
+          validation_protocol_id, activation_manifest_sha256, activated_at,
+          activation_scoring_system_sha256, participant_group_id, recruitment_frame_id,
+          recruitment_source_id, recruitment_event_contract_version, recruitment_event_at,
+          recruitment_event_sha256, community_approval_sha256,
+          assignment_id, source_record_sha256, effort_segment_id, effort_unit,
+          attempt_count, target_taxon_id, segment_start_at, incentive_policy_id,
+          selection_method, target_intent, primary_target_confirmed,
+          complete_attempt_confirmed, mode_at_enrollment, consent_version,
+          consented_at, score_influenced_choice, forecast_impression_id,
+          attestation_status
+        FROM trip_validation_provenance
+        WHERE trip_id = ? AND event_type = 'enrollment'
+        ORDER BY created_at ASC LIMIT 1`)
+        .bind(tripId)
+        .first<StoredValidationEnrollment>();
+    },
+
+    async getRecruitmentEvent(participantGroupId, activation) {
+      return db.prepare(`SELECT participant_group_id, recruitment_frame_id,
+          recruitment_source_id, recruitment_event_contract_version,
+          recruitment_event_at, recruitment_event_sha256, community_approval_sha256
+        FROM trip_validation_provenance
+        WHERE participant_group_id = ?
+          AND event_type = 'enrollment'
+          AND source_role = 'prospective_secondary'
+          AND validation_protocol_id = ?
+          AND activation_manifest_sha256 = ?
+          AND activated_at = ?
+          AND activation_scoring_system_sha256 = ?
+          AND recruitment_frame_id = ?
+          AND recruitment_event_sha256 IS NOT NULL
+        ORDER BY recruitment_event_at ASC, created_at ASC LIMIT 1`)
+        .bind(
+          participantGroupId,
+          activation.protocolId,
+          activation.manifestSha256,
+          activation.activatedAt,
+          activation.scoringSystemSha256,
+          RECRUITMENT_FRAME_ID,
+        )
+        .first<StoredRecruitmentEvent>();
+    },
+
+    async getForecastImpression(tripId) {
+      return db.prepare(`SELECT id, window_start, window_end, site_id
+        FROM forecast_impressions WHERE trip_id = ? LIMIT 1`)
+        .bind(tripId)
+        .first<StoredForecastImpression>();
+    },
+
+    async completeTrip(id, tokenHash, completion, provenance) {
+      const update = db.prepare(`UPDATE trips SET
           status = 'completed',
           opportunity_window_id = CASE WHEN mode = ? THEN opportunity_window_id ELSE NULL END,
           opportunity_score = CASE WHEN mode = ? THEN opportunity_score ELSE NULL END,
@@ -795,7 +1471,6 @@ export function createTripStore(db: D1DatabaseLike): TripStore {
           fishability_score = CASE WHEN mode = ? THEN fishability_score ELSE NULL END,
           model_version = CASE WHEN mode = ? THEN model_version ELSE NULL END,
           prediction_metadata_json = CASE WHEN mode = ? THEN prediction_metadata_json ELSE NULL END,
-          score_influenced_choice = CASE WHEN mode = ? THEN ? ELSE NULL END,
           ended_at = ?, mode = ?, fishing_method = ?, gear = ?,
           gear_profile_id = ?, rod = ?, reel = ?, bait_lure = ?, rig = ?,
           angler_count = ?, angler_hours = ?, keeper_count = ?, short_released_count = ?,
@@ -816,8 +1491,6 @@ export function createTripStore(db: D1DatabaseLike): TripStore {
           completion.mode,
           completion.mode,
           completion.mode,
-          completion.mode,
-          completion.scoreInfluencedChoice === null ? null : Number(completion.scoreInfluencedChoice),
           completion.endedAt,
           completion.mode,
           completion.fishingMethod,
@@ -854,10 +1527,17 @@ export function createTripStore(db: D1DatabaseLike): TripStore {
           completion.updatedAt,
           id,
           tokenHash,
-        )
-        .run();
+        );
 
-      if (Number(result.meta?.changes ?? 0) !== 1) return null;
+      const results = provenance
+        ? await db.batch([
+            update,
+            prepareConditionalCompletionProvenanceInsert(db, provenance, completion.updatedAt),
+          ])
+        : [await update.run()];
+      const result = results[0] as { meta?: { changes?: number } } | undefined;
+
+      if (Number(result?.meta?.changes ?? 0) !== 1) return null;
       return getTrip(id);
     },
 
@@ -923,6 +1603,640 @@ export function createTripStore(db: D1DatabaseLike): TripStore {
   };
 }
 
+function prepareForecastImpressionInsert(db: D1DatabaseLike, record: ForecastImpressionRecord) {
+  return db.prepare(INSERT_FORECAST_IMPRESSION_SQL).bind(
+    record.id,
+    record.tripId,
+    OPPORTUNITY_ATTESTATION_INDEX_VERSION,
+    record.snapshotSha256,
+    record.siteCatalogSha256,
+    record.targetTaxonId,
+    record.taxonCatalogVersion,
+    record.observationContractVersion,
+    record.modelRunContractVersion,
+    record.opportunityContractVersion,
+    record.scoringSystemKind,
+    record.scoringSystemVersion,
+    record.scoringSystemSha256,
+    record.windowId,
+    record.siteId,
+    record.windowStart,
+    record.windowEnd,
+    record.opportunityScore,
+    record.habitatScore,
+    record.seasonalityScore,
+    record.conditionsScore,
+    record.fishabilityScore,
+    record.attestedAt,
+  );
+}
+
+function validationProvenanceBindings(record: ValidationProvenanceRecord) {
+  return [
+    record.id,
+    record.tripId,
+    record.eventType,
+    record.collectionContractVersion,
+    record.validationProtocolId,
+    record.activationManifestSha256,
+    record.activatedAt,
+    record.activationScoringSystemSha256,
+    record.cohortId,
+    record.sourceRole,
+    record.participantGroupId,
+    record.recruitmentFrameId,
+    record.recruitmentSourceId,
+    record.recruitmentEventContractVersion,
+    record.recruitmentEventAt,
+    record.recruitmentEventSha256,
+    record.communityApprovalSha256,
+    record.assignmentId,
+    record.sourceRecordSha256,
+    record.effortSegmentId,
+    record.effortUnit,
+    record.attemptCount,
+    record.targetTaxonId,
+    record.segmentStartAt,
+    record.segmentEndAt,
+    record.modeAtCompletion,
+    record.anglerCount,
+    record.durationMilliseconds,
+    record.personMilliseconds,
+    record.completionEventContractVersion,
+    record.completionEventAt,
+    record.completionConsentVersion,
+    record.completionConsentedAt,
+    record.completionPrimaryTargetConfirmed === null
+      ? null
+      : Number(record.completionPrimaryTargetConfirmed),
+    record.completionCompleteAttemptConfirmed === null
+      ? null
+      : Number(record.completionCompleteAttemptConfirmed),
+    record.completionEventSha256,
+    record.incentivePolicyId,
+    record.selectionMethod,
+    record.targetIntent,
+    Number(record.primaryTargetConfirmed),
+    record.completeAttemptConfirmed === null ? null : Number(record.completeAttemptConfirmed),
+    record.modeAtEnrollment,
+    record.consentVersion,
+    record.consentedAt,
+    record.scoreInfluencedChoice === null ? null : Number(record.scoreInfluencedChoice),
+    record.attestationStatus,
+    record.forecastImpressionId,
+    record.completionAttestedAt,
+    record.evidenceStatus,
+    record.exclusionReason,
+    record.createdAt,
+  ];
+}
+
+function prepareValidationProvenanceInsert(db: D1DatabaseLike, record: ValidationProvenanceRecord) {
+  return db.prepare(INSERT_VALIDATION_PROVENANCE_SQL).bind(...validationProvenanceBindings(record));
+}
+
+function prepareConditionalCompletionProvenanceInsert(
+  db: D1DatabaseLike,
+  record: ValidationProvenanceRecord,
+  completedAt: string,
+) {
+  const placeholders = validationProvenanceBindings(record).map(() => "?").join(", ");
+  return db.prepare(`INSERT INTO trip_validation_provenance (
+      ${VALIDATION_PROVENANCE_COLUMNS.join(", ")}
+    ) SELECT ${placeholders}
+    WHERE EXISTS (
+      SELECT 1 FROM trips WHERE id = ? AND status = 'completed'
+        AND token_hash IS NULL AND completed_at = ?
+    )`).bind(...validationProvenanceBindings(record), record.tripId, completedAt);
+}
+
+function forecastFieldsFromAttestation(
+  opportunity: AttestedOpportunity | null,
+  scoreInfluencedChoice: boolean,
+) {
+  if (!opportunity) {
+    return {
+      opportunityWindowId: null,
+      opportunityScore: null,
+      habitatScore: null,
+      seasonalityScore: null,
+      conditionsScore: null,
+      fishabilityScore: null,
+      modelVersion: null,
+      scoreInfluencedChoice,
+      predictionMetadataJson: null,
+    };
+  }
+
+  return {
+    opportunityWindowId: opportunity.windowId,
+    opportunityScore: opportunity.opportunityScore,
+    habitatScore: opportunity.habitatScore,
+    seasonalityScore: opportunity.seasonalityScore,
+    conditionsScore: opportunity.conditionsScore,
+    fishabilityScore: opportunity.fishabilityScore,
+    modelVersion: opportunity.scoringSystemVersion,
+    scoreInfluencedChoice,
+    predictionMetadataJson: JSON.stringify({
+      attestationIndexVersion: OPPORTUNITY_ATTESTATION_INDEX_VERSION,
+      attestationGeneratedAt: opportunity.generatedAt,
+      snapshotSha256: opportunity.snapshotSha256,
+      siteCatalogSha256: opportunity.siteCatalogSha256,
+      targetTaxonId: opportunity.targetTaxonId,
+      taxonCatalogVersion: opportunity.taxonCatalogVersion,
+      observationContractVersion: opportunity.observationContractVersion,
+      modelRunContractVersion: opportunity.modelRunContractVersion,
+      opportunityContractVersion: opportunity.opportunityContractVersion,
+      scoringSystemKind: opportunity.scoringSystemKind,
+      scoringSystemVersion: opportunity.scoringSystemVersion,
+      scoringSystemSha256: opportunity.scoringSystemSha256,
+      windowStart: opportunity.windowStart,
+      windowEnd: opportunity.windowEnd,
+    }),
+  };
+}
+
+function strictActivationTimestamp(value: string | undefined) {
+  const candidate = value?.trim();
+  if (!candidate || !STRICT_UTC_TIMESTAMP_PATTERN.test(candidate) || candidate.startsWith("0000-")) return null;
+  const date = new Date(candidate);
+  const normalizedInput = candidate.includes(".") ? candidate : candidate.replace("Z", ".000Z");
+  if (!Number.isFinite(date.getTime()) || date.toISOString() !== normalizedInput) return null;
+  return date.toISOString();
+}
+
+function recruitmentEventPayload(event: {
+  participantGroupId: string;
+  recruitmentFrameId: string;
+  recruitmentSourceId: string;
+  recruitmentEventAt: string;
+  communityApprovalSha256: string | null;
+}) {
+  // Insertion order is the RFC 8785 lexicographic key order. Values are strings/null,
+  // so JSON.stringify produces the canonical bytes hashed by this fixed contract.
+  return JSON.stringify({
+    community_approval_sha256: event.communityApprovalSha256,
+    participant_group_id: event.participantGroupId,
+    recruitment_event_at: event.recruitmentEventAt,
+    recruitment_frame_id: event.recruitmentFrameId,
+    recruitment_source_id: event.recruitmentSourceId,
+  });
+}
+
+async function prepareOrganicRecruitmentEvent(
+  store: TripStore,
+  participantGroupId: string,
+  timestamp: string,
+  activation: ValidationActivationRecord,
+): Promise<RecruitmentEventRecord | null> {
+  const existing = await store.getRecruitmentEvent?.(participantGroupId, activation);
+  if (existing) {
+    const event: RecruitmentEventRecord = {
+      participantGroupId: existing.participant_group_id,
+      recruitmentFrameId: existing.recruitment_frame_id,
+      recruitmentSourceId: existing.recruitment_source_id,
+      recruitmentEventContractVersion: existing.recruitment_event_contract_version,
+      recruitmentEventAt: existing.recruitment_event_at,
+      recruitmentEventSha256: existing.recruitment_event_sha256,
+      communityApprovalSha256: existing.community_approval_sha256,
+    };
+    const canonicalEventAt = strictActivationTimestamp(event.recruitmentEventAt);
+    const communityApprovalValid = event.recruitmentSourceId === "admin-approved-community-prospective"
+      ? Boolean(event.communityApprovalSha256 && SHA256_PATTERN.test(event.communityApprovalSha256))
+      : event.communityApprovalSha256 === null;
+    if (
+      event.participantGroupId !== participantGroupId ||
+      event.recruitmentFrameId !== RECRUITMENT_FRAME_ID ||
+      event.recruitmentEventContractVersion !== RECRUITMENT_EVENT_CONTRACT_VERSION ||
+      !ALLOWED_RECRUITMENT_SOURCE_IDS.has(event.recruitmentSourceId) ||
+      canonicalEventAt !== event.recruitmentEventAt ||
+      Date.parse(event.recruitmentEventAt) > Date.parse(timestamp) ||
+      !SHA256_PATTERN.test(event.recruitmentEventSha256) ||
+      !communityApprovalValid ||
+      await sha256(recruitmentEventPayload(event)) !== event.recruitmentEventSha256
+    ) return null;
+    return event;
+  }
+
+  const event = {
+    participantGroupId,
+    recruitmentFrameId: RECRUITMENT_FRAME_ID,
+    recruitmentSourceId: ORGANIC_RECRUITMENT_SOURCE_ID,
+    recruitmentEventContractVersion: RECRUITMENT_EVENT_CONTRACT_VERSION,
+    recruitmentEventAt: timestamp,
+    communityApprovalSha256: null,
+  };
+  return {
+    ...event,
+    recruitmentEventSha256: await sha256(recruitmentEventPayload(event)),
+  };
+}
+
+async function validationCollectionIdentity(
+  tripId: string,
+  protocolId: string,
+): Promise<ValidationCollectionIdentity> {
+  const sourceRecordSha256 = await sha256(`${VALIDATION_SOURCE_RECORD_DOMAIN}\u0000${tripId}`);
+  const effortSegmentSha256 = await sha256(`${VALIDATION_EFFORT_SEGMENT_DOMAIN}\u0000${tripId}`);
+  const assignmentSha256 = await sha256(
+    `${VALIDATION_ASSIGNMENT_DOMAIN}\u0000${protocolId}\u0000${sourceRecordSha256}`,
+  );
+  return {
+    assignmentId: `assignment-${assignmentSha256}`,
+    sourceRecordSha256,
+    effortSegmentId: `effort-${effortSegmentSha256}`,
+  };
+}
+
+function canonicalCompletionEventPayload(input: {
+  activationManifestSha256: string;
+  anglerCount: number;
+  assignmentId: string;
+  cohortId: string;
+  completionEventAt: string;
+  durationMilliseconds: number;
+  effortSegmentId: string;
+  incentivePolicyId: string;
+  mode: string;
+  participantGroupId: string;
+  personMilliseconds: number;
+  segmentEndAt: string;
+  segmentStartAt: string;
+  sourceRecordSha256: string;
+}) {
+  // Keys are inserted in lexicographic order and every value is ASCII scalar data.
+  return JSON.stringify({
+    activation_manifest_sha256: input.activationManifestSha256,
+    angler_count: input.anglerCount,
+    assignment_id: input.assignmentId,
+    attempt_count: 1,
+    cohort_id: input.cohortId,
+    completion_complete_attempt_confirmed: true,
+    completion_consent_version: TRIP_VALIDATION_CONSENT_VERSION,
+    completion_consented_at: input.completionEventAt,
+    completion_event_at: input.completionEventAt,
+    completion_event_contract_version: VALIDATION_COMPLETION_EVENT_CONTRACT_VERSION,
+    completion_primary_target_confirmed: true,
+    duration_milliseconds: input.durationMilliseconds,
+    effort_segment_id: input.effortSegmentId,
+    effort_unit: VALIDATION_EFFORT_UNIT,
+    incentive_policy_id: input.incentivePolicyId,
+    mode: input.mode,
+    participant_group_id: input.participantGroupId,
+    person_milliseconds: input.personMilliseconds,
+    segment_end_at: input.segmentEndAt,
+    segment_start_at: input.segmentStartAt,
+    source_record_sha256: input.sourceRecordSha256,
+    target_taxon_id: CALIFORNIA_HALIBUT_TAXON_ID,
+  });
+}
+
+function validationActivation(
+  env: TripApiEnv,
+  startedAt: string,
+  enrolledAt: string,
+  opportunity: AttestedOpportunity | null,
+): ValidationActivationRecord | null {
+  if (env.VALIDATION_OBSERVATIONAL_SECONDARY_ENABLED?.trim().toLowerCase() !== "true") return null;
+  if (env.VALIDATION_PROTOCOL_ID?.trim() !== VALIDATION_PROTOCOL_ID) return null;
+  const cohortId = env.VALIDATION_COHORT_ID?.trim();
+  if (cohortId !== VALIDATION_SECONDARY_COHORT_ID) return null;
+  const manifestSha256 = env.VALIDATION_ACTIVATION_MANIFEST_SHA256?.trim();
+  const scoringSystemSha256 = env.VALIDATION_ACTIVATION_SCORING_SHA256?.trim();
+  const activatedAt = strictActivationTimestamp(env.VALIDATION_ACTIVATED_AT);
+  if (
+    !opportunity ||
+    !manifestSha256 ||
+    !SHA256_PATTERN.test(manifestSha256) ||
+    !scoringSystemSha256 ||
+    !SHA256_PATTERN.test(scoringSystemSha256) ||
+    scoringSystemSha256 !== opportunity.scoringSystemSha256 ||
+    !activatedAt
+  ) return null;
+  const startedAtMs = Date.parse(startedAt);
+  const enrolledAtMs = Date.parse(enrolledAt);
+  const activatedAtMs = Date.parse(activatedAt);
+  if (
+    startedAtMs < VALIDATION_ENROLLMENT_START_MS ||
+    startedAtMs >= VALIDATION_ENROLLMENT_END_EXCLUSIVE_MS ||
+    activatedAtMs >= startedAtMs ||
+    activatedAtMs >= enrolledAtMs ||
+    activatedAtMs >= VALIDATION_ENROLLMENT_START_MS
+  ) return null;
+  return {
+    protocolId: VALIDATION_PROTOCOL_ID,
+    cohortId,
+    manifestSha256,
+    activatedAt,
+    scoringSystemSha256,
+  };
+}
+
+function buildLiveValidationBundle(input: {
+  tripId: string;
+  mode: string;
+  scoreInfluencedChoice: boolean;
+  timestamp: string;
+  serverBoundLiveStart: boolean;
+  activation: ValidationActivationRecord | null;
+  recruitmentEvent: RecruitmentEventRecord | null;
+  collectionIdentity: ValidationCollectionIdentity | null;
+  attestationStatus: OpportunityAttestationStatus;
+  opportunity: AttestedOpportunity | null;
+}): ValidationPersistenceBundle {
+  const impression = input.opportunity
+    ? {
+        ...input.opportunity,
+        id: `impression_${crypto.randomUUID()}`,
+        tripId: input.tripId,
+        attestedAt: input.timestamp,
+      }
+    : null;
+  const eligibleMode = VALIDATION_ELIGIBLE_MODES.has(input.mode);
+  const prospectiveSecondary = Boolean(
+    input.activation && impression && input.attestationStatus === "verified" && input.serverBoundLiveStart &&
+      input.recruitmentEvent && input.collectionIdentity && eligibleMode,
+  );
+  const exclusionReason = !input.activation
+    ? "prospective_collection_not_active"
+    : input.attestationStatus !== "verified" || !impression
+      ? `forecast_${input.attestationStatus}`
+      : !input.serverBoundLiveStart
+        ? "late_start_not_preoutcome"
+        : !input.recruitmentEvent
+          ? "recruitment_event_unverified"
+          : !input.collectionIdentity
+            ? "collection_identity_unavailable"
+            : !eligibleMode
+              ? "unsupported_validation_mode"
+              : null;
+
+  return {
+    impression,
+    provenance: {
+      id: `validation_${crypto.randomUUID()}`,
+      tripId: input.tripId,
+      eventType: "enrollment",
+      collectionContractVersion: VALIDATION_COLLECTION_CONTRACT_VERSION,
+      validationProtocolId: input.activation?.protocolId ?? null,
+      activationManifestSha256: input.activation?.manifestSha256 ?? null,
+      activatedAt: input.activation?.activatedAt ?? null,
+      activationScoringSystemSha256: input.activation?.scoringSystemSha256 ?? null,
+      cohortId: input.activation?.cohortId ?? DEFAULT_VALIDATION_COHORT_ID,
+      // Organic score-visible selection can be secondary observational evidence only.
+      sourceRole: prospectiveSecondary ? "prospective_secondary" : "context_only",
+      participantGroupId: input.recruitmentEvent?.participantGroupId ?? null,
+      recruitmentFrameId: input.recruitmentEvent?.recruitmentFrameId ?? null,
+      recruitmentSourceId: input.recruitmentEvent?.recruitmentSourceId ?? ORGANIC_RECRUITMENT_SOURCE_ID,
+      recruitmentEventContractVersion: input.recruitmentEvent?.recruitmentEventContractVersion ?? null,
+      recruitmentEventAt: input.recruitmentEvent?.recruitmentEventAt ?? null,
+      recruitmentEventSha256: input.recruitmentEvent?.recruitmentEventSha256 ?? null,
+      communityApprovalSha256: input.recruitmentEvent?.communityApprovalSha256 ?? null,
+      assignmentId: input.collectionIdentity?.assignmentId ?? null,
+      sourceRecordSha256: input.collectionIdentity?.sourceRecordSha256 ?? null,
+      effortSegmentId: input.collectionIdentity?.effortSegmentId ?? null,
+      effortUnit: input.collectionIdentity ? VALIDATION_EFFORT_UNIT : null,
+      attemptCount: input.collectionIdentity ? 1 : null,
+      targetTaxonId: input.collectionIdentity ? CALIFORNIA_HALIBUT_TAXON_ID : null,
+      segmentStartAt: input.collectionIdentity ? input.timestamp : null,
+      segmentEndAt: null,
+      modeAtCompletion: null,
+      anglerCount: null,
+      durationMilliseconds: null,
+      personMilliseconds: null,
+      completionEventContractVersion: null,
+      completionEventAt: null,
+      completionConsentVersion: null,
+      completionConsentedAt: null,
+      completionPrimaryTargetConfirmed: null,
+      completionCompleteAttemptConfirmed: null,
+      completionEventSha256: null,
+      incentivePolicyId: DEFAULT_INCENTIVE_POLICY_ID,
+      selectionMethod: impression ? "organic_score_visible" : "organic_unverified",
+      targetIntent: "california-halibut-primary-full-trip",
+      primaryTargetConfirmed: true,
+      completeAttemptConfirmed: null,
+      modeAtEnrollment: input.mode,
+      consentVersion: TRIP_VALIDATION_CONSENT_VERSION,
+      consentedAt: input.timestamp,
+      scoreInfluencedChoice: input.scoreInfluencedChoice,
+      attestationStatus: input.attestationStatus,
+      forecastImpressionId: impression?.id ?? null,
+      completionAttestedAt: null,
+      evidenceStatus: prospectiveSecondary ? "secondary_pending_review" : "context_only",
+      exclusionReason,
+      createdAt: input.timestamp,
+    },
+  };
+}
+
+async function buildCompletionProvenance(input: {
+  trip: TripRow;
+  endedAt: string;
+  mode: string;
+  anglerCount: number;
+  timestamp: string;
+  enrollment: StoredValidationEnrollment | null;
+  impression: StoredForecastImpression | null;
+}): Promise<ValidationProvenanceRecord> {
+  const enrollmentImpressionMatches = Boolean(
+    input.impression && input.enrollment?.forecast_impression_id === input.impression.id,
+  );
+  const insideWindow = Boolean(
+    input.impression &&
+    input.impression.site_id === input.trip.site_id &&
+    Date.parse(input.trip.started_at) >= Date.parse(input.impression.window_start) &&
+    Date.parse(input.endedAt) <= Date.parse(input.impression.window_end),
+  );
+  const enrollmentModeMatches = input.enrollment?.mode_at_enrollment === input.mode;
+  const eligibleMode = VALIDATION_ELIGIBLE_MODES.has(input.mode);
+  const durationMilliseconds = Date.parse(input.endedAt) - Date.parse(input.trip.started_at);
+  const completionIdentityAvailable = Boolean(
+    input.enrollment?.assignment_id && input.enrollment.source_record_sha256 &&
+      input.enrollment.effort_segment_id && input.enrollment.participant_group_id &&
+      input.enrollment.activation_manifest_sha256 && input.enrollment.cohort_id &&
+      input.enrollment.incentive_policy_id && input.enrollment.segment_start_at &&
+      input.enrollment.target_taxon_id === CALIFORNIA_HALIBUT_TAXON_ID &&
+      input.enrollment.effort_unit === VALIDATION_EFFORT_UNIT &&
+      input.enrollment.attempt_count === 1 && Number.isSafeInteger(durationMilliseconds) &&
+      durationMilliseconds >= 60_000 && durationMilliseconds <= 36 * 60 * 60 * 1_000 &&
+      Date.parse(input.timestamp) >= Date.parse(input.endedAt),
+  );
+  const personMilliseconds = completionIdentityAvailable
+    ? durationMilliseconds * input.anglerCount
+    : null;
+  const completionEventSha256 = completionIdentityAvailable && personMilliseconds !== null
+    ? await sha256(canonicalCompletionEventPayload({
+        activationManifestSha256: input.enrollment!.activation_manifest_sha256!,
+        anglerCount: input.anglerCount,
+        assignmentId: input.enrollment!.assignment_id!,
+        cohortId: input.enrollment!.cohort_id,
+        completionEventAt: input.timestamp,
+        durationMilliseconds,
+        effortSegmentId: input.enrollment!.effort_segment_id!,
+        incentivePolicyId: input.enrollment!.incentive_policy_id,
+        mode: input.mode,
+        participantGroupId: input.enrollment!.participant_group_id!,
+        personMilliseconds,
+        segmentEndAt: input.endedAt,
+        segmentStartAt: input.enrollment!.segment_start_at!,
+        sourceRecordSha256: input.enrollment!.source_record_sha256!,
+      }))
+    : null;
+  const remainsProspectiveSecondary = Boolean(
+    input.enrollment?.source_role === "prospective_secondary" &&
+    enrollmentImpressionMatches &&
+    insideWindow &&
+    enrollmentModeMatches &&
+    eligibleMode &&
+    completionEventSha256,
+  );
+  const exclusionReason = !input.enrollment
+    ? "missing_preoutcome_enrollment"
+    : !enrollmentImpressionMatches
+      ? "missing_authoritative_impression"
+      : !enrollmentModeMatches
+        ? "mode_changed_after_enrollment"
+        : !eligibleMode
+          ? "unsupported_validation_mode"
+          : !insideWindow
+            ? "trip_outside_attested_window"
+            : input.enrollment.source_role !== "prospective_secondary"
+              ? "enrollment_context_only"
+              : !completionEventSha256
+                ? "completion_identity_unavailable"
+                : null;
+
+  return {
+    id: `validation_${crypto.randomUUID()}`,
+    tripId: input.trip.id,
+    eventType: "completion",
+    collectionContractVersion:
+      input.enrollment?.collection_contract_version ?? VALIDATION_COLLECTION_CONTRACT_VERSION,
+    validationProtocolId: input.enrollment?.validation_protocol_id ?? null,
+    activationManifestSha256: input.enrollment?.activation_manifest_sha256 ?? null,
+    activatedAt: input.enrollment?.activated_at ?? null,
+    activationScoringSystemSha256: input.enrollment?.activation_scoring_system_sha256 ?? null,
+    cohortId: input.enrollment?.cohort_id ?? DEFAULT_VALIDATION_COHORT_ID,
+    sourceRole: remainsProspectiveSecondary ? "prospective_secondary" : "context_only",
+    participantGroupId: input.enrollment?.participant_group_id ?? null,
+    recruitmentFrameId: input.enrollment?.recruitment_frame_id ?? null,
+    recruitmentSourceId: input.enrollment?.recruitment_source_id ?? "legacy-unknown",
+    recruitmentEventContractVersion: input.enrollment?.recruitment_event_contract_version ?? null,
+    recruitmentEventAt: input.enrollment?.recruitment_event_at ?? null,
+    recruitmentEventSha256: input.enrollment?.recruitment_event_sha256 ?? null,
+    communityApprovalSha256: input.enrollment?.community_approval_sha256 ?? null,
+    assignmentId: completionIdentityAvailable ? input.enrollment?.assignment_id ?? null : null,
+    sourceRecordSha256: completionIdentityAvailable
+      ? input.enrollment?.source_record_sha256 ?? null
+      : null,
+    effortSegmentId: completionIdentityAvailable ? input.enrollment?.effort_segment_id ?? null : null,
+    effortUnit: completionIdentityAvailable ? VALIDATION_EFFORT_UNIT : null,
+    attemptCount: completionIdentityAvailable ? 1 : null,
+    targetTaxonId: completionIdentityAvailable ? CALIFORNIA_HALIBUT_TAXON_ID : null,
+    segmentStartAt: completionIdentityAvailable ? input.enrollment?.segment_start_at ?? null : null,
+    segmentEndAt: completionIdentityAvailable ? input.endedAt : null,
+    modeAtCompletion: completionIdentityAvailable ? input.mode : null,
+    anglerCount: completionIdentityAvailable ? input.anglerCount : null,
+    durationMilliseconds: completionIdentityAvailable ? durationMilliseconds : null,
+    personMilliseconds,
+    completionEventContractVersion: completionIdentityAvailable
+      ? VALIDATION_COMPLETION_EVENT_CONTRACT_VERSION
+      : null,
+    completionEventAt: completionIdentityAvailable ? input.timestamp : null,
+    completionConsentVersion: completionIdentityAvailable ? TRIP_VALIDATION_CONSENT_VERSION : null,
+    completionConsentedAt: completionIdentityAvailable ? input.timestamp : null,
+    completionPrimaryTargetConfirmed: completionIdentityAvailable ? true : null,
+    completionCompleteAttemptConfirmed: completionIdentityAvailable ? true : null,
+    completionEventSha256,
+    incentivePolicyId: input.enrollment?.incentive_policy_id ?? DEFAULT_INCENTIVE_POLICY_ID,
+    selectionMethod: input.enrollment?.selection_method ?? "organic_unverified",
+    targetIntent: "california-halibut-primary-full-trip",
+    primaryTargetConfirmed: true,
+    completeAttemptConfirmed: true,
+    modeAtEnrollment: input.enrollment?.mode_at_enrollment ?? input.trip.mode,
+    consentVersion: TRIP_VALIDATION_CONSENT_VERSION,
+    consentedAt: input.timestamp,
+    scoreInfluencedChoice: input.enrollment
+      ? input.enrollment.score_influenced_choice === null
+        ? null
+        : Boolean(input.enrollment.score_influenced_choice)
+      : input.trip.score_influenced_choice === null
+        ? null
+        : Boolean(input.trip.score_influenced_choice),
+    attestationStatus: enrollmentImpressionMatches ? "verified" : "unverified_missing",
+    forecastImpressionId: enrollmentImpressionMatches ? input.impression?.id ?? null : null,
+    completionAttestedAt: input.timestamp,
+    evidenceStatus: remainsProspectiveSecondary ? "secondary_pending_review" : "context_only",
+    exclusionReason,
+    createdAt: input.timestamp,
+  };
+}
+
+function buildRetrospectiveValidationBundle(input: {
+  tripId: string;
+  mode: string;
+  scoreInfluencedChoice: boolean;
+  timestamp: string;
+}): ValidationPersistenceBundle {
+  return {
+    impression: null,
+    provenance: {
+      id: `validation_${crypto.randomUUID()}`,
+      tripId: input.tripId,
+      eventType: "retrospective_submission",
+      collectionContractVersion: VALIDATION_COLLECTION_CONTRACT_VERSION,
+      validationProtocolId: null,
+      activationManifestSha256: null,
+      activatedAt: null,
+      activationScoringSystemSha256: null,
+      cohortId: DEFAULT_VALIDATION_COHORT_ID,
+      sourceRole: "context_only",
+      participantGroupId: null,
+      recruitmentFrameId: null,
+      recruitmentSourceId: "retrospective-self-report",
+      recruitmentEventContractVersion: null,
+      recruitmentEventAt: null,
+      recruitmentEventSha256: null,
+      communityApprovalSha256: null,
+      assignmentId: null,
+      sourceRecordSha256: null,
+      effortSegmentId: null,
+      effortUnit: null,
+      attemptCount: null,
+      targetTaxonId: null,
+      segmentStartAt: null,
+      segmentEndAt: null,
+      modeAtCompletion: null,
+      anglerCount: null,
+      durationMilliseconds: null,
+      personMilliseconds: null,
+      completionEventContractVersion: null,
+      completionEventAt: null,
+      completionConsentVersion: null,
+      completionConsentedAt: null,
+      completionPrimaryTargetConfirmed: null,
+      completionCompleteAttemptConfirmed: null,
+      completionEventSha256: null,
+      incentivePolicyId: DEFAULT_INCENTIVE_POLICY_ID,
+      selectionMethod: "retrospective_self_report",
+      targetIntent: "california-halibut-primary-full-trip",
+      primaryTargetConfirmed: true,
+      completeAttemptConfirmed: true,
+      modeAtEnrollment: input.mode,
+      consentVersion: TRIP_VALIDATION_CONSENT_VERSION,
+      consentedAt: input.timestamp,
+      scoreInfluencedChoice: input.scoreInfluencedChoice,
+      attestationStatus: "not_applicable_retrospective",
+      forecastImpressionId: null,
+      completionAttestedAt: input.timestamp,
+      evidenceStatus: "context_only",
+      exclusionReason: "retrospective_report_not_preoutcome",
+      createdAt: input.timestamp,
+    },
+  };
+}
+
 export async function handleTripRequest(
   request: Request,
   env: TripApiEnv,
@@ -954,25 +2268,70 @@ export async function handleTripRequest(
       const body = await readJsonObject(request);
       assertHoneypot(body.website);
       assertConsent(body.consent);
+      assertPrimaryTargetConfirmed(body.primaryTargetConfirmed);
       assertNoObservationContractOverride(body);
 
       const reporter = await getOrCreateReporter(request, body.reporterKey);
       await store.assertSubmissionAllowed(reporter.hash, now);
       const site = getSite(siteMap, body.siteId);
-      const startedAt = parseStartDate(body.startedAt, now, 48);
+      const submittedStartedAt = parseStartDate(body.startedAt, now, 48);
+      const mode = parseRequiredMode(body.mode);
+      const scoreInfluencedChoice = requiredScoreInfluence(body);
+      const referralCode = parseReferralCode(body.referralCode);
       const token = randomSecret();
       const timestamp = now.toISOString();
-      const prediction = parsePrediction(body);
+      const serverBoundLiveStart = Math.abs(Date.parse(submittedStartedAt) - now.getTime()) <=
+        MAX_LIVE_START_CLOCK_SKEW_MS;
+      if (!serverBoundLiveStart) {
+        throw new ApiError(
+          422,
+          "live_start_must_be_now",
+          "Live trips start when submitted. Use Log a past trip for an earlier start.",
+        );
+      }
+      const startedAt = timestamp;
+      const id = `trip_${crypto.randomUUID()}`;
+      const attestation = await verifyOpportunityAttestation(env.ASSETS, request.url, {
+        windowId: body.opportunityWindowId,
+        siteId: site.id,
+        startedAt,
+      });
+      const activation = validationActivation(env, startedAt, timestamp, attestation.opportunity);
+      const eligibleRecruitmentCandidate = Boolean(
+        activation && attestation.status === "verified" && attestation.opportunity &&
+          serverBoundLiveStart && VALIDATION_ELIGIBLE_MODES.has(mode),
+      );
+      const participantGroupId = eligibleRecruitmentCandidate
+        ? `participant-${await sha256(`${VALIDATION_PARTICIPANT_TOKEN_DOMAIN}\u0000${reporter.hash}`)}`
+        : null;
+      const recruitmentEvent = activation && participantGroupId
+        ? await prepareOrganicRecruitmentEvent(store, participantGroupId, timestamp, activation)
+        : null;
+      const collectionIdentity = activation && recruitmentEvent
+        ? await validationCollectionIdentity(id, activation.protocolId)
+        : null;
+      const validation = buildLiveValidationBundle({
+        tripId: id,
+        mode,
+        scoreInfluencedChoice,
+        timestamp,
+        serverBoundLiveStart,
+        activation,
+        recruitmentEvent,
+        collectionIdentity,
+        attestationStatus: attestation.status,
+        opportunity: attestation.opportunity,
+      });
 
       const trip = await store.insertTrip({
-        id: `trip_${crypto.randomUUID()}`,
+        id,
         userId: options.accountId ?? null,
         status: "active",
         source: "live",
         siteId: site.id,
         startedAt,
         endedAt: null,
-        mode: parseMode(body.mode, defaultMode(site)),
+        mode,
         fishingMethod: optionalText(body.method ?? body.fishingMethod, "method", 80),
         ...parseTripDetails(body),
         anglerCount: parseInteger(body.anglerCount, "anglerCount", 1, 12, 1),
@@ -995,16 +2354,16 @@ export async function handleTripRequest(
         consentAt: timestamp,
         moderationStatus: "pending",
         reporterKeyHash: reporter.hash,
-        referralCode: parseReferralCode(body.referralCode),
+        referralCode,
         tokenHash: await sha256(token),
-        ...prediction,
+        ...forecastFieldsFromAttestation(attestation.opportunity, scoreInfluencedChoice),
         photoKey: null,
         photoContentType: null,
         photoSizeBytes: null,
         createdAt: timestamp,
         updatedAt: timestamp,
         completedAt: null,
-      });
+      }, validation);
 
       return jsonResponse({ trip: publicTrip(trip), token }, 201, reporter.setCookie);
     }
@@ -1015,6 +2374,9 @@ export async function handleTripRequest(
       assertBodySize(request, MAX_MULTIPART_BYTES);
       const form = await request.formData();
       assertHoneypot(form.get("website"));
+      assertConsent(form.get("consent"));
+      assertCompleteAttempt(form.get("completeAttempt"));
+      assertPrimaryTargetConfirmed(form.get("primaryTargetConfirmed"));
       assertNoObservationContractOverride(form);
       const id = completionMatch[1];
       if (!/^trip_[a-f0-9-]{36}$/.test(id)) {
@@ -1030,8 +2392,10 @@ export async function handleTripRequest(
         throw new ApiError(404, "trip_not_found", "The active trip could not be found.");
       }
 
-      const endedAt = parseEndDate(form.get("endedAt"), now);
-      const durationHours = validateDuration(existing.started_at, endedAt, 36);
+      // Active-trip completion is attested at server receipt; client finish times are never authoritative.
+      const completionTimestamp = now.toISOString();
+      const endedAt = completionTimestamp;
+      validateDuration(existing.started_at, endedAt, 36);
       const anglerCount = parseInteger(form.get("anglerCount"), "anglerCount", 1, 12, existing.angler_count);
       const keeperCount = parseInteger(form.get("keeperCount"), "keeperCount", 0, 25, 0);
       const shortReleasedCount = parseInteger(
@@ -1046,9 +2410,10 @@ export async function handleTripRequest(
       }
       const details = parseTripDetails(form, existing);
       assertOtherSpeciesCountConsistency(details.otherCatchCount, details.otherSpecies);
-      const mode = parseMode(form.get("mode"), existing.mode);
+      const mode = parseRequiredMode(form.get("mode"));
       const forecastAttributionCleared = mode !== existing.mode;
-      const anglerHours = round(durationHours * anglerCount, 2);
+      assertImmutableScoreInfluence(form, existing.score_influenced_choice);
+      const anglerHours = (Date.parse(endedAt) - Date.parse(existing.started_at)) * anglerCount / 3_600_000;
       const speciesObservation = buildSpeciesObservationFields({
         tripId: existing.id,
         siteId: existing.site_id,
@@ -1060,7 +2425,19 @@ export async function handleTripRequest(
         shortReleasedCount,
         otherCatchCount: details.otherCatchCount,
       });
-      if (form.has("consent")) assertConsent(form.get("consent"));
+      const [validationEnrollment, forecastImpression] = await Promise.all([
+        store.getValidationEnrollment?.(id) ?? Promise.resolve(null),
+        store.getForecastImpression?.(id) ?? Promise.resolve(null),
+      ]);
+      const completionProvenance = await buildCompletionProvenance({
+        trip: existing,
+        endedAt,
+        mode,
+        anglerCount,
+        timestamp: completionTimestamp,
+        enrollment: validationEnrollment,
+        impression: forecastImpression,
+      });
       const uploaded = await processPhoto(form.get("photo"), id, env);
 
       try {
@@ -1079,20 +2456,12 @@ export async function handleTripRequest(
           noCatch: speciesObservation.anyFishEncounterCount === 0,
           ...speciesObservation,
           notes: optionalText(form.get("notes"), "notes", 1000),
-          consentAt: now.toISOString(),
-          scoreInfluencedChoice:
-            optionalBoolean(
-              form.get("scoreInfluencedChoice") ?? form.get("contourCastInfluenced"),
-              "scoreInfluencedChoice",
-            ) ??
-            (existing.score_influenced_choice === null
-              ? null
-              : Boolean(existing.score_influenced_choice)),
+          consentAt: completionTimestamp,
           photoKey: uploaded?.key ?? null,
           photoContentType: uploaded?.contentType ?? null,
           photoSizeBytes: uploaded?.size ?? null,
-          updatedAt: now.toISOString(),
-        });
+          updatedAt: completionTimestamp,
+        }, completionProvenance);
 
         if (!completed) {
           throw new ApiError(404, "trip_not_found", "The active trip could not be found.");
@@ -1111,6 +2480,8 @@ export async function handleTripRequest(
       const form = await request.formData();
       assertHoneypot(form.get("website"));
       assertConsent(form.get("consent"));
+      assertCompleteAttempt(form.get("completeAttempt"));
+      assertPrimaryTargetConfirmed(form.get("primaryTargetConfirmed"));
       assertNoObservationContractOverride(form);
 
       const reporter = await getOrCreateReporter(request, form.get("reporterKey"));
@@ -1118,7 +2489,7 @@ export async function handleTripRequest(
       const site = getSite(siteMap, form.get("siteId"));
       const startedAt = parseHistoricalStartDate(form.get("startedAt"), now);
       const endedAt = parseEndDate(form.get("endedAt"), now);
-      const durationHours = validateDuration(startedAt, endedAt, 36);
+      validateDuration(startedAt, endedAt, 36);
       const anglerCount = parseInteger(form.get("anglerCount"), "anglerCount", 1, 12, 1);
       const keeperCount = parseInteger(form.get("keeperCount"), "keeperCount", 0, 25, 0);
       const shortReleasedCount = parseInteger(
@@ -1134,10 +2505,12 @@ export async function handleTripRequest(
 
       const id = `trip_${crypto.randomUUID()}`;
       const timestamp = now.toISOString();
-      const mode = parseMode(form.get("mode"), defaultMode(site));
+      const mode = parseRequiredMode(form.get("mode"));
+      const scoreInfluencedChoice = requiredScoreInfluence(form);
+      const referralCode = parseReferralCode(form.get("referralCode"));
       const details = parseTripDetails(form);
       assertOtherSpeciesCountConsistency(details.otherCatchCount, details.otherSpecies);
-      const anglerHours = round(durationHours * anglerCount, 2);
+      const anglerHours = (Date.parse(endedAt) - Date.parse(startedAt)) * anglerCount / 3_600_000;
       const speciesObservation = buildSpeciesObservationFields({
         tripId: id,
         siteId: site.id,
@@ -1148,6 +2521,12 @@ export async function handleTripRequest(
         keeperCount,
         shortReleasedCount,
         otherCatchCount: details.otherCatchCount,
+      });
+      const validation = buildRetrospectiveValidationBundle({
+        tripId: id,
+        mode,
+        scoreInfluencedChoice,
+        timestamp,
       });
       const uploaded = await processPhoto(form.get("photo"), id, env);
 
@@ -1175,16 +2554,16 @@ export async function handleTripRequest(
           consentAt: timestamp,
           moderationStatus: "pending",
           reporterKeyHash: reporter.hash,
-          referralCode: parseReferralCode(form.get("referralCode")),
+          referralCode,
           tokenHash: null,
-          ...parsePrediction(form),
+          ...forecastFieldsFromAttestation(null, scoreInfluencedChoice),
           photoKey: uploaded?.key ?? null,
           photoContentType: uploaded?.contentType ?? null,
           photoSizeBytes: uploaded?.size ?? null,
           createdAt: timestamp,
           updatedAt: timestamp,
           completedAt: timestamp,
-        });
+        }, validation);
         options.onTripCompleted?.(trip);
         return jsonResponse({ trip: publicTrip(trip) }, 201, reporter.setCookie);
       } catch (error) {
@@ -1291,39 +2670,6 @@ function parseTripDetails(source: Record<string, unknown> | FormData, existing?:
     otherCatchCount: parseInteger(value("otherCatchCount"), "otherCatchCount", 0, 100, existing?.other_catch_count ?? 0),
     otherSpecies: optionalText(value("otherSpecies"), "otherSpecies", 200) ?? existing?.other_species ?? null,
     observationsJson: hasObservations ? JSON.stringify(observations) : existing?.observations_json ?? null,
-  };
-}
-
-function parsePrediction(source: Record<string, unknown> | FormData) {
-  const value = (key: string) => (source instanceof FormData ? source.get(key) : source[key]);
-  const metadata = value("predictionMetadata");
-  let predictionMetadataJson: string | null = null;
-  if (metadata !== null && metadata !== undefined && metadata !== "") {
-    try {
-      const rawMetadata = typeof metadata === "string" ? metadata : JSON.stringify(metadata);
-      if (typeof rawMetadata !== "string" || rawMetadata.length > 4096) throw new Error("too long");
-      const parsed = typeof metadata === "string" ? JSON.parse(metadata) : metadata;
-      const minimized = minimizeForecastMetadata(parsed);
-      if (!minimized) throw new Error("invalid shape");
-      predictionMetadataJson = JSON.stringify(minimized);
-    } catch {
-      throw new ApiError(422, "invalid_prediction_metadata", "predictionMetadata must be valid JSON under 4 KB.");
-    }
-  }
-
-  return {
-    opportunityWindowId: optionalText(value("opportunityWindowId"), "opportunityWindowId", 120),
-    opportunityScore: optionalNumber(value("opportunityScore"), "opportunityScore", 0, 100),
-    habitatScore: optionalNumber(value("habitatScore"), "habitatScore", 0, 100),
-    seasonalityScore: optionalNumber(value("seasonalityScore"), "seasonalityScore", 0, 100),
-    conditionsScore: optionalNumber(value("conditionsScore"), "conditionsScore", 0, 100),
-    fishabilityScore: optionalNumber(value("fishabilityScore"), "fishabilityScore", 0, 100),
-    modelVersion: optionalText(value("modelVersion"), "modelVersion", 120),
-    scoreInfluencedChoice: optionalBoolean(
-      value("scoreInfluencedChoice") ?? value("contourCastInfluenced"),
-      "scoreInfluencedChoice",
-    ),
-    predictionMetadataJson,
   };
 }
 
@@ -1560,16 +2906,10 @@ function getSite(siteMap: Map<string, CuratedSite>, value: unknown) {
   return site;
 }
 
-function defaultMode(site: CuratedSite) {
-  const type = site.type?.toLowerCase() ?? "shore";
-  if (type.includes("pier")) return "pier";
-  if (type.includes("beach")) return "beach";
-  if (type.includes("jetty")) return "jetty";
-  return "shore";
-}
-
-function parseMode(value: unknown, fallback: string) {
-  if (value === null || value === undefined || value === "") return fallback;
+function parseRequiredMode(value: unknown) {
+  if (value === null || value === undefined || value === "") {
+    throw new ApiError(422, "mode_required", "Choose the fishing mode used for the whole trip.");
+  }
   const mode = String(value).trim().toLowerCase();
   if (!ALLOWED_MODES.has(mode)) {
     throw new ApiError(422, "invalid_mode", "Choose a supported fishing mode.");
@@ -1670,6 +3010,75 @@ function optionalBoolean(value: unknown, field: string): boolean | null {
 function assertConsent(value: unknown) {
   if (optionalBoolean(value, "consent") !== true) {
     throw new ApiError(422, "consent_required", "Consent is required to contribute a trip report.");
+  }
+}
+
+function assertPrimaryTargetConfirmed(value: unknown) {
+  if (optionalBoolean(value, "primaryTargetConfirmed") !== true) {
+    throw new ApiError(
+      422,
+      "primary_target_confirmation_required",
+      "Confirm that California halibut was the primary target for the whole trip.",
+    );
+  }
+}
+
+function assertCompleteAttempt(value: unknown) {
+  if (optionalBoolean(value, "completeAttempt") !== true) {
+    throw new ApiError(
+      422,
+      "complete_attempt_required",
+      "Confirm that this report covers the whole fishing attempt, including a no-catch result.",
+    );
+  }
+}
+
+function scoreInfluenceValues(source: Record<string, unknown> | FormData) {
+  const values: unknown[] = [];
+  for (const key of ["scoreInfluencedChoice", "contourCastInfluenced"]) {
+    if (source instanceof FormData) {
+      for (const value of source.getAll(key)) {
+        if (value !== "") values.push(value);
+      }
+    } else if (Object.prototype.hasOwnProperty.call(source, key) && source[key] !== "") {
+      values.push(source[key]);
+    }
+  }
+  return values;
+}
+
+function requiredScoreInfluence(source: Record<string, unknown> | FormData) {
+  const values = scoreInfluenceValues(source);
+  if (values.length === 0) {
+    throw new ApiError(
+      422,
+      "score_influence_required",
+      "Answer whether the CastingCompass score influenced this trip choice.",
+    );
+  }
+  const parsed = values.map((value) => optionalBoolean(value, "scoreInfluencedChoice"));
+  if (parsed.some((value) => value === null) || parsed.some((value) => value !== parsed[0])) {
+    throw new ApiError(
+      422,
+      "invalid_scoreInfluencedChoice",
+      "Provide one consistent answer about whether the score influenced this trip choice.",
+    );
+  }
+  return parsed[0] as boolean;
+}
+
+function assertImmutableScoreInfluence(
+  source: Record<string, unknown> | FormData,
+  storedValue: number | null,
+) {
+  if (scoreInfluenceValues(source).length === 0) return;
+  const submitted = requiredScoreInfluence(source);
+  if (storedValue === null || submitted !== Boolean(storedValue)) {
+    throw new ApiError(
+      422,
+      "score_influence_immutable",
+      "The pre-trip score-influence answer cannot be changed after the trip starts.",
+    );
   }
 }
 

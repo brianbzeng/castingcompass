@@ -8,17 +8,19 @@ from typing import Annotated
 from fastapi import Depends, FastAPI, HTTPException, Query, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
-
-from .models import (
-    HealthResponse,
+from shared.species_contract import (
     MODEL_RUN_CONTRACT_VERSION,
     OBSERVATION_CONTRACT_VERSION,
     OPPORTUNITY_CONTRACT_VERSION,
-    OpportunityResponse,
     PRODUCTION_TARGET_TAXON_ID,
+    TAXON_CATALOG_VERSION,
+)
+
+from .models import (
+    HealthResponse,
+    OpportunityResponse,
     SiteDetail,
     SiteSummary,
-    TAXON_CATALOG_VERSION,
 )
 from .repository import DataUnavailableError, Repository, build_repository, utc_now
 

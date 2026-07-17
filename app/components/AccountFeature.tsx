@@ -349,6 +349,7 @@ export function AccountModal({
   const [editFields, setEditFields] = useState<ProfileTripEditFields | null>(null);
   const [profileActionBusy, setProfileActionBusy] = useState(false);
   const [profileActionError, setProfileActionError] = useState("");
+  const [profileActionNotice, setProfileActionNotice] = useState("");
   const [deletionDetails, setDeletionDetails] = useState<DeletionDetails | null>(null);
   const [browserAccountStorageCleared, setBrowserAccountStorageCleared] = useState<boolean | null>(null);
   const [deletionStatusAction, setDeletionStatusAction] = useState<"checking" | "dismissing" | null>(null);
@@ -650,6 +651,7 @@ export function AccountModal({
       window.localStorage.removeItem(draftKey);
     }
     setProfileActionError("");
+    setProfileActionNotice("");
     setEditingTrip(trip);
     setEditFields(nextFields);
   };
@@ -669,6 +671,7 @@ export function AccountModal({
     }
     setProfileActionBusy(true);
     setProfileActionError("");
+    setProfileActionNotice("");
     try {
       const response = await fetch(`/api/profile/trips/${encodeURIComponent(editingTrip.id)}`, {
         method: "PATCH",
@@ -679,11 +682,18 @@ export function AccountModal({
           endedAt: new Date(editFields.endedAt).toISOString(),
         }),
       });
-      const body = await response.json() as { error?: { message?: string } };
+      const body = await response.json() as {
+        error?: { message?: string };
+        validationEvidenceExcluded?: boolean;
+      };
       if (!response.ok) throw new Error(body.error?.message ?? "The trip log could not be updated.");
+      if (body.validationEvidenceExcluded !== true) {
+        throw new Error("The trip log changed, but its validation-evidence exclusion could not be verified. Refresh before editing again.");
+      }
       window.localStorage.removeItem(`${PROFILE_TRIP_DRAFT_PREFIX}${editingTrip.id}`);
       closeTripEdit();
       await loadProfile();
+      setProfileActionNotice("Saved. Because this completed report was edited, it remains context-only and cannot enter prospective validation evidence.");
     } catch (editError) {
       setProfileActionError(editError instanceof Error ? editError.message : "The trip log could not be updated.");
     } finally {
@@ -922,7 +932,8 @@ export function AccountModal({
                   })}
                 </div>
               ) : <p>No completed trip logs are attached to this account yet.</p>}
-              <small className="profile-review-note">Trip data is saved immediately. Automated review may prepare a discussion draft, but nothing is posted without human approval. Pending reports remain editable during the beta.</small>
+              <small className="profile-review-note">Trip data is saved immediately. Automated review may prepare a discussion draft, but nothing is posted without human approval. Pending reports remain editable during the beta. After any edit, the revised report remains useful as descriptive context but cannot re-enter prospective validation evidence.</small>
+              {profileActionNotice && !editingTrip ? <p role="status">{profileActionNotice}</p> : null}
               {profileActionError && !editingTrip ? <p className="account-error" role="alert">{profileActionError}</p> : null}
             </section>
             {editingTrip && editFields ? (
@@ -934,7 +945,7 @@ export function AccountModal({
                   <div><span>Pending trip</span><h3 id="profile-trip-editor-title">Edit trip log</h3></div>
                   <button type="button" onClick={closeTripEdit}>Close</button>
                 </div>
-                <p className="profile-trip-editor-note">Your saved report is loaded below. Any unfinished edits on this device are restored automatically.</p>
+                <p className="profile-trip-editor-note">Your saved report is loaded below. Any unfinished edits on this device are restored automatically. Saving any edit permanently keeps this report out of prospective validation evidence; the revised report remains usable as descriptive context.</p>
                 <SiteCombobox
                   sites={sites}
                   value={editFields.siteId}

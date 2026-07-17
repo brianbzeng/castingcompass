@@ -39,6 +39,7 @@ export interface AuthUser {
 interface AccountRequestOptions {
   onTripUpdated?(trip: TripRow): void;
   onTripsReviewRequested?(trips: TripRow[]): void;
+  now?(): Date;
 }
 
 const initializedDatabases = new WeakMap<object, Promise<void>>();
@@ -640,16 +641,26 @@ export async function handleAccountRequest(
         delete exportedTrip.photo_key;
         return exportedTrip;
       });
-      const discussionRows = await db.prepare(`SELECT site_discussion_posts.id, site_discussion_posts.trip_id,
-          site_discussion_posts.site_id, site_discussion_posts.summary, site_discussion_posts.gear_summary,
-          site_discussion_posts.technique_tags_json, site_discussion_posts.observed_at,
-          site_discussion_posts.created_at, site_discussion_posts.updated_at,
-          site_discussion_posts.review_model, site_discussion_posts.approved_at,
-          site_discussion_posts.source_ai_reviewed_at
-        FROM site_discussion_posts
-        JOIN trips ON trips.id = site_discussion_posts.trip_id
-        WHERE trips.user_id = ? ORDER BY site_discussion_posts.created_at DESC`)
-        .bind(user.id).all<Record<string, unknown>>();
+      const [discussionRows, forecastImpressionRows, validationProvenanceRows] = await Promise.all([
+        db.prepare(`SELECT site_discussion_posts.id, site_discussion_posts.trip_id,
+            site_discussion_posts.site_id, site_discussion_posts.summary, site_discussion_posts.gear_summary,
+            site_discussion_posts.technique_tags_json, site_discussion_posts.observed_at,
+            site_discussion_posts.created_at, site_discussion_posts.updated_at,
+            site_discussion_posts.review_model, site_discussion_posts.approved_at,
+            site_discussion_posts.source_ai_reviewed_at
+          FROM site_discussion_posts
+          JOIN trips ON trips.id = site_discussion_posts.trip_id
+          WHERE trips.user_id = ? ORDER BY site_discussion_posts.created_at DESC`)
+          .bind(user.id).all<Record<string, unknown>>(),
+        db.prepare(`SELECT forecast_impressions.* FROM forecast_impressions
+          JOIN trips ON trips.id = forecast_impressions.trip_id
+          WHERE trips.user_id = ? ORDER BY forecast_impressions.attested_at ASC`)
+          .bind(user.id).all<Record<string, unknown>>(),
+        db.prepare(`SELECT trip_validation_provenance.* FROM trip_validation_provenance
+          JOIN trips ON trips.id = trip_validation_provenance.trip_id
+          WHERE trips.user_id = ? ORDER BY trip_validation_provenance.created_at ASC`)
+          .bind(user.id).all<Record<string, unknown>>(),
+      ]);
       const photoManifest = await Promise.all(tripRows
         .filter((trip) => typeof trip.photo_key === "string" && trip.photo_key)
         .map((trip) => buildPhotoExportManifest(env, trip)));
@@ -659,6 +670,8 @@ export async function handleAccountRequest(
         savedSites: saved.results ?? [],
         gearProfiles: gear.results ?? [],
         tripReports,
+        forecastImpressions: forecastImpressionRows.results ?? [],
+        validationProvenance: validationProvenanceRows.results ?? [],
         discussionPosts: discussionRows.results ?? [],
         photos: photoManifest,
       }, 200, undefined, { "Content-Disposition": `attachment; filename="castingcompass-data-${new Date().toISOString().slice(0, 10)}.json"` });
@@ -834,7 +847,8 @@ export async function handleAccountRequest(
       const trip = await db.prepare(`SELECT id, user_id, site_id, started_at, ended_at, mode, moderation_status, photo_key,
           observation_contract_version, taxon_catalog_version,
           target_taxon_id, contract_status, taxon_observations_json, outcome_class,
-          target_encounter_count, any_fish_encounter_count, target_identification_confidence
+          target_encounter_count, any_fish_encounter_count, target_identification_confidence,
+          score_influenced_choice
         FROM trips WHERE id = ? AND user_id = ? AND status = 'completed' LIMIT 1`)
         .bind(tripId, user.id)
         .first<Pick<TripRow,
@@ -842,7 +856,7 @@ export async function handleAccountRequest(
           "observation_contract_version" |
           "taxon_catalog_version" | "target_taxon_id" | "contract_status" |
           "taxon_observations_json" | "outcome_class" | "target_encounter_count" |
-          "any_fish_encounter_count" | "target_identification_confidence"
+          "any_fish_encounter_count" | "target_identification_confidence" | "score_influenced_choice"
         >>();
       if (!trip) return errorResponse(404, "trip_not_found", "That trip log could not be found.");
       if (trip.moderation_status !== "pending") {
@@ -873,6 +887,7 @@ export async function handleAccountRequest(
 
       if (request.method === "PATCH") {
         const body = await readJson(request);
+        const requestNow = options.now?.() ?? new Date();
         if (hasServerControlledObservationFields(body)) {
           throw new AuthError(
             422,
@@ -881,8 +896,8 @@ export async function handleAccountRequest(
           );
         }
         const siteId = parseProfileTripSite(body.siteId, curatedSites);
-        const startedAt = parseProfileTripDate(body.startedAt, "start time");
-        const endedAt = parseProfileTripDate(body.endedAt, "finish time");
+        const startedAt = parseProfileTripDate(body.startedAt, "start time", requestNow);
+        const endedAt = parseProfileTripDate(body.endedAt, "finish time", requestNow);
         const mode = parseProfileTripMode(body.mode ?? trip.mode);
         const durationHours = (new Date(endedAt).getTime() - new Date(startedAt).getTime()) / 3_600_000;
         if (!Number.isFinite(durationHours) || durationHours < (1 / 60) || durationHours > 36) {
@@ -917,7 +932,7 @@ export async function handleAccountRequest(
         }
         const observations = parseProfileTripObservations(body);
         const notes = parseProfileTripText(body.notes, "notes", 1000, false);
-        const timestamp = new Date().toISOString();
+        const timestamp = requestNow.toISOString();
         const anglerHours = Math.round(durationHours * anglerCount * 100) / 100;
         const forecastAttributionChanged = siteId !== trip.site_id
           || startedAt !== trip.started_at
@@ -952,9 +967,9 @@ export async function handleAccountRequest(
         const forecastInvalidation = forecastAttributionChanged
           ? `opportunity_window_id = NULL, opportunity_score = NULL, habitat_score = NULL,
              seasonality_score = NULL, conditions_score = NULL, fishability_score = NULL,
-             model_version = NULL, score_influenced_choice = NULL, prediction_metadata_json = NULL,`
+             model_version = NULL, prediction_metadata_json = NULL,`
           : "";
-        const updateResult = await db.prepare(`UPDATE trips SET site_id = ?, started_at = ?, ended_at = ?, mode = ?, fishing_method = ?,
+        const updateStatement = db.prepare(`UPDATE trips SET site_id = ?, started_at = ?, ended_at = ?, mode = ?, fishing_method = ?,
           angler_count = ?, angler_hours = ?, keeper_count = ?, short_released_count = ?,
           halibut_encounters = ?, no_catch = ?, gear_profile_id = ?, rod = ?, reel = ?, bait_lure = ?, rig = ?,
           other_catch_count = ?, other_species = ?, observations_json = ?, notes = ?, updated_at = ?, completed_at = ?,
@@ -998,16 +1013,42 @@ export async function handleAccountRequest(
             speciesObservation.targetIdentificationConfidence,
             tripId,
             user.id,
-          )
-          .run();
-        if (Number(updateResult.meta?.changes ?? 0) !== 1) {
+          );
+        const statements = [
+          updateStatement,
+          db.prepare(`INSERT INTO trip_validation_provenance (
+              id, trip_id, event_type, collection_contract_version, validation_protocol_id,
+              cohort_id, source_role, recruitment_source_id, incentive_policy_id, selection_method,
+              target_intent, mode_at_enrollment, score_influenced_choice, attestation_status,
+              evidence_status, exclusion_reason, created_at
+            ) SELECT ?, id, 'evidence_exclusion', 'castingcompass.validation-collection/1.0.0', NULL,
+              'predeployment-context', 'context_only', 'profile-edit',
+              'none-outcome-independent/1.0.0', 'legacy_unknown', 'legacy_unknown', ?, ?,
+              'invalidated_after_edit', 'context_only', 'post_completion_profile_edit', ?
+            FROM trips WHERE id = ? AND user_id = ? AND moderation_status = 'pending'`)
+            .bind(
+              `validation_${crypto.randomUUID()}`,
+              trip.mode,
+              trip.score_influenced_choice,
+              timestamp,
+              tripId,
+              user.id,
+            ),
+        ];
+        const [updateResult] = await db.batch(statements);
+        if (mutationChanges(updateResult) !== 1) {
           return errorResponse(409, "trip_reviewed", "Reviewed trip logs can no longer be changed.");
         }
         const updatedTrip = await db.prepare("SELECT * FROM trips WHERE id = ? AND user_id = ? LIMIT 1")
           .bind(tripId, user.id)
           .first<TripRow>();
         if (updatedTrip) options.onTripUpdated?.(updatedTrip);
-        return jsonResponse({ updated: true, tripId, forecastAttributionCleared: forecastAttributionChanged });
+        return jsonResponse({
+          updated: true,
+          tripId,
+          forecastAttributionCleared: forecastAttributionChanged,
+          validationEvidenceExcluded: true,
+        });
       }
 
       return methodNotAllowed("PATCH, DELETE");
@@ -1056,12 +1097,12 @@ function parseProfileTripSite(value: unknown, curatedSites: readonly CuratedSite
   return value;
 }
 
-function parseProfileTripDate(value: unknown, label: string) {
+function parseProfileTripDate(value: unknown, label: string, now = new Date()) {
   if (typeof value !== "string" || value.length > 80) {
     throw new AuthError(422, "invalid_date", `Enter a valid ${label}.`);
   }
   const date = new Date(value);
-  if (!Number.isFinite(date.getTime()) || date.getTime() > Date.now() + 15 * 60 * 1000) {
+  if (!Number.isFinite(date.getTime()) || date.getTime() > now.getTime() + 15 * 60 * 1000) {
     throw new AuthError(422, "invalid_date", `Enter a valid ${label}.`);
   }
   return date.toISOString();

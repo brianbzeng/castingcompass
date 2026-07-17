@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { check, index, integer, primaryKey, real, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
+import { check, foreignKey, index, integer, primaryKey, real, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
 
 export const users = sqliteTable(
   "users",
@@ -375,6 +375,405 @@ export const trips = sqliteTable(
       table.contractStatus,
       table.targetTaxonId,
       table.completedAt,
+    ),
+  ],
+);
+
+export const forecastImpressions = sqliteTable(
+  "forecast_impressions",
+  {
+    id: text("id").primaryKey(),
+    tripId: text("trip_id").notNull().references(() => trips.id, { onDelete: "cascade" }),
+    attestationIndexVersion: text("attestation_index_version").notNull(),
+    snapshotSha256: text("snapshot_sha256").notNull(),
+    siteCatalogSha256: text("site_catalog_sha256").notNull(),
+    targetTaxonId: text("target_taxon_id").notNull(),
+    taxonCatalogVersion: text("taxon_catalog_version").notNull(),
+    observationContractVersion: text("observation_contract_version").notNull(),
+    modelRunContractVersion: text("model_run_contract_version").notNull(),
+    opportunityContractVersion: text("opportunity_contract_version").notNull(),
+    scoringSystemKind: text("scoring_system_kind").notNull(),
+    scoringSystemVersion: text("scoring_system_version").notNull(),
+    scoringSystemSha256: text("scoring_system_sha256").notNull(),
+    windowId: text("window_id").notNull(),
+    siteId: text("site_id").notNull(),
+    windowStart: text("window_start").notNull(),
+    windowEnd: text("window_end").notNull(),
+    opportunityScore: real("opportunity_score").notNull(),
+    habitatScore: real("habitat_score").notNull(),
+    seasonalityScore: real("seasonality_score").notNull(),
+    conditionsScore: real("conditions_score").notNull(),
+    fishabilityScore: real("fishability_score").notNull(),
+    attestedAt: text("attested_at").notNull(),
+  },
+  (table) => [
+    uniqueIndex("forecast_impressions_trip_unique").on(table.tripId),
+    uniqueIndex("forecast_impressions_id_trip_unique").on(table.id, table.tripId),
+    index("forecast_impressions_window_idx").on(table.windowId, table.siteId, table.windowStart),
+    check(
+      "forecast_impressions_hashes_check",
+      sql`length(${table.snapshotSha256}) = 64 and ${table.snapshotSha256} not glob '*[^a-f0-9]*'
+        and length(${table.siteCatalogSha256}) = 64 and ${table.siteCatalogSha256} not glob '*[^a-f0-9]*'
+        and length(${table.scoringSystemSha256}) = 64 and ${table.scoringSystemSha256} not glob '*[^a-f0-9]*'`,
+    ),
+    check(
+      "forecast_impressions_identity_check",
+      sql`${table.attestationIndexVersion} = 'castingcompass.opportunity-attestation-index/1.0.0'
+        and ${table.targetTaxonId} = 'california-halibut'
+        and ${table.taxonCatalogVersion} = 'castingcompass.taxa/1.0.0'
+        and ${table.observationContractVersion} = 'castingcompass.observation/2.0.0'
+        and ${table.modelRunContractVersion} = 'castingcompass.model-run/2.0.0'
+        and ${table.opportunityContractVersion} = 'castingcompass.opportunity/2.0.0'
+        and ${table.scoringSystemKind} = 'heuristic-configuration'
+        and ${table.scoringSystemVersion} = 'heuristic-' || ${table.targetTaxonId} || '-' || ${table.scoringSystemSha256}`,
+    ),
+    check(
+      "forecast_impressions_scores_check",
+      sql`${table.opportunityScore} between 0 and 100
+        and ${table.habitatScore} between 0 and 100
+        and ${table.seasonalityScore} between 0 and 100
+        and ${table.conditionsScore} between 0 and 100
+        and ${table.fishabilityScore} between 0 and 100`,
+    ),
+    check(
+      "forecast_impressions_window_check",
+      sql`length(${table.windowStart}) = 24
+        and strftime('%Y-%m-%dT%H:%M:%fZ', ${table.windowStart}) = ${table.windowStart}
+        and length(${table.windowEnd}) = 24
+        and strftime('%Y-%m-%dT%H:%M:%fZ', ${table.windowEnd}) = ${table.windowEnd}
+        and length(${table.attestedAt}) = 24
+        and strftime('%Y-%m-%dT%H:%M:%fZ', ${table.attestedAt}) = ${table.attestedAt}
+        and julianday(${table.windowEnd}) > julianday(${table.windowStart})
+        and abs((julianday(${table.windowEnd}) - julianday(${table.windowStart})) * 24.0 - 2.0) < 0.000001`,
+    ),
+  ],
+);
+
+export const tripValidationProvenance = sqliteTable(
+  "trip_validation_provenance",
+  {
+    id: text("id").primaryKey(),
+    tripId: text("trip_id").notNull().references(() => trips.id, { onDelete: "cascade" }),
+    eventType: text("event_type").notNull(),
+    collectionContractVersion: text("collection_contract_version").notNull(),
+    validationProtocolId: text("validation_protocol_id"),
+    activationManifestSha256: text("activation_manifest_sha256"),
+    activatedAt: text("activated_at"),
+    activationScoringSystemSha256: text("activation_scoring_system_sha256"),
+    cohortId: text("cohort_id").notNull(),
+    sourceRole: text("source_role").notNull(),
+    participantGroupId: text("participant_group_id"),
+    recruitmentFrameId: text("recruitment_frame_id"),
+    recruitmentSourceId: text("recruitment_source_id").notNull(),
+    recruitmentEventContractVersion: text("recruitment_event_contract_version"),
+    recruitmentEventAt: text("recruitment_event_at"),
+    recruitmentEventSha256: text("recruitment_event_sha256"),
+    communityApprovalSha256: text("community_approval_sha256"),
+    assignmentId: text("assignment_id"),
+    sourceRecordSha256: text("source_record_sha256"),
+    effortSegmentId: text("effort_segment_id"),
+    effortUnit: text("effort_unit"),
+    attemptCount: integer("attempt_count"),
+    targetTaxonId: text("target_taxon_id"),
+    segmentStartAt: text("segment_start_at"),
+    segmentEndAt: text("segment_end_at"),
+    modeAtCompletion: text("mode_at_completion"),
+    anglerCount: integer("angler_count"),
+    durationMilliseconds: integer("duration_milliseconds"),
+    personMilliseconds: integer("person_milliseconds"),
+    completionEventContractVersion: text("completion_event_contract_version"),
+    completionEventAt: text("completion_event_at"),
+    completionConsentVersion: text("completion_consent_version"),
+    completionConsentedAt: text("completion_consented_at"),
+    completionPrimaryTargetConfirmed: integer("completion_primary_target_confirmed", { mode: "boolean" }),
+    completionCompleteAttemptConfirmed: integer("completion_complete_attempt_confirmed", { mode: "boolean" }),
+    completionEventSha256: text("completion_event_sha256"),
+    incentivePolicyId: text("incentive_policy_id").notNull(),
+    selectionMethod: text("selection_method").notNull(),
+    targetIntent: text("target_intent").notNull(),
+    primaryTargetConfirmed: integer("primary_target_confirmed", { mode: "boolean" }),
+    completeAttemptConfirmed: integer("complete_attempt_confirmed", { mode: "boolean" }),
+    modeAtEnrollment: text("mode_at_enrollment"),
+    consentVersion: text("consent_version"),
+    consentedAt: text("consented_at"),
+    scoreInfluencedChoice: integer("score_influenced_choice", { mode: "boolean" }),
+    attestationStatus: text("attestation_status").notNull(),
+    forecastImpressionId: text("forecast_impression_id"),
+    completionAttestedAt: text("completion_attested_at"),
+    evidenceStatus: text("evidence_status").notNull(),
+    exclusionReason: text("exclusion_reason"),
+    createdAt: text("created_at").notNull(),
+  },
+  (table) => [
+    foreignKey({
+      columns: [table.forecastImpressionId, table.tripId],
+      foreignColumns: [forecastImpressions.id, forecastImpressions.tripId],
+      name: "trip_validation_forecast_impression_trip_fk",
+    }).onDelete("cascade"),
+    index("trip_validation_provenance_trip_created_idx").on(table.tripId, table.createdAt),
+    index("trip_validation_provenance_cohort_role_idx").on(
+      table.collectionContractVersion,
+      table.validationProtocolId,
+      table.cohortId,
+      table.sourceRole,
+      table.evidenceStatus,
+    ),
+    index("trip_validation_provenance_participant_recruitment_idx").on(
+      table.participantGroupId,
+      table.recruitmentEventAt,
+    ),
+    check(
+      "trip_validation_event_type_check",
+      sql`${table.eventType} in ('enrollment', 'completion', 'retrospective_submission', 'evidence_exclusion', 'legacy_context')`,
+    ),
+    check("trip_validation_source_role_check", sql`${table.sourceRole} in ('context_only', 'prospective_secondary')`),
+    check(
+      "trip_validation_selection_method_check",
+      sql`${table.selectionMethod} in ('organic_score_visible', 'organic_unverified', 'retrospective_self_report', 'legacy_unknown')`,
+    ),
+    check(
+      "trip_validation_target_intent_check",
+      sql`${table.targetIntent} in ('california-halibut-primary-full-trip', 'legacy_unknown')`,
+    ),
+    check(
+      "trip_validation_mode_check",
+      sql`${table.modeAtEnrollment} is null or ${table.modeAtEnrollment} in ('shore', 'beach', 'pier', 'jetty', 'kayak', 'boat', 'other')`,
+    ),
+    check(
+      "trip_validation_attestation_check",
+      sql`${table.attestationStatus} in ('verified', 'unverified_missing', 'unverified_mismatch', 'unverified_asset', 'not_applicable_retrospective', 'invalidated_after_edit', 'legacy_unverified')`,
+    ),
+    check(
+      "trip_validation_evidence_status_check",
+      sql`${table.evidenceStatus} in ('context_only', 'secondary_pending_review')`,
+    ),
+    check(
+      "trip_validation_target_complete_check",
+      sql`(${table.primaryTargetConfirmed} is null or ${table.primaryTargetConfirmed} in (0, 1))
+        and (${table.completeAttemptConfirmed} is null or ${table.completeAttemptConfirmed} in (0, 1))`,
+    ),
+    check(
+      "trip_validation_score_influence_check",
+      sql`${table.scoreInfluencedChoice} is null or ${table.scoreInfluencedChoice} in (0, 1)`,
+    ),
+    check(
+      "trip_validation_verified_impression_check",
+      sql`(${table.attestationStatus} = 'verified' and ${table.forecastImpressionId} is not null)
+        or (${table.attestationStatus} != 'verified' and ${table.forecastImpressionId} is null)`,
+    ),
+    check(
+      "trip_validation_activation_check",
+      sql`(${table.validationProtocolId} is null
+          and ${table.activationManifestSha256} is null
+          and ${table.activatedAt} is null
+          and ${table.activationScoringSystemSha256} is null)
+        or (${table.validationProtocolId} = 'california-halibut-site-window-v1'
+          and length(${table.activationManifestSha256}) = 64
+          and ${table.activationManifestSha256} not glob '*[^a-f0-9]*'
+          and length(${table.activatedAt}) = 24
+          and strftime('%Y-%m-%dT%H:%M:%fZ', ${table.activatedAt}) = ${table.activatedAt}
+          and length(${table.activationScoringSystemSha256}) = 64
+          and ${table.activationScoringSystemSha256} not glob '*[^a-f0-9]*'
+          and ${table.activatedAt} < '2026-08-01T00:00:00.000Z'
+          and julianday(${table.activatedAt}) < julianday(${table.createdAt}))`,
+    ),
+    check(
+      "trip_validation_collection_time_check",
+      sql`${table.collectionContractVersion} = 'castingcompass.validation-collection/1.0.0'
+        and length(${table.createdAt}) = 24
+        and strftime('%Y-%m-%dT%H:%M:%fZ', ${table.createdAt}) = ${table.createdAt}
+        and (${table.consentedAt} is null or (length(${table.consentedAt}) = 24
+          and strftime('%Y-%m-%dT%H:%M:%fZ', ${table.consentedAt}) = ${table.consentedAt}))
+        and (${table.completionAttestedAt} is null or (length(${table.completionAttestedAt}) = 24
+          and strftime('%Y-%m-%dT%H:%M:%fZ', ${table.completionAttestedAt}) = ${table.completionAttestedAt}))`,
+    ),
+    check(
+      "trip_validation_recruitment_event_check",
+      sql`(${table.participantGroupId} is null
+          and ${table.recruitmentFrameId} is null
+          and ${table.recruitmentEventContractVersion} is null
+          and ${table.recruitmentEventAt} is null
+          and ${table.recruitmentEventSha256} is null
+          and ${table.communityApprovalSha256} is null)
+        or (length(${table.participantGroupId}) = 76
+          and substr(${table.participantGroupId}, 1, 12) = 'participant-'
+          and substr(${table.participantGroupId}, 13) not glob '*[^a-f0-9]*'
+          and ${table.recruitmentFrameId} = 'california-halibut-site-window-recruitment-v1'
+          and ${table.recruitmentSourceId} in ('castingcompass-organic-product', 'direct-opt-in-research-invite', 'admin-approved-community-prospective')
+          and ${table.recruitmentEventContractVersion} = 'castingcompass.recruitment-event/1.0.0'
+          and length(${table.recruitmentEventAt}) = 24
+          and strftime('%Y-%m-%dT%H:%M:%fZ', ${table.recruitmentEventAt}) = ${table.recruitmentEventAt}
+          and julianday(${table.recruitmentEventAt}) <= julianday(${table.createdAt})
+          and length(${table.recruitmentEventSha256}) = 64
+          and ${table.recruitmentEventSha256} not glob '*[^a-f0-9]*'
+          and ((${table.recruitmentSourceId} = 'admin-approved-community-prospective'
+              and length(${table.communityApprovalSha256}) = 64
+              and ${table.communityApprovalSha256} not glob '*[^a-f0-9]*')
+            or (${table.recruitmentSourceId} != 'admin-approved-community-prospective'
+              and ${table.communityApprovalSha256} is null)))`,
+    ),
+    check(
+      "trip_validation_collection_identity_check",
+      sql`(${table.assignmentId} is null
+          and ${table.sourceRecordSha256} is null
+          and ${table.effortSegmentId} is null
+          and ${table.effortUnit} is null
+          and ${table.attemptCount} is null
+          and ${table.targetTaxonId} is null
+          and ${table.segmentStartAt} is null)
+        or (length(${table.assignmentId}) = 75
+          and substr(${table.assignmentId}, 1, 11) = 'assignment-'
+          and substr(${table.assignmentId}, 12) not glob '*[^a-f0-9]*'
+          and length(${table.sourceRecordSha256}) = 64
+          and ${table.sourceRecordSha256} not glob '*[^a-f0-9]*'
+          and length(${table.effortSegmentId}) = 71
+          and substr(${table.effortSegmentId}, 1, 7) = 'effort-'
+          and substr(${table.effortSegmentId}, 8) not glob '*[^a-f0-9]*'
+          and ${table.effortUnit} = 'whole-trip-group-attempt'
+          and ${table.attemptCount} = 1
+          and ${table.targetTaxonId} = 'california-halibut'
+          and length(${table.segmentStartAt}) = 24
+          and strftime('%Y-%m-%dT%H:%M:%fZ', ${table.segmentStartAt}) = ${table.segmentStartAt})`,
+    ),
+    check(
+      "trip_validation_completion_event_check",
+      sql`(${table.segmentEndAt} is null
+          and ${table.modeAtCompletion} is null
+          and ${table.anglerCount} is null
+          and ${table.durationMilliseconds} is null
+          and ${table.personMilliseconds} is null
+          and ${table.completionEventContractVersion} is null
+          and ${table.completionEventAt} is null
+          and ${table.completionConsentVersion} is null
+          and ${table.completionConsentedAt} is null
+          and ${table.completionPrimaryTargetConfirmed} is null
+          and ${table.completionCompleteAttemptConfirmed} is null
+          and ${table.completionEventSha256} is null)
+        or (${table.assignmentId} is not null
+          and length(${table.segmentEndAt}) = 24
+          and strftime('%Y-%m-%dT%H:%M:%fZ', ${table.segmentEndAt}) = ${table.segmentEndAt}
+          and julianday(${table.segmentEndAt}) > julianday(${table.segmentStartAt})
+          and ${table.modeAtCompletion} in ('shore', 'beach', 'pier', 'jetty', 'kayak', 'boat', 'other')
+          and ${table.anglerCount} between 1 and 12
+          and ${table.durationMilliseconds} between 60000 and 129600000
+          and cast(round((julianday(${table.segmentEndAt}) - julianday(${table.segmentStartAt})) * 86400000.0) as integer) = ${table.durationMilliseconds}
+          and ${table.personMilliseconds} = ${table.durationMilliseconds} * ${table.anglerCount}
+          and ${table.completionEventContractVersion} = 'castingcompass.validation-completion-event/1.0.0'
+          and length(${table.completionEventAt}) = 24
+          and strftime('%Y-%m-%dT%H:%M:%fZ', ${table.completionEventAt}) = ${table.completionEventAt}
+          and julianday(${table.completionEventAt}) >= julianday(${table.segmentEndAt})
+          and ${table.completionConsentVersion} = 'castingcompass.trip-validation-consent/1.0.0'
+          and ${table.completionConsentedAt} = ${table.completionEventAt}
+          and ${table.completionPrimaryTargetConfirmed} = 1
+          and ${table.completionCompleteAttemptConfirmed} = 1
+          and length(${table.completionEventSha256}) = 64
+          and ${table.completionEventSha256} not glob '*[^a-f0-9]*'
+          and ${table.completionEventAt} = ${table.completionAttestedAt}
+          and ${table.completionConsentVersion} = ${table.consentVersion}
+          and ${table.completionConsentedAt} = ${table.consentedAt}
+          and ${table.completionPrimaryTargetConfirmed} = ${table.primaryTargetConfirmed}
+          and ${table.completionCompleteAttemptConfirmed} = ${table.completeAttemptConfirmed})`,
+    ),
+    check(
+      "trip_validation_role_check",
+      sql`(${table.sourceRole} = 'prospective_secondary'
+          and ${table.validationProtocolId} is not null
+          and ${table.participantGroupId} is not null
+          and ${table.recruitmentFrameId} = 'california-halibut-site-window-recruitment-v1'
+          and ${table.recruitmentEventContractVersion} = 'castingcompass.recruitment-event/1.0.0'
+          and ${table.recruitmentEventSha256} is not null
+          and ${table.assignmentId} is not null
+          and ${table.sourceRecordSha256} is not null
+          and ${table.effortSegmentId} is not null
+          and ${table.effortUnit} = 'whole-trip-group-attempt'
+          and ${table.attemptCount} = 1
+          and ${table.targetTaxonId} = 'california-halibut'
+          and ${table.segmentStartAt} is not null
+          and ${table.cohortId} = 'california-halibut-site-window-observational-secondary-v1'
+          and ${table.incentivePolicyId} = 'none-v1'
+          and ${table.selectionMethod} = 'organic_score_visible'
+          and ${table.targetIntent} = 'california-halibut-primary-full-trip'
+          and ${table.primaryTargetConfirmed} = 1
+          and ${table.scoreInfluencedChoice} is not null
+          and ${table.modeAtEnrollment} in ('shore', 'beach', 'pier', 'jetty')
+          and ${table.attestationStatus} = 'verified'
+          and ${table.evidenceStatus} = 'secondary_pending_review')
+        or (${table.sourceRole} = 'context_only' and ${table.evidenceStatus} = 'context_only')`,
+    ),
+    check(
+      "trip_validation_context_enrollment_recruitment_check",
+      sql`${table.eventType} != 'enrollment' or ${table.sourceRole} != 'context_only' or ${table.participantGroupId} is null`,
+    ),
+    check(
+      "trip_validation_enrollment_completion_fields_check",
+      sql`${table.eventType} != 'enrollment' or ${table.segmentEndAt} is null`,
+    ),
+    check(
+      "trip_validation_completion_identity_check",
+      sql`${table.eventType} != 'completion' or ${table.assignmentId} is null or ${table.completionEventSha256} is not null`,
+    ),
+    check(
+      "trip_validation_event_coherence_check",
+      sql`(${table.eventType} = 'enrollment'
+          and ${table.primaryTargetConfirmed} = 1
+          and ${table.completeAttemptConfirmed} is null
+          and ${table.consentVersion} = 'castingcompass.trip-validation-consent/1.0.0'
+          and ${table.consentedAt} is not null
+          and ${table.completionAttestedAt} is null)
+        or (${table.eventType} = 'completion'
+          and ${table.primaryTargetConfirmed} = 1
+          and ${table.completeAttemptConfirmed} = 1
+          and ${table.consentVersion} = 'castingcompass.trip-validation-consent/1.0.0'
+          and ${table.consentedAt} = ${table.createdAt}
+          and ${table.completionAttestedAt} = ${table.createdAt})
+        or (${table.eventType} = 'retrospective_submission'
+          and ${table.validationProtocolId} is null
+          and ${table.sourceRole} = 'context_only'
+          and ${table.selectionMethod} = 'retrospective_self_report'
+          and ${table.primaryTargetConfirmed} = 1
+          and ${table.completeAttemptConfirmed} = 1
+          and ${table.attestationStatus} = 'not_applicable_retrospective'
+          and ${table.consentedAt} = ${table.createdAt}
+          and ${table.completionAttestedAt} = ${table.createdAt})
+        or (${table.eventType} = 'evidence_exclusion'
+          and ${table.validationProtocolId} is null
+          and ${table.activationManifestSha256} is null
+          and ${table.activatedAt} is null
+          and ${table.activationScoringSystemSha256} is null
+          and ${table.sourceRole} = 'context_only'
+          and ${table.participantGroupId} is null
+          and ${table.recruitmentFrameId} is null
+          and ${table.recruitmentEventContractVersion} is null
+          and ${table.recruitmentEventAt} is null
+          and ${table.recruitmentEventSha256} is null
+          and ${table.communityApprovalSha256} is null
+          and ${table.assignmentId} is null
+          and ${table.sourceRecordSha256} is null
+          and ${table.effortSegmentId} is null
+          and ${table.effortUnit} is null
+          and ${table.attemptCount} is null
+          and ${table.targetTaxonId} is null
+          and ${table.segmentStartAt} is null
+          and ${table.segmentEndAt} is null
+          and ${table.modeAtCompletion} is null
+          and ${table.anglerCount} is null
+          and ${table.durationMilliseconds} is null
+          and ${table.personMilliseconds} is null
+          and ${table.completionEventContractVersion} is null
+          and ${table.completionEventAt} is null
+          and ${table.completionConsentVersion} is null
+          and ${table.completionConsentedAt} is null
+          and ${table.completionPrimaryTargetConfirmed} is null
+          and ${table.completionCompleteAttemptConfirmed} is null
+          and ${table.completionEventSha256} is null
+          and ${table.attestationStatus} = 'invalidated_after_edit'
+          and ${table.forecastImpressionId} is null
+          and ${table.completionAttestedAt} is null
+          and ${table.evidenceStatus} = 'context_only'
+          and ${table.exclusionReason} in ('post_completion_profile_edit', 'trusted_review_exclusion'))
+        or (${table.eventType} = 'legacy_context'
+          and ${table.sourceRole} = 'context_only'
+          and ${table.evidenceStatus} = 'context_only')`,
     ),
   ],
 );

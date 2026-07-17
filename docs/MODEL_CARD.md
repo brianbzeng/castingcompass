@@ -80,13 +80,26 @@ created merely by importing the code.
 - Report each fold, the aggregate mean and spread, sample counts, class balance,
   and rows removed by the buffer.
 
-Primary occurrence metrics are Brier score and log loss because the product
-consumes probabilities. Secondary metrics are ROC AUC, average precision, and
-10-bin expected calibration error. Positive-catch CPUE is reported with MAE and
-RMSE. Opportunity ranking is evaluated with Spearman rank correlation and
-NDCG@10, including deterministic percentile-bootstrap 95% intervals within
-each geographic fold. Folds containing one occurrence class or no rank
-variation return null for the affected metrics rather than inventing values.
+For a future target-specific occurrence model that explicitly emits
+probabilities, primary occurrence metrics are Brier score and log loss;
+secondary metrics are ROC AUC, average precision, and 10-bin expected
+calibration error. Those probability metrics do **not** apply to the current
+heuristic 0–100 percentile, which is an ordinal rank and does not claim
+calibration. Positive-catch CPUE is reported with MAE and RMSE. Opportunity
+ranking is evaluated with Spearman rank correlation and NDCG@10 only when the
+candidate set and sampling support make those metrics identifiable. Folds
+containing one occurrence class or no rank variation return null for the
+affected metrics rather than inventing values.
+
+The frozen first-party site × two-hour-window design is separate from the
+point-terrain benchmark above. `docs/VALIDATION-PROTOCOL.md` and
+`validation/protocols/california-halibut-site-window-v1.json` preregister a
+prospective primary cohort, absolute temporal holdouts, a fixed 46-site/five-
+panel geography, development-only baseline selection, paired clustered
+uncertainty, conservative support and promotion gates, and the exact ordinal
+claim boundary. It is a fixed-interval census with frozen pre-outcome recruitment
+sources and required source/selection-design stratification. Site-supported trip
+rows are never converted to point labels.
 
 ## Required ablations
 
@@ -158,6 +171,13 @@ A model is eligible for a future `candidate` stage only after:
    tested.
 
 No automatic production promotion is implemented.
+
+For any run claiming evidence under the frozen site-window protocol, the
+protocol file, private label-blind split manifest, data snapshot, and prediction
+snapshot must be hashed run inputs. A locally frozen protocol is not an active
+production cohort: activation must be sealed and deployed before the first
+eligible row, and locked-test outcomes cannot influence baseline selection,
+feature work, or candidate configuration.
 
 ## Limitations and risks
 

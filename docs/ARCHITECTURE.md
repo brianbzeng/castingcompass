@@ -122,6 +122,46 @@ dispositions that were never collected. Those rows remain user-visible and
 deletable but cannot enter modeling or validation. Production rollout requires
 the migration plus aggregate pre/post audits before v2 collection is enabled.
 
+## Validation-governance boundary
+
+The observation contract answers whether a row is internally coherent. It does
+not decide whether the row is admissible confirmatory evidence. The frozen
+validation preregistration adds a second, fail-closed boundary:
+
+```mermaid
+flowchart LR
+    ROW["Valid observation v2"] --> ROLE["Immutable source and cohort role"]
+    IMP["Authoritative pre-outcome impression or assignment"] --> ROLE
+    ACT["Sealed production activation"] --> ROLE
+    ROLE --> SPLIT["Private outcome-blind append-only manifest"]
+    SPLIT --> DEV["Blocks 1–2 and non-held panels: baseline development"]
+    SPLIT --> TEST["Blocks 3–4 and held panel: locked primary test"]
+    DEV --> COMPARE["One selected baseline"]
+    TEST --> COMPARE
+    COMPARE --> REPORT["Pass, negative, or inconclusive report"]
+```
+
+`docs/VALIDATION-PROTOCOL.md` is the human contract;
+`validation/protocols/california-halibut-site-window-v1.json` is the frozen
+machine preregistration; and
+`contracts/validation-split-manifest.schema.json` constrains the private
+activation/assignment chain. The protocol supports only an ordinal
+California-halibut site × two-hour-window claim. Site rows remain site rows;
+no exact coordinate is collected or inferred.
+
+Local schema/test completion does not activate production. Before any primary
+row can exist, production must deploy the species migration, server-bound
+impression/assignment evidence, precommit or safe-randomization flow, aligned
+legal consent and retention, private access/deletion/restore controls, and a
+sealed outcome-blind activation manifest. Any row before that point is
+exploratory.
+
+The prospective frame assigns an immutable pre-outcome recruitment source from
+three frozen IDs and includes every eligible accepted row through the fixed
+interval. The pooled primary analysis is accompanied by recruitment-source,
+selection-design, and source-by-design reporting; outcome-adaptive quotas,
+post-hoc subsampling, and arrival-order exclusions are prohibited.
+
 ## Score flow
 
 1. `HabitatScore` comes from the promoted spatial model. In the current demo it is a labeled curated proxy, not a trained-model output.

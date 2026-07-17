@@ -55,6 +55,21 @@ after its acceptance checks pass in the intended environment.
   selection where possible. Curated site IDs support site × time-window claims only; precise
   casting-zone research requires separate consent, minimization, access, retention/deletion,
   and sensitive-location controls.
+  - [x] Freeze and locally verify the strict human/machine preregistration, exact 46-site
+    geography, absolute time blocks, fixed-interval census, frozen recruitment provenance,
+    baseline/metric/sample/promotion gates, private-manifest contract, adversarial semantic
+    tests, and narrow ordinal claim boundary.
+  - [ ] Before the first eligible row, deploy and seal production activation evidence for the
+    species migration, a full signed server-authoritative pre-outcome impression/assignment
+    payload and tamper-evident issuance log, primary recruitment or safe
+    randomization, consented privacy-safe server-authoritative study-stable participant grouping
+    across sessions/devices, legal consent/retention alignment, private access/deletion/restore controls,
+    the outcome-blind append-only split manifest, an externally anchored/allowlisted Ed25519
+    signer/exporter whose activation commitment is tamper-evidently published before enrollment,
+    a pinned evaluator image with the exact dependency lock, actual independent recomputation,
+    and a fresh one-time publication authorization after final deletion reconciliation. Same-key
+    signatures prove consistency—not server provenance or independence. Never backdate activation
+    or treat a local draft as publishable evidence.
 - [ ] Acquire reproducible official CDFW/CRFS/RecFIN data—starting with CDFW ds3186
   all-species/all-effort and ds3185 rockfish/cabezon blocks—and start a prospective first-party
   cohort. Every snapshot needs its query/export manifest, retrieval date, checksum, license,
@@ -77,6 +92,16 @@ after its acceptance checks pass in the intended environment.
   Google Search Console and Bing Webmaster Tools verification, sitemap submission, crawl/index
   coverage, canonical URLs, metadata, social previews, appropriate structured data, Core Web
   Vitals, mobile/accessibility checks, and privacy-conscious conversion analytics.
+  - [ ] Implement and locally verify the crawl foundation: owner-supplied Google/Bing
+    verification values, a real XML sitemap and robots reference, self-canonical public routes,
+    `noindex` for account-only surfaces, truthful metadata/social cards, and narrowly appropriate
+    structured data. The current live sitemap is missing and route canonicals collapse to `/`.
+  - [ ] After an approved deployment, submit the sitemap in the already-created Google and Bing
+    dashboards, request/index the canonical public pages, inspect exclusions and crawl errors, and
+    record the first coverage baseline without assuming that verification guarantees ranking.
+  - [ ] Establish Core Web Vitals, mobile, accessibility, and privacy-conscious funnel baselines;
+    define conversions before enabling analytics, avoid precise-location or trip-content capture,
+    and document consent/retention behavior for any measurement vendor.
 - [ ] Make infrastructure mobile-ready and scalable with versioned APIs/shared schemas,
   appropriate mobile authentication, queue-based AI work, staging, bounded retries/costs,
   and WebKit/offline/safe-area coverage.

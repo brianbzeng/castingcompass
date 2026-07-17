@@ -6,11 +6,19 @@ import math
 import os
 import re
 from abc import ABC, abstractmethod
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Iterable
 
-from shared.species_contract import is_strict_offset_datetime, validate_contract_assets
+from shared.species_contract import (
+    MODEL_RUN_CONTRACT_VERSION,
+    OBSERVATION_CONTRACT_VERSION,
+    OPPORTUNITY_CONTRACT_VERSION,
+    PRODUCTION_TARGET_TAXON_ID,
+    TAXON_CATALOG_VERSION,
+    is_strict_offset_datetime,
+    validate_contract_assets,
+)
 
 from .models import (
     ComponentScores,
@@ -19,16 +27,11 @@ from .models import (
     ExplanationFactor,
     FishingMode,
     FreshnessStatus,
-    MODEL_RUN_CONTRACT_VERSION,
-    OBSERVATION_CONTRACT_VERSION,
-    OPPORTUNITY_CONTRACT_VERSION,
     OpportunityStatus,
     OpportunityWindow,
-    PRODUCTION_TARGET_TAXON_ID,
     SiteDetail,
     SiteSummary,
     SourceFreshness,
-    TAXON_CATALOG_VERSION,
 )
 
 LOGGER = logging.getLogger(__name__)

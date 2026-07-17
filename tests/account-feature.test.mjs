@@ -68,5 +68,12 @@ test("allows owners to edit or remove pending reports only", () => {
   assert.match(authSource, /trip\.contract_status === "valid"/);
   assert.match(accountSource, /Changing the location, start, finish, or fishing mode clears/);
   assert.match(authSource, /forecastAttributionChanged/);
+  assert.match(authSource, /validationEvidenceExcluded: true/);
+  assert.match(authSource, /post_completion_profile_edit/);
+  assert.match(accountSource, /validationEvidenceExcluded !== true/);
+  assert.match(accountSource, /remains useful as descriptive context but cannot re-enter prospective validation evidence/);
+  assert.match(accountSource, /Saving any edit permanently keeps this report out of prospective validation evidence/);
+  assert.match(accountSource, /Saved\. Because this completed report was edited, it remains context-only and cannot enter prospective validation evidence\./);
+  assert.match(accountSource, /profileActionNotice && !editingTrip \? <p role="status">/);
   assert.match(authSource, /moderation_status = 'pending'/);
 });

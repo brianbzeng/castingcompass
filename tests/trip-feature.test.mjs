@@ -15,6 +15,14 @@ test("trip validation UI uses the first-party API contract", async () => {
   assert.match(source, /fetch\("\/api\/trips\/summary"/);
   assert.match(source, /formData\.set\("website", ""\)/);
   assert.match(source, /formData\.set\("referralCode", referralCodeRef\.current\)/);
+  assert.match(source, /authoritativeStartedAt = typeof trip\.startedAt === "string" \? trip\.startedAt : startedAt/);
+  assert.match(source, /startedAt: authoritativeStartedAt/);
+  assert.match(source, /const startedAt = new Date\(\)\.toISOString\(\)/);
+  assert.match(source, /Starts when you tap Start trip/);
+  assert.match(source, /use Log a past trip for an earlier attempt/);
+  assert.match(source, /formData\.set\("endedAt", new Date\(\)\.toISOString\(\)\)/);
+  assert.match(source, /Finish time is recorded when you submit/);
+  assert.match(source, /<TripCompletionFields[^>]+hideTimes \/>/);
 });
 
 test("active reports are recoverable without collecting social identity or GPS", async () => {
@@ -34,7 +42,15 @@ test("trip UX distinguishes no fish, target encounters, and unresolved non-targe
   assert.match(source, /unresolved non-target fish/);
   assert.match(source, /anyFishEncounters = targetEncounters \+ fields\.otherCatchCount/);
   assert.match(source, /nothing enters training automatically/);
-  assert.match(source, /Model use requires a separate validation protocol/);
+  assert.match(source, /Model use requires separate protocol activation/);
+  assert.match(source, /observational secondary or context only/);
+  assert.match(source, /scoreInfluencedChoice: "" \| "yes" \| "no"/);
+  assert.match(source, /primaryTargetConfirmed/);
+  assert.match(source, /completeAttempt/);
+  assert.match(source, /Choose mode/);
+  assert.match(source, /formData\.set\("mode", fields\.mode\)/);
+  assert.match(source, /If the mode changed after you started/);
+  assert.doesNotMatch(source, /No — independent trip/);
   assert.match(source, /Trip reports do not change the current score/);
   assert.doesNotMatch(source, /same validation value as a catch/);
   assert.match(source, /image\/jpeg,image\/png,image\/webp/);

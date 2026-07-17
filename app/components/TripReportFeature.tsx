@@ -44,7 +44,7 @@ interface StoredActiveTrip {
   reel: string;
   baitLure: string;
   rig: string;
-  contourCastInfluenced: boolean;
+  scoreInfluencedChoice: boolean;
 }
 
 interface SummaryView {
@@ -81,7 +81,10 @@ interface FormFields {
   reel: string;
   baitLure: string;
   rig: string;
-  contourCastInfluenced: boolean;
+  mode: string;
+  scoreInfluencedChoice: "" | "yes" | "no";
+  primaryTargetConfirmed: boolean;
+  completeAttempt: boolean;
   otherCatchCount: number;
   otherSpecies: string;
   shorebreak: string;
@@ -131,7 +134,10 @@ function freshFields(siteId = ""): FormFields {
     reel: "",
     baitLure: "",
     rig: "",
-    contourCastInfluenced: true,
+    mode: "",
+    scoreInfluencedChoice: "",
+    primaryTargetConfirmed: false,
+    completeAttempt: false,
     otherCatchCount: 0,
     otherSpecies: "",
     shorebreak: "",
@@ -158,6 +164,12 @@ function parseFormDraft(raw: string | null, fallback: FormFields) {
       shortReleasedCount: Number(parsed.shortReleasedCount ?? fallback.shortReleasedCount),
       otherCatchCount: Number(parsed.otherCatchCount ?? fallback.otherCatchCount),
       consent: Boolean(parsed.consent),
+      primaryTargetConfirmed: Boolean(parsed.primaryTargetConfirmed),
+      completeAttempt: Boolean(parsed.completeAttempt),
+      scoreInfluencedChoice:
+        parsed.scoreInfluencedChoice === "yes" || parsed.scoreInfluencedChoice === "no"
+          ? parsed.scoreInfluencedChoice
+          : fallback.scoreInfluencedChoice,
     };
   } catch {
     return fallback;
@@ -186,31 +198,9 @@ function findForecastWindow(snapshot: OpportunitySnapshot, siteId: string, start
   return Math.abs(matchedMidpoint - midpoint) <= 6 * 60 * 60 * 1000 ? matched : null;
 }
 
-function forecastFields(window: OpportunityWindow | null, snapshot: OpportunitySnapshot) {
+function forecastFields(window: OpportunityWindow | null) {
   if (!window) return {};
-  return {
-    opportunityWindowId: window.id,
-    opportunityScore: window.score,
-    habitatScore: window.habitatScore,
-    seasonalityScore: window.seasonalityScore,
-    conditionsScore: window.dynamicScore,
-    fishabilityScore: window.fishabilityScore,
-    modelVersion: window.modelVersion ?? snapshot.modelVersion,
-    predictionMetadata: JSON.stringify({
-      snapshotGeneratedAt: snapshot.generatedAt,
-      forecastStart: window.start,
-      forecastEnd: window.end,
-      forecastConditions: window.conditions,
-      confidence: window.confidence,
-    }),
-  };
-}
-
-function appendForecastFields(formData: FormData, window: OpportunityWindow | null, snapshot: OpportunitySnapshot) {
-  const fields = forecastFields(window, snapshot);
-  for (const [key, value] of Object.entries(fields)) {
-    if (value !== undefined && value !== null) formData.set(key, String(value));
-  }
+  return { opportunityWindowId: window.id };
 }
 
 function integerValue(value: string) {
@@ -246,7 +236,12 @@ function parseStoredTrip(raw: string | null): StoredActiveTrip | null {
       reel: typeof value.reel === "string" ? value.reel : "",
       baitLure: typeof value.baitLure === "string" ? value.baitLure : "",
       rig: typeof value.rig === "string" ? value.rig : "",
-      contourCastInfluenced: typeof value.contourCastInfluenced === "boolean" ? value.contourCastInfluenced : true,
+      scoreInfluencedChoice:
+        typeof value.scoreInfluencedChoice === "boolean"
+          ? value.scoreInfluencedChoice
+          : typeof (value as { contourCastInfluenced?: unknown }).contourCastInfluenced === "boolean"
+            ? Boolean((value as { contourCastInfluenced: boolean }).contourCastInfluenced)
+            : false,
     };
   } catch {
     return null;
@@ -331,18 +326,32 @@ function validatePhoto(file: File | null) {
   if (file.size > MAX_PHOTO_BYTES) throw new Error("Photo must be 5 MB or smaller.");
 }
 
-function appendCompletionFields(formData: FormData, fields: FormFields, photo: File | null) {
-  const startedAt = isoFromLocalInput(fields.startedAt);
-  const endedAt = isoFromLocalInput(fields.endedAt);
-  if (new Date(endedAt) <= new Date(startedAt)) throw new Error("End time must be after the start time.");
+function appendCompletionFields(
+  formData: FormData,
+  fields: FormFields,
+  photo: File | null,
+  includeClientTimes = true,
+) {
   if (!fields.consent) throw new Error("Confirm the trip report before submitting.");
+  if (!fields.primaryTargetConfirmed) {
+    throw new Error("Confirm that California halibut was the primary target for the whole trip.");
+  }
+  if (!fields.completeAttempt) {
+    throw new Error("Confirm that this report covers the whole fishing attempt.");
+  }
+  if (!fields.mode) throw new Error("Choose the fishing mode used for the whole trip.");
   if (fields.keeperCount > 25 || fields.shortReleasedCount > 25 || fields.keeperCount + fields.shortReleasedCount > 40) {
     throw new Error("Halibut counts must be 25 or fewer per field and 40 or fewer combined.");
   }
   validatePhoto(photo);
 
-  formData.set("startedAt", startedAt);
-  formData.set("endedAt", endedAt);
+  if (includeClientTimes) {
+    const startedAt = isoFromLocalInput(fields.startedAt);
+    const endedAt = isoFromLocalInput(fields.endedAt);
+    if (new Date(endedAt) <= new Date(startedAt)) throw new Error("End time must be after the start time.");
+    formData.set("startedAt", startedAt);
+    formData.set("endedAt", endedAt);
+  }
   formData.set("keeperCount", String(fields.keeperCount));
   formData.set("shortReleasedCount", String(fields.shortReleasedCount));
   formData.set("gearProfileId", fields.gearProfileId);
@@ -361,6 +370,8 @@ function appendCompletionFields(formData: FormData, fields: FormFields, photo: F
   formData.set("fishabilityNotes", fields.fishabilityNotes.trim());
   formData.set("notes", fields.notes.trim());
   formData.set("consent", "true");
+  formData.set("primaryTargetConfirmed", "true");
+  formData.set("completeAttempt", "true");
   formData.set("website", "");
   if (photo) formData.set("photo", photo);
 }
@@ -397,6 +408,9 @@ export function TripReportFeature({ sites, snapshot, request, canSubmit, onRequi
   const siteMap = useMemo(() => new Map(sites.map((site) => [site.id, site])), [sites]);
   const targetEncounters = fields.keeperCount + fields.shortReleasedCount;
   const anyFishEncounters = targetEncounters + fields.otherCatchCount;
+  const currentStartWindow = panel === "start"
+    ? findForecastWindow(snapshot, fields.siteId, new Date().toISOString())
+    : null;
 
   const resetFeedback = useCallback(() => {
     setSubmitState("idle");
@@ -428,7 +442,10 @@ export function TripReportFeature({ sites, snapshot, request, canSubmit, onRequi
         reel: activeTrip.reel,
         baitLure: activeTrip.baitLure,
         rig: activeTrip.rig,
-        contourCastInfluenced: activeTrip.contourCastInfluenced,
+        mode: activeTrip.mode,
+        scoreInfluencedChoice: "" as const,
+        primaryTargetConfirmed: false,
+        completeAttempt: false,
       };
       setFields(parseFormDraft(window.localStorage.getItem(`${TRIP_DRAFT_PREFIX}complete.${activeTrip.id}`), fallback));
     } else if (nextPanel === "start") {
@@ -609,16 +626,29 @@ export function TripReportFeature({ sites, snapshot, request, canSubmit, onRequi
     }
     if (!fields.consent) {
       setSubmitState("error");
-      setMessage("Confirm the validation consent before starting.");
+      setMessage("Confirm the collection and evaluation consent before starting.");
+      return;
+    }
+    if (!fields.primaryTargetConfirmed) {
+      setSubmitState("error");
+      setMessage("Confirm that California halibut is the primary target for this whole trip.");
+      return;
+    }
+    if (!fields.mode) {
+      setSubmitState("error");
+      setMessage("Choose the fishing mode you will use for this trip.");
+      return;
+    }
+    if (!fields.scoreInfluencedChoice) {
+      setSubmitState("error");
+      setMessage("Answer whether the CastingCompass score influenced this trip choice.");
       return;
     }
     setSubmitState("submitting");
     setMessage("");
     try {
-      const startedAt = isoFromLocalInput(fields.startedAt);
-      const forecastWindow = selectedWindow?.siteId === site.id
-        ? selectedWindow
-        : findForecastWindow(snapshot, site.id, startedAt);
+      const startedAt = new Date().toISOString();
+      const forecastWindow = findForecastWindow(snapshot, site.id, startedAt);
       const response = await fetch("/api/trips/start", {
         method: "POST",
         headers: { "Content-Type": "application/json", Accept: "application/json" },
@@ -626,7 +656,7 @@ export function TripReportFeature({ sites, snapshot, request, canSubmit, onRequi
           siteId: site.id,
           startedAt,
           anglerCount: fields.anglerCount,
-          mode: site.type.toLowerCase(),
+          mode: fields.mode,
           fishingMethod: fields.fishingMethod,
           method: fields.fishingMethod,
           gearProfileId: fields.gearProfileId,
@@ -634,11 +664,13 @@ export function TripReportFeature({ sites, snapshot, request, canSubmit, onRequi
           reel: fields.reel,
           baitLure: fields.baitLure,
           rig: fields.rig,
-          contourCastInfluenced: fields.contourCastInfluenced,
+          scoreInfluencedChoice: fields.scoreInfluencedChoice === "yes",
+          primaryTargetConfirmed: fields.primaryTargetConfirmed,
           reporterKey: anonymousReporterKey(),
           consent: fields.consent,
           website: "",
-          ...forecastFields(forecastWindow, snapshot),
+          ...(referralCodeRef.current ? { referralCode: referralCodeRef.current } : {}),
+          ...forecastFields(forecastWindow),
         }),
       });
       const payload = await responsePayload(response);
@@ -646,14 +678,15 @@ export function TripReportFeature({ sites, snapshot, request, canSubmit, onRequi
       const id = typeof trip.id === "string" ? trip.id : typeof payload.tripId === "string" ? payload.tripId : null;
       const token = typeof payload.token === "string" ? payload.token : null;
       if (!id || !token) throw new Error("The trip started, but this browser did not receive a recovery token.");
+      const authoritativeStartedAt = typeof trip.startedAt === "string" ? trip.startedAt : startedAt;
       const stored: StoredActiveTrip = {
         id,
         token,
         siteId: site.id,
         siteName: site.name,
-        startedAt,
+        startedAt: authoritativeStartedAt,
         anglerCount: fields.anglerCount,
-        mode: site.type.toLowerCase(),
+        mode: fields.mode,
         opportunityWindowId: forecastWindow?.id,
         opportunityScore: forecastWindow?.score,
         modelVersion: forecastWindow?.modelVersion ?? snapshot.modelVersion,
@@ -663,7 +696,7 @@ export function TripReportFeature({ sites, snapshot, request, canSubmit, onRequi
         reel: fields.reel,
         baitLure: fields.baitLure,
         rig: fields.rig,
-        contourCastInfluenced: fields.contourCastInfluenced,
+        scoreInfluencedChoice: fields.scoreInfluencedChoice === "yes",
       };
       window.localStorage.setItem(ACTIVE_TRIP_KEY, JSON.stringify(stored));
       window.localStorage.removeItem(LEGACY_ACTIVE_TRIP_KEY);
@@ -684,19 +717,14 @@ export function TripReportFeature({ sites, snapshot, request, canSubmit, onRequi
     setMessage("");
     try {
       const formData = new FormData();
-      appendCompletionFields(formData, fields, photo);
+      appendCompletionFields(formData, fields, photo, false);
+      formData.set("endedAt", new Date().toISOString());
       formData.set("token", activeTrip.token);
       formData.set("reporterKey", anonymousReporterKey());
       formData.set("anglerCount", String(fields.anglerCount));
-      formData.set("mode", activeTrip.mode);
+      formData.set("mode", fields.mode);
       formData.set("fishingMethod", fields.fishingMethod);
       formData.set("method", fields.fishingMethod);
-      formData.set("contourCastInfluenced", String(fields.contourCastInfluenced));
-      appendForecastFields(
-        formData,
-        findForecastWindow(snapshot, activeTrip.siteId, activeTrip.startedAt, isoFromLocalInput(fields.endedAt)),
-        snapshot,
-      );
       const response = await fetch(`/api/trips/${encodeURIComponent(activeTrip.id)}/complete`, {
         method: "POST",
         body: formData,
@@ -709,7 +737,7 @@ export function TripReportFeature({ sites, snapshot, request, canSubmit, onRequi
       void refreshSummary(setSummary, setSummaryUnavailable);
       setSubmitState("success");
       setMessage(anyFishEncounters === 0
-        ? "No-fish trip recorded. That result is essential for honest validation and is pending review."
+        ? "No-fish trip recorded. That result is essential for an honest evaluation backlog and is pending review."
         : targetEncounters === 0
           ? "Non-target fish recorded with zero California halibut. The complete result is pending review."
         : "Trip recorded and pending review. Thanks for helping build the evaluation backlog.");
@@ -727,6 +755,16 @@ export function TripReportFeature({ sites, snapshot, request, canSubmit, onRequi
       setMessage("Choose a fishing location.");
       return;
     }
+    if (!fields.mode) {
+      setSubmitState("error");
+      setMessage("Choose the fishing mode used for this trip.");
+      return;
+    }
+    if (!fields.scoreInfluencedChoice) {
+      setSubmitState("error");
+      setMessage("Answer whether the CastingCompass score influenced this trip choice.");
+      return;
+    }
     setSubmitState("submitting");
     setMessage("");
     try {
@@ -734,23 +772,19 @@ export function TripReportFeature({ sites, snapshot, request, canSubmit, onRequi
       appendCompletionFields(formData, fields, photo);
       formData.set("siteId", site.id);
       formData.set("anglerCount", String(fields.anglerCount));
-      formData.set("mode", site.type.toLowerCase());
+      formData.set("mode", fields.mode);
       formData.set("fishingMethod", fields.fishingMethod);
       formData.set("method", fields.fishingMethod);
-      formData.set("contourCastInfluenced", String(fields.contourCastInfluenced));
+      formData.set("scoreInfluencedChoice", String(fields.scoreInfluencedChoice === "yes"));
       formData.set("reporterKey", anonymousReporterKey());
       if (referralCodeRef.current) formData.set("referralCode", referralCodeRef.current);
-      const matchedWindow = selectedWindow?.siteId === site.id
-        ? selectedWindow
-        : findForecastWindow(snapshot, site.id, isoFromLocalInput(fields.startedAt), isoFromLocalInput(fields.endedAt));
-      appendForecastFields(formData, matchedWindow, snapshot);
       const response = await fetch("/api/trips/report", { method: "POST", body: formData });
       await responsePayload(response);
       window.localStorage.removeItem(`${TRIP_DRAFT_PREFIX}past`);
       void refreshSummary(setSummary, setSummaryUnavailable);
       setSubmitState("success");
       setMessage(anyFishEncounters === 0
-        ? "No-fish trip recorded and pending review. Complete misses are necessary to measure how often ranked windows do not produce fish."
+        ? "No-fish trip recorded and pending review. Past reports provide descriptive context and stay outside prospective evidence."
         : targetEncounters === 0
           ? "Non-target fish recorded with zero California halibut. The complete result is pending review."
         : "Past trip recorded and pending review. Thank you.");
@@ -829,7 +863,7 @@ export function TripReportFeature({ sites, snapshot, request, canSubmit, onRequi
             tabIndex={-1}
           >
             <button className="sheet-close" type="button" onClick={closePanel} aria-label="Close trip report"><CloseIcon /></button>
-            <span className="eyebrow"><span /> Validation beta</span>
+            <span className="eyebrow"><span /> Evaluation trip log</span>
 
             {panel === "start" ? (
               <form onSubmit={formStep === 1 ? (event) => { event.preventDefault(); setFormStep(2); } : startTrip}>
@@ -840,10 +874,11 @@ export function TripReportFeature({ sites, snapshot, request, canSubmit, onRequi
                 <div className="trip-step-indicator"><span className={formStep === 1 ? "active" : ""}>1 · Trip</span><span className={formStep === 2 ? "active" : ""}>2 · Gear</span></div>
                 {formStep === 1 ? <div className="trip-field-grid">
                   <SiteCombobox className="trip-field wide" sites={sites} value={fields.siteId} onChange={updateSite} />
-                  <label className="trip-field">
+                  <div className="trip-field">
                     <span>Start time</span>
-                    <input type="datetime-local" value={fields.startedAt} onChange={(event) => setFields((current) => ({ ...current, startedAt: event.target.value }))} required />
-                  </label>
+                    <strong>Starts when you tap Start trip</strong>
+                    <small>The server records the exact start; use Log a past trip for an earlier attempt.</small>
+                  </div>
                   <label className="trip-field">
                     <span>Anglers</span>
                     <input type="number" min="1" max="12" inputMode="numeric" value={fields.anglerCount} onChange={(event) => updateCount("anglerCount", event.target.value)} required />
@@ -858,19 +893,38 @@ export function TripReportFeature({ sites, snapshot, request, canSubmit, onRequi
                     </select>
                   </label>
                   <label className="trip-field">
-                    <span>Did the score influence this trip?</span>
-                    <select value={fields.contourCastInfluenced ? "yes" : "no"} onChange={(event) => setFields((current) => ({ ...current, contourCastInfluenced: event.target.value === "yes" }))} required>
-                      <option value="yes">Yes</option>
-                      <option value="no">No — independent trip</option>
+                    <span>Fishing mode for the whole trip</span>
+                    <select value={fields.mode} onChange={(event) => setFields((current) => ({ ...current, mode: event.target.value }))} required>
+                      <option value="">Choose mode</option>
+                      <option value="shore">Shore</option>
+                      <option value="beach">Beach</option>
+                      <option value="pier">Pier</option>
+                      <option value="jetty">Jetty</option>
+                      <option value="kayak">Kayak</option>
+                      <option value="boat">Boat</option>
+                      <option value="other">Other</option>
                     </select>
+                  </label>
+                  <label className="trip-field">
+                    <span>Did the score influence this trip?</span>
+                    <select value={fields.scoreInfluencedChoice} onChange={(event) => setFields((current) => ({ ...current, scoreInfluencedChoice: event.target.value as FormFields["scoreInfluencedChoice"] }))} required>
+                      <option value="">Choose an answer</option>
+                      <option value="yes">Yes</option>
+                      <option value="no">No — I had already chosen this trip</option>
+                    </select>
+                    <small>This answer is preserved, but it does not make a score-visible trip random or independent.</small>
+                  </label>
+                  <label className="consent-field wide">
+                    <input type="checkbox" checked={fields.primaryTargetConfirmed} onChange={(event) => setFields((current) => ({ ...current, primaryTargetConfirmed: event.target.checked }))} required />
+                    <span>I confirm California halibut is my primary target for this whole fishing attempt.</span>
                   </label>
                 </div> : <>
                 <TripGearFields fields={fields} setFields={setFields} gearProfiles={gearProfiles} applyGearProfile={applyGearProfile} />
-                {(selectedWindow ?? findForecastWindow(snapshot, fields.siteId, isoFromLocalInput(fields.startedAt))) ? (
+                {currentStartWindow ? (
                   <div className="captured-forecast">
                     <span>Forecast captured</span>
-                    <strong>{Math.round((selectedWindow ?? findForecastWindow(snapshot, fields.siteId, isoFromLocalInput(fields.startedAt)))!.score)}</strong>
-                    <p>The exact forecast window, score components, model version, and conditions are stored with this trip.</p>
+                    <strong>{Math.round(currentStartWindow.score)}</strong>
+                    <p>The server verifies the published window and stores its authoritative score identity with this trip when they match.</p>
                   </div>
                 ) : null}
                 <div className="trip-privacy-note">
@@ -879,7 +933,7 @@ export function TripReportFeature({ sites, snapshot, request, canSubmit, onRequi
                 </div>
                 <label className="consent-field">
                   <input type="checkbox" checked={fields.consent} onChange={(event) => setFields((current) => ({ ...current, consent: event.target.checked }))} required />
-                  <span>I own anything I submit and consent to the private use described in the <Link href="/terms" target="_blank">Terms</Link> and <Link href="/privacy" target="_blank">Privacy Policy</Link>, including storage in a structured evaluation backlog. Any later model use requires the separate validation protocol.</span>
+                  <span>I own anything I submit and consent to the private use described in the <Link href="/terms" target="_blank">Terms</Link> and <Link href="/privacy" target="_blank">Privacy Policy</Link>, including storage in a structured evaluation backlog. Organic score-visible trips are observational secondary or context only—not an active primary validation cohort.</span>
                 </label>
                 </>}
                 {formStep === 2 ? <button className="trip-back-button" type="button" onClick={() => setFormStep(1)}>← Back to trip details</button> : null}
@@ -895,10 +949,23 @@ export function TripReportFeature({ sites, snapshot, request, canSubmit, onRequi
               <form onSubmit={completeTrip}>
                 <header className="trip-form-heading">
                   <h2 id="trip-modal-title">Finish the trip.</h2>
-                  <p>{activeTrip.siteName} · California halibut is the fixed target. Zero in every fish-count field records a no-fish trip.</p>
+                  <p>{activeTrip.siteName} · Finish time is recorded when you submit. California halibut is the fixed target. Zero in every fish-count field records a no-fish trip.</p>
                 </header>
+                <label className="trip-field wide">
+                  <span>Fishing mode for the whole trip</span>
+                  <select value={fields.mode} onChange={(event) => setFields((current) => ({ ...current, mode: event.target.value }))} required>
+                    <option value="shore">Shore</option>
+                    <option value="beach">Beach</option>
+                    <option value="pier">Pier</option>
+                    <option value="jetty">Jetty</option>
+                    <option value="kayak">Kayak</option>
+                    <option value="boat">Boat</option>
+                    <option value="other">Other</option>
+                  </select>
+                  <small>If the mode changed after you started, choose the mode that best describes the whole attempt. The report will stay useful as context.</small>
+                </label>
                 <TripGearFields fields={fields} setFields={setFields} gearProfiles={gearProfiles} applyGearProfile={applyGearProfile} includeObservations />
-                <TripCompletionFields fields={fields} setFields={setFields} updateCount={updateCount} photo={photo} photoInputRef={photoInputRef} onPhoto={handlePhoto} />
+                <TripCompletionFields fields={fields} setFields={setFields} updateCount={updateCount} photo={photo} photoInputRef={photoInputRef} onPhoto={handlePhoto} hideTimes />
                 <button className="trip-submit" type="submit" disabled={submitState === "submitting" || submitState === "success"}>
                   {submitState === "submitting"
                     ? "Saving…"
@@ -927,7 +994,7 @@ export function TripReportFeature({ sites, snapshot, request, canSubmit, onRequi
               <form onSubmit={formStep === 1 ? (event) => { event.preventDefault(); setFormStep(2); } : reportPastTrip}>
                 <header className="trip-form-heading">
                   <h2 id="trip-modal-title">Log a past trip.</h2>
-                  <p>Complete results—including zero fish—help test whether the ranking separates stronger windows from weaker ones.</p>
+                  <p>Complete past results—including zero fish—provide exploratory context. They cannot enter prospective primary evidence.</p>
                 </header>
                 <div className="trip-step-indicator"><span className={formStep === 1 ? "active" : ""}>1 · Trip</span><span className={formStep === 2 ? "active" : ""}>2 · Gear + result</span></div>
                 {formStep === 1 ? <div className="trip-field-grid">
@@ -954,11 +1021,26 @@ export function TripReportFeature({ sites, snapshot, request, canSubmit, onRequi
                     </select>
                   </label>
                   <label className="trip-field">
-                    <span>Did the score influence this trip?</span>
-                    <select value={fields.contourCastInfluenced ? "yes" : "no"} onChange={(event) => setFields((current) => ({ ...current, contourCastInfluenced: event.target.value === "yes" }))} required>
-                      <option value="yes">Yes</option>
-                      <option value="no">No — independent trip</option>
+                    <span>Fishing mode for the whole trip</span>
+                    <select value={fields.mode} onChange={(event) => setFields((current) => ({ ...current, mode: event.target.value }))} required>
+                      <option value="">Choose mode</option>
+                      <option value="shore">Shore</option>
+                      <option value="beach">Beach</option>
+                      <option value="pier">Pier</option>
+                      <option value="jetty">Jetty</option>
+                      <option value="kayak">Kayak</option>
+                      <option value="boat">Boat</option>
+                      <option value="other">Other</option>
                     </select>
+                  </label>
+                  <label className="trip-field">
+                    <span>Did the score influence this trip?</span>
+                    <select value={fields.scoreInfluencedChoice} onChange={(event) => setFields((current) => ({ ...current, scoreInfluencedChoice: event.target.value as FormFields["scoreInfluencedChoice"] }))} required>
+                      <option value="">Choose an answer</option>
+                      <option value="yes">Yes</option>
+                      <option value="no">No — I had already chosen this trip</option>
+                    </select>
+                    <small>This self-report does not make a past trip random, independent, or prospective.</small>
                   </label>
                 </div> : <>
                 <TripGearFields fields={fields} setFields={setFields} gearProfiles={gearProfiles} applyGearProfile={applyGearProfile} includeObservations />
@@ -1096,8 +1178,16 @@ function TripCompletionFields({
         </label>
       ) : null}
       <label className="consent-field">
+        <input type="checkbox" checked={fields.primaryTargetConfirmed} onChange={(event) => setFields((current) => ({ ...current, primaryTargetConfirmed: event.target.checked }))} required />
+        <span>I confirm California halibut was the primary target for this whole fishing attempt.</span>
+      </label>
+      <label className="consent-field">
+        <input type="checkbox" checked={fields.completeAttempt} onChange={(event) => setFields((current) => ({ ...current, completeAttempt: event.target.checked }))} required />
+        <span>I confirm this report covers the whole attempt, including all zero-catch time—not just the best part.</span>
+      </label>
+      <label className="consent-field">
         <input type="checkbox" checked={fields.consent} onChange={(event) => setFields((current) => ({ ...current, consent: event.target.checked }))} required />
-        <span>I confirm this reflects the whole trip, own anything I submit, and consent to the uses described in the <Link href="/terms" target="_blank">Terms</Link> and <Link href="/privacy" target="_blank">Privacy Policy</Link>, including structured evaluation and preparation of a possible public summary. Model use requires a separate validation protocol, and a summary cannot appear unless a human moderator approves it.</span>
+        <span>I own anything I submit and consent to the uses described in the <Link href="/terms" target="_blank">Terms</Link> and <Link href="/privacy" target="_blank">Privacy Policy</Link>, including structured evaluation and preparation of a possible public summary. Model use requires separate protocol activation, and a summary cannot appear unless a human moderator approves it.</span>
       </label>
     </>
   );

@@ -203,6 +203,7 @@ test("the complete migration chain applies atomically and produces the runtime s
     "0009_human_discussion_approval.sql",
     "0010_privacy_durability.sql",
     "0011_species_aware_observations.sql",
+    "0012_validation_protocol.sql",
   ]);
 
   const sqlite = new DatabaseSync(":memory:");
@@ -212,7 +213,7 @@ test("the complete migration chain applies atomically and produces the runtime s
   assert.deepEqual(
     sqlite.prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%' ORDER BY name").all()
       .map((row) => row.name),
-    ["auth_attempts", "auth_sessions", "email_challenges", "gear_profiles", "privacy_deletion_jobs", "privacy_deletion_tasks", "saved_sites", "signup_age_proofs", "site_discussion_posts", "trips", "users"],
+    ["auth_attempts", "auth_sessions", "email_challenges", "forecast_impressions", "gear_profiles", "privacy_deletion_jobs", "privacy_deletion_tasks", "saved_sites", "signup_age_proofs", "site_discussion_posts", "trip_validation_provenance", "trips", "users"],
   );
   assert.ok(columns(sqlite, "trips").includes("user_id"));
   assert.ok(columns(sqlite, "trips").includes("ai_reviewed_at"));
@@ -229,6 +230,8 @@ test("the complete migration chain applies atomically and produces the runtime s
   assert.ok(columns(sqlite, "trips").includes("observation_contract_version"));
   assert.ok(columns(sqlite, "trips").includes("taxon_observations_json"));
   assert.ok(columns(sqlite, "trips").includes("outcome_class"));
+  assert.ok(columns(sqlite, "trip_validation_provenance").includes("activation_manifest_sha256"));
+  assert.ok(columns(sqlite, "trip_validation_provenance").includes("complete_attempt_confirmed"));
   const tripOwnershipForeignKeys = sqlite.prepare(`SELECT COUNT(*) AS count
     FROM pragma_foreign_key_list('trips')
     WHERE "table" = 'users' AND "from" = 'user_id' AND upper(on_delete) = 'SET NULL'`).get().count;
@@ -369,4 +372,228 @@ test("fresh runtime schema rejects malformed valid-contract evidence", async () 
     ) VALUES ('trip_wrong_target', 'active', 'live', 'ocean-beach',
       '2026-07-01T10:00:00.000Z', 'beach', 1, 1, 'pending', 'reporter',
       'unresolved-fish', '2026-07-01T10:00:00.000Z', '2026-07-01T10:00:00.000Z')`).run());
+});
+
+test("validation provenance is fail-closed, server-bound, and append-only", async () => {
+  const sqlite = new DatabaseSync(":memory:");
+  sqlite.exec("PRAGMA foreign_keys = ON;");
+  for (const file of await migrationFiles()) {
+    if (file === "0012_validation_protocol.sql") {
+      insertValidObservationTrip(sqlite, "trip_validation_historical", {
+        anglerHours: 2,
+      });
+    }
+    await applyMigration(sqlite, file);
+  }
+
+  const legacy = sqlite.prepare(`SELECT event_type, collection_contract_version,
+      validation_protocol_id, activation_manifest_sha256, source_role, evidence_status
+    FROM trip_validation_provenance WHERE trip_id = ?`).get("trip_validation_historical");
+  assert.deepEqual({ ...legacy }, {
+    event_type: "legacy_context",
+    collection_contract_version: "castingcompass.validation-collection/1.0.0",
+    validation_protocol_id: null,
+    activation_manifest_sha256: null,
+    source_role: "context_only",
+    evidence_status: "context_only",
+  });
+
+  const scoringSha = "c".repeat(64);
+  sqlite.prepare(`INSERT INTO forecast_impressions (
+      id, trip_id, attestation_index_version, snapshot_sha256, site_catalog_sha256,
+      target_taxon_id, taxon_catalog_version, observation_contract_version,
+      model_run_contract_version, opportunity_contract_version, scoring_system_kind,
+      scoring_system_version, scoring_system_sha256, window_id, site_id, window_start,
+      window_end, opportunity_score, habitat_score, seasonality_score, conditions_score,
+      fishability_score, attested_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`).run(
+    "impression_validation_historical",
+    "trip_validation_historical",
+    "castingcompass.opportunity-attestation-index/1.0.0",
+    "a".repeat(64),
+    "b".repeat(64),
+    "california-halibut",
+    "castingcompass.taxa/1.0.0",
+    "castingcompass.observation/2.0.0",
+    "castingcompass.model-run/2.0.0",
+    "castingcompass.opportunity/2.0.0",
+    "heuristic-configuration",
+    `heuristic-california-halibut-${scoringSha}`,
+    scoringSha,
+    "ocean-beach--20260701T1000Z",
+    "ocean-beach",
+    "2026-07-01T10:00:00.000Z",
+    "2026-07-01T12:00:00.000Z",
+    50,
+    50,
+    50,
+    50,
+    50,
+    "2026-07-01T09:59:00.000Z",
+  );
+
+  sqlite.prepare(`INSERT INTO trip_validation_provenance (
+      id, trip_id, event_type, collection_contract_version, validation_protocol_id,
+      cohort_id, source_role, recruitment_source_id, incentive_policy_id, selection_method,
+      target_intent, mode_at_enrollment, score_influenced_choice, attestation_status,
+      evidence_status, exclusion_reason, created_at
+    ) VALUES (?, ?, 'evidence_exclusion', ?, NULL, ?, 'context_only', ?, ?, ?, ?, ?, 0,
+      'invalidated_after_edit', 'context_only', ?, ?)`).run(
+    "validation_verified_context",
+    "trip_validation_historical",
+    "castingcompass.validation-collection/1.0.0",
+    "predeployment-context",
+    "trusted-census-review",
+    "none-v1",
+    "legacy_unknown",
+    "legacy_unknown",
+    "beach",
+    "trusted_review_exclusion",
+    "2026-07-01T12:00:00.000Z",
+  );
+
+  const recruitmentAnchorSql = `INSERT INTO trip_validation_provenance (
+      id, trip_id, event_type, collection_contract_version, cohort_id, source_role,
+      participant_group_id, recruitment_frame_id, recruitment_source_id,
+      recruitment_event_contract_version, recruitment_event_at, recruitment_event_sha256,
+      community_approval_sha256, incentive_policy_id, selection_method, target_intent,
+      attestation_status, evidence_status, exclusion_reason, created_at
+    ) VALUES (?, 'trip_validation_historical', 'legacy_context',
+      'castingcompass.validation-collection/1.0.0', 'predeployment-context', 'context_only',
+      ?, 'california-halibut-site-window-recruitment-v1', 'castingcompass-organic-product',
+      'castingcompass.recruitment-event/1.0.0', '2026-07-01T11:59:00.000Z', ?, NULL,
+      'none-outcome-independent/1.0.0', 'legacy_unknown', 'legacy_unknown',
+      'unverified_missing', 'context_only', 'immutability_fixture', '2026-07-01T12:00:00.000Z')`;
+  const participantGroupId = `participant-${"f".repeat(64)}`;
+  sqlite.prepare(recruitmentAnchorSql).run(
+    "validation_recruitment_anchor",
+    participantGroupId,
+    "e".repeat(64),
+  );
+  assert.throws(() => sqlite.prepare(recruitmentAnchorSql).run(
+    "validation_recruitment_mutated",
+    participantGroupId,
+    "d".repeat(64),
+  ));
+  assert.throws(() => sqlite.prepare(`INSERT INTO trip_validation_provenance (
+      id, trip_id, event_type, collection_contract_version, cohort_id, source_role,
+      participant_group_id, recruitment_frame_id, recruitment_source_id,
+      recruitment_event_contract_version, recruitment_event_at, recruitment_event_sha256,
+      incentive_policy_id, selection_method, target_intent, primary_target_confirmed,
+      mode_at_enrollment, consent_version, consented_at, score_influenced_choice,
+      attestation_status, evidence_status, created_at
+    ) VALUES ('validation_context_enrollment_with_event', 'trip_validation_historical', 'enrollment',
+      'castingcompass.validation-collection/1.0.0', 'predeployment-context', 'context_only',
+      ?, 'california-halibut-site-window-recruitment-v1', 'castingcompass-organic-product',
+      'castingcompass.recruitment-event/1.0.0', '2026-07-01T11:59:00.000Z', ?,
+      'none-outcome-independent/1.0.0', 'organic_unverified',
+      'california-halibut-primary-full-trip', 1, 'beach',
+      'castingcompass.trip-validation-consent/1.0.0', '2026-07-01T12:00:00.000Z', 0,
+      'unverified_missing', 'context_only', '2026-07-01T12:00:00.000Z')`).run(
+    `participant-${"a".repeat(64)}`,
+    "b".repeat(64),
+  ));
+
+  assert.throws(() => sqlite.prepare(
+    "UPDATE forecast_impressions SET opportunity_score = 99 WHERE id = 'impression_validation_historical'",
+  ).run());
+  assert.throws(() => sqlite.prepare(
+    "UPDATE trip_validation_provenance SET source_role = 'prospective_secondary' WHERE id = 'validation_verified_context'",
+  ).run());
+  assert.throws(() => sqlite.prepare(`INSERT INTO trip_validation_provenance (
+      id, trip_id, event_type, collection_contract_version, cohort_id, source_role,
+      recruitment_source_id, incentive_policy_id, selection_method, target_intent,
+      primary_target_confirmed, complete_attempt_confirmed, mode_at_enrollment,
+      consent_version, consented_at, score_influenced_choice, attestation_status,
+      evidence_status, created_at
+    ) VALUES ('validation_missing_impression', 'trip_validation_historical', 'completion',
+      'castingcompass.validation-collection/1.0.0', 'predeployment-context', 'context_only',
+      'legacy-unknown', 'none-outcome-independent/1.0.0', 'organic_unverified',
+      'california-halibut-primary-full-trip', 1, 1, 'beach',
+      'castingcompass.trip-validation-consent/1.0.0', '2026-07-01T12:00:00.000Z', 0,
+      'verified', 'context_only', '2026-07-01T12:00:00.000Z')`).run());
+  assert.throws(() => sqlite.prepare(`INSERT INTO trip_validation_provenance (
+      id, trip_id, event_type, collection_contract_version, validation_protocol_id,
+      cohort_id, source_role, recruitment_source_id, incentive_policy_id, selection_method,
+      target_intent, primary_target_confirmed, complete_attempt_confirmed,
+      mode_at_enrollment, consent_version, consented_at, score_influenced_choice,
+      attestation_status, forecast_impression_id, evidence_status, created_at
+    ) VALUES ('validation_unsealed_activation', 'trip_validation_historical', 'enrollment',
+      'castingcompass.validation-collection/1.0.0', 'california-halibut-site-window-v1',
+      'organic-v1', 'prospective_secondary', 'organic-product',
+      'none-outcome-independent/1.0.0', 'organic_score_visible',
+      'california-halibut-primary-full-trip', 1, NULL, 'beach',
+      'castingcompass.trip-validation-consent/1.0.0', '2026-07-01T09:59:00.000Z', 0,
+      'verified', 'impression_validation_historical', 'secondary_pending_review',
+      '2026-07-01T09:59:00.000Z')`).run());
+
+  sqlite.prepare("DELETE FROM trips WHERE id = ?").run("trip_validation_historical");
+  assert.equal(sqlite.prepare("SELECT COUNT(*) AS count FROM forecast_impressions").get().count, 0);
+  assert.equal(sqlite.prepare("SELECT COUNT(*) AS count FROM trip_validation_provenance").get().count, 0);
+  assert.equal(sqlite.prepare("PRAGMA foreign_key_check").all().length, 0);
+});
+
+test("a real generated attestation tuple satisfies the persisted impression contract", async () => {
+  const sqlite = new DatabaseSync(":memory:");
+  sqlite.exec("PRAGMA foreign_keys = ON;");
+  for (const file of await migrationFiles()) await applyMigration(sqlite, file);
+  const attestation = JSON.parse(await readFile(
+    new URL("../public/data/opportunity-attestations.json", import.meta.url),
+    "utf8",
+  ));
+  const [windowId, siteId, windowStart, windowEnd, score, habitat, seasonality, conditions, fishability] =
+    attestation.windows[0];
+  const normalizedStart = new Date(windowStart).toISOString();
+  const normalizedEnd = new Date(windowEnd).toISOString();
+  const startedAt = new Date(new Date(normalizedStart).getTime() + 60_000).toISOString();
+  sqlite.prepare(`INSERT INTO trips (
+      id, status, source, site_id, started_at, mode, angler_count, consent, consent_at,
+      moderation_status, reporter_key_hash, target_taxon_id, created_at, updated_at
+    ) VALUES (?, 'active', 'live', ?, ?, 'shore', 1, 1, ?, 'pending', ?,
+      'california-halibut', ?, ?)`).run(
+    "trip_real_attestation",
+    siteId,
+    startedAt,
+    startedAt,
+    "real-attestation-reporter",
+    startedAt,
+    startedAt,
+  );
+  sqlite.prepare(`INSERT INTO forecast_impressions (
+      id, trip_id, attestation_index_version, snapshot_sha256, site_catalog_sha256,
+      target_taxon_id, taxon_catalog_version, observation_contract_version,
+      model_run_contract_version, opportunity_contract_version, scoring_system_kind,
+      scoring_system_version, scoring_system_sha256, window_id, site_id, window_start,
+      window_end, opportunity_score, habitat_score, seasonality_score, conditions_score,
+      fishability_score, attested_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`).run(
+    "impression_real_attestation",
+    "trip_real_attestation",
+    attestation.schema_version,
+    attestation.snapshot_sha256,
+    attestation.site_catalog_sha256,
+    attestation.target_taxon_id,
+    attestation.taxon_catalog_version,
+    attestation.observation_contract_version,
+    attestation.model_run_contract_version,
+    attestation.opportunity_contract_version,
+    attestation.scoring_system_kind,
+    attestation.scoring_system_version,
+    attestation.scoring_system_sha256,
+    windowId,
+    siteId,
+    normalizedStart,
+    normalizedEnd,
+    score,
+    habitat,
+    seasonality,
+    conditions,
+    fishability,
+    new Date(attestation.generated_at).toISOString(),
+  );
+  assert.equal(
+    sqlite.prepare("SELECT window_id FROM forecast_impressions WHERE trip_id = ?").get("trip_real_attestation").window_id,
+    windowId,
+  );
+  assert.equal(sqlite.prepare("PRAGMA foreign_key_check").all().length, 0);
 });

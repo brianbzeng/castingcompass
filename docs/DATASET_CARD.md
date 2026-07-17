@@ -204,6 +204,22 @@ to ecological management areas. Before a reported experiment, region count and
 buffer distance should be chosen from sampling density and the intended product
 use, then fixed before inspecting test results.
 
+That scaffold applies to exact-point terrain experiments. First-party
+CastingCompass trips deliberately retain curated `site` support and cannot
+enter the point loader. The separately frozen site-window protocol uses the
+public site catalog's fixed SHA-256, 46 sites assigned once to five named
+geographic panels, and four absolute time blocks. It never invents a site
+centroid, weakens point-model eligibility, or treats a whole trip spanning
+multiple windows as one two-hour label. Pre-freeze, pre-activation, past, and
+legacy rows remain exploratory regardless of structural validity.
+
+Prospective rows additionally retain the frozen recruitment-frame ID, one of
+three allowed pre-outcome source IDs, recruitment event time/hash, and—only for
+admin-approved community recruitment—the prior approval hash. The validation
+analysis is a census of every eligible accepted row in the fixed interval; it
+cannot take a post-hoc or arrival-ordered subsample. Recruitment-source and
+selection-design mix are preserved for required stratified reporting.
+
 ## Known biases and limitations
 
 - CRFS/RecFIN measure fishing activity and observed catches, not complete fish
@@ -230,6 +246,10 @@ Every real-data run must preserve:
 - terrain configuration and fixed channel order;
 - observation eligibility counts and rejected-row reasons;
 - geographic split seed/count/buffer;
+- when the site-window protocol is claimed, the preregistration hash, private
+  outcome-blind split-manifest hash, activation identity, source/cohort role,
+  recruitment frame/source/event identity, site-catalog hash, absolute time
+  block, and prediction-snapshot hash;
 - Git revision, Python runtime, input hashes, experiment version, model version,
   target scope, catalog version, and observation contract version from
   `run_metadata.json`.
@@ -242,6 +262,12 @@ python3 -m pipeline.contourcast.cli smoke --output-dir /tmp/contourcast-smoke
 
 Synthetic fixture metrics are labeled `synthetic_fixture` and are not real-data
 results.
+
+The private validation manifest must never contain raw email, account ID,
+reporter hash, notes, photos, or exact coordinates. It is an append-only hash
+chain whose assignments are created without outcomes and are not regenerated
+after labels are opened. Deletion and withdrawal must be reconciled through
+future snapshots and derived private artifacts before evaluation.
 
 ## Current results
 

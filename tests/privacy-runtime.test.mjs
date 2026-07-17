@@ -18,6 +18,7 @@ const MIGRATIONS = [
   "0009_human_discussion_approval.sql",
   "0010_privacy_durability.sql",
   "0011_species_aware_observations.sql",
+  "0012_validation_protocol.sql",
 ];
 
 class D1StatementAdapter {
@@ -119,6 +120,48 @@ function request(path, { method = "GET", body, cookie, origin = method !== "GET"
     headers,
     body: body === undefined ? undefined : JSON.stringify(body),
   });
+}
+
+const PRIVACY_TEST_SCORING_SHA = "c".repeat(64);
+
+function privacyTestAssets({
+  windowId = "ocean-beach--20260710T1000Z",
+  start = "2026-07-10T10:00:00Z",
+  end = "2026-07-10T12:00:00Z",
+} = {}) {
+  const index = {
+    schema_version: "castingcompass.opportunity-attestation-index/1.0.0",
+    generated_at: "2026-07-10T09:00:00Z",
+    snapshot_sha256: "a".repeat(64),
+    site_catalog_sha256: "b".repeat(64),
+    target_taxon_id: "california-halibut",
+    taxon_catalog_version: "castingcompass.taxa/1.0.0",
+    observation_contract_version: "castingcompass.observation/2.0.0",
+    model_run_contract_version: "castingcompass.model-run/2.0.0",
+    opportunity_contract_version: "castingcompass.opportunity/2.0.0",
+    scoring_system_kind: "heuristic-configuration",
+    scoring_system_version: `heuristic-california-halibut-${PRIVACY_TEST_SCORING_SHA}`,
+    scoring_system_sha256: PRIVACY_TEST_SCORING_SHA,
+    windows: [[
+      windowId,
+      "ocean-beach",
+      start,
+      end,
+      81,
+      78,
+      74,
+      72,
+      69,
+    ]],
+  };
+  return {
+    async fetch() {
+      return new Response(JSON.stringify(index), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      });
+    },
+  };
 }
 
 async function sha256(value) {
@@ -971,6 +1014,231 @@ test("export includes user data and downloadable photos without internal locator
   assert.equal((await withoutBinding.json()).photos[0].reason, "photo_storage_unavailable");
 });
 
+test("private export preserves immutable validation lineage without accepting evaluator roles", async () => {
+  const { sqlite, d1 } = await database();
+  const user = await addUser(sqlite, "validation-export");
+  const sites = [{ id: "ocean-beach", type: "Beach" }];
+  const windowId = "ocean-beach--20260801T1000Z";
+  const env = {
+    DB: d1,
+    ASSETS: privacyTestAssets({
+      windowId,
+      start: "2026-08-01T10:00:00Z",
+      end: "2026-08-01T12:00:00Z",
+    }),
+    VALIDATION_OBSERVATIONAL_SECONDARY_ENABLED: "true",
+    VALIDATION_PROTOCOL_ID: "california-halibut-site-window-v1",
+    VALIDATION_COHORT_ID: "california-halibut-site-window-observational-secondary-v1",
+    VALIDATION_ACTIVATION_MANIFEST_SHA256: "d".repeat(64),
+    VALIDATION_ACTIVATED_AT: "2026-07-31T23:59:00Z",
+    VALIDATION_ACTIVATION_SCORING_SHA256: PRIVACY_TEST_SCORING_SHA,
+  };
+  const reporterKey = "private-export-device-key-123456789";
+  const startResponse = await handleTripRequest(new Request("https://castingcompass.com/api/trips/start", {
+    method: "POST",
+    headers: { Origin: "https://castingcompass.com", "Content-Type": "application/json" },
+    body: JSON.stringify({
+      siteId: "ocean-beach",
+      startedAt: "2026-08-01T10:30:00.000Z",
+      mode: "beach",
+      fishingMethod: "artificial-lure",
+      anglerCount: 3,
+      consent: true,
+      primaryTargetConfirmed: true,
+      scoreInfluencedChoice: true,
+      reporterKey,
+      opportunityWindowId: windowId,
+      website: "",
+      sourceRole: "score-visible-first-party",
+      cohortRole: "secondary",
+      selectionDesign: "prospective-score-visible-self-selected",
+      collectionSourceRole: "prospective_secondary",
+      collectionEvidenceStatus: "secondary_pending_review",
+      collectionCohortId: "california-halibut-site-window-observational-secondary-v1",
+    }),
+  }), env, sites, {
+    accountId: user.id,
+    now: () => new Date("2026-08-01T10:31:00.000Z"),
+  });
+  assert.equal(startResponse.status, 201, JSON.stringify(await startResponse.clone().json()));
+  const started = await startResponse.json();
+
+  const completion = new FormData();
+  completion.set("token", started.token);
+  completion.set("endedAt", "2026-08-01T10:45:00.000Z");
+  completion.set("mode", "beach");
+  completion.set("anglerCount", "3");
+  completion.set("keeperCount", "0");
+  completion.set("shortReleasedCount", "0");
+  completion.set("otherCatchCount", "0");
+  completion.set("consent", "true");
+  completion.set("primaryTargetConfirmed", "true");
+  completion.set("completeAttempt", "true");
+  completion.set("website", "");
+  completion.set("sourceRole", "score-visible-first-party");
+  completion.set("cohortRole", "secondary");
+  completion.set("selectionDesign", "prospective-score-visible-self-selected");
+  const completionResponse = await handleTripRequest(new Request(
+    `https://castingcompass.com/api/trips/${started.trip.id}/complete`,
+    { method: "POST", headers: { Origin: "https://castingcompass.com" }, body: completion },
+  ), env, sites, {
+    accountId: user.id,
+    now: () => new Date("2026-08-01T11:31:00.000Z"),
+  });
+  assert.equal(completionResponse.status, 200, JSON.stringify(await completionResponse.clone().json()));
+
+  const provenanceColumns = sqlite.prepare("PRAGMA table_info(trip_validation_provenance)")
+    .all()
+    .map((column) => column.name);
+  const cloneCompletion = (id, overrides) => {
+    const selectExpressions = provenanceColumns.map((column) => {
+      if (column === "id") return `'${id}'`;
+      if (Object.hasOwn(overrides, column)) return `'${overrides[column]}'`;
+      return `\`${column}\``;
+    });
+    return sqlite.prepare(`INSERT INTO trip_validation_provenance (
+        ${provenanceColumns.map((column) => `\`${column}\``).join(", ")}
+      ) SELECT ${selectExpressions.join(", ")}
+      FROM trip_validation_provenance
+      WHERE trip_id = ? AND event_type = 'completion'`);
+  };
+  assert.throws(() => cloneCompletion(
+    "validation_forged_assignment",
+    { assignment_id: `assignment-${"f".repeat(64)}` },
+  ).run(started.trip.id));
+  assert.throws(() => cloneCompletion(
+    "validation_forged_completion_mode",
+    { mode_at_completion: "pier" },
+  ).run(started.trip.id));
+  assert.throws(() => cloneCompletion(
+    "validation_forged_secondary_exclusion",
+    { event_type: "evidence_exclusion" },
+  ).run(started.trip.id));
+  assert.throws(() => cloneCompletion(
+    "validation_forged_secondary_legacy_context",
+    { event_type: "legacy_context" },
+  ).run(started.trip.id));
+
+  const storedTrip = sqlite.prepare(`SELECT started_at, ended_at FROM trips WHERE id = ?`)
+    .get(started.trip.id);
+  const profileEditBase = {
+    siteId: "ocean-beach",
+    mode: "beach",
+    startedAt: storedTrip.started_at,
+    endedAt: storedTrip.ended_at,
+    anglerCount: 3,
+    keeperCount: 0,
+    shortReleasedCount: 0,
+    fishingMethod: "artificial-lure",
+    gearProfileId: "",
+    rod: "",
+    reel: "",
+    baitLure: "",
+    rig: "",
+    otherCatchCount: 0,
+    otherSpecies: "",
+    shorebreak: "",
+    wadingDepth: "",
+    waterClarity: "",
+    crowding: "",
+    fishabilityRating: "",
+    observedWaveHeightFeet: "",
+    fishabilityNotes: "",
+    notes: "",
+  };
+  const adversarialEdits = [
+    ["outcome-only", { ...profileEditBase, keeperCount: 1 }, "2026-08-01T11:32:00.000Z"],
+    ["effort-only", { ...profileEditBase, keeperCount: 1, anglerCount: 4 }, "2026-08-01T11:33:00.000Z"],
+    ["gear/notes-only", {
+      ...profileEditBase,
+      keeperCount: 1,
+      anglerCount: 4,
+      rod: "Edited rod",
+      notes: "Edited after completion",
+    }, "2026-08-01T11:34:00.000Z"],
+  ];
+  for (const [label, body, editedAt] of adversarialEdits) {
+    const edited = await handleAccountRequest(request(`/api/profile/trips/${started.trip.id}`, {
+      method: "PATCH",
+      cookie: user.cookie,
+      body,
+    }), { DB: d1 }, sites, { now: () => new Date(editedAt) });
+    assert.equal(edited?.status, 200, `${label}: ${JSON.stringify(await edited?.clone().json())}`);
+    assert.deepEqual(await edited.json(), {
+      updated: true,
+      tripId: started.trip.id,
+      forecastAttributionCleared: false,
+      validationEvidenceExcluded: true,
+    }, label);
+  }
+  assert.equal(sqlite.prepare(`SELECT COUNT(*) AS count FROM trip_validation_provenance
+    WHERE trip_id = ? AND event_type = 'evidence_exclusion'
+      AND attestation_status = 'invalidated_after_edit'
+      AND exclusion_reason = 'post_completion_profile_edit'`).get(started.trip.id).count, 3);
+  assert.equal(sqlite.prepare("SELECT opportunity_window_id FROM trips WHERE id = ?")
+    .get(started.trip.id).opportunity_window_id, windowId);
+
+  const exported = await handleAccountRequest(
+    request("/api/profile/export", { cookie: user.cookie }),
+    { DB: d1 },
+    sites,
+  );
+  assert.equal(exported?.status, 200);
+  const payload = await exported.json();
+  assert.equal(payload.forecastImpressions.length, 1);
+  assert.equal(payload.validationProvenance.length, 5);
+
+  const impression = payload.forecastImpressions[0];
+  assert.equal(impression.trip_id, started.trip.id);
+  assert.equal(impression.window_id, windowId);
+  assert.equal(impression.scoring_system_sha256, PRIVACY_TEST_SCORING_SHA);
+  assert.match(impression.id, /^impression_[a-f0-9-]{36}$/);
+
+  const enrollment = payload.validationProvenance.find((row) => row.event_type === "enrollment");
+  const completed = payload.validationProvenance.find((row) => row.event_type === "completion");
+  const exclusions = payload.validationProvenance.filter((row) => row.event_type === "evidence_exclusion");
+  assert.equal(enrollment.source_role, "prospective_secondary");
+  assert.equal(enrollment.evidence_status, "secondary_pending_review");
+  assert.equal(enrollment.cohort_id, "california-halibut-site-window-observational-secondary-v1");
+  assert.equal(enrollment.forecast_impression_id, impression.id);
+  assert.match(enrollment.participant_group_id, /^participant-[a-f0-9]{64}$/);
+  assert.match(enrollment.recruitment_event_sha256, /^[a-f0-9]{64}$/);
+  assert.match(enrollment.assignment_id, /^assignment-[a-f0-9]{64}$/);
+  assert.match(enrollment.source_record_sha256, /^[a-f0-9]{64}$/);
+  assert.match(enrollment.effort_segment_id, /^effort-[a-f0-9]{64}$/);
+  assert.equal(enrollment.segment_start_at, "2026-08-01T10:31:00.000Z");
+
+  assert.equal(completed.source_role, "prospective_secondary");
+  assert.equal(completed.evidence_status, "secondary_pending_review");
+  assert.equal(completed.assignment_id, enrollment.assignment_id);
+  assert.equal(completed.source_record_sha256, enrollment.source_record_sha256);
+  assert.equal(completed.effort_segment_id, enrollment.effort_segment_id);
+  assert.equal(completed.participant_group_id, enrollment.participant_group_id);
+  assert.equal(completed.recruitment_event_sha256, enrollment.recruitment_event_sha256);
+  assert.equal(completed.forecast_impression_id, impression.id);
+  assert.equal(completed.segment_end_at, "2026-08-01T11:31:00.000Z");
+  assert.equal(completed.angler_count, 3);
+  assert.equal(completed.duration_milliseconds, 3_600_000);
+  assert.equal(completed.person_milliseconds, 10_800_000);
+  assert.match(completed.completion_event_sha256, /^[a-f0-9]{64}$/);
+
+  assert.equal(exclusions.length, 3);
+  for (const exclusion of exclusions) {
+    assert.match(exclusion.id, /^validation_[a-f0-9-]{36}$/);
+    assert.equal(exclusion.trip_id, started.trip.id);
+    assert.equal(exclusion.source_role, "context_only");
+    assert.equal(exclusion.evidence_status, "context_only");
+    assert.equal(exclusion.attestation_status, "invalidated_after_edit");
+    assert.equal(exclusion.exclusion_reason, "post_completion_profile_edit");
+    assert.equal(exclusion.assignment_id, null);
+    assert.equal(exclusion.completion_event_sha256, null);
+  }
+
+  const serialized = JSON.stringify(payload);
+  assert.doesNotMatch(serialized, new RegExp(reporterKey));
+  assert.doesNotMatch(serialized, /reporter_key_hash|token_hash|score-visible-first-party|prospective-score-visible-self-selected|"cohort_role"/);
+});
+
 test("profile edits recompute valid v2 evidence, reject overrides, and never promote legacy rows", async () => {
   const { sqlite, d1 } = await database();
   const user = await addUser(sqlite, "26");
@@ -997,6 +1265,9 @@ test("profile edits recompute valid v2 evidence, reject overrides, and never pro
     confidence: "medium",
   }));
   form.set("consent", "true");
+  form.set("primaryTargetConfirmed", "true");
+  form.set("completeAttempt", "true");
+  form.set("mode", "beach");
   form.set("reporterKey", "profile-edit-device-key-123456789");
   form.set("website", "");
   const created = await handleTripRequest(new Request("https://castingcompass.com/api/trips/report", {
@@ -1041,6 +1312,12 @@ test("profile edits recompute valid v2 evidence, reject overrides, and never pro
     body: editBody,
   }), { DB: d1 }, sites);
   assert.equal(edited?.status, 200);
+  assert.deepEqual(await edited.json(), {
+    updated: true,
+    tripId,
+    forecastAttributionCleared: false,
+    validationEvidenceExcluded: true,
+  });
   const row = sqlite.prepare(`SELECT no_catch, observation_contract_version, taxon_catalog_version,
       target_taxon_id, contract_status, taxon_observations_json, outcome_class,
       target_encounter_count, any_fish_encounter_count, target_identification_confidence
@@ -1079,20 +1356,15 @@ test("profile edits recompute valid v2 evidence, reject overrides, and never pro
   assert.deepEqual({ ...sqlite.prepare(`SELECT opportunity_window_id, opportunity_score,
       habitat_score, seasonality_score, conditions_score, fishability_score, model_version,
       score_influenced_choice, prediction_metadata_json FROM trips WHERE id = ?`).get(tripId) }, {
-    opportunity_window_id: "window-profile-edit",
-    opportunity_score: 73,
-    habitat_score: 78,
-    seasonality_score: 68,
-    conditions_score: 71,
-    fishability_score: 66,
-    model_version: "model-profile-edit-v1",
+    opportunity_window_id: null,
+    opportunity_score: null,
+    habitat_score: null,
+    seasonality_score: null,
+    conditions_score: null,
+    fishability_score: null,
+    model_version: null,
     score_influenced_choice: 1,
-    prediction_metadata_json: JSON.stringify({
-      snapshotGeneratedAt: "2026-07-10T14:00:00.000Z",
-      forecastStart: "2026-07-10T15:00:00.000Z",
-      forecastEnd: "2026-07-10T18:00:00.000Z",
-      confidence: "medium",
-    }),
+    prediction_metadata_json: null,
   });
 
   const attributionEdit = await handleAccountRequest(request(`/api/profile/trips/${tripId}`, {
@@ -1101,7 +1373,12 @@ test("profile edits recompute valid v2 evidence, reject overrides, and never pro
     body: { ...editBody, mode: "shore" },
   }), { DB: d1 }, sites);
   assert.equal(attributionEdit?.status, 200);
-  assert.equal((await attributionEdit.json()).forecastAttributionCleared, true);
+  assert.deepEqual(await attributionEdit.json(), {
+    updated: true,
+    tripId,
+    forecastAttributionCleared: true,
+    validationEvidenceExcluded: true,
+  });
   assert.deepEqual({ ...sqlite.prepare(`SELECT mode, opportunity_window_id, opportunity_score,
       habitat_score, seasonality_score, conditions_score, fishability_score, model_version,
       score_influenced_choice, prediction_metadata_json FROM trips WHERE id = ?`).get(tripId) }, {
@@ -1113,9 +1390,13 @@ test("profile edits recompute valid v2 evidence, reject overrides, and never pro
     conditions_score: null,
     fishability_score: null,
     model_version: null,
-    score_influenced_choice: null,
+    score_influenced_choice: 1,
     prediction_metadata_json: null,
   });
+  assert.equal(sqlite.prepare(`SELECT COUNT(*) AS count FROM trip_validation_provenance
+    WHERE trip_id = ? AND event_type = 'evidence_exclusion'
+      AND attestation_status = 'invalidated_after_edit'
+      AND exclusion_reason = 'post_completion_profile_edit'`).get(tripId).count, 2);
 
   const override = await handleAccountRequest(request(`/api/profile/trips/${tripId}`, {
     method: "PATCH",
@@ -1140,6 +1421,7 @@ test("profile edits recompute valid v2 evidence, reject overrides, and never pro
     body: { ...editBody, keeperCount: 2, otherCatchCount: 0, otherSpecies: "" },
   }), { DB: d1 }, sites);
   assert.equal(legacyEdit?.status, 200);
+  assert.equal((await legacyEdit.json()).validationEvidenceExcluded, true);
   assert.deepEqual({ ...sqlite.prepare(`SELECT contract_status, observation_contract_version,
       taxon_observations_json, outcome_class, target_encounter_count, any_fish_encounter_count,
       target_identification_confidence FROM trips WHERE id = ?`).get(legacyTripId) }, {
@@ -1165,15 +1447,16 @@ test("active completion clears forecast attribution atomically when fishing mode
       mode: "pier",
       anglerCount: 1,
       consent: true,
+      primaryTargetConfirmed: true,
       reporterKey: "mode-change-device-key-123456789",
       website: "",
-      opportunityWindowId: "window-mode-start",
-      opportunityScore: 81,
-      habitatScore: 78,
-      seasonalityScore: 74,
-      conditionsScore: 72,
-      fishabilityScore: 69,
-      modelVersion: "model-mode-start-v1",
+      opportunityWindowId: "ocean-beach--20260710T1000Z",
+      opportunityScore: 1,
+      habitatScore: 1,
+      seasonalityScore: 1,
+      conditionsScore: 1,
+      fishabilityScore: 1,
+      modelVersion: "client-forged-model",
       scoreInfluencedChoice: true,
       predictionMetadata: {
         snapshotGeneratedAt: "2026-07-10T09:00:00.000Z",
@@ -1182,8 +1465,8 @@ test("active completion clears forecast attribution atomically when fishing mode
         confidence: "medium",
       },
     }),
-  }), { DB: d1 }, sites, { now: () => new Date("2026-07-10T10:00:00.000Z") });
-  assert.equal(startResponse?.status, 201);
+  }), { DB: d1, ASSETS: privacyTestAssets() }, sites, { now: () => new Date("2026-07-10T10:00:00.000Z") });
+  assert.equal(startResponse?.status, 201, JSON.stringify(await startResponse?.clone().json()));
   const started = await startResponse.json();
 
   const form = new FormData();
@@ -1194,13 +1477,14 @@ test("active completion clears forecast attribution atomically when fishing mode
   form.set("keeperCount", "0");
   form.set("shortReleasedCount", "0");
   form.set("otherCatchCount", "0");
-  form.set("scoreInfluencedChoice", "true");
   form.set("consent", "true");
+  form.set("primaryTargetConfirmed", "true");
+  form.set("completeAttempt", "true");
   form.set("website", "");
   const completionResponse = await handleTripRequest(new Request(
     `https://castingcompass.com/api/trips/${started.trip.id}/complete`,
     { method: "POST", headers: { Origin: "https://castingcompass.com" }, body: form },
-  ), { DB: d1 }, sites, { now: () => new Date("2026-07-10T12:00:00.000Z") });
+  ), { DB: d1, ASSETS: privacyTestAssets() }, sites, { now: () => new Date("2026-07-10T12:00:00.000Z") });
   assert.equal(completionResponse?.status, 200);
   const completed = await completionResponse.json();
   assert.equal(completed.forecastAttributionCleared, true);
@@ -1209,7 +1493,7 @@ test("active completion clears forecast attribution atomically when fishing mode
   assert.equal(completed.trip.opportunityWindowId, null);
   assert.equal(completed.trip.opportunityScore, null);
   assert.equal(completed.trip.modelVersion, null);
-  assert.equal(completed.trip.scoreInfluencedChoice, null);
+  assert.equal(completed.trip.scoreInfluencedChoice, true);
   assert.deepEqual({ ...sqlite.prepare(`SELECT opportunity_window_id, opportunity_score,
       habitat_score, seasonality_score, conditions_score, fishability_score, model_version,
       score_influenced_choice, prediction_metadata_json FROM trips WHERE id = ?`).get(started.trip.id) }, {
@@ -1220,8 +1504,19 @@ test("active completion clears forecast attribution atomically when fishing mode
     conditions_score: null,
     fishability_score: null,
     model_version: null,
-    score_influenced_choice: null,
+    score_influenced_choice: 1,
     prediction_metadata_json: null,
+  });
+  assert.equal(sqlite.prepare("SELECT COUNT(*) AS count FROM forecast_impressions WHERE trip_id = ?")
+    .get(started.trip.id).count, 1);
+  assert.deepEqual({ ...sqlite.prepare(`SELECT source_role, evidence_status, exclusion_reason,
+      complete_attempt_confirmed, consented_at FROM trip_validation_provenance
+    WHERE trip_id = ? AND event_type = 'completion'`).get(started.trip.id) }, {
+    source_role: "context_only",
+    evidence_status: "context_only",
+    exclusion_reason: "mode_changed_after_enrollment",
+    complete_attempt_confirmed: 1,
+    consented_at: "2026-07-10T12:00:00.000Z",
   });
 });
 

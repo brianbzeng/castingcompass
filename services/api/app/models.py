@@ -6,15 +6,6 @@ from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field, HttpUrl
 
-from shared.species_contract import (
-    MODEL_RUN_CONTRACT_VERSION,
-    OBSERVATION_CONTRACT_VERSION,
-    OPPORTUNITY_CONTRACT_VERSION,
-    PRODUCTION_TARGET_TAXON_ID,
-    TAXON_CATALOG_VERSION,
-)
-
-
 class APIModel(BaseModel):
     model_config = ConfigDict(extra="ignore", populate_by_name=True)
 
