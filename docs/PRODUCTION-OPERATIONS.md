@@ -102,6 +102,21 @@ Repository tests prove the code paths and privacy boundaries, not the deployed c
 Worker background-email lifecycle, provider delivery, D1 state, or edge rate limits. Keep this
 gate open until those live synthetic checks pass on the exact deployed version.
 
+## Key custody and encryption
+
+Use [Key custody and encryption](KEY-CUSTODY-AND-ENCRYPTION.md) as the source of truth for the
+six runtime secret names, separation rules, managed D1 encryption boundary, local backup
+encryption, semantic rotation hazards, incident path, and account-level acceptance evidence.
+Never include a secret value in this runbook, a release record, monitoring, or the future
+operator dashboard. A local scanner pass does not prove production custody, least-privilege
+roles, MFA, correct environment bindings, revocation, recovery, or rotation.
+
+Treat every runtime secret change as a deployment. Cloudflare documents that ordinary
+`wrangler secret put` immediately deploys a new Worker version, so use a reviewed versioned
+secret/release workflow and record the exact Worker version. Do not rotate validation HMACs
+mid-activation, do not rotate a backup key before all retained artifacts remain recoverable,
+and account for the temporary edge-counter reset caused by rate-limit pseudonym-key rotation.
+
 ## Monitoring and alerting
 
 Cloudflare Worker observability is enabled in `wrangler.jsonc`, but that setting alone is not
@@ -212,6 +227,12 @@ prove that the object is either attached to a live trip or durably queued for cl
       commit. The recorded SBOM lock hash matches that commit.
 - [ ] GitHub dependency/Dependabot review has no untriaged high or critical advisory; accepted
       development findings have reachability evidence, an owner, and a deadline.
+- [ ] The six runtime secret bindings, distinct opaque key IDs, named custodians/reviewers,
+      least-privilege account roles, MFA, recovery, revocation, and environment separation were
+      verified without placing values in evidence.
+- [ ] D1 managed transport/at-rest controls and the absence of application field-level
+      encryption are recorded accurately; enabled features passed missing-key, rotation,
+      rollback, redacted-log, and provider-revocation checks on the exact Worker version.
 - [ ] A named operator exercised the reviewed snapshot PR and guarded publication cadence;
       a deliberately aged fixture displayed `Cached`/`stale` instead of `Live data`/`fresh`.
 - [ ] The six Worker rate-limit bindings have the reviewed production limits; their secret,

@@ -121,6 +121,12 @@ after its acceptance checks pass in the intended environment.
       Hashed Python transitive locks, install-script enforcement, combined/signed SBOM and build
       attestations, repository required-check settings, production evidence, key custody, and
       restore drills remain open.
+    - [x] Locally inventory all six Worker runtime secrets, extend named-secret scanning and
+      ignored local Wrangler secret files, define environment/purpose/backup-key separation,
+      document D1 managed-encryption and application-controlled AES-256-GCM boundaries, and
+      record feature-specific rotation and recovery hazards. Production IAM/MFA evidence,
+      actual binding/key IDs, approved custody, rotation exercises, and restore drills remain
+      open, so the parent gate is not complete.
   - [ ] Exercise the attack surface in an isolated staging environment with authorized load,
     stress, and penetration tests; remediate critical/high findings and retest before production
     promotion. Never aim stress or intrusive security testing at production user data.
