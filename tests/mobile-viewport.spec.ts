@@ -26,7 +26,10 @@ const TURNSTILE_MOCK_SCRIPT = `(() => {
   };
 })();`;
 
-test.beforeEach(async ({ page }) => {
+test.beforeEach(async ({ page }, testInfo) => {
+  if (testInfo.title.includes("failed lazy route dependency")) {
+    await page.route("**/assets/ContourMap-*.js", (route) => route.abort());
+  }
   await page.route("**/api/auth/session", (route) => route.fulfill({
     status: 200,
     contentType: "application/json",
@@ -108,6 +111,37 @@ test("the 404 recovery page stays truthful and usable on mobile", async ({ page 
   expect(geometry.overflow).toBeLessThanOrEqual(1);
   expect(geometry.card.left).toBeGreaterThanOrEqual(-1);
   expect(geometry.card.right).toBeLessThanOrEqual(geometry.card.viewportWidth + 1);
+});
+
+test.describe("route render recovery", () => {
+  test.use({ serviceWorkers: "block" });
+
+  test("a failed lazy route dependency reaches the safe mobile recovery boundary", async ({ page }) => {
+    const map = page.locator(".map-wrap");
+    await map.evaluate((element) => element.scrollIntoView({ block: "center", behavior: "instant" }));
+    const loadMap = page.getByRole("button", { name: /open interactive map/i });
+    if (await loadMap.isVisible()) await loadMap.click({ timeout: 2_000 }).catch(() => undefined);
+
+    const alert = page.getByRole("alert");
+    await expect(alert).toBeVisible();
+    await expect(page.getByRole("heading", { name: "This page could not finish loading." })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Try again" })).toBeVisible();
+    await expect(page.getByRole("link", { name: "Return to the forecast" })).toHaveAttribute("href", "/");
+    await expect(alert).not.toContainText(/TypeError|ContourMap|digest|stack/i);
+
+    const geometry = await page.evaluate(() => {
+      const box = document.querySelector<HTMLElement>(".route-state-card")!.getBoundingClientRect();
+      return {
+        overflow: document.documentElement.scrollWidth - window.innerWidth,
+        left: box.left,
+        right: box.right,
+        viewportWidth: window.innerWidth,
+      };
+    });
+    expect(geometry.overflow).toBeLessThanOrEqual(1);
+    expect(geometry.left).toBeGreaterThanOrEqual(-1);
+    expect(geometry.right).toBeLessThanOrEqual(geometry.viewportWidth + 1);
+  });
 });
 
 test.describe("mocked Turnstile browser states", () => {

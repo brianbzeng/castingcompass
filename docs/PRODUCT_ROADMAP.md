@@ -332,6 +332,12 @@ after its acceptance checks pass in the intended environment.
   route-appropriate skeletons, immediate acknowledgement, progressive status for slow work,
   inline retry/cancel where safe, and carefully scoped optimistic updates that roll back on
   failure. Do not display fake precision or let optimistic UI imply a privileged write succeeded.
+  - [x] Add and locally verify an accessible route-level indeterminate loading shell plus a
+    render-error boundary with generic copy, explicit retry/home actions, reduced-motion
+    behavior, no raw diagnostics, and no claim that an in-flight account write completed.
+  - [ ] Add operation-specific progress, timeout, retry, cancellation, and reconnection states
+    only where the underlying API can report them truthfully; retain authoritative confirmation
+    for account, trip, privacy, and other privileged writes.
 - [ ] Improve trip-photo upload states with accessible visual emphasis (including the requested
   glow plus a copy/state change, not color alone), thumbnail, file type, size, validation result,
   and per-file progress/retry/cancel. Multiple files receive independent state and progress;
