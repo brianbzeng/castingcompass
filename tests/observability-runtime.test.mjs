@@ -62,6 +62,16 @@ test("request context uses server correlation and a secret-keyed session pseudon
     {},
   );
   assert.equal(withoutSecret.actorSessionKey, null);
+
+  const withoutRuntimeEnv = await requestLogContext(
+    new Request("http://localhost/", {
+      headers: { Cookie: `__Host-cc_session=${SESSION}` },
+    }),
+    undefined,
+  );
+  assert.equal(withoutRuntimeEnv.environment, "development");
+  assert.equal(withoutRuntimeEnv.workerVersionId, null);
+  assert.equal(withoutRuntimeEnv.actorSessionKey, null);
 });
 
 test("route templates preserve operations but discard identifiers and hostile unknown paths", () => {

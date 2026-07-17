@@ -88,7 +88,7 @@ const storage = new AsyncLocalStorage<LogContext>();
 
 export async function requestLogContext(
   request: Request,
-  env: ObservabilityEnv,
+  env: ObservabilityEnv = {},
 ): Promise<RequestLogContext> {
   const url = new URL(request.url);
   const sessionToken = presentedSessionToken(request.headers.get("Cookie"));
