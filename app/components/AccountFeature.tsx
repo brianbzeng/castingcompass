@@ -33,6 +33,16 @@ export interface AccountController {
   openAccount(message?: string): void;
   closeAccount(): void;
   signOut(): Promise<void>;
+  checkSignOutStatus(): Promise<void>;
+  signOutRequest: {
+    kind: "submit" | "verify";
+    state: MutationRequestState;
+    message: string;
+  } | null;
+  signOutDisabled: boolean;
+  signOutLabel: string;
+  signOutCheckDisabled: boolean;
+  signOutCheckLabel: string;
   toggleSavedSite(siteId: string): Promise<boolean>;
   refresh(): Promise<void>;
 }
@@ -104,6 +114,46 @@ function MutationRequestStatus({ state, message }: { state: MutationRequestState
       {state === "submitting" ? <i aria-hidden="true" /> : null}
     </div>
   );
+}
+
+function SignOutControls({ account, primary = false }: { account: AccountController; primary?: boolean }) {
+  const status = account.signOutRequest;
+  const checking = status?.kind === "verify" && status.state === "submitting";
+  const canCheck = status?.state === "ambiguous" || checking;
+  return (
+    <div className="account-signout-controls">
+      <button
+        className={primary ? "account-primary account-signout" : "account-text-button"}
+        type="button"
+        disabled={account.signOutDisabled}
+        onClick={() => void account.signOut()}
+      >{account.signOutLabel}</button>
+      {canCheck ? (
+        <button
+          className="account-secondary account-signout-check"
+          type="button"
+          disabled={account.signOutCheckDisabled}
+          onClick={() => void account.checkSignOutStatus()}
+        >{account.signOutCheckLabel}</button>
+      ) : null}
+      <MutationRequestStatus state={status?.state ?? "idle"} message={status?.message ?? ""} />
+    </div>
+  );
+}
+
+function isAccountUser(value: unknown): value is AccountUser {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return false;
+  const candidate = value as Record<string, unknown>;
+  return typeof candidate.id === "string" &&
+    typeof candidate.email === "string" &&
+    typeof candidate.ageEligible === "boolean" &&
+    typeof candidate.legalAccepted === "boolean";
+}
+
+function isExactSignOutReceipt(value: unknown): value is { signedOut: true; user: null } {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return false;
+  const candidate = value as Record<string, unknown>;
+  return Object.keys(candidate).length === 2 && candidate.signedOut === true && candidate.user === null;
 }
 
 function isProfileData(value: unknown): value is ProfileData {
@@ -302,6 +352,12 @@ export function useAccount(): AccountController {
   const [savedSiteIds, setSavedSiteIds] = useState<Set<string>>(new Set());
   const [modalOpen, setModalOpen] = useState(false);
   const [modalMessage, setModalMessage] = useState("");
+  const [signOutRequest, setSignOutRequest] = useState<{
+    kind: "submit" | "verify";
+    state: MutationRequestState;
+    message: string;
+  } | null>(null);
+  const networkState = useClientNetworkState();
 
   const refresh = useCallback(async () => {
     try {
@@ -339,12 +395,99 @@ export function useAccount(): AccountController {
     setModalMessage("");
   }, []);
 
-  const signOut = useCallback(async () => {
-    await fetch("/api/auth/logout", { method: "POST" }).catch(() => undefined);
+  const completeLocalSignOut = useCallback(() => {
     setUser(null);
     setSavedSiteIds(new Set());
+    setSignOutRequest(null);
     closeAccount();
   }, [closeAccount]);
+
+  const signOut = useCallback(async () => {
+    if (networkState === "offline" || signOutRequest?.state === "submitting" || signOutRequest?.state === "ambiguous") return;
+    setSignOutRequest({
+      kind: "submit",
+      state: "submitting",
+      message: "Signing out on the server. Your session is not confirmed closed yet.",
+    });
+    const slowNotice = window.setTimeout(() => {
+      setSignOutRequest((current) => current?.kind === "submit" && current.state === "submitting"
+        ? { ...current, message: "Still waiting for the server. Keep this page open; sign-out is not confirmed yet." }
+        : current);
+    }, SLOW_MUTATION_NOTICE_MS);
+    try {
+      const response = await fetch("/api/auth/logout", { method: "POST" });
+      const body = await response.json().catch(() => null) as unknown;
+      if (!response.ok) {
+        if (response.status >= 500) {
+          throw new AmbiguousMutationError("The server could not confirm sign-out.");
+        }
+        throw new Error("Sign-out was rejected. Your session remains active.");
+      }
+      if (response.status !== 200 || !isExactSignOutReceipt(body)) {
+        throw new AmbiguousMutationError("The sign-out response could not be verified.");
+      }
+      completeLocalSignOut();
+    } catch (signOutError) {
+      const ambiguous = isConnectionFailure(signOutError) || signOutError instanceof AmbiguousMutationError;
+      setSignOutRequest({
+        kind: "submit",
+        state: ambiguous ? "ambiguous" : "error",
+        message: ambiguous
+          ? "No server confirmation arrived. Your session may still be active. Do not assume this device is signed out or retry yet; check sign-out status first."
+          : signOutError instanceof Error ? signOutError.message : "Sign-out failed. Your session remains active.",
+      });
+    } finally {
+      window.clearTimeout(slowNotice);
+    }
+  }, [completeLocalSignOut, networkState, signOutRequest?.state]);
+
+  const checkSignOutStatus = useCallback(async () => {
+    if (signOutRequest?.state !== "ambiguous" || networkState === "offline") return;
+    setSignOutRequest({
+      kind: "verify",
+      state: "submitting",
+      message: "Checking the server session without repeating sign-out.",
+    });
+    try {
+      const response = await fetch("/api/auth/session", { cache: "no-store" });
+      const body = await response.json().catch(() => null) as { user?: unknown } | null;
+      if (!response.ok || !body || !Object.hasOwn(body, "user") || (body.user !== null && !isAccountUser(body.user))) {
+        throw new Error("The server session response could not be verified.");
+      }
+      if (body.user === null) {
+        completeLocalSignOut();
+        return;
+      }
+      setSignOutRequest({
+        kind: "submit",
+        state: "error",
+        message: "The server confirms that this session is still active. You can retry sign-out now.",
+      });
+    } catch {
+      setSignOutRequest({
+        kind: "submit",
+        state: "ambiguous",
+        message: "The server session could not be verified. Do not assume this device is signed out; reconnect if needed and check again.",
+      });
+    }
+  }, [completeLocalSignOut, networkState, signOutRequest?.state]);
+
+  const signOutDisabled = networkState === "offline" || signOutRequest?.state === "submitting" || signOutRequest?.state === "ambiguous";
+  const signOutCheckDisabled = networkState === "offline" || (signOutRequest?.kind === "verify" && signOutRequest.state === "submitting");
+  const signOutCheckLabel = signOutRequest?.kind === "verify" && signOutRequest.state === "submitting"
+    ? "Checking…"
+    : networkState === "offline"
+      ? "Reconnect to check sign-out status"
+      : "Check sign-out status";
+  const signOutLabel = signOutRequest?.state === "submitting"
+    ? signOutRequest.kind === "verify" ? "Checking sign-out status…" : "Signing out…"
+    : signOutRequest?.state === "ambiguous"
+      ? "Sign-out status unresolved"
+      : networkState === "offline"
+        ? "Reconnect to sign out"
+        : signOutRequest?.state === "error"
+          ? "Retry sign out"
+          : "Sign out";
 
   const toggleSavedSite = useCallback(async (siteId: string) => {
     if (!user) {
@@ -380,6 +523,12 @@ export function useAccount(): AccountController {
     openAccount,
     closeAccount,
     signOut,
+    checkSignOutStatus,
+    signOutRequest,
+    signOutDisabled,
+    signOutLabel,
+    signOutCheckDisabled,
+    signOutCheckLabel,
     toggleSavedSite,
     refresh,
   };
@@ -1254,7 +1403,7 @@ export function AccountModal({
               </form>
             </details>
             {profileActionError ? <p className="account-error" role="alert">{profileActionError}</p> : null}
-            <button className="account-text-button" type="button" onClick={() => void account.signOut()}>Sign out</button>
+            <SignOutControls account={account} />
           </>
         ) : account.user && !account.user.legalAccepted ? (
           <>
@@ -1278,7 +1427,7 @@ export function AccountModal({
               </form>
             </details>
             {profileActionError ? <p className="account-error" role="alert">{profileActionError}</p> : null}
-            <button className="account-text-button" type="button" onClick={() => void account.signOut()}>Sign out</button>
+            <SignOutControls account={account} />
           </>
         ) : account.user ? (
           <>
@@ -1577,7 +1726,7 @@ export function AccountModal({
                 </form>
               </details>
             </section>
-            <button className="account-primary account-signout" type="button" onClick={() => void account.signOut()}>Sign out</button>
+            <SignOutControls account={account} primary />
           </>
         ) : (
           <>

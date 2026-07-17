@@ -2965,7 +2965,22 @@ footer > div {
 }
 
 .account-signout {
+  margin-top: 0;
+}
+
+.account-signout-controls {
+  display: grid;
+  gap: 0.65rem;
   margin-top: 1.4rem;
+}
+
+.account-signout-controls > .account-text-button,
+.account-signout-controls > .mutation-request-status {
+  margin-top: 0;
+}
+
+.account-signout-check {
+  width: 100%;
 }
 
 .profile-page-shell {
@@ -3001,6 +3016,7 @@ footer > div {
 .account-profile-page > .account-email,
 .account-profile-page > .profile-summary,
 .account-profile-page > .profile-review-note,
+.account-profile-page > .account-signout-controls,
 .account-profile-page > .account-signout,
 .account-profile-page > .account-error {
   grid-column: 1 / -1;
@@ -3022,7 +3038,7 @@ footer > div {
   margin: 0;
 }
 
-.account-profile-page .account-signout {
+.account-profile-page > .account-signout-controls {
   width: min(320px, 100%);
   justify-self: end;
 }
@@ -5337,12 +5353,13 @@ footer {
   .account-profile-page > .profile-summary,
   .account-profile-page > .profile-section,
   .account-profile-page > .profile-section:last-of-type,
+  .account-profile-page > .account-signout-controls,
   .account-profile-page > .account-signout,
   .account-profile-page > .account-error {
     grid-column: 1;
   }
 
-  .account-profile-page .account-signout {
+  .account-profile-page > .account-signout-controls {
     width: 100%;
   }
 

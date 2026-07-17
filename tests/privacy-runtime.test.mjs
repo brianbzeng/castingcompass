@@ -276,6 +276,7 @@ test("authentication rotates presented sessions into secure host cookies and log
     cookie: rotatedCookie,
   }), { DB: d1 }, []);
   assert.equal(logout?.status, 200);
+  assert.deepEqual(await logout.json(), { signedOut: true, user: null });
   const logoutCookies = (logout.headers.getSetCookie?.() ?? [logout.headers.get("set-cookie") ?? ""]).join("\n");
   assert.match(logoutCookies, /__Host-cc_session=;.*Max-Age=0/);
   assert.match(logoutCookies, /(?:^|\n)cc_session=;.*Max-Age=0/);
