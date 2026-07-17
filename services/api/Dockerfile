@@ -1,4 +1,4 @@
-FROM python:3.12-slim AS runtime
+FROM python:3.12.13-slim-bookworm@sha256:d50fb7611f86d04a3b0471b46d7557818d88983fc3136726336b2a4c657aa30b AS runtime
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
@@ -10,8 +10,9 @@ WORKDIR /app
 
 RUN addgroup --system contourcast && adduser --system --ingroup contourcast contourcast
 
-COPY services/api/requirements.txt /tmp/requirements.txt
-RUN pip install --no-cache-dir --requirement /tmp/requirements.txt
+COPY services/api/requirements-runtime.lock /tmp/requirements-runtime.lock
+RUN python -m pip install --disable-pip-version-check --no-cache-dir \
+    --only-binary=:all: --require-hashes --requirement /tmp/requirements-runtime.lock
 
 COPY services/api/app /app/app
 COPY shared /app/shared
