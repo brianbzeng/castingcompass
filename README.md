@@ -59,14 +59,14 @@ More detail: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
 Requirements:
 
-- Node.js 22.13+
+- Node.js 22.23.1 with npm 10.9.8
 - Python 3.12+
 - Docker, only if you want the local PostGIS stack
 
 ### PWA
 
 ```bash
-npm install
+npm ci --ignore-scripts
 npm run dev
 ```
 

@@ -139,8 +139,9 @@ after its acceptance checks pass in the intended environment.
       action commits; remediate the known npm advisory tree to zero; add high/production-
       moderate audit gates, pull-request dependency review, a deterministic CycloneDX
       production SBOM bound to the package-lock hash, and an owner/deadline/update runbook.
-      Cross-version npm install-script enforcement, Cloudflare deployed-digest evidence, key
-      custody, and restore drills remain open.
+      The exact npm CLI and a fail-closed zero-execution install-script policy are now locally
+      enforced; hosted Linux and merge evidence remain required. Cloudflare deployed-digest
+      evidence, key custody, and restore drills remain open.
     - [x] Define source-bound, exact, SHA-256-hashed, binary-only optional Geo/PyTorch locks for
       CPython 3.12 on macOS 15+ ARM64/MPS and manylinux_2_28 x86-64/CPU; add scheduled hosted
       execution that checks platform/backend identity, exact package identity, GeoTIFF/CRS

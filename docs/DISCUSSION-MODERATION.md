@@ -29,11 +29,11 @@ review can write the public table.
    node scripts/verify-release-checkout.mjs \
      --root /ABSOLUTE/PATH/TO/FULL_RELEASE_WORKTREE \
      --expected-commit "$RELEASE_COMMIT"
-   npm ci
+   npm ci --ignore-scripts
    npm run verify:release-checkout
    ```
 
-   Stop before touching production if either verification fails. `npm ci` establishes the
+   Stop before touching production if either verification fails. `npm ci --ignore-scripts` establishes the
    reviewed lockfile's Wrangler; later commands invoke that local binary and cannot download a
    different CLI implicitly.
 
@@ -60,7 +60,7 @@ review can write the public table.
    repository, then inspect the active deployment:
 
    ```sh
-   npm ci
+   npm ci --ignore-scripts
    NEXT_PUBLIC_API_URL= npm run build:cloudflare
    export WRANGLER_OUTPUT_FILE_DIRECTORY=/ABSOLUTE/PATH/TO/PRIVATE/RELEASE_EVIDENCE
    ./node_modules/.bin/wrangler deploy --config wrangler.jsonc

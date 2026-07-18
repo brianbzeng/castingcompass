@@ -130,7 +130,7 @@ For a reviewed release bridge or a short urgent incident:
 
 1. Disable Cloudflare Git-connected automatic deployments and pause scheduled snapshot
    publication. Record the current deployment/version and the immutable 40-character commit.
-2. Use a clean detached checkout at that exact commit, run `npm ci`, export `RELEASE_COMMIT`,
+2. Use a clean detached checkout at that exact commit, run `npm ci --ignore-scripts`, export `RELEASE_COMMIT`,
    and execute `npm run release:cloudflare:maintenance`. Do not edit the checked-in default or
    use an ad hoc dashboard variable that cannot be tied to reviewed source.
 3. Confirm one maintenance version has `100%` traffic. Run `npm run verify:release-maintenance`
@@ -189,7 +189,7 @@ umask 077
   --output /PRIVATE/ENCRYPTED-VOLUME/castingcompass-UTC.sql
 ```
 
-Run the export only from a verified release checkout after `npm ci`; do not let a package
+Run the export only from a verified release checkout after `npm ci --ignore-scripts`; do not let a package
 runner download an unreviewed Wrangler version for a production-data operation.
 
 A restore drill must use an isolated local database or a disposable non-production D1
@@ -263,7 +263,7 @@ prove that the object is either attached to a live trip or durably queued for cl
 - [ ] Canonical, redirect-alias, and `workers.dev` smoke checks passed.
 - [ ] Health and security endpoints return the expected content and hardening headers.
 - [ ] The release used the reviewed Node/Python versions and pinned API container digest;
-      `npm ci`, secret scanning, exact-input Python lock verification, binary-only hash-checked
+      `npm ci --ignore-scripts`, secret scanning, exact-input Python lock verification, binary-only hash-checked
       Python installs, both npm audit thresholds, dependency review, and deterministic SBOM
       verification passed at the exact commit. The recorded SBOM/lock hashes match that commit.
 - [ ] GitHub dependency/Dependabot review has no untriaged high or critical advisory; accepted
