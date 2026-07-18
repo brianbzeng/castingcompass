@@ -1158,8 +1158,12 @@ class HybridRepository(Repository):
 
 def build_repository() -> HybridRepository:
     validate_contract_assets()
-    default_root = Path(__file__).resolve().parents[3]
-    root = Path(os.getenv("DATA_ROOT", str(default_root))).resolve()
+    configured_root = os.getenv("DATA_ROOT")
+    root = (
+        Path(configured_root).resolve()
+        if configured_root
+        else Path(__file__).resolve().parents[3]
+    )
     file_repository = FileRepository(root=root)
     database_url = os.getenv("DATABASE_URL")
     database_repository = PostgresRepository(database_url) if database_url else None

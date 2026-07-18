@@ -18,7 +18,7 @@ test("direct npm packages and build runtimes are exact reviewed versions", async
   assert.equal(manifest.engines.node, ">=22.23.1 <23");
   assert.equal(await readFile(new URL(".node-version", root), "utf8"), "22.23.1\n");
   assert.equal(await readFile(new URL(".python-version", root), "utf8"), "3.12.13\n");
-  assert.equal(await readFile(new URL("services/api/.python-version", root), "utf8"), "3.12.13\n");
+  assert.equal(await readFile(new URL("services/api/.python-version", root), "utf8"), "3.13.14\n");
   assert.equal(await readFile(new URL("pipeline/.python-version", root), "utf8"), "3.12.13\n");
 
   const reactFramework = {
@@ -79,7 +79,8 @@ test("CI fixes runner versions and enforces dependency review, audits, and SBOM 
   const optional = await readFile(new URL(".github/workflows/optional-python.yml", root), "utf8");
   assert.doesNotMatch(`${ci}\n${refresh}\n${optional}`, /(?:ubuntu|macos)-latest|node-version:\s*22\s*$|python-version:\s*["']?3\.12["']?\s*$/m);
   assert.equal((`${ci}\n${refresh}`.match(/node-version:\s*22\.23\.1/g) ?? []).length, 3);
-  assert.equal((`${ci}\n${refresh}\n${optional}`.match(/python-version:\s*["']3\.12\.13["']/g) ?? []).length, 5);
+  assert.equal((`${ci}\n${refresh}\n${optional}`.match(/python-version:\s*["']3\.12\.13["']/g) ?? []).length, 4);
+  assert.equal((ci.match(/python-version:\s*["']3\.13\.14["']/g) ?? []).length, 1);
   assert.match(ci, /actions\/dependency-review-action@a1d282b36b6f3519aa1f3fc636f609c47dddb294/);
   assert.match(ci, /fail-on-severity:\s*high/);
   assert.match(ci, /github\.base_ref\s*==\s*github\.event\.repository\.default_branch/);
@@ -115,9 +116,17 @@ test("Python API and pipeline installs use exact source-bound wheel hashes", asy
   assert.match(manifest.scripts["security:python-locks"], /generate-python-locks\.mjs --check/);
 
   const dockerfile = await readFile(new URL("services/api/Dockerfile", root), "utf8");
-  assert.match(dockerfile, /^FROM python:3\.12\.13-slim-bookworm@sha256:[a-f0-9]{64} AS runtime$/m);
+  assert.match(
+    dockerfile,
+    /^FROM python:3\.13\.14-alpine3\.24@sha256:399babc8b49529dabfd9c922f2b5eea81d611e4512e3ed250d75bd2e7683f4b0 AS runtime$/m,
+  );
   assert.match(dockerfile, /--only-binary=:all: --require-hashes/);
   assert.match(dockerfile, /services\/api\/requirements-runtime\.lock/);
+  assert.match(dockerfile, /python -m pip check/);
+  assert.match(dockerfile, /\/usr\/local\/bin\/pip\*/);
+  assert.match(dockerfile, /\/usr\/local\/lib\/python3\.13\/tarfile\.py/);
+  assert.match(dockerfile, /\/usr\/local\/lib\/python3\.13\/html\/parser\.py/);
+  assert.match(dockerfile, /^CMD \["python", "-m", "app\.server"\]$/m);
   assert.doesNotMatch(dockerfile, /requirements\.txt|\bRUN pip\b/);
   assert.doesNotMatch(dockerfile, /requirements-test|pytest|httpx/);
 
@@ -229,9 +238,13 @@ test("the supply-chain runbook scopes optional locks and keeps deployment proven
   assert.match(policy, /prove[\s\S]+digest is the digest actually deployed[\s\S]+before marking end-to-end provenance complete/i);
   assert.match(
     policy,
-    /combined release (?:SBOM|inventory)[\s\S]+production npm graph[\s\S]+Python graphs[\s\S]+API-(?:image|container)\/Debian identities[\s\S]+Worker\/D1\/assets service contract/i,
+    /combined release (?:SBOM|inventory)[\s\S]+production npm graph[\s\S]+Python graphs[\s\S]+API-(?:image|container)\/Alpine identities[\s\S]+Worker\/D1\/assets service contract/i,
   );
-  assert.match(policy, /does not claim a package-level scan[\s\S]+do not identify deployed bytes/i);
+  assert.match(policy, /package-level contents[\s\S]+per-architecture Syft\/Grype[\s\S]+do not identify deployed\s+bytes/i);
+  assert.match(
+    policy,
+    /native API image evidence[\s\S]+AMD64 and ARM64[\s\S]+Syft 1\.42\.3[\s\S]+Grype 0\.110\.0[\s\S]+expire 2026-08-01/i,
+  );
   assert.match(policy, /Main-branch signing acceptance is recorded below[\s\S]+rather than deployed-version evidence/i);
   assert.match(
     policy,
@@ -242,7 +255,7 @@ test("the supply-chain runbook scopes optional locks and keeps deployment proven
     /PR[\s\S]+`#79`[\s\S]+d98d947360df4845901ca95c921b9e10733f6aaa[\s\S]+29630783417[\s\S]+8425375002[\s\S]+5a106e016c15ae269a7dc1b28ebdb04f281e125dfb63456b03f20b2b43938805[\s\S]+35937141[\s\S]+35937144[\s\S]+2193447569[\s\S]+2193447815[\s\S]+29630783432[\s\S]+83457741[\s\S]+29630783254[\s\S]+zero open Dependabot,[\s\S]+code-scanning,[\s\S]+secret-scanning alerts[\s\S]+source-bound combined inventory[\s\S]+deployed Worker digest proof/i,
   );
   assert.match(policy, /stacked successor PRs[\s\S]+do not falsely report a dependency-review pass/i);
-  assert.match(policy, /directory-local `services\/api\/\.python-version`[\s\S]+not a control over GitHub's[\s\S]+hosted resolver/i);
+  assert.match(policy, /directory-local `services\/api\/\.python-version`[\s\S]+Python 3\.13\.14[\s\S]+not a[\s\S]+control over GitHub's hosted resolver/i);
   assert.match(policy, /byte-identical transport mirror[\s\S]+managed parser/i);
   assert.match(
     policy,

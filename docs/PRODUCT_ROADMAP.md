@@ -152,8 +152,17 @@ after its acceptance checks pass in the intended environment.
       attestation `35937141` and CycloneDX attestation `35937144`. Main CI `29630783432`, exact
       dependency snapshot `83457741`, and CodeQL `29630783254` passed, followed by zero open
       Dependabot, code-scanning, or secret-scanning alerts. This closes the source-bound combined
-      inventory only; package-level Debian scanning, deployed Worker proof, and license/advisory
+      inventory only; package-level image scanning, deployed Worker proof, and license/advisory
       reconciliation remain open.
+    - [ ] Build and accept a native AMD64/ARM64 package-level API image gate. The reviewed
+      candidate upgrades only the API from Python 3.12.13/Bookworm to maintained Python 3.13.14
+      on the exact official Alpine 3.24 image index, reducing the local ARM64 scan from 215 total
+      findings (8 critical, 30 high) to 11 total findings (0 critical, 3 high). It also removes
+      pip/ensurepip and the unused affected `tarfile`/`html.parser` modules, eliminates shell-based
+      startup, verifies all 22 applicable locked Python packages plus 29 APK packages and their
+      licenses, and fails closed on unreviewed/expired high or any critical finding. The three
+      temporary CPython exceptions expire 2026-08-01. Mark this complete only after both native
+      hosted jobs pass on the exact PR head and the raw/normalized artifacts are preserved.
     - [x] Enable live `main` protection with pull requests, strict app-bound GitHub Actions and
       Advanced Security `CodeQL` checks, resolved conversations, administrator enforcement, and
       force-push/deletion denial; enable Dependabot security updates, secret-scanning push

@@ -20,8 +20,10 @@ from services.api.app.repository import (
     FileRepository,
     HybridRepository,
     PostgresRepository,
+    build_repository,
     validate_database_window_shape,
 )
+from services.api.app.server import configured_port
 
 
 SCORING_SHA256 = "a" * 64
@@ -42,6 +44,28 @@ WINDOW_CONTRACT_IDENTITY = {
     for key, value in CONTRACT_IDENTITY.items()
     if key != "scoring_system_version"
 }
+
+
+def test_build_repository_uses_explicit_data_root_before_source_layout(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    monkeypatch.setenv("DATA_ROOT", str(tmp_path))
+    monkeypatch.delenv("DATABASE_URL", raising=False)
+
+    repository = build_repository()
+
+    assert repository.file_repository.root == tmp_path.resolve()
+    assert repository.database_repository is None
+
+
+@pytest.mark.parametrize("value", ["", "0", "65536", "8000; touch /tmp/pwned", "-1"])
+def test_server_rejects_invalid_or_shell_like_ports(value: str) -> None:
+    with pytest.raises(ValueError, match="PORT must be an integer"):
+        configured_port(value)
+
+
+def test_server_accepts_bounded_port() -> None:
+    assert configured_port("8000") == 8000
 
 
 @pytest.fixture

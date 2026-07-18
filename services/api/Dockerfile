@@ -1,4 +1,4 @@
-FROM python:3.12.13-slim-bookworm@sha256:d50fb7611f86d04a3b0471b46d7557818d88983fc3136726336b2a4c657aa30b AS runtime
+FROM python:3.13.14-alpine3.24@sha256:399babc8b49529dabfd9c922f2b5eea81d611e4512e3ed250d75bd2e7683f4b0 AS runtime
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
@@ -8,11 +8,19 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 
 WORKDIR /app
 
-RUN addgroup --system contourcast && adduser --system --ingroup contourcast contourcast
+RUN addgroup -S contourcast && adduser -S -G contourcast contourcast
 
 COPY services/api/requirements-runtime.lock /tmp/requirements-runtime.lock
 RUN python -m pip install --disable-pip-version-check --no-cache-dir \
-    --only-binary=:all: --require-hashes --requirement /tmp/requirements-runtime.lock
+    --only-binary=:all: --require-hashes --requirement /tmp/requirements-runtime.lock \
+    && python -m pip check \
+    && rm -rf \
+        /usr/local/bin/pip* \
+        /usr/local/lib/python3.13/ensurepip \
+        /usr/local/lib/python3.13/html/parser.py \
+        /usr/local/lib/python3.13/site-packages/pip \
+        /usr/local/lib/python3.13/site-packages/pip-*.dist-info \
+        /usr/local/lib/python3.13/tarfile.py
 
 COPY services/api/app /app/app
 COPY shared /app/shared
@@ -24,6 +32,6 @@ USER contourcast
 EXPOSE 8000
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
-    CMD python -c "import os, urllib.request; urllib.request.urlopen('http://127.0.0.1:' + os.getenv('PORT', '8000') + '/health', timeout=3)"
+    CMD ["python", "-c", "import os, urllib.request; urllib.request.urlopen('http://127.0.0.1:' + os.getenv('PORT', '8000') + '/health', timeout=3)"]
 
-CMD ["sh", "-c", "uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000} --proxy-headers --forwarded-allow-ips='*'"]
+CMD ["python", "-m", "app.server"]

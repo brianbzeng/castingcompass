@@ -1,0 +1,169 @@
+{
+  "schemaVersion": 1,
+  "reviewedAt": "2026-07-18",
+  "baseImage": {
+    "repository": "python",
+    "tag": "3.13.14-alpine3.24",
+    "indexDigest": "sha256:399babc8b49529dabfd9c922f2b5eea81d611e4512e3ed250d75bd2e7683f4b0",
+    "sourceRevision": "f79aea5b8f6b2d65b31ba2bb3f69c0c2083345c8",
+    "platforms": {
+      "linux/amd64": {
+        "manifestDigest": "sha256:c25cd44f45df1279a2cba589e67dfcd9db04647ea483b117a7de8b1a99bdfb23",
+        "operatingSystemBaseDigest": "sha256:79ff19e9084a00eece421b2523fb93e22d730e2c0e525905de047e848e56d95f"
+      },
+      "linux/arm64": {
+        "manifestDigest": "sha256:0515d7a37d0febc8bd7d88b4879b8598f4e1a1aae16307c733fd34f36be18f15",
+        "operatingSystemBaseDigest": "sha256:e7a1a92a5bfeee40966aea60f0796b0e7917cc35591542701834f03a68fa3d18"
+      }
+    }
+  },
+  "runtime": {
+    "python": "3.13.14",
+    "operatingSystem": "Alpine Linux 3.24",
+    "commonApkPackages": [
+      { "package": "alpine-baselayout", "version": "3.7.2-r1" },
+      { "package": "alpine-baselayout-data", "version": "3.7.2-r1" },
+      { "package": "alpine-keys", "version": "2.6-r0" },
+      { "package": "alpine-release", "version": "3.24.1-r0" },
+      { "package": "apk-tools", "version": "3.0.6-r0" },
+      { "package": "busybox", "version": "1.37.0-r31" },
+      { "package": "busybox-binsh", "version": "1.37.0-r31" },
+      { "package": "ca-certificates", "version": "20260611-r0" },
+      { "package": "ca-certificates-bundle", "version": "20260611-r0" },
+      { "package": "gdbm", "version": "1.26-r0" },
+      { "package": "libapk", "version": "3.0.6-r0" },
+      { "package": "libbz2", "version": "1.0.8-r6" },
+      { "package": "libcrypto3", "version": "3.5.7-r0" },
+      { "package": "libffi", "version": "3.5.2-r1" },
+      { "package": "libncursesw", "version": "6.6_p20260516-r0" },
+      { "package": "libpanelw", "version": "6.6_p20260516-r0" },
+      { "package": "libssl3", "version": "3.5.7-r0" },
+      { "package": "libuuid", "version": "2.42-r0" },
+      { "package": "musl", "version": "1.2.6-r2" },
+      { "package": "musl-utils", "version": "1.2.6-r2" },
+      { "package": "ncurses-terminfo-base", "version": "6.6_p20260516-r0" },
+      { "package": "readline", "version": "8.3.3-r1" },
+      { "package": "scanelf", "version": "1.3.9-r1" },
+      { "package": "sqlite-libs", "version": "3.53.2-r0" },
+      { "package": "ssl_client", "version": "1.37.0-r31" },
+      { "package": "tzdata", "version": "2026b-r0" },
+      { "package": "xz-libs", "version": "5.8.3-r0" },
+      { "package": "zlib", "version": "1.3.2-r0" }
+    ],
+    "platformApkPackages": {
+      "linux/amd64": [
+        { "package": ".python-rundeps", "version": "20260616.002554" }
+      ],
+      "linux/arm64": [
+        { "package": ".python-rundeps", "version": "20260616.002547" }
+      ]
+    },
+    "forbiddenPackages": [
+      "gcc",
+      "git",
+      "make",
+      "perl",
+      "pip"
+    ],
+    "expectedApkPackageCount": 29
+  },
+  "scanners": {
+    "syft": "1.42.3",
+    "grype": "0.110.0",
+    "maximumDatabaseAgeDays": 5
+  },
+  "allowedLicenseExpressions": [
+    "0BSD",
+    "AND",
+    "Apache-2.0",
+    "BSD-3-Clause",
+    "GPL-2.0-only",
+    "GPL-2.0-or-later",
+    "GPL-3.0-or-later",
+    "LGPL-2.1-or-later",
+    "LGPL-3.0-only",
+    "MIT",
+    "MIT AND BSD-2-Clause AND GPL-2.0-or-later",
+    "MIT License",
+    "MPL-2.0 AND MIT",
+    "PSF-2.0",
+    "Public-Domain",
+    "X11",
+    "Zlib",
+    "blessing",
+    "bzip2-1.0.6"
+  ],
+  "missingLicenseReviews": [
+    {
+      "package": ".python-rundeps",
+      "version": "20260616.002547",
+      "type": "apk",
+      "platform": "linux/arm64",
+      "classification": "virtual dependency marker with no distributable package payload",
+      "source": "https://github.com/docker-library/python/tree/f79aea5b8f6b2d65b31ba2bb3f69c0c2083345c8/3.13/alpine3.24"
+    },
+    {
+      "package": ".python-rundeps",
+      "version": "20260616.002554",
+      "type": "apk",
+      "platform": "linux/amd64",
+      "classification": "virtual dependency marker with no distributable package payload",
+      "source": "https://github.com/docker-library/python/tree/f79aea5b8f6b2d65b31ba2bb3f69c0c2083345c8/3.13/alpine3.24"
+    },
+    {
+      "package": "annotated-types",
+      "version": "0.7.0",
+      "type": "python",
+      "classification": "MIT license confirmed from the exact upstream release",
+      "source": "https://github.com/annotated-types/annotated-types/blob/v0.7.0/LICENSE"
+    }
+  ],
+  "mitigatedModules": [
+    {
+      "module": "tarfile",
+      "removedPath": "/usr/local/lib/python3.13/tarfile.py"
+    },
+    {
+      "module": "html.parser",
+      "removedPath": "/usr/local/lib/python3.13/html/parser.py"
+    }
+  ],
+  "highSeverityExceptions": [
+    {
+      "vulnerability": "CVE-2026-11940",
+      "namespace": "nvd:cpe",
+      "package": "python",
+      "version": "3.13.14",
+      "type": "binary",
+      "severity": "High",
+      "expires": "2026-08-01",
+      "module": "tarfile",
+      "reason": "No stable CPython release containing the backport existed at review time; the API image removes tarfile and the source contract rejects reintroduction.",
+      "source": "https://github.com/python/cpython/issues/151558"
+    },
+    {
+      "vulnerability": "CVE-2026-11972",
+      "namespace": "nvd:cpe",
+      "package": "python",
+      "version": "3.13.14",
+      "type": "binary",
+      "severity": "High",
+      "expires": "2026-08-01",
+      "module": "tarfile",
+      "reason": "No stable CPython release containing the backport existed at review time; the API image removes tarfile and the source contract rejects reintroduction.",
+      "source": "https://github.com/python/cpython/issues/151981"
+    },
+    {
+      "vulnerability": "CVE-2026-15308",
+      "namespace": "nvd:cpe",
+      "package": "python",
+      "version": "3.13.14",
+      "type": "binary",
+      "severity": "High",
+      "expires": "2026-08-01",
+      "module": "html.parser",
+      "reason": "No stable CPython release containing the backport existed at review time; the API image removes html.parser and the source contract rejects reintroduction.",
+      "source": "https://github.com/python/cpython/issues/153030"
+    }
+  ]
+}

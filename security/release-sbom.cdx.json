@@ -1,7 +1,7 @@
 {
   "bomFormat": "CycloneDX",
   "specVersion": "1.5",
-  "serialNumber": "urn:uuid:e5a7eff3-a84d-5cb3-acf9-46bf3009efdd",
+  "serialNumber": "urn:uuid:23860cf0-1b4a-5b4c-babb-d26635c67cb0",
   "version": 1,
   "metadata": {
     "component": {
@@ -33,7 +33,15 @@
         },
         {
           "name": "castingcompass:input-sha256",
+          "value": "pipeline/.python-version:aa0d6581054e6e4ff3f91839deca7a854ad37221b8784d060b42d0f847ff1a3b"
+        },
+        {
+          "name": "castingcompass:input-sha256",
           "value": "pipeline/requirements-ci.lock:cc5dc54a4434aa143abdad44cde47e368cd8d6a880f7eb26fb1d836e6fd60fda"
+        },
+        {
+          "name": "castingcompass:input-sha256",
+          "value": "security/api-image-policy.json:e2884e0a6c9320d9c51505c20ee5ec1338f4f369dd78a3bcaa478b626936fe32"
         },
         {
           "name": "castingcompass:input-sha256",
@@ -41,11 +49,15 @@
         },
         {
           "name": "castingcompass:input-sha256",
-          "value": "services/api/Dockerfile:7fd2d9423fcd07d4b40aa61798f6fd4b6452b77e1d2f5e6853554d7e488f10b2"
+          "value": "services/api/.python-version:f8faecf2505680716c6279bf2cdec3d5a5ba2ba852f0d7df45d51ac1ce8d9ade"
         },
         {
           "name": "castingcompass:input-sha256",
-          "value": "services/api/requirements-runtime.lock:4f0506fa970514fe7a91a1a767f5971738a54fbb91c57c725a61b728ecbaf381"
+          "value": "services/api/Dockerfile:70f1e667245e6dae80beec7be7c79a9361538d445f6d6ed13ec027b7cde95bcf"
+        },
+        {
+          "name": "castingcompass:input-sha256",
+          "value": "services/api/requirements-runtime.lock:296d1f0bf782a6a044e86706ab06bcd45890c48730d7f0760e78b496eda34202"
         },
         {
           "name": "castingcompass:input-sha256",
@@ -1820,19 +1832,19 @@
       ]
     },
     {
-      "bom-ref": "container:python@sha256:d50fb7611f86d04a3b0471b46d7557818d88983fc3136726336b2a4c657aa30b",
+      "bom-ref": "container:python@sha256:399babc8b49529dabfd9c922f2b5eea81d611e4512e3ed250d75bd2e7683f4b0",
       "type": "container",
       "name": "python",
-      "version": "3.12.13-slim-bookworm",
+      "version": "3.13.14-alpine3.24",
       "scope": "required",
       "properties": [
         {
           "name": "castingcompass:image-reference",
-          "value": "python:3.12.13-slim-bookworm@sha256:d50fb7611f86d04a3b0471b46d7557818d88983fc3136726336b2a4c657aa30b"
+          "value": "python:3.13.14-alpine3.24@sha256:399babc8b49529dabfd9c922f2b5eea81d611e4512e3ed250d75bd2e7683f4b0"
         },
         {
           "name": "castingcompass:inventory-limit",
-          "value": "identity-level; Debian package contents are not enumerated"
+          "value": "identity-level; APK package contents are not enumerated"
         },
         {
           "name": "castingcompass:inventory-role",
@@ -1842,13 +1854,13 @@
       "hashes": [
         {
           "alg": "SHA-256",
-          "content": "d50fb7611f86d04a3b0471b46d7557818d88983fc3136726336b2a4c657aa30b"
+          "content": "399babc8b49529dabfd9c922f2b5eea81d611e4512e3ed250d75bd2e7683f4b0"
         }
       ],
       "externalReferences": [
         {
           "type": "distribution",
-          "url": "https://hub.docker.com/_/python/tags?name=3.12.13-slim-bookworm"
+          "url": "https://hub.docker.com/_/python/tags?name=3.13.14-alpine3.24"
         }
       ]
     },
@@ -2249,19 +2261,19 @@
       ]
     },
     {
-      "bom-ref": "operating-system:debian@12-bookworm",
+      "bom-ref": "operating-system:alpine@3.24",
       "type": "operating-system",
-      "name": "Debian GNU/Linux",
-      "version": "12 (bookworm)",
+      "name": "Alpine Linux",
+      "version": "3.24",
       "scope": "required",
       "properties": [
         {
           "name": "castingcompass:identity-source",
-          "value": "python slim-bookworm image tag plus pinned image-index digest"
+          "value": "official Python Alpine image tag plus pinned image-index digest"
         },
         {
           "name": "castingcompass:inventory-limit",
-          "value": "identity-level; no installed Debian package claim"
+          "value": "identity-level; no installed APK package claim"
         },
         {
           "name": "castingcompass:inventory-role",
@@ -2558,7 +2570,7 @@
         },
         {
           "name": "castingcompass:python-lock-sha256",
-          "value": "4f0506fa970514fe7a91a1a767f5971738a54fbb91c57c725a61b728ecbaf381"
+          "value": "296d1f0bf782a6a044e86706ab06bcd45890c48730d7f0760e78b496eda34202"
         }
       ],
       "purl": "pkg:pypi/annotated-doc@0.0.4"
@@ -2588,7 +2600,7 @@
         },
         {
           "name": "castingcompass:python-lock-sha256",
-          "value": "4f0506fa970514fe7a91a1a767f5971738a54fbb91c57c725a61b728ecbaf381"
+          "value": "296d1f0bf782a6a044e86706ab06bcd45890c48730d7f0760e78b496eda34202"
         }
       ],
       "purl": "pkg:pypi/annotated-types@0.7.0"
@@ -2618,7 +2630,7 @@
         },
         {
           "name": "castingcompass:python-lock-sha256",
-          "value": "4f0506fa970514fe7a91a1a767f5971738a54fbb91c57c725a61b728ecbaf381"
+          "value": "296d1f0bf782a6a044e86706ab06bcd45890c48730d7f0760e78b496eda34202"
         }
       ],
       "purl": "pkg:pypi/anyio@4.14.2"
@@ -3074,7 +3086,7 @@
         },
         {
           "name": "castingcompass:python-lock-sha256",
-          "value": "4f0506fa970514fe7a91a1a767f5971738a54fbb91c57c725a61b728ecbaf381"
+          "value": "296d1f0bf782a6a044e86706ab06bcd45890c48730d7f0760e78b496eda34202"
         }
       ],
       "purl": "pkg:pypi/click@8.4.2"
@@ -3108,7 +3120,7 @@
         },
         {
           "name": "castingcompass:python-lock-sha256",
-          "value": "4f0506fa970514fe7a91a1a767f5971738a54fbb91c57c725a61b728ecbaf381"
+          "value": "296d1f0bf782a6a044e86706ab06bcd45890c48730d7f0760e78b496eda34202"
         }
       ],
       "purl": "pkg:pypi/colorama@0.4.6"
@@ -3356,7 +3368,7 @@
         },
         {
           "name": "castingcompass:python-lock-sha256",
-          "value": "4f0506fa970514fe7a91a1a767f5971738a54fbb91c57c725a61b728ecbaf381"
+          "value": "296d1f0bf782a6a044e86706ab06bcd45890c48730d7f0760e78b496eda34202"
         }
       ],
       "purl": "pkg:pypi/fastapi@0.139.2"
@@ -3386,7 +3398,7 @@
         },
         {
           "name": "castingcompass:python-lock-sha256",
-          "value": "4f0506fa970514fe7a91a1a767f5971738a54fbb91c57c725a61b728ecbaf381"
+          "value": "296d1f0bf782a6a044e86706ab06bcd45890c48730d7f0760e78b496eda34202"
         }
       ],
       "purl": "pkg:pypi/h11@0.16.0"
@@ -3608,7 +3620,7 @@
         },
         {
           "name": "castingcompass:python-lock-sha256",
-          "value": "4f0506fa970514fe7a91a1a767f5971738a54fbb91c57c725a61b728ecbaf381"
+          "value": "296d1f0bf782a6a044e86706ab06bcd45890c48730d7f0760e78b496eda34202"
         }
       ],
       "purl": "pkg:pypi/httptools@0.8.0"
@@ -3638,7 +3650,7 @@
         },
         {
           "name": "castingcompass:python-lock-sha256",
-          "value": "4f0506fa970514fe7a91a1a767f5971738a54fbb91c57c725a61b728ecbaf381"
+          "value": "296d1f0bf782a6a044e86706ab06bcd45890c48730d7f0760e78b496eda34202"
         }
       ],
       "purl": "pkg:pypi/idna@3.18"
@@ -4356,7 +4368,7 @@
         },
         {
           "name": "castingcompass:python-lock-sha256",
-          "value": "4f0506fa970514fe7a91a1a767f5971738a54fbb91c57c725a61b728ecbaf381"
+          "value": "296d1f0bf782a6a044e86706ab06bcd45890c48730d7f0760e78b496eda34202"
         }
       ],
       "purl": "pkg:pypi/psycopg-binary@3.3.4"
@@ -4386,7 +4398,7 @@
         },
         {
           "name": "castingcompass:python-lock-sha256",
-          "value": "4f0506fa970514fe7a91a1a767f5971738a54fbb91c57c725a61b728ecbaf381"
+          "value": "296d1f0bf782a6a044e86706ab06bcd45890c48730d7f0760e78b496eda34202"
         }
       ],
       "purl": "pkg:pypi/psycopg-pool@3.3.1"
@@ -4416,7 +4428,7 @@
         },
         {
           "name": "castingcompass:python-lock-sha256",
-          "value": "4f0506fa970514fe7a91a1a767f5971738a54fbb91c57c725a61b728ecbaf381"
+          "value": "296d1f0bf782a6a044e86706ab06bcd45890c48730d7f0760e78b496eda34202"
         }
       ],
       "purl": "pkg:pypi/psycopg@3.3.4"
@@ -4868,7 +4880,7 @@
         },
         {
           "name": "castingcompass:python-lock-sha256",
-          "value": "4f0506fa970514fe7a91a1a767f5971738a54fbb91c57c725a61b728ecbaf381"
+          "value": "296d1f0bf782a6a044e86706ab06bcd45890c48730d7f0760e78b496eda34202"
         }
       ],
       "purl": "pkg:pypi/pydantic-core@2.33.2"
@@ -4898,7 +4910,7 @@
         },
         {
           "name": "castingcompass:python-lock-sha256",
-          "value": "4f0506fa970514fe7a91a1a767f5971738a54fbb91c57c725a61b728ecbaf381"
+          "value": "296d1f0bf782a6a044e86706ab06bcd45890c48730d7f0760e78b496eda34202"
         }
       ],
       "purl": "pkg:pypi/pydantic@2.11.7"
@@ -4958,7 +4970,7 @@
         },
         {
           "name": "castingcompass:python-lock-sha256",
-          "value": "4f0506fa970514fe7a91a1a767f5971738a54fbb91c57c725a61b728ecbaf381"
+          "value": "296d1f0bf782a6a044e86706ab06bcd45890c48730d7f0760e78b496eda34202"
         }
       ],
       "purl": "pkg:pypi/python-dotenv@1.2.2"
@@ -5272,7 +5284,7 @@
         },
         {
           "name": "castingcompass:python-lock-sha256",
-          "value": "4f0506fa970514fe7a91a1a767f5971738a54fbb91c57c725a61b728ecbaf381"
+          "value": "296d1f0bf782a6a044e86706ab06bcd45890c48730d7f0760e78b496eda34202"
         }
       ],
       "purl": "pkg:pypi/pyyaml@6.0.3"
@@ -5758,7 +5770,7 @@
         },
         {
           "name": "castingcompass:python-lock-sha256",
-          "value": "4f0506fa970514fe7a91a1a767f5971738a54fbb91c57c725a61b728ecbaf381"
+          "value": "296d1f0bf782a6a044e86706ab06bcd45890c48730d7f0760e78b496eda34202"
         }
       ],
       "purl": "pkg:pypi/starlette@1.3.1"
@@ -5818,7 +5830,7 @@
         },
         {
           "name": "castingcompass:python-lock-sha256",
-          "value": "4f0506fa970514fe7a91a1a767f5971738a54fbb91c57c725a61b728ecbaf381"
+          "value": "296d1f0bf782a6a044e86706ab06bcd45890c48730d7f0760e78b496eda34202"
         }
       ],
       "purl": "pkg:pypi/typing-extensions@4.16.0"
@@ -5848,7 +5860,7 @@
         },
         {
           "name": "castingcompass:python-lock-sha256",
-          "value": "4f0506fa970514fe7a91a1a767f5971738a54fbb91c57c725a61b728ecbaf381"
+          "value": "296d1f0bf782a6a044e86706ab06bcd45890c48730d7f0760e78b496eda34202"
         }
       ],
       "purl": "pkg:pypi/typing-inspection@0.4.2"
@@ -5894,7 +5906,7 @@
         },
         {
           "name": "castingcompass:python-lock-sha256",
-          "value": "4f0506fa970514fe7a91a1a767f5971738a54fbb91c57c725a61b728ecbaf381"
+          "value": "296d1f0bf782a6a044e86706ab06bcd45890c48730d7f0760e78b496eda34202"
         },
         {
           "name": "castingcompass:python-lock-sha256",
@@ -5928,7 +5940,7 @@
         },
         {
           "name": "castingcompass:python-lock-sha256",
-          "value": "4f0506fa970514fe7a91a1a767f5971738a54fbb91c57c725a61b728ecbaf381"
+          "value": "296d1f0bf782a6a044e86706ab06bcd45890c48730d7f0760e78b496eda34202"
         }
       ],
       "purl": "pkg:pypi/uvicorn@0.35.0"
@@ -6150,7 +6162,7 @@
         },
         {
           "name": "castingcompass:python-lock-sha256",
-          "value": "4f0506fa970514fe7a91a1a767f5971738a54fbb91c57c725a61b728ecbaf381"
+          "value": "296d1f0bf782a6a044e86706ab06bcd45890c48730d7f0760e78b496eda34202"
         }
       ],
       "purl": "pkg:pypi/uvloop@0.22.1"
@@ -6600,7 +6612,7 @@
         },
         {
           "name": "castingcompass:python-lock-sha256",
-          "value": "4f0506fa970514fe7a91a1a767f5971738a54fbb91c57c725a61b728ecbaf381"
+          "value": "296d1f0bf782a6a044e86706ab06bcd45890c48730d7f0760e78b496eda34202"
         }
       ],
       "purl": "pkg:pypi/watchfiles@1.2.0"
@@ -7058,7 +7070,7 @@
         },
         {
           "name": "castingcompass:python-lock-sha256",
-          "value": "4f0506fa970514fe7a91a1a767f5971738a54fbb91c57c725a61b728ecbaf381"
+          "value": "296d1f0bf782a6a044e86706ab06bcd45890c48730d7f0760e78b496eda34202"
         }
       ],
       "purl": "pkg:pypi/websockets@16.1.1"
@@ -7218,10 +7230,24 @@
       "properties": [
         {
           "name": "castingcompass:inventory-role",
-          "value": "api-and-pipeline-runtime"
+          "value": "pipeline-runtime"
         }
       ],
       "purl": "pkg:generic/python@3.12.13"
+    },
+    {
+      "bom-ref": "runtime:python@3.13.14",
+      "type": "application",
+      "name": "Python",
+      "version": "3.13.14",
+      "scope": "required",
+      "properties": [
+        {
+          "name": "castingcompass:inventory-role",
+          "value": "api-runtime"
+        }
+      ],
+      "purl": "pkg:generic/python@3.13.14"
     },
     {
       "bom-ref": "scheduler@0.27.0",
@@ -7811,7 +7837,7 @@
     {
       "ref": "castingcompass-api@0.1.0",
       "dependsOn": [
-        "container:python@sha256:d50fb7611f86d04a3b0471b46d7557818d88983fc3136726336b2a4c657aa30b",
+        "container:python@sha256:399babc8b49529dabfd9c922f2b5eea81d611e4512e3ed250d75bd2e7683f4b0",
         "pypi:annotated-doc@0.0.4",
         "pypi:annotated-types@0.7.0",
         "pypi:anyio@4.14.2",
@@ -7864,9 +7890,10 @@
         "castingcompass-api@0.1.0",
         "castingcompass-pipeline@0.1.0",
         "castingcompass@0.1.0",
-        "container:python@sha256:d50fb7611f86d04a3b0471b46d7557818d88983fc3136726336b2a4c657aa30b",
+        "container:python@sha256:399babc8b49529dabfd9c922f2b5eea81d611e4512e3ed250d75bd2e7683f4b0",
         "runtime:node@22.23.1",
         "runtime:python@3.12.13",
+        "runtime:python@3.13.14",
         "service:cloudflare-d1",
         "service:cloudflare-workers-assets",
         "service:cloudflare-workers@2026-05-15"
@@ -7890,10 +7917,10 @@
       "dependsOn": []
     },
     {
-      "ref": "container:python@sha256:d50fb7611f86d04a3b0471b46d7557818d88983fc3136726336b2a4c657aa30b",
+      "ref": "container:python@sha256:399babc8b49529dabfd9c922f2b5eea81d611e4512e3ed250d75bd2e7683f4b0",
       "dependsOn": [
-        "operating-system:debian@12-bookworm",
-        "runtime:python@3.12.13"
+        "operating-system:alpine@3.24",
+        "runtime:python@3.13.14"
       ]
     },
     {
