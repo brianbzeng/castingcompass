@@ -27,7 +27,7 @@ from .patches import (
     save_patch_corpus,
 )
 from .splits import spatial_block_folds
-from .sources import get_source_manifest
+from .sources import assert_source_operation, get_source_manifest
 from .structure import STRUCTURE_CHANNELS, derive_structure_channels, load_feature_stack
 
 from shared.species_contract import (
@@ -51,6 +51,7 @@ def build_pretraining_corpus(
     """Create a content-addressable, physically scaled SSL patch corpus."""
 
     channels, grid, channel_names, feature_metadata = load_feature_stack(feature_stack_path)
+    assert_source_operation(grid.source_id, "terrain-pretraining")
     x, y = sample_water_centers(
         channels,
         grid,
@@ -136,6 +137,7 @@ def build_geotiff_pretraining_corpus(
         raise ValueError("max_centers must be at least two and tile_size at least 128")
     if stride_m <= 0:
         raise ValueError("stride_m must be positive")
+    assert_source_operation(source_id, "terrain-pretraining")
     manifest = get_source_manifest(source_id)
     source_sha256 = sha256_file(source_path)
     if expected_sha256 and expected_sha256.lower() != source_sha256:
@@ -439,6 +441,10 @@ def run_bathymetry_pretraining(
     if epochs < 1 or batch_size < 2:
         raise ValueError("epochs must be positive and batch_size must be at least two")
     patches, x, y, channel_names, corpus_metadata = load_patch_corpus(corpus_path)
+    source_id = corpus_metadata.get("source_id")
+    if not isinstance(source_id, str) or not source_id:
+        raise ValueError("pretraining corpus is missing its admitted source_id")
+    assert_source_operation(source_id, "terrain-pretraining")
     folds = spatial_block_folds(
         x,
         y,

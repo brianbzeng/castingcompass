@@ -9,6 +9,7 @@ import json
 import math
 import os
 import re
+import sys
 import tempfile
 from datetime import datetime, timezone
 from pathlib import Path
@@ -18,6 +19,12 @@ from urllib.request import Request, urlopen
 
 
 ROOT = Path(__file__).resolve().parents[1]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
+from pipeline.contourcast.sources import assert_source_operation  # noqa: E402
+
+
 SOURCE_DIR = ROOT / "pipeline" / "sources"
 ALLOWED_ORIGIN = ("https", "services2.arcgis.com")
 MAX_RESPONSE_BYTES = 64 * 1024 * 1024
@@ -137,6 +144,10 @@ def validate_manifest(manifest: Mapping[str, Any]) -> None:
     missing = required - set(manifest)
     if missing:
         raise AcquisitionError(f"source manifest is missing {sorted(missing)}")
+    try:
+        assert_source_operation(str(manifest["source_id"]), "descriptive-context")
+    except ValueError as error:
+        raise AcquisitionError("CDFW source is not admitted for descriptive context") from error
     dataset_id = manifest["dataset_id"]
     if dataset_id not in {"ds3185", "ds3186"}:
         raise AcquisitionError("only reviewed CDFW datasets ds3185 and ds3186 are supported")
