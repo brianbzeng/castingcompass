@@ -21,10 +21,14 @@ also satisfied.
 - [x] Verify support and allowed-use boundaries. Local evidence: 69/69 pipeline tests passed
       (one documented optional raster test skipped), 324/324 repository tests passed, Ruff,
       lint, typecheck, offline dependency audits, secrets, locks, and both SBOM checks passed.
-- [ ] Publish the draft PR and obtain hosted network-audit and mobile-browser evidence; the local
-      sandbox cannot reach the registry or bind the Playwright test port.
-- [ ] Merge only after every required hosted check passes, reconcile post-merge evidence, and
-      leave Cloudflare and production paused.
+- [x] Publish PR `#88` and obtain hosted network-audit and 102/102 mobile-browser evidence.
+      API, dependency review, both pinned Python stacks, CodeQL for Actions/JavaScript/Python,
+      pipeline, web, and release-provenance checks all passed on the exact PR commit.
+- [x] Merge only after every required hosted check passes and reconcile the exact main commit.
+      PR `#88` merged as `5b221f59c39f69d939f144f99a3ea81226e8908d`; post-merge CI
+      `29645959440`, release provenance `29645959456`, optional Python `29645959451`, and CodeQL
+      `29645959414` all passed. Dependabot remained at zero open alerts. Cloudflare and
+      production remain paused.
 
 ## Completed prior seven-step cycle
 
