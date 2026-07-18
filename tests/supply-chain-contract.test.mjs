@@ -41,6 +41,14 @@ test("direct npm packages and build runtimes are exact reviewed versions", async
     assert.equal(manifest.devDependencies[name], version);
     assert.equal(lock.packages[`node_modules/${name}`].version, version);
   }
+  const tailwindToolchain = {
+    "@tailwindcss/postcss": "4.3.3",
+    tailwindcss: "4.3.3",
+  };
+  for (const [name, version] of Object.entries(tailwindToolchain)) {
+    assert.equal(manifest.devDependencies[name], version);
+    assert.equal(lock.packages[`node_modules/${name}`].version, version);
+  }
   assert.equal(
     lock.packages["node_modules/@cloudflare/vite-plugin"].peerDependencies.wrangler,
     "^4.112.0",
