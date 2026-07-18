@@ -15,35 +15,36 @@ import { spawnSync } from "node:child_process";
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const UV_VERSION = "0.10.11";
-const PYTHON_VERSION = "3.12.13";
-const PYTHON_VERSION_FILES = [
-  ".python-version",
-  "services/api/.python-version",
-  "pipeline/.python-version",
-];
+const PYTHON_VERSION_FILES = new Map([
+  [".python-version", "3.12.13"],
+  ["services/api/.python-version", "3.13.14"],
+  ["pipeline/.python-version", "3.12.13"],
+]);
 const VALIDATION_LOCK = "pipeline/requirements-validation.lock";
 const VALIDATION_CONSTRAINTS = "pipeline/requirements-validation.txt";
 const LOCKS = [
   {
     name: "FastAPI runtime",
     inputs: [
-      ".python-version",
       "services/api/.python-version",
       "services/api/requirements.txt",
     ],
     source: "services/api/requirements.txt",
     output: "services/api/requirements-runtime.lock",
+    pythonVersion: "3.13",
+    target: "CPython 3.13 universal wheel resolution; source builds are disabled at install.",
   },
   {
     name: "FastAPI test",
     inputs: [
-      ".python-version",
       "services/api/.python-version",
       "services/api/requirements-test.in",
       "services/api/requirements.txt",
     ],
     source: "services/api/requirements-test.in",
     output: "services/api/requirements-test.lock",
+    pythonVersion: "3.13",
+    target: "CPython 3.13 universal wheel resolution; source builds are disabled at install.",
   },
   {
     name: "pipeline CI",
@@ -99,10 +100,10 @@ function sha256(path) {
 }
 
 function verifyPythonVersionFiles() {
-  const expected = `${PYTHON_VERSION}\n`;
-  for (const path of PYTHON_VERSION_FILES) {
+  for (const [path, version] of PYTHON_VERSION_FILES) {
+    const expected = `${version}\n`;
     if (readFileSync(resolve(ROOT, path), "utf8") !== expected) {
-      throw new Error(`${path} must select exact Python ${PYTHON_VERSION}`);
+      throw new Error(`${path} must select exact Python ${version}`);
     }
   }
 }
@@ -168,7 +169,7 @@ function uvCommand(lock, output) {
     "compile",
     lock.source,
     "--python-version",
-    "3.12",
+    lock.pythonVersion ?? "3.12",
     ...(lock.pythonPlatform ? ["--python-platform", lock.pythonPlatform] : ["--universal"]),
     "--generate-hashes",
     "--only-binary",

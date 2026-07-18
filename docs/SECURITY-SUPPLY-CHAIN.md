@@ -12,8 +12,8 @@ path so security fixes are not frozen out.
 | Boundary | Repository control | Remaining external dependency |
 | --- | --- | --- |
 | Node build runtime | `.node-version`, GitHub CI, and snapshot automation select Node `22.23.1`; `engines.node` accepts only that patched 22.x floor through the next major boundary | Cloudflare must be verified to honor the file on the exact build; GitHub/Cloudflare host images are mutable services |
-| Python test runtime | `.python-version` and every checked-in GitHub test workflow select Python `3.12.13` | GitHub's separate hosted Dependabot resolver used Python 3.14.5; Python 3.12 is security-fixes-only, so a tested feature-series upgrade is still required before its support ends |
-| API container runtime | The API Dockerfile selects the official `python:3.12.13-slim-bookworm` multi-platform image by immutable index digest | The pinned OS/Python image needs weekly reviewed Docker updates; the container is not the current Cloudflare Worker production path |
+| Python test runtimes | The API selector and API CI use exact Python `3.13.14`; the root/pipeline selectors and pipeline workflows retain exact Python `3.12.13` while the larger scientific-platform migration is reviewed separately | GitHub's separate hosted Dependabot resolver is not controlled by these files; Python 3.12 is security-fixes-only, so the remaining pipeline upgrade must finish before support ends |
+| API container runtime | The API Dockerfile selects official `python:3.13.14-alpine3.24` by immutable multi-platform index digest, installs only hash-locked wheels, runs non-root, removes pip/ensurepip and the unused vulnerable `tarfile`/`html.parser` modules, and starts without a shell | The exact image still needs weekly re-scanning and prompt adoption of the next stable CPython security release; the container is not the current Cloudflare Worker production path |
 | Exercised Python graphs | FastAPI runtime/test and pipeline CI use exact transitive versions from source-bound locks with committed SHA-256 distribution hashes; CI and the API image require hashes and reject source distributions | The package index, pip implementation, host kernel/libc, and wheel contents remain external |
 | Approved optional Geo/PyTorch graphs | Separate source-bound, exact, hashed, binary-only locks cover CPython 3.12 on macOS 15+ ARM64 with an MPS-capable Torch wheel and manylinux_2_28 x86-64 with the official CPU-only Torch wheel; a scheduled workflow tests both platform identities, GeoTIFF/CRS behavior, the pipeline suite, and deep smoke | GitHub runner images and package indexes remain external; CUDA, ROCm, Windows, Intel macOS, and other unlisted platforms are not approved or claimed reproducible |
 | GitHub Python dependency graph | A main-only job waits for the tested API/pipeline locks, then submits exact versioned PyPI package URLs for all three exercised graphs; user submissions take precedence over incomplete managed/static parses | GitHub owns storage, precedence, and alert refresh; verify the accepted snapshot and alert state after each relevant merge rather than treating a successful upload as the final receipt |
@@ -26,13 +26,14 @@ path so security fixes are not frozen out.
 | Pull-request dependency changes | The SHA-pinned GitHub dependency-review action rejects newly introduced high/critical runtime or development advisories on release PRs targeting the default branch, and the live `main` protection requires that check | GitHub builds the graph from the default branch, so stacked PRs cannot supply this evidence; the complete-tree audit and SBOM remain mandatory |
 | Static analysis | GitHub-managed CodeQL default setup scans Actions, JavaScript/TypeScript, and Python; the Advanced Security `CodeQL` merge result is required on `main`, and findings are reviewed individually rather than bulk-dismissed | GitHub controls the analyzer/runtime and its default query updates; release evidence still records the alert state and each dismissal rationale |
 | Production npm SBOM | `security/sbom.cdx.json` is a deterministic CycloneDX 1.5 inventory of the lock-resolved production graph, including cross-platform optional variants, and embeds the SHA-256 of `package-lock.json` | It remains the focused npm input to the combined release inventory; neither document proves the bytes Cloudflare actually ran |
-| Combined release inventory | `security/release-sbom.cdx.json` deterministically combines the production npm graph, exact hashed API-runtime and pipeline-CI Python graphs, pinned Node/Python/API-image/Debian identities, and the repository-declared Worker/D1/assets service contract; every source file is SHA-256-bound and CI rejects drift | Main-branch signing acceptance is recorded below; the OS entry remains identity-level without installed Debian packages, and the Worker entries remain repository contracts rather than deployed-version evidence |
+| Combined release inventory | `security/release-sbom.cdx.json` deterministically combines the production npm graph, exact hashed API-runtime and pipeline-CI Python graphs, their distinct Python runtimes, pinned Node/API-image/Alpine identities, the image-security policy, and the repository-declared Worker/D1/assets service contract; every source file is SHA-256-bound and CI rejects drift | Main-branch signing acceptance is recorded below; the OS entry remains identity-level while native package reports are separate workflow evidence, and the Worker entries remain repository contracts rather than deployed-version evidence |
+| Native API image evidence | A read-only weekly/change-triggered workflow builds the exact image natively on GitHub's fixed Ubuntu 24.04 AMD64 and ARM64 runners, verifies non-root/minimized runtime behavior and live health, then uses SHA-pinned Syft 1.42.3 and Grype 0.110.0 actions to preserve raw CycloneDX, vulnerability, and normalized policy reports | The hosted acceptance receipt is pending this change's PR. Three newly disclosed CPython highs have no stable 3.13 fix as of 2026-07-18; exact exceptions expire 2026-08-01 and are coupled to removal/import guards for the affected modules |
 | Secrets and private reporting | Repository secret scanning and provider-pattern tests run before dependency installation in CI; GitHub secret scanning, push protection, and private vulnerability reporting are enabled | GitHub's extra non-provider-pattern and validity-check options were unavailable in the current account configuration; rotation, IAM, and incident drills still require provider evidence |
 
 The exact Node release is the current patched release selected for the maintained 22.x line,
-not a claim that Node 22 should remain forever. Python 3.12.13 is a security-only source
-release and is pinned here because the existing API/pipeline contract is on 3.12; plan and test
-an upgrade instead of waiting for end of support.
+not a claim that Node 22 should remain forever. The API has moved to maintained Python 3.13.14;
+Python 3.12.13 remains only for the scientific pipeline while its broader binary/platform
+compatibility is reviewed. Do not let that bounded split turn into an indefinite support gap.
 
 ## CI security gates
 
@@ -46,8 +47,9 @@ The web job deliberately orders its gates as follows:
    committed SBOM and lockfile hash;
 5. lint, typecheck, build, run all runtime/attack tests, and exercise the mobile browser suite.
 
-The API, pipeline, and optional-platform jobs install only the committed CPython 3.12 locks with pip's
-all-or-nothing `--require-hashes` mode and `--only-binary=:all:`. The API job runs its tests;
+The API job installs its CPython 3.13 lock and the pipeline/optional-platform jobs install their
+CPython 3.12 locks with pip's all-or-nothing `--require-hashes` mode and
+`--only-binary=:all:`. The API job runs its tests;
 the pipeline lock also pins Ruff and the validation-compatible numerical/cryptographic graph
 before lint, unit tests, and the deterministic smoke workflow. The pip caches are keyed to the
 lock files rather than the range/source inputs. The API Dockerfile uses the runtime-only lock,
@@ -98,19 +100,26 @@ lock diff and SBOM diff in the same pull request. CI rejects a stale SBOM.
 The focused npm SBOM intentionally covers the production npm tree only. Development tools remain
 visible in `package-lock.json`, the complete-tree audit, and dependency review. The deterministic
 combined release SBOM then embeds that npm graph alongside both exercised exact Python graphs,
-the pinned Node/Python/API-container/Debian identities, and the Worker/D1/assets service contract.
-It binds `.node-version`, `.python-version`, both selected Python locks, the API Dockerfile,
+the pinned Node/distinct-Python/API-container/Alpine identities, and the Worker/D1/assets service
+contract. It binds `.node-version`, all three Python selectors, both selected Python locks, the
+API Dockerfile, the API image policy,
 `package.json`, `package-lock.json`, the focused npm SBOM, and `wrangler.jsonc` by SHA-256. Python
 distribution hashes and environment markers remain attached to their package identities. The
 release builder archives those inputs and exports the combined document as the SBOM predicate;
 the isolated signer rejects a narrowed predicate that lacks Python, container, OS, Worker, or the
 explicit non-deployment claim.
 
-This is a source-bound release inventory. The Debian entry identifies the pinned multi-platform
-image index and its `slim-bookworm` OS family but does not claim a package-level scan of a selected
-image manifest. The Cloudflare service entries describe reviewed bindings and compatibility
-settings but do not identify deployed bytes, traffic allocation, or provider state. Preserve these
-limits until separate platform-specific image scanning and deployed-digest evidence exist.
+This is a source-bound release inventory. The Alpine entry identifies the pinned multi-platform
+image index and OS family; package-level contents live in separate per-architecture Syft/Grype
+workflow artifacts and are not copied into this deterministic source inventory. The Cloudflare
+service entries describe reviewed bindings and compatibility settings but do not identify deployed
+bytes, traffic allocation, or provider state. Preserve these limits until deployed-digest evidence
+exists.
+
+The image policy's license allowlist is a technical drift-control record of licenses observed and
+reviewed for this exact runtime, not legal advice or a conclusion that every distribution obligation
+has been fulfilled. Preserve the raw per-package evidence and obtain legal review before making a
+commercial licensing or redistribution claim.
 
 ## Python lock workflow
 
@@ -119,14 +128,15 @@ limits until separate platform-specific image scanning and deployed-digest evide
 in the API image.
 `pipeline/requirements-ci.in` composes the smoke ranges with the validation protocol's exact
 overlap constraints, fixes the reviewed pandas behavior, and pins the CI-only Ruff version.
-The generated FastAPI runtime/test locks and `pipeline/requirements-ci.lock` contain exact
-transitive versions and SHA-256 hashes for universal CPython 3.12 wheel resolution.
+The generated FastAPI runtime/test locks contain exact transitive versions and SHA-256 hashes for
+universal CPython 3.13 wheel resolution. `pipeline/requirements-ci.lock` retains the corresponding
+CPython 3.12 contract.
 
-The directory-local `services/api/.python-version` and `pipeline/.python-version` files mirror
-the canonical root `.python-version` for local tools started inside those directories; the
-generator rejects any byte or version drift between them. They are not a control over GitHub's
-hosted resolver: the post-merge managed job log showed Python 3.14.5 even with those files
-present. The validation protocol remains canonically frozen in
+The directory-local `services/api/.python-version` deliberately selects Python 3.13.14 while the
+root and `pipeline/.python-version` remain byte-identical at Python 3.12.13. The generator enforces
+that exact split and resolves each lock for its selected feature series. These files are not a
+control over GitHub's hosted resolver: an earlier managed job selected Python 3.14.5 even with a
+directory-local file present. The validation protocol remains canonically frozen in
 `pipeline/requirements-validation.lock`, while `pipeline/requirements-validation.txt` is a
 byte-identical transport mirror because the managed parser follows `.in` and `.txt` constraint
 files but not a `.lock` constraint suffix. `pipeline/requirements-ci.in` points to that mirror,
@@ -289,9 +299,10 @@ Dependabot proposes npm, Python, and GitHub Action updates weekly. For every upd
    the reviewed npm toolchain, run `npm ci`, regenerate the SBOM, and inspect unexpected
    transitive additions/removals. Do not run an unreviewed blanket force-fix.
 3. For Python, update the direct source or constraint deliberately, regenerate with the exact
-   checked generator, inspect every resolved version/hash/marker, install into fresh CPython
-   3.12 environments using pip hash and binary-only mode, and run the complete API/pipeline
-   suites. Never hand-edit a hash to make a failed install pass.
+   checked generator, inspect every resolved version/hash/marker, install into fresh environments
+   matching the selected CPython 3.13 API and CPython 3.12 pipeline runtimes using pip hash and
+   binary-only mode, and run the complete API/pipeline suites. Never hand-edit a hash to make a
+   failed install pass.
 4. For the API base image, verify the official image identity, exact Python patch, multi-platform
    index digest, upstream source revision, OS advisories, and both amd64/arm64 manifests before
    updating the digest. Build and smoke the image; a tag alone is not immutable.
@@ -370,9 +381,12 @@ surface-reduction controls, not a sandbox or trust guarantee.
   are `2193447569` and `2193447815`. Main CI `29630783432` passed web/mobile, API, pipeline,
   and exact Python dependency snapshot `83457741`; CodeQL `29630783254` passed Actions,
   JavaScript/TypeScript, and Python. GitHub then reported zero open Dependabot, code-scanning,
-  or secret-scanning alerts. This closes only the source-bound combined inventory. Package-level
-  Debian image scanning, deployed Worker digest proof, and license/advisory reconciliation remain
-  separate open work.
+  or secret-scanning alerts. At that immutable `#79` receipt, this closed only the
+  source-bound combined inventory; package-level Debian image scanning, deployed Worker digest proof, and
+  license/advisory reconciliation were still open. The current change replaces that Debian
+  candidate with a pinned, minimized Alpine image and adds native package/license/vulnerability
+  evidence, but it is not accepted until both hosted architecture jobs pass on the exact final
+  head. Deployed Worker digest proof remains separate open work.
 - The checked-in GitHub workflow produces a deterministic release candidate from `main`
   containing the built Worker, static assets, reviewed Wrangler configuration, migrations,
   exact lock, and committed CycloneDX SBOM. The bundle embeds the repository, full commit,
@@ -422,3 +436,9 @@ Additional primary references:
 - [pip secure installs and hash-checking mode](https://pip.pypa.io/en/stable/topics/secure-installs/)
 - [Node.js 22.23.1 release](https://nodejs.org/en/blog/release/v22.23.1)
 - [Python 3.12.13 security release](https://www.python.org/downloads/release/python-31213/)
+- [Python 3.13.14 security release](https://www.python.org/downloads/release/python-31314/)
+- [Syft SBOM action](https://github.com/anchore/sbom-action)
+- [Grype scan action](https://github.com/anchore/scan-action)
+- [CPython CVE-2026-11940 tracking](https://github.com/python/cpython/issues/151558)
+- [CPython CVE-2026-11972 tracking](https://github.com/python/cpython/issues/151981)
+- [CPython CVE-2026-15308 tracking](https://github.com/python/cpython/issues/153030)

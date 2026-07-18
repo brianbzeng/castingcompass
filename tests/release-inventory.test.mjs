@@ -9,8 +9,11 @@ const inputPaths = [
   ".python-version",
   "package-lock.json",
   "package.json",
+  "pipeline/.python-version",
   "pipeline/requirements-ci.lock",
+  "security/api-image-policy.json",
   "security/sbom.cdx.json",
+  "services/api/.python-version",
   "services/api/Dockerfile",
   "services/api/requirements-runtime.lock",
   "wrangler.jsonc",
@@ -77,9 +80,9 @@ test("the combined release SBOM is deterministic, input-bound, complete, and exp
   assert.equal(container.version, imageMatch[1]);
   assert.equal(container.hashes[0].content, imageMatch[2].slice("sha256:".length));
   const operatingSystem = inventory.components.find(({ type }) => type === "operating-system");
-  assert.equal(operatingSystem.name, "Debian GNU/Linux");
+  assert.equal(operatingSystem.name, "Alpine Linux");
   assert.equal(operatingSystem.properties.some(({ value }) =>
-    value === "identity-level; no installed Debian package claim"), true);
+    value === "identity-level; no installed APK package claim"), true);
 
   const worker = inventory.services.find(({ name }) => name === "Cloudflare Workers Runtime");
   assert.equal(worker.version, wrangler.compatibility_date);

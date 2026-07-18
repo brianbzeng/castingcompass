@@ -17,16 +17,19 @@ const MANIFESTS = [
     manifest: "services/api/requirements.txt",
     lock: "services/api/requirements-runtime.lock",
     scope: "runtime",
+    python: "3.13.14",
   },
   {
     manifest: "services/api/requirements-test.in",
     lock: "services/api/requirements-test.lock",
     scope: "development",
+    python: "3.13.14",
   },
   {
     manifest: "pipeline/requirements-ci.in",
     lock: "pipeline/requirements-ci.lock",
     scope: "development",
+    python: "3.12.13",
   },
 ];
 
@@ -82,7 +85,7 @@ function resolvedLock(path) {
   return packages;
 }
 
-function manifestSnapshot({ manifest, lock, scope }) {
+function manifestSnapshot({ manifest, lock, scope, python }) {
   const direct = directRequirements(manifest);
   const packages = resolvedLock(lock);
   for (const name of direct) {
@@ -104,7 +107,7 @@ function manifestSnapshot({ manifest, lock, scope }) {
     metadata: {
       "castingcompass:lock": lock,
       "castingcompass:lock-sha256": sha256(lock),
-      "castingcompass:python": "3.12.13",
+      "castingcompass:python": python,
     },
     resolved,
   };

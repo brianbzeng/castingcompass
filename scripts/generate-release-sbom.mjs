@@ -19,9 +19,12 @@ const inputPaths = [
   "package-lock.json",
   "package.json",
   "pipeline/requirements-ci.lock",
+  "security/api-image-policy.json",
   "security/sbom.cdx.json",
+  "services/api/.python-version",
   "services/api/Dockerfile",
   "services/api/requirements-runtime.lock",
+  "pipeline/.python-version",
   "wrangler.jsonc",
 ];
 const inputs = new Map(inputPaths.map((path) => [path, readFileSync(resolve(root, path))]));
@@ -30,10 +33,15 @@ const packageManifest = JSON.parse(inputs.get("package.json").toString("utf8"));
 const npmSbom = JSON.parse(inputs.get("security/sbom.cdx.json").toString("utf8"));
 const wrangler = JSON.parse(inputs.get("wrangler.jsonc").toString("utf8"));
 const nodeVersion = exactVersion(inputs.get(".node-version").toString("utf8").trim(), "Node version");
-const pythonVersion = exactVersion(inputs.get(".python-version").toString("utf8").trim(), "Python version");
+const rootPythonVersion = exactVersion(inputs.get(".python-version").toString("utf8").trim(), "root Python version");
+const apiPythonVersion = exactVersion(inputs.get("services/api/.python-version").toString("utf8").trim(), "API Python version");
+const pipelinePythonVersion = exactVersion(inputs.get("pipeline/.python-version").toString("utf8").trim(), "pipeline Python version");
+if (rootPythonVersion !== pipelinePythonVersion) {
+  throw new Error("The root Python selection must match the pipeline runtime");
+}
 
 assertNpmSbom(npmSbom, inputHashes.get("package-lock.json"));
-const container = parseContainerIdentity(inputs.get("services/api/Dockerfile").toString("utf8"), pythonVersion);
+const container = parseContainerIdentity(inputs.get("services/api/Dockerfile").toString("utf8"), apiPythonVersion);
 const worker = parseWorkerIdentity(wrangler, packageManifest);
 const pythonGraphs = [
   parsePythonLock("services/api/requirements-runtime.lock", "api-runtime"),
@@ -45,9 +53,10 @@ const npmRootReference = npmSbom.metadata.component["bom-ref"];
 const apiReference = `castingcompass-api@${packageManifest.version}`;
 const pipelineReference = `castingcompass-pipeline@${packageManifest.version}`;
 const nodeReference = `runtime:node@${nodeVersion}`;
-const pythonReference = `runtime:python@${pythonVersion}`;
+const apiPythonReference = `runtime:python@${apiPythonVersion}`;
+const pipelinePythonReference = `runtime:python@${pipelinePythonVersion}`;
 const containerReference = `container:python@${container.digest}`;
-const osReference = "operating-system:debian@12-bookworm";
+const osReference = container.operatingSystem.reference;
 const workerServiceReference = `service:cloudflare-workers@${worker.compatibilityDate}`;
 const d1ServiceReference = "service:cloudflare-d1";
 const assetsServiceReference = "service:cloudflare-workers-assets";
@@ -75,14 +84,17 @@ const components = [
   component(nodeReference, "application", "Node.js", nodeVersion, [
     property("castingcompass:inventory-role", "worker-build-runtime"),
   ], `pkg:generic/node@${nodeVersion}`),
-  component(pythonReference, "application", "Python", pythonVersion, [
-    property("castingcompass:inventory-role", "api-and-pipeline-runtime"),
-  ], `pkg:generic/python@${pythonVersion}`),
+  component(apiPythonReference, "application", "Python", apiPythonVersion, [
+    property("castingcompass:inventory-role", "api-runtime"),
+  ], `pkg:generic/python@${apiPythonVersion}`),
+  component(pipelinePythonReference, "application", "Python", pipelinePythonVersion, [
+    property("castingcompass:inventory-role", "pipeline-runtime"),
+  ], `pkg:generic/python@${pipelinePythonVersion}`),
   {
     ...component(containerReference, "container", container.image, container.tag, [
       property("castingcompass:inventory-role", "api-base-image-index"),
       property("castingcompass:image-reference", container.reference),
-      property("castingcompass:inventory-limit", "identity-level; Debian package contents are not enumerated"),
+      property("castingcompass:inventory-limit", "identity-level; APK package contents are not enumerated"),
     ]),
     hashes: [{ alg: "SHA-256", content: container.digest.slice("sha256:".length) }],
     externalReferences: [{
@@ -90,10 +102,10 @@ const components = [
       url: `https://hub.docker.com/_/python/tags?name=${encodeURIComponent(container.tag)}`,
     }],
   },
-  component(osReference, "operating-system", "Debian GNU/Linux", "12 (bookworm)", [
+  component(osReference, "operating-system", container.operatingSystem.name, container.operatingSystem.version, [
     property("castingcompass:inventory-role", "api-base-operating-system-identity"),
-    property("castingcompass:identity-source", "python slim-bookworm image tag plus pinned image-index digest"),
-    property("castingcompass:inventory-limit", "identity-level; no installed Debian package claim"),
+    property("castingcompass:identity-source", "official Python Alpine image tag plus pinned image-index digest"),
+    property("castingcompass:inventory-limit", "identity-level; no installed APK package claim"),
   ]),
 ];
 
@@ -127,7 +139,8 @@ const dependencies = mergeDependencies([
       apiReference,
       pipelineReference,
       nodeReference,
-      pythonReference,
+      apiPythonReference,
+      pipelinePythonReference,
       containerReference,
       workerServiceReference,
       d1ServiceReference,
@@ -144,9 +157,9 @@ const dependencies = mergeDependencies([
   },
   {
     ref: pipelineReference,
-    dependsOn: [pythonReference, ...pythonGraphs[1].components.map(({ reference }) => reference)],
+    dependsOn: [pipelinePythonReference, ...pythonGraphs[1].components.map(({ reference }) => reference)],
   },
-  { ref: containerReference, dependsOn: [osReference, pythonReference] },
+  { ref: containerReference, dependsOn: [osReference, apiPythonReference] },
   { ref: workerServiceReference, dependsOn: [d1ServiceReference, assetsServiceReference] },
 ]);
 
@@ -329,14 +342,19 @@ function parseContainerIdentity(dockerfile, expectedPythonVersion) {
   const match = dockerfile.match(/^FROM python:([^@\s]+)@(sha256:[a-f0-9]{64}) AS runtime$/mu);
   if (!match) throw new Error("API Dockerfile must use one exact official Python image index");
   const tag = match[1];
-  if (tag !== `${expectedPythonVersion}-slim-bookworm`) {
-    throw new Error("API container tag does not match the repository Python runtime");
+  if (tag !== `${expectedPythonVersion}-alpine3.24`) {
+    throw new Error("API container tag must match the reviewed Python and Alpine runtime");
   }
   return {
     image: "python",
     tag,
     digest: match[2],
     reference: `python:${tag}@${match[2]}`,
+    operatingSystem: {
+      reference: "operating-system:alpine@3.24",
+      name: "Alpine Linux",
+      version: "3.24",
+    },
   };
 }
 

@@ -1,0 +1,137 @@
+name: API image security
+
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/api-image-security.yml"
+      - "contracts/**"
+      - "data/**"
+      - "public/data/**"
+      - "scripts/verify-api-image-evidence.mjs"
+      - "security/api-image-policy.json"
+      - "services/api/**"
+      - "shared/**"
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/api-image-security.yml"
+      - "contracts/**"
+      - "data/**"
+      - "public/data/**"
+      - "scripts/verify-api-image-evidence.mjs"
+      - "security/api-image-policy.json"
+      - "services/api/**"
+      - "shared/**"
+  schedule:
+    - cron: "17 9 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: api-image-security-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  package-inventory-and-vulnerabilities:
+    name: ${{ matrix.platform }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: ubuntu-24.04
+            platform: linux/amd64
+            architecture: amd64
+          - runner: ubuntu-24.04-arm
+            platform: linux/arm64
+            architecture: arm64
+    runs-on: ${{ matrix.runner }}
+    env:
+      SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+      IMAGE_NAME: castingcompass-api:${{ github.event.pull_request.head.sha || github.sha }}-${{ matrix.architecture }}
+      SBOM_FILE: api-image-${{ matrix.architecture }}.cdx.json
+      SCAN_FILE: api-image-${{ matrix.architecture }}.grype.json
+      SUMMARY_FILE: api-image-${{ matrix.architecture }}.summary.json
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+          ref: ${{ env.SOURCE_SHA }}
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 22.23.1
+      - name: Build the exact native API image
+        run: docker build --pull --platform "${{ matrix.platform }}" --tag "$IMAGE_NAME" --file services/api/Dockerfile .
+      - name: Verify non-root, minimized runtime and live health
+        run: |
+          test "$(docker inspect "$IMAGE_NAME" --format '{{.Architecture}}')" = "${{ matrix.architecture }}"
+          test "$(docker inspect "$IMAGE_NAME" --format '{{.Config.User}}')" = "contourcast"
+          docker run --rm --entrypoint python "$IMAGE_NAME" -c '
+          import importlib.util, os
+          assert os.getuid() != 0
+          for module in ("html.parser", "pip", "tarfile"):
+              assert importlib.util.find_spec(module) is None, module
+          import fastapi, psycopg, pydantic, uvicorn, uvloop
+          '
+          container_id=$(docker run --detach --network none "$IMAGE_NAME")
+          trap 'docker rm --force "$container_id" >/dev/null 2>&1 || true' EXIT
+          healthy=0
+          for attempt in 1 2 3 4 5 6 7 8 9 10; do
+            if docker exec "$container_id" python -c \
+              "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=3)"; then
+              healthy=1
+              break
+            fi
+            sleep 1
+          done
+          if [ "$healthy" -ne 1 ]; then
+            docker logs "$container_id"
+            exit 1
+          fi
+      - name: Generate package-level CycloneDX evidence
+        uses: anchore/sbom-action@e22c389904149dbc22b58101806040fa8d37a610 # v0.24.0
+        with:
+          image: ${{ env.IMAGE_NAME }}
+          format: cyclonedx-json
+          output-file: ${{ env.SBOM_FILE }}
+          syft-version: v1.42.3
+          dependency-snapshot: false
+          upload-artifact: false
+          upload-release-assets: false
+      - name: Scan every package with a fresh vulnerability database
+        uses: anchore/scan-action@e1165082ffb1fe366ebaf02d8526e7c4989ea9d2 # v7.4.0
+        with:
+          image: ${{ env.IMAGE_NAME }}
+          output-format: json
+          output-file: ${{ env.SCAN_FILE }}
+          grype-version: v0.110.0
+          fail-build: false
+          only-fixed: false
+          add-cpes-if-none: false
+          cache-db: false
+      - name: Enforce inventory, license and vulnerability policy
+        id: policy
+        continue-on-error: true
+        run: >-
+          node scripts/verify-api-image-evidence.mjs
+          --policy security/api-image-policy.json
+          --sbom "$SBOM_FILE"
+          --scan "$SCAN_FILE"
+          --platform "${{ matrix.platform }}"
+          --source-commit "$SOURCE_SHA"
+          --output "$SUMMARY_FILE"
+      - name: Preserve raw and normalized evidence
+        if: always() && steps.policy.outcome != 'skipped'
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: api-image-security-${{ matrix.architecture }}-${{ env.SOURCE_SHA }}
+          path: |
+            ${{ env.SBOM_FILE }}
+            ${{ env.SCAN_FILE }}
+            ${{ env.SUMMARY_FILE }}
+          if-no-files-found: error
+          retention-days: 30
+      - name: Fail closed when policy rejected the image
+        if: steps.policy.outcome != 'success'
+        run: exit 1
