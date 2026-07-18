@@ -140,6 +140,34 @@ The evidence file contains aggregate counts and checksums only. A named second r
 verify the source manifests, key-custody record, retention deadline, empty work directory,
 aggregate evidence, and audit head before the operational restore drill is accepted.
 
+### Reproduce the synthetic non-production acceptance drill
+
+The repository also provides a production-shaped synthetic fixture for an offline technical
+acceptance drill. It creates a restored account, trip, public discussion, validation rows, and
+both pending and completed object-deletion tasks; seals the snapshot and a newer current
+privacy ledger with separate ephemeral keys; proves tampered-artifact and wrong-key rejection;
+replays deletion suppression; checks SQLite integrity and foreign keys; then destroys every
+plaintext source, key, encrypted fixture artifact, and restored database. Only three private,
+aggregate-only files remain: restore evidence, the hash-chained audit log, and an acceptance
+record. The runner refuses a dirty checkout or a `HEAD` that differs from `--source-commit`.
+
+Run it from an exact committed checkout into a new output directory outside the repository:
+
+```sh
+umask 077
+npm run drill:restore:offline -- \
+  --output-directory "$HOME/.local/share/castingcompass/release-evidence/UTC-restore-drill" \
+  --source-commit "$(git rev-parse HEAD)"
+```
+
+The acceptance record deliberately keeps `production_data_used`,
+`production_provider_accessed`, `production_key_custody_approved`,
+`second_person_reviewed`, and `production_restore_gate_passed` false. This drill proves the
+repository-controlled offline mechanism only. It does not restore the real encrypted
+pre-release backup, replace a current production deletion-ledger export, approve key custody,
+or satisfy the separate 730-day validation-snapshot governance gate. A reviewer must verify
+the exact source commit and file hashes before accepting even this non-production receipt.
+
 ## Exercise the 730-day validation-only technical candidate
 
 Do not run this workflow against production until migration `0015` is applied and the data
