@@ -26,7 +26,7 @@ path so security fixes are not frozen out.
 | Pull-request dependency changes | The SHA-pinned GitHub dependency-review action rejects newly introduced high/critical runtime or development advisories on release PRs targeting the default branch, and the live `main` protection requires that check | GitHub builds the graph from the default branch, so stacked PRs cannot supply this evidence; the complete-tree audit and SBOM remain mandatory |
 | Static analysis | GitHub-managed CodeQL default setup scans Actions, JavaScript/TypeScript, and Python; the Advanced Security `CodeQL` merge result is required on `main`, and findings are reviewed individually rather than bulk-dismissed | GitHub controls the analyzer/runtime and its default query updates; release evidence still records the alert state and each dismissal rationale |
 | Production npm SBOM | `security/sbom.cdx.json` is a deterministic CycloneDX 1.5 inventory of the lock-resolved production graph, including cross-platform optional variants, and embeds the SHA-256 of `package-lock.json` | It remains the focused npm input to the combined release inventory; neither document proves the bytes Cloudflare actually ran |
-| Combined release inventory | `security/release-sbom.cdx.json` deterministically combines the production npm graph, exact hashed API-runtime and pipeline-CI Python graphs, pinned Node/Python/API-image/Debian identities, and the repository-declared Worker/D1/assets service contract; every source file is SHA-256-bound and CI rejects drift | The OS entry is identity-level and does not enumerate installed Debian packages; the Worker entries are repository contracts, not deployed-version evidence; hosted signing acceptance must be recorded before this gate is counted complete |
+| Combined release inventory | `security/release-sbom.cdx.json` deterministically combines the production npm graph, exact hashed API-runtime and pipeline-CI Python graphs, pinned Node/Python/API-image/Debian identities, and the repository-declared Worker/D1/assets service contract; every source file is SHA-256-bound and CI rejects drift | Main-branch signing acceptance is recorded below; the OS entry remains identity-level without installed Debian packages, and the Worker entries remain repository contracts rather than deployed-version evidence |
 | Secrets and private reporting | Repository secret scanning and provider-pattern tests run before dependency installation in CI; GitHub secret scanning, push protection, and private vulnerability reporting are enabled | GitHub's extra non-provider-pattern and validity-check options were unavailable in the current account configuration; rotation, IAM, and incident drills still require provider evidence |
 
 The exact Node release is the current patched release selected for the maintained 22.x line,
@@ -351,8 +351,26 @@ surface-reduction controls, not a sandbox or trust guarantee.
   open Dependabot, code-scanning, or secret-scanning alerts. This evidence covers only the two
   named platform/backend combinations and does not broaden the exclusions above.
 - The deterministic combined release SBOM covers the selected npm/Python graphs plus
-  identity-level API image/OS and Worker service contracts. Obtain a successful main-branch
-  combined-SBOM attestation and independently verify it before closing that sub-gate. Package-level
+  identity-level API image/OS and Worker service contracts. Immutable acceptance evidence is PR
+  `#79`, merged as `d98d947360df4845901ca95c921b9e10733f6aaa`. Main release-provenance run
+  `29630783417` passed both isolated jobs; GitHub artifact `8425375002` retains the exact
+  four-file candidate through 2026-10-16 with artifact-record SHA-256
+  `ba2b91b263e4697ac379da74a04cd52022fa3cd62b10a22edfaac64b0d42b1c9`.
+  A fresh download passed every strict `SHA256SUMS` entry and the independent verifier. Its
+  124-file bundle SHA-256 is
+  `5a106e016c15ae269a7dc1b28ebdb04f281e125dfb63456b03f20b2b43938805`; its external
+  combined-SBOM SHA-256 is
+  `bccfc8e094de5fe3783d8c834ae9782ef70c9354999956c562454588eae57d0a`.
+  The verified CycloneDX 1.5 document has deterministic serial
+  `urn:uuid:e5a7eff3-a84d-5cb3-acf9-46bf3009efdd`, 127 components, 37 unique PyPI
+  components, three services, and the exact claim `source-bound release inventory; not
+  Cloudflare deployment provenance`. Identity-constrained `gh attestation verify` accepted SLSA
+  attestation `35937141` and CycloneDX attestation `35937144` only for the exact repository,
+  signer workflow, `main` ref, source/signer commit, and GitHub-hosted runner; their Rekor indexes
+  are `2193447569` and `2193447815`. Main CI `29630783432` passed web/mobile, API, pipeline,
+  and exact Python dependency snapshot `83457741`; CodeQL `29630783254` passed Actions,
+  JavaScript/TypeScript, and Python. GitHub then reported zero open Dependabot, code-scanning,
+  or secret-scanning alerts. This closes only the source-bound combined inventory. Package-level
   Debian image scanning, deployed Worker digest proof, and license/advisory reconciliation remain
   separate open work.
 - The checked-in GitHub workflow produces a deterministic release candidate from `main`
