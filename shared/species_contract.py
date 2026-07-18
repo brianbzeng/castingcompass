@@ -19,6 +19,7 @@ TAXON_CATALOG_VERSION = "castingcompass.taxa/1.0.0"
 OBSERVATION_CONTRACT_VERSION = "castingcompass.observation/2.0.0"
 MODEL_RUN_CONTRACT_VERSION = "castingcompass.model-run/2.0.0"
 MODEL_GOVERNANCE_CONTRACT_VERSION = "castingcompass.model-governance/1.0.0"
+SOURCE_ADMISSIBILITY_CONTRACT_VERSION = "castingcompass.source-admissibility/1.0.0"
 OPPORTUNITY_CONTRACT_VERSION = "castingcompass.opportunity/2.0.0"
 
 PRODUCTION_TARGET_TAXON_ID = "california-halibut"
@@ -98,6 +99,7 @@ def validate_contract_assets() -> None:
         "observation.schema.json": OBSERVATION_CONTRACT_VERSION,
         "model-run.schema.json": MODEL_RUN_CONTRACT_VERSION,
         "model-governance.schema.json": MODEL_GOVERNANCE_CONTRACT_VERSION,
+        "source-admissibility.schema.json": SOURCE_ADMISSIBILITY_CONTRACT_VERSION,
         "opportunity.schema.json": OPPORTUNITY_CONTRACT_VERSION,
     }
     for filename, version in expected_schema_versions.items():

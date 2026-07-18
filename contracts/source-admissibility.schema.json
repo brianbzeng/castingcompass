@@ -1,0 +1,157 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "castingcompass.source-admissibility/1.0.0",
+  "title": "CastingCompass source admissibility policy 1.0.0",
+  "description": "Strict structural contract for fail-closed data-source and platform admissibility. Semantic verification locks the current allowlist and deny decisions.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "policy_id",
+    "policy_version",
+    "default_decision",
+    "current_model_roles",
+    "manifest_sources",
+    "synthetic_sources",
+    "blocked_platforms"
+  ],
+  "properties": {
+    "schema_version": { "const": "castingcompass.source-admissibility/1.0.0" },
+    "policy_id": { "const": "castingcompass-source-admissibility-v1" },
+    "policy_version": { "const": "1.0.0" },
+    "default_decision": { "const": "deny" },
+    "current_model_roles": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "supervised_model_training_authorized",
+        "model_validation_authorized",
+        "production_scoring_authorized",
+        "reason"
+      ],
+      "properties": {
+        "supervised_model_training_authorized": { "const": false },
+        "model_validation_authorized": { "const": false },
+        "production_scoring_authorized": { "const": false },
+        "reason": { "$ref": "#/$defs/slug" }
+      }
+    },
+    "manifest_sources": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": { "$ref": "#/$defs/source" }
+    },
+    "synthetic_sources": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": { "$ref": "#/$defs/source" }
+    },
+    "blocked_platforms": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": { "$ref": "#/$defs/blockedPlatform" }
+    }
+  },
+  "$defs": {
+    "slug": {
+      "type": "string",
+      "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+    },
+    "sourceId": {
+      "type": "string",
+      "pattern": "^[a-z0-9]+(?:[-_][a-z0-9]+)*$"
+    },
+    "nonEmptyText": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 500
+    },
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "source_id",
+        "source_class",
+        "allowed_operations",
+        "supervised_model_training_authorized",
+        "model_validation_authorized",
+        "production_scoring_authorized",
+        "conditions"
+      ],
+      "properties": {
+        "source_id": { "$ref": "#/$defs/sourceId" },
+        "source_class": { "$ref": "#/$defs/slug" },
+        "allowed_operations": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "enum": [
+              "bathymetry-ingest",
+              "descriptive-context",
+              "observation-normalization",
+              "terrain-pretraining"
+            ]
+          }
+        },
+        "supervised_model_training_authorized": { "const": false },
+        "model_validation_authorized": { "const": false },
+        "production_scoring_authorized": { "const": false },
+        "conditions": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": { "$ref": "#/$defs/nonEmptyText" }
+        }
+      }
+    },
+    "blockedPlatform": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "platform_id",
+        "manifest_source_allowed",
+        "automated_collection_allowed",
+        "credential_collection_allowed",
+        "retrospective_content_import_allowed",
+        "social_identity_collection_allowed",
+        "model_use_allowed",
+        "allowed_interactions",
+        "required_before_policy_change",
+        "terms_urls",
+        "terms_reviewed_at"
+      ],
+      "properties": {
+        "platform_id": { "$ref": "#/$defs/slug" },
+        "manifest_source_allowed": { "const": false },
+        "automated_collection_allowed": { "const": false },
+        "credential_collection_allowed": { "const": false },
+        "retrospective_content_import_allowed": { "const": false },
+        "social_identity_collection_allowed": { "const": false },
+        "model_use_allowed": { "const": false },
+        "allowed_interactions": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": { "$ref": "#/$defs/slug" }
+        },
+        "required_before_policy_change": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": { "$ref": "#/$defs/nonEmptyText" }
+        },
+        "terms_urls": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": { "type": "string", "format": "uri", "pattern": "^https://" }
+        },
+        "terms_reviewed_at": { "type": "string", "format": "date" }
+      }
+    }
+  }
+}

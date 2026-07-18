@@ -40,6 +40,7 @@ test("machine contract assets declare the locked IDs and versions", async () => 
     "contracts/observation.schema.json",
     "contracts/model-run.schema.json",
     "contracts/model-governance.schema.json",
+    "contracts/source-admissibility.schema.json",
     "contracts/opportunity.schema.json",
   ].map(async (path) => JSON.parse(await readFile(new URL(path, root), "utf8"))));
   const [
@@ -48,6 +49,7 @@ test("machine contract assets declare the locked IDs and versions", async () => 
     observationSchema,
     modelRunSchema,
     modelGovernanceSchema,
+    sourceAdmissibilitySchema,
     opportunitySchema,
   ] = files;
   assert.equal(catalog.contract_version, "castingcompass.taxa/1.0.0");
@@ -55,6 +57,7 @@ test("machine contract assets declare the locked IDs and versions", async () => 
   assert.equal(observationSchema.$id, "castingcompass.observation/2.0.0");
   assert.equal(modelRunSchema.$id, "castingcompass.model-run/2.0.0");
   assert.equal(modelGovernanceSchema.$id, "castingcompass.model-governance/1.0.0");
+  assert.equal(sourceAdmissibilitySchema.$id, "castingcompass.source-admissibility/1.0.0");
   assert.equal(opportunitySchema.$id, "castingcompass.opportunity/2.0.0");
   assert.deepEqual(catalog.taxa.map((taxon) => taxon.taxon_id), [
     "california-halibut",
@@ -84,6 +87,7 @@ test("Ajv 2020 strictly compiles every schema and validates structural fixtures"
     "contracts/observation.schema.json",
     "contracts/model-run.schema.json",
     "contracts/model-governance.schema.json",
+    "contracts/source-admissibility.schema.json",
     "contracts/opportunity.schema.json",
   ];
   const [
@@ -91,14 +95,16 @@ test("Ajv 2020 strictly compiles every schema and validates structural fixtures"
     observationSchema,
     modelRunSchema,
     modelGovernanceSchema,
+    sourceAdmissibilitySchema,
     opportunitySchema,
   ] = await Promise.all(
     paths.map(async (path) => JSON.parse(await readFile(new URL(path, root), "utf8"))),
   );
-  const [catalog, corpus, modelGovernancePolicy] = await Promise.all([
+  const [catalog, corpus, modelGovernancePolicy, sourceAdmissibilityPolicy] = await Promise.all([
     JSON.parse(await readFile(new URL("contracts/taxa.json", root), "utf8")),
     JSON.parse(await readFile(new URL("contracts/fixtures/observation-contract-cases.json", root), "utf8")),
     JSON.parse(await readFile(new URL("model/governance/california-halibut-v1.json", root), "utf8")),
+    JSON.parse(await readFile(new URL("pipeline/source-admissibility-policy.json", root), "utf8")),
   ]);
 
   const ajv = new Ajv2020({ strict: true, allErrors: true });
@@ -107,6 +113,7 @@ test("Ajv 2020 strictly compiles every schema and validates structural fixtures"
   const validateObservation = ajv.compile(observationSchema);
   const validateModelRun = ajv.compile(modelRunSchema);
   const validateModelGovernance = ajv.compile(modelGovernanceSchema);
+  const validateSourceAdmissibility = ajv.compile(sourceAdmissibilitySchema);
   const validateOpportunity = ajv.compile(opportunitySchema);
 
   assert.equal(validateCatalog(catalog), true, JSON.stringify(validateCatalog.errors));
@@ -158,6 +165,17 @@ test("Ajv 2020 strictly compiles every schema and validates structural fixtures"
   const ambiguousGovernance = structuredClone(modelGovernancePolicy);
   ambiguousGovernance.unreviewed_escape_hatch = true;
   assert.equal(validateModelGovernance(ambiguousGovernance), false);
+  assert.equal(
+    validateSourceAdmissibility(sourceAdmissibilityPolicy),
+    true,
+    JSON.stringify(validateSourceAdmissibility.errors),
+  );
+  const weakenedSourcePolicy = structuredClone(sourceAdmissibilityPolicy);
+  weakenedSourcePolicy.blocked_platforms[1].automated_collection_allowed = true;
+  assert.equal(validateSourceAdmissibility(weakenedSourcePolicy), false);
+  const ambiguousSourcePolicy = structuredClone(sourceAdmissibilityPolicy);
+  ambiguousSourcePolicy.unreviewed_escape_hatch = true;
+  assert.equal(validateSourceAdmissibility(ambiguousSourcePolicy), false);
 
   const opportunityCommon = {
     id: "pier--20260716T1800Z",

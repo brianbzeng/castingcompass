@@ -468,6 +468,14 @@ after its acceptance checks pass in the intended environment.
   data without complete attempts, no-catch, effort, coverage, and sampling propensity is for
   discovery, weak supervision, or external trend corroboration only; the independent benchmark
   remains a source-separated prospective cohort.
+  - [x] Freeze a default-deny source-admissibility policy and strict schema, bind the complete
+    manifest inventory, reject unreviewed sources, gate each allowed operation, and explicitly
+    deny Fishbrain/Facebook automation, credentials, retrospective import, social identity, and
+    model use. Policy SHA-256:
+    `54b245191ad8da6dac820e189a6a21834ccca7699e0ced7bcc29c7bf430cf817`.
+  - [ ] Obtain any required written platform/license permissions, group-administrator approval,
+    direct participant opt-in, legal/privacy review, and source-quality evidence before a
+    separately protected policy change. No social data has been acquired.
 - [ ] Validate the California halibut relative ranking against frozen baselines before broader
   claims; publish uncertainty, limitations, negative results, and the current all-zero sample
   constraint. Attempt probability calibration only after a trained occurrence model has a

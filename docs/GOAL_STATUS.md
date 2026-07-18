@@ -9,6 +9,32 @@ its complete acceptance boundary passed. “Local complete” means the reposito
 but the parent stays open until its production, provider, legal, or independent-review gate is
 also satisfied.
 
+## Current seven-step work cycle — source admissibility
+
+- [x] Reconcile the exact protected `main` after the model-governance receipt cycle. Evidence:
+      `main` is `7a3ca95fe5449bc9b41dab9a0fe0a33ceaaaf237`; CI `29658714106`, release
+      provenance `29658714150`, and CodeQL `29658714078` passed; open PRs and all three alert
+      classes were empty; issue `#86` remains open by design.
+- [x] Inventory every current source manifest and synthetic fixture, then review the current
+      official Fishbrain and Meta terms without acquiring CDFW, social, private-group, profile,
+      credential, or user-account data.
+- [x] Freeze a strict source-admissibility JSON Schema and default-deny policy covering the exact
+      manifest inventory, allowed preprocessing operations, current all-false supervised-model
+      training, validation, and production-scoring roles, synthetic-test boundary, and
+      Fishbrain/Facebook prohibitions. Canonical policy SHA-256:
+      `54b245191ad8da6dac820e189a6a21834ccca7699e0ced7bcc29c7bf430cf817`.
+- [x] Enforce the policy in the source-manifest loader, official CDFW context verifier,
+      observation normalization, bathymetry ingestion, and terrain-pretraining entry points.
+      Unknown sources, extra manifests, wrong operations, retrospective social content,
+      credentials, automation, identity collection, and all current model roles fail closed.
+- [x] Add semantic and cross-language adversarial tests plus owner-facing Fishbrain/Facebook and
+      official-data guidance. Evidence: 81/81 executable pipeline tests pass with one documented
+      optional-raster skip; 5/5 cross-language contract tests pass; Ruff passes.
+- [ ] Pass the complete local repository/security/lock/SBOM suite, publish a protected draft PR,
+      and accept every required check on its exact head.
+- [ ] Merge only after every required check passes, then reconcile exact `main`, post-merge
+      workflows, PR/issue/alert state, and the unchanged Cloudflare/production hold.
+
 ## Completed seven-step work cycle — model governance
 
 - [x] Reconcile the exact protected `main` after the API-image renewal cycle. Evidence: `main` is
@@ -170,6 +196,9 @@ also satisfied.
       while a complete-effort RecFIN export and the prospective cohort remain open.
 - [ ] Treat Fishbrain only as an optional written-license partnership and Facebook groups only
       as admin-approved prospective recruitment—never scraped retrospective evidence.
+      **Local default-deny policy/schema/loader and operation gates complete;** written platform
+      permissions or license, administrator approval, direct participant opt-in, legal/privacy
+      review, and any separately protected policy change remain open. No social data was acquired.
 - [ ] Validate California halibut relative ranking against frozen baselines and publish
       uncertainty, limitations, negative results, and the current all-zero sample constraint.
 - [ ] Define model promotion, drift, rollback, monitoring, and revalidation gates. **Local

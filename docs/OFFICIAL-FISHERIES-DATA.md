@@ -9,6 +9,8 @@ No private-group, authenticated-social, credentialed, or user-account data belon
 workflow. Raw public snapshots are archived outside Git because their byte-binding receipts are
 enough for repository review and the official service can be reacquired. Never place a snapshot
 in a public release until its current license and redistribution terms have been reviewed.
+The exact admitted inventory and operation boundaries are enforced by
+`pipeline/source-admissibility-policy.json`; the loader rejects any unreviewed manifest.
 
 ## Accepted aggregate snapshots
 
@@ -111,4 +113,5 @@ source evidence; it is not legal advice or a substitute for counsel.
   cannot create point labels from blocks.
 - Begin the consented prospective first-party cohort under the still-closed validation gate.
 - Review training, validation, context, and redistribution permissions for each future source
-  before any model or public-product use.
+  before any model or public-product use, then land a protected policy change before manifest or
+  ingestion code.

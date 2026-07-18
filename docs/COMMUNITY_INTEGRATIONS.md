@@ -14,6 +14,14 @@ record a curated access zone, time, effort, fishing method, complete catch or
 no-catch outcome, and an optional verification photo. Reports remain pending
 review and are not automatically added to the Opportunity Score.
 
+The machine-readable policy at `pipeline/source-admissibility-policy.json`
+defaults to denial, binds the complete admitted manifest inventory, and keeps
+every current source disabled for supervised model training, validation, and
+production scoring. The manifest loader rejects an extra source, and
+operation-specific entry points separately gate normalization, bathymetry
+ingestion, descriptive context, and terrain pretraining. A source-policy change
+must land before new manifest or ingestion code.
+
 ## Google Maps
 
 Automated crawling of Google Maps or copying review text is not an acceptable
@@ -39,17 +47,37 @@ References:
 
 ## Fishbrain
 
-Fishbrain does not publish a supported third-party review API, OAuth flow,
-embed SDK, or "Sign in with Fishbrain" integration. A Fishbrain Pro
-subscription is a consumer license; it does not authorize automated access,
-republishing, credential proxying, or commercial crawling. CastingCompass must not
-collect Fishbrain passwords, cookies, or session tokens.
+The Fishbrain terms reviewed on 2026-07-18 describe personal, private use and
+bar robots, spiders, crawlers, scraping or data extraction, and third-party app
+access without written consent. A Fishbrain Pro subscription does not authorize
+automated access, republishing, credential proxying, or commercial crawling.
+CastingCompass must not collect Fishbrain passwords, cookies, or session tokens.
 
 Compliant options are limited to an outbound Fishbrain link, a user-provided
 plain URL on the user's own report without metadata scraping, or a written
 commercial partnership and licensed data feed from Fishbrain.
 
 Reference: [Fishbrain Terms of Service](https://fishbrain.com/policies/terms-of-service/latest)
+
+## Facebook Groups
+
+Facebook group posts, reactions, member lists, profiles, account identifiers,
+and social identities are not an ingestion source. The Meta terms reviewed on
+2026-07-18 require prior permission for automated collection; Meta's separate
+Automated Data Collection Terms require express written permission. Never ask
+for Facebook credentials or access tokens and never backfill group content as
+retrospective model or validation evidence.
+
+The narrow prospective path is an administrator-approved recruitment post that
+links out to CastingCompass. A participant must then opt in and submit a new
+first-party report directly to CastingCompass under its own privacy and deletion
+controls. Group administrator approval does not grant data rights, participant
+consent, or permission for automation.
+
+References:
+
+- [Meta Terms of Service](https://www.facebook.com/legal/terms)
+- [Meta Automated Data Collection Terms](https://www.facebook.com/legal/automated_data_collection_terms)
 
 ## First-party path now implemented
 

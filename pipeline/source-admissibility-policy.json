@@ -1,0 +1,183 @@
+{
+  "schema_version": "castingcompass.source-admissibility/1.0.0",
+  "policy_id": "castingcompass-source-admissibility-v1",
+  "policy_version": "1.0.0",
+  "default_decision": "deny",
+  "current_model_roles": {
+    "supervised_model_training_authorized": false,
+    "model_validation_authorized": false,
+    "production_scoring_authorized": false,
+    "reason": "no-current-source-has-separately-approved-confirmatory-model-evidence"
+  },
+  "manifest_sources": [
+    {
+      "source_id": "castingcompass-trip-log",
+      "source_class": "first-party-private",
+      "allowed_operations": ["observation-normalization"],
+      "supervised_model_training_authorized": false,
+      "model_validation_authorized": false,
+      "production_scoring_authorized": false,
+      "conditions": [
+        "Only minimized, consented, deletion-checked records admitted by a separately active frozen protocol may leave the private store.",
+        "Notes, photos, precise coordinates, account identifiers, reporter secrets, and social identity remain excluded."
+      ]
+    },
+    {
+      "source_id": "cdfw_crfs",
+      "source_class": "official-survey-export",
+      "allowed_operations": ["observation-normalization"],
+      "supervised_model_training_authorized": false,
+      "model_validation_authorized": false,
+      "production_scoring_authorized": false,
+      "conditions": [
+        "The exact official export, query, retrieval time, checksum, dictionary, sampling design, license, and intended use must be receipted before normalization.",
+        "Normalization is not authorization for model training, validation, or production scoring."
+      ]
+    },
+    {
+      "source_id": "cdfw_crfs_ds3185",
+      "source_class": "official-aggregate-context",
+      "allowed_operations": ["descriptive-context"],
+      "supervised_model_training_authorized": false,
+      "model_validation_authorized": false,
+      "production_scoring_authorized": false,
+      "conditions": [
+        "Only the exact receipted official aggregate snapshot may be used as descriptive block-and-period context.",
+        "The source cannot become a point label, complete attempt, species-specific target-effort denominator, model-training row, validation row, or production-scoring input."
+      ]
+    },
+    {
+      "source_id": "cdfw_crfs_ds3186",
+      "source_class": "official-aggregate-context",
+      "allowed_operations": ["descriptive-context"],
+      "supervised_model_training_authorized": false,
+      "model_validation_authorized": false,
+      "production_scoring_authorized": false,
+      "conditions": [
+        "Only the exact receipted official aggregate snapshot may be used as descriptive block-and-period context.",
+        "The source cannot become a point label, complete attempt, California-halibut target-effort denominator, model-training row, validation row, or production-scoring input."
+      ]
+    },
+    {
+      "source_id": "noaa_bluetopo",
+      "source_class": "official-bathymetry",
+      "allowed_operations": ["bathymetry-ingest", "terrain-pretraining"],
+      "supervised_model_training_authorized": false,
+      "model_validation_authorized": false,
+      "production_scoring_authorized": false,
+      "conditions": [
+        "The exact official asset, source metadata, checksum, CRS, datum, uncertainty or quality bands, license, and access date must be receipted before use.",
+        "Unlabeled terrain pretraining cannot measure or claim catch-prediction skill."
+      ]
+    },
+    {
+      "source_id": "noaa_ncei_cudem",
+      "source_class": "official-bathymetry",
+      "allowed_operations": ["bathymetry-ingest", "terrain-pretraining"],
+      "supervised_model_training_authorized": false,
+      "model_validation_authorized": false,
+      "production_scoring_authorized": false,
+      "conditions": [
+        "The exact official asset, source metadata, checksum, CRS, datum, license, and access date must be receipted before use.",
+        "Unlabeled terrain pretraining cannot measure or claim catch-prediction skill."
+      ]
+    },
+    {
+      "source_id": "psmfc_recfin",
+      "source_class": "official-survey-export",
+      "allowed_operations": ["observation-normalization"],
+      "supervised_model_training_authorized": false,
+      "model_validation_authorized": false,
+      "production_scoring_authorized": false,
+      "conditions": [
+        "The exact official export, query, retrieval time, checksum, dictionary, sampling design, license, and intended use must be receipted before normalization.",
+        "Normalization is not authorization for model training, validation, or production scoring."
+      ]
+    },
+    {
+      "source_id": "usgs_central_bay_multibeam",
+      "source_class": "official-bathymetry",
+      "allowed_operations": ["bathymetry-ingest", "terrain-pretraining"],
+      "supervised_model_training_authorized": false,
+      "model_validation_authorized": false,
+      "production_scoring_authorized": false,
+      "conditions": [
+        "The exact official asset, source metadata, checksum, CRS, datum, survey age, license, and access date must be receipted before use.",
+        "Unlabeled terrain pretraining cannot measure current depth or catch-prediction skill."
+      ]
+    },
+    {
+      "source_id": "usgs_sf_state_waters_2m",
+      "source_class": "official-bathymetry",
+      "allowed_operations": ["bathymetry-ingest", "terrain-pretraining"],
+      "supervised_model_training_authorized": false,
+      "model_validation_authorized": false,
+      "production_scoring_authorized": false,
+      "conditions": [
+        "The exact official asset, source metadata, checksum, CRS, datum, license, and access date must be receipted before use.",
+        "Unlabeled terrain pretraining cannot measure or claim catch-prediction skill."
+      ]
+    }
+  ],
+  "synthetic_sources": [
+    {
+      "source_id": "synthetic_fixture",
+      "source_class": "synthetic-test",
+      "allowed_operations": ["observation-normalization", "terrain-pretraining"],
+      "supervised_model_training_authorized": false,
+      "model_validation_authorized": false,
+      "production_scoring_authorized": false,
+      "conditions": [
+        "Synthetic data is limited to deterministic tests and smoke checks.",
+        "Synthetic rows and artifacts are never production evidence."
+      ]
+    }
+  ],
+  "blocked_platforms": [
+    {
+      "platform_id": "facebook-groups",
+      "manifest_source_allowed": false,
+      "automated_collection_allowed": false,
+      "credential_collection_allowed": false,
+      "retrospective_content_import_allowed": false,
+      "social_identity_collection_allowed": false,
+      "model_use_allowed": false,
+      "allowed_interactions": ["outbound-link", "admin-approved-prospective-recruitment"],
+      "required_before_policy_change": [
+        "Meta express written permission for any automated collection and use",
+        "group-administrator written approval for prospective recruitment",
+        "participant opt-in submitted directly to CastingCompass",
+        "documented license, privacy, deletion, security, sampling, and permitted-use review",
+        "a separately protected source-policy update before any manifest or ingestion code"
+      ],
+      "terms_urls": [
+        "https://www.facebook.com/legal/terms",
+        "https://www.facebook.com/legal/automated_data_collection_terms"
+      ],
+      "terms_reviewed_at": "2026-07-18"
+    },
+    {
+      "platform_id": "fishbrain",
+      "manifest_source_allowed": false,
+      "automated_collection_allowed": false,
+      "credential_collection_allowed": false,
+      "retrospective_content_import_allowed": false,
+      "social_identity_collection_allowed": false,
+      "model_use_allowed": false,
+      "allowed_interactions": [
+        "outbound-link",
+        "user-supplied-plain-url-without-fetch",
+        "written-license-partnership-review"
+      ],
+      "required_before_policy_change": [
+        "Fishbrain written commercial license and data-use terms",
+        "an approved supported feed or API with exact scopes",
+        "documented content rights, attribution, privacy, retention, deletion, and security review",
+        "documented attempt completeness, coverage, sampling propensity, and intended model role",
+        "a separately protected source-policy update before any manifest or ingestion code"
+      ],
+      "terms_urls": ["https://fishbrain.com/policies/terms-of-service/latest"],
+      "terms_reviewed_at": "2026-07-18"
+    }
+  ]
+}

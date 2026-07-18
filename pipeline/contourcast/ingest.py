@@ -12,7 +12,7 @@ import pandas as pd
 
 from .geo import GeoGrid, GridValidationError, verify_projected_crs
 from .metadata import sha256_file, utc_now, write_json
-from .sources import get_source_manifest
+from .sources import assert_source_operation, get_source_manifest
 
 from shared.species_contract import (
     JSON_SAFE_INTEGER_MAX,
@@ -144,6 +144,7 @@ def ingest_bathymetry(
 ) -> Mapping[str, Any]:
     """Convert an official GeoTIFF or canonical NPZ into a validated archive."""
 
+    assert_source_operation(source_id, "bathymetry-ingest")
     manifest = get_source_manifest(source_id)
     actual_sha256 = sha256_file(source_path)
     if expected_sha256 and expected_sha256.lower() != actual_sha256:
@@ -553,6 +554,7 @@ def ingest_observations(
     validate_contract_assets()
     if column_map_path is not None:
         raise ValueError("column maps are not accepted by observation contract v2")
+    assert_source_operation(source_id, "observation-normalization")
     if source_id == "synthetic_fixture":
         manifest: Mapping[str, Any] = {
             "title": "Synthetic pipeline fixture",
