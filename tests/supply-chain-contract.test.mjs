@@ -232,10 +232,14 @@ test("the supply-chain runbook scopes optional locks and keeps deployment proven
     /combined release (?:SBOM|inventory)[\s\S]+production npm graph[\s\S]+Python graphs[\s\S]+API-(?:image|container)\/Debian identities[\s\S]+Worker\/D1\/assets service contract/i,
   );
   assert.match(policy, /does not claim a package-level scan[\s\S]+do not identify deployed bytes/i);
-  assert.match(policy, /successful main-branch[\s\S]+attestation[\s\S]+before closing that sub-gate/i);
+  assert.match(policy, /Main-branch signing acceptance is recorded below[\s\S]+rather than deployed-version evidence/i);
   assert.match(
     policy,
     /PR `#77`[\s\S]+fa73c4dd4162b6834113f40a6f77be6907bdd202[\s\S]+29629689167[\s\S]+8425041514[\s\S]+e2d8b79a39a28c9ae97ba1c384e1f8eacffe95275ea6b7eaf79d3baee8f12ad0[\s\S]+35935237[\s\S]+35935240[\s\S]+29629689192[\s\S]+83454900[\s\S]+29629688765[\s\S]+zero open Dependabot,[\s\S]+code-scanning,[\s\S]+secret-scanning alerts[\s\S]+None of this proves a Cloudflare deployment/i,
+  );
+  assert.match(
+    policy,
+    /PR[\s\S]+`#79`[\s\S]+d98d947360df4845901ca95c921b9e10733f6aaa[\s\S]+29630783417[\s\S]+8425375002[\s\S]+5a106e016c15ae269a7dc1b28ebdb04f281e125dfb63456b03f20b2b43938805[\s\S]+35937141[\s\S]+35937144[\s\S]+2193447569[\s\S]+2193447815[\s\S]+29630783432[\s\S]+83457741[\s\S]+29630783254[\s\S]+zero open Dependabot,[\s\S]+code-scanning,[\s\S]+secret-scanning alerts[\s\S]+source-bound combined inventory[\s\S]+deployed Worker digest proof/i,
   );
   assert.match(policy, /stacked successor PRs[\s\S]+do not falsely report a dependency-review pass/i);
   assert.match(policy, /directory-local `services\/api\/\.python-version`[\s\S]+not a control over GitHub's[\s\S]+hosted resolver/i);

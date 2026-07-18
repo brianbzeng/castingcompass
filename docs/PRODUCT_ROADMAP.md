@@ -119,9 +119,8 @@ after its acceptance checks pass in the intended environment.
       action commits; remediate the known npm advisory tree to zero; add high/production-
       moderate audit gates, pull-request dependency review, a deterministic CycloneDX
       production SBOM bound to the package-lock hash, and an owner/deadline/update runbook.
-      Cross-version npm install-script enforcement, hosted acceptance of the combined
-      Python/OS/Worker inventory, Cloudflare deployed-digest evidence, key custody, and restore
-      drills remain open.
+      Cross-version npm install-script enforcement, Cloudflare deployed-digest evidence, key
+      custody, and restore drills remain open.
     - [x] Define source-bound, exact, SHA-256-hashed, binary-only optional Geo/PyTorch locks for
       CPython 3.12 on macOS 15+ ARM64/MPS and manylinux_2_28 x86-64/CPU; add scheduled hosted
       execution that checks platform/backend identity, exact package identity, GeoTIFF/CRS
@@ -142,10 +141,19 @@ after its acceptance checks pass in the intended environment.
       alerts. This completes GitHub release-candidate provenance only; the combined inventory,
       Cloudflare deployed-digest proof, unapproved platform locks, key custody, and restore drill
       remain open.
-    - [ ] Produce and independently verify the deterministic combined release SBOM that embeds
+    - [x] Produce and independently verify the deterministic combined release SBOM that embeds
       the production npm graph, exact hashed API/pipeline Python graphs, identity-level pinned API
       image/Debian runtime, and Worker/D1/assets contracts. Keep package-level Debian image
-      contents and Cloudflare deployed bytes outside the claim until separately evidenced.
+      contents and Cloudflare deployed bytes outside the claim until separately evidenced. PR
+      `#79` merged as `d98d947360df4845901ca95c921b9e10733f6aaa`; release-provenance run
+      `29630783417` signed the independently verified 124-file bundle digest
+      `5a106e016c15ae269a7dc1b28ebdb04f281e125dfb63456b03f20b2b43938805` and combined-SBOM
+      digest `bccfc8e094de5fe3783d8c834ae9782ef70c9354999956c562454588eae57d0a` as SLSA
+      attestation `35937141` and CycloneDX attestation `35937144`. Main CI `29630783432`, exact
+      dependency snapshot `83457741`, and CodeQL `29630783254` passed, followed by zero open
+      Dependabot, code-scanning, or secret-scanning alerts. This closes the source-bound combined
+      inventory only; package-level Debian scanning, deployed Worker proof, and license/advisory
+      reconciliation remain open.
     - [x] Enable live `main` protection with pull requests, strict app-bound GitHub Actions and
       Advanced Security `CodeQL` checks, resolved conversations, administrator enforcement, and
       force-push/deletion denial; enable Dependabot security updates, secret-scanning push
