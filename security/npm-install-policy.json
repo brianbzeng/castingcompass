@@ -1,0 +1,87 @@
+{
+  "schemaVersion": 1,
+  "reviewedAt": "2026-07-18",
+  "packageManager": {
+    "name": "npm",
+    "version": "10.9.8",
+    "nodeVersion": "22.23.1"
+  },
+  "installScripts": {
+    "default": "disabled",
+    "configuration": ".npmrc",
+    "reviewedScriptBearingPackages": [
+      {
+        "path": "node_modules/@esbuild-kit/core-utils/node_modules/esbuild",
+        "name": "esbuild",
+        "version": "0.25.12",
+        "integrity": "sha512-bbPBYYrtZbkt6Os6FiTLCTFxvq4tt3JKall1vRwshA3fdVztsLAatFaZobhkBC8/BrPetoa0oksYoKXoG4ryJg==",
+        "development": true,
+        "optional": false,
+        "execution": "disabled"
+      },
+      {
+        "path": "node_modules/drizzle-kit/node_modules/esbuild",
+        "name": "esbuild",
+        "version": "0.25.12",
+        "integrity": "sha512-bbPBYYrtZbkt6Os6FiTLCTFxvq4tt3JKall1vRwshA3fdVztsLAatFaZobhkBC8/BrPetoa0oksYoKXoG4ryJg==",
+        "development": true,
+        "optional": false,
+        "execution": "disabled"
+      },
+      {
+        "path": "node_modules/esbuild",
+        "name": "esbuild",
+        "version": "0.28.1",
+        "integrity": "sha512-HrJrvZv5ayxBzPfwphOoNzkzOIIlifzk0KJrGK2c8R4+LKpMtpYLQeUdjnwjWv/LZlkH2laZk+4w78pi99D4Vw==",
+        "development": true,
+        "optional": false,
+        "execution": "disabled"
+      },
+      {
+        "path": "node_modules/fsevents",
+        "name": "fsevents",
+        "version": "2.3.3",
+        "integrity": "sha512-5xoDfX+fL7faATnagmWPpbFtwh/R77WmMMqqHGS65C3vvB0YHrgF+B1YmZ3441tMj5n63k0212XNoJwzlhffQw==",
+        "development": true,
+        "optional": true,
+        "execution": "disabled"
+      },
+      {
+        "path": "node_modules/playwright/node_modules/fsevents",
+        "name": "fsevents",
+        "version": "2.3.2",
+        "integrity": "sha512-xiqMQR4xAeHTuB9uWm+fFRcIOgKBMiOBP+eXiyT7jsgVCq1bkVygt00oASowB7EdtpOHaaPgKt812P9ab+DDKA==",
+        "development": false,
+        "optional": true,
+        "execution": "disabled"
+      },
+      {
+        "path": "node_modules/sharp",
+        "name": "sharp",
+        "version": "0.34.5",
+        "integrity": "sha512-Ou9I5Ft9WNcCbXrU9cMgPBcCK8LiwLqcbywW3t4oDV37n1pzpuNLsYiAV8eODnjbtQlSDwZ2cUEeQz4E54Hltg==",
+        "development": false,
+        "optional": false,
+        "execution": "disabled"
+      },
+      {
+        "path": "node_modules/unrs-resolver",
+        "name": "unrs-resolver",
+        "version": "1.11.1",
+        "integrity": "sha512-bSjt9pjaEBnNiGgc9rUiHGKv5l4/TGzDmYw3RhnkJGtLhbnnA/5qJj7x3dNDCRx/PJxu774LlH8lCOlB4hEfKg==",
+        "development": true,
+        "optional": false,
+        "execution": "disabled"
+      },
+      {
+        "path": "node_modules/workerd",
+        "name": "workerd",
+        "version": "1.20260714.1",
+        "integrity": "sha512-oIbQzfdyl9UQUnG6XLegcSq0Mgt/7WKDbFOoqGgOWCS+/fhyGB460uKEgdAQQ9RHCO/ttcNCX/KiMIQzdoeu3Q==",
+        "development": true,
+        "optional": false,
+        "execution": "disabled"
+      }
+    ]
+  }
+}

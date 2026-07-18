@@ -15,11 +15,13 @@ if (!["--stdout", "--check", "--write"].includes(mode) || process.argv.length > 
 
 const inputPaths = [
   ".node-version",
+  ".npmrc",
   ".python-version",
   "package-lock.json",
   "package.json",
   "pipeline/requirements-ci.lock",
   "security/api-image-policy.json",
+  "security/npm-install-policy.json",
   "security/sbom.cdx.json",
   "services/api/.python-version",
   "services/api/Dockerfile",

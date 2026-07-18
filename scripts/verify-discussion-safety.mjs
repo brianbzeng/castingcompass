@@ -68,7 +68,7 @@ export async function verifySourceSafety(root = DEFAULT_ROOT) {
     requirePattern(integratedRunbook, /d1 time-travel info/, "pre-migration Time Travel bookmark is recorded"),
     requirePattern(integratedRunbook, /exactly one version[\s\S]*100%/i, "deployed Worker version must receive all traffic"),
     requirePattern(integratedRunbook, /Disable Cloudflare Git-connected automatic deployments/i, "automatic deployment is paused before rollout"),
-    requirePattern(integratedRunbook, /export RELEASE_COMMIT=FULL_40_CHARACTER_RELEASE_COMMIT[\s\S]*npm ci[\s\S]*verify:release-checkout/, "full release provenance precedes D1 work"),
+    requirePattern(integratedRunbook, /export RELEASE_COMMIT=FULL_40_CHARACTER_RELEASE_COMMIT[\s\S]*npm ci --ignore-scripts[\s\S]*verify:release-checkout/, "full release provenance precedes D1 work"),
     requirePattern(runbook, /real containment smoke test[\s\S]*total public-row count is unchanged/i, "synthetic AI containment is verified"),
     requirePattern(runbook, /expected-worker-version-id FULL_VERSION_ID/, "live checks bind the full release version"),
     requirePattern(wrangler, /"RELEASE_MAINTENANCE_MODE"\s*:\s*"false"/, "release maintenance defaults off"),

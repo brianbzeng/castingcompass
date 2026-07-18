@@ -16,6 +16,8 @@ test("direct npm packages and build runtimes are exact reviewed versions", async
     assert.equal(lock.packages[""][scope][name], version);
   }
   assert.equal(manifest.engines.node, ">=22.23.1 <23");
+  assert.equal(manifest.engines.npm, "10.9.8");
+  assert.equal(manifest.packageManager, "npm@10.9.8");
   assert.equal(await readFile(new URL(".node-version", root), "utf8"), "22.23.1\n");
   assert.equal(await readFile(new URL(".python-version", root), "utf8"), "3.12.13\n");
   assert.equal(await readFile(new URL("services/api/.python-version", root), "utf8"), "3.13.14\n");
@@ -73,6 +75,44 @@ test("direct npm packages and build runtimes are exact reviewed versions", async
   );
 });
 
+test("npm installs execute no dependency lifecycle scripts and fail on lock drift", async () => {
+  assert.equal(
+    await readFile(new URL(".npmrc", root), "utf8"),
+    "engine-strict=true\nignore-scripts=true\n",
+  );
+  const policy = JSON.parse(await readFile(
+    new URL("security/npm-install-policy.json", root),
+    "utf8",
+  ));
+  assert.equal(policy.packageManager.version, "10.9.8");
+  assert.equal(policy.packageManager.nodeVersion, "22.23.1");
+  assert.equal(policy.installScripts.default, "disabled");
+  assert.equal(policy.installScripts.reviewedScriptBearingPackages.length, 8);
+  assert.equal(
+    policy.installScripts.reviewedScriptBearingPackages.every(
+      (entry) => entry.execution === "disabled" && entry.integrity.startsWith("sha512-"),
+    ),
+    true,
+  );
+
+  const verifier = spawnSync(process.execPath, ["scripts/verify-npm-install-policy.mjs"], {
+    cwd: root,
+    encoding: "utf8",
+  });
+  assert.equal(verifier.status, 0, verifier.stderr);
+  assert.match(verifier.stdout, /npm 10\.9\.8 install policy verified \(8 reviewed hooks, 0 executed\)/);
+
+  const ci = await readFile(new URL(".github/workflows/ci.yml", root), "utf8");
+  const release = await readFile(new URL(".github/workflows/release-provenance.yml", root), "utf8");
+  for (const workflow of [ci, release]) {
+    assert.match(
+      workflow,
+      /node scripts\/verify-npm-install-policy\.mjs[\s\S]+npm ci --ignore-scripts/,
+    );
+    assert.doesNotMatch(workflow, /--ignore-scripts(?:=|\s+)false/);
+  }
+});
+
 test("CI fixes runner versions and enforces dependency review, audits, and SBOM verification", async () => {
   const ci = await readFile(new URL(".github/workflows/ci.yml", root), "utf8");
   const refresh = await readFile(new URL(".github/workflows/refresh-snapshot.yml", root), "utf8");
@@ -84,7 +124,7 @@ test("CI fixes runner versions and enforces dependency review, audits, and SBOM 
   assert.match(ci, /actions\/dependency-review-action@a1d282b36b6f3519aa1f3fc636f609c47dddb294/);
   assert.match(ci, /fail-on-severity:\s*high/);
   assert.match(ci, /github\.base_ref\s*==\s*github\.event\.repository\.default_branch/);
-  assert.match(ci, /npm run security:secrets[\s\S]+npm ci[\s\S]+npm run security:dependencies[\s\S]+npm run security:sbom[\s\S]+npm run security:release-sbom/);
+  assert.match(ci, /npm run security:secrets[\s\S]+verify-npm-install-policy[\s\S]+npm ci --ignore-scripts[\s\S]+npm run security:dependencies[\s\S]+npm run security:sbom[\s\S]+npm run security:release-sbom/);
   assert.equal((ci.match(/--only-binary=:all: --require-hashes/g) ?? []).length, 2);
   assert.match(ci, /services\/api\/requirements-test\.lock/);
   assert.match(ci, /pipeline\/requirements-ci\.lock/);
@@ -195,7 +235,7 @@ test("the deterministic production SBOM is bound to the lock and direct runtime 
   assert.equal(sbom.bomFormat, "CycloneDX");
   assert.equal(sbom.specVersion, "1.5");
   assert.match(sbom.serialNumber, /^urn:uuid:[0-9a-f]{8}-[0-9a-f]{4}-5[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/u);
-  assert.equal(sbom.serialNumber, "urn:uuid:876d04a5-e4ed-5ace-8f57-797233f2d455");
+  assert.equal(sbom.serialNumber, "urn:uuid:23790e89-7631-5ba2-bc20-25f4c6dd4e29");
   assert.equal("timestamp" in sbom.metadata, false);
   assert.equal(sbom.metadata.component.name, manifest.name);
   assert.deepEqual(sbom.metadata.properties, [{
@@ -223,7 +263,7 @@ test("the deterministic production SBOM is bound to the lock and direct runtime 
 
 test("the supply-chain runbook scopes optional locks and keeps deployment provenance open", async () => {
   const policy = await readFile(new URL("docs/SECURITY-SUPPLY-CHAIN.md", root), "utf8");
-  assert.match(policy, /does? \*\*not\*\* yet claim a cross-version enforced npm install-script/i);
+  assert.match(policy, /npm `10\.9\.8`[\s\S]+all eight exact[\s\S]+0 hooks executed/i);
   assert.match(policy, /exact lockfile package paths[\s\S]+lock-derived UUIDv5[\s\S]+development-only package/i);
   assert.match(policy, /FastAPI runtime\/test and pipeline CI[\s\S]+exact transitive versions[\s\S]+SHA-256/i);
   assert.match(policy, /approved optional Geo\/PyTorch environments[\s\S]+macOS 15\+ ARM64[\s\S]+manylinux_2_28 x86-64 CPU/i);

@@ -52,7 +52,7 @@ reviewed full-release worktree:
 
 ```sh
 export RELEASE_COMMIT=FULL_40_CHARACTER_RELEASE_COMMIT
-npm ci
+npm ci --ignore-scripts
 npm run verify:release-checkout
 npm test
 npm run lint

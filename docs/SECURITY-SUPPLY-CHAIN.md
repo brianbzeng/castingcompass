@@ -19,7 +19,7 @@ path so security fixes are not frozen out.
 | GitHub Python dependency graph | A main-only job waits for the tested API/pipeline locks, then submits exact versioned PyPI package URLs for all three exercised graphs; user submissions take precedence over incomplete managed/static parses | GitHub owns storage, precedence, and alert refresh; verify the accepted snapshot and alert state after each relevant merge rather than treating a successful upload as the final receipt |
 | Worker runtime contract | `wrangler.jsonc` fixes `compatibility_date` and the reviewed compatibility flags | Cloudflare implements the runtime; a date pin needs deliberate compatibility review and periodic advancement |
 | Direct npm packages | Every direct production and development dependency uses an exact version in `package.json` | A package version can still be malicious or vulnerable; review source/provenance, advisories, licenses, and install scripts |
-| Transitive npm tree | `package-lock.json` records exact versions, registry locations, and integrity hashes; CI and release use `npm ci` | Registry availability and npm/client behavior remain external; the hosted runner itself is not bit-for-bit pinned |
+| Transitive npm tree | `package-lock.json` records exact versions, registry locations, and integrity hashes; npm `10.9.8` is selected with an exact engine gate, `.npmrc` disables lifecycle scripts, CI/release also pass `--ignore-scripts`, and the exact eight script-bearing lock paths are reviewed in a fail-closed policy | Registry availability, npm implementation integrity, and preinstalled optional native binaries remain external; the hosted runner itself is not bit-for-bit pinned |
 | Known npm advisories | Compatible Babel and YAML fixes are forced; the deprecated Drizzle loader's vulnerable esbuild is overridden to tested `0.25.12`; the resulting complete npm tree currently audits clean | Replace the deprecated `@esbuild-kit` loader path when Drizzle removes it; do not leave the override indefinitely without tests |
 | GitHub Actions | Every `uses:` reference is a full immutable commit SHA; runner labels are fixed to `ubuntu-24.04` and `macos-15` rather than mutable `-latest` aliases | GitHub updates the images behind those labels; a release still records the workflow run and source commit |
 | Default-branch integrity | Live `main` protection requires pull requests, strict successful `api`, `pipeline`, `web`, and `dependency-review` checks from the GitHub Actions app plus the `CodeQL` result from the GitHub Advanced Security app, resolved review conversations, and applies to the owner; force-pushes and branch deletion are disabled | This is provider-side configuration rather than source code; verify it again for the exact release and preserve a separate emergency-access procedure |
@@ -40,7 +40,8 @@ compatibility is reviewed. Do not let that bounded split turn into an indefinite
 The web job deliberately orders its gates as follows:
 
 1. scan the checked-out repository for committed credentials before running dependency code;
-2. install only the committed npm tree with `npm ci`;
+2. verify the exact npm/install-script policy, then install only the committed npm tree with
+   `npm ci --ignore-scripts` so dependency lifecycle code is never executed;
 3. reject high/critical advisories anywhere in the npm tree and moderate-or-higher advisories
    in the production tree;
 4. regenerate the production CycloneDX document in memory and require an exact match with the
@@ -79,7 +80,7 @@ and re-verifies the provider-side settings.
 
 ## Deterministic SBOM workflow
 
-Run the generator only after `npm ci`:
+Run the generator only after `npm ci --ignore-scripts`:
 
 ```sh
 npm run security:sbom:write
@@ -296,7 +297,7 @@ Dependabot proposes npm, Python, and GitHub Action updates weekly. For every upd
    advisory/CVE, integrity/provenance evidence, license, maintainers, and newly added install
    scripts. A familiar name or green bot label is not approval.
 2. For npm, change the direct pin/override deliberately, regenerate `package-lock.json` with
-   the reviewed npm toolchain, run `npm ci`, regenerate the SBOM, and inspect unexpected
+   the reviewed npm toolchain, run `npm ci --ignore-scripts`, regenerate the SBOM, and inspect unexpected
    transitive additions/removals. Do not run an unreviewed blanket force-fix.
 3. For Python, update the direct source or constraint deliberately, regenerate with the exact
    checked generator, inspect every resolved version/hash/marker, install into fresh environments
@@ -330,13 +331,16 @@ demands it:
 
 ## Install-script boundary
 
-The current npm tree contains install hooks for esbuild binaries, optional `fsevents`, Sharp,
-`unrs-resolver`, and the local Cloudflare `workerd` runtime. Those hooks execute third-party
-code during installation. The repository currently relies on exact lock integrity, review,
-and clean ephemeral CI; it does **not** yet claim a cross-version enforced npm install-script
-allowlist. Before enabling strict allowlisting, pin one npm CLI version across local, CI, and
-Cloudflare builds, approve only exact reviewed package versions, prove the required native
-binaries still install on Linux and macOS, and fail on every newly introduced hook.
+The current npm tree declares install hooks for esbuild binaries, optional `fsevents`, Sharp,
+`unrs-resolver`, and the local Cloudflare `workerd` runtime. CastingCompass pins npm `10.9.8`,
+sets `engine-strict=true` and `ignore-scripts=true`, passes `--ignore-scripts` explicitly in CI
+and release jobs, and binds all eight exact script-bearing lock paths, versions, integrity
+digests, development/optional flags, and a `disabled` disposition in
+`security/npm-install-policy.json`. The pre-install verifier rejects npm/Node drift, root
+install lifecycle hooks, workflow overrides, a newly introduced hook, or stale policy. A fresh
+macOS ARM64 install with hooks disabled completed the Cloudflare build; hosted Linux CI must
+repeat the same proof before merge. This is a no-execution boundary (0 hooks executed), not a
+claim that optional native binaries or npm itself are trustworthy or sandboxed.
 
 Python CI and the API image reject source distributions, preventing package build backends and
 arbitrary source-build hooks from running during those installs. Wheels can still contain

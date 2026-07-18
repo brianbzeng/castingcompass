@@ -120,9 +120,10 @@ that could become a privacy, integrity, or availability incident.
   transitive changes.
 - **Owner:** Dependency/release owner.
 - **State:** provider-evidenced.
-- **Evidence:** Exact npm and hash-locked Python graphs, immutable Actions, dependency review,
-  Dependabot, deterministic CycloneDX release inventory, signed provenance, and native AMD64/
-  ARM64 API-image SBOM/Grype/license gates documented in the
+- **Evidence:** Exact npm and hash-locked Python graphs, a pinned npm CLI with zero dependency
+  lifecycle scripts executed, immutable Actions, dependency review, Dependabot, deterministic
+  CycloneDX release inventory, signed provenance, and native AMD64/ARM64 API-image SBOM/Grype/
+  license gates documented in the
   [supply-chain policy](SECURITY-SUPPLY-CHAIN.md).
 - **Alert:** Dependency review, npm audit, Python lock verification, Dependabot, image policy,
   SBOM drift, provenance verification, or release-checkout failure.

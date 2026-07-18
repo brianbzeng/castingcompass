@@ -29,7 +29,8 @@ jobs:
           node-version: 22.23.1
           cache: npm
       - run: npm run security:secrets
-      - run: npm ci
+      - run: node scripts/verify-npm-install-policy.mjs
+      - run: npm ci --ignore-scripts
       - run: npm run security:dependencies
       - run: npm run security:sbom
       - run: npm run security:release-sbom

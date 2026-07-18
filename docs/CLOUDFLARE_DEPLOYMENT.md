@@ -47,7 +47,7 @@ deployment identity separately.
 
 ```bash
 export RELEASE_COMMIT=REVIEWED_COMMIT
-npm ci
+npm ci --ignore-scripts
 npm run release:cloudflare
 ./node_modules/.bin/wrangler deployments status --config wrangler.jsonc --json
 ```
