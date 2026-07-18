@@ -3,6 +3,7 @@ import { readFile } from "node:fs/promises";
 import test from "node:test";
 
 import {
+  isExactVersion,
   sourceImportsMitigatedModule,
   verifyApiImageEvidence,
 } from "../scripts/verify-api-image-evidence.mjs";
@@ -104,6 +105,13 @@ test("module mitigation guard rejects direct and parent imports", () => {
   assert.equal(sourceImportsMitigatedModule("from html import parser\n", "html.parser"), true);
   assert.equal(sourceImportsMitigatedModule("from html import escape, parser\n", "html.parser"), true);
   assert.equal(sourceImportsMitigatedModule("from html import escape\n", "html.parser"), false);
+});
+
+test("exact version validation rejects ranges and long hostile suffixes", () => {
+  assert.equal(isExactVersion("3.13.14"), true);
+  assert.equal(isExactVersion("1.42.3-rc.1"), true);
+  assert.equal(isExactVersion(">=3.13.14"), false);
+  assert.equal(isExactVersion(`9.9.9+${"--".repeat(20_000)}!`), false);
 });
 
 test("API image evidence binds packages, licenses, mitigations and reviewed findings", async () => {

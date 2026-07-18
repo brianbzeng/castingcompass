@@ -6,7 +6,7 @@ import { fileURLToPath } from "node:url";
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const EXACT_DIGEST = /^sha256:[a-f0-9]{64}$/u;
-const EXACT_VERSION = /^\d+\.\d+\.\d+(?:[-+._][0-9A-Za-z.-]+)*$/u;
+const EXACT_VERSION = /^\d+\.\d+\.\d+(?:[-+._][0-9A-Za-z.-]+)?$/u;
 const EXACT_APK_VERSION = /^\d[0-9A-Za-z._+~-]*$/u;
 const SEVERITY = new Map([
   ["Unknown", 0],
@@ -19,6 +19,10 @@ const SEVERITY = new Map([
 
 function invariant(condition, message) {
   if (!condition) throw new Error(message);
+}
+
+export function isExactVersion(value) {
+  return EXACT_VERSION.test(value);
 }
 
 function normalizeName(value) {
@@ -113,11 +117,11 @@ function assertModuleMitigations(root, policy, dockerfile) {
 function assertPolicy(policy, now) {
   invariant(policy.schemaVersion === 1, "API image policy schema is unsupported");
   invariant(/^\d{4}-\d{2}-\d{2}$/u.test(policy.reviewedAt), "Policy review date is invalid");
-  invariant(EXACT_VERSION.test(policy.runtime.python), "Policy Python version is not exact");
+  invariant(isExactVersion(policy.runtime.python), "Policy Python version is not exact");
   invariant(EXACT_DIGEST.test(policy.baseImage.indexDigest), "Base image index digest is invalid");
   invariant(/^[a-f0-9]{40}$/u.test(policy.baseImage.sourceRevision), "Base image source revision is invalid");
-  invariant(EXACT_VERSION.test(policy.scanners.syft), "Syft version is not exact");
-  invariant(EXACT_VERSION.test(policy.scanners.grype), "Grype version is not exact");
+  invariant(isExactVersion(policy.scanners.syft), "Syft version is not exact");
+  invariant(isExactVersion(policy.scanners.grype), "Grype version is not exact");
   invariant(policy.scanners.maximumDatabaseAgeDays >= 1, "Grype database age policy is invalid");
   invariant(new Set(policy.allowedLicenseExpressions).size === policy.allowedLicenseExpressions.length,
     "Allowed license expressions contain duplicates");
