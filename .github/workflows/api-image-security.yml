@@ -48,7 +48,8 @@ jobs:
             architecture: arm64
     runs-on: ${{ matrix.runner }}
     env:
-      IMAGE_NAME: castingcompass-api:${{ github.sha }}-${{ matrix.architecture }}
+      SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+      IMAGE_NAME: castingcompass-api:${{ github.event.pull_request.head.sha || github.sha }}-${{ matrix.architecture }}
       SBOM_FILE: api-image-${{ matrix.architecture }}.cdx.json
       SCAN_FILE: api-image-${{ matrix.architecture }}.grype.json
       SUMMARY_FILE: api-image-${{ matrix.architecture }}.summary.json
@@ -56,6 +57,7 @@ jobs:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           persist-credentials: false
+          ref: ${{ env.SOURCE_SHA }}
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: 22.23.1
@@ -117,12 +119,13 @@ jobs:
           --sbom "$SBOM_FILE"
           --scan "$SCAN_FILE"
           --platform "${{ matrix.platform }}"
+          --source-commit "$SOURCE_SHA"
           --output "$SUMMARY_FILE"
       - name: Preserve raw and normalized evidence
         if: always() && steps.policy.outcome != 'skipped'
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: api-image-security-${{ matrix.architecture }}-${{ github.sha }}
+          name: api-image-security-${{ matrix.architecture }}-${{ env.SOURCE_SHA }}
           path: |
             ${{ env.SBOM_FILE }}
             ${{ env.SCAN_FILE }}

@@ -58,6 +58,7 @@ async function acceptedEvidence(platform = "linux/arm64") {
     },
   }));
   return {
+    sourceCommit: "a".repeat(40),
     sbom: {
       bomFormat: "CycloneDX",
       specVersion: "1.6",
@@ -90,6 +91,10 @@ test("native image workflow pins scanners and fails closed on full findings", as
   const workflow = await readFile(new URL(".github/workflows/api-image-security.yml", root), "utf8");
   assert.match(workflow, /runner: ubuntu-24\.04\n\s+platform: linux\/amd64/);
   assert.match(workflow, /runner: ubuntu-24\.04-arm\n\s+platform: linux\/arm64/);
+  assert.match(workflow, /SOURCE_SHA: \$\{\{ github\.event\.pull_request\.head\.sha \|\| github\.sha \}\}/);
+  assert.match(workflow, /ref: \$\{\{ env\.SOURCE_SHA \}\}/);
+  assert.match(workflow, /--source-commit "\$SOURCE_SHA"/);
+  assert.match(workflow, /name: api-image-security-\$\{\{ matrix\.architecture \}\}-\$\{\{ env\.SOURCE_SHA \}\}/);
   assert.match(workflow, /anchore\/sbom-action@e22c389904149dbc22b58101806040fa8d37a610/);
   assert.match(workflow, /anchore\/scan-action@e1165082ffb1fe366ebaf02d8526e7c4989ea9d2/);
   assert.match(workflow, /syft-version: v1\.42\.3/);
@@ -123,6 +128,7 @@ test("API image evidence binds packages, licenses, mitigations and reviewed find
     now: new Date("2026-07-18T12:00:00Z"),
   });
   assert.equal(summary.inventory.apkPackages, 29);
+  assert.equal(summary.sourceCommit, "a".repeat(40));
   assert.equal(summary.inventory.pythonPackages, 22);
   assert.deepEqual(summary.vulnerabilities.severityCounts, {
     Unknown: 0,

@@ -307,8 +307,17 @@ function assertScan(policy, scan, platform, now, expectedExceptionKeys) {
   };
 }
 
-export function verifyApiImageEvidence({ sbom, scan, policy, platform, now = new Date(), root = ROOT }) {
+export function verifyApiImageEvidence({
+  sbom,
+  scan,
+  policy,
+  platform,
+  sourceCommit,
+  now = new Date(),
+  root = ROOT,
+}) {
   invariant(policy.baseImage.platforms[platform], `Platform ${platform} is not policy-bound`);
+  invariant(/^[a-f0-9]{40}$/u.test(sourceCommit), "API image evidence source commit is invalid");
   const exceptionKeys = assertPolicy(policy, now);
   const imageReference = assertContainerContract(root, policy);
   const inventory = assertSbom(root, policy, sbom, platform);
@@ -316,6 +325,7 @@ export function verifyApiImageEvidence({ sbom, scan, policy, platform, now = new
   return {
     schemaVersion: 1,
     platform,
+    sourceCommit,
     imageReference,
     platformManifestDigest: policy.baseImage.platforms[platform].manifestDigest,
     operatingSystemBaseDigest: policy.baseImage.platforms[platform].operatingSystemBaseDigest,
@@ -332,11 +342,11 @@ function cliArguments(values) {
   for (let index = 0; index < values.length; index += 2) {
     const name = values[index];
     const value = values[index + 1];
-    invariant(/^--(?:policy|sbom|scan|platform|output)$/u.test(name ?? "") && value,
-      "Usage: verify-api-image-evidence.mjs --policy FILE --sbom FILE --scan FILE --platform OS/ARCH --output FILE");
+    invariant(/^--(?:policy|sbom|scan|platform|source-commit|output)$/u.test(name ?? "") && value,
+      "Usage: verify-api-image-evidence.mjs --policy FILE --sbom FILE --scan FILE --platform OS/ARCH --source-commit SHA --output FILE");
     parsed[name.slice(2)] = value;
   }
-  for (const name of ["policy", "sbom", "scan", "platform", "output"]) {
+  for (const name of ["policy", "sbom", "scan", "platform", "source-commit", "output"]) {
     invariant(parsed[name], `Missing --${name}`);
   }
   return parsed;
@@ -349,6 +359,7 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
     sbom: JSON.parse(readFileSync(resolve(paths.sbom), "utf8")),
     scan: JSON.parse(readFileSync(resolve(paths.scan), "utf8")),
     platform: paths.platform,
+    sourceCommit: paths["source-commit"],
   });
   writeFileSync(resolve(paths.output), `${JSON.stringify(result, null, 2)}\n`, { mode: 0o600 });
   process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);
