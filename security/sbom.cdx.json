@@ -31,7 +31,7 @@
     "properties": [
       {
         "name": "castingcompass:package-lock-sha256",
-        "value": "682ee49d7b74e2b5fcba7bedb22f8186cffe61f26cc9a79b7fc1254ed0fda6fe"
+        "value": "0fd7151b23190038524c0fbfe5c2d58b12d41db65949ceed4bdb3e1d6b2591f3"
       }
     ]
   },
@@ -61,6 +61,36 @@
           "content": "be08fb477cb75a0c76e0841a18f03f47a6055cb1d530e674b951322103da5acfab7750337c43179400b6d856303b55e4291e8d3ecabb9946a7747f2821175917"
         }
       ],
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ]
+    },
+    {
+      "bom-ref": "@emnapi/runtime@1.11.1",
+      "type": "library",
+      "name": "@emnapi/runtime",
+      "version": "1.11.1",
+      "scope": "optional",
+      "purl": "pkg:npm/%40emnapi/runtime@1.11.1",
+      "properties": [
+        {
+          "name": "cdx:npm:package:bundled",
+          "value": "true"
+        },
+        {
+          "name": "cdx:npm:package:development",
+          "value": "true"
+        },
+        {
+          "name": "cdx:npm:package:path",
+          "value": "node_modules/@tailwindcss/oxide-wasm32-wasi/node_modules/@emnapi/runtime"
+        }
+      ],
+      "externalReferences": [],
       "licenses": [
         {
           "license": {
@@ -2871,6 +2901,12 @@
     }
   ],
   "dependencies": [
+    {
+      "ref": "@emnapi/runtime@1.11.1",
+      "dependsOn": [
+        "tslib@2.8.1"
+      ]
+    },
     {
       "ref": "@emnapi/runtime@1.11.1",
       "dependsOn": [
