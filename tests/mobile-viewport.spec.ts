@@ -741,7 +741,7 @@ test.describe("gear mutation recovery", () => {
       if (route.request().method() === "GET") {
         return route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ gearProfiles: [] }) });
       }
-      await new Promise((resolve) => setTimeout(resolve, 6_000));
+      await new Promise((resolve) => setTimeout(resolve, 8_000));
       return route.fulfill({
         status: 201,
         contentType: "application/json",
@@ -752,7 +752,8 @@ test.describe("gear mutation recovery", () => {
     const { gear } = await prepareGearMutation(page);
     await gear.getByRole("button", { name: "Save gear preset" }).click();
     const status = gear.getByRole("status");
-    await expect(status).toContainText("new gear preset has not been confirmed yet", { timeout: 5_500 });
+    await expect(status).toContainText("No new preset is confirmed yet");
+    await expect(status).toContainText("new gear preset has not been confirmed yet", { timeout: 7_500 });
     await expect(status.locator("i")).toBeVisible();
     await expect(gear.getByRole("button", { name: "Saving…" })).toBeDisabled();
     await expect(gear.getByLabel("Preset name")).toHaveValue("", { timeout: 8_000 });

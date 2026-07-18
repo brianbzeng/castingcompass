@@ -140,6 +140,34 @@ The evidence file contains aggregate counts and checksums only. A named second r
 verify the source manifests, key-custody record, retention deadline, empty work directory,
 aggregate evidence, and audit head before the operational restore drill is accepted.
 
+### Reproduce the synthetic non-production acceptance drill
+
+The repository also provides a production-shaped synthetic fixture for an offline technical
+acceptance drill. It creates a restored account, trip, public discussion, validation rows, and
+both pending and completed object-deletion tasks; seals the snapshot and a newer current
+privacy ledger with separate ephemeral keys; proves tampered-artifact and wrong-key rejection;
+replays deletion suppression; checks SQLite integrity and foreign keys; then destroys every
+plaintext source, key, encrypted fixture artifact, and restored database. Only three private,
+aggregate-only files remain: restore evidence, the hash-chained audit log, and an acceptance
+record. The runner refuses a dirty checkout or a `HEAD` that differs from `--source-commit`.
+
+Run it from an exact committed checkout into a new output directory outside the repository:
+
+```sh
+umask 077
+npm run drill:restore:offline -- \
+  --output-directory "$HOME/.local/share/castingcompass/release-evidence/UTC-restore-drill" \
+  --source-commit "$(git rev-parse HEAD)"
+```
+
+The acceptance record deliberately keeps `production_data_used`,
+`production_provider_accessed`, `production_key_custody_approved`,
+`second_person_reviewed`, and `production_restore_gate_passed` false. This drill proves the
+repository-controlled offline mechanism only. It does not restore the real encrypted
+pre-release backup, replace a current production deletion-ledger export, approve key custody,
+or satisfy the separate 730-day validation-snapshot governance gate. A reviewer must verify
+the exact source commit and file hashes before accepting even this non-production receipt.
+
 ## Exercise the 730-day validation-only technical candidate
 
 Do not run this workflow against production until migration `0015` is applied and the data
@@ -206,13 +234,18 @@ Successful local evidence sets `technical_validation_snapshot_restore_passed: tr
 configuration, and witnessed production-shaped acceptance drill are complete. Never publish
 the encrypted artifacts, manifests, audit log, or raw validation rows.
 
-## Still required outside the repository
+## Acceptance status and work still required outside the repository
 
 - approve production key generation, custody, rotation, recovery, and destruction;
 - create the actual encrypted production artifacts and test their retention deletion;
 - record the D1 Time Travel window and keep it shorter than the current tombstone window;
-- exercise the drill against a production-shaped non-production target with deleted account,
-  trip, discussion, completed object task, and unresolved object task fixtures;
+- [x] Exercise the repository-controlled drill against a production-shaped synthetic non-
+  production target with deleted account, trip, discussion, completed object task, and
+  unresolved object task fixtures. Clean source commit
+  `0542074ce681c2fbecbe6ea93ffc443c276b6a7a`; private packet time
+  `2026-07-18T06:24:47.211Z`; restore-evidence SHA-256
+  `585a156ecbec933c6cdb485340bd04f802be4781d8a0e2bd6a54668c59c309d8`; audit head
+  `ff60f51a34be01d73dfc2a8182d174d4386e6bf03ede2ad71fdf0365d7f5b96c`.
 - obtain the required second-person review;
 - approve the 730-day validation-only snapshot/suppression policy and production controls;
 - create and retention-test actual 730-day validation artifacts with separately custodied keys;
