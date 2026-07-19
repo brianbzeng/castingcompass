@@ -249,6 +249,10 @@ prove that the object is either attached to a live trip or durably queued for cl
 
 ## Production evidence checklist
 
+- [ ] A fresh redacted provider-state audit confirms exactly one version has `100%` traffic,
+      maintenance/config parity is understood, and no provider mutation occurred. Exact
+      deployment, version, and reviewed-commit binding is recorded privately; provider metadata
+      alone is not accepted as source provenance.
 - [ ] Release came from a clean worktree at the reviewed immutable commit.
 - [ ] Deployment ID and Worker version ID were recorded; exactly one version has `100%` traffic.
 - [ ] Production migration preflight, Time Travel bookmark, migration, and postflight passed.
