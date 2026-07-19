@@ -9,6 +9,44 @@ its complete acceptance boundary passed. “Local complete” means the reposito
 but the parent stays open until its production, provider, legal, or independent-review gate is
 also satisfied.
 
+Current provider truth overrides historical “paused” language in completed receipts below. The
+2026-07-19 read-only reconciliation found an active Worker; no production mutation is authorized
+by that discovery.
+
+## Active seven-step work cycle — Cloudflare provider-state hold
+
+- [x] Reconcile exact protected `main` and the provider state without mutation. Starting `main`
+      is `c9bc1d839bbd8783fc77afba9af6f0f5054d8a45`; read-only Wrangler and dashboard evidence found
+      one active version at all traffic, five domains, one cron trigger, maintenance mode off,
+      and recent invocations.
+- [x] Freeze the no-mutation, redaction, and hold contract. A disconnected Git build integration
+      is not a paused Worker; public evidence cannot contain provider, account, author, database,
+      namespace, etag, secret, or token identifiers; source binding and live-host verification
+      remain private external gates.
+- [x] Add the locked offline policy verifier and the separately confirmed live analyzer. It can
+      execute only the exact deployment-status and active-version read commands, uses no shell,
+      bounds and validates JSON, and cannot deploy, change traffic/routes/domains/secrets, or
+      mutate D1.
+- [x] Add adversarial coverage for weakened policy, missing confirmation, command widening,
+      malformed and oversized output, split traffic, ambiguous identities, duplicate bindings,
+      current drift, and receipt redaction. CI and release provenance run only the offline gate.
+- [x] Complete local verification and capture the current fail-closed redacted audit receipt.
+      At `2026-07-19T15:26:01.050Z` the read-only audit confirmed single-version traffic and
+      compatibility parity, then correctly refused the hold/release claim because maintenance is
+      off, two variables and six rate-limit bindings are missing, live-host proof is absent, and
+      the reviewed commit is unbound. No private provider identifier or mutation entered the
+      receipt. Evidence: exact Node 22.23.1/npm 10.9.8 Cloudflare build and 382/382 Node tests;
+      140/140 Chromium/WebKit mobile, offline, recovery, 404, and safe-area cases; ESLint;
+      TypeScript; the integrated security/SBOM gate and both npm audits with zero vulnerabilities;
+      29/29 API tests on the locally available Python 3.13.12 compatible runtime; 18 migrations,
+      14 critical query plans, and every foreign-key child path indexed; Ruff; 81/81 pipeline
+      tests with one documented optional-raster skip; and deterministic smoke. Exact Python
+      3.13.14 execution remains a hosted-CI gate because that local Homebrew interpreter is
+      damaged, not because of a repository failure.
+- [ ] Publish the exact clean head through a protected draft PR and accept all hosted checks
+      without weakening the policy or test boundary.
+- [ ] Merge only the accepted head and add the immutable protected-`main` reconciliation receipt.
+
 ## Completed seven-step work cycle — deterministic mobile map readiness
 
 - [x] Reconcile exact protected `main` and freeze the acceptance boundary. Starting `main` is
@@ -531,9 +569,9 @@ also satisfied.
 
 ## Do not do yet
 
-- Do not resume Cloudflare, reconnect Git deployments, change production DNS, deploy,
-      migrate D1, provision production secrets, enable Turnstile, or submit the sitemap until the
-      guarded release checklist reaches those steps.
+- Do not reconnect Git deployments, change production DNS, deploy, change Worker traffic,
+      routes, domains, triggers, or variables, migrate D1, provision production secrets, enable
+      Turnstile, or submit the sitemap until the guarded release checklist reaches those steps.
 - Do not enable photos, public discussions, AI auto-publication, the validation pilot, or
       PostHog/session replay.
 - Do not run load, stress, vulnerability scanning, or penetration testing against

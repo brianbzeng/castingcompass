@@ -1,0 +1,76 @@
+{
+  "schema_version": "castingcompass.cloudflare-provider-state-policy/1.0.0",
+  "policy_id": "castingcompass-cloudflare-provider-state-v1",
+  "worker": {
+    "name": "contourcast-halibut",
+    "config_path": "wrangler.jsonc",
+    "wrangler_version": "4.112.0"
+  },
+  "production_hold": {
+    "required": true,
+    "variable_name": "RELEASE_MAINTENANCE_MODE",
+    "candidate_default_value": "false",
+    "expected_deployed_value": "true",
+    "live_host_verification_required": true
+  },
+  "source_binding": {
+    "required": true,
+    "provider_metadata_is_sufficient": false,
+    "private_exact_identity_evidence_required": true
+  },
+  "commands": {
+    "deployment_status": [
+      "deployments",
+      "status",
+      "--name",
+      "{worker}",
+      "--config",
+      "wrangler.jsonc",
+      "--json"
+    ],
+    "version_view": [
+      "versions",
+      "view",
+      "{version}",
+      "--name",
+      "{worker}",
+      "--config",
+      "wrangler.jsonc",
+      "--json"
+    ]
+  },
+  "limits": {
+    "maximum_output_bytes": 1048576,
+    "maximum_versions": 32,
+    "maximum_bindings": 128
+  },
+  "public_receipt": {
+    "schema_version": "castingcompass.cloudflare-provider-state-receipt/1.0.0",
+    "allowed_top_level_fields": [
+      "schema_version",
+      "observed_at",
+      "worker",
+      "read_only",
+      "provider_mutation_performed",
+      "traffic",
+      "maintenance",
+      "configuration",
+      "source_identity",
+      "production_hold_proven",
+      "release_ready",
+      "blockers"
+    ],
+    "forbidden_identifier_keys": [
+      "account_id",
+      "author_email",
+      "author_id",
+      "database_id",
+      "deployment_id",
+      "etag",
+      "namespace_id",
+      "secret",
+      "token",
+      "version_id"
+    ]
+  }
+}

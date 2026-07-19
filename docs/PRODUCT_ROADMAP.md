@@ -142,6 +142,12 @@ after its acceptance checks pass in the intended environment.
       The exact npm CLI and a fail-closed zero-execution install-script policy are now locally
       enforced; hosted Linux and merge evidence remain required. Cloudflare deployed-digest
       evidence, key custody, and restore drills remain open.
+    - [x] Add a fail-closed Cloudflare provider-state policy and redacted read-only analyzer that
+      distinguishes disconnected Git builds from a paused Worker, compares the active runtime and
+      binding contract, and refuses source/hold/release claims without private exact identity and
+      live-host evidence. CI performs only offline verification. The 2026-07-19 reconciliation
+      found the Worker active with maintenance off and configuration drift; provider repair,
+      deployment, migrations, and production acceptance remain open.
     - [x] Define source-bound, exact, SHA-256-hashed, binary-only optional Geo/PyTorch locks for
       CPython 3.12 on macOS 15+ ARM64/MPS and manylinux_2_28 x86-64/CPU; add scheduled hosted
       execution that checks platform/backend identity, exact package identity, GeoTIFF/CRS

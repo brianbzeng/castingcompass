@@ -76,6 +76,13 @@ build can publish whatever commit the integration selects and cannot establish t
 operator reviewed the supplied `RELEASE_COMMIT`. GitHub CI may build and test changes, but
 production publication follows the guarded manual release above.
 
+Disabling or disconnecting Git builds does **not** stop an already deployed Worker, detach its
+domains, disable cron triggers, or activate maintenance mode. Before every release or incident
+decision, run the offline and explicitly confirmed read-only checks in
+[Cloudflare provider-state audit](CLOUDFLARE-PROVIDER-STATE.md). A redacted receipt can establish
+traffic and checked-in configuration drift, but exact deployment/version/source evidence stays
+private and the separate live-host verifier is still required.
+
 If a future protected release workflow replaces the manual path, it must pass an explicitly
 approved immutable commit to the same checkout verifier and must keep D1 migration approval
 separate. Do not configure a Git deploy command that derives `RELEASE_COMMIT` from the checkout
