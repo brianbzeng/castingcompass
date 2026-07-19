@@ -57,3 +57,7 @@ next-env.d.ts
 /data/raw/
 /data/processed/
 .validation-private/
+/finance/private/
+/finance/receipts/
+/finance/filled/
+*.xlsx.inspect.ndjson

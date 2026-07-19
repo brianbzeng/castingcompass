@@ -712,6 +712,19 @@ by that discovery.
       pipeline tests with one documented optional-raster skip, and deterministic smoke.
 - [ ] Track operating costs and receipts by provider in a simple accounting ledger. Keep this
       separate from application logs and analytics; a financial dashboard comes later.
+      **Local workbook control complete:** the blank six-sheet XLSX template and machine-checked
+      boundary reserve 200 formula-driven ledger rows, controlled provider/category/status fields,
+      opaque private receipt references, monthly reconciliation checks, and explicit repository
+      exclusions for filled ledgers and financial documents. The item stays open until the owner
+      copies the template outside Git, records every current provider cost or explicit zero-cost
+      confirmation, associates privately stored receipts, and completes the first reconciliation.
+      No actual financial record, dashboard integration, billing action, provider mutation, or
+      production change is included. Local acceptance passed formula inspection with zero errors,
+      visual QA of all six sheets, the hash-bound workbook check, the Cloudflare build and 410/410
+      Node tests, 140/140 Chromium/WebKit browser cases, ESLint, TypeScript, the locked
+      security/SBOM/provenance chain and both zero-vulnerability npm audits, 29/29 API tests plus
+      the D1 query/index contract, Ruff, 81/81 pipeline tests with one documented optional-raster
+      skip, and deterministic smoke.
 
 ## Do not do yet
 

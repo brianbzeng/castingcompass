@@ -1,0 +1,104 @@
+{
+  "schemaVersion": 1,
+  "reviewedOn": "2026-07-19",
+  "status": "template_only_owner_input_required",
+  "currency": "USD",
+  "financialDashboardAuthorized": false,
+  "privateReceiptIdPattern": "^FIN-[0-9]{4}-[0-9]{4}$",
+  "repositoryDataBoundary": {
+    "actualLedgerRecordsAllowed": false,
+    "receiptFilesAllowed": false,
+    "privateStorageRequired": true,
+    "allowedRepositoryContent": [
+      "blank workbook template",
+      "controlled provider aliases and categories",
+      "formulas, validation rules, and aggregate checks",
+      "privacy and reconciliation instructions"
+    ],
+    "prohibitedRepositoryContent": [
+      "invoices, receipts, statements, tax records, or contracts",
+      "account, invoice, order, transaction, or payment identifiers",
+      "card, bank, routing, wallet, or tax identifiers",
+      "billing addresses, personal contact details, or credentials",
+      "completed operating-cost rows or private storage paths"
+    ]
+  },
+  "workbook": {
+    "file": "finance/templates/CastingCompass-Operating-Cost-Ledger.xlsx",
+    "sha256": "2f115fc773fc21322e67c960439baeba634518b4c7b61378f986a9e3fa32edea",
+    "sheets": [
+      "Summary",
+      "Ledger",
+      "Providers",
+      "Receipt Register",
+      "Checks",
+      "Instructions"
+    ],
+    "reservedLedgerRows": 200,
+    "entryColumns": [
+      "Entry ID",
+      "Transaction Date",
+      "Service Start",
+      "Service End",
+      "Provider",
+      "Category",
+      "Description (non-sensitive)",
+      "Subtotal USD",
+      "Tax USD",
+      "Credits USD",
+      "Net Cost USD",
+      "Payment Status",
+      "Private Receipt ID",
+      "Receipt Status",
+      "Review Status"
+    ]
+  },
+  "providerAliases": [
+    "Cloudflare",
+    "GitHub",
+    "Domain registrar",
+    "Primary email provider",
+    "Database provider",
+    "Deployment provider",
+    "AI/inference provider",
+    "Data/API provider",
+    "Monitoring/observability provider",
+    "Professional services",
+    "Other"
+  ],
+  "categories": [
+    "Hosting/CDN",
+    "Source control/CI",
+    "Domain",
+    "Email",
+    "Database",
+    "Deployment",
+    "AI/inference",
+    "Data/licensing",
+    "Monitoring/observability",
+    "Legal/accounting",
+    "Insurance",
+    "Other"
+  ],
+  "paymentStatuses": [
+    "Planned",
+    "Pending",
+    "Paid",
+    "Refunded",
+    "Credited",
+    "Cancelled"
+  ],
+  "receiptStatuses": [
+    "Not assessed",
+    "Not expected",
+    "Expected",
+    "Stored privately",
+    "Missing"
+  ],
+  "reviewStatuses": [
+    "Unreviewed",
+    "Reconciled",
+    "Disputed"
+  ],
+  "ledgerEntries": []
+}
