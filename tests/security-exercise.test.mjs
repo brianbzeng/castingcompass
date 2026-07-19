@@ -406,7 +406,10 @@ test("a fully authorized fake exercise retains private raw evidence and an aggre
   assert.equal(spawned, true);
   assert.equal(receipt.acceptance_passed, true);
   assert.equal(receipt.production_ready, false);
-  assert.equal(readFileSync(join(output, "scanner-stdout.log"), "utf8").includes(TARGET), true);
+  assert.equal(
+    readFileSync(join(output, "scanner-stdout.log"), "utf8"),
+    `private scanner log ${TARGET}`,
+  );
   const aggregate = readFileSync(join(output, "aggregate-receipt.json"), "utf8");
   assert.doesNotMatch(aggregate, /isolated\.example\.test|sec_0123|\/privacy/u);
 });
