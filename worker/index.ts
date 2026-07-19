@@ -24,6 +24,7 @@ import {
 import { handleTurnstileConfigRequest, type TurnstileEnv } from "./turnstile";
 import { enforceRequestRateLimit, type RateLimitEnv } from "./rate-limit";
 import { apiRoutePolicyForRequest, isKnownApiPath } from "./route-policy";
+import { unsupportedApiVersionResponse } from "./api-version.ts";
 import {
   attachRequestId,
   internalErrorResponse,
@@ -96,6 +97,9 @@ async function handleFetchRequest(request: Request, env: Env, ctx: ExecutionCont
 
   const maintenance = releaseMaintenanceResponse(request, env);
   if (maintenance) return maintenance;
+
+  const unsupportedApiVersion = unsupportedApiVersionResponse(request);
+  if (unsupportedApiVersion) return unsupportedApiVersion;
 
   const rateLimit = await enforceRequestRateLimit(request, env);
   if (rateLimit) return rateLimit;

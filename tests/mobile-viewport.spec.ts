@@ -324,6 +324,64 @@ test("primary controls stay inside common phone viewports", async ({ page }) => 
   }
 });
 
+test("safe-area contract keeps fixed controls inside simulated insets", async ({ page }) => {
+  const insets = { top: 23, right: 17, bottom: 31, left: 19 };
+  await page.addStyleTag({ content: `
+    :root {
+      --safe-area-top: ${insets.top}px !important;
+      --safe-area-right: ${insets.right}px !important;
+      --safe-area-bottom: ${insets.bottom}px !important;
+      --safe-area-left: ${insets.left}px !important;
+    }
+  ` });
+
+  const topbar = await page.locator(".topbar").evaluate((element) => {
+    const box = element.getBoundingClientRect();
+    const style = getComputedStyle(element);
+    return {
+      top: box.top,
+      left: box.left,
+      right: box.right,
+      viewportWidth: window.innerWidth,
+      paddingTop: Number.parseFloat(style.paddingTop),
+      paddingRight: Number.parseFloat(style.paddingRight),
+      paddingLeft: Number.parseFloat(style.paddingLeft),
+    };
+  });
+  expect(topbar.top).toBeGreaterThanOrEqual(0);
+  expect(topbar.left).toBeGreaterThanOrEqual(0);
+  expect(topbar.right).toBeLessThanOrEqual(topbar.viewportWidth);
+  expect(topbar.paddingTop).toBeGreaterThanOrEqual(insets.top);
+  expect(topbar.paddingRight).toBeGreaterThan(insets.right);
+  expect(topbar.paddingLeft).toBeGreaterThan(insets.left);
+
+  await page.locator(".account-button").click();
+  const modal = await page.locator(".account-modal-layer").evaluate((layer) => {
+    const box = layer.querySelector<HTMLElement>(".account-modal")!.getBoundingClientRect();
+    const style = getComputedStyle(layer);
+    return {
+      left: box.left,
+      right: box.right,
+      top: box.top,
+      bottom: box.bottom,
+      viewportWidth: window.innerWidth,
+      viewportHeight: window.innerHeight,
+      paddingTop: Number.parseFloat(style.paddingTop),
+      paddingRight: Number.parseFloat(style.paddingRight),
+      paddingBottom: Number.parseFloat(style.paddingBottom),
+      paddingLeft: Number.parseFloat(style.paddingLeft),
+    };
+  });
+  expect(modal.paddingTop).toBeGreaterThan(insets.top);
+  expect(modal.paddingRight).toBeGreaterThan(insets.right);
+  expect(modal.paddingBottom).toBeGreaterThan(insets.bottom);
+  expect(modal.paddingLeft).toBeGreaterThan(insets.left);
+  expect(modal.left).toBeGreaterThanOrEqual(insets.left);
+  expect(modal.right).toBeLessThanOrEqual(modal.viewportWidth - insets.right);
+  expect(modal.top).toBeGreaterThanOrEqual(insets.top);
+  expect(modal.bottom).toBeLessThanOrEqual(modal.viewportHeight - insets.bottom);
+});
+
 test("map overlays do not collide or clip", async ({ page }) => {
   const map = page.locator(".map-wrap");
   const centerButton = page.getByRole("button", { name: /center bay/i });

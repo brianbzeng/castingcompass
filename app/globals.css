@@ -19,6 +19,10 @@
   --panel-line: rgba(192, 218, 241, 0.16);
   --font-sans: "Avenir Next", Avenir, "Segoe UI", Helvetica, Arial, system-ui, sans-serif;
   --font-mono: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+  --safe-area-top: env(safe-area-inset-top, 0px);
+  --safe-area-right: env(safe-area-inset-right, 0px);
+  --safe-area-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-area-left: env(safe-area-inset-left, 0px);
 }
 
 * {
@@ -79,6 +83,7 @@ svg {
 
 .app-shell {
   min-height: 100vh;
+  min-height: 100dvh;
   overflow: clip;
   background: transparent;
 }
@@ -90,8 +95,8 @@ svg {
   display: grid;
   grid-template-columns: 1fr auto 1fr;
   align-items: center;
-  min-height: 72px;
-  padding: 0 4vw;
+  min-height: calc(72px + var(--safe-area-top));
+  padding: var(--safe-area-top) max(4vw, calc(1rem + var(--safe-area-right))) 0 max(4vw, calc(1rem + var(--safe-area-left)));
   border-bottom: 1px solid var(--line);
   background: rgba(5, 20, 40, 0.86);
   backdrop-filter: blur(18px);
@@ -1487,7 +1492,7 @@ footer > div {
   height: 100dvh;
   max-height: 100dvh;
   min-height: 0;
-  padding: 1.6rem 1.8rem 2rem;
+  padding: calc(1.6rem + var(--safe-area-top)) calc(1.8rem + var(--safe-area-right)) calc(2rem + var(--safe-area-bottom)) 1.8rem;
   overflow-y: auto;
   overscroll-behavior-y: contain;
   scrollbar-color: rgba(12, 75, 106, 0.38) transparent;
@@ -1505,7 +1510,8 @@ footer > div {
 
 .detail-sheet.expanded {
   width: 100vw;
-  padding-inline: max(4vw, 1.5rem);
+  padding-right: max(4vw, calc(1.5rem + var(--safe-area-right)));
+  padding-left: max(4vw, calc(1.5rem + var(--safe-area-left)));
 }
 
 .detail-sheet.expanded > :not(.sheet-close):not(.sheet-expand):not(.sheet-handle) {
@@ -1545,8 +1551,8 @@ footer > div {
 
 .sheet-close {
   position: absolute;
-  top: 1rem;
-  right: 1rem;
+  top: calc(1rem + var(--safe-area-top));
+  right: calc(1rem + var(--safe-area-right));
   display: grid;
   place-items: center;
   width: 44px;
@@ -1583,7 +1589,7 @@ footer > div {
 
 .detail-sheet.expanded .sheet-expand {
   right: auto;
-  left: 1rem;
+  left: calc(1rem + var(--safe-area-left));
   border-radius: 0 24px 24px 0;
 }
 
@@ -2233,14 +2239,16 @@ footer > div {
   z-index: 130;
   display: grid;
   place-items: center;
-  padding: 1rem;
+  padding: calc(1rem + var(--safe-area-top)) calc(1rem + var(--safe-area-right)) calc(1rem + var(--safe-area-bottom)) calc(1rem + var(--safe-area-left));
   background: rgba(1, 8, 19, 0.82);
   backdrop-filter: blur(8px);
 }
 
 .respect-modal {
   width: min(560px, 100%);
+  max-height: calc(100dvh - 2rem - var(--safe-area-top) - var(--safe-area-bottom));
   padding: clamp(1.5rem, 5vw, 3rem);
+  overflow-y: auto;
   border: 1px solid var(--line-strong);
   background:
     linear-gradient(rgba(7, 28, 55, 0.88), rgba(5, 22, 44, 0.94)),
@@ -2832,7 +2840,7 @@ footer > div {
   z-index: 120;
   display: grid;
   place-items: center;
-  padding: 1rem;
+  padding: calc(1rem + var(--safe-area-top)) calc(1rem + var(--safe-area-right)) calc(1rem + var(--safe-area-bottom)) calc(1rem + var(--safe-area-left));
   background: rgba(1, 8, 19, 0.78);
   backdrop-filter: blur(9px);
 }
@@ -2840,7 +2848,7 @@ footer > div {
 .account-modal {
   position: relative;
   width: min(100%, 520px);
-  max-height: calc(100dvh - 2rem);
+  max-height: calc(100dvh - 2rem - var(--safe-area-top) - var(--safe-area-bottom));
   padding: 2.4rem;
   overflow-y: auto;
   border: 1px solid var(--line-strong);
@@ -3427,7 +3435,7 @@ footer > div {
   z-index: 140;
   display: grid;
   place-items: center;
-  padding: 1rem;
+  padding: calc(1rem + var(--safe-area-top)) calc(1rem + var(--safe-area-right)) calc(1rem + var(--safe-area-bottom)) calc(1rem + var(--safe-area-left));
   background: rgba(1, 8, 19, 0.78);
   backdrop-filter: blur(10px);
   animation: fade-in 160ms ease-out;
@@ -3435,7 +3443,7 @@ footer > div {
 
 .profile-trip-editor-modal {
   width: min(620px, 100%);
-  max-height: calc(100dvh - 2rem);
+  max-height: calc(100dvh - 2rem - var(--safe-area-top) - var(--safe-area-bottom));
   margin: 0;
   overflow-y: auto;
   overscroll-behavior: contain;
@@ -3844,13 +3852,13 @@ footer > div {
 
 .active-trip-banner {
   position: fixed;
-  right: 1.25rem;
-  bottom: max(1.25rem, env(safe-area-inset-bottom));
+  right: calc(1.25rem + var(--safe-area-right));
+  bottom: calc(1.25rem + var(--safe-area-bottom));
   z-index: 72;
   display: flex;
   align-items: center;
   gap: 1.2rem;
-  width: min(430px, calc(100vw - 2rem));
+  width: min(430px, calc(100vw - 2.5rem - var(--safe-area-right) - var(--safe-area-left)));
   padding: 0.8rem;
   border: 1px solid rgba(216, 237, 148, 0.4);
   color: var(--ink);
@@ -3928,7 +3936,7 @@ footer > div {
   z-index: 100;
   display: grid;
   place-items: center;
-  padding: 1rem;
+  padding: calc(1rem + var(--safe-area-top)) calc(1rem + var(--safe-area-right)) calc(1rem + var(--safe-area-bottom)) calc(1rem + var(--safe-area-left));
   background: rgba(1, 8, 19, 0.74);
   backdrop-filter: blur(8px);
   animation: fade-in 160ms ease-out;
@@ -3937,7 +3945,7 @@ footer > div {
 .trip-modal {
   position: relative;
   width: min(720px, 100%);
-  max-height: calc(100dvh - 2rem);
+  max-height: calc(100dvh - 2rem - var(--safe-area-top) - var(--safe-area-bottom));
   padding: clamp(1.5rem, 4vw, 2.8rem);
   overflow-y: auto;
   overscroll-behavior: contain;
@@ -4486,7 +4494,8 @@ footer > div {
 @media (max-width: 960px) {
   .topbar {
     grid-template-columns: 1fr auto;
-    padding-inline: 1.25rem;
+    padding-right: calc(1.25rem + var(--safe-area-right));
+    padding-left: calc(1.25rem + var(--safe-area-left));
   }
 
   .desktop-nav {
@@ -4577,8 +4586,9 @@ footer > div {
   }
 
   .topbar {
-    min-height: 62px;
-    padding-inline: 1rem;
+    min-height: calc(62px + var(--safe-area-top));
+    padding-right: calc(1rem + var(--safe-area-right));
+    padding-left: calc(1rem + var(--safe-area-left));
   }
 
   .brand em {
@@ -4943,7 +4953,7 @@ footer > div {
     width: 100%;
     height: 90dvh;
     max-height: 90dvh;
-    padding: 1.7rem 1rem calc(1.4rem + env(safe-area-inset-bottom));
+    padding: 1.7rem calc(1rem + var(--safe-area-right)) calc(1.4rem + var(--safe-area-bottom)) calc(1rem + var(--safe-area-left));
     border-radius: 18px 18px 0 0;
     animation-name: sheet-up;
   }
@@ -4954,7 +4964,8 @@ footer > div {
 
   .detail-sheet.expanded {
     width: 100%;
-    padding-inline: 1rem;
+    padding-right: calc(1rem + var(--safe-area-right));
+    padding-left: calc(1rem + var(--safe-area-left));
   }
 
   .detail-sheet.expanded .structure-guide-grid {
@@ -5066,13 +5077,13 @@ footer > div {
 
   .trip-modal-layer {
     align-items: end;
-    padding: 0;
+    padding: var(--safe-area-top) var(--safe-area-right) 0 var(--safe-area-left);
   }
 
   .trip-modal {
     width: 100%;
-    max-height: 92dvh;
-    padding: 2.7rem 1rem calc(1.2rem + env(safe-area-inset-bottom));
+    max-height: calc(100dvh - var(--safe-area-top));
+    padding: 2.7rem 1rem calc(1.2rem + var(--safe-area-bottom));
     border-right: 0;
     border-bottom: 0;
     border-left: 0;
@@ -5100,9 +5111,9 @@ footer > div {
   }
 
   .active-trip-banner {
-    right: 0.75rem;
-    bottom: max(0.75rem, env(safe-area-inset-bottom));
-    width: calc(100vw - 1.5rem);
+    right: calc(0.75rem + var(--safe-area-right));
+    bottom: calc(0.75rem + var(--safe-area-bottom));
+    width: calc(100vw - 1.5rem - var(--safe-area-right) - var(--safe-area-left));
   }
 
   .compare-grid h3,
@@ -5397,12 +5408,12 @@ footer {
 
   .profile-trip-editor-layer {
     place-items: end center;
-    padding: 0;
+    padding: var(--safe-area-top) var(--safe-area-right) 0 var(--safe-area-left);
   }
 
   .profile-trip-editor-modal {
     width: 100%;
-    max-height: 92dvh;
+    max-height: calc(100dvh - var(--safe-area-top));
     border-right: 0;
     border-bottom: 0;
     border-left: 0;
@@ -5583,7 +5594,8 @@ footer {
   .topbar {
     grid-template-columns: minmax(0, 1fr) auto;
     gap: 0.5rem;
-    padding-inline: 0.75rem;
+    padding-right: calc(0.75rem + var(--safe-area-right));
+    padding-left: calc(0.75rem + var(--safe-area-left));
   }
 
   .brand {

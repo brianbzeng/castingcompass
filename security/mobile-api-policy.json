@@ -1,0 +1,42 @@
+{
+  "schemaVersion": 1,
+  "api": {
+    "compatibilityVersion": "1",
+    "header": "X-CastingCompass-API-Version",
+    "requestHeaderRequired": false,
+    "unsupportedStatus": 400,
+    "unversionedFirstPartyWebAccepted": true
+  },
+  "authentication": {
+    "currentWebMode": "secure_host_cookie",
+    "credentialsInLocalStorageAllowed": false,
+    "nativeReleaseMode": "authorization_code_pkce_required_before_native_release"
+  },
+  "coverage": {
+    "chromiumProjects": [
+      "iphone-se",
+      "iphone-13",
+      "pixel-7"
+    ],
+    "webkitProjects": [
+      "webkit-iphone-13"
+    ],
+    "offlineSpec": "tests/mobile-viewport.spec.ts",
+    "safeAreaSelectors": [
+      ".topbar",
+      ".detail-sheet",
+      ".respect-modal-layer",
+      ".account-modal-layer",
+      ".profile-trip-editor-layer",
+      ".trip-modal-layer",
+      ".active-trip-banner"
+    ]
+  },
+  "sharedContracts": [
+    "contracts/model-run.schema.json",
+    "contracts/observation.schema.json",
+    "contracts/opportunity.schema.json",
+    "contracts/taxa.schema.json"
+  ],
+  "productionReadiness": false
+}
