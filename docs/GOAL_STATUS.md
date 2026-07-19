@@ -9,6 +9,31 @@ its complete acceptance boundary passed. “Local complete” means the reposito
 but the parent stays open until its production, provider, legal, or independent-review gate is
 also satisfied.
 
+## Active seven-step work cycle — mobile web and API compatibility controls
+
+- [x] Reconcile exact protected `main` and freeze the acceptance boundary. Starting `main` is
+      `a1dd23c85c9540cc86b52fd35942a7ebceeb53dd`; production and Cloudflare remain paused, issue
+      `#86` remains open, and this cycle cannot claim native-client or production readiness.
+- [x] Add an additive API compatibility contract. Existing first-party web requests may omit the
+      header; opt-in clients must send exact version `1`, and incompatible or ambiguous values fail
+      with a no-store `400` before rate limiting, body reads, authentication, routes, storage, or
+      provider work. Every API response receives the centrally owned version header.
+- [x] Complete the fixed-surface safe-area contract across top, right, bottom, and left insets,
+      while retaining viewport fallbacks and dynamic viewport bounds. A rebuilt focused Chromium
+      browser check passed deterministic simulated-inset geometry.
+- [x] Expand the hosted mobile matrix from three Chromium viewports to those three plus a WebKit
+      iPhone viewport. The existing offline/recovery suite plus the new inset test now enumerates
+      140 browser cases; exact-head WebKit acceptance remains part of the protected PR gate.
+- [x] Add the strict machine-readable policy, fail-closed verifier, focused runtime/static tests,
+      and [mobile/API boundary](MOBILE-READINESS.md). The current secure host-cookie web model is
+      preserved, browser credential storage remains forbidden, and PKCE/OS-protected token work is
+      an explicit precondition for any native release.
+- [ ] Pass the complete local repository/security suite and publish a protected draft PR from the
+      exact reviewed head without deploying or changing Cloudflare.
+- [ ] Accept exact-head hosted CI—including WebKit—then merge only that head and record immutable
+      post-merge receipts. Keep the parent roadmap item open for native, staging, provider,
+      physical-device, and production-scale evidence.
+
 ## Completed seven-step work cycle — default-off advisory AI review queue
 
 - [x] Reconcile exact protected `main`, the owner roadmap, and the highest-risk repository gap.
@@ -336,6 +361,12 @@ also satisfied.
       Vitals, and privacy-reviewed funnel baselines remain.
 - [ ] Make infrastructure mobile-ready with shared schemas, appropriate authentication,
       queue-based work, staging, bounded retries/costs, and WebKit/offline/safe-area coverage.
+      **Local compatibility control implemented:** API responses advertise compatibility version
+      `1`; opt-in incompatible clients fail before expensive work; current secure-cookie web
+      clients remain compatible; shared schemas are inventoried; fixed surfaces consume all four
+      safe-area insets; and hosted CI runs the mobile/offline suite on Chromium and WebKit. Native
+      PKCE/token work, isolated staging, physical-device acceptance, provider bindings, deployment,
+      and production-scale evidence remain open.
 
 ## P2 — Species and business expansion
 

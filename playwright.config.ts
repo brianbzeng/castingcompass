@@ -8,16 +8,16 @@ export default defineConfig({
   reporter: process.env.CI ? [["line"], ["html", { open: "never" }]] : "line",
   use: {
     baseURL: "http://127.0.0.1:4173",
-    browserName: "chromium",
     hasTouch: true,
     isMobile: true,
     trace: "retain-on-failure",
     screenshot: "only-on-failure",
   },
   projects: [
-    { name: "iphone-se", use: { viewport: { width: 375, height: 667 } } },
-    { name: "iphone-13", use: { viewport: { width: 390, height: 844 } } },
-    { name: "pixel-7", use: { viewport: { width: 412, height: 915 } } },
+    { name: "iphone-se", use: { browserName: "chromium", viewport: { width: 375, height: 667 } } },
+    { name: "iphone-13", use: { browserName: "chromium", viewport: { width: 390, height: 844 } } },
+    { name: "pixel-7", use: { browserName: "chromium", viewport: { width: 412, height: 915 } } },
+    { name: "webkit-iphone-13", use: { browserName: "webkit", viewport: { width: 390, height: 844 } } },
   ],
   webServer: {
     command: "npm run start -- --host 127.0.0.1 --port 4173",

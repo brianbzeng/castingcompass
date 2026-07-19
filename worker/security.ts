@@ -1,4 +1,5 @@
 import type { D1DatabaseLike } from "./trips";
+import { API_COMPATIBILITY_VERSION, API_VERSION_HEADER } from "./api-version.ts";
 
 interface SecurityEnv {
   DB?: D1DatabaseLike;
@@ -76,6 +77,7 @@ export async function healthResponse(request: Request, env: SecurityEnv): Promis
   const body = JSON.stringify({
     status: databaseAvailable ? "ok" : "degraded",
     service: "castingcompass-web",
+    apiCompatibilityVersion: API_COMPATIBILITY_VERSION,
     workerVersionId,
     releaseMaintenance: releaseMaintenanceEnabled(env),
     securityExerciseId,
@@ -258,6 +260,8 @@ export function hardenResponse(response: Response, request: Request): Response {
   const isProductionHttps = url.protocol === "https:" && (
     PRODUCTION_HOSTS.has(url.hostname) || isPreviewHost
   );
+
+  if (isApi) headers.set(API_VERSION_HEADER, API_COMPATIBILITY_VERSION);
 
   if (!headers.has("Content-Security-Policy")) {
     headers.set("Content-Security-Policy", "base-uri 'self'; object-src 'none'; frame-ancestors 'none'");

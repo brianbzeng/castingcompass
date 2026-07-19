@@ -530,6 +530,12 @@ after its acceptance checks pass in the intended environment.
 - [ ] Make infrastructure mobile-ready and scalable with versioned APIs/shared schemas,
   appropriate mobile authentication, queue-based AI work, staging, bounded retries/costs,
   and WebKit/offline/safe-area coverage.
+  - [x] Implement the local mobile/API compatibility control: additive version negotiation and
+    centrally owned response headers, exact opt-in rejection before expensive work, preserved
+    secure-cookie web authentication, an explicit native-PKCE release gate, shared-contract
+    inventory, four-edge safe-area handling, and hosted Chromium/WebKit offline coverage.
+  - [ ] Complete native-client contract/authentication work, isolated staging and provider setup,
+    physical-device acceptance, deployment, and production-scale performance/failure evidence.
 
 ## P2 — Species and business expansion
 

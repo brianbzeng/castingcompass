@@ -13,6 +13,7 @@ import {
   releaseMaintenanceEnabled,
   releaseMaintenanceResponse,
 } from "../worker/security.ts";
+import { API_COMPATIBILITY_VERSION, API_VERSION_HEADER } from "../worker/api-version.ts";
 
 const ORIGIN = "https://castingcompass.com";
 
@@ -50,6 +51,7 @@ test("health endpoint reports D1 readiness, Worker and staging exercise identity
   assert.deepEqual(await get?.json(), {
     status: "ok",
     service: "castingcompass-web",
+    apiCompatibilityVersion: API_COMPATIBILITY_VERSION,
     workerVersionId: "version-123",
     releaseMaintenance: false,
     securityExerciseId: "sec_0123456789abcdef0123456789abcdef",
@@ -65,6 +67,7 @@ test("health endpoint reports D1 readiness, Worker and staging exercise identity
   assert.deepEqual(await degraded?.json(), {
     status: "degraded",
     service: "castingcompass-web",
+    apiCompatibilityVersion: API_COMPATIBILITY_VERSION,
     workerVersionId: null,
     releaseMaintenance: false,
     securityExerciseId: null,
@@ -225,6 +228,7 @@ test("central hardening prevents API caching and preserves explicit asset cachin
   assert.equal(apiResponse.headers.get("Cache-Control"), "no-store");
   assert.equal(apiResponse.headers.get("CDN-Cache-Control"), "no-store");
   assert.equal(apiResponse.headers.get("X-Robots-Tag"), "noindex, nofollow");
+  assert.equal(apiResponse.headers.get(API_VERSION_HEADER), API_COMPATIBILITY_VERSION);
   assert.equal(apiResponse.headers.get("X-Content-Type-Options"), "nosniff");
   assert.equal(apiResponse.headers.get("X-Frame-Options"), "DENY");
   assert.equal(apiResponse.headers.get("Strict-Transport-Security"), "max-age=31536000");
@@ -235,6 +239,7 @@ test("central hardening prevents API caching and preserves explicit asset cachin
   }), new Request(`${ORIGIN}/_next/static/app.js`));
   assert.equal(assetResponse.headers.get("Cache-Control"), "public, max-age=31536000, immutable");
   assert.equal(assetResponse.headers.has("CDN-Cache-Control"), false);
+  assert.equal(assetResponse.headers.has(API_VERSION_HEADER), false);
 
   const previewResponse = hardenResponse(
     new Response("page"),
