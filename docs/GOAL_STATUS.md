@@ -13,7 +13,7 @@ Current provider truth overrides historical “paused” language in completed r
 2026-07-19 read-only reconciliation found an active Worker; no production mutation is authorized
 by that discovery.
 
-## Active seven-step work cycle — Cloudflare provider-state hold
+## Completed seven-step work cycle — Cloudflare provider-state hold
 
 - [x] Reconcile exact protected `main` and the provider state without mutation. Starting `main`
       is `c9bc1d839bbd8783fc77afba9af6f0f5054d8a45`; read-only Wrangler and dashboard evidence found
