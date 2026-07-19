@@ -8,11 +8,15 @@ export function LegalPage({
   eyebrow,
   title,
   summary,
+  updatedDate = LEGAL_EFFECTIVE_DATE,
+  documentVersion = LEGAL_DOCUMENT_VERSION,
   children,
 }: {
   eyebrow: string;
   title: string;
   summary: string;
+  updatedDate?: string;
+  documentVersion?: string;
   children: ReactNode;
 }) {
   return (
@@ -29,7 +33,7 @@ export function LegalPage({
         <p className="legal-eyebrow">{eyebrow}</p>
         <h1>{title}</h1>
         <p className="legal-summary">{summary}</p>
-        <p className="legal-date">Effective and last updated: {LEGAL_EFFECTIVE_DATE} · Document version {LEGAL_DOCUMENT_VERSION}</p>
+        <p className="legal-date">Effective and last updated: {updatedDate} · Document version {documentVersion}</p>
         <div className="legal-callout">
           Plain-language notice: CastingCompass is a work in progress and a planning aid for California halibut anglers. It is not a catch guarantee, navigation system, emergency service, legal guide, or substitute for checking real conditions.
         </div>

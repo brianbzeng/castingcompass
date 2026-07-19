@@ -37,6 +37,15 @@ function elementText(html, name) {
   return html.match(new RegExp(`<${name}[^>]*>([\\s\\S]*?)<\\/${name}>`, "i"))?.[1] ?? null;
 }
 
+function articleText(html) {
+  const article = html.match(/<article\b[^>]*>([\s\S]*?)<\/article>/iu)?.[1] ?? "";
+  return article
+    .replaceAll("<!-- -->", "")
+    .replace(/<[^>]+>/gu, " ")
+    .replace(/\s+/gu, " ")
+    .trim();
+}
+
 const publicRoutes = [
   {
     path: "/",
@@ -140,6 +149,22 @@ test("homepage JSON-LD is a narrow truthful WebSite declaration", async () => {
     inLanguage: "en-US",
   });
   assert.doesNotMatch(JSON.stringify(structuredData), /rating|accuracy|probability|localbusiness|product|dataset/i);
+});
+
+test("AI disclosure renders the current all-zero validation boundary and negative result", async () => {
+  const response = await render("/ai-disclosure");
+  assert.equal(response.status, 200);
+  const html = await response.text();
+  const text = articleText(html);
+  assert.match(text, /Effective and last updated: July 19, 2026 · Document version 2026-07-19\.1/);
+  assert.match(text, /has not activated a prospective validation study/);
+  assert.match(text, /0 attempts/);
+  assert.match(text, /0 eligible target encounters and 0 eligible target non-encounters/);
+  assert.match(text, /0 preregistered baseline comparisons/);
+  assert.match(text, /0 probability-calibration runs/);
+  assert.match(text, /macro F1 0\.3914/);
+  assert.match(text, /was not promoted/);
+  assert.match(text, /not evidence about the live Opportunity Score/);
 });
 
 test("unknown routes render a useful noindex page with a real 404 status", async () => {
