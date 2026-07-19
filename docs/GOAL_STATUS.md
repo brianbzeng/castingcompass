@@ -606,6 +606,12 @@ by that discovery.
       review, and any separately protected policy change remain open. No social data was acquired.
 - [ ] Validate California halibut relative ranking against frozen baselines and publish
       uncertainty, limitations, negative results, and the current all-zero sample constraint.
+      **Public all-zero status locally complete:** the machine-bound disclosure states that no
+      prospective study is activated, eligible prospective/confirmatory attempts, encounters,
+      non-encounters, preregistered baseline comparisons, and probability-calibration runs are
+      all zero, and the non-promoted terrain-probe result is explicitly not live-score evidence.
+      Guarded deployment remains open, and actual performance validation cannot begin until a
+      separately preregistered confirmatory study has eligible locked evidence.
 - [ ] Define model promotion, drift, rollback, monitoring, and revalidation gates. **Local
       policy, schema, evaluator, CLI, and operator runbook complete;** the separate confirmatory
       protocol, eligible locked-test evidence, independent review, staged serving exercises,

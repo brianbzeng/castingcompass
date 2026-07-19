@@ -58,6 +58,14 @@ test("public legal pages separate forecast limitations, privacy, and automated r
   assert.match(terms, /not navigational data/);
   assert.match(ai, /hybrid ranking system/);
   assert.match(ai, /not a catch probability/);
+  assert.match(ai, /updatedDate="July 19, 2026"/);
+  assert.match(ai, /documentVersion="2026-07-19\.1"/);
+  assert.match(ai, /has not activated a prospective validation study/);
+  assert.match(ai, /eligible prospective or confirmatory validation sample/);
+  assert.match(ai, /preregistered baseline comparisons/);
+  assert.match(ai, /probability-calibration runs/);
+  assert.match(ai, /was reliably worse than simpler classical structure summaries/);
+  assert.match(ai, /not evidence about the live Opportunity Score/);
   assert.match(ai, /response cannot restore the deleted trip or publish a post/);
   assert.match(ai, /Trip reports do not change the current score or enter model evaluation automatically/);
 });

@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import validationStatus from "../../validation/public-status.json";
 import { LegalPage, LegalSection } from "../components/LegalPage";
 
 const PAGE_URL = "https://castingcompass.com/ai-disclosure";
@@ -32,10 +33,18 @@ export default function AiDisclosurePage() {
       eyebrow="Transparency · Automated systems"
       title="AI and Forecast Disclosure"
       summary="CastingCompass uses automated scoring and a third-party language model. This page separates what is live today from research that is still being tested."
+      updatedDate="July 19, 2026"
+      documentVersion="2026-07-19.1"
     >
       <LegalSection title="The live Opportunity Score">
         <p>The live score is a hybrid ranking system. It combines curated habitat and access information, public seasonal data, tides, weather and marine conditions, daylight and moon context, and practical fishability adjustments. The result is converted to a 0–100 percentile among the current location and time-window candidates.</p>
-        <p>It is not a catch probability, a statement that halibut are present, or a promise that the water is safe or practical to fish. Public inputs can be wrong or unavailable, and the rules and weights are still being evaluated against real trip reports.</p>
+        <p>It is not a catch probability, a statement that halibut are present, or a promise that the water is safe or practical to fish. Public inputs can be wrong or unavailable. Trip reports may inform product review, but they do not validate or train the current score.</p>
+      </LegalSection>
+
+      <LegalSection title="Validation evidence today">
+        <p>As of July 19, 2026, CastingCompass has not activated a prospective validation study. The current eligible prospective or confirmatory validation sample therefore contains <strong>{validationStatus.eligibleValidationEvidence.prospectiveOrConfirmatoryAttempts} attempts</strong>: {validationStatus.eligibleValidationEvidence.targetEncounters} eligible target encounters and {validationStatus.eligibleValidationEvidence.targetNonEncounters} eligible target non-encounters. Existing trip reports, including catches and skunks, remain product feedback or descriptive context rather than model-evaluation evidence.</p>
+        <p>The live heuristic has completed <strong>{validationStatus.completedPerformanceAnalyses.preregisteredBaselineComparisons} preregistered baseline comparisons</strong> and <strong>{validationStatus.completedPerformanceAnalyses.probabilityCalibrationRuns} probability-calibration runs</strong>. No ranking-accuracy, calibrated catch-probability, or model-promotion claim is supported.</p>
+        <p>The current published negative research result is separate: a geographically held-out seafloor-character probe reached macro F1 {validationStatus.knownNegativeResults[0].candidateValue} and was reliably worse than simpler classical structure summaries, so it was not promoted. That experiment measured terrain representation, not California-halibut catch ranking, and it is not evidence about the live Opportunity Score.</p>
       </LegalSection>
 
       <LegalSection title="Deep-learning research status">

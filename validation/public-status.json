@@ -1,0 +1,33 @@
+{
+  "schemaVersion": 1,
+  "asOfDate": "2026-07-19",
+  "scoringSystemKind": "heuristic-configuration",
+  "claimBoundary": "ordinal_relative_ranking_only",
+  "prospectiveStudyActivated": false,
+  "eligibleValidationEvidence": {
+    "prospectiveOrConfirmatoryAttempts": 0,
+    "targetEncounters": 0,
+    "targetNonEncounters": 0
+  },
+  "completedPerformanceAnalyses": {
+    "preregisteredBaselineComparisons": 0,
+    "probabilityCalibrationRuns": 0
+  },
+  "knownNegativeResults": [
+    {
+      "id": "usgs-sf-2m-seafloor-probe-v1",
+      "scope": "terrain-representation-probe",
+      "metric": "macro_f1",
+      "candidateValue": 0.3914,
+      "result": "The pretrained probe was reliably worse than classical structure summaries.",
+      "promoted": false,
+      "appliesToLiveOpportunityScore": false
+    }
+  ],
+  "evidenceRules": [
+    "Existing product trip reports are descriptive context, not eligible validation evidence.",
+    "The collection-feasibility pilot cannot evaluate ranking performance or calibrate probability.",
+    "Only a separately preregistered and prospectively activated confirmatory study can produce ranking-performance evidence.",
+    "A terrain-representation result is not evidence of catch-ranking skill or live-score accuracy."
+  ]
+}
