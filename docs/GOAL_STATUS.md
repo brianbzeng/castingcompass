@@ -13,6 +13,54 @@ Current provider truth overrides historical “paused” language in completed r
 2026-07-19 read-only reconciliation found an active Worker; no production mutation is authorized
 by that discovery.
 
+## Completed seven-step work cycle — SEO language and provider evidence
+
+- [x] Reconcile protected `main` and the existing crawl contract. Starting `main` was
+      `6aaad6e4252fa7f873ac0f95196cb61281fd89bb`; the intended public set remains exactly `/`,
+      `/privacy`, `/terms`, and `/ai-disclosure`, while `/profile` remains crawlable but
+      `noindex, nofollow` and absent from the sitemap. Production is active, drifted, and untouched.
+- [x] Recheck current official Google and Bing guidance and freeze the truthful boundary. Titles
+      and descriptions are search-result preferences, not guaranteed output; a sitemap or URL
+      request does not prove crawling, indexing, ranking, or traffic; and dashboard creation does
+      not prove ownership. Candidate phrases are audience-research prompts, not keyword-stuffing
+      instructions or performance predictions.
+- [x] Create the four-page language sheet and prohibited-claim matrix. Every page has an honest
+      purpose, audience questions, candidate phrases, current title/description, desired snippet,
+      and useful next action. The strategy rejects catch-probability, outcome/superiority,
+      validation/training, freshness/regulation/access/safety, agency-endorsement, search-status,
+      and production-parity overclaims while preserving the narrower heuristic relative-ranking
+      truth.
+- [x] Create the private Google/Bing evidence workflow. It separates dashboard creation,
+      ownership, sitemap submission/processing, live URL testing, indexing request, observed
+      indexing, and performance; permits only secret-free operational fields; and keeps raw and
+      redacted screenshots outside Git. DNS/HTML verification values, account identifiers,
+      credentials, recovery codes, billing details, and user/trip data are prohibited.
+- [x] Add the fail-closed machine policy and tests. `seo/language-policy.json` binds the exact
+      four-page set and metadata, keeps `/profile` excluded, rejects prohibited strategy phrases
+      and token-shaped material, and fixes every Google/Bing action to `false`. The goal dashboard
+      closes only the language-sheet task; dashboard ownership/verification and all provider,
+      deployment, indexing, coverage, performance, and Core Web Vitals work remain open.
+- [x] Publish the exact accepted head without a provider or production action. Local Cloudflare
+      build plus 400/400 Node tests, ESLint, TypeScript, secrets, the exact npm 10.9.8 integrated
+      security/SBOM/provenance chain, and both npm audits with zero vulnerabilities passed.
+      Protected PR `#113` at exact head `0b514951effd066d9b4cbef90ac767cac8baded2` passed PR CI
+      `29697668825`, release provenance `29697668861`, and CodeQL `29697667897`, including
+      dependency review, hosted API and pipeline suites, and 140/140 Chromium/WebKit browser
+      cases. Duplicate branch-push CI `29697667318` and release provenance `29697667340` also
+      passed on their original attempts.
+- [x] Merge only the accepted head and add the immutable protected-`main` receipt. PR `#113`
+      merged normally as `f362707f68dd77b243a0b9b8863b8240a0073e2c` without admin bypass,
+      squash, rebase, provider mutation, or production change. Its tree
+      `e75a7d2d57a2cf909a36df50bf91cdc76c58d3e5` exactly equals the fully green accepted-head
+      tree. As of `2026-07-19T18:04:27Z`, GitHub had created zero push check suites for that merge
+      commit despite accepting it on protected `main`; this receipt therefore makes no claim of
+      exact-merge CI, CodeQL, release, SBOM-attestation, or deployment evidence. The identical
+      protected PR tree evidence above remains the acceptance evidence. Open PRs and open
+      Dependabot, code-scanning, and secret-scanning alerts were all zero; issue `#86` remains
+      open by design. Production remains active, drifted, and untouched. The broader SEO parent
+      remains open for reviewed deployment, Google/Bing verification and provider operations,
+      observed indexing/coverage, Core Web Vitals, and privacy-reviewed measurement.
+
 ## Completed seven-step work cycle — production change authorization
 
 - [x] Reconcile exact protected `main` and inventory every production mutation entry point.
