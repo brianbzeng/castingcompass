@@ -399,10 +399,13 @@ after its acceptance checks pass in the intended environment.
     ad hoc console output, correlate scheduled work, disable raw URL invocation logs, and publish
     the Cloudflare dashboard/query/incident recipe plus the PostHog privacy decision. A fail-closed
     offline drill now reconstructs request, Queue, and scheduled-task timelines from a bounded
-    non-sensitive fixture and emits a deterministic aggregate receipt without actor pseudonyms or
-    raw payloads. A second fail-closed policy now verifies a private, source-bound activation
-    manifest and emits only aggregate readiness/blocker state; it cannot query Cloudflare or
-    authorize production. Production/preview stream reconstruction, dashboard creation,
+    non-sensitive fixture only when per-identity timestamps are strictly ordered and completion or
+    start/terminal positions are unambiguous; it emits a deterministic aggregate receipt without
+    actor pseudonyms or raw payloads. A second fail-closed policy now verifies a private,
+    source-bound activation manifest against an independently supplied expected commit and emits a
+    public-safe receipt containing that commit plus aggregate readiness/blocker state; it cannot
+    query Cloudflare or authorize production. Production/preview stream reconstruction, dashboard
+    creation,
     IAM/retention/cost evidence, external uptime checks, and delivered alert drills remain open.
 - [ ] Make the data and execution paths measurably scalable before a traffic campaign.
   - [ ] Inventory every production query, capture representative `EXPLAIN QUERY PLAN` evidence,

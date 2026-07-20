@@ -591,10 +591,12 @@ by that discovery.
       structured logs, request IDs, redaction, searchable failures, alerts, backup/privacy-job
       views, immutable changes, and a separately authorized future financial domain. **Local
       logging schema/runbook and fail-closed offline request/Queue/scheduled reconstruction drill
-      plus the source-bound activation-evidence verifier are complete;** their aggregate receipts
-      omit commits, evidence hashes, saved-view names, actor pseudonyms, and raw payloads. The
-      activation verifier requires exact release binding, structured-only logs, access review,
-      retention/cost ownership, delivered/acknowledged/closed/redaction-tested alerts, uptime,
+      plus the source-bound activation-evidence verifier are complete;** the incident receipt
+      omits actor pseudonyms and raw payloads, while the public-safe activation receipt exposes
+      only its independently expected reviewed commit and aggregate gate results—never evidence
+      hashes, saved-view names, provider identifiers, or raw payloads. The activation verifier
+      refuses a missing or mismatched expected commit and requires structured-only logs, access
+      review, retention/cost ownership, delivered/acknowledged/closed/redaction-tested alerts, uptime,
       preview/production reconstruction, and pseudonym-key separation within 72 hours; it neither
       queries a provider nor authorizes production. Preview/production evidence, provider
       dashboard, access, retention, cost, uptime, and delivered-alert evidence remain. PostHog

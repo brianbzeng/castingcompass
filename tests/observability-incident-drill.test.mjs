@@ -133,4 +133,25 @@ test("drill fails closed when correlation chains are incomplete or ambiguous", a
     () => buildObservabilityDrillReport(serialize(mixedActor)),
     /changes actor_session_key/u,
   );
+
+  const requestAfterCompletion = structuredClone(events);
+  requestAfterCompletion[0].timestamp = "2026-07-19T20:00:00.075Z";
+  assert.throws(
+    () => buildObservabilityDrillReport(serialize(requestAfterCompletion)),
+    /completion must be the final event/u,
+  );
+
+  const operationBeforeStart = structuredClone(events);
+  operationBeforeStart[3].timestamp = "2026-07-19T20:01:00.075Z";
+  assert.throws(
+    () => buildObservabilityDrillReport(serialize(operationBeforeStart)),
+    /start must be the first event/u,
+  );
+
+  const ambiguousTimestamp = structuredClone(events);
+  ambiguousTimestamp[1].timestamp = ambiguousTimestamp[0].timestamp;
+  assert.throws(
+    () => buildObservabilityDrillReport(serialize(ambiguousTimestamp)),
+    /strictly increasing timestamps/u,
+  );
 });

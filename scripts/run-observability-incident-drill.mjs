@@ -193,6 +193,15 @@ function consistentValue(events, key, label) {
   return events[0][key] ?? null;
 }
 
+function requireStrictTimeline(events, label) {
+  for (let index = 1; index < events.length; index += 1) {
+    requireCondition(
+      events[index - 1].timestamp < events[index].timestamp,
+      `${label} events must have strictly increasing timestamps`,
+    );
+  }
+}
+
 function reconstructRequests(events) {
   const groups = new Map();
   for (const event of events.filter((candidate) => Object.hasOwn(candidate, "request_id"))) {
@@ -203,10 +212,17 @@ function reconstructRequests(events) {
   const requests = [];
   for (const [requestId, group] of groups) {
     group.sort((left, right) => left.timestamp.localeCompare(right.timestamp));
+    requireStrictTimeline(group, `Request ${requestId}`);
     const terminal = group.filter((event) => event.event === "http.request.completed");
     requireCondition(terminal.length === 1, `Request ${requestId} must have exactly one completion event`);
     const completion = terminal[0];
-    requireCondition(Number.isInteger(completion.status) && typeof completion.outcome === "string", `Request ${requestId} completion is incomplete`);
+    requireCondition(completion === group.at(-1), `Request ${requestId} completion must be the final event`);
+    requireCondition(
+      Number.isInteger(completion.status)
+        && typeof completion.outcome === "string"
+        && typeof completion.duration_ms === "number",
+      `Request ${requestId} completion is incomplete`,
+    );
     consistentValue(group, "trace_id", `Request ${requestId}`);
     consistentValue(group, "actor_session_key", `Request ${requestId}`);
     requests.push({
@@ -240,12 +256,16 @@ function reconstructOperations(events) {
   const operations = [];
   for (const [operationId, group] of groups) {
     group.sort((left, right) => left.timestamp.localeCompare(right.timestamp));
+    requireStrictTimeline(group, `Operation ${operationId}`);
     const environment = consistentValue(group, "environment", `Operation ${operationId}`);
     const prefix = environment === "queue" ? "queue.task." : "scheduled.task.";
     const started = group.filter((event) => event.event === `${prefix}started`);
     const terminal = group.filter((event) => event.event === `${prefix}completed` || event.event === `${prefix}failed`);
     requireCondition(started.length === 1 && terminal.length === 1, `Operation ${operationId} must have one start and one terminal event`);
     const terminalEvent = terminal[0];
+    requireCondition(started[0] === group[0], `Operation ${operationId} start must be the first event`);
+    requireCondition(terminalEvent === group.at(-1), `Operation ${operationId} terminal must be the final event`);
+    requireCondition(typeof terminalEvent.duration_ms === "number", `Operation ${operationId} terminal is incomplete`);
     const task = consistentValue(group.filter((event) => Object.hasOwn(event, "task")), "task", `Operation ${operationId}`);
     requireCondition(typeof task === "string", `Operation ${operationId} is missing its task`);
     operations.push({

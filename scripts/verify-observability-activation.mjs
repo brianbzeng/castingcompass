@@ -64,6 +64,7 @@ const RECEIPT_FIELDS = [
   "schema_version",
   "evaluated_at",
   "evidence_observed_at",
+  "reviewed_commit",
   "policy_id",
   "read_only",
   "provider_query_performed",
@@ -135,6 +136,10 @@ function boolean(value, label) {
   return value;
 }
 
+function allBooleans(entries) {
+  return entries.map(([value, label]) => boolean(value, label)).every(Boolean);
+}
+
 function digest(value, label) {
   if (!DIGEST_PATTERN.test(value ?? "")) {
     refuse("evidence-invalid", `${label} must be a lowercase SHA-256 digest`);
@@ -165,7 +170,7 @@ function exactNamedEntries(entries, requiredNames, fields, label, predicate) {
     || [...byName].some(([name]) => !requiredNames.includes(name))) {
     refuse("evidence-invalid", `${label} names disagree with the locked policy`);
   }
-  return requiredNames.every((name) => predicate(byName.get(name)));
+  return requiredNames.map((name) => predicate(byName.get(name))).every(Boolean);
 }
 
 export function validatePolicy(policy) {
@@ -342,6 +347,19 @@ function validateEvidence(evidence, policy) {
 export function evaluateEvidence(evidence, policy = loadPolicy(), options = {}) {
   const lockedPolicy = validatePolicy(policy);
   const observedAt = validateEvidence(evidence, lockedPolicy);
+  if (!options || typeof options !== "object" || Array.isArray(options)
+    || Object.keys(options).some((key) => !["expectedCommit", "now"].includes(key))) {
+    refuse("evaluation-invalid", "Evaluation options are invalid");
+  }
+  const expectedCommit = options.expectedCommit;
+  if (!COMMIT_PATTERN.test(expectedCommit ?? "")) {
+    refuse("evaluation-invalid",
+      "Expected commit must be supplied independently as a full lowercase Git commit");
+  }
+  if (evidence.release_binding.reviewed_commit !== expectedCommit) {
+    refuse("release-binding-mismatch",
+      "Private release evidence does not match the independently expected commit");
+  }
   const now = options.now ?? new Date();
   if (!(now instanceof Date) || !Number.isFinite(now.getTime())) {
     refuse("evaluation-invalid", "Evaluation time is invalid");
@@ -351,55 +369,57 @@ export function evaluateEvidence(evidence, policy = loadPolicy(), options = {}) 
   const ageMs = now.getTime() - observedAt.getTime();
   const evidenceFresh = ageMs <= maximumAgeMs && ageMs >= -maximumFutureMs;
 
-  const releaseBinding = boolean(evidence.release_binding.preview_matches_reviewed_commit,
-    "Preview release binding")
-    && boolean(evidence.release_binding.production_matches_reviewed_commit,
-      "Production release binding");
-  const logHygiene = [
+  const releaseBinding = allBooleans([
+    [evidence.release_binding.preview_matches_reviewed_commit, "Preview release binding"],
+    [evidence.release_binding.production_matches_reviewed_commit, "Production release binding"],
+  ]);
+  const logHygiene = allBooleans([
     [evidence.log_hygiene.preview_structured_only, "Preview structured-only evidence"],
     [evidence.log_hygiene.production_structured_only, "Production structured-only evidence"],
     [evidence.log_hygiene.preview_raw_invocation_absent, "Preview raw-invocation evidence"],
     [evidence.log_hygiene.production_raw_invocation_absent,
       "Production raw-invocation evidence"],
-  ].every(([value, label]) => boolean(value, label));
+  ]);
   const dashboardNames = new Set(evidence.dashboards.saved_views);
   const dashboards = dashboardNames.size === lockedPolicy.required_saved_views.length
     && lockedPolicy.required_saved_views.every((name) => dashboardNames.has(name));
-  const access = [
+  const access = allBooleans([
     [evidence.access.mfa_enforced, "MFA evidence"],
     [evidence.access.least_privilege_role, "Least-privilege evidence"],
     [evidence.access.access_review_completed, "Access-review evidence"],
-  ].every(([value, label]) => boolean(value, label));
-  const retentionAndCost = [
+  ]);
+  const retentionAndCost = allBooleans([
     [evidence.retention_and_cost.plan_recorded, "Plan evidence"],
     [evidence.retention_and_cost.owner_assigned, "Cost owner evidence"],
-  ].every(([value, label]) => boolean(value, label));
+  ]);
   const alerts = exactNamedEntries(evidence.alerts.drills,
     lockedPolicy.required_alert_drills,
     ["delivered", "acknowledged", "closed", "redaction_tested"],
     "Alert drills",
     (entry) => ["delivered", "acknowledged", "closed", "redaction_tested"]
-      .every((field) => boolean(entry[field], `Alert ${entry.name} ${field}`)));
+      .map((field) => boolean(entry[field], `Alert ${entry.name} ${field}`)).every(Boolean));
   const uptime = exactNamedEntries(evidence.uptime.checks,
     lockedPolicy.required_uptime_checks,
     ["configured", "delivered", "acknowledged"],
     "Uptime checks",
     (entry) => ["configured", "delivered", "acknowledged"]
-      .every((field) => boolean(entry[field], `Uptime ${entry.name} ${field}`)));
+      .map((field) => boolean(entry[field], `Uptime ${entry.name} ${field}`)).every(Boolean));
   const reconstruction = exactNamedEntries(evidence.reconstruction.drills,
     lockedPolicy.required_reconstruction_drills,
     ["completed", "structured_only", "redaction_passed"],
     "Reconstruction drills",
     (entry) => ["completed", "structured_only", "redaction_passed"]
-      .every((field) => boolean(entry[field], `Reconstruction ${entry.name} ${field}`)));
-  const pseudonymKey = [
+      .map((field) => boolean(entry[field], `Reconstruction ${entry.name} ${field}`))
+      .every(Boolean));
+  const pseudonymKey = allBooleans([
     [evidence.pseudonym_key.distinct_from_session_secret, "Pseudonym separation evidence"],
     [evidence.pseudonym_key.access_separated, "Pseudonym access evidence"],
     [evidence.pseudonym_key.rotation_owner_assigned, "Pseudonym rotation owner evidence"],
-  ].every(([value, label]) => boolean(value, label));
-  const posthogDeferred = boolean(evidence.posthog.enabled, "PostHog enabled evidence") === false
-    && boolean(evidence.posthog.separate_approval_recorded,
-      "PostHog approval evidence") === false;
+  ]);
+  const posthogEnabled = boolean(evidence.posthog.enabled, "PostHog enabled evidence");
+  const posthogApproval = boolean(evidence.posthog.separate_approval_recorded,
+    "PostHog approval evidence");
+  const posthogDeferred = posthogEnabled === false && posthogApproval === false;
 
   const checks = {
     access,
@@ -432,6 +452,7 @@ export function evaluateEvidence(evidence, policy = loadPolicy(), options = {}) 
     schema_version: RECEIPT_SCHEMA_VERSION,
     evaluated_at: now.toISOString(),
     evidence_observed_at: observedAt.toISOString(),
+    reviewed_commit: expectedCommit,
     policy_id: lockedPolicy.policy_id,
     read_only: true,
     provider_query_performed: false,
@@ -451,6 +472,7 @@ export function assertPublicReceipt(receipt, policy = loadPolicy()) {
     "Observability activation receipt checks", "receipt-invalid");
   if (receipt.schema_version !== RECEIPT_SCHEMA_VERSION
     || receipt.policy_id !== lockedPolicy.policy_id
+    || !COMMIT_PATTERN.test(receipt.reviewed_commit ?? "")
     || receipt.read_only !== true
     || receipt.provider_query_performed !== false
     || receipt.production_change_authorized !== false
@@ -493,11 +515,26 @@ function loadPrivateEvidence(path, policy) {
 }
 
 function parseEvaluateArgs(args) {
-  if (args.length !== 2 || args[0] !== "--evidence-file" || !args[1]) {
-    refuse("usage-invalid",
-      "Usage: node scripts/verify-observability-activation.mjs evaluate --evidence-file /private/path.json");
+  const usage = "Usage: node scripts/verify-observability-activation.mjs evaluate "
+    + "--evidence-file /private/path.json --expected-commit 40-character-commit";
+  if (args.length !== 4) refuse("usage-invalid", usage);
+  const values = new Map();
+  for (let index = 0; index < args.length; index += 2) {
+    const flag = args[index];
+    const value = args[index + 1];
+    if (!["--evidence-file", "--expected-commit"].includes(flag)
+      || typeof value !== "string" || value.length === 0 || value.startsWith("--")
+      || values.has(flag)) {
+      refuse("usage-invalid", usage);
+    }
+    values.set(flag, value);
   }
-  return args[1];
+  const evidencePath = values.get("--evidence-file");
+  const expectedCommit = values.get("--expected-commit");
+  if (!evidencePath || !COMMIT_PATTERN.test(expectedCommit ?? "")) {
+    refuse("usage-invalid", usage);
+  }
+  return { evidencePath, expectedCommit };
 }
 
 function main(args) {
@@ -513,13 +550,14 @@ function main(args) {
     return;
   }
   if (command === "evaluate") {
-    const evidencePath = parseEvaluateArgs(rest);
-    console.log(JSON.stringify(evaluateEvidence(loadPrivateEvidence(evidencePath, policy), policy),
-      null, 2));
+    const { evidencePath, expectedCommit } = parseEvaluateArgs(rest);
+    console.log(JSON.stringify(evaluateEvidence(loadPrivateEvidence(evidencePath, policy), policy,
+      { expectedCommit }), null, 2));
     return;
   }
   refuse("usage-invalid",
-    "Usage: node scripts/verify-observability-activation.mjs verify-policy|evaluate --evidence-file /private/path.json");
+    "Usage: node scripts/verify-observability-activation.mjs verify-policy|evaluate "
+      + "--evidence-file /private/path.json --expected-commit 40-character-commit");
 }
 
 if (import.meta.url === pathToFileURL(process.argv[1]).href) {

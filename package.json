@@ -45,7 +45,7 @@
     "security:observability-activation": "node scripts/verify-observability-activation.mjs verify-policy",
     "security:production-change-policy": "node scripts/verify-production-change-authorization.mjs verify-policy",
     "audit:cloudflare:state": "node scripts/audit-cloudflare-provider-state.mjs audit-live",
-    "verify:observability:activation": "node scripts/verify-observability-activation.mjs evaluate --evidence-file \"$OBSERVABILITY_EVIDENCE_FILE\"",
+    "verify:observability:activation": "node scripts/verify-observability-activation.mjs evaluate --evidence-file \"$OBSERVABILITY_EVIDENCE_FILE\" --expected-commit \"$OBSERVABILITY_EXPECTED_COMMIT\"",
     "security:ai-review-queue-policy": "node scripts/verify-ai-review-queue-policy.mjs",
     "security:mobile-readiness": "node scripts/verify-mobile-readiness.mjs",
     "security:authorship-provenance": "node scripts/verify-authorship-provenance.mjs --check",

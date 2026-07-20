@@ -125,9 +125,11 @@ authorized D1 runbook in `docs/AI-REVIEW-QUEUE.md`.
 Run `npm run drill:observability:offline` before configuring provider views or after changing the
 event contract. The drill ingests only the committed non-sensitive NDJSON fixture, validates every
 event against `castingcompass.log/1.0.0`, rejects unsupported or high-risk fields and values,
-requires normalized route templates, and reconstructs complete request, Queue, and scheduled-task
-timelines. Its deterministic JSON receipt contains aggregate counts and correlation metadata only;
-it deliberately excludes actor-session pseudonyms and raw event payloads.
+requires normalized route templates and strictly increasing timestamps within each correlation
+identity, and reconstructs request, Queue, and scheduled-task timelines only when request
+completion and operation start/terminal ordering is unambiguous. Its deterministic JSON receipt
+contains aggregate counts and correlation metadata only; it deliberately excludes actor-session
+pseudonyms and raw event payloads.
 
 This is a repository-level contract and runbook exercise. It makes no network request and proves
 neither production log contents nor dashboard, IAM, retention, cost, alert delivery, escalation,
@@ -144,6 +146,7 @@ and run:
 
 ```sh
 OBSERVABILITY_EVIDENCE_FILE=/absolute/private/path/observability-evidence.json \
+OBSERVABILITY_EXPECTED_COMMIT=0123456789abcdef0123456789abcdef01234567 \
   npm run verify:observability:activation
 ```
 
@@ -152,11 +155,14 @@ The exact manifest schema is enforced by
 the reviewed 40-character commit, SHA-256 references to the separately retained private evidence
 packet, bounded retention/volume/cost facts, and boolean outcomes for each named release binding,
 log-hygiene, saved-view, access, alert, uptime, reconstruction, pseudonym-key, and PostHog gate.
+The operator must also supply the independently reviewed commit through
+`OBSERVABILITY_EXPECTED_COMMIT`; evaluation refuses a missing, malformed, or mismatched value.
 It rejects unknown fields, provider/account identifiers, URLs, raw event data, stale or
 future-dated evidence, files inside Git, symlinks, group/world-readable files, and any claim that
 the manifest authorizes a production change.
 
-The printed receipt is aggregate-only: no commit, evidence digest, saved-view name, provider ID,
+The printed receipt is public-safe and data-minimized: it includes the expected reviewed commit
+so the claim cannot float between releases, but no evidence digest, saved-view name, provider ID,
 actor pseudonym, payload, account detail, or secret is copied into it. A ready receipt requires
 all exact gates within 72 hours. A dashboard screenshot alone therefore cannot prove alert
 delivery, MFA/least privilege, retention/cost ownership, uptime, redaction, or incident
@@ -175,8 +181,9 @@ reconstruction. The verifier is read-only, performs no provider query, and alway
       escalation destination; acknowledge and close them through the runbook.
 - [x] Prove repository-level request/Queue/scheduled reconstruction with a non-sensitive fixture;
       fail closed on email/raw identifiers, cookies/tokens, IPs, prompts, notes, coordinates,
-      provider bodies, unnormalized routes, and incomplete correlation chains; omit rotating actor
-      pseudonyms from the deterministic aggregate receipt.
+      provider bodies, unnormalized routes, incomplete correlation chains, equal timestamps, and
+      start/terminal ordering errors; omit rotating actor pseudonyms from the deterministic
+      aggregate receipt.
 - [ ] Repeat the minimum redacted reconstruction against the exact preview and production log
       streams, proving that only the structured schema arrived and no raw invocation event leaked.
 - [ ] Decide whether short native retention is sufficient. If not, approve an OTLP/Logpush

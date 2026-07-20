@@ -61,6 +61,7 @@
       "schema_version",
       "evaluated_at",
       "evidence_observed_at",
+      "reviewed_commit",
       "policy_id",
       "read_only",
       "provider_query_performed",
