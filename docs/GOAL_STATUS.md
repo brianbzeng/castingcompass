@@ -36,12 +36,17 @@ by that discovery.
       A fresh npm `10.9.8` zero-script install completed with 534 audited packages and both full
       and production-only audits returned zero vulnerabilities; no dependency lifecycle script
       ran.
+- [x] Bound all five scheduled authentication/retention delete statements to 100 selected primary
+      rows per table and invocation. A 101-row fixture proves one eligible row remains after the
+      first run, the next run drains it, and current rows survive; all five actual statements use
+      the intended indexes. Existing privacy cleanup remains bounded to 50 tasks and 100-job
+      reconciliation. Completed-job child-cascade cost still needs isolated staging evidence.
 - [x] Bind the policy and generated query ledger into CI, the combined release SBOM, and the
       deterministic release archive; add a 15th representative query-plan check for gear-profile
       ordering. Focused adversarial tests, ESLint, and all 15 plans pass.
 - [x] Complete the full locked verification matrix. A fresh zero-script npm install audited 534
       packages with zero vulnerabilities; every offline security/SBOM gate, both npm audits,
-      ESLint, TypeScript, the Cloudflare build, 440/440 Node tests, and 140/140 Chromium/WebKit
+      ESLint, TypeScript, the Cloudflare build, 441/441 Node tests, and 140/140 Chromium/WebKit
       mobile cases passed. The saved-location recovery cases use their committed forecast
       fixture's recorded clock, so their recovery assertions cannot expire with wall-clock time.
       Exact locked Python graphs passed 29/29 API tests, 81/81 pipeline tests
@@ -763,8 +768,8 @@ by that discovery.
       production-refusing harness, and the default-off advisory Queue adapter with its opaque
       message, D1 outbox/lease/attention ledger, bounded retries, deletion/maintenance recovery,
       DLQ policy, and guarded replay planner are complete;** migrations, provider Queue/DLQ
-      bindings, IAM/alerts, asynchronous complete export packaging, batch-limited scheduled
-      cleanup, staging measurements, failure injection,
+      bindings, IAM/alerts, asynchronous complete export packaging, staging measurements,
+      child-cascade cost evidence, failure injection,
       rollback evidence, and authorized penetration testing remain.
 - [ ] Freeze and deploy the species-aware observation/model-run contract. **Local contract
       complete;** production migration, legacy-row audit, and first approved ingestion manifest

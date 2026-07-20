@@ -316,6 +316,90 @@ test("expired and deleted-account sessions fail closed", async () => {
   assert.deepEqual(await deletedResponse.json(), { user: null });
 });
 
+test("scheduled authentication retention deletes bounded batches and drains old rows", async () => {
+  const { sqlite, d1 } = await database();
+  const user = await addUser(sqlite, "bounded-retention");
+  const oldTimestamp = "2000-01-01T00:00:00.000Z";
+  const futureTimestamp = "2099-01-01T00:00:00.000Z";
+  const insertSession = sqlite.prepare(`INSERT INTO auth_sessions
+    (token_hash, user_id, expires_at, created_at) VALUES (?, ?, ?, ?)`);
+  const insertChallenge = sqlite.prepare(`INSERT INTO email_challenges
+    (id, kind, email, code_hash, expires_at, created_at) VALUES (?, 'signup', ?, ?, ?, ?)`);
+  const insertAttempt = sqlite.prepare(`INSERT INTO auth_attempts
+    (id, email_hash, attempted_at, successful) VALUES (?, ?, ?, 0)`);
+  const insertProof = sqlite.prepare(`INSERT INTO signup_age_proofs
+    (token_hash, confirmed_at, gate_version, expires_at, consumed_at, created_at)
+    VALUES (?, ?, 'age-13:test', ?, NULL, ?)`);
+  const insertDeletionJob = sqlite.prepare(`INSERT INTO privacy_deletion_jobs (
+      id, receipt_hash, scope, subject_hash, owner_subject_hash, state, objects_total,
+      objects_deleted, requested_at, active_data_removed_at, completed_at, updated_at)
+    VALUES (?, ?, 'account', ?, ?, 'completed', 0, 0, ?, ?, ?, ?)`);
+
+  for (let index = 0; index < 101; index += 1) {
+    const suffix = index.toString().padStart(3, "0");
+    insertSession.run(`expired-session-${suffix}`, user.id, oldTimestamp, oldTimestamp);
+    insertChallenge.run(
+      `expired-challenge-${suffix}`,
+      `expired-${suffix}@example.com`,
+      `challenge-hash-${suffix}`,
+      oldTimestamp,
+      oldTimestamp,
+    );
+    insertAttempt.run(`expired-attempt-${suffix}`, `email-hash-${suffix}`, oldTimestamp);
+    insertProof.run(`expired-proof-${suffix}`, oldTimestamp, oldTimestamp, oldTimestamp);
+    insertDeletionJob.run(
+      `expired-deletion-${suffix}`,
+      `expired-receipt-${suffix}`,
+      `expired-subject-${suffix}`,
+      `expired-owner-${suffix}`,
+      oldTimestamp,
+      oldTimestamp,
+      oldTimestamp,
+      oldTimestamp,
+    );
+  }
+
+  insertSession.run("current-session", user.id, futureTimestamp, oldTimestamp);
+  insertChallenge.run(
+    "current-challenge",
+    "current@example.com",
+    "current-challenge-hash",
+    futureTimestamp,
+    oldTimestamp,
+  );
+  insertAttempt.run("current-attempt", "current-email-hash", futureTimestamp);
+  insertProof.run("current-proof", oldTimestamp, futureTimestamp, oldTimestamp);
+  insertDeletionJob.run(
+    "current-deletion",
+    "current-receipt",
+    "current-subject",
+    "current-owner",
+    oldTimestamp,
+    oldTimestamp,
+    futureTimestamp,
+    oldTimestamp,
+  );
+
+  const oldRowCounts = () => ({
+    sessions: sqlite.prepare("SELECT COUNT(*) AS count FROM auth_sessions WHERE token_hash LIKE 'expired-session-%'").get().count,
+    challenges: sqlite.prepare("SELECT COUNT(*) AS count FROM email_challenges WHERE id LIKE 'expired-challenge-%'").get().count,
+    attempts: sqlite.prepare("SELECT COUNT(*) AS count FROM auth_attempts WHERE id LIKE 'expired-attempt-%'").get().count,
+    proofs: sqlite.prepare("SELECT COUNT(*) AS count FROM signup_age_proofs WHERE token_hash LIKE 'expired-proof-%'").get().count,
+    deletions: sqlite.prepare("SELECT COUNT(*) AS count FROM privacy_deletion_jobs WHERE id LIKE 'expired-deletion-%'").get().count,
+  });
+
+  await cleanupAuthData({ DB: d1 });
+  assert.deepEqual(oldRowCounts(), { sessions: 1, challenges: 1, attempts: 1, proofs: 1, deletions: 1 });
+  assert.equal(sqlite.prepare("SELECT COUNT(*) AS count FROM auth_sessions WHERE token_hash = 'current-session'").get().count, 1);
+  assert.equal(sqlite.prepare("SELECT COUNT(*) AS count FROM email_challenges WHERE id = 'current-challenge'").get().count, 1);
+  assert.equal(sqlite.prepare("SELECT COUNT(*) AS count FROM auth_attempts WHERE id = 'current-attempt'").get().count, 1);
+  assert.equal(sqlite.prepare("SELECT COUNT(*) AS count FROM signup_age_proofs WHERE token_hash = 'current-proof'").get().count, 1);
+  assert.equal(sqlite.prepare("SELECT COUNT(*) AS count FROM privacy_deletion_jobs WHERE id = 'current-deletion'").get().count, 1);
+
+  await cleanupAuthData({ DB: d1 });
+  assert.deepEqual(oldRowCounts(), { sessions: 0, challenges: 0, attempts: 0, proofs: 0, deletions: 0 });
+});
+
 test("known and unknown invalid logins perform password derivation and return the same response", async () => {
   const { sqlite, d1 } = await database();
   const user = await addUser(sqlite, "42");

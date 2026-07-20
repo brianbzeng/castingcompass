@@ -27,6 +27,15 @@ still need asynchronous packaging for large accounts. An inventory proves source
 review identity; it does not prove query latency, production index selection, or safe load
 capacity.
 
+Scheduled authentication retention now selects at most 100 eligible primary keys per table and
+invocation before deleting sessions, challenges, attempts, age proofs, and completed deletion
+jobs. Backlogs drain on later scheduled runs, and regression coverage proves the first invocation
+leaves exactly one row from a 101-row eligible fixture while preserving ineligible rows. Privacy
+object work was already bounded to 50 tasks and deletion-job reconciliation to 100 jobs. A
+completed deletion job can still cascade its already-finished child-task rows, so isolated
+production-shaped timing and rows-written evidence remains required before calling the cleanup
+capacity proven.
+
 `scripts/check_d1_query_plans.py` separately applies every migration to an in-memory SQLite
 database, runs 15 representative `EXPLAIN QUERY PLAN` checks, and rejects missing leftmost
 indexes for every foreign-key child path. The checked plans cover the highest-frequency or
@@ -34,7 +43,7 @@ growth-sensitive access patterns:
 
 | Workload | Bound / ordering | Required access path |
 | --- | --- | --- |
-| Session, email-challenge, auth-attempt, and age-proof retention | Scheduled deletion by time; an invocation row ceiling remains open | Dedicated leading time indexes; the two age-proof predicates use SQLite's multi-index OR plan |
+| Session, email-challenge, auth-attempt, and age-proof retention | Scheduled deletion by time; each table selects at most 100 eligible primary keys per invocation | Dedicated leading time indexes; the two age-proof predicates use SQLite's multi-index OR plan |
 | Login and email abuse ceilings | One email pseudonym/address plus a fixed time window | Existing `(email_hash, attempted_at)` and `(email, created_at)` indexes |
 | Saved sites and gear profiles | One authenticated user; exact 100-item ceilings, `LIMIT 101` overflow detection, fail-closed legacy overflow, and atomic count-guarded creates | `(user_id, created_at)` and `(user_id, updated_at)` ordering indexes |
 | Profile trip history | One authenticated user, completed rows only, `LIMIT 100` | Partial expression index over user and effective completion time; no temporary sort |
@@ -43,7 +52,7 @@ growth-sensitive access patterns:
 | Advisory AI backlog | Completed and pending/retry rows, `LIMIT 10` | Partial `(status, effective completion time)` index; row claim remains atomic and idempotent |
 | Advisory AI queue outbox | Due pending/retry/queued jobs and expired leases, bounded oldest-first | `(state, available_at, lease_expires_at)` dispatch index plus a unique trip index; D1 remains authoritative under at-least-once delivery |
 | Public discussions | One curated site, newest first, `LIMIT 12`, then a primary-key trip join | Existing `(site_id, observed_at)` index and trip primary key |
-| Privacy deletion receipts, tombstones, jobs, and tasks | Receipt lookup, subject/owner lookup, bounded worker claims, completed-job retention | Unique receipt, scope/subject, owner/state, state/completion, task retry, and job/object indexes |
+| Privacy deletion receipts, tombstones, jobs, and tasks | Receipt lookup, subject/owner lookup, 50-task worker claims, 100-job reconciliation, and 100-job top-level retention selection; child cascades still require staging cost evidence | Unique receipt, scope/subject, owner/state, state/completion, task retry, and job/object indexes |
 | Validation exports and cascades | Activation, trip, or user predicates with append-only sequence order | Existing activation/trip indexes plus user recruitment, activation correction, and forecast/trip foreign-key indexes |
 
 The inventory policy and generated artifact are inputs to the combined release SBOM and are

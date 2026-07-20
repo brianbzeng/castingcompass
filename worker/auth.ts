@@ -25,6 +25,7 @@ const AGE_PROOF_SECONDS = 10 * 60;
 const MAX_DELETION_ATTEMPTS = 8;
 const MAX_SAVED_SITES_PER_ACCOUNT = 100;
 const MAX_GEAR_PROFILES_PER_ACCOUNT = 100;
+const AUTH_RETENTION_DELETE_BATCH = 100;
 export const LEGAL_VERSION = "2026-07-17.1";
 const AGE_GATE_VERSION = `age-13:${LEGAL_VERSION}`;
 const MINIMUM_ACCOUNT_AGE = 13;
@@ -1959,18 +1960,34 @@ export async function cleanupAuthData(env: AuthApiEnv) {
   const proofCutoff = new Date(now.getTime() - 24 * 60 * 60 * 1000).toISOString();
   const tombstoneCutoff = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000).toISOString();
   await env.DB.batch([
-    env.DB.prepare("DELETE FROM auth_sessions WHERE expires_at <= ?").bind(now.toISOString()),
-    env.DB.prepare("DELETE FROM email_challenges WHERE expires_at <= ?").bind(expiredChallengeCutoff),
-    env.DB.prepare("DELETE FROM auth_attempts WHERE attempted_at < ?").bind(attemptCutoff),
-    env.DB.prepare("DELETE FROM signup_age_proofs WHERE expires_at < ? OR (consumed_at IS NOT NULL AND consumed_at < ?)")
-      .bind(proofCutoff, proofCutoff),
+    env.DB.prepare(`DELETE FROM auth_sessions WHERE token_hash IN (
+      SELECT token_hash FROM auth_sessions WHERE expires_at <= ?
+      ORDER BY expires_at, token_hash LIMIT ?
+    )`).bind(now.toISOString(), AUTH_RETENTION_DELETE_BATCH),
+    env.DB.prepare(`DELETE FROM email_challenges WHERE id IN (
+      SELECT id FROM email_challenges WHERE expires_at <= ?
+      ORDER BY expires_at, id LIMIT ?
+    )`).bind(expiredChallengeCutoff, AUTH_RETENTION_DELETE_BATCH),
+    env.DB.prepare(`DELETE FROM auth_attempts WHERE id IN (
+      SELECT id FROM auth_attempts WHERE attempted_at < ?
+      ORDER BY attempted_at, id LIMIT ?
+    )`).bind(attemptCutoff, AUTH_RETENTION_DELETE_BATCH),
+    env.DB.prepare(`DELETE FROM signup_age_proofs WHERE token_hash IN (
+      SELECT token_hash FROM signup_age_proofs
+      WHERE expires_at < ? OR (consumed_at IS NOT NULL AND consumed_at < ?)
+      LIMIT ?
+    )`).bind(proofCutoff, proofCutoff, AUTH_RETENTION_DELETE_BATCH),
     env.DB.prepare(`DELETE FROM privacy_deletion_jobs
-      WHERE state = 'completed' AND completed_at < ?
-        AND objects_deleted = objects_total
-        AND (SELECT COUNT(*) FROM privacy_deletion_tasks
-          WHERE job_id = privacy_deletion_jobs.id) = objects_total
-        AND NOT EXISTS (SELECT 1 FROM privacy_deletion_tasks
-          WHERE job_id = privacy_deletion_jobs.id AND state != 'completed')`).bind(tombstoneCutoff),
+      WHERE id IN (
+        SELECT id FROM privacy_deletion_jobs
+        WHERE state = 'completed' AND completed_at < ?
+          AND objects_deleted = objects_total
+          AND (SELECT COUNT(*) FROM privacy_deletion_tasks
+            WHERE job_id = privacy_deletion_jobs.id) = objects_total
+          AND NOT EXISTS (SELECT 1 FROM privacy_deletion_tasks
+            WHERE job_id = privacy_deletion_jobs.id AND state != 'completed')
+        ORDER BY completed_at, id LIMIT ?
+      )`).bind(tombstoneCutoff, AUTH_RETENTION_DELETE_BATCH),
   ]);
   await processPrivacyDeletionTasks(env);
 }

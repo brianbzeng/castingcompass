@@ -433,9 +433,14 @@ after its acceptance checks pass in the intended environment.
       reads with exact 100-item resource ceilings, `LIMIT 101` overflow detection, atomic
       count-guarded creates, idempotent duplicate saves, and fail-closed legacy overflow.
       Complete privacy exports remain deliberately untruncated.
-    - [ ] Move large export packaging off the request path and batch-limit scheduled retention
-      deletion. Then capture production-shaped latency, rows-read, and migration-cost evidence in
-      isolated staging. The static inventory is not that performance evidence.
+    - [x] Batch-limit all five scheduled authentication/retention deletes to 100 selected primary
+      rows per table and invocation, preserve ineligible rows, drain backlogs on later runs, and
+      run the actual bounded statements through the query-plan contract. Existing privacy object
+      work remains bounded to 50 tasks and 100-job reconciliation; child cascades still require
+      isolated cost evidence.
+    - [ ] Move large export packaging off the request path. Then capture production-shaped
+      latency, rows-read/written, child-cascade cost, and migration-cost evidence in isolated
+      staging. The static inventory is not that performance evidence.
   - [ ] Publish a cache matrix by asset/data class with owner, privacy classification, cache key,
     TTL, invalidation trigger, stale policy, and failure behavior. Never share-cache personalized
     or authenticated responses; test purge, version skew, offline/service-worker upgrades, and
