@@ -213,13 +213,20 @@ use, then fixed before inspecting test results.
 
 That scaffold applies to exact-point terrain experiments. First-party
 CastingCompass trips deliberately retain curated `site` support and cannot
-enter the point loader. Historical v1 preserves a fixed site-catalog SHA-256,
-46 sites assigned once to five named panels, and four absolute time blocks, but
+enter the point loader. Historical v1 preserves a fixed site-catalog SHA-256 in
+`validation/catalogs/california-halibut-bay-area-v1.json`, with 46 sites assigned
+once to five named panels and four absolute time blocks, but
 it is not activatable. The v2 successor uses the same curated site support only
 for a collection-feasibility pilot. Neither design invents a site centroid,
 weakens point-model eligibility, or treats a whole trip spanning multiple
 windows as a point label. Pre-freeze, pre-activation, past, and legacy rows
 remain product-observational only regardless of structural validity.
+
+The public site catalog may expand independently of that archive. Its Santa
+Barbara South Coast entries are product-planning locations with curated habitat
+priors and public forecast sources, not labeled training data and not eligible
+pilot geography. Local trip reports remain model-excluded unless a future
+prospective protocol freezes the expanded population before enrollment.
 
 Prospective rows additionally retain the frozen recruitment-frame ID, one of
 three allowed pre-outcome source IDs, recruitment event time/hash, and—only for

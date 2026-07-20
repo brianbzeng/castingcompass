@@ -1682,7 +1682,7 @@ export function AccountModal({
                           onOpenSite?.(saved.site_id);
                         }}
                       >
-                        <span><strong>{site?.name ?? saved.site_id}</strong><small>{site?.region ?? "Bay Area"}</small></span>
+                        <span><strong>{site?.name ?? saved.site_id}</strong><small>{site?.region ?? "California coast"}</small></span>
                         <b aria-hidden="true">View forecast →</b>
                       </button>
                     );

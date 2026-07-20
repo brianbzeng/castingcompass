@@ -375,6 +375,24 @@ after its acceptance checks pass in the intended environment.
 
 ## P1 — Evidence, data contracts, discoverability, and scalable foundations
 
+- [ ] Expand California-halibut planning coverage to the Santa Barbara South Coast without
+  weakening the existing safety or evidence boundary.
+  - [x] Curate public Gaviota, Goleta, Santa Barbara, Carpinteria, and Rincon access locations;
+    bind official access/regulation sources; explicitly exclude no-take or ambiguous water;
+    add Santa Barbara tide/weather/buoy/marine mappings; move wave exposure from brittle region
+    names to casting-zone metadata; and adapt the map, metadata, tests, and disclosures for a
+    multi-region heuristic.
+  - [x] Archive the exact original Bay Area site population and bind both frozen validation
+    protocols to that immutable catalog so an evolving public catalog cannot rewrite prior
+    evidence semantics. New-region trip reports remain model-excluded product observations.
+  - [x] Regenerate a fresh 72-hour snapshot from the declared public regional sources, bind its
+    exact catalog and scoring identity into the compact attestation index, and pass local build,
+    contract, pipeline, API, and security gates.
+  - [ ] Review the regional site/access list with local anglers, obtain protected-PR evidence,
+    and deploy only through the still-open guarded production-security release process. Do not
+    claim Santa Barbara training, calibration, validation, catch probability, complete access,
+    or guaranteed safety.
+
 - [ ] Establish privacy-preserving production observability and an operator console before
   scaling traffic. Evaluate Cloudflare-native logs/analytics and focused vendors such as
   PostHog by data fit, searchability, alerting, cost, retention, residency, deletion support,

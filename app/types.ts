@@ -22,6 +22,13 @@ export interface FishingSite {
   accessStatusNote?: string;
   accessStatusUpdatedAt?: string;
   tideStation?: string;
+  weatherAnchor?: string;
+  castingZone?: {
+    radiusMeters: number;
+    bearingDegrees: number;
+    targetDepthMeters: number[];
+    exposure: string;
+  };
   distanceMiles?: number;
 }
 

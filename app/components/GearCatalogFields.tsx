@@ -97,7 +97,7 @@ export function GearCatalogFields({ values, onChange, className = "" }: GearCata
           <input maxLength={200} value={values.rig} onChange={(event) => updateValue("rig", event.target.value)} placeholder="Dropshot, Carolina rig…" />
         </label>
       </div>
-      <small className="gear-catalog-note">Can’t find it? Choose “Other / not listed” and type the exact setup. The catalog focuses on common Bay Area inshore and surf gear.</small>
+      <small className="gear-catalog-note">Can’t find it? Choose “Other / not listed” and type the exact setup. The catalog focuses on common California inshore and surf gear.</small>
     </div>
   );
 }

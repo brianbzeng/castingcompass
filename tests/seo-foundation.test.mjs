@@ -51,7 +51,7 @@ const publicRoutes = [
     path: "/",
     canonical: "https://castingcompass.com/",
     title: "CastingCompass — California halibut opportunity planner",
-    description: "Compare public Bay Area shore, beach, jetty, and pier fishing windows using explainable relative rankings from habitat, seasonality, and current conditions.",
+    description: "Compare public Bay Area and Santa Barbara South Coast fishing windows using explainable relative rankings from habitat, seasonality, and current conditions.",
   },
   {
     path: "/privacy",

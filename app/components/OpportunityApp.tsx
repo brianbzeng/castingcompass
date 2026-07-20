@@ -1397,7 +1397,7 @@ export function OpportunityApp() {
         <a className="brand" href="#top" aria-label="CastingCompass home">
           <span className="brand-icon" aria-hidden="true" />
           <span>CastingCompass</span>
-          <em>Bay Area beta</em>
+          <em>California coast beta</em>
         </a>
         <nav className="desktop-nav" aria-label="Primary navigation">
           <button type="button" onClick={() => scrollToSection("forecast")}>Forecast</button>
@@ -1950,7 +1950,9 @@ export function OpportunityApp() {
                 const report = wavePowerReport(
                   selectedWindow.conditions.wavePowerKwM,
                   selectedWindow.conditions.swellPeriodSeconds,
-                  ["Point Reyes", "Marin Coast", "San Francisco Coast", "San Mateo Coast", "Half Moon Bay"].includes(selectedSite.region),
+                  ["open-coast", "harbor-mouth", "semi-protected"].includes(
+                    selectedSite.castingZone?.exposure ?? "",
+                  ),
                 );
                 return (
                   <div className={`wave-power-condition ${report.tone}`}>

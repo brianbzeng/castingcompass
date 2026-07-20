@@ -13,24 +13,55 @@ function sha256(bytes) {
   return createHash("sha256").update(bytes).digest("hex");
 }
 
-test("curates the required number of reachable Bay Area access sites", async () => {
+test("curates reachable Bay Area and Santa Barbara South Coast access sites", async () => {
   const [sites, publicSites] = await Promise.all([
     readJson("data/sites.json"),
     readJson("public/data/sites.json"),
   ]);
 
-  assert.ok(sites.length >= 30 && sites.length <= 50, `expected 30–50 sites, received ${sites.length}`);
+  assert.ok(sites.length >= 60 && sites.length <= 70, `expected 60–70 sites, received ${sites.length}`);
   assert.equal(new Set(sites.map((site) => site.id)).size, sites.length);
   assert.deepEqual(publicSites, sites);
 
+  const expectedSantaBarbaraSites = new Set([
+    "gaviota-state-park-beach",
+    "refugio-state-beach",
+    "el-capitan-state-beach",
+    "haskells-beach",
+    "goleta-beach",
+    "arroyo-burro-beach",
+    "mesa-lane-beach",
+    "leadbetter-beach",
+    "santa-barbara-harbor-breakwater",
+    "stearns-wharf",
+    "east-beach-santa-barbara",
+    "carpinteria-state-beach",
+    "rincon-beach-park",
+  ]);
+
+  for (const siteId of expectedSantaBarbaraSites) {
+    assert.ok(sites.some((site) => site.id === siteId), `${siteId} must be in the regional catalog`);
+  }
+
   for (const site of sites) {
     assert.match(site.id, /^[a-z0-9]+(?:-[a-z0-9]+)*$/);
-    assert.ok(site.latitude >= 37.35 && site.latitude <= 38.25, `${site.id} latitude outside launch geography`);
-    assert.ok(site.longitude >= -123.1 && site.longitude <= -121.9, `${site.id} longitude outside launch geography`);
+    const inBayArea =
+      site.latitude >= 37.35 && site.latitude <= 38.25 &&
+      site.longitude >= -123.1 && site.longitude <= -121.9;
+    const inSantaBarbaraSouthCoast =
+      site.latitude >= 34.34 && site.latitude <= 34.5 &&
+      site.longitude >= -120.3 && site.longitude <= -119.4;
+    assert.ok(inBayArea || inSantaBarbaraSouthCoast, `${site.id} outside supported regional coverage`);
     assert.ok(["Shore", "Beach", "Jetty", "Pier"].includes(site.type));
     assert.ok(site.regulationUrl.startsWith("https://wildlife.ca.gov/"));
     assert.ok(site.structureTags.length > 0);
     assert.ok(site.castingZone?.radiusMeters > 0);
+    assert.ok(
+      ["bay", "channel", "harbor", "protected-bay", "open-coast", "harbor-mouth", "semi-protected"].includes(
+        site.castingZone?.exposure,
+      ),
+      `${site.id} must declare a recognized casting-zone exposure`,
+    );
     assert.ok(Number.isFinite(site.streetViewLatitude));
     assert.ok(Number.isFinite(site.streetViewLongitude));
     if (site.accessStatus === "closed") {

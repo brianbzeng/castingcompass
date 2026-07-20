@@ -13,6 +13,24 @@ Current provider truth overrides historical “paused” language in completed r
 2026-07-19 read-only reconciliation found an active Worker; no production mutation is authorized
 by that discovery.
 
+## Active checkpoint — Santa Barbara South Coast model track
+
+- **Security/release checkpoint:** paused at the owner's request on 2026-07-19. All open P0/P1
+  provider, migration, independent-review, production-security, and live-evidence gates below
+  remain open exactly as written. This track does not deploy, mutate Cloudflare, activate a
+  provider, or treat local verification as production evidence.
+- **Active implementation:** expand the existing explainable California-halibut heuristic from
+  the Bay Area to the public Santa Barbara South Coast from Gaviota through Goleta and Santa
+  Barbara to Rincon. The work must preserve official access and MPA boundaries, use fresh
+  regional forecast anchors, adapt the map and truthful search language, and retain the score as
+  a relative ranking rather than a catch probability.
+- **Evidence boundary:** the original Bay Area validation geography is preserved byte-for-byte
+  in a versioned catalog. Santa Barbara trip reports are ordinary private, reviewable product
+  observations only; they do not enter the frozen pilot or support a model-performance claim.
+- **Resume point:** after this regional branch is reviewed, resume the earliest open P0 release
+  gate in [PRODUCT_ROADMAP.md](PRODUCT_ROADMAP.md). Do not ship either track until the guarded
+  production checklist clears.
+
 ## Completed seven-step work cycle — privacy-safe observability evidence
 
 - [x] Reconcile protected `main`, draft PR `#119`, the owner roadmap, and the current API-image
@@ -50,7 +68,6 @@ by that discovery.
       secret-scanning alerts are all zero. The provider dashboard, IAM/retention/cost evidence,
       uptime checks, delivered alerts, preview/production reconstruction, and production release
       remain open; this repository receipt does not authorize them.
-
 ## Completed seven-step work cycle — SEO language and provider evidence
 
 - [x] Reconcile protected `main` and the existing crawl contract. Starting `main` was

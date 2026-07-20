@@ -4,7 +4,24 @@
 bathymetry self-supervised pretraining implemented; catch heads remain
 untrained; no catch performance measured.
 
-**Version:** 0.3.0
+**Version:** 0.4.0
+
+## Live regional-ranking boundary
+
+The public live ranker is a separate heuristic configuration, not the untrained
+research heads described below. Its catalog covers the Bay Area plus 13 public
+Santa Barbara South Coast access locations from Gaviota through Rincon. Santa
+Barbara sites use curated casting-zone exposure and habitat priors together with
+Santa Barbara tide, weather, buoy, and marine-forecast inputs. They do not use a
+Santa Barbara-trained terrain model and have not been validated against local trip
+outcomes. Scores remain relative percentiles across the current candidate set, so
+adding a region changes the comparison universe rather than creating a catch
+probability.
+
+Ordinary trip reports from the new region remain private, reviewable product
+observations. They cannot become evidence for the frozen Bay Area validation pilot
+or a performance claim without a separately approved, prospective protocol that
+defines the new geography before outcomes are known.
 
 ## Model purpose
 

@@ -1746,7 +1746,7 @@ test("feasibility pilot start, completion, safe cancellation, export, and privac
       'sealed-before-enrollment', ?)`)
     .run(
       activationId,
-      "8ff0d7bd009ed8eb10f328347d58d0b63d0b6c822b08351cc5c2760d41de13ed",
+      "4d034e303c841d05419cd1512abacad8c24080582edcfd4fc194d638ee5a7c3c",
       "e".repeat(64),
       "d".repeat(64),
       "b0378742f40cca598c57d845fb683ab9b36068cdd69de541aeb3e45d93c31860",

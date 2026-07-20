@@ -869,7 +869,7 @@ export const validationFeasibilityActivations = sqliteTable(
       "validation_feasibility_activation_protocol_check",
       sql`${table.protocolId} = 'california-halibut-collection-feasibility-v2'
         and ${table.protocolVersion} = '2.0.0'
-        and ${table.protocolSha256} = '8ff0d7bd009ed8eb10f328347d58d0b63d0b6c822b08351cc5c2760d41de13ed'
+        and ${table.protocolSha256} = '4d034e303c841d05419cd1512abacad8c24080582edcfd4fc194d638ee5a7c3c'
         and ${table.siteCatalogSha256} = 'b0378742f40cca598c57d845fb683ab9b36068cdd69de541aeb3e45d93c31860'`,
     ),
     check(
