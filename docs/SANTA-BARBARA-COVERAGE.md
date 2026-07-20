@@ -3,7 +3,7 @@
 **Status:** repository implementation; not a production-release receipt
 
 CastingCompass extends its explainable California-halibut relative ranker across
-13 public South Coast access locations from Gaviota through Goleta and Santa
+14 public South Coast access locations from Gaviota through Goleta and Santa
 Barbara to Rincon. This is geographic product coverage, not a trained Santa
 Barbara catch model and not evidence of improved accuracy.
 
@@ -14,6 +14,8 @@ Barbara catch model and not evidence of improved accuracy.
 - **Goleta:** Haskell's Beach and the ocean side of Goleta Beach.
 - **Santa Barbara:** Arroyo Burro, Mesa Lane Steps, Leadbetter, Santa Barbara
   Harbor Breakwater, Stearns Wharf, and East Beach.
+- **Summerland:** Summerland Beach from Lookout Park, kept limited until local
+  reviewers confirm the pedestrian route, posted hours, and tide constraints.
 - **Carpinteria:** Carpinteria State Beach and Rincon Beach Park.
 
 Each catalog entry names its public-access source, applicable CDFW regulation
@@ -23,7 +25,11 @@ can change; the user must recheck official sources and posted signs before trave
 
 ## Exclusions and boundary safeguards
 
-- Campus Point and the adjacent no-take coastline are not catalog locations.
+- Campus Point, Sands, and Devereux are not fishing catalog locations because
+  CDFW places that shoreline inside the Campus Point no-take conservation area.
+  Ellwood Beach also remains unranked until a public access point can be tied to
+  a clearly legal casting zone outside the protected boundary and locally
+  reviewed without inviting boundary confusion.
 - Goleta Slough is no-take. The Goleta listing covers the ocean beach only and
   does not assert that every portion of its pier is open.
 - The El Capitán casting zone is kept outside the Naples no-take boundary.
@@ -31,15 +37,29 @@ can change; the user must recheck official sources and posted signs before trave
   explicitly closed and is not a ranked site.
 - Private, uncertain, or poorly sourced access is omitted rather than inferred.
 
+The 2026-07-20 gap audit used the [City of Goleta coastal-access
+inventory](https://www.cityofgoleta.org/home/showpublisheddocument/32405/638962261763570000),
+[CDFW's Campus Point boundary](https://wildlife.ca.gov/Conservation/Marine/MPAs/Campus-Point),
+the [City of Santa Barbara beach
+inventory](https://sbparksandrec.santabarbaraca.gov/parks-recreation-spaces?combine=&field_space_target_id=525),
+and [Santa Barbara County's official Lookout Park
+listing](https://www.countyofsb.org/lookout-park). It added the previously
+uncovered Summerland segment through that public access. The
+Summerland map point is based on [CDFW OSPR site summary
+`4-675-C`](https://filelib.wildlife.ca.gov/Public/OSPR/WebMapping/ACP/dfg_ospr_acp4/pdfs/sensitive_sites/Archive/Archive_2019/4-675-C.pdf);
+that response-planning document does not establish fishing quality, safe access,
+or current water quality.
+
 These product boundaries are conservative aids, not legal geofences. Official
 CDFW maps, current regulations, and posted closures control.
 
 ## Forecast and scoring inputs
 
 Regional tide predictions use NOAA CO-OPS station `9411399` at Gaviota State
-Park for the Gaviota Coast, `9411340` at Santa Barbara for Goleta and Santa
-Barbara, and `9411270` at Rincon Island for Carpinteria and Rincon. Four
-NWS/Open-Meteo anchors cover Gaviota, Goleta, Santa Barbara, and Carpinteria.
+Park for the Gaviota Coast, `9411340` at Santa Barbara for Goleta, Santa
+Barbara, and Summerland, and `9411270` at Rincon Island for Carpinteria and
+Rincon. Five NWS/Open-Meteo anchors cover Gaviota, Goleta, Santa Barbara,
+Summerland, and Carpinteria.
 NOAA NDBC station `46054` supplies West Santa Barbara Channel observations for
 the Gaviota anchor, while `46053` supplies East Channel observations for the
 other three anchors. Missing or stale values remain missing or stale; the

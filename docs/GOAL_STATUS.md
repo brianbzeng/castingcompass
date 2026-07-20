@@ -27,9 +27,10 @@ by that discovery.
 - **Regional source audit:** the 2026-07-20 read-only recheck replaced the single Santa Barbara
   tide proxy with NOAA's Gaviota (`9411399`), Santa Barbara (`9411340`), and Rincon (`9411270`)
   prediction stations, and routes the Gaviota weather anchor to West Channel buoy `46054` while
-  Goleta through Carpinteria retain East Channel buoy `46053`. The regenerated 72-hour snapshot
-  reports no tide, weather, buoy, or marine-forecast fetch failure. This is source coverage, not
-  local-access or model-performance evidence.
+  Goleta through Carpinteria retain East Channel buoy `46053`. The official gap audit added
+  Summerland through Lookout Park while preserving the Campus Point no-take exclusion. The
+  regenerated 2,160-window snapshot reports no tide, weather, buoy, or marine-forecast fetch
+  failure. This is source coverage, not local-access or model-performance evidence.
 - **Evidence boundary:** the original Bay Area validation geography is preserved byte-for-byte
   in a versioned catalog. Santa Barbara trip reports are ordinary private, reviewable product
   observations only; they do not enter the frozen pilot or support a model-performance claim.
@@ -42,7 +43,7 @@ by that discovery.
   carries the regional implementation. It must remain unmerged and undeployed until every
   exact-head check passes, local anglers review the access list, and the guarded production
   checklist clears.
-- **Local-review readiness:** the blank 13-site access-review packet and read-only evaluator are
+- **Local-review readiness:** the blank 14-site access-review packet and read-only evaluator are
   machine-bound to the catalog and signed release inventory. The evaluator keeps raw responses
   outside the repository, counts random pseudonymous reviewer keys, enforces recent observations
   and seven-day official-source checks, blocks unresolved corrections, and emits only aggregate
@@ -51,6 +52,43 @@ by that discovery.
 - **Resume point:** after this regional branch is reviewed, resume the earliest open P0 release
   gate in [PRODUCT_ROADMAP.md](PRODUCT_ROADMAP.md). Do not ship either track until the guarded
   production checklist clears.
+
+## Completed work cycle — API image upstream watch
+
+- [x] Reconcile protected `main`, draft regional PR `#118`, the owner roadmap, and GitHub work.
+      Starting `main` is `4f20a786c8a88cce7104be7a73f012fca1440f02`; `#118` remains the only
+      open PR and issue `#86` remains the only open issue. Production is untouched.
+- [x] Identify the earliest repository-actionable P0 gap. The weekly native image scan runs on
+      Monday, while Python 3.13.15 is scheduled for Tuesday 2026-08-04 and the bounded exception
+      expires Saturday 2026-08-08, leaving a detection gap during the replacement window.
+- [x] Implement a dependency-free daily/manual, read-only primary-source watch with bounded
+      requests. Offline policy and adversarial fixture tests pass 5/5; a live 2026-07-20 check
+      confirms Python `3.13.14`, source SHA-256
+      `639e43243c620a308f968213df9e00f2f8f62332f7adbaa7a7eeb9783057c690`, source revision
+      `f79aea5b8f6b2d65b31ba2bb3f69c0c2083345c8`, and AMD64/ARM64 publication remain current.
+- [x] Regenerate the deterministic release inventory and pass the complete clean local gate.
+      A fresh zero-script npm install audited 534 packages with zero vulnerabilities; the
+      Cloudflare build, 430/430 Node tests, 140/140 Chromium/WebKit mobile cases, ESLint,
+      TypeScript, every offline security/SBOM gate, five Python lock graphs, and both npm audits
+      passed. Fresh hash-locked Python graphs passed 29/29 API tests and 81/81 pipeline tests
+      with one documented optional-raster skip, 14 critical query plans, Ruff, and deterministic
+      smoke. The local Homebrew Python 3.13.14 `pyexpat`/system-library mismatch prevents a clean
+      exact-runtime API environment, so hosted CI remains the exact Python 3.13.14 authority.
+- [x] Publish the exact accepted implementation head through protected CI, provenance, CodeQL,
+      and native image checks without deployment or provider mutation. Draft PR `#121` head
+      `20cd657686a9bd7e1ec8bfbac9c5742c37879f06` passed PR CI `29716510562`, release
+      provenance `29716510577`, CodeQL `29716509307`, and native image security `29716510583`;
+      duplicate branch-push CI `29716478066` and release provenance `29716478086` also passed.
+      Fifteen checks succeeded and five event-appropriate jobs skipped. Both web runs completed
+      all 140 Chromium/WebKit cases, hosted API used exact Python 3.13.14, and both native image
+      architectures passed. No Cloudflare, D1, DNS, provider, or production action ran.
+- [x] Merge only accepted evidence and reconcile exact protected `main`, workflows, alerts, and
+      issue `#86`. PR `#121` merged normally as
+      `8c051080abcb3f19b6ab7bc36f6aed67c5bb9f87`; main CI `29717064849`, release
+      provenance `29717064802`, native API image security `29717064831`, and CodeQL
+      `29717064180` passed. Manual main watch run `29717078040` also passed. Dependabot,
+      code-scanning, and secret-scanning alerts were all zero; issue `#86` remains open until a
+      fixed image passes both native architectures. No deployment or provider mutation ran.
 
 ## Completed seven-step work cycle — privacy-safe observability evidence
 
@@ -728,6 +766,16 @@ by that discovery.
 
 ## P2 — Species and business expansion
 
+- [ ] Add pollution and water-quality conditions to a separately versioned score component only
+      after its meaning, official/licensed sources, spatial and temporal support, freshness,
+      uncertainty, missing-data behavior, and validation gates are frozen. Agency advisories stay
+      authoritative; the product must not turn a fishing score into a water-contact or seafood-
+      consumption safety claim.
+- [ ] Enrich the map one available location at a time with reviewed notable structure and useful
+      depth levels. Every feature needs reproducible official/licensed source provenance, units,
+      vertical datum, resolution, retrieval date, checksum, uncertainty, allowed use, sensitive-
+      habitat review, and per-location visual/data acceptance; unmapped locations remain clearly
+      incomplete instead of receiving invented detail.
 - [ ] Add striped bass as the first distinct estuary/migration beta.
 - [ ] Add defensible rockfish complexes, cabezon, and surfperch groups, each with its own source
       inventory, model card, validation gate, and regulation treatment.
@@ -755,7 +803,7 @@ by that discovery.
 - [ ] Refresh visual design, graphics, species art, empty states, social cards, and brand
       illustration. Artist collaboration remains deferred until higher-risk work is complete.
 
-## Product-owner work that is safe while Cloudflare stays paused
+## Product-owner work that is safe while production changes remain on hold
 
 - [ ] Audit MFA/passkeys and recovery methods for GitHub, Cloudflare, the domain registrar,
       primary email, Google Search Console, and Bing Webmaster Tools. Store recovery codes

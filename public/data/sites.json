@@ -2278,6 +2278,44 @@
     "streetViewRoadDistanceMeters": 180
   },
   {
+    "id": "summerland-beach-lookout-park",
+    "name": "Summerland Beach (Lookout Park)",
+    "latitude": 34.41993,
+    "longitude": -119.60136,
+    "region": "Summerland",
+    "type": "Beach",
+    "access": "Public pedestrian beach access from Lookout Park in Summerland. Use the signed route, observe posted park hours and restrictions, and do not depend on a tide-covered shoreline as a return path.",
+    "regulationUrl": "https://wildlife.ca.gov/Fishing/Ocean/Regulations/Fishing-Map/Southern",
+    "depthProfile": "General sandy shoreline; detailed source-bound shore-reachable depth and structure review remains queued.",
+    "beachSlopeClass": "gentle",
+    "structureTags": [
+      "bluff-backed-beach",
+      "sand-flat"
+    ],
+    "parking": "Small public park lot; obey posted hours and parking restrictions.",
+    "transit": "No transit availability is asserted; verify the current route before relying on it.",
+    "amenities": [],
+    "habitatPrior": 77,
+    "tideStation": "9411340",
+    "weatherAnchor": "summerland",
+    "castingZone": {
+      "radiusMeters": 480,
+      "bearingDegrees": 190,
+      "targetDepthMeters": [
+        1,
+        9
+      ],
+      "exposure": "open-coast"
+    },
+    "accessSourceUrl": "https://www.countyofsb.org/lookout-park",
+    "accessStatus": "limited",
+    "accessStatusNote": "County Parks lists Lookout Park, while the pedestrian route, park hours, bluff conditions, and tide-limited shoreline still require local confirmation before release.",
+    "accessStatusUpdatedAt": "2026-07-19",
+    "streetViewLatitude": 34.42055,
+    "streetViewLongitude": -119.60058,
+    "streetViewRoadDistanceMeters": 112
+  },
+  {
     "id": "carpinteria-state-beach",
     "name": "Carpinteria State Beach",
     "latitude": 34.3924,

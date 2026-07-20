@@ -96,6 +96,10 @@ credential formats.
   posted wharf rules or temporary closures require a correction.
 - `east-beach-santa-barbara` — **East Beach (Santa Barbara)** (`open`): confirm
   public access and whether seasonal recreation-zone constraints are clear.
+- `summerland-beach-lookout-park` — **Summerland Beach (Lookout Park)**
+  (`limited`): confirm the public pedestrian route from the park, posted hours,
+  bluff conditions, and whether the tide-limited return warning is clear. Two
+  local reviews are required.
 - `carpinteria-state-beach` — **Carpinteria State Beach** (`open`): confirm park
   access and whether wildlife/tide-pool restrictions need clearer wording.
 - `rincon-beach-park` — **Rincon Beach Park** (`open`): confirm public access and

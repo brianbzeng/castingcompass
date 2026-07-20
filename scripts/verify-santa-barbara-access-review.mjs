@@ -7,8 +7,8 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 import { isDeepStrictEqual } from "node:util";
 
 const DEFAULT_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
-const REGION_NAMES = new Set(["Gaviota Coast", "Goleta", "Santa Barbara", "Carpinteria"]);
-const POLICY_SCHEMA = "castingcompass.santa-barbara-access-review/1.1.0";
+const REGION_NAMES = new Set(["Gaviota Coast", "Goleta", "Santa Barbara", "Summerland", "Carpinteria"]);
+const POLICY_SCHEMA = "castingcompass.santa-barbara-access-review/1.2.0";
 const EVIDENCE_SCHEMA = "castingcompass.santa-barbara-access-review-evidence/1.0.0";
 const RECEIPT_SCHEMA = "castingcompass.santa-barbara-access-review-receipt/1.0.0";
 const COMMIT_PATTERN = /^[a-f0-9]{40}$/u;
@@ -195,7 +195,7 @@ export function validateSantaBarbaraAccessReview({ policy, catalog, guide }) {
   requireExactKeys(policy.geography, ["expectedSiteCount", "label", "scope"], "Review geography");
   requireCondition(policy.geography.label === "Santa Barbara South Coast", "Review geography label changed.");
   requireCondition(policy.geography.scope === "Gaviota through Rincon", "Review geography scope changed.");
-  requireCondition(policy.geography.expectedSiteCount === 13, "Review geography must contain 13 sites.");
+  requireCondition(policy.geography.expectedSiteCount === 14, "Review geography must contain 14 sites.");
 
   requireExactKeys(policy.storage, [
     "privateEvidenceDigestRequiredForAggregateReceipt",
@@ -313,7 +313,7 @@ export function validateSantaBarbaraAccessReview({ policy, catalog, guide }) {
     requireCondition(guide.includes(`\`${reviewSite.siteId}\``), `${reviewSite.siteId} is missing from the reviewer guide.`);
     requireCondition(guide.includes(`**${reviewSite.name}**`), `${reviewSite.name} is missing from the reviewer guide.`);
   }
-  requireCondition(limitedSiteCount === 4, "Expected exactly four limited-access sites requiring two reviews.");
+  requireCondition(limitedSiteCount === 5, "Expected exactly five limited-access sites requiring two reviews.");
 
   for (const questionId of QUESTION_IDS) {
     requireCondition(guide.includes(`${questionId}: matches_catalog | correction_needed | not_observed | uncertain`), `Reviewer guide response block is missing ${questionId}.`);

@@ -81,6 +81,7 @@ WEATHER_ANCHORS = {
     "gaviota-coast": (34.46, -120.08),
     "goleta": (34.42, -119.84),
     "santa-barbara": (34.405, -119.69),
+    "summerland": (34.42, -119.60),
     "carpinteria": (34.39, -119.52),
 }
 
@@ -98,6 +99,7 @@ BUOY_BY_ANCHOR = {
     "gaviota-coast": "46054",
     "goleta": "46053",
     "santa-barbara": "46053",
+    "summerland": "46053",
     "carpinteria": "46053",
 }
 

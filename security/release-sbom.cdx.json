@@ -1,7 +1,7 @@
 {
   "bomFormat": "CycloneDX",
   "specVersion": "1.5",
-  "serialNumber": "urn:uuid:cc126b88-5b52-5ebb-93c4-f37c8846c956",
+  "serialNumber": "urn:uuid:f46bd67e-7901-5231-b0f9-1cf50561cebf",
   "version": 1,
   "metadata": {
     "component": {
@@ -29,7 +29,7 @@
         },
         {
           "name": "castingcompass:input-sha256",
-          "value": "field-review/santa-barbara-access-review-policy.json:7cb09aac852c88565528a7760af61d1032bcc5a0146f0f1e622249a217878216"
+          "value": "field-review/santa-barbara-access-review-policy.json:123b115fdda8b0adf856e14d2cc7c5674737fca8a9c54fe3b638ce69a11c81e6"
         },
         {
           "name": "castingcompass:input-sha256",
@@ -37,7 +37,7 @@
         },
         {
           "name": "castingcompass:input-sha256",
-          "value": "package.json:50bf0a55f7f01c2d61808e3e6f294faaa82d2d4304246e3a598188864acd50da"
+          "value": "package.json:c323c5c528cab9dacdf86c293f58f739c5d23063d5b4e6db54a6fe65693af3fb"
         },
         {
           "name": "castingcompass:input-sha256",
@@ -53,7 +53,7 @@
         },
         {
           "name": "castingcompass:input-sha256",
-          "value": "security/api-image-policy.json:4464b2a880f7ca189bacb998dee759808083b9bfcad1f81a0cb06ccda3a419f7"
+          "value": "security/api-image-policy.json:c6ea351c859e9f2816f91894e84ae0fc860e3d3d57d5ec5e2c69b111ebaa857a"
         },
         {
           "name": "castingcompass:input-sha256",

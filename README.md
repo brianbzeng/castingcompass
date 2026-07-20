@@ -24,8 +24,8 @@ The final 0–100 **Opportunity Score is a relative percentile**, not a catch pr
 
 The checked-in demo includes:
 
-- 60 curated public access locations, with temporary closures retained in the catalog but excluded from ranking.
-- 2,124 two-hour windows over a 72-hour horizon when one catalog location is closed.
+- 61 curated public access locations, with temporary closures retained in the catalog but excluded from ranking.
+- 2,160 two-hour windows over a 72-hour horizon when one catalog location is closed.
 - Live public NOAA CO-OPS tide predictions, NWS hourly forecasts, NDBC observations, and Open-Meteo Marine modeled SST at snapshot generation time.
 - Visible freshness states and exclusion of missing/stale inputs.
 - A MapLibre map using ArcGIS World Ocean base and reference layers, clustered map-native site points, a ranked access list, preset/custom distance-radius filtering, score explanations, official CDFW links, responsive detail sheets, geolocation sorting, PWA installation, and offline access to the latest loaded forecast.

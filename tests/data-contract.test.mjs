@@ -35,6 +35,7 @@ test("curates reachable Bay Area and Santa Barbara South Coast access sites", as
     "santa-barbara-harbor-breakwater",
     "stearns-wharf",
     "east-beach-santa-barbara",
+    "summerland-beach-lookout-park",
     "carpinteria-state-beach",
     "rincon-beach-park",
   ]);
@@ -50,6 +51,7 @@ test("curates reachable Bay Area and Santa Barbara South Coast access sites", as
     ["santa-barbara-harbor-breakwater", "9411340"],
     ["stearns-wharf", "9411340"],
     ["east-beach-santa-barbara", "9411340"],
+    ["summerland-beach-lookout-park", "9411340"],
     ["carpinteria-state-beach", "9411270"],
     ["rincon-beach-park", "9411270"],
   ]);

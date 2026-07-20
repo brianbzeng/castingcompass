@@ -1,12 +1,12 @@
 {
-  "schemaVersion": "castingcompass.santa-barbara-access-review/1.1.0",
+  "schemaVersion": "castingcompass.santa-barbara-access-review/1.2.0",
   "status": "template_only_not_executed",
   "reviewedOn": "2026-07-19",
   "purpose": "Collect generalized local corrections to the Santa Barbara South Coast public-access catalog before release without collecting trip, catch, identity, or precise-location data.",
   "geography": {
     "label": "Santa Barbara South Coast",
     "scope": "Gaviota through Rincon",
-    "expectedSiteCount": 13
+    "expectedSiteCount": 14
   },
   "storage": {
     "responseLocation": "private_outside_repository",
@@ -236,6 +236,17 @@
       "accessSourceUrl": "https://sbparksandrec.santabarbaraca.gov/parks/east-beach-park",
       "regulationUrl": "https://wildlife.ca.gov/Fishing/Ocean/Regulations/Fishing-Map/Southern",
       "minimumLocalReviews": 1,
+      "reviewState": "pending"
+    },
+    {
+      "siteId": "summerland-beach-lookout-park",
+      "name": "Summerland Beach (Lookout Park)",
+      "region": "Summerland",
+      "catalogAccessStatus": "limited",
+      "catalogAccessStatusUpdatedAt": "2026-07-19",
+      "accessSourceUrl": "https://www.countyofsb.org/lookout-park",
+      "regulationUrl": "https://wildlife.ca.gov/Fishing/Ocean/Regulations/Fishing-Map/Southern",
+      "minimumLocalReviews": 2,
       "reviewState": "pending"
     },
     {

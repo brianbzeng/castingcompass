@@ -220,7 +220,11 @@ after its acceptance checks pass in the intended environment.
       `29653146497`, release-provenance `29653146479`, and CodeQL `29653146307` passed, followed
       by zero open dependency, code-scanning, or secret-scanning alerts. Issue `#86` stays open
       and fails closed after the bounded renewal unless the first fixed stable official image is
-      adopted and natively re-verified.
+      adopted and natively re-verified. A dependency-free daily official-source watch now closes
+      the Monday-native-scan/Tuesday-release cadence gap and fails on maintained-version,
+      checksum, source-revision, tag, directory, or AMD64/ARM64 publication drift. This is early
+      detection only; it neither closes `#86` nor substitutes for the required two-architecture
+      native replacement scan.
     - [x] Enable live `main` protection with pull requests, strict app-bound GitHub Actions and
       Advanced Security `CodeQL` checks, resolved conversations, administrator enforcement, and
       force-push/deletion denial; enable Dependabot security updates, secret-scanning push
@@ -377,7 +381,7 @@ after its acceptance checks pass in the intended environment.
 
 - [ ] Expand California-halibut planning coverage to the Santa Barbara South Coast without
   weakening the existing safety or evidence boundary.
-  - [x] Curate public Gaviota, Goleta, Santa Barbara, Carpinteria, and Rincon access locations;
+  - [x] Curate public Gaviota, Goleta, Santa Barbara, Summerland, Carpinteria, and Rincon access locations;
     bind official access/regulation sources; explicitly exclude no-take or ambiguous water;
     bind NOAA Gaviota/Santa Barbara/Rincon tide-prediction stations and West/East Santa Barbara
     Channel buoys to their appropriate subregions; add regional weather/marine mappings; move
@@ -393,7 +397,7 @@ after its acceptance checks pass in the intended environment.
     and deploy only through the still-open guarded production-security release process. Do not
     claim Santa Barbara training, calibration, validation, catch probability, complete access,
     or guaranteed safety.
-    - [x] Freeze and machine-check a blank 13-site local access-review packet with one review per
+    - [x] Freeze and machine-check a blank 14-site local access-review packet with one review per
       open site, two per limited site, at least two regional reviewers, a seven-day official-source
       recheck, zero unresolved corrections, 30-day raw-response disposal, private evidence only,
       and explicit denial of deployment, safety/legal, and model-validation authority. Actual
@@ -406,19 +410,10 @@ after its acceptance checks pass in the intended environment.
       denial are machine-checked. The public receipt contains aggregate counts and a private-file
       digest only. The policy is CI- and release-inventory-bound and makes no network or provider
       request. No local responses or accepted receipt exist yet.
-  - [ ] Incorporate official pollution and recreational-water-quality conditions into the
-    opportunity score only after freezing a source and safety contract for each covered region.
-    Bind advisory/closure authority, analyte or indicator meaning, spatial and temporal support,
-    update cadence, stale/missing behavior, provenance, and a preregistered score direction or
-    hard-exclusion rule. A closure must suppress the affected opportunity; missing data must
-    remain unknown rather than imply clean or safe water; and the feature must not claim health,
-    catch, or model validity without the corresponding official and prospective evidence.
-  - [ ] Enrich every available location one by one with source-bound notable structure and depth
-    levels. Each site review must record the official bathymetry/habitat source, native resolution,
-    positional accuracy, vertical datum, generalized shore-reachable depth range, mapped structure,
-    uncertainty, review date, and whether the information is display-only or score-eligible. Do
-    not invent precise casting spots, resample coarse data into false detail, or let a map annotation
-    alter ranking before its source and validation gates pass.
+  - [ ] Complete the separately prioritized P2 pollution/water-quality score contract and
+    location-by-location structure/depth inventory before claiming either as regional capability.
+    Those deferred goals retain their canonical acceptance boundaries in P2 below and do not block
+    private trip logging or this source-bound geographic checkpoint.
 
 - [ ] Establish privacy-preserving production observability and an operator console before
   scaling traffic. Evaluate Cloudflare-native logs/analytics and focused vendors such as
@@ -615,6 +610,18 @@ after its acceptance checks pass in the intended environment.
 
 ## P2 — Species and business expansion
 
+- [ ] Incorporate pollution and water-quality conditions into a separately versioned score
+  component only after its intended meaning is frozen (fishing-quality context versus human-health
+  advisory), official or explicitly licensed sources are inventoried, spatial/temporal support and
+  freshness are preserved, missing or stale inputs fail closed, and the contribution is validated
+  against frozen baselines. Keep agency advisories visible and authoritative; never imply that a
+  fishing score proves water, contact, or seafood-consumption safety.
+- [ ] Build the map location by location until every available location has a reviewed inventory
+  of notable structure and useful depth levels. Bind each feature to a reproducible official or
+  licensed bathymetry/chart source, units, vertical datum, resolution, retrieval date, checksum,
+  uncertainty, and permitted display/model use; reject false precision and protect sensitive
+  habitat or access information. Ship each location only after visual and data acceptance, while
+  keeping unmapped locations explicitly incomplete.
 - [ ] Add striped bass as the first new beta using a distinct estuary/migration model.
 - [ ] Define and evaluate explicit shore-relevant rockfish species/complexes next; then model
   cabezon as its own taxon; then split surfperch into defensible habitat/taxon groups. Each beta

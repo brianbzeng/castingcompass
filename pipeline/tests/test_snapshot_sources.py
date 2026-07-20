@@ -14,6 +14,7 @@ class SnapshotSourceTests(unittest.TestCase):
             "gaviota-coast": ((34.46, -120.08), "46054"),
             "goleta": ((34.42, -119.84), "46053"),
             "santa-barbara": ((34.405, -119.69), "46053"),
+            "summerland": ((34.42, -119.60), "46053"),
             "carpinteria": ((34.39, -119.52), "46053"),
         }
         for anchor, (coordinates, buoy) in expected.items():

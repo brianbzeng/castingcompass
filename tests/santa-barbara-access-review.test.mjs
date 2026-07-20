@@ -105,10 +105,10 @@ function evaluate(fixture, evidence) {
 
 test("Santa Barbara access-review policy exactly covers the regional catalog and remains unexecuted", async () => {
   assert.deepEqual(await verifySantaBarbaraAccessReview(), {
-    schemaVersion: "castingcompass.santa-barbara-access-review/1.1.0",
+    schemaVersion: "castingcompass.santa-barbara-access-review/1.2.0",
     status: "template_only_not_executed",
-    siteCount: 13,
-    limitedSiteCount: 4,
+    siteCount: 14,
+    limitedSiteCount: 5,
     questionCount: 5,
     deploymentAuthorizationGranted: false,
     modelValidationEvidenceGranted: false,
@@ -141,7 +141,7 @@ test("blank evidence template is digest-bound, private-data-free, and non-author
   assert.equal(template.catalog_sha256, sha256(fixture.catalogSource));
   assert.equal(template.policy_sha256, sha256(fixture.policySource));
   assert.deepEqual(template.responses, []);
-  assert.equal(template.official_source_rechecks.length, 13);
+  assert.equal(template.official_source_rechecks.length, 14);
   assert.equal(template.official_source_rechecks.every((entry) =>
     entry.checked_at === "1970-01-01T00:00:00.000Z"
       && entry.access_source_reachable === false
@@ -149,7 +149,7 @@ test("blank evidence template is digest-bound, private-data-free, and non-author
   assert.equal(template.deployment_authorization_granted, false);
 });
 
-test("complete evidence accepts all 13 sites while its public receipt exposes only aggregates", async () => {
+test("complete evidence accepts all 14 sites while its public receipt exposes only aggregates", async () => {
   const fixture = await fixtures();
   const evidence = completeEvidence(fixture);
   const evidenceSource = Buffer.from(`${JSON.stringify(evidence, null, 2)}\n`);
@@ -161,11 +161,11 @@ test("complete evidence accepts all 13 sites while its public receipt exposes on
     evaluatedAt,
   });
   assert.equal(receipt.access_review_accepted, true);
-  assert.equal(receipt.site_count, 13);
-  assert.equal(receipt.passing_site_count, 13);
+  assert.equal(receipt.site_count, 14);
+  assert.equal(receipt.passing_site_count, 14);
   assert.equal(receipt.blocked_site_count, 0);
-  assert.equal(receipt.response_count, 17);
-  assert.equal(receipt.qualifying_response_count, 17);
+  assert.equal(receipt.response_count, 19);
+  assert.equal(receipt.qualifying_response_count, 19);
   assert.equal(receipt.distinct_reviewer_count, 2);
   assert.equal(receipt.private_evidence_sha256, sha256(evidenceSource));
   assert.deepEqual(receipt.blockers, []);

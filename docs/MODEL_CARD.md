@@ -9,7 +9,7 @@ untrained; no catch performance measured.
 ## Live regional-ranking boundary
 
 The public live ranker is a separate heuristic configuration, not the untrained
-research heads described below. Its catalog covers the Bay Area plus 13 public
+research heads described below. Its catalog covers the Bay Area plus 14 public
 Santa Barbara South Coast access locations from Gaviota through Rincon. Santa
 Barbara sites use curated casting-zone exposure and habitat priors together with
 Santa Barbara tide, weather, buoy, and marine-forecast inputs. They do not use a
