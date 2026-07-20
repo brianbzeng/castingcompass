@@ -27,6 +27,10 @@ by that discovery.
 - **Evidence boundary:** the original Bay Area validation geography is preserved byte-for-byte
   in a versioned catalog. Santa Barbara trip reports are ordinary private, reviewable product
   observations only; they do not enter the frozen pilot or support a model-performance claim.
+- **Review receipt:** draft PR [#118](https://github.com/brianbzeng/castingcompass/pull/118)
+  carries the regional implementation. It must remain unmerged and undeployed until every
+  exact-head check passes, local anglers review the access list, and the guarded production
+  checklist clears.
 - **Resume point:** after this regional branch is reviewed, resume the earliest open P0 release
   gate in [PRODUCT_ROADMAP.md](PRODUCT_ROADMAP.md). Do not ship either track until the guarded
   production checklist clears.
