@@ -441,10 +441,13 @@ after its acceptance checks pass in the intended environment.
     - [ ] Move large export packaging off the request path. Then capture production-shaped
       latency, rows-read/written, child-cascade cost, and migration-cost evidence in isolated
       staging. The static inventory is not that performance evidence.
-  - [ ] Publish a cache matrix by asset/data class with owner, privacy classification, cache key,
-    TTL, invalidation trigger, stale policy, and failure behavior. Never share-cache personalized
-    or authenticated responses; test purge, version skew, offline/service-worker upgrades, and
-    correctness during snapshot rollover.
+  - [x] Publish a cache matrix by asset/data class with owner, privacy classification, cache key,
+    TTL, invalidation trigger, stale policy, and failure behavior. Authenticated, personalized,
+    error, cookie-setting, and every `/api/*` response fail closed to browser/CDN `no-store`; the
+    PWA bypasses APIs and accepts only explicitly public successful responses.
+  - [ ] In isolated staging, record an explicit edge purge, canonical/alias warm and cold headers,
+    snapshot rollover, version skew, offline fallback, service-worker replacement, and prior-cache
+    removal. Local policy and browser tests are not provider purge or rollover evidence.
   - [ ] Queue only slow or retryable side effects such as AI generation, media processing,
     notifications, cleanup, and aggregation. Keep authorization and consistency-critical writes
     synchronous; require idempotency keys, deduplication, bounded retry/backoff, dead-letter
@@ -455,9 +458,13 @@ after its acceptance checks pass in the intended environment.
       deletion and maintenance recovery, provider-DLQ policy, and a non-executing state-guarded
       replay planner. Production migration, Queue/DLQ bindings, IAM/alerts, isolated failure and
       rollback drills, and the separate activation change remain open.
-  - [ ] Use Cloudflare's managed D1 binding lifecycle instead of inventing a traditional SQL
-    connection pool. If a future database/provider supports pooling, size and monitor it against
-    concurrency limits and failure modes before adoption.
+  - [x] Use Cloudflare's managed D1 binding lifecycle instead of inventing a traditional SQL
+    connection pool. The optional FastAPI/Postgres process owns one bounded pool with validated
+    minimum, maximum, wait-queue, and checkout-timeout settings plus explicit startup/shutdown;
+    it is not part of the Worker request path.
+  - [ ] Size the optional pool against the approved provider plan and process count, export its
+    queue/wait/error statistics, and test exhaustion and recovery in isolated staging before
+    enabling that service in production.
   - [ ] Define performance budgets and run isolated load, soak, spike, and failure-injection
     tests with production-shaped synthetic data. Record saturation points, tail latency, error
     rates, queue depth, database contention, cache effectiveness, cost, and a safe rollback plan.

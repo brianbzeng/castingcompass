@@ -41,6 +41,11 @@ by that discovery.
       first run, the next run drains it, and current rows survive; all five actual statements use
       the intended indexes. Existing privacy cleanup remains bounded to 50 tasks and 100-job
       reconciliation. Completed-job child-cascade cost still needs isolated staging evidence.
+- [x] Reconcile the already-enforced cache and connection boundaries into the owner checklist.
+      The complete cache matrix and fail-closed API/PWA rules are locally tested; the Worker uses
+      provider-managed D1 bindings, while the optional Postgres service owns one validated bounded
+      pool. Edge purge/rollover evidence and provider-sized pool telemetry/exhaustion drills remain
+      isolated-staging gates rather than implied production evidence.
 - [x] Bind the policy and generated query ledger into CI, the combined release SBOM, and the
       deterministic release archive; add a 15th representative query-plan check for gear-profile
       ordering. Focused adversarial tests, ESLint, and all 15 plans pass.
