@@ -34,8 +34,14 @@ by that discovery.
       with one documented optional-raster skip, 14 critical query plans, Ruff, and deterministic
       smoke. The local Homebrew Python 3.13.14 `pyexpat`/system-library mismatch prevents a clean
       exact-runtime API environment, so hosted CI remains the exact Python 3.13.14 authority.
-- [ ] Publish the exact accepted head through protected CI, provenance, CodeQL, and native image
-      checks without deployment or provider mutation.
+- [x] Publish the exact accepted implementation head through protected CI, provenance, CodeQL,
+      and native image checks without deployment or provider mutation. Draft PR `#121` head
+      `20cd657686a9bd7e1ec8bfbac9c5742c37879f06` passed PR CI `29716510562`, release
+      provenance `29716510577`, CodeQL `29716509307`, and native image security `29716510583`;
+      duplicate branch-push CI `29716478066` and release provenance `29716478086` also passed.
+      Fifteen checks succeeded and five event-appropriate jobs skipped. Both web runs completed
+      all 140 Chromium/WebKit cases, hosted API used exact Python 3.13.14, and both native image
+      architectures passed. No Cloudflare, D1, DNS, provider, or production action ran.
 - [ ] Merge only accepted evidence and reconcile exact protected `main`, workflows, alerts, and
       issue `#86`. The issue must remain open until a fixed image passes both native architectures.
 
