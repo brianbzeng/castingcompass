@@ -38,6 +38,7 @@ jobs:
       - run: npm run security:cloudflare-provider-state
       - run: npm run security:observability-activation
       - run: npm run security:production-change-policy
+      - run: npm run security:santa-barbara-access-review
       - run: npm run lint
       - run: npm run typecheck
       - run: npm test

@@ -36,9 +36,12 @@ by that discovery.
   carries the regional implementation. It must remain unmerged and undeployed until every
   exact-head check passes, local anglers review the access list, and the guarded production
   checklist clears.
-- **Local-review readiness:** the blank 13-site access-review packet is machine-bound to the
-  catalog and permits generalized access corrections only. It has not been executed or accepted;
-  all sites remain pending and no deployment or validation authority follows from it.
+- **Local-review readiness:** the blank 13-site access-review packet and read-only evaluator are
+  machine-bound to the catalog and signed release inventory. The evaluator keeps raw responses
+  outside the repository, counts random pseudonymous reviewer keys, enforces recent observations
+  and seven-day official-source checks, blocks unresolved corrections, and emits only aggregate
+  counts plus a private-evidence digest. It has not been executed or accepted; all sites remain
+  pending and no deployment, safety/legal, or validation authority follows from it.
 - **Resume point:** after this regional branch is reviewed, resume the earliest open P0 release
   gate in [PRODUCT_ROADMAP.md](PRODUCT_ROADMAP.md). Do not ship either track until the guarded
   production checklist clears.

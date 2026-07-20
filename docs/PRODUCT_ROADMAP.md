@@ -398,6 +398,13 @@ after its acceptance checks pass in the intended environment.
       and explicit denial of deployment, safety/legal, and model-validation authority. Actual
       local review, its aggregate receipt, final protected checks, and guarded deployment remain
       open.
+    - [x] Add the offline, fail-closed evidence evaluator missing from that packet. Private files
+      must be regular `0600` non-symlinks outside the repository; checkout and evidence digests,
+      random pseudonymous reviewer keys, per-site thresholds, six-month observation recency,
+      seven-day source freshness, correction resolution, strict field/size bounds, and authority
+      denial are machine-checked. The public receipt contains aggregate counts and a private-file
+      digest only. The policy is CI- and release-inventory-bound and makes no network or provider
+      request. No local responses or accepted receipt exist yet.
   - [ ] Incorporate official pollution and recreational-water-quality conditions into the
     opportunity score only after freezing a source and safety contract for each covered region.
     Bind advisory/closure authority, analyte or indicator meaning, spatial and temporal support,

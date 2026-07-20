@@ -7,6 +7,7 @@ const root = new URL("../", import.meta.url);
 const inputPaths = [
   ".node-version",
   ".python-version",
+  "field-review/santa-barbara-access-review-policy.json",
   "package-lock.json",
   "package.json",
   "pipeline/.python-version",
@@ -117,6 +118,9 @@ test("CI verifies the combined inventory and the signer rejects a narrowed hando
   assert.match(manifest, /"security:release-sbom": "node scripts\/generate-release-sbom\.mjs --check"/u);
   assert.match(ci, /npm run security:sbom\n\s+- run: npm run security:release-sbom/u);
   assert.match(release, /npm run security:sbom\n\s+- run: npm run security:release-sbom/u);
+  assert.match(manifest, /"security:santa-barbara-access-review": "node scripts\/verify-santa-barbara-access-review\.mjs verify-policy"/u);
+  assert.match(ci, /npm run security:production-change-policy\n\s+- run: npm run security:santa-barbara-access-review/u);
+  assert.match(release, /npm run security:production-change-policy\n\s+- run: npm run security:santa-barbara-access-review/u);
   const signingJob = release.slice(release.indexOf("  attest-release:"));
   assert.match(signingJob, /castingcompass-release[\s\S]+not Cloudflare deployment provenance/u);
   assert.match(signingJob, /\.type == "container"[\s\S]+\.type == "operating-system"[\s\S]+pkg:pypi\//u);

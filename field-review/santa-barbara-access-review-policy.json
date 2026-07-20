@@ -1,5 +1,5 @@
 {
-  "schemaVersion": "castingcompass.santa-barbara-access-review/1.0.0",
+  "schemaVersion": "castingcompass.santa-barbara-access-review/1.1.0",
   "status": "template_only_not_executed",
   "reviewedOn": "2026-07-19",
   "purpose": "Collect generalized local corrections to the Santa Barbara South Coast public-access catalog before release without collecting trip, catch, identity, or precise-location data.",
@@ -17,6 +17,7 @@
   "allowedPrivateResponseFields": [
     "site_id",
     "response_id",
+    "reviewer_key",
     "observed_month",
     "question_answers",
     "correction_category",
@@ -40,6 +41,49 @@
     "not_observed",
     "uncertain"
   ],
+  "evidence": {
+    "schemaVersion": "castingcompass.santa-barbara-access-review-evidence/1.0.0",
+    "maximumFileBytes": 262144,
+    "maximumResponsesPerSite": 10,
+    "maximumObservedMonthAgeMonths": 6,
+    "maximumFutureSkewMinutes": 5
+  },
+  "publicReceipt": {
+    "schemaVersion": "castingcompass.santa-barbara-access-review-receipt/1.0.0",
+    "allowedFields": [
+      "schema_version",
+      "evaluated_at",
+      "reviewed_commit",
+      "catalog_sha256",
+      "policy_sha256",
+      "private_evidence_sha256",
+      "read_only",
+      "provider_query_performed",
+      "production_change_authorized",
+      "response_count",
+      "qualifying_response_count",
+      "distinct_reviewer_count",
+      "site_count",
+      "passing_site_count",
+      "blocked_site_count",
+      "unresolved_correction_count",
+      "official_rechecks_current",
+      "raw_response_disposal_due_at",
+      "access_review_accepted",
+      "deployment_authorization_granted",
+      "model_validation_evidence_granted",
+      "safety_or_legality_guarantee_granted",
+      "blockers"
+    ],
+    "blockerCodes": [
+      "distinct-reviewers-insufficient",
+      "official-recheck-incomplete",
+      "official-recheck-stale",
+      "response-outside-recency-window",
+      "responses-incomplete",
+      "unresolved-corrections"
+    ]
+  },
   "questions": [
     {
       "id": "public_entry_route",

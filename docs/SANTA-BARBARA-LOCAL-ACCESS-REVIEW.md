@@ -20,6 +20,8 @@ photos, catches, or trip notes.
 
 ```text
 Site ID:
+Reviewer key (owner-assigned random UUID; reuse for this reviewer only):
+Response ID (owner-assigned random UUID; unique for this site response):
 Observed month (YYYY-MM, or not_observed):
 public_entry_route: matches_catalog | correction_needed | not_observed | uncertain
 access_status: matches_catalog | correction_needed | not_observed | uncertain
@@ -31,10 +33,40 @@ General correction (one sentence; no personal, trip, catch, or precise-location 
 ```
 
 One reviewer may cover multiple locations, but use one block per site. The
-owner should assign a random response ID, keep the raw response outside Git and
-outside Codex, and delete it within 30 days after accepting or rejecting the
-correction. Only a later aggregate, non-identifying receipt may enter the
+owner should assign a random response ID and a random pseudonymous reviewer key.
+Reuse that reviewer key only to count the same reviewer across sites; it must
+not be a name, contact detail, account ID, or other identifier. Keep both UUIDs
+and the raw response outside Git and outside Codex. Delete the private evidence
+within 30 days after accepting or rejecting the review. Only the evaluator's
+aggregate, non-identifying receipt and private-evidence digest may enter the
 repository.
+
+## Offline evaluator
+
+The evaluator is read-only and makes no provider or network requests. Generate
+a blank, checkout-bound evidence manifest into a private directory with a
+restrictive umask:
+
+```sh
+umask 077
+npm run template:santa-barbara-access-review -- --expected-commit <full-commit-sha> > /absolute/private/path/access-review.json
+```
+
+Fill that private file without adding fields. Record a current official-source
+recheck for every location after comparing the linked access and regulation
+pages to the catalog. Then evaluate it against the same reviewed checkout:
+
+```sh
+npm run evaluate:santa-barbara-access-review -- --evidence-file /absolute/private/path/access-review.json --expected-commit <full-commit-sha>
+```
+
+The evidence file must be a regular non-symlink file outside the repository,
+no larger than 256 KiB, with permissions exactly `0600`. Observations older
+than six calendar months, uncertain or unobserved answers, missing or stale
+official checks, insufficient distinct reviewers, and unresolved corrections
+all fail closed. Generalized correction text is limited to one short line and
+rejects contact details, links, coordinates, phone-like strings, and common
+credential formats.
 
 ## Locations to review
 

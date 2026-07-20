@@ -1,7 +1,7 @@
 {
   "bomFormat": "CycloneDX",
   "specVersion": "1.5",
-  "serialNumber": "urn:uuid:c21de580-f7bd-50f2-bae8-bc6e1cf7ba8b",
+  "serialNumber": "urn:uuid:cc126b88-5b52-5ebb-93c4-f37c8846c956",
   "version": 1,
   "metadata": {
     "component": {
@@ -29,11 +29,15 @@
         },
         {
           "name": "castingcompass:input-sha256",
+          "value": "field-review/santa-barbara-access-review-policy.json:7cb09aac852c88565528a7760af61d1032bcc5a0146f0f1e622249a217878216"
+        },
+        {
+          "name": "castingcompass:input-sha256",
           "value": "package-lock.json:45e650d6089694753a041541662bc68eded62de0b2e77157bd19cc9c747de0e5"
         },
         {
           "name": "castingcompass:input-sha256",
-          "value": "package.json:2f2d78508f714923788cf62f78564eed378d9d1fc97eca8681b45d2e914be0ab"
+          "value": "package.json:50bf0a55f7f01c2d61808e3e6f294faaa82d2d4304246e3a598188864acd50da"
         },
         {
           "name": "castingcompass:input-sha256",
