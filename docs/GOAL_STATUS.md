@@ -24,6 +24,12 @@ by that discovery.
   Barbara to Rincon. The work must preserve official access and MPA boundaries, use fresh
   regional forecast anchors, adapt the map and truthful search language, and retain the score as
   a relative ranking rather than a catch probability.
+- **Regional source audit:** the 2026-07-20 read-only recheck replaced the single Santa Barbara
+  tide proxy with NOAA's Gaviota (`9411399`), Santa Barbara (`9411340`), and Rincon (`9411270`)
+  prediction stations, and routes the Gaviota weather anchor to West Channel buoy `46054` while
+  Goleta through Carpinteria retain East Channel buoy `46053`. The regenerated 72-hour snapshot
+  reports no tide, weather, buoy, or marine-forecast fetch failure. This is source coverage, not
+  local-access or model-performance evidence.
 - **Evidence boundary:** the original Bay Area validation geography is preserved byte-for-byte
   in a versioned catalog. Santa Barbara trip reports are ordinary private, reviewable product
   observations only; they do not enter the frozen pilot or support a model-performance claim.
@@ -83,6 +89,7 @@ by that discovery.
       secret-scanning alerts are all zero. The provider dashboard, IAM/retention/cost evidence,
       uptime checks, delivered alerts, preview/production reconstruction, and production release
       remain open; this repository receipt does not authorize them.
+
 ## Completed seven-step work cycle — SEO language and provider evidence
 
 - [x] Reconcile protected `main` and the existing crawl contract. Starting `main` was

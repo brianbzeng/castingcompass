@@ -1834,7 +1834,7 @@
       "campground-nearby"
     ],
     "habitatPrior": 73,
-    "tideStation": "9411340",
+    "tideStation": "9411399",
     "weatherAnchor": "gaviota-coast",
     "castingZone": {
       "radiusMeters": 420,
@@ -1877,7 +1877,7 @@
       "picnic-tables"
     ],
     "habitatPrior": 72,
-    "tideStation": "9411340",
+    "tideStation": "9411399",
     "weatherAnchor": "gaviota-coast",
     "castingZone": {
       "radiusMeters": 380,
@@ -1919,7 +1919,7 @@
       "picnic-tables"
     ],
     "habitatPrior": 71,
-    "tideStation": "9411340",
+    "tideStation": "9411399",
     "weatherAnchor": "gaviota-coast",
     "castingZone": {
       "radiusMeters": 320,
@@ -2301,7 +2301,7 @@
       "campground"
     ],
     "habitatPrior": 81,
-    "tideStation": "9411340",
+    "tideStation": "9411270",
     "weatherAnchor": "carpinteria",
     "castingZone": {
       "radiusMeters": 580,
@@ -2343,7 +2343,7 @@
       "picnic-tables"
     ],
     "habitatPrior": 75,
-    "tideStation": "9411340",
+    "tideStation": "9411270",
     "weatherAnchor": "carpinteria",
     "castingZone": {
       "radiusMeters": 420,

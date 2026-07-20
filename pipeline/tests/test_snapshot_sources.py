@@ -9,16 +9,16 @@ from scripts import generate_snapshot
 
 
 class SnapshotSourceTests(unittest.TestCase):
-    def test_santa_barbara_anchors_use_the_declared_channel_buoy(self):
+    def test_santa_barbara_anchors_use_regionally_appropriate_channel_buoys(self):
         expected = {
-            "gaviota-coast": (34.46, -120.08),
-            "goleta": (34.42, -119.84),
-            "santa-barbara": (34.405, -119.69),
-            "carpinteria": (34.39, -119.52),
+            "gaviota-coast": ((34.46, -120.08), "46054"),
+            "goleta": ((34.42, -119.84), "46053"),
+            "santa-barbara": ((34.405, -119.69), "46053"),
+            "carpinteria": ((34.39, -119.52), "46053"),
         }
-        for anchor, coordinates in expected.items():
+        for anchor, (coordinates, buoy) in expected.items():
             self.assertEqual(generate_snapshot.WEATHER_ANCHORS[anchor], coordinates)
-            self.assertEqual(generate_snapshot.BUOY_BY_ANCHOR[anchor], "46053")
+            self.assertEqual(generate_snapshot.BUOY_BY_ANCHOR[anchor], buoy)
 
     def test_wave_exposure_is_bound_to_casting_zone_not_region_name(self):
         self.assertTrue(

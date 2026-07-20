@@ -36,11 +36,14 @@ CDFW maps, current regulations, and posted closures control.
 
 ## Forecast and scoring inputs
 
-All regional sites use NOAA CO-OPS station `9411340` for Santa Barbara tide
-predictions. Four NWS/Open-Meteo anchors cover Gaviota, Goleta, Santa Barbara,
-and Carpinteria, and NOAA NDBC station `46053` supplies East Santa Barbara Channel
-observations. Missing or stale values remain missing or stale; the generator does
-not invent replacements.
+Regional tide predictions use NOAA CO-OPS station `9411399` at Gaviota State
+Park for the Gaviota Coast, `9411340` at Santa Barbara for Goleta and Santa
+Barbara, and `9411270` at Rincon Island for Carpinteria and Rincon. Four
+NWS/Open-Meteo anchors cover Gaviota, Goleta, Santa Barbara, and Carpinteria.
+NOAA NDBC station `46054` supplies West Santa Barbara Channel observations for
+the Gaviota anchor, while `46053` supplies East Channel observations for the
+other three anchors. Missing or stale values remain missing or stale; the
+generator does not invent replacements.
 
 The live configuration combines a curated habitat prior, provisional monthly
 seasonality, public conditions, practical fishability, and a small transparent

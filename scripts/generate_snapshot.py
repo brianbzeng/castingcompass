@@ -42,7 +42,7 @@ PACIFIC = ZoneInfo("America/Los_Angeles")
 
 SCORING_SYSTEM_KIND = "heuristic-configuration"
 SCORING_CONFIGURATION = {
-    "configuration_version": "castingcompass-hybrid-demo/0.7.0",
+    "configuration_version": "castingcompass-hybrid-demo/0.7.1",
     "target_taxon_id": PRODUCTION_TARGET_TAXON_ID,
     "components": {
         "habitat": 0.44,
@@ -95,7 +95,7 @@ BUOY_BY_ANCHOR = {
     "south-bay": "46026",
     "peninsula-bay": "46026",
     "half-moon-bay": "46012",
-    "gaviota-coast": "46053",
+    "gaviota-coast": "46054",
     "goleta": "46053",
     "santa-barbara": "46053",
     "carpinteria": "46053",

@@ -38,9 +38,30 @@ test("curates reachable Bay Area and Santa Barbara South Coast access sites", as
     "carpinteria-state-beach",
     "rincon-beach-park",
   ]);
+  const expectedSantaBarbaraTideStations = new Map([
+    ["gaviota-state-park-beach", "9411399"],
+    ["refugio-state-beach", "9411399"],
+    ["el-capitan-state-beach", "9411399"],
+    ["haskells-beach", "9411340"],
+    ["goleta-beach", "9411340"],
+    ["arroyo-burro-beach", "9411340"],
+    ["mesa-lane-beach", "9411340"],
+    ["leadbetter-beach", "9411340"],
+    ["santa-barbara-harbor-breakwater", "9411340"],
+    ["stearns-wharf", "9411340"],
+    ["east-beach-santa-barbara", "9411340"],
+    ["carpinteria-state-beach", "9411270"],
+    ["rincon-beach-park", "9411270"],
+  ]);
 
   for (const siteId of expectedSantaBarbaraSites) {
-    assert.ok(sites.some((site) => site.id === siteId), `${siteId} must be in the regional catalog`);
+    const site = sites.find((candidate) => candidate.id === siteId);
+    assert.ok(site, `${siteId} must be in the regional catalog`);
+    assert.equal(
+      site.tideStation,
+      expectedSantaBarbaraTideStations.get(siteId),
+      `${siteId} must use its nearest declared NOAA tide-prediction anchor`,
+    );
   }
 
   for (const site of sites) {

@@ -379,9 +379,10 @@ after its acceptance checks pass in the intended environment.
   weakening the existing safety or evidence boundary.
   - [x] Curate public Gaviota, Goleta, Santa Barbara, Carpinteria, and Rincon access locations;
     bind official access/regulation sources; explicitly exclude no-take or ambiguous water;
-    add Santa Barbara tide/weather/buoy/marine mappings; move wave exposure from brittle region
-    names to casting-zone metadata; and adapt the map, metadata, tests, and disclosures for a
-    multi-region heuristic.
+    bind NOAA Gaviota/Santa Barbara/Rincon tide-prediction stations and West/East Santa Barbara
+    Channel buoys to their appropriate subregions; add regional weather/marine mappings; move
+    wave exposure from brittle region names to casting-zone metadata; and adapt the map,
+    metadata, tests, and disclosures for a multi-region heuristic.
   - [x] Archive the exact original Bay Area site population and bind both frozen validation
     protocols to that immutable catalog so an evolving public catalog cannot rewrite prior
     evidence semantics. New-region trip reports remain model-excluded product observations.
