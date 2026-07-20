@@ -38,9 +38,14 @@ by that discovery.
       and both npm audits passed. The exact Python graphs passed 29/29 API tests, 81/81 pipeline
       tests with one documented optional-raster skip, Ruff, the deterministic synthetic smoke,
       18 migrations, and 14 critical query plans.
-- [ ] Publish the exact accepted implementation head through protected CI, release provenance,
-      and CodeQL without deployment or provider mutation; then reconcile the immutable hosted
-      receipt.
+- [x] Publish the exact accepted implementation head without deployment or provider mutation.
+      Draft PR `#124` head `ac65e788f1eb08c913a1883d58a01b97553c527c` passed branch-push CI
+      `29721479936` and release provenance `29721479889`, PR CI `29721522454` and release
+      provenance `29721522444`, CodeQL `29721520911`, and native API-image security
+      `29721522455`. Fifteen checks succeeded and five event-appropriate jobs skipped; both web
+      runs completed all 140 Chromium/WebKit cases and both native image architectures passed.
+      The PR is still a mergeable draft with no comments or reviews, and no Cloudflare, D1, DNS,
+      deployment, migration, provider query, or production mutation ran.
 - [ ] Obtain a real second-person review of the private historical packet outside Git. Until that
       reviewer supplies a valid private record and the verifier accepts it, independent review,
       production key custody, provider evidence, the restore gate, and release authorization all
