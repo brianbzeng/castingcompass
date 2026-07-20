@@ -48,6 +48,24 @@ access-pressure modifier. Habitat priors were not fit to Santa Barbara trip logs
 The final 0–100 value is a relative percentile across every active site/window in
 the current catalog, not a calibrated chance of catching a fish.
 
+## Queued data improvements
+
+Two owner-requested goals are recorded but not implemented:
+
+1. Add official pollution and recreational-water-quality conditions as a
+   source-bound score modifier or hard exclusion. A closure must suppress the
+   affected opportunity, stale or missing data must remain visibly unknown, and
+   no value may imply that water is clean, safe, or predictive of catch without
+   the required official and prospective evidence.
+2. Review every available catalog location one by one for notable structure and
+   shore-reachable depth. Each annotation must retain its bathymetry or habitat
+   source, resolution, positional accuracy, vertical datum, uncertainty, and
+   display-versus-scoring permission. Coarse data cannot be converted into an
+   invented precise casting spot.
+
+These goals remain unchecked in the product roadmap. They do not change the
+current snapshot, ranking identity, map annotations, or validation boundary.
+
 ## Trip and validation boundary
 
 Friends and other anglers may submit complete trips and skunks through the normal

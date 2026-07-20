@@ -27,6 +27,11 @@ by that discovery.
 - **Evidence boundary:** the original Bay Area validation geography is preserved byte-for-byte
   in a versioned catalog. Santa Barbara trip reports are ordinary private, reviewable product
   observations only; they do not enter the frozen pilot or support a model-performance claim.
+- **Queued regional data goals:** add official pollution/water-quality conditions as a
+  source-bound score modifier or hard exclusion, and audit every catalog location one by one for
+  notable structure and shore-reachable depth. Both stay unchecked until their provenance,
+  resolution, uncertainty, freshness, missing-data, safety, and score-eligibility gates pass;
+  neither is a current product capability or a health/catch guarantee.
 - **Review receipt:** draft PR [#118](https://github.com/brianbzeng/castingcompass/pull/118)
   carries the regional implementation. It must remain unmerged and undeployed until every
   exact-head check passes, local anglers review the access list, and the guarded production

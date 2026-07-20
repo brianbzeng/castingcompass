@@ -398,6 +398,19 @@ after its acceptance checks pass in the intended environment.
       and explicit denial of deployment, safety/legal, and model-validation authority. Actual
       local review, its aggregate receipt, final protected checks, and guarded deployment remain
       open.
+  - [ ] Incorporate official pollution and recreational-water-quality conditions into the
+    opportunity score only after freezing a source and safety contract for each covered region.
+    Bind advisory/closure authority, analyte or indicator meaning, spatial and temporal support,
+    update cadence, stale/missing behavior, provenance, and a preregistered score direction or
+    hard-exclusion rule. A closure must suppress the affected opportunity; missing data must
+    remain unknown rather than imply clean or safe water; and the feature must not claim health,
+    catch, or model validity without the corresponding official and prospective evidence.
+  - [ ] Enrich every available location one by one with source-bound notable structure and depth
+    levels. Each site review must record the official bathymetry/habitat source, native resolution,
+    positional accuracy, vertical datum, generalized shore-reachable depth range, mapped structure,
+    uncertainty, review date, and whether the information is display-only or score-eligible. Do
+    not invent precise casting spots, resample coarse data into false detail, or let a map annotation
+    alter ranking before its source and validation gates pass.
 
 - [ ] Establish privacy-preserving production observability and an operator console before
   scaling traffic. Evaluate Cloudflare-native logs/analytics and focused vendors such as
