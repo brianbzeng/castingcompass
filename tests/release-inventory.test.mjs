@@ -16,6 +16,7 @@ const inputPaths = [
   "security/ai-review-queue-policy.json",
   "security/cloudflare-provider-state-policy.json",
   "security/observability-activation-policy.json",
+  "security/operational-restore-review-policy.json",
   "security/production-change-authorization-policy.json",
   "security/sbom.cdx.json",
   "services/api/.python-version",
@@ -118,9 +119,10 @@ test("CI verifies the combined inventory and the signer rejects a narrowed hando
   assert.match(manifest, /"security:release-sbom": "node scripts\/generate-release-sbom\.mjs --check"/u);
   assert.match(ci, /npm run security:sbom\n\s+- run: npm run security:release-sbom/u);
   assert.match(release, /npm run security:sbom\n\s+- run: npm run security:release-sbom/u);
+  assert.match(manifest, /"security:operational-restore-review": "node scripts\/verify-operational-restore-review\.mjs verify-policy"/u);
   assert.match(manifest, /"security:santa-barbara-access-review": "node scripts\/verify-santa-barbara-access-review\.mjs verify-policy"/u);
-  assert.match(ci, /npm run security:production-change-policy\n\s+- run: npm run security:santa-barbara-access-review/u);
-  assert.match(release, /npm run security:production-change-policy\n\s+- run: npm run security:santa-barbara-access-review/u);
+  assert.match(ci, /npm run security:production-change-policy\n\s+- run: npm run security:operational-restore-review\n\s+- run: npm run security:santa-barbara-access-review/u);
+  assert.match(release, /npm run security:production-change-policy\n\s+- run: npm run security:operational-restore-review\n\s+- run: npm run security:santa-barbara-access-review/u);
   const signingJob = release.slice(release.indexOf("  attest-release:"));
   assert.match(signingJob, /castingcompass-release[\s\S]+not Cloudflare deployment provenance/u);
   assert.match(signingJob, /\.type == "container"[\s\S]+\.type == "operating-system"[\s\S]+pkg:pypi\//u);
