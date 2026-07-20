@@ -155,6 +155,11 @@ test.beforeEach(async ({ page }, testInfo) => {
   const savedSiteRecoveryTest = testTitle.includes("saved-location changes pause while offline") ||
     testTitle.includes("slow saved-location removal stays unconfirmed") ||
     testTitle.includes("malformed saved-location receipt stays unresolved");
+  if (savedSiteRecoveryTest) {
+    // Keep the committed forecast fixture inside its availability window so this mutation test
+    // exercises recovery behavior instead of expiring as wall-clock time advances.
+    await page.clock.setFixedTime(new Date("2026-07-17T12:00:00.000Z"));
+  }
   let profileAttempts = 0;
   await page.route("**/api/auth/session", (route) => route.fulfill({
     status: 200,

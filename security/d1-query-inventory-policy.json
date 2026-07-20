@@ -10,10 +10,10 @@
     "worker/validation-feasibility-export.ts"
   ],
   "expectedSummary": {
-    "prepareCallCount": 186,
-    "literalCallCount": 161,
+    "prepareCallCount": 187,
+    "literalCallCount": 162,
     "nonLiteralCallCount": 25,
-    "multiRowLiteralWithoutLimitCount": 15
+    "multiRowLiteralWithoutLimitCount": 11
   },
   "allowedNonLiteralExpressions": [
     {
@@ -280,38 +280,6 @@
       "boundPredicate": "privacy_deletion_jobs.owner_subject_hash = ?",
       "rowBoundStatus": "owner-lifecycle-cleanup",
       "rationale": "Pending object keys for the same owner are deduplicated before the active-data deletion batch."
-    },
-    {
-      "callSiteId": "43ccf60fd513ff411fd4cd63",
-      "sqlSha256": "9d7b2607848728b06bea49e6bdb440f2cd69a1005935230de8b7218fcec22d3a",
-      "scope": "owner profile view",
-      "boundPredicate": "user_id = ?",
-      "rowBoundStatus": "open-account-cardinality",
-      "rationale": "Cross-account access is closed, but an explicit UI pagination ceiling remains open."
-    },
-    {
-      "callSiteId": "5102c43347004541d895ba30",
-      "sqlSha256": "2dd4aa49253ba9aa42392146197897fa41e7c01df92d776e7013ffab6a17f01e",
-      "scope": "owner profile view",
-      "boundPredicate": "user_id = ?",
-      "rowBoundStatus": "open-account-cardinality",
-      "rationale": "Cross-account access is closed, but an explicit UI pagination ceiling remains open."
-    },
-    {
-      "callSiteId": "c43f29c82622f082ab13f42f",
-      "sqlSha256": "2dd4aa49253ba9aa42392146197897fa41e7c01df92d776e7013ffab6a17f01e",
-      "scope": "owner gear endpoint",
-      "boundPredicate": "user_id = ?",
-      "rowBoundStatus": "open-account-cardinality",
-      "rationale": "Cross-account access is closed, but an explicit endpoint pagination ceiling remains open."
-    },
-    {
-      "callSiteId": "d347322f6368cb15c4129bc8",
-      "sqlSha256": "0dbc5493b1cf1b04ff6fb471c7ee15f00babec76fbef6096cded7df8fcab780b",
-      "scope": "owner trip-entry view",
-      "boundPredicate": "user_id = ?",
-      "rowBoundStatus": "open-account-cardinality",
-      "rationale": "Cross-account access is closed, but an explicit saved-location pagination ceiling remains open."
     }
   ]
 }

@@ -15,33 +15,44 @@ by that discovery.
 
 ## Active work cycle — complete D1 query inventory
 
-- [x] Reconcile protected `main`, draft regional PR `#118`, open issue `#86`, and the scale
-      roadmap without touching Cloudflare or production. Starting `main` is
-      `7ed0f97c499e853b6a3d1a5b6f8c9ef82e70ef2d`; `#118` remains the only open PR.
+- [x] Reconcile protected `main`, draft regional PR `#118`, draft query-inventory PR `#125`, open
+      issue `#86`, and the scale roadmap without touching Cloudflare or production. Starting
+      `main` is `7ed0f97c499e853b6a3d1a5b6f8c9ef82e70ef2d`; both draft PRs remain open.
 - [x] Identify the earliest repository-actionable P1 gap. Existing evidence covered 14
       representative plans but did not inventory every production D1 statement, so query source
       coverage and remaining unbounded reads could not be independently audited.
-- [x] Implement a deterministic TypeScript-AST inventory for all 186 direct Worker `.prepare()`
-      sites across seven files: 161 literal statements, 25 exact reviewed nonliteral expressions,
-      and 15 reviewed literal multi-row reads without `LIMIT`. The gate rejects source drift,
+- [x] Implement a deterministic TypeScript-AST inventory for all 187 direct Worker `.prepare()`
+      sites across seven files: 162 literal statements, 25 exact reviewed nonliteral expressions,
+      and 11 reviewed literal multi-row reads without `LIMIT`. The gate rejects source drift,
       computed/aliased prepare access, unreviewed dynamic SQL, unscoped literal writes, and
       unreviewed multi-row reads.
-- [x] Preserve truthful scale boundaries. Nine reads are complete authenticated rights exports,
-      two are owner-lifecycle cleanup reads, and four saved-site/gear UI reads remain explicitly
-      `open-account-cardinality`; complete export packaging, scheduled-cleanup batching, and
-      isolated latency/load evidence remain open.
+- [x] Preserve truthful scale boundaries. Nine reads are complete authenticated rights exports
+      and two are owner-lifecycle cleanup reads. The four saved-site/gear UI reads now use exact
+      100-item account ceilings, `LIMIT 101` overflow detection, atomic count-guarded creates, and
+      fail-closed legacy overflow without truncating rights exports. Complete export packaging,
+      scheduled-cleanup batching, and isolated latency/load evidence remain open.
+- [x] Resolve the newly published high-severity `brace-expansion` advisory in both locked
+      development-tool paths by moving exactly from `1.1.14` to `1.1.16` and `5.0.6` to `5.0.7`.
+      A fresh npm `10.9.8` zero-script install completed with 534 audited packages and both full
+      and production-only audits returned zero vulnerabilities; no dependency lifecycle script
+      ran.
 - [x] Bind the policy and generated query ledger into CI, the combined release SBOM, and the
       deterministic release archive; add a 15th representative query-plan check for gear-profile
       ordering. Focused adversarial tests, ESLint, and all 15 plans pass.
 - [x] Complete the full locked verification matrix. A fresh zero-script npm install audited 534
       packages with zero vulnerabilities; every offline security/SBOM gate, both npm audits,
-      ESLint, TypeScript, the Cloudflare build, 439/439 Node tests, and 140/140 Chromium/WebKit
-      mobile cases passed. Exact locked Python graphs passed 29/29 API tests, 81/81 pipeline tests
+      ESLint, TypeScript, the Cloudflare build, 440/440 Node tests, and 140/140 Chromium/WebKit
+      mobile cases passed. The saved-location recovery cases use their committed forecast
+      fixture's recorded clock, so their recovery assertions cannot expire with wall-clock time.
+      Exact locked Python graphs passed 29/29 API tests, 81/81 pipeline tests
       with one documented optional-raster skip, Ruff, the deterministic synthetic smoke, 18
       migrations, 15 representative query plans, and every foreign-key child index contract.
-- [ ] Publish an exact-head protected draft PR and record hosted CI, provenance, CodeQL, and
-      native image receipts. No deployment, D1 migration, provider query, or production mutation
-      is part of this cycle.
+- [x] Publish protected draft PR `#125` at exact head
+      `0808c732c8210bd4d2f47e4f37a38c2f03361f55`; all applicable hosted checks passed. No
+      deployment, D1 migration, provider query, or production mutation was part of that receipt.
+- [ ] Publish the local account-ceiling follow-up on `#125` and record its new exact-head hosted
+      CI, provenance, CodeQL, and native image receipts. The local evidence is not a hosted
+      receipt, and this step does not authorize a deployment or provider mutation.
 
 ## Completed work cycle — independent operational restore review handoff
 
@@ -745,13 +756,15 @@ by that discovery.
       remains deferred pending privacy review.
 - [ ] Make data and execution paths measurably scalable: query plans/indexes, bounded access,
       cache matrix, justified asynchronous work, D1-managed connections, optional API pooling,
-      and isolated load/soak/spike/failure tests. **A complete static inventory now covers all 186
-      Worker prepare sites, while local query/index/cache/connection contracts,
+      and isolated load/soak/spike/failure tests. **A complete static inventory now covers all 187
+      Worker prepare sites, and exact 100-item saved-location/gear-preset account ceilings now
+      fail closed on overflow without truncating rights exports, while local query/index/cache/
+      connection contracts,
       production-refusing harness, and the default-off advisory Queue adapter with its opaque
       message, D1 outbox/lease/attention ledger, bounded retries, deletion/maintenance recovery,
       DLQ policy, and guarded replay planner are complete;** migrations, provider Queue/DLQ
-      bindings, IAM/alerts, four account-list pagination/ceiling decisions, asynchronous complete
-      export packaging, batch-limited scheduled cleanup, staging measurements, failure injection,
+      bindings, IAM/alerts, asynchronous complete export packaging, batch-limited scheduled
+      cleanup, staging measurements, failure injection,
       rollback evidence, and authorized penetration testing remain.
 - [ ] Freeze and deploy the species-aware observation/model-run contract. **Local contract
       complete;** production migration, legacy-row audit, and first approved ingestion manifest

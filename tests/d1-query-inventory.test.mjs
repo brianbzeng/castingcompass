@@ -56,14 +56,31 @@ test("the committed inventory covers every Worker prepare site and its reviewed 
   validatePolicy(policy, inventory);
   assert.deepEqual(JSON.parse(committed), inventory);
   assert.deepEqual(inventory.summary, {
-    prepareCallCount: 186,
-    literalCallCount: 161,
+    prepareCallCount: 187,
+    literalCallCount: 162,
     nonLiteralCallCount: 25,
-    multiRowLiteralWithoutLimitCount: 15,
+    multiRowLiteralWithoutLimitCount: 11,
   });
   assert.equal(inventory.sourceFiles.length, 7);
-  assert.equal(new Set(inventory.queries.map(({ callSiteId }) => callSiteId)).size, 186);
-  assert.equal(policy.multiRowReadContracts.filter(({ rowBoundStatus }) => rowBoundStatus === "open-account-cardinality").length, 4);
+  assert.equal(new Set(inventory.queries.map(({ callSiteId }) => callSiteId)).size, 187);
+  assert.equal(policy.multiRowReadContracts.filter(({ rowBoundStatus }) => rowBoundStatus === "open-account-cardinality").length, 0);
+  assert.equal(policy.multiRowReadContracts.filter(({ rowBoundStatus }) => rowBoundStatus === "complete-rights-export").length, 9);
+  assert.equal(policy.multiRowReadContracts.filter(({ rowBoundStatus }) => rowBoundStatus === "owner-lifecycle-cleanup").length, 2);
+
+  const boundedAccountLists = inventory.queries.filter(({ executionMode, hasLimit, sql }) =>
+    executionMode === "all"
+      && hasLimit
+      && /FROM (?:saved_sites|gear_profiles) WHERE user_id = \? ORDER BY/u.test(sql ?? "")
+      && /LIMIT 101$/u.test(sql ?? ""));
+  assert.equal(boundedAccountLists.length, 4);
+
+  const gearInsert = inventory.queries.find(({ sql }) => sql?.startsWith("INSERT INTO gear_profiles"));
+  assert.match(gearInsert?.sql ?? "", /WHERE \(SELECT COUNT\(\*\) FROM gear_profiles WHERE user_id = \?\) < 100$/u);
+  const savedSiteInsert = inventory.queries.find(({ sql }) => sql?.startsWith("INSERT OR IGNORE INTO saved_sites"));
+  assert.match(savedSiteInsert?.sql ?? "", /WHERE \(SELECT COUNT\(\*\) FROM saved_sites WHERE user_id = \?\) < 100$/u);
+  assert.ok(inventory.queries.some(({ executionMode, sql }) =>
+    executionMode === "first"
+      && sql === "SELECT 1 AS present FROM saved_sites WHERE user_id = ? AND site_id = ? LIMIT 1"));
 });
 
 test("unscoped writes and unreviewed multi-row reads fail closed", async () => {

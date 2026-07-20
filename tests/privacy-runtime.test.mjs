@@ -885,6 +885,119 @@ test("per-record authorization denies cross-account reads and mutations", async 
     .get(gearId, owner.id).count, 1);
 });
 
+test("saved-location and gear-preset reads and writes enforce exact account ceilings", async () => {
+  const { sqlite, d1 } = await database();
+  const user = await addUser(sqlite, "resource-ceilings");
+  const timestamp = "2026-07-20T12:00:00.000Z";
+  const insertGear = sqlite.prepare(`INSERT INTO gear_profiles
+    (id, user_id, name, created_at, updated_at) VALUES (?, ?, ?, ?, ?)`);
+  const insertSavedSite = sqlite.prepare(
+    "INSERT INTO saved_sites (user_id, site_id, created_at) VALUES (?, ?, ?)",
+  );
+  const sites = Array.from({ length: 102 }, (_, index) => ({
+    id: `ceiling-site-${index.toString().padStart(3, "0")}`,
+    type: "Beach",
+  }));
+
+  for (let index = 0; index < 100; index += 1) {
+    insertGear.run(
+      `gear_00000000-0000-4000-8000-${index.toString().padStart(12, "0")}`,
+      user.id,
+      `Preset ${index.toString().padStart(3, "0")}`,
+      timestamp,
+      timestamp,
+    );
+    insertSavedSite.run(user.id, sites[index].id, timestamp);
+  }
+
+  const gearAtLimit = await handleAccountRequest(
+    request("/api/gear-profiles", { cookie: user.cookie }),
+    { DB: d1 },
+    sites,
+  );
+  assert.equal(gearAtLimit?.status, 200);
+  assert.equal((await gearAtLimit?.json()).gearProfiles.length, 100);
+
+  const savedSitesAtLimit = await handleAccountRequest(
+    request("/api/saved-sites", { cookie: user.cookie }),
+    { DB: d1 },
+    sites,
+  );
+  assert.equal(savedSitesAtLimit?.status, 200);
+  assert.equal((await savedSitesAtLimit?.json()).siteIds.length, 100);
+
+  const profileAtLimit = await handleAccountRequest(
+    request("/api/profile", { cookie: user.cookie }),
+    { DB: d1 },
+    sites,
+  );
+  assert.equal(profileAtLimit?.status, 200);
+  const profileAtLimitBody = await profileAtLimit?.json();
+  assert.equal(profileAtLimitBody.gearProfiles.length, 100);
+  assert.equal(profileAtLimitBody.savedSites.length, 100);
+
+  const rejectedGear = await handleAccountRequest(request("/api/gear-profiles", {
+    method: "POST",
+    cookie: user.cookie,
+    body: { name: "One too many", rod: "", reel: "", baitLure: "", rig: "" },
+  }), { DB: d1 }, sites);
+  assert.equal(rejectedGear?.status, 409);
+  assert.equal((await rejectedGear?.json()).error.code, "gear_profile_limit_reached");
+  assert.equal(sqlite.prepare("SELECT COUNT(*) AS count FROM gear_profiles WHERE user_id = ?")
+    .get(user.id).count, 100);
+
+  const rejectedSavedSite = await handleAccountRequest(request(`/api/saved-sites/${sites[100].id}`, {
+    method: "POST",
+    cookie: user.cookie,
+  }), { DB: d1 }, sites);
+  assert.equal(rejectedSavedSite?.status, 409);
+  assert.equal((await rejectedSavedSite?.json()).error.code, "saved_site_limit_reached");
+  assert.equal(sqlite.prepare("SELECT COUNT(*) AS count FROM saved_sites WHERE user_id = ?")
+    .get(user.id).count, 100);
+
+  const duplicateAtLimit = await handleAccountRequest(request(`/api/saved-sites/${sites[0].id}`, {
+    method: "POST",
+    cookie: user.cookie,
+  }), { DB: d1 }, sites);
+  assert.equal(duplicateAtLimit?.status, 200);
+  assert.deepEqual(await duplicateAtLimit?.json(), { saved: true, siteId: sites[0].id });
+
+  insertGear.run(
+    "gear_00000000-0000-4000-8000-999999999999",
+    user.id,
+    "Legacy overflow",
+    timestamp,
+    timestamp,
+  );
+  insertSavedSite.run(user.id, sites[101].id, timestamp);
+
+  const gearOverflow = await handleAccountRequest(
+    request("/api/gear-profiles", { cookie: user.cookie }),
+    { DB: d1 },
+    sites,
+  );
+  assert.equal(gearOverflow?.status, 409);
+  assert.equal((await gearOverflow?.json()).error.code, "gear_profile_limit_exceeded");
+
+  const savedSiteOverflow = await handleAccountRequest(
+    request("/api/saved-sites", { cookie: user.cookie }),
+    { DB: d1 },
+    sites,
+  );
+  assert.equal(savedSiteOverflow?.status, 409);
+  assert.equal((await savedSiteOverflow?.json()).error.code, "saved_site_limit_exceeded");
+
+  const completeExport = await handleAccountRequest(
+    request("/api/profile/export", { cookie: user.cookie }),
+    { DB: d1 },
+    sites,
+  );
+  assert.equal(completeExport?.status, 200);
+  const completeExportBody = await completeExport?.json();
+  assert.equal(completeExportBody.gearProfiles.length, 101);
+  assert.equal(completeExportBody.savedSites.length, 101);
+});
+
 test("owner mutations reject undeclared gear and profile fields", async () => {
   const { sqlite, d1 } = await database();
   const user = await addUser(sqlite, "strict-input");

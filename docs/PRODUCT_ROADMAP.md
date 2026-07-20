@@ -424,14 +424,16 @@ after its acceptance checks pass in the intended environment.
   - [ ] Inventory every production query, capture representative `EXPLAIN QUERY PLAN` evidence,
     add only workload-justified indexes, bound scans/pagination, eliminate N+1 patterns, verify
     cross-account predicates, and regression-test query latency and migration cost.
-    - [x] Add a deterministic AST-backed inventory for all 186 Worker `.prepare()` sites across
-      seven files, including exact review contracts for 25 nonliteral expressions and 15 literal
+    - [x] Add a deterministic AST-backed inventory for all 187 Worker `.prepare()` sites across
+      seven files, including exact review contracts for 25 nonliteral expressions and 11 literal
       multi-row reads without `LIMIT`. CI and release provenance fail closed on inventory drift,
       computed/aliased prepare access, unreviewed dynamic SQL, unscoped literal writes, and
       unreviewed multi-row reads; the policy and generated ledger are SBOM-bound release inputs.
-    - [ ] Resolve the four explicitly disclosed `open-account-cardinality` saved-site/gear UI
-      reads with usable pagination or a hard resource ceiling; preserve complete privacy exports,
-      move large export packaging off the request path, and batch-limit scheduled retention
+    - [x] Resolve the four explicitly disclosed `open-account-cardinality` saved-site/gear UI
+      reads with exact 100-item resource ceilings, `LIMIT 101` overflow detection, atomic
+      count-guarded creates, idempotent duplicate saves, and fail-closed legacy overflow.
+      Complete privacy exports remain deliberately untruncated.
+    - [ ] Move large export packaging off the request path and batch-limit scheduled retention
       deletion. Then capture production-shaped latency, rows-read, and migration-cost evidence in
       isolated staging. The static inventory is not that performance evidence.
   - [ ] Publish a cache matrix by asset/data class with owner, privacy classification, cache key,

@@ -8,7 +8,7 @@ accounts, or production data.
 ## D1 query inventory
 
 `scripts/generate-d1-query-inventory.mjs` parses every Worker TypeScript source file and records
-all 186 direct `.prepare()` sites: 161 literal statements and 25 separately reviewed nonliteral
+all 187 direct `.prepare()` sites: 162 literal statements and 25 separately reviewed nonliteral
 expressions across seven source files. The committed policy and generated inventory are
 source-hash and call-site bound. CI rejects source-file/count drift, computed or aliased
 `prepare` access, a nonliteral expression without its exact static-authority review, an unscoped
@@ -16,12 +16,16 @@ literal `UPDATE` or `DELETE`, and a literal multi-row `SELECT` without a reviewe
 cardinality contract. No database or provider is queried while generating the inventory.
 
 The inventory exposes rather than conceals the remaining scale boundaries. Nine unbounded
-multi-row reads are intentional complete authenticated privacy exports, two are complete
-owner-lifecycle cleanup reads, and four account-facing saved-site/gear reads remain explicitly
-`open-account-cardinality` until a hard resource ceiling or usable pagination contract is added.
-The complete privacy export also still needs asynchronous packaging for large accounts. An
-inventory proves source coverage and review identity; it does not prove query latency, production
-index selection, or safe load capacity.
+multi-row reads are intentional complete authenticated privacy exports and two are complete
+owner-lifecycle cleanup reads. Account-facing saved-location and gear-preset reads now fetch at
+most 101 rows, expose at most the exact 100-item account ceiling, and fail closed on a legacy
+overflow instead of silently truncating it. Their creates enforce the same ceiling inside the
+single `INSERT ... SELECT` statement so concurrent requests cannot both pass a separate count
+check. An existing saved location remains idempotently successful at the ceiling. Complete
+privacy exports stay intentionally unbounded so a data-rights response cannot omit records; they
+still need asynchronous packaging for large accounts. An inventory proves source coverage and
+review identity; it does not prove query latency, production index selection, or safe load
+capacity.
 
 `scripts/check_d1_query_plans.py` separately applies every migration to an in-memory SQLite
 database, runs 15 representative `EXPLAIN QUERY PLAN` checks, and rejects missing leftmost
@@ -32,7 +36,7 @@ growth-sensitive access patterns:
 | --- | --- | --- |
 | Session, email-challenge, auth-attempt, and age-proof retention | Scheduled deletion by time; an invocation row ceiling remains open | Dedicated leading time indexes; the two age-proof predicates use SQLite's multi-index OR plan |
 | Login and email abuse ceilings | One email pseudonym/address plus a fixed time window | Existing `(email_hash, attempted_at)` and `(email, created_at)` indexes |
-| Saved sites and gear profiles | One authenticated user; cross-account predicates are closed, but four UI reads still need pagination or a hard ceiling | `(user_id, created_at)` and `(user_id, updated_at)` ordering indexes |
+| Saved sites and gear profiles | One authenticated user; exact 100-item ceilings, `LIMIT 101` overflow detection, fail-closed legacy overflow, and atomic count-guarded creates | `(user_id, created_at)` and `(user_id, updated_at)` ordering indexes |
 | Profile trip history | One authenticated user, completed rows only, `LIMIT 100` | Partial expression index over user and effective completion time; no temporary sort |
 | Complete account trip export | One authenticated user; intentionally complete rather than silently truncated | `(user_id, created_at)` index. Rare cross-child export ordering may sort; no speculative indexes are added solely for exports |
 | Trip submission ceilings | One reporter pseudonym and hour/day windows; active rows have a strict product ceiling | Existing reporter-time index plus a smaller partial active-trip index |

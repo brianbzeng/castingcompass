@@ -1,12 +1,12 @@
 {
   "schemaVersion": "castingcompass.d1-query-inventory/1.0.0",
   "generatedFrom": "TypeScript AST; no runtime or provider query executed",
-  "policySha256": "4da4c3fdbf88476d0056ec194be007cc3f96d859dbd81422435fa2e57dbe8730",
+  "policySha256": "115378aed5ab79b75ffc0bc3a0ec02ce63fb8e5ee56c70647b453ffee15054d9",
   "sourceFiles": [
     {
       "file": "worker/auth.ts",
-      "sha256": "844538dedc3fa1c55b17fb35025b6fb90cfb1737907b192423bba486fca80a4a",
-      "prepareCallCount": 128
+      "sha256": "609d28f2e4b1477d0b04501a1f76ef56489a6154b7a45be9d0b1cd0da699145b",
+      "prepareCallCount": 129
     },
     {
       "file": "worker/discussions.ts",
@@ -40,16 +40,16 @@
     }
   ],
   "summary": {
-    "prepareCallCount": 186,
-    "literalCallCount": 161,
+    "prepareCallCount": 187,
+    "literalCallCount": 162,
     "nonLiteralCallCount": 25,
-    "multiRowLiteralWithoutLimitCount": 15
+    "multiRowLiteralWithoutLimitCount": 11
   },
   "queries": [
     {
       "callSiteId": "802b8fbf511eb93e84a45a1a",
       "file": "worker/auth.ts",
-      "line": 216,
+      "line": 234,
       "containingFunction": "initialize",
       "occurrence": 1,
       "executionMode": "batch",
@@ -58,7 +58,7 @@
       "expressionSha256": "b5a1b65e1ac974f3f245990d63e5c915c5b3916dd3dd131a8a72ee4c328d6382",
       "declarationReference": {
         "name": "CREATE_USERS_SQL",
-        "declarationLine": 98,
+        "declarationLine": 116,
         "initializerSha256": "05172dee1f3ef9c6754a8d2f1cc159cd6cdc9c7c0d3e44cbcc64647877d4f5fb"
       },
       "statementClass": "UNRESOLVED",
@@ -73,7 +73,7 @@
     {
       "callSiteId": "dcbd24d6be8849bf3219222b",
       "file": "worker/auth.ts",
-      "line": 217,
+      "line": 235,
       "containingFunction": "initialize",
       "occurrence": 2,
       "executionMode": "batch",
@@ -82,7 +82,7 @@
       "expressionSha256": "81450ebf83d4f122d29398d3a71ac08ce584225fb9b7e73d35682c715fd0d3d7",
       "declarationReference": {
         "name": "CREATE_SESSIONS_SQL",
-        "declarationLine": 112,
+        "declarationLine": 130,
         "initializerSha256": "13abab9c22c441ed59c3254f3b9d608cb6e2706ec697e6972a51ce557239ffac"
       },
       "statementClass": "UNRESOLVED",
@@ -97,7 +97,7 @@
     {
       "callSiteId": "fa70ef2abf277fa8a641557b",
       "file": "worker/auth.ts",
-      "line": 218,
+      "line": 236,
       "containingFunction": "initialize",
       "occurrence": 3,
       "executionMode": "batch",
@@ -106,7 +106,7 @@
       "expressionSha256": "4555d2bdd7d83ed4634e04fd7a4816e4f6e7ad90cff22dafcbdc694660b1ceea",
       "declarationReference": {
         "name": "CREATE_SAVED_SITES_SQL",
-        "declarationLine": 120,
+        "declarationLine": 138,
         "initializerSha256": "428c7a9baa9e83e80f1c84899bb95ae9254d757870153ead9ac349ed91c54a0a"
       },
       "statementClass": "UNRESOLVED",
@@ -121,7 +121,7 @@
     {
       "callSiteId": "1e9f5458dc3e5fc703e1745c",
       "file": "worker/auth.ts",
-      "line": 219,
+      "line": 237,
       "containingFunction": "initialize",
       "occurrence": 4,
       "executionMode": "batch",
@@ -130,7 +130,7 @@
       "expressionSha256": "b4b0b6ee87040e6509a72f95fa4f706ba01573898985adcd3c132ba013d73929",
       "declarationReference": {
         "name": "CREATE_AUTH_ATTEMPTS_SQL",
-        "declarationLine": 128,
+        "declarationLine": 146,
         "initializerSha256": "b8089614d87271853526fe794ee5bac6a878d3e072835be762166b02baa79751"
       },
       "statementClass": "UNRESOLVED",
@@ -145,7 +145,7 @@
     {
       "callSiteId": "c11b5b2cb0c826b28fd382b9",
       "file": "worker/auth.ts",
-      "line": 220,
+      "line": 238,
       "containingFunction": "initialize",
       "occurrence": 5,
       "executionMode": "batch",
@@ -154,7 +154,7 @@
       "expressionSha256": "cb57e30102c6a8c9c03527d2cb3f6032a13127265e2396459e9db3512a4d0f1f",
       "declarationReference": {
         "name": "CREATE_EMAIL_CHALLENGES_SQL",
-        "declarationLine": 135,
+        "declarationLine": 153,
         "initializerSha256": "a143f686a81106b1c8fc8476045578521f2a3cf1879cad4c3a44ba6c67beb368"
       },
       "statementClass": "UNRESOLVED",
@@ -169,7 +169,7 @@
     {
       "callSiteId": "20242946fa004fe71d2538b2",
       "file": "worker/auth.ts",
-      "line": 221,
+      "line": 239,
       "containingFunction": "initialize",
       "occurrence": 6,
       "executionMode": "batch",
@@ -178,7 +178,7 @@
       "expressionSha256": "87a141161a9bc55de2d2cc8c93e010c0dfba7f8b352e056eafd4f78087d133ba",
       "declarationReference": {
         "name": "CREATE_GEAR_PROFILES_SQL",
-        "declarationLine": 153,
+        "declarationLine": 171,
         "initializerSha256": "d89fc43f23d377af29be157445bc2e7cfee57bf12d1382bc34043de52867bb53"
       },
       "statementClass": "UNRESOLVED",
@@ -193,7 +193,7 @@
     {
       "callSiteId": "483cbdd8bc7157ee19f73fe7",
       "file": "worker/auth.ts",
-      "line": 222,
+      "line": 240,
       "containingFunction": "initialize",
       "occurrence": 7,
       "executionMode": "batch",
@@ -202,7 +202,7 @@
       "expressionSha256": "0fe2d3e2fc90a83558e82a3b5213cd3739bc224d544bd0fd7de641a98f840caa",
       "declarationReference": {
         "name": "CREATE_SIGNUP_AGE_PROOFS_SQL",
-        "declarationLine": 166,
+        "declarationLine": 184,
         "initializerSha256": "b9fdadcbd76c5987f2844d9ae80507b8e226d288edaabd13f4055de96220d9f4"
       },
       "statementClass": "UNRESOLVED",
@@ -217,7 +217,7 @@
     {
       "callSiteId": "089c264b41a75a0e125b7c55",
       "file": "worker/auth.ts",
-      "line": 223,
+      "line": 241,
       "containingFunction": "initialize",
       "occurrence": 8,
       "executionMode": "batch",
@@ -226,7 +226,7 @@
       "expressionSha256": "6dfe400169a665b5a0e8123fa9bd209d4e8518c6e3258325b42d27e3affe67af",
       "declarationReference": {
         "name": "CREATE_PRIVACY_DELETION_JOBS_SQL",
-        "declarationLine": 175,
+        "declarationLine": 193,
         "initializerSha256": "70b35e178ae1a5a4da8d823746e820c0b0f82d4aee278918763e98a3ac9d4c70"
       },
       "statementClass": "UNRESOLVED",
@@ -241,7 +241,7 @@
     {
       "callSiteId": "7d6339aff462ba8412cfbf86",
       "file": "worker/auth.ts",
-      "line": 224,
+      "line": 242,
       "containingFunction": "initialize",
       "occurrence": 9,
       "executionMode": "batch",
@@ -250,7 +250,7 @@
       "expressionSha256": "70bc3806cc9b572058b2ad7ec1513712ffddd43f98ea749881503f5ed557a211",
       "declarationReference": {
         "name": "CREATE_PRIVACY_DELETION_TASKS_SQL",
-        "declarationLine": 191,
+        "declarationLine": 209,
         "initializerSha256": "c4e25320906aba7ebe715ce8c4a4e9b65f86c01e6177c029ea4b33f295cb8e64"
       },
       "statementClass": "UNRESOLVED",
@@ -265,7 +265,7 @@
     {
       "callSiteId": "c93ab1a40c6c20fa09cbe843",
       "file": "worker/auth.ts",
-      "line": 227,
+      "line": 245,
       "containingFunction": "initialize",
       "occurrence": 10,
       "executionMode": "batch",
@@ -285,7 +285,7 @@
     {
       "callSiteId": "5524c72aca9d02f3024db04a",
       "file": "worker/auth.ts",
-      "line": 228,
+      "line": 246,
       "containingFunction": "initialize",
       "occurrence": 11,
       "executionMode": "batch",
@@ -305,7 +305,7 @@
     {
       "callSiteId": "621858f5a5f08fcc94dd5f83",
       "file": "worker/auth.ts",
-      "line": 229,
+      "line": 247,
       "containingFunction": "initialize",
       "occurrence": 12,
       "executionMode": "batch",
@@ -325,7 +325,7 @@
     {
       "callSiteId": "78343afbe3c3b551c4ba43f3",
       "file": "worker/auth.ts",
-      "line": 230,
+      "line": 248,
       "containingFunction": "initialize",
       "occurrence": 13,
       "executionMode": "batch",
@@ -345,7 +345,7 @@
     {
       "callSiteId": "e8fc1c347c4ac6e1450b1abc",
       "file": "worker/auth.ts",
-      "line": 231,
+      "line": 249,
       "containingFunction": "initialize",
       "occurrence": 14,
       "executionMode": "batch",
@@ -365,7 +365,7 @@
     {
       "callSiteId": "e7e792d1e67732179b108fdd",
       "file": "worker/auth.ts",
-      "line": 232,
+      "line": 250,
       "containingFunction": "initialize",
       "occurrence": 15,
       "executionMode": "batch",
@@ -385,7 +385,7 @@
     {
       "callSiteId": "87d66bba002e6ae73ff32522",
       "file": "worker/auth.ts",
-      "line": 233,
+      "line": 251,
       "containingFunction": "initialize",
       "occurrence": 16,
       "executionMode": "batch",
@@ -405,7 +405,7 @@
     {
       "callSiteId": "51468d9116906324ce44d940",
       "file": "worker/auth.ts",
-      "line": 234,
+      "line": 252,
       "containingFunction": "initialize",
       "occurrence": 17,
       "executionMode": "batch",
@@ -425,7 +425,7 @@
     {
       "callSiteId": "5d8fff6da88fbf76ec6adbbc",
       "file": "worker/auth.ts",
-      "line": 235,
+      "line": 253,
       "containingFunction": "initialize",
       "occurrence": 18,
       "executionMode": "batch",
@@ -445,7 +445,7 @@
     {
       "callSiteId": "7d9adcaac32b80f4d5bd999d",
       "file": "worker/auth.ts",
-      "line": 236,
+      "line": 254,
       "containingFunction": "initialize",
       "occurrence": 19,
       "executionMode": "batch",
@@ -465,7 +465,7 @@
     {
       "callSiteId": "3800bfb36fb429da8d2569ef",
       "file": "worker/auth.ts",
-      "line": 237,
+      "line": 255,
       "containingFunction": "initialize",
       "occurrence": 20,
       "executionMode": "batch",
@@ -485,7 +485,7 @@
     {
       "callSiteId": "b6e1cbd84664314b3e6ddb4a",
       "file": "worker/auth.ts",
-      "line": 238,
+      "line": 256,
       "containingFunction": "initialize",
       "occurrence": 21,
       "executionMode": "batch",
@@ -505,7 +505,7 @@
     {
       "callSiteId": "a46670391bf3d56e15157931",
       "file": "worker/auth.ts",
-      "line": 239,
+      "line": 257,
       "containingFunction": "initialize",
       "occurrence": 22,
       "executionMode": "batch",
@@ -525,7 +525,7 @@
     {
       "callSiteId": "1448d4fac80290c0ccc8952c",
       "file": "worker/auth.ts",
-      "line": 240,
+      "line": 258,
       "containingFunction": "initialize",
       "occurrence": 23,
       "executionMode": "batch",
@@ -545,7 +545,7 @@
     {
       "callSiteId": "5bd3a97388bce7a5da7d4d6d",
       "file": "worker/auth.ts",
-      "line": 241,
+      "line": 259,
       "containingFunction": "initialize",
       "occurrence": 24,
       "executionMode": "batch",
@@ -565,7 +565,7 @@
     {
       "callSiteId": "ab5a8a4ba4ded8402fd2d5ba",
       "file": "worker/auth.ts",
-      "line": 242,
+      "line": 260,
       "containingFunction": "initialize",
       "occurrence": 25,
       "executionMode": "batch",
@@ -585,7 +585,7 @@
     {
       "callSiteId": "a3a039449eef4453f77e58de",
       "file": "worker/auth.ts",
-      "line": 243,
+      "line": 261,
       "containingFunction": "initialize",
       "occurrence": 26,
       "executionMode": "batch",
@@ -605,7 +605,7 @@
     {
       "callSiteId": "eb7ba2439256391742234c71",
       "file": "worker/auth.ts",
-      "line": 264,
+      "line": 282,
       "containingFunction": "getAuthenticatedSession",
       "occurrence": 27,
       "executionMode": "first",
@@ -628,7 +628,7 @@
     {
       "callSiteId": "d3f8d15f182b584d54f0ca60",
       "file": "worker/auth.ts",
-      "line": 374,
+      "line": 392,
       "containingFunction": "handleAccountRequest",
       "occurrence": 28,
       "executionMode": "run",
@@ -650,7 +650,7 @@
     {
       "callSiteId": "7d7dff3aa0a0b4233ebf1604",
       "file": "worker/auth.ts",
-      "line": 415,
+      "line": 433,
       "containingFunction": "handleAccountRequest",
       "occurrence": 29,
       "executionMode": "first",
@@ -672,7 +672,7 @@
     {
       "callSiteId": "41ae99298b69bfdbcdf6e47d",
       "file": "worker/auth.ts",
-      "line": 422,
+      "line": 440,
       "containingFunction": "handleAccountRequest",
       "occurrence": 30,
       "executionMode": "run",
@@ -694,7 +694,7 @@
     {
       "callSiteId": "2eab9e4959960c8840013c9a",
       "file": "worker/auth.ts",
-      "line": 442,
+      "line": 460,
       "containingFunction": "handleAccountRequest",
       "occurrence": 31,
       "executionMode": "run",
@@ -716,7 +716,7 @@
     {
       "callSiteId": "cacad5cd3893fa7fd909ab07",
       "file": "worker/auth.ts",
-      "line": 454,
+      "line": 472,
       "containingFunction": "handleAccountRequest",
       "occurrence": 32,
       "executionMode": "first",
@@ -738,7 +738,7 @@
     {
       "callSiteId": "7d74f8d1cebc28cbc92f70f0",
       "file": "worker/auth.ts",
-      "line": 468,
+      "line": 486,
       "containingFunction": "handleAccountRequest",
       "occurrence": 33,
       "executionMode": "batch",
@@ -760,7 +760,7 @@
     {
       "callSiteId": "576caac2418a7ebd03473d4e",
       "file": "worker/auth.ts",
-      "line": 476,
+      "line": 494,
       "containingFunction": "handleAccountRequest",
       "occurrence": 34,
       "executionMode": "batch",
@@ -782,7 +782,7 @@
     {
       "callSiteId": "f5e6750b43d9bc7d20652146",
       "file": "worker/auth.ts",
-      "line": 495,
+      "line": 513,
       "containingFunction": "handleAccountRequest",
       "occurrence": 35,
       "executionMode": "first",
@@ -804,7 +804,7 @@
     {
       "callSiteId": "98e5b1898144bb598545921b",
       "file": "worker/auth.ts",
-      "line": 513,
+      "line": 531,
       "containingFunction": "handleAccountRequest",
       "occurrence": 36,
       "executionMode": "run",
@@ -826,7 +826,7 @@
     {
       "callSiteId": "17e08d1b1e3ae906e86b38e7",
       "file": "worker/auth.ts",
-      "line": 560,
+      "line": 578,
       "containingFunction": "handleAccountRequest",
       "occurrence": 37,
       "executionMode": "run",
@@ -848,7 +848,7 @@
     {
       "callSiteId": "13becc71b782f08f88efd6df",
       "file": "worker/auth.ts",
-      "line": 586,
+      "line": 604,
       "containingFunction": "handleAccountRequest",
       "occurrence": 38,
       "executionMode": "first",
@@ -870,7 +870,7 @@
     {
       "callSiteId": "34623680789531e32e06a02a",
       "file": "worker/auth.ts",
-      "line": 603,
+      "line": 621,
       "containingFunction": "handleAccountRequest",
       "occurrence": 39,
       "executionMode": "run",
@@ -892,7 +892,7 @@
     {
       "callSiteId": "a4113490445af4fee30cba63",
       "file": "worker/auth.ts",
-      "line": 638,
+      "line": 656,
       "containingFunction": "handleAccountRequest",
       "occurrence": 40,
       "executionMode": "batch",
@@ -914,7 +914,7 @@
     {
       "callSiteId": "5ceb14dc377f941506e0dc67",
       "file": "worker/auth.ts",
-      "line": 640,
+      "line": 658,
       "containingFunction": "handleAccountRequest",
       "occurrence": 41,
       "executionMode": "batch",
@@ -936,7 +936,7 @@
     {
       "callSiteId": "a51cc733736e9716ccd67d8c",
       "file": "worker/auth.ts",
-      "line": 641,
+      "line": 659,
       "containingFunction": "handleAccountRequest",
       "occurrence": 42,
       "executionMode": "batch",
@@ -958,7 +958,7 @@
     {
       "callSiteId": "68363d2ccb6c51bfa72ec6a5",
       "file": "worker/auth.ts",
-      "line": 657,
+      "line": 675,
       "containingFunction": "handleAccountRequest",
       "occurrence": 43,
       "executionMode": "first",
@@ -980,7 +980,7 @@
     {
       "callSiteId": "e23844a3f552e6d9aac4268c",
       "file": "worker/auth.ts",
-      "line": 665,
+      "line": 683,
       "containingFunction": "handleAccountRequest",
       "occurrence": 44,
       "executionMode": "first",
@@ -1002,7 +1002,7 @@
     {
       "callSiteId": "421d7248253ae6ff89406a12",
       "file": "worker/auth.ts",
-      "line": 683,
+      "line": 701,
       "containingFunction": "handleAccountRequest",
       "occurrence": 45,
       "executionMode": "run",
@@ -1024,7 +1024,7 @@
     {
       "callSiteId": "83b13f018b493ea6912a2c0b",
       "file": "worker/auth.ts",
-      "line": 701,
+      "line": 719,
       "containingFunction": "map-callback",
       "occurrence": 46,
       "executionMode": "all",
@@ -1046,7 +1046,7 @@
     {
       "callSiteId": "21325551f6c6ee3b8e1d3324",
       "file": "worker/auth.ts",
-      "line": 719,
+      "line": 737,
       "containingFunction": "handleAccountRequest",
       "occurrence": 47,
       "executionMode": "run",
@@ -1068,7 +1068,7 @@
     {
       "callSiteId": "df357a81c7b5ae371a02dfec",
       "file": "worker/auth.ts",
-      "line": 729,
+      "line": 747,
       "containingFunction": "handleAccountRequest",
       "occurrence": 48,
       "executionMode": "first",
@@ -1090,7 +1090,7 @@
     {
       "callSiteId": "66ac10548ae775a5720aaef7",
       "file": "worker/auth.ts",
-      "line": 757,
+      "line": 775,
       "containingFunction": "handleAccountRequest",
       "occurrence": 49,
       "executionMode": "first",
@@ -1112,7 +1112,7 @@
     {
       "callSiteId": "ee3979185fb94e3653ca5079",
       "file": "worker/auth.ts",
-      "line": 760,
+      "line": 778,
       "containingFunction": "handleAccountRequest",
       "occurrence": 50,
       "executionMode": "all",
@@ -1134,7 +1134,7 @@
     {
       "callSiteId": "57f1457184e2171a61982808",
       "file": "worker/auth.ts",
-      "line": 762,
+      "line": 780,
       "containingFunction": "handleAccountRequest",
       "occurrence": 51,
       "executionMode": "all",
@@ -1156,7 +1156,7 @@
     {
       "callSiteId": "bea9ccb6608e35b53419a87a",
       "file": "worker/auth.ts",
-      "line": 765,
+      "line": 783,
       "containingFunction": "handleAccountRequest",
       "occurrence": 52,
       "executionMode": "all",
@@ -1178,7 +1178,7 @@
     {
       "callSiteId": "435746bb782b38fbc073780f",
       "file": "worker/auth.ts",
-      "line": 794,
+      "line": 812,
       "containingFunction": "handleAccountRequest",
       "occurrence": 53,
       "executionMode": "all",
@@ -1201,7 +1201,7 @@
     {
       "callSiteId": "9ea938a4fd0f8721aca9cd9a",
       "file": "worker/auth.ts",
-      "line": 804,
+      "line": 822,
       "containingFunction": "handleAccountRequest",
       "occurrence": 54,
       "executionMode": "all",
@@ -1224,7 +1224,7 @@
     {
       "callSiteId": "725c6e27803581352813784c",
       "file": "worker/auth.ts",
-      "line": 808,
+      "line": 826,
       "containingFunction": "handleAccountRequest",
       "occurrence": 55,
       "executionMode": "all",
@@ -1247,7 +1247,7 @@
     {
       "callSiteId": "2b03ba515785decdf29b68c0",
       "file": "worker/auth.ts",
-      "line": 812,
+      "line": 830,
       "containingFunction": "handleAccountRequest",
       "occurrence": 56,
       "executionMode": "all",
@@ -1270,7 +1270,7 @@
     {
       "callSiteId": "e32ca9b28fec51e27fd681bb",
       "file": "worker/auth.ts",
-      "line": 816,
+      "line": 834,
       "containingFunction": "handleAccountRequest",
       "occurrence": 57,
       "executionMode": "all",
@@ -1292,7 +1292,7 @@
     {
       "callSiteId": "aa386a1d1d60f74601db3c79",
       "file": "worker/auth.ts",
-      "line": 825,
+      "line": 843,
       "containingFunction": "handleAccountRequest",
       "occurrence": 58,
       "executionMode": "all",
@@ -1315,7 +1315,7 @@
     {
       "callSiteId": "81a782b0cbb1cd5cfa180995",
       "file": "worker/auth.ts",
-      "line": 861,
+      "line": 879,
       "containingFunction": "handleAccountRequest",
       "occurrence": 59,
       "executionMode": "first",
@@ -1337,7 +1337,7 @@
     {
       "callSiteId": "a6b9412d4678e77078488c8e",
       "file": "worker/auth.ts",
-      "line": 866,
+      "line": 884,
       "containingFunction": "handleAccountRequest",
       "occurrence": 60,
       "executionMode": "all",
@@ -1359,7 +1359,7 @@
     {
       "callSiteId": "fb94a2f05458a60230219482",
       "file": "worker/auth.ts",
-      "line": 869,
+      "line": 887,
       "containingFunction": "handleAccountRequest",
       "occurrence": 61,
       "executionMode": "all",
@@ -1382,7 +1382,7 @@
     {
       "callSiteId": "7ad875cf5547429f4b3049da",
       "file": "worker/auth.ts",
-      "line": 883,
+      "line": 901,
       "containingFunction": "handleAccountRequest",
       "occurrence": 62,
       "executionMode": "batch",
@@ -1405,7 +1405,7 @@
     {
       "callSiteId": "dc5217d838b7e451aaeb6716",
       "file": "worker/auth.ts",
-      "line": 888,
+      "line": 906,
       "containingFunction": "handleAccountRequest",
       "occurrence": 63,
       "executionMode": "batch",
@@ -1428,7 +1428,7 @@
     {
       "callSiteId": "ee97b60e4f2cb2468865e455",
       "file": "worker/auth.ts",
-      "line": 889,
+      "line": 907,
       "containingFunction": "handleAccountRequest",
       "occurrence": 64,
       "executionMode": "batch",
@@ -1450,7 +1450,7 @@
     {
       "callSiteId": "f84e60b4afad73ab7852474e",
       "file": "worker/auth.ts",
-      "line": 890,
+      "line": 908,
       "containingFunction": "handleAccountRequest",
       "occurrence": 65,
       "executionMode": "batch",
@@ -1472,7 +1472,7 @@
     {
       "callSiteId": "1107f26149ecdec2f6355c0c",
       "file": "worker/auth.ts",
-      "line": 891,
+      "line": 909,
       "containingFunction": "handleAccountRequest",
       "occurrence": 66,
       "executionMode": "batch",
@@ -1494,7 +1494,7 @@
     {
       "callSiteId": "626e01c8b711fdbd11148859",
       "file": "worker/auth.ts",
-      "line": 892,
+      "line": 910,
       "containingFunction": "handleAccountRequest",
       "occurrence": 67,
       "executionMode": "batch",
@@ -1516,7 +1516,7 @@
     {
       "callSiteId": "b3aafa1beb60418d7ed8e799",
       "file": "worker/auth.ts",
-      "line": 893,
+      "line": 911,
       "containingFunction": "handleAccountRequest",
       "occurrence": 68,
       "executionMode": "batch",
@@ -1538,7 +1538,7 @@
     {
       "callSiteId": "b5569a7823e9134e910e226c",
       "file": "worker/auth.ts",
-      "line": 894,
+      "line": 912,
       "containingFunction": "handleAccountRequest",
       "occurrence": 69,
       "executionMode": "batch",
@@ -1560,7 +1560,7 @@
     {
       "callSiteId": "471443029bf9f23a4261e549",
       "file": "worker/auth.ts",
-      "line": 895,
+      "line": 913,
       "containingFunction": "handleAccountRequest",
       "occurrence": 70,
       "executionMode": "batch",
@@ -1582,7 +1582,7 @@
     {
       "callSiteId": "b2a6a717167eaafe1d1569b1",
       "file": "worker/auth.ts",
-      "line": 919,
+      "line": 937,
       "containingFunction": "handleAccountRequest",
       "occurrence": 71,
       "executionMode": "all",
@@ -1604,7 +1604,7 @@
     {
       "callSiteId": "a3babcbfbd4aaf85ffe9ddae",
       "file": "worker/auth.ts",
-      "line": 928,
+      "line": 946,
       "containingFunction": "map-callback",
       "occurrence": 72,
       "executionMode": "batch",
@@ -1624,31 +1624,31 @@
       "hasLimit": false
     },
     {
-      "callSiteId": "43ccf60fd513ff411fd4cd63",
+      "callSiteId": "9f194ce91d369311c7765980",
       "file": "worker/auth.ts",
-      "line": 939,
+      "line": 957,
       "containingFunction": "handleAccountRequest",
       "occurrence": 73,
       "executionMode": "all",
       "argumentKind": "literal",
-      "expression": "\"SELECT site_id, created_at FROM saved_sites WHERE user_id = ? ORDER BY created_at DESC\"",
-      "expressionSha256": "a229fe844a96328f69a280f1c2afdab0180b7a9c15b66d80af50a28c29d1c149",
+      "expression": "\"SELECT site_id, created_at FROM saved_sites WHERE user_id = ? ORDER BY created_at DESC LIMIT 101\"",
+      "expressionSha256": "e4a7a5920d375a1a3fe91eec012c4f15d31aa0d1cf9887393c02039867af9387",
       "declarationReference": null,
       "statementClass": "SELECT",
-      "sql": "SELECT site_id, created_at FROM saved_sites WHERE user_id = ? ORDER BY created_at DESC",
-      "sqlSha256": "9d7b2607848728b06bea49e6bdb440f2cd69a1005935230de8b7218fcec22d3a",
+      "sql": "SELECT site_id, created_at FROM saved_sites WHERE user_id = ? ORDER BY created_at DESC LIMIT 101",
+      "sqlSha256": "d2ebf9011e93a239f151e306958ae9ac516adbbd2e6305d6f2a9c81ebeacec01",
       "tables": [
         "saved_sites"
       ],
       "placeholderCount": 1,
       "hasWhere": true,
       "hasOrderBy": true,
-      "hasLimit": false
+      "hasLimit": true
     },
     {
       "callSiteId": "abef4285ef5f6f6bd347f556",
       "file": "worker/auth.ts",
-      "line": 942,
+      "line": 960,
       "containingFunction": "handleAccountRequest",
       "occurrence": 74,
       "executionMode": "all",
@@ -1668,75 +1668,75 @@
       "hasLimit": true
     },
     {
-      "callSiteId": "5102c43347004541d895ba30",
+      "callSiteId": "34b525f43ed7d94672581634",
       "file": "worker/auth.ts",
-      "line": 956,
+      "line": 974,
       "containingFunction": "handleAccountRequest",
       "occurrence": 75,
       "executionMode": "all",
       "argumentKind": "literal",
-      "expression": "`SELECT id, name, rod, reel, bait_lure, rig, created_at, updated_at\n          FROM gear_profiles WHERE user_id = ? ORDER BY updated_at DESC`",
-      "expressionSha256": "3909132c8b09c8e1d66eb24c1e67502aa70357daaf81a59298b650db603680a6",
+      "expression": "`SELECT id, name, rod, reel, bait_lure, rig, created_at, updated_at\n          FROM gear_profiles WHERE user_id = ? ORDER BY updated_at DESC LIMIT 101`",
+      "expressionSha256": "b11189b51ee28dd075d4b6c74205a3f7f9ceff99538583b2e7c3e8a373fdaeab",
       "declarationReference": null,
       "statementClass": "SELECT",
-      "sql": "SELECT id, name, rod, reel, bait_lure, rig, created_at, updated_at FROM gear_profiles WHERE user_id = ? ORDER BY updated_at DESC",
-      "sqlSha256": "2dd4aa49253ba9aa42392146197897fa41e7c01df92d776e7013ffab6a17f01e",
+      "sql": "SELECT id, name, rod, reel, bait_lure, rig, created_at, updated_at FROM gear_profiles WHERE user_id = ? ORDER BY updated_at DESC LIMIT 101",
+      "sqlSha256": "7177542e8df0d7d92386c61ab1481d39c7eeabbe5477728dcac8461d92c701ca",
       "tables": [
         "gear_profiles"
       ],
       "placeholderCount": 1,
       "hasWhere": true,
       "hasOrderBy": true,
-      "hasLimit": false
+      "hasLimit": true
     },
     {
-      "callSiteId": "c43f29c82622f082ab13f42f",
+      "callSiteId": "976bef13651da00eb362f7dd",
       "file": "worker/auth.ts",
-      "line": 971,
+      "line": 1001,
       "containingFunction": "handleAccountRequest",
       "occurrence": 76,
       "executionMode": "all",
       "argumentKind": "literal",
-      "expression": "`SELECT id, name, rod, reel, bait_lure, rig, created_at, updated_at\n          FROM gear_profiles WHERE user_id = ? ORDER BY updated_at DESC`",
-      "expressionSha256": "3909132c8b09c8e1d66eb24c1e67502aa70357daaf81a59298b650db603680a6",
+      "expression": "`SELECT id, name, rod, reel, bait_lure, rig, created_at, updated_at\n          FROM gear_profiles WHERE user_id = ? ORDER BY updated_at DESC LIMIT 101`",
+      "expressionSha256": "b11189b51ee28dd075d4b6c74205a3f7f9ceff99538583b2e7c3e8a373fdaeab",
       "declarationReference": null,
       "statementClass": "SELECT",
-      "sql": "SELECT id, name, rod, reel, bait_lure, rig, created_at, updated_at FROM gear_profiles WHERE user_id = ? ORDER BY updated_at DESC",
-      "sqlSha256": "2dd4aa49253ba9aa42392146197897fa41e7c01df92d776e7013ffab6a17f01e",
+      "sql": "SELECT id, name, rod, reel, bait_lure, rig, created_at, updated_at FROM gear_profiles WHERE user_id = ? ORDER BY updated_at DESC LIMIT 101",
+      "sqlSha256": "7177542e8df0d7d92386c61ab1481d39c7eeabbe5477728dcac8461d92c701ca",
       "tables": [
         "gear_profiles"
       ],
       "placeholderCount": 1,
       "hasWhere": true,
       "hasOrderBy": true,
-      "hasLimit": false
+      "hasLimit": true
     },
     {
-      "callSiteId": "fbda7732ec962645fd3d83e2",
+      "callSiteId": "018eb9c650d382e4f04102ff",
       "file": "worker/auth.ts",
-      "line": 984,
+      "line": 1021,
       "containingFunction": "handleAccountRequest",
       "occurrence": 77,
       "executionMode": "run",
       "argumentKind": "literal",
-      "expression": "`INSERT INTO gear_profiles\n          (id, user_id, name, rod, reel, bait_lure, rig, created_at, updated_at)\n          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`",
-      "expressionSha256": "24eea4128f902e39de79e974c63ab8deba31143418df89397665ad4eecf0c05e",
+      "expression": "`INSERT INTO gear_profiles\n          (id, user_id, name, rod, reel, bait_lure, rig, created_at, updated_at)\n          SELECT ?, ?, ?, ?, ?, ?, ?, ?, ?\n          WHERE (SELECT COUNT(*) FROM gear_profiles WHERE user_id = ?) < 100`",
+      "expressionSha256": "9dad85e27ccf47134e88089de116ecb4878c4217e4480029bf9f7e33ec569301",
       "declarationReference": null,
       "statementClass": "INSERT",
-      "sql": "INSERT INTO gear_profiles (id, user_id, name, rod, reel, bait_lure, rig, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
-      "sqlSha256": "f1a38f15885f4c47c9f29380c431a1045de07498ba8cf07afaa4ae6f66854da7",
+      "sql": "INSERT INTO gear_profiles (id, user_id, name, rod, reel, bait_lure, rig, created_at, updated_at) SELECT ?, ?, ?, ?, ?, ?, ?, ?, ? WHERE (SELECT COUNT(*) FROM gear_profiles WHERE user_id = ?) < 100",
+      "sqlSha256": "5fc590e87eef71428b9d5fbf69029ccd4669f2471e1ce8a01a79d06b377523a9",
       "tables": [
         "gear_profiles"
       ],
-      "placeholderCount": 9,
-      "hasWhere": false,
+      "placeholderCount": 10,
+      "hasWhere": true,
       "hasOrderBy": false,
       "hasLimit": false
     },
     {
       "callSiteId": "6fd8d81f566ceb1949aee913",
       "file": "worker/auth.ts",
-      "line": 998,
+      "line": 1042,
       "containingFunction": "handleAccountRequest",
       "occurrence": 78,
       "executionMode": "first",
@@ -1758,7 +1758,7 @@
     {
       "callSiteId": "422c92322678548f85fc3d0c",
       "file": "worker/auth.ts",
-      "line": 1003,
+      "line": 1047,
       "containingFunction": "handleAccountRequest",
       "occurrence": 79,
       "executionMode": "run",
@@ -1780,7 +1780,7 @@
     {
       "callSiteId": "4722965a1d855e789e4b136e",
       "file": "worker/auth.ts",
-      "line": 1011,
+      "line": 1055,
       "containingFunction": "handleAccountRequest",
       "occurrence": 80,
       "executionMode": "run",
@@ -1802,7 +1802,7 @@
     {
       "callSiteId": "d34fde198ba426b647e08c09",
       "file": "worker/auth.ts",
-      "line": 1024,
+      "line": 1068,
       "containingFunction": "handleAccountRequest",
       "occurrence": 81,
       "executionMode": "first",
@@ -1824,7 +1824,7 @@
     {
       "callSiteId": "fb9ce98776b34b5ca027bfdb",
       "file": "worker/auth.ts",
-      "line": 1048,
+      "line": 1092,
       "containingFunction": "handleAccountRequest",
       "occurrence": 82,
       "executionMode": "batch",
@@ -1847,7 +1847,7 @@
     {
       "callSiteId": "2f851ea162cada822dc8708f",
       "file": "worker/auth.ts",
-      "line": 1051,
+      "line": 1095,
       "containingFunction": "handleAccountRequest",
       "occurrence": 83,
       "executionMode": "batch",
@@ -1869,7 +1869,7 @@
     {
       "callSiteId": "97d6fb14f19d1f0f3c759d42",
       "file": "worker/auth.ts",
-      "line": 1069,
+      "line": 1113,
       "containingFunction": "handleAccountRequest",
       "occurrence": 84,
       "executionMode": "first",
@@ -1891,7 +1891,7 @@
     {
       "callSiteId": "2e3c3a4c57a07f8597f3aba0",
       "file": "worker/auth.ts",
-      "line": 1079,
+      "line": 1123,
       "containingFunction": "handleAccountRequest",
       "occurrence": 85,
       "executionMode": "first",
@@ -1913,7 +1913,7 @@
     {
       "callSiteId": "cb8fd579027019520db9cf72",
       "file": "worker/auth.ts",
-      "line": 1082,
+      "line": 1126,
       "containingFunction": "handleAccountRequest",
       "occurrence": 86,
       "executionMode": "first",
@@ -1935,7 +1935,7 @@
     {
       "callSiteId": "5a3701c6f37eec3533e82e33",
       "file": "worker/auth.ts",
-      "line": 1150,
+      "line": 1194,
       "containingFunction": "handleAccountRequest",
       "occurrence": 87,
       "executionMode": "first",
@@ -1957,7 +1957,7 @@
     {
       "callSiteId": "b5d158a164d7b9793a310402",
       "file": "worker/auth.ts",
-      "line": 1227,
+      "line": 1271,
       "containingFunction": "handleAccountRequest",
       "occurrence": 88,
       "executionMode": "prepared-statement",
@@ -1977,7 +1977,7 @@
     {
       "callSiteId": "f47dad59ad4997a5a4b4621e",
       "file": "worker/auth.ts",
-      "line": 1274,
+      "line": 1318,
       "containingFunction": "handleAccountRequest",
       "occurrence": 89,
       "executionMode": "prepared-statement",
@@ -2000,7 +2000,7 @@
     {
       "callSiteId": "dc2b774290c89d5122daedf8",
       "file": "worker/auth.ts",
-      "line": 1305,
+      "line": 1349,
       "containingFunction": "handleAccountRequest",
       "occurrence": 90,
       "executionMode": "first",
@@ -2020,55 +2020,77 @@
       "hasLimit": true
     },
     {
-      "callSiteId": "d347322f6368cb15c4129bc8",
+      "callSiteId": "79031ba47ddc67454f1431ad",
       "file": "worker/auth.ts",
-      "line": 1326,
+      "line": 1370,
       "containingFunction": "handleAccountRequest",
       "occurrence": 91,
       "executionMode": "all",
       "argumentKind": "literal",
-      "expression": "\"SELECT site_id FROM saved_sites WHERE user_id = ? ORDER BY created_at DESC\"",
-      "expressionSha256": "8c9cae10b040b1f5dcf0fca86625460df202e741dd1bfffab1b79dcfba86e29b",
+      "expression": "\"SELECT site_id FROM saved_sites WHERE user_id = ? ORDER BY created_at DESC LIMIT 101\"",
+      "expressionSha256": "05ebe55ecbdc454aa90a995f772f9de21201875928666f837dae66689711d26a",
       "declarationReference": null,
       "statementClass": "SELECT",
-      "sql": "SELECT site_id FROM saved_sites WHERE user_id = ? ORDER BY created_at DESC",
-      "sqlSha256": "0dbc5493b1cf1b04ff6fb471c7ee15f00babec76fbef6096cded7df8fcab780b",
+      "sql": "SELECT site_id FROM saved_sites WHERE user_id = ? ORDER BY created_at DESC LIMIT 101",
+      "sqlSha256": "33351ff98092a2f54b533f7a86eff4d59d8264ba4218deeef7319a3d9a21b2bc",
       "tables": [
         "saved_sites"
       ],
       "placeholderCount": 1,
       "hasWhere": true,
       "hasOrderBy": true,
-      "hasLimit": false
+      "hasLimit": true
     },
     {
-      "callSiteId": "6b8a3102b8ffd2856ff0a957",
+      "callSiteId": "34634cd057f21fdf987bee5a",
       "file": "worker/auth.ts",
-      "line": 1341,
+      "line": 1391,
       "containingFunction": "handleAccountRequest",
       "occurrence": 92,
       "executionMode": "run",
       "argumentKind": "literal",
-      "expression": "\"INSERT OR IGNORE INTO saved_sites (user_id, site_id, created_at) VALUES (?, ?, ?)\"",
-      "expressionSha256": "3ddb4e346b90be78f88d51b4c34231dc54b76bda099362a24f260ea8f8e582ca",
+      "expression": "`INSERT OR IGNORE INTO saved_sites (user_id, site_id, created_at)\n        SELECT ?, ?, ? WHERE (SELECT COUNT(*) FROM saved_sites WHERE user_id = ?) < 100`",
+      "expressionSha256": "fc31c56c1e2db8ea86dae72b8291814d9b697d742bb8e6eba6f0104f8d577ea6",
       "declarationReference": null,
       "statementClass": "INSERT",
-      "sql": "INSERT OR IGNORE INTO saved_sites (user_id, site_id, created_at) VALUES (?, ?, ?)",
-      "sqlSha256": "80d6cf7daf7df87006489fbe12b44bc3938f71569ab7140ca11555c914dc8574",
+      "sql": "INSERT OR IGNORE INTO saved_sites (user_id, site_id, created_at) SELECT ?, ?, ? WHERE (SELECT COUNT(*) FROM saved_sites WHERE user_id = ?) < 100",
+      "sqlSha256": "7144c16d97b0d14c8b28ac0c1e32ab4356bf045209f8c419671ae42e73a70b3f",
       "tables": [
         "saved_sites"
       ],
-      "placeholderCount": 3,
-      "hasWhere": false,
+      "placeholderCount": 4,
+      "hasWhere": true,
       "hasOrderBy": false,
       "hasLimit": false
     },
     {
-      "callSiteId": "6152cc85ac4793122511ba72",
+      "callSiteId": "84224843ff73f11767c2e3f3",
       "file": "worker/auth.ts",
-      "line": 1347,
+      "line": 1396,
       "containingFunction": "handleAccountRequest",
       "occurrence": 93,
+      "executionMode": "first",
+      "argumentKind": "literal",
+      "expression": "\"SELECT 1 AS present FROM saved_sites WHERE user_id = ? AND site_id = ? LIMIT 1\"",
+      "expressionSha256": "d0102c2c75512191168f83e1a2f3424134df370ce5bab6025a8991d15c551fbd",
+      "declarationReference": null,
+      "statementClass": "SELECT",
+      "sql": "SELECT 1 AS present FROM saved_sites WHERE user_id = ? AND site_id = ? LIMIT 1",
+      "sqlSha256": "06980058ae380a60f7404949bdd9dabb72fef34064f190ca2025b97989c0af51",
+      "tables": [
+        "saved_sites"
+      ],
+      "placeholderCount": 2,
+      "hasWhere": true,
+      "hasOrderBy": false,
+      "hasLimit": true
+    },
+    {
+      "callSiteId": "f2a5b2c63825e97502ac9673",
+      "file": "worker/auth.ts",
+      "line": 1408,
+      "containingFunction": "handleAccountRequest",
+      "occurrence": 94,
       "executionMode": "run",
       "argumentKind": "literal",
       "expression": "\"DELETE FROM saved_sites WHERE user_id = ? AND site_id = ?\"",
@@ -2086,11 +2108,11 @@
       "hasLimit": false
     },
     {
-      "callSiteId": "12328b649064d3a226dc8f56",
+      "callSiteId": "848f28e257b2d177e493f402",
       "file": "worker/auth.ts",
-      "line": 1507,
+      "line": 1568,
       "containingFunction": "jobStatement",
-      "occurrence": 94,
+      "occurrence": 95,
       "executionMode": "returned-statement",
       "argumentKind": "literal",
       "expression": "`INSERT INTO privacy_deletion_jobs\n      (id, receipt_hash, scope, subject_hash, owner_subject_hash, state, objects_total, objects_deleted,\n        last_error_code, requested_at, active_data_removed_at, completed_at, updated_at)\n      VALUES (?, ?, ?, ?, ?, ?, ?, 0, NULL, ?, ?, ?, ?)`",
@@ -2108,11 +2130,11 @@
       "hasLimit": false
     },
     {
-      "callSiteId": "ea21bdc285c6077a76b6f3c3",
+      "callSiteId": "b8fb1a8a0750f5c2128db534",
       "file": "worker/auth.ts",
-      "line": 1524,
+      "line": 1585,
       "containingFunction": "jobStatementForPendingTrip",
-      "occurrence": 95,
+      "occurrence": 96,
       "executionMode": "returned-statement",
       "argumentKind": "literal",
       "expression": "`INSERT INTO privacy_deletion_jobs\n      (id, receipt_hash, scope, subject_hash, owner_subject_hash, state, objects_total, objects_deleted,\n        last_error_code, requested_at, active_data_removed_at, completed_at, updated_at)\n      SELECT ?, ?, ?, ?, ?, ?, ?, 0, NULL, ?, ?, ?, ?\n      WHERE EXISTS (SELECT 1 FROM trips WHERE id = ? AND user_id = ? AND moderation_status = 'pending')`",
@@ -2131,11 +2153,11 @@
       "hasLimit": false
     },
     {
-      "callSiteId": "14dda954c4aa56596a7e2102",
+      "callSiteId": "4a35be013027cfdf19cac3b8",
       "file": "worker/auth.ts",
-      "line": 1544,
+      "line": 1605,
       "containingFunction": "map-callback",
-      "occurrence": 96,
+      "occurrence": 97,
       "executionMode": "returned-statement",
       "argumentKind": "literal",
       "expression": "`INSERT INTO privacy_deletion_tasks\n      (id, job_id, object_key, object_key_hash, state, attempts, available_at, lease_expires_at,\n        lease_token, last_error_code, created_at, updated_at, completed_at)\n      VALUES (?, ?, ?, ?, 'pending', 0, ?, NULL, NULL, NULL, ?, ?, NULL)`",
@@ -2153,11 +2175,11 @@
       "hasLimit": false
     },
     {
-      "callSiteId": "05df735c8e45d5b568b7f6a0",
+      "callSiteId": "5841a88e365c298da95821f4",
       "file": "worker/auth.ts",
-      "line": 1549,
+      "line": 1610,
       "containingFunction": "map-callback",
-      "occurrence": 97,
+      "occurrence": 98,
       "executionMode": "returned-statement",
       "argumentKind": "literal",
       "expression": "`INSERT INTO privacy_deletion_tasks\n      (id, job_id, object_key, object_key_hash, state, attempts, available_at, lease_expires_at,\n        lease_token, last_error_code, created_at, updated_at, completed_at)\n      SELECT ?, ?, ?, ?, 'pending', 0, ?, NULL, NULL, NULL, ?, ?, NULL\n      WHERE EXISTS (SELECT 1 FROM trips WHERE id = ? AND user_id = ? AND moderation_status = 'pending')`",
@@ -2176,11 +2198,11 @@
       "hasLimit": false
     },
     {
-      "callSiteId": "12f3706f263a4c6561ed9d25",
+      "callSiteId": "bda6fafa8ccba078ad54b878",
       "file": "worker/auth.ts",
-      "line": 1571,
+      "line": 1632,
       "containingFunction": "prepareConditionalFeasibilityCorrectionInsert",
-      "occurrence": 98,
+      "occurrence": 99,
       "executionMode": "returned-statement",
       "argumentKind": "literal",
       "expression": "`INSERT INTO validation_feasibility_corrections (\n      correction_id, activation_id, trip_id, correction_contract_version,\n      root_completion_event_sha256, previous_event_sha256, correction_reason,\n      analytical_status, site_id, geographic_panel, mode, segment_start_at,\n      segment_end_at, angler_count, effort_minutes, target_encountered,\n      target_encounter_count, target_retained_count, target_released_count,\n      identification_confidence, corrected_at, event_sha256\n    ) SELECT ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?\n    WHERE EXISTS (\n      SELECT 1 FROM trips WHERE id = ? AND user_id = ? AND moderation_status = 'pending'\n        AND updated_at = ?\n    )`",
@@ -2199,11 +2221,11 @@
       "hasLimit": false
     },
     {
-      "callSiteId": "6596ca55a8ba170f39ad9634",
+      "callSiteId": "eff1a54502c399b4fbf96d85",
       "file": "worker/auth.ts",
-      "line": 1641,
+      "line": 1702,
       "containingFunction": "selectDeletionJobByReceipt",
-      "occurrence": 99,
+      "occurrence": 100,
       "executionMode": "first",
       "argumentKind": "literal",
       "expression": "`SELECT scope, state, objects_total, objects_deleted, requested_at, completed_at\n    FROM privacy_deletion_jobs WHERE receipt_hash = ? LIMIT 1`",
@@ -2221,18 +2243,18 @@
       "hasLimit": true
     },
     {
-      "callSiteId": "1111cfc7488e318f8130dfd5",
+      "callSiteId": "97dcbbf084e67338ca0f54c8",
       "file": "worker/auth.ts",
-      "line": 1686,
+      "line": 1747,
       "containingFunction": "processPrivacyDeletionTasks",
-      "occurrence": 100,
+      "occurrence": 101,
       "executionMode": "prepared-statement",
       "argumentKind": "reviewed-nonliteral",
       "expression": "query",
       "expressionSha256": "a8b771920b8319e47251d1360f5e880bc18e8d329b0f0d003ea3c7e615558947",
       "declarationReference": {
         "name": "query",
-        "declarationLine": 1676,
+        "declarationLine": 1737,
         "initializerSha256": "ede1eb7240c9023869fd0575d466720728c38dea84d50e7038131bdfa3eff71f"
       },
       "statementClass": "UNRESOLVED",
@@ -2245,11 +2267,11 @@
       "hasLimit": null
     },
     {
-      "callSiteId": "8ec6552e13e1feb9e6b5935c",
+      "callSiteId": "e0eebe2ccee420af1fc6afa8",
       "file": "worker/auth.ts",
-      "line": 1700,
+      "line": 1761,
       "containingFunction": "processPrivacyDeletionTasks",
-      "occurrence": 101,
+      "occurrence": 102,
       "executionMode": "run",
       "argumentKind": "literal",
       "expression": "`UPDATE privacy_deletion_tasks\n        SET state = 'needs_attention', lease_expires_at = NULL, lease_token = NULL,\n          last_error_code = 'photo_delete_lease_expired', updated_at = ?\n        WHERE id = ? AND state = 'leased' AND attempts >= ?\n          AND (lease_expires_at IS NULL OR lease_expires_at <= ?)`",
@@ -2267,11 +2289,11 @@
       "hasLimit": false
     },
     {
-      "callSiteId": "5d082cd72cf8bc4bd3f64060",
+      "callSiteId": "9bf0967de9397319651e88cc",
       "file": "worker/auth.ts",
-      "line": 1712,
+      "line": 1773,
       "containingFunction": "processPrivacyDeletionTasks",
-      "occurrence": 102,
+      "occurrence": 103,
       "executionMode": "run",
       "argumentKind": "literal",
       "expression": "`UPDATE privacy_deletion_tasks\n      SET state = 'needs_attention', attempts = CASE WHEN attempts < ? THEN ? ELSE attempts END,\n        lease_expires_at = NULL, lease_token = NULL,\n        last_error_code = 'photo_locator_missing', updated_at = ?\n      WHERE id = ? AND state != 'completed'`",
@@ -2289,11 +2311,11 @@
       "hasLimit": false
     },
     {
-      "callSiteId": "54d0e1355671bc2ce66c1800",
+      "callSiteId": "25f0bc38479f253cfb9790e9",
       "file": "worker/auth.ts",
-      "line": 1727,
+      "line": 1788,
       "containingFunction": "map-callback",
-      "occurrence": 103,
+      "occurrence": 104,
       "executionMode": "batch",
       "argumentKind": "literal",
       "expression": "`UPDATE privacy_deletion_tasks\n        SET state = 'needs_attention', available_at = ?, lease_expires_at = NULL, lease_token = NULL,\n          last_error_code = 'photo_storage_unavailable', updated_at = ? WHERE id = ? AND state != 'completed'\n          AND (state != 'leased' OR lease_expires_at IS NULL OR lease_expires_at <= ?)`",
@@ -2311,11 +2333,11 @@
       "hasLimit": false
     },
     {
-      "callSiteId": "f9d9fc3e12ea152cc3b21039",
+      "callSiteId": "4ae1b1b116cd0f141e06e8c8",
       "file": "worker/auth.ts",
-      "line": 1732,
+      "line": 1793,
       "containingFunction": "map-callback",
-      "occurrence": 104,
+      "occurrence": 105,
       "executionMode": "batch",
       "argumentKind": "literal",
       "expression": "`UPDATE privacy_deletion_jobs\n        SET state = 'needs_attention', last_error_code = 'photo_storage_unavailable', updated_at = ?\n        WHERE id = ? AND state != 'completed'`",
@@ -2333,11 +2355,11 @@
       "hasLimit": false
     },
     {
-      "callSiteId": "90bc82f83d8a6e64d4acdfa3",
+      "callSiteId": "26587a2270efdd0f087d44a4",
       "file": "worker/auth.ts",
-      "line": 1744,
+      "line": 1805,
       "containingFunction": "processPrivacyDeletionTasks",
-      "occurrence": 105,
+      "occurrence": 106,
       "executionMode": "run",
       "argumentKind": "literal",
       "expression": "`UPDATE privacy_deletion_tasks\n      SET state = 'leased', attempts = attempts + 1, lease_expires_at = ?, lease_token = ?, updated_at = ?\n      WHERE id = ?\n        AND ((state = 'pending' AND available_at <= ?)\n          OR (state = 'leased' AND (lease_expires_at IS NULL OR lease_expires_at <= ?)))`",
@@ -2355,11 +2377,11 @@
       "hasLimit": false
     },
     {
-      "callSiteId": "85992a63a45ae56f16f9ead7",
+      "callSiteId": "41f1b3c555682948715da1d5",
       "file": "worker/auth.ts",
-      "line": 1752,
+      "line": 1813,
       "containingFunction": "processPrivacyDeletionTasks",
-      "occurrence": 106,
+      "occurrence": 107,
       "executionMode": "run",
       "argumentKind": "literal",
       "expression": "\"UPDATE privacy_deletion_jobs SET state = 'purging', last_error_code = NULL, updated_at = ? WHERE id = ? AND state != 'completed'\"",
@@ -2377,11 +2399,11 @@
       "hasLimit": false
     },
     {
-      "callSiteId": "aa52a36aff6e844ac607cef2",
+      "callSiteId": "15e591c1f5cd29278738a72b",
       "file": "worker/auth.ts",
-      "line": 1757,
+      "line": 1818,
       "containingFunction": "processPrivacyDeletionTasks",
-      "occurrence": 107,
+      "occurrence": 108,
       "executionMode": "run",
       "argumentKind": "literal",
       "expression": "`UPDATE privacy_deletion_tasks SET state = 'completed', object_key = NULL,\n        lease_expires_at = NULL, lease_token = NULL, last_error_code = NULL,\n        completed_at = ?, updated_at = ?\n        WHERE id = ? AND state = 'leased' AND lease_token = ?`",
@@ -2399,11 +2421,11 @@
       "hasLimit": false
     },
     {
-      "callSiteId": "09378a3d369bde34e45caee1",
+      "callSiteId": "3bd4ea3479ba9899919363d6",
       "file": "worker/auth.ts",
-      "line": 1767,
+      "line": 1828,
       "containingFunction": "processPrivacyDeletionTasks",
-      "occurrence": 108,
+      "occurrence": 109,
       "executionMode": "run",
       "argumentKind": "literal",
       "expression": "`UPDATE privacy_deletion_tasks\n        SET state = CASE WHEN attempts >= ? THEN 'needs_attention' ELSE 'pending' END,\n        available_at = ?, lease_expires_at = NULL,\n        lease_token = NULL, last_error_code = 'photo_delete_failed', updated_at = ?\n        WHERE id = ? AND state = 'leased' AND lease_token = ?`",
@@ -2421,11 +2443,11 @@
       "hasLimit": false
     },
     {
-      "callSiteId": "6715d9c7ac5cc057ff2b6959",
+      "callSiteId": "d41be3974824bccfd2e0c52a",
       "file": "worker/auth.ts",
-      "line": 1783,
+      "line": 1844,
       "containingFunction": "refreshDeletionJobStatus",
-      "occurrence": 109,
+      "occurrence": 110,
       "executionMode": "run",
       "argumentKind": "literal",
       "expression": "`UPDATE privacy_deletion_jobs SET\n      objects_deleted = (SELECT COUNT(*) FROM privacy_deletion_tasks\n        WHERE job_id = privacy_deletion_jobs.id AND state = 'completed'),\n      state = CASE\n        WHEN (SELECT COUNT(*) FROM privacy_deletion_tasks WHERE job_id = privacy_deletion_jobs.id) = objects_total\n          AND NOT EXISTS (SELECT 1 FROM privacy_deletion_tasks\n            WHERE job_id = privacy_deletion_jobs.id AND state != 'completed')\n          THEN 'completed'\n        WHEN (SELECT COUNT(*) FROM privacy_deletion_tasks WHERE job_id = privacy_deletion_jobs.id) != objects_total\n          THEN 'needs_attention'\n        WHEN EXISTS (SELECT 1 FROM privacy_deletion_tasks\n          WHERE job_id = privacy_deletion_jobs.id AND state = 'needs_attention')\n          THEN 'needs_attention'\n        ELSE 'active_data_removed'\n      END,\n      last_error_code = CASE\n        WHEN (SELECT COUNT(*) FROM privacy_deletion_tasks WHERE job_id = privacy_deletion_jobs.id) = objects_total\n          AND NOT EXISTS (SELECT 1 FROM privacy_deletion_tasks\n            WHERE job_id = privacy_deletion_jobs.id AND state != 'completed')\n          THEN NULL\n        WHEN (SELECT COUNT(*) FROM privacy_deletion_tasks WHERE job_id = privacy_deletion_jobs.id) != objects_total\n          THEN 'task_ledger_incomplete'\n        WHEN EXISTS (SELECT 1 FROM privacy_deletion_tasks\n          WHERE job_id = privacy_deletion_jobs.id AND state = 'needs_attention')\n          THEN 'photo_delete_incomplete'\n        ELSE NULL\n      END,\n      completed_at = CASE\n        WHEN (SELECT COUNT(*) FROM privacy_deletion_tasks WHERE job_id = privacy_deletion_jobs.id) = objects_total\n          AND NOT EXISTS (SELECT 1 FROM privacy_deletion_tasks\n            WHERE job_id = privacy_deletion_jobs.id AND state != 'completed')\n          THEN COALESCE(completed_at, ?)\n        ELSE NULL\n      END,\n      updated_at = ?\n    WHERE id = ?`",
@@ -2444,11 +2466,11 @@
       "hasLimit": false
     },
     {
-      "callSiteId": "98f04a0603c3a5676eeaa081",
+      "callSiteId": "b5d6e2b771dd5105865eea55",
       "file": "worker/auth.ts",
-      "line": 1825,
+      "line": 1886,
       "containingFunction": "reconcileDeletionJobs",
-      "occurrence": 110,
+      "occurrence": 111,
       "executionMode": "all",
       "argumentKind": "literal",
       "expression": "\"SELECT id FROM privacy_deletion_jobs WHERE id = ? AND state != 'completed' LIMIT 1\"",
@@ -2466,11 +2488,11 @@
       "hasLimit": true
     },
     {
-      "callSiteId": "91489ba78cf39143e00cc284",
+      "callSiteId": "86144f79aaba86ae74f84fac",
       "file": "worker/auth.ts",
-      "line": 1827,
+      "line": 1888,
       "containingFunction": "reconcileDeletionJobs",
-      "occurrence": 111,
+      "occurrence": 112,
       "executionMode": "all",
       "argumentKind": "literal",
       "expression": "`SELECT id FROM privacy_deletion_jobs\n      WHERE state != 'completed'\n        OR objects_deleted != objects_total\n        OR (SELECT COUNT(*) FROM privacy_deletion_tasks\n          WHERE job_id = privacy_deletion_jobs.id) != objects_total\n        OR EXISTS (SELECT 1 FROM privacy_deletion_tasks\n          WHERE job_id = privacy_deletion_jobs.id AND state != 'completed')\n      ORDER BY updated_at LIMIT 100`",
@@ -2489,11 +2511,11 @@
       "hasLimit": true
     },
     {
-      "callSiteId": "dd63a5babe0d8fa641d9ca0f",
+      "callSiteId": "b20ce60f911af8349b41117d",
       "file": "worker/auth.ts",
-      "line": 1901,
+      "line": 1962,
       "containingFunction": "cleanupAuthData",
-      "occurrence": 112,
+      "occurrence": 113,
       "executionMode": "batch",
       "argumentKind": "literal",
       "expression": "\"DELETE FROM auth_sessions WHERE expires_at <= ?\"",
@@ -2511,11 +2533,11 @@
       "hasLimit": false
     },
     {
-      "callSiteId": "fdb74c8a353c77733b3a23cd",
+      "callSiteId": "5be3b6243879deccef422fd2",
       "file": "worker/auth.ts",
-      "line": 1902,
+      "line": 1963,
       "containingFunction": "cleanupAuthData",
-      "occurrence": 113,
+      "occurrence": 114,
       "executionMode": "batch",
       "argumentKind": "literal",
       "expression": "\"DELETE FROM email_challenges WHERE expires_at <= ?\"",
@@ -2533,11 +2555,11 @@
       "hasLimit": false
     },
     {
-      "callSiteId": "2c93239b9d74521c8499efff",
+      "callSiteId": "1f47e64eac5105345843c7bc",
       "file": "worker/auth.ts",
-      "line": 1903,
+      "line": 1964,
       "containingFunction": "cleanupAuthData",
-      "occurrence": 114,
+      "occurrence": 115,
       "executionMode": "batch",
       "argumentKind": "literal",
       "expression": "\"DELETE FROM auth_attempts WHERE attempted_at < ?\"",
@@ -2555,11 +2577,11 @@
       "hasLimit": false
     },
     {
-      "callSiteId": "422419bd524f57364ad516f2",
+      "callSiteId": "f7698208c6d9d24f6bbbd481",
       "file": "worker/auth.ts",
-      "line": 1904,
+      "line": 1965,
       "containingFunction": "cleanupAuthData",
-      "occurrence": 115,
+      "occurrence": 116,
       "executionMode": "batch",
       "argumentKind": "literal",
       "expression": "\"DELETE FROM signup_age_proofs WHERE expires_at < ? OR (consumed_at IS NOT NULL AND consumed_at < ?)\"",
@@ -2577,11 +2599,11 @@
       "hasLimit": false
     },
     {
-      "callSiteId": "7b0813c7b0c8d70650bc02db",
+      "callSiteId": "7359ed869106a15ae4adb7fa",
       "file": "worker/auth.ts",
-      "line": 1906,
+      "line": 1967,
       "containingFunction": "cleanupAuthData",
-      "occurrence": 116,
+      "occurrence": 117,
       "executionMode": "batch",
       "argumentKind": "literal",
       "expression": "`DELETE FROM privacy_deletion_jobs\n      WHERE state = 'completed' AND completed_at < ?\n        AND objects_deleted = objects_total\n        AND (SELECT COUNT(*) FROM privacy_deletion_tasks\n          WHERE job_id = privacy_deletion_jobs.id) = objects_total\n        AND NOT EXISTS (SELECT 1 FROM privacy_deletion_tasks\n          WHERE job_id = privacy_deletion_jobs.id AND state != 'completed')`",
@@ -2600,11 +2622,11 @@
       "hasLimit": false
     },
     {
-      "callSiteId": "de0344008ba1de8251bc9cf9",
+      "callSiteId": "30c55cc35b66fd66b84872ca",
       "file": "worker/auth.ts",
-      "line": 1918,
+      "line": 1979,
       "containingFunction": "selectUserForSession",
-      "occurrence": 117,
+      "occurrence": 118,
       "executionMode": "first",
       "argumentKind": "literal",
       "expression": "`SELECT id, email,\n    CASE WHEN age_eligibility_confirmed_at IS NOT NULL THEN 1 ELSE 0 END AS age_eligible,\n    CASE WHEN age_eligibility_confirmed_at IS NOT NULL AND terms_version = ? AND privacy_version = ?\n      THEN 1 ELSE 0 END AS legal_accepted\n    FROM users WHERE id = ? LIMIT 1`",
@@ -2622,11 +2644,11 @@
       "hasLimit": true
     },
     {
-      "callSiteId": "0c1ec66083b47ac59fbabf50",
+      "callSiteId": "26c26153d74eb5cc8736cee1",
       "file": "worker/auth.ts",
-      "line": 1938,
+      "line": 1999,
       "containingFunction": "map-callback",
-      "occurrence": 118,
+      "occurrence": 119,
       "executionMode": "all",
       "argumentKind": "literal",
       "expression": "\"DELETE FROM auth_sessions WHERE token_hash = ?\"",
@@ -2644,11 +2666,11 @@
       "hasLimit": false
     },
     {
-      "callSiteId": "66ae0e66c6417dc9a25f5706",
+      "callSiteId": "f867c6aad53d0babbcbf2f10",
       "file": "worker/auth.ts",
-      "line": 1941,
+      "line": 2002,
       "containingFunction": "createSessionResponse",
-      "occurrence": 119,
+      "occurrence": 120,
       "executionMode": "batch",
       "argumentKind": "literal",
       "expression": "\"INSERT INTO auth_sessions (token_hash, user_id, expires_at, created_at) VALUES (?, ?, ?, ?)\"",
@@ -2666,11 +2688,11 @@
       "hasLimit": false
     },
     {
-      "callSiteId": "9c85032492f1d6b4fea694f2",
+      "callSiteId": "88003dcee41730babe7c4ee6",
       "file": "worker/auth.ts",
-      "line": 2160,
+      "line": 2221,
       "containingFunction": "validateSignupAgeProof",
-      "occurrence": 120,
+      "occurrence": 121,
       "executionMode": "first",
       "argumentKind": "literal",
       "expression": "`SELECT confirmed_at FROM signup_age_proofs\n    WHERE token_hash = ? AND consumed_at IS NULL AND expires_at > ? AND gate_version = ?\n    LIMIT 1`",
@@ -2688,11 +2710,11 @@
       "hasLimit": true
     },
     {
-      "callSiteId": "d5d0140a53671ff78f69318e",
+      "callSiteId": "a230ebbe7d9247c254256c2d",
       "file": "worker/auth.ts",
-      "line": 2173,
+      "line": 2234,
       "containingFunction": "consumeSignupAgeProof",
-      "occurrence": 121,
+      "occurrence": 122,
       "executionMode": "run",
       "argumentKind": "literal",
       "expression": "`UPDATE signup_age_proofs SET consumed_at = ?\n    WHERE token_hash = ? AND consumed_at IS NULL AND expires_at > ? AND gate_version = ?`",
@@ -2710,11 +2732,11 @@
       "hasLimit": false
     },
     {
-      "callSiteId": "6d1a6d3ae8f95207d3935ef2",
+      "callSiteId": "0ba24ed48e6b39e73b873b62",
       "file": "worker/auth.ts",
-      "line": 2268,
+      "line": 2329,
       "containingFunction": "assertEmailChallengeAllowed",
-      "occurrence": 122,
+      "occurrence": 123,
       "executionMode": "first",
       "argumentKind": "literal",
       "expression": "\"SELECT COUNT(*) AS count FROM email_challenges WHERE email = ? AND created_at >= ?\"",
@@ -2732,11 +2754,11 @@
       "hasLimit": false
     },
     {
-      "callSiteId": "397cf81a2e377acca6081101",
+      "callSiteId": "dcb25624cb743ef337910be2",
       "file": "worker/auth.ts",
-      "line": 2287,
+      "line": 2348,
       "containingFunction": "verifyEmailChallenge",
-      "occurrence": 123,
+      "occurrence": 124,
       "executionMode": "first",
       "argumentKind": "literal",
       "expression": "\"SELECT * FROM email_challenges WHERE id = ? AND kind = ? LIMIT 1\"",
@@ -2754,31 +2776,9 @@
       "hasLimit": true
     },
     {
-      "callSiteId": "b247d58e80292b3692dfead1",
-      "file": "worker/auth.ts",
-      "line": 2291,
-      "containingFunction": "verifyEmailChallenge",
-      "occurrence": 124,
-      "executionMode": "run",
-      "argumentKind": "literal",
-      "expression": "\"DELETE FROM email_challenges WHERE id = ?\"",
-      "expressionSha256": "003b1082b90dae073d66105ff3db4c4eb675969d0902e2de592942f743f95af8",
-      "declarationReference": null,
-      "statementClass": "DELETE",
-      "sql": "DELETE FROM email_challenges WHERE id = ?",
-      "sqlSha256": "e75a985affbec14e5d61e7cd15e6d54f39334f04f77a8f0b4acb2e8f1116e867",
-      "tables": [
-        "email_challenges"
-      ],
-      "placeholderCount": 1,
-      "hasWhere": true,
-      "hasOrderBy": false,
-      "hasLimit": false
-    },
-    {
       "callSiteId": "46d49c05fdd4b13b7835fefb",
       "file": "worker/auth.ts",
-      "line": 2299,
+      "line": 2352,
       "containingFunction": "verifyEmailChallenge",
       "occurrence": 125,
       "executionMode": "run",
@@ -2800,7 +2800,7 @@
     {
       "callSiteId": "2d3ccd888360d9161aee36bf",
       "file": "worker/auth.ts",
-      "line": 2307,
+      "line": 2360,
       "containingFunction": "verifyEmailChallenge",
       "occurrence": 126,
       "executionMode": "run",
@@ -2820,11 +2820,33 @@
       "hasLimit": false
     },
     {
-      "callSiteId": "87eefc205c94003a165883ee",
+      "callSiteId": "39509cafac7c48dead74692d",
       "file": "worker/auth.ts",
-      "line": 2309,
+      "line": 2368,
       "containingFunction": "verifyEmailChallenge",
       "occurrence": 127,
+      "executionMode": "run",
+      "argumentKind": "literal",
+      "expression": "\"DELETE FROM email_challenges WHERE id = ?\"",
+      "expressionSha256": "003b1082b90dae073d66105ff3db4c4eb675969d0902e2de592942f743f95af8",
+      "declarationReference": null,
+      "statementClass": "DELETE",
+      "sql": "DELETE FROM email_challenges WHERE id = ?",
+      "sqlSha256": "e75a985affbec14e5d61e7cd15e6d54f39334f04f77a8f0b4acb2e8f1116e867",
+      "tables": [
+        "email_challenges"
+      ],
+      "placeholderCount": 1,
+      "hasWhere": true,
+      "hasOrderBy": false,
+      "hasLimit": false
+    },
+    {
+      "callSiteId": "4abfb7ddcec4486af9720b31",
+      "file": "worker/auth.ts",
+      "line": 2370,
+      "containingFunction": "verifyEmailChallenge",
+      "occurrence": 128,
       "executionMode": "run",
       "argumentKind": "literal",
       "expression": "\"UPDATE email_challenges SET attempts = attempts + 1 WHERE id = ?\"",
@@ -2842,11 +2864,11 @@
       "hasLimit": false
     },
     {
-      "callSiteId": "f838fd5006fcb79723d2d6d4",
+      "callSiteId": "73051e3a77a670057add1155",
       "file": "worker/auth.ts",
-      "line": 2482,
+      "line": 2543,
       "containingFunction": "catch-callback",
-      "occurrence": 128,
+      "occurrence": 129,
       "executionMode": "run",
       "argumentKind": "literal",
       "expression": "\"DELETE FROM email_challenges WHERE id = ?\"",
