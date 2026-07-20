@@ -68,7 +68,9 @@ test("every security layer records owner, state, evidence, alert, recovery, resi
 });
 
 test("threat model keeps unexercised production controls visibly open", () => {
-  assert.match(threatModel, /Cloudflare remains paused/i);
+  assert.match(threatModel, /provider reconciliation found the Worker and routes active/i);
+  assert.match(threatModel, /maintenance off[\s\S]+configuration drift/i);
+  assert.doesNotMatch(threatModel, /Cloudflare remains paused|the service is paused/i);
   assert.match(threatModel, /### L10 — Dynamic application security testing[\s\S]+?- \*\*State:\*\* open\./);
   assert.match(threatModel, /### L12 — DDoS and traffic filtering[\s\S]+?- \*\*State:\*\* open\./);
   assert.match(threatModel, /Never target `castingcompass\.com`/);

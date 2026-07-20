@@ -55,8 +55,10 @@ Do not prepare an active authorization until all of these external gates exist:
   stop conditions; and
 - separate synthetic accounts for later authenticated IDOR and business-logic testing.
 
-The current Cloudflare service is paused and no isolated target is provisioned. Therefore no
-active authorization exists and no scan should run now.
+The accepted 2026-07-19 reconciliation found the Cloudflare production service active, and no
+later accepted provider receipt has superseded it. No isolated target is provisioned. Production
+and every alias remain permanently outside this runner's scope. Therefore no active authorization
+exists and no scan should run now.
 
 ## Offline policy and plan preparation
 

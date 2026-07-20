@@ -13,7 +13,7 @@ Current provider truth overrides historical “paused” language in completed r
 2026-07-19 read-only reconciliation found an active Worker; no production mutation is authorized
 by that discovery.
 
-## Active work cycle — API image upstream watch
+## Completed work cycle — API image upstream watch
 
 - [x] Reconcile protected `main`, draft regional PR `#118`, the owner roadmap, and GitHub work.
       Starting `main` is `4f20a786c8a88cce7104be7a73f012fca1440f02`; `#118` remains the only
@@ -42,8 +42,13 @@ by that discovery.
       Fifteen checks succeeded and five event-appropriate jobs skipped. Both web runs completed
       all 140 Chromium/WebKit cases, hosted API used exact Python 3.13.14, and both native image
       architectures passed. No Cloudflare, D1, DNS, provider, or production action ran.
-- [ ] Merge only accepted evidence and reconcile exact protected `main`, workflows, alerts, and
-      issue `#86`. The issue must remain open until a fixed image passes both native architectures.
+- [x] Merge only accepted evidence and reconcile exact protected `main`, workflows, alerts, and
+      issue `#86`. PR `#121` merged normally as
+      `8c051080abcb3f19b6ab7bc36f6aed67c5bb9f87`; main CI `29717064849`, release
+      provenance `29717064802`, native API image security `29717064831`, and CodeQL
+      `29717064180` passed. Manual main watch run `29717078040` also passed. Dependabot,
+      code-scanning, and secret-scanning alerts were all zero; issue `#86` remains open until a
+      fixed image passes both native architectures. No deployment or provider mutation ran.
 
 ## Completed seven-step work cycle — privacy-safe observability evidence
 
@@ -758,7 +763,7 @@ by that discovery.
 - [ ] Refresh visual design, graphics, species art, empty states, social cards, and brand
       illustration. Artist collaboration remains deferred until higher-risk work is complete.
 
-## Product-owner work that is safe while Cloudflare stays paused
+## Product-owner work that is safe while production changes remain on hold
 
 - [ ] Audit MFA/passkeys and recovery methods for GitHub, Cloudflare, the domain registrar,
       primary email, Google Search Console, and Bing Webmaster Tools. Store recovery codes
