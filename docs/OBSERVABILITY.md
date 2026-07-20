@@ -120,6 +120,55 @@ authorized D1 runbook in `docs/AI-REVIEW-QUEUE.md`.
 6. Close only after a synthetic non-sensitive reproduction proves both recovery and log
    redaction. Link the exact commit, deployment, alert, and follow-up owner.
 
+## Offline incident-reconstruction drill
+
+Run `npm run drill:observability:offline` before configuring provider views or after changing the
+event contract. The drill ingests only the committed non-sensitive NDJSON fixture, validates every
+event against `castingcompass.log/1.0.0`, rejects unsupported or high-risk fields and values,
+requires normalized route templates and strictly increasing timestamps within each correlation
+identity, and reconstructs request, Queue, and scheduled-task timelines only when request
+completion and operation start/terminal ordering is unambiguous. Its deterministic JSON receipt
+contains aggregate counts and correlation metadata only; it deliberately excludes actor-session
+pseudonyms and raw event payloads.
+
+This is a repository-level contract and runbook exercise. It makes no network request and proves
+neither production log contents nor dashboard, IAM, retention, cost, alert delivery, escalation,
+uptime, D1/R2/provider coverage, or incident recovery. Repeat the same reconstruction against a
+minimum redacted preview export, then capture provider evidence through the guarded production
+process. Never place an exported production log file in the repository or pass it through Codex.
+
+## Fail-closed activation receipt
+
+`npm run security:observability-activation` verifies the locked repository policy in CI without
+reading a provider account. After an authorized operator completes the provider checklist, place
+a private aggregate evidence manifest outside every checkout, set its permissions to owner-only,
+and run:
+
+```sh
+OBSERVABILITY_EVIDENCE_FILE=/absolute/private/path/observability-evidence.json \
+OBSERVABILITY_EXPECTED_COMMIT=0123456789abcdef0123456789abcdef01234567 \
+  npm run verify:observability:activation
+```
+
+The exact manifest schema is enforced by
+`scripts/verify-observability-activation.mjs`. It accepts only a canonical observation time,
+the reviewed 40-character commit, SHA-256 references to the separately retained private evidence
+packet, bounded retention/volume/cost facts, and boolean outcomes for each named release binding,
+log-hygiene, saved-view, access, alert, uptime, reconstruction, pseudonym-key, and PostHog gate.
+The operator must also supply the independently reviewed commit through
+`OBSERVABILITY_EXPECTED_COMMIT`; evaluation refuses a missing, malformed, or mismatched value.
+It rejects unknown fields, provider/account identifiers, URLs, raw event data, stale or
+future-dated evidence, files inside Git, symlinks, group/world-readable files, and any claim that
+the manifest authorizes a production change.
+
+The printed receipt is public-safe and data-minimized: it includes the expected reviewed commit
+so the claim cannot float between releases, but no evidence digest, saved-view name, provider ID,
+actor pseudonym, payload, account detail, or secret is copied into it. A ready receipt requires
+all exact gates within 72 hours. A dashboard screenshot alone therefore cannot prove alert
+delivery, MFA/least privilege, retention/cost ownership, uptime, redaction, or incident
+reconstruction. The verifier is read-only, performs no provider query, and always records
+`production_change_authorized: false`.
+
 ## External activation evidence still required
 
 - [ ] Confirm Workers Logs receives only the structured schema and raw invocation logs are absent
@@ -130,8 +179,13 @@ authorized D1 runbook in `docs/AI-REVIEW-QUEUE.md`.
       who reviews them.
 - [ ] Deliver synthetic 5xx, latency, scheduled-failure, D1, and volume alerts to the real
       escalation destination; acknowledge and close them through the runbook.
-- [ ] Prove a request-ID reconstruction with fixtures and verify that email, raw account/trip
-      identifiers, cookies, tokens, IPs, prompts, notes, coordinates, and provider bodies are absent.
+- [x] Prove repository-level request/Queue/scheduled reconstruction with a non-sensitive fixture;
+      fail closed on email/raw identifiers, cookies/tokens, IPs, prompts, notes, coordinates,
+      provider bodies, unnormalized routes, incomplete correlation chains, equal timestamps, and
+      start/terminal ordering errors; omit rotating actor pseudonyms from the deterministic
+      aggregate receipt.
+- [ ] Repeat the minimum redacted reconstruction against the exact preview and production log
+      streams, proving that only the structured schema arrived and no raw invocation event leaked.
 - [ ] Decide whether short native retention is sufficient. If not, approve an OTLP/Logpush
       destination with encryption, region, access control, deletion, cost, and processor review
       before enabling export.
