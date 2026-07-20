@@ -61,6 +61,15 @@ performance study would require a new prospective protocol, frozen population,
 recruitment plan, privacy review, and activation before any eligible outcome is
 known.
 
+## Local access review
+
+The blank [local access review packet](SANTA-BARBARA-LOCAL-ACCESS-REVIEW.md)
+provides a machine-checked way for area anglers to flag generalized catalog
+corrections without supplying identity, exact trip time, coordinates, photos,
+catches, or trip notes. It has not been executed. Every site remains pending,
+and completing it cannot authorize deployment or create model-validation
+evidence.
+
 ## Release checkpoint
 
 This branch makes no Cloudflare, database, provider, indexing, or production

@@ -1,0 +1,220 @@
+{
+  "schemaVersion": "castingcompass.santa-barbara-access-review/1.0.0",
+  "status": "template_only_not_executed",
+  "reviewedOn": "2026-07-19",
+  "purpose": "Collect generalized local corrections to the Santa Barbara South Coast public-access catalog before release without collecting trip, catch, identity, or precise-location data.",
+  "geography": {
+    "label": "Santa Barbara South Coast",
+    "scope": "Gaviota through Rincon",
+    "expectedSiteCount": 13
+  },
+  "storage": {
+    "responseLocation": "private_outside_repository",
+    "repositoryState": "blank_policy_and_aggregate_receipt_only",
+    "rawResponseRetentionDaysAfterDecision": 30,
+    "privateEvidenceDigestRequiredForAggregateReceipt": true
+  },
+  "allowedPrivateResponseFields": [
+    "site_id",
+    "response_id",
+    "observed_month",
+    "question_answers",
+    "correction_category",
+    "generalized_correction"
+  ],
+  "prohibitedFields": [
+    "reviewer_name",
+    "contact_information",
+    "account_or_user_id",
+    "exact_visit_timestamp",
+    "precise_coordinates",
+    "catch_or_trip_outcomes",
+    "trip_notes",
+    "photos_or_video",
+    "credentials_or_tokens",
+    "private_access_directions"
+  ],
+  "responseStates": [
+    "matches_catalog",
+    "correction_needed",
+    "not_observed",
+    "uncertain"
+  ],
+  "questions": [
+    {
+      "id": "public_entry_route",
+      "prompt": "Did the public entry route and shoreline access match the catalog description?"
+    },
+    {
+      "id": "access_status",
+      "prompt": "Did posted access information match the catalog status during the month you checked?"
+    },
+    {
+      "id": "parking_walk",
+      "prompt": "Did the parking or transit and walking description match what was generally available?"
+    },
+    {
+      "id": "posted_restrictions",
+      "prompt": "Did the catalog caveat account for the posted closures or use restrictions you observed?"
+    },
+    {
+      "id": "boundary_clarity",
+      "prompt": "Was the described fishing area and exclusion boundary clear enough to follow without entering excluded water?"
+    }
+  ],
+  "acceptance": {
+    "minimumDistinctReviewersAcrossRegion": 2,
+    "minimumReviewsForOpenSite": 1,
+    "minimumReviewsForLimitedSite": 2,
+    "officialSourceRecheckWithinDays": 7,
+    "maximumUnresolvedCorrections": 0,
+    "deploymentAuthorizationGranted": false,
+    "modelValidationEvidenceGranted": false,
+    "safetyOrLegalityGuaranteeGranted": false
+  },
+  "sites": [
+    {
+      "siteId": "gaviota-state-park-beach",
+      "name": "Gaviota State Park Beach",
+      "region": "Gaviota Coast",
+      "catalogAccessStatus": "open",
+      "catalogAccessStatusUpdatedAt": "2026-07-19",
+      "accessSourceUrl": "https://www.parks.ca.gov/?page_id=606",
+      "regulationUrl": "https://wildlife.ca.gov/Fishing/Ocean/Regulations/Fishing-Map/Central",
+      "minimumLocalReviews": 1,
+      "reviewState": "pending"
+    },
+    {
+      "siteId": "refugio-state-beach",
+      "name": "Refugio State Beach",
+      "region": "Gaviota Coast",
+      "catalogAccessStatus": "open",
+      "catalogAccessStatusUpdatedAt": "2026-07-19",
+      "accessSourceUrl": "https://www.parks.ca.gov/?page_id=603",
+      "regulationUrl": "https://wildlife.ca.gov/Fishing/Ocean/Regulations/Fishing-Map/Central",
+      "minimumLocalReviews": 1,
+      "reviewState": "pending"
+    },
+    {
+      "siteId": "el-capitan-state-beach",
+      "name": "El Capitán State Beach",
+      "region": "Gaviota Coast",
+      "catalogAccessStatus": "limited",
+      "catalogAccessStatusUpdatedAt": "2026-07-19",
+      "accessSourceUrl": "https://www.parks.ca.gov/?page_id=601",
+      "regulationUrl": "https://wildlife.ca.gov/Fishing/Ocean/Regulations/Fishing-Map/Central",
+      "minimumLocalReviews": 2,
+      "reviewState": "pending"
+    },
+    {
+      "siteId": "haskells-beach",
+      "name": "Haskell's Beach",
+      "region": "Goleta",
+      "catalogAccessStatus": "open",
+      "catalogAccessStatusUpdatedAt": "2026-07-19",
+      "accessSourceUrl": "https://www.cityofgoleta.org/home/showpublisheddocument/24331/637394023523700000",
+      "regulationUrl": "https://wildlife.ca.gov/Fishing/Ocean/Regulations/Fishing-Map/Southern",
+      "minimumLocalReviews": 1,
+      "reviewState": "pending"
+    },
+    {
+      "siteId": "goleta-beach",
+      "name": "Goleta Beach",
+      "region": "Goleta",
+      "catalogAccessStatus": "limited",
+      "catalogAccessStatusUpdatedAt": "2026-07-19",
+      "accessSourceUrl": "https://www.countyofsb.org/goleta-beach-park",
+      "regulationUrl": "https://wildlife.ca.gov/Fishing/Ocean/Regulations/Fishing-Map/Southern",
+      "minimumLocalReviews": 2,
+      "reviewState": "pending"
+    },
+    {
+      "siteId": "arroyo-burro-beach",
+      "name": "Arroyo Burro Beach",
+      "region": "Santa Barbara",
+      "catalogAccessStatus": "open",
+      "catalogAccessStatusUpdatedAt": "2026-07-19",
+      "accessSourceUrl": "https://www.countyofsb.org/arroyo-burro-beach",
+      "regulationUrl": "https://wildlife.ca.gov/Fishing/Ocean/Regulations/Fishing-Map/Southern",
+      "minimumLocalReviews": 1,
+      "reviewState": "pending"
+    },
+    {
+      "siteId": "mesa-lane-beach",
+      "name": "Mesa Lane Steps Beach",
+      "region": "Santa Barbara",
+      "catalogAccessStatus": "limited",
+      "catalogAccessStatusUpdatedAt": "2026-07-19",
+      "accessSourceUrl": "https://sbparksandrec.santabarbaraca.gov/beaches/mesa-lane-steps-beach",
+      "regulationUrl": "https://wildlife.ca.gov/Fishing/Ocean/Regulations/Fishing-Map/Southern",
+      "minimumLocalReviews": 2,
+      "reviewState": "pending"
+    },
+    {
+      "siteId": "leadbetter-beach",
+      "name": "Leadbetter Beach",
+      "region": "Santa Barbara",
+      "catalogAccessStatus": "open",
+      "catalogAccessStatusUpdatedAt": "2026-07-19",
+      "accessSourceUrl": "https://sbparksandrec.santabarbaraca.gov/beaches/leadbetter-beach",
+      "regulationUrl": "https://wildlife.ca.gov/Fishing/Ocean/Regulations/Fishing-Map/Southern",
+      "minimumLocalReviews": 1,
+      "reviewState": "pending"
+    },
+    {
+      "siteId": "santa-barbara-harbor-breakwater",
+      "name": "Santa Barbara Harbor Breakwater",
+      "region": "Santa Barbara",
+      "catalogAccessStatus": "limited",
+      "catalogAccessStatusUpdatedAt": "2026-07-19",
+      "accessSourceUrl": "https://wildlife.ca.gov/fishing/ocean/beach-fishing",
+      "regulationUrl": "https://wildlife.ca.gov/Fishing/Ocean/Regulations/Fishing-Map/Southern",
+      "minimumLocalReviews": 2,
+      "reviewState": "pending"
+    },
+    {
+      "siteId": "stearns-wharf",
+      "name": "Stearns Wharf",
+      "region": "Santa Barbara",
+      "catalogAccessStatus": "open",
+      "catalogAccessStatusUpdatedAt": "2026-07-19",
+      "accessSourceUrl": "https://santabarbaraca.gov/things-do/waterfront/about-stearns-wharf",
+      "regulationUrl": "https://wildlife.ca.gov/Fishing/Ocean/Regulations/Fishing-Map/Southern",
+      "minimumLocalReviews": 1,
+      "reviewState": "pending"
+    },
+    {
+      "siteId": "east-beach-santa-barbara",
+      "name": "East Beach (Santa Barbara)",
+      "region": "Santa Barbara",
+      "catalogAccessStatus": "open",
+      "catalogAccessStatusUpdatedAt": "2026-07-19",
+      "accessSourceUrl": "https://sbparksandrec.santabarbaraca.gov/parks/east-beach-park",
+      "regulationUrl": "https://wildlife.ca.gov/Fishing/Ocean/Regulations/Fishing-Map/Southern",
+      "minimumLocalReviews": 1,
+      "reviewState": "pending"
+    },
+    {
+      "siteId": "carpinteria-state-beach",
+      "name": "Carpinteria State Beach",
+      "region": "Carpinteria",
+      "catalogAccessStatus": "open",
+      "catalogAccessStatusUpdatedAt": "2026-07-19",
+      "accessSourceUrl": "https://www.parks.ca.gov/?lang=en&page_id=599",
+      "regulationUrl": "https://wildlife.ca.gov/Fishing/Ocean/Regulations/Fishing-Map/Southern",
+      "minimumLocalReviews": 1,
+      "reviewState": "pending"
+    },
+    {
+      "siteId": "rincon-beach-park",
+      "name": "Rincon Beach Park",
+      "region": "Carpinteria",
+      "catalogAccessStatus": "open",
+      "catalogAccessStatusUpdatedAt": "2026-07-19",
+      "accessSourceUrl": "https://www.countyofsb.org/rincon-beach-park",
+      "regulationUrl": "https://wildlife.ca.gov/Fishing/Ocean/Regulations/Fishing-Map/Southern",
+      "minimumLocalReviews": 1,
+      "reviewState": "pending"
+    }
+  ]
+}

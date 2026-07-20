@@ -392,6 +392,12 @@ after its acceptance checks pass in the intended environment.
     and deploy only through the still-open guarded production-security release process. Do not
     claim Santa Barbara training, calibration, validation, catch probability, complete access,
     or guaranteed safety.
+    - [x] Freeze and machine-check a blank 13-site local access-review packet with one review per
+      open site, two per limited site, at least two regional reviewers, a seven-day official-source
+      recheck, zero unresolved corrections, 30-day raw-response disposal, private evidence only,
+      and explicit denial of deployment, safety/legal, and model-validation authority. Actual
+      local review, its aggregate receipt, final protected checks, and guarded deployment remain
+      open.
 
 - [ ] Establish privacy-preserving production observability and an operator console before
   scaling traffic. Evaluate Cloudflare-native logs/analytics and focused vendors such as
