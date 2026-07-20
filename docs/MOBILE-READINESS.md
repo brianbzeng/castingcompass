@@ -1,10 +1,12 @@
 # Mobile and API compatibility boundary
 
-Last reviewed: **2026-07-19 UTC**
+Last reviewed: **2026-07-20 UTC**
 
 This document defines the repository controls for mobile web clients and future native clients.
 It does not authorize a production deployment, claim native-app readiness, or replace an isolated
-staging exercise. Production and Cloudflare remain paused until the separate release gates pass.
+staging exercise. The last accepted provider reconciliation found the Worker active with
+unresolved source/configuration drift; production changes remain on hold until the separate
+release gates pass.
 
 ## API compatibility contract
 

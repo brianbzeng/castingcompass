@@ -108,8 +108,9 @@ All boxes stay open until provider access and an isolated synthetic environment 
       resumes without duplicate publication or deleted-trip resurrection.
 - [ ] Only then use a separate reviewed change to set `AI_REVIEW_QUEUE_ENABLED=true`, verify the
       exact Worker version and bindings on preview, canary if available, and production, and
-      preserve aggregate evidence. Production/public traffic remains paused until its wider
-      security release gate also passes.
+      preserve aggregate evidence. The last accepted provider reconciliation found production
+      traffic active, but the queue feature remains default-off and provider-unbound until its
+      wider security release gate also passes.
 
 The eventual Wrangler fragment must be derived from the reviewed queue identities, not copied
 with placeholders. Its shape is:

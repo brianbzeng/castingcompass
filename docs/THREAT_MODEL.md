@@ -1,15 +1,18 @@
 # CastingCompass threat model and owner security-layer mapping
 
 Status: **repository mapping complete; production activation evidence remains open**
-Last reconciled: **2026-07-18 UTC**
+Last reconciled: **2026-07-20 UTC**
 
 This document turns the owner's three security reference screenshots into an attack-specific
 CastingCompass control map. The screenshots are a generic checklist, not evidence that a
 control exists and not a requirement to adopt every named vendor. Each layer below records an
 accountable role, current evidence, alert path, recovery action, residual risk, and next gate.
 
-Cloudflare remains paused. This review did not deploy, inspect user rows, change DNS, provision
-secrets, activate rate limits, run DAST, or aim load or security traffic at production.
+The accepted 2026-07-19 read-only provider reconciliation found the Worker and routes active,
+maintenance off, and checked-in configuration drift. That observation does not bind the deployed
+source or prove any WAF, DDoS, alerting, or release gate. This review did not deploy, inspect user
+rows, change DNS, provision secrets, activate rate limits, run DAST, or aim load or security
+traffic at production.
 
 ## Reference provenance
 
@@ -73,9 +76,9 @@ that could become a privacy, integrity, or availability incident.
 | L08 | Input sanitization and parameterized queries | accepted-local | Parser differentials and deployed composition still need authorized DAST |
 | L09 | Secrets management | partial | Production custody, MFA/IAM evidence, and rotation drills remain open |
 | L10 | Dynamic application security testing | open | No authorized isolated staging target or DAST receipt exists |
-| L11 | API rate limiting | partial | Worker bindings are default-off and outer edge rules are not active |
-| L12 | DDoS and traffic filtering | open | Cloudflare is paused; no active WAF/DDoS configuration is claimed |
-| L13 | Runtime threat defense | partial | Structured events exist locally; live alerts and detection are not active |
+| L11 | API rate limiting | partial | Worker bindings are absent/default-off; no reviewed outer edge-rule evidence exists |
+| L12 | DDoS and traffic filtering | open | Production traffic is active; no reviewed WAF/DDoS configuration or test evidence is claimed |
+| L13 | Runtime threat defense | partial | Structured events exist locally; no accepted live alert or detection evidence exists |
 
 ### L01 — Security-first prompts
 
@@ -306,16 +309,16 @@ that could become a privacy, integrity, or availability incident.
   database, provider, or operator capacity.
 - **Owner:** Cloudflare account/security owner.
 - **State:** open.
-- **Evidence:** Cloudflare is the intended edge and the production runbook requires outer rate-
-  limiting/WAF evidence, but the service is paused and no active DDoS/WAF configuration or test
-  is claimed by this repository.
+- **Evidence:** Cloudflare is the active production edge and the production runbook requires outer
+  rate-limiting/WAF evidence. The accepted provider-state audit deliberately did not inspect that
+  security configuration, so this repository claims no reviewed DDoS/WAF configuration or test.
 - **Alert:** Future Cloudflare Security Events/analytics, origin error and saturation alerts,
   provider cost alerts, and external uptime checks.
 - **Recovery:** Keep or enter maintenance, block abusive classes at the edge, protect provider
   and database budgets, roll back the reviewed Worker when needed, and verify legitimate traffic
   before reopening.
-- **Residual risk:** Resuming traffic without reviewed edge rules and alerts would leave
-  availability, cost, and downstream provider exhaustion insufficiently evidenced.
+- **Residual risk:** Active traffic without reviewed edge rules and alerts leaves availability,
+  cost, and downstream provider exhaustion insufficiently evidenced.
 - **Next gate:** Review managed protections and narrow custom WAF/rate rules, test false positives
   in isolated staging, record rollback, and activate only in the guarded release sequence.
 
@@ -333,8 +336,9 @@ that could become a privacy, integrity, or availability incident.
 - **Recovery:** Enter maintenance or disable the affected optional route, preserve redacted event
   evidence, revoke exposed credentials, roll back to the reviewed release, reconcile privacy
   and deletion work, and complete the incident runbook.
-- **Residual risk:** No production dashboard, retention/IAM approval, external uptime check,
-  delivered-alert drill, or staffed escalation path is active while Cloudflare is paused.
+- **Residual risk:** The Worker is active without accepted evidence for a production dashboard,
+  retention/IAM approval, external uptime check, delivered-alert drill, or staffed escalation
+  path.
 - **Next gate:** Choose the alert destination and backup owner, create least-privilege saved
   views, prove delivery and redaction with synthetic failures, and record acknowledgement and
   recovery timing.
