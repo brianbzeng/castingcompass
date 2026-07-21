@@ -940,12 +940,16 @@ export async function handleAccountRequest(
         .all<TripRow>();
       const trips = rows.results ?? [];
       if (trips.length) {
-        await db.batch(trips.map((trip) => db.prepare(
-          "UPDATE trips SET ai_review_status = 'queued' WHERE id = ? AND (ai_review_status IS NULL OR ai_review_status = 'retry')",
-        ).bind(trip.id)));
-        options.onTripsReviewRequested?.(trips);
+        const results = await db.batch(trips.map((trip) => db.prepare(
+          `UPDATE trips SET ai_review_status = 'queued'
+            WHERE id = ? AND user_id = ?
+              AND (ai_review_status IS NULL OR ai_review_status = 'retry')`,
+        ).bind(trip.id, user.id)));
+        const queuedTrips = trips.filter((_, index) => mutationChanges(results[index]) === 1);
+        if (queuedTrips.length) options.onTripsReviewRequested?.(queuedTrips);
+        return jsonResponse({ queued: queuedTrips.length }, 202);
       }
-      return jsonResponse({ queued: trips.length }, 202);
+      return jsonResponse({ queued: 0 }, 202);
     }
 
     if (url.pathname === "/api/profile") {

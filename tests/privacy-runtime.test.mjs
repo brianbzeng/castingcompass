@@ -971,6 +971,45 @@ test("per-record authorization denies cross-account reads and mutations", async 
     .get(gearId, owner.id).count, 1);
 });
 
+test("manual review retry repeats owner identity in the final write and dispatches only confirmed rows", async () => {
+  const { sqlite, d1 } = await database();
+  const owner = await addUser(sqlite, "review-retry-owner-133");
+  const other = await addUser(sqlite, "review-retry-other-134");
+  const tripId = addTrip(sqlite, owner);
+  sqlite.prepare("UPDATE trips SET ai_review_status = 'retry' WHERE id = ?").run(tripId);
+
+  const dispatched = [];
+  d1.beforeOnceQuerySubstring = "UPDATE trips SET ai_review_status = 'queued'";
+  d1.beforeOnceQuery = () => {
+    sqlite.prepare("UPDATE trips SET user_id = ? WHERE id = ?").run(other.id, tripId);
+  };
+  const raced = await handleAccountRequest(request("/api/profile/reviews/retry", {
+    method: "POST",
+    cookie: owner.cookie,
+  }), { DB: d1 }, [], {
+    onTripsReviewRequested: (trips) => dispatched.push(...trips.map(({ id }) => id)),
+  });
+
+  assert.equal(raced?.status, 202);
+  assert.deepEqual(await raced?.json(), { queued: 0 });
+  assert.deepEqual(dispatched, []);
+  assert.deepEqual(
+    { ...sqlite.prepare("SELECT user_id, ai_review_status FROM trips WHERE id = ?").get(tripId) },
+    { user_id: other.id, ai_review_status: "retry" },
+  );
+
+  const confirmed = await handleAccountRequest(request("/api/profile/reviews/retry", {
+    method: "POST",
+    cookie: other.cookie,
+  }), { DB: d1 }, [], {
+    onTripsReviewRequested: (trips) => dispatched.push(...trips.map(({ id }) => id)),
+  });
+  assert.equal(confirmed?.status, 202);
+  assert.deepEqual(await confirmed?.json(), { queued: 1 });
+  assert.deepEqual(dispatched, [tripId]);
+  assert.equal(sqlite.prepare("SELECT ai_review_status FROM trips WHERE id = ?").get(tripId).ai_review_status, "queued");
+});
+
 test("active trip completion and cancellation bind the authenticated account even with the exact token", async () => {
   const { sqlite, d1 } = await database();
   const owner = await addUser(sqlite, "trip-terminal-owner-131");

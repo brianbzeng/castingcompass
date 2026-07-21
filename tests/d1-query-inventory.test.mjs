@@ -92,6 +92,17 @@ test("the committed inventory covers every Worker prepare site and its reviewed 
   assert.ok(terminalTripWrites.some(({ sql }) =>
     sql === "UPDATE trips SET token_hash = NULL, updated_at = ? WHERE id = ? AND user_id IS ? AND status = 'active' AND token_hash = ?"));
 
+  const manualReviewRetryWrites = inventory.queries.filter(({ file, executionMode, statementClass, sql }) =>
+    file === "worker/auth.ts"
+      && executionMode === "batch"
+      && statementClass === "UPDATE"
+      && sql?.startsWith("UPDATE trips SET ai_review_status = 'queued'"));
+  assert.equal(manualReviewRetryWrites.length, 1);
+  assert.equal(
+    manualReviewRetryWrites[0].sql,
+    "UPDATE trips SET ai_review_status = 'queued' WHERE id = ? AND user_id = ? AND (ai_review_status IS NULL OR ai_review_status = 'retry')",
+  );
+
   const exactOwnerTripRead = inventory.queries.find(({ sql }) =>
     sql === "SELECT * FROM trips WHERE id = ? AND user_id IS ? LIMIT 1");
   assert.equal(exactOwnerTripRead?.executionMode, "first");

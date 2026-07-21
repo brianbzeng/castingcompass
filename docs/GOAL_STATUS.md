@@ -86,6 +86,27 @@ by that discovery.
       receipt close this repository-only checkpoint; no push, new pull request, merge,
       deployment, provider query, D1 mutation, model change, or UI change occurred.
 
+## Active checkpoint — owner-bound manual review retry
+
+- [x] Continue the P0 row-security audit into the signed-in manual advisory-review retry route.
+      Its initial trip selection bound the authenticated account, but each final transition to
+      `queued` used only the trip ID and retry state. That contradicted the matrix rule that a
+      prior owner lookup cannot authorize a later private-object mutation by ID alone.
+- [x] Repeat the server-derived `user_id` in every retry update and treat exactly one D1 change as
+      the dispatch boundary. Rows that lose ownership or retry eligibility after selection do
+      not enter the internal scheduler, and the response reports only confirmed transitions.
+- [x] Add a deterministic ownership-change race: the selected trip moves to a second account
+      immediately before the final statement. The prior owner receives `queued: 0`, no callback
+      is dispatched, and the row remains retryable; the new owner can then queue exactly that row.
+      The generated 222-site D1 inventory also requires the exact owner predicate and rejects
+      regression to the old ID-only update.
+- [x] Pass the pinned Cloudflare build, ESLint, TypeScript, all 548/548 Node tests, the complete
+      offline security/SBOM/source-integrity chain, both zero-vulnerability npm audits, and the
+      full 200/200 Chromium/WebKit phone matrix. Preserve the clean local commit and exact
+      deterministic release-bundle receipts for this repository-only checkpoint. No push, pull
+      request, merge, deployment, provider query, D1 mutation, model change, or UI change belongs
+      to this work.
+
 ## Active checkpoint — confirmed-session browser privacy cleanup
 
 - [x] Audit every browser-persisted account/trip recovery value and both account-exit paths. The

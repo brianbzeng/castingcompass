@@ -141,6 +141,12 @@ after its acceptance checks pass in the intended environment.
       collision check returns only constant `1` by random client-trip ID so duplicate identities
       remain a generic `409` without projecting another account's row or sidecars. The complete
       D1 inventory machine-checks all nine owner reads and this narrow opaque exception.
+    - [x] Bind manual advisory-review retry to the authenticated account through the final D1
+      transition. The owner-scoped pre-read no longer authorizes an ID-only batch update: every
+      retry write repeats `id`, `user_id`, and retryable state, and only rows with one confirmed
+      D1 change reach the internal scheduler. An ownership-change race proves the prior owner
+      queues and dispatches nothing while the new owner can request the retry normally; the
+      generated D1 inventory rejects regression to the old unscoped statement.
   - [ ] Verify strict schema/size/type validation, contextual output encoding, safe database
     binding, upload signature and metadata checks, and AI prompt-injection boundaries. Model
     instructions and user content remain data, never authority; models receive no ambient
