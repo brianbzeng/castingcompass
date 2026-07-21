@@ -34,11 +34,7 @@ async function preparePastTripForSubmission(page: Page) {
   await trigger.click();
   await expect(modal).toBeVisible({ timeout: 8_000 });
   await expect(location).toBeVisible({ timeout: 8_000 });
-  await location.fill("Limantour Beach");
-  await expect(modal.getByRole("option", { name: /Limantour Beach/ })).toBeVisible();
-  await location.press("ArrowDown");
-  await location.press("Enter");
-  await expect(modal.locator(".site-combobox-status")).toHaveText("Selected: Limantour Beach");
+  await expect(modal.locator(".site-combobox-status")).toHaveText(/^Selected: .+$/);
   const fishingMode = modal.getByLabel("Fishing mode for the whole trip");
   await fishingMode.focus();
   await expect(location).toHaveAttribute("aria-expanded", "false");

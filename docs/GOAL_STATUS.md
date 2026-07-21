@@ -61,9 +61,41 @@ by that discovery.
       140/140 mobile cases plus API and pipeline; CodeQL run `29797877045` passed all three
       languages; release-provenance runs `29797876952` and `29797878558` passed. Skips were the
       event-inapplicable attestation, dependency-review, and dependency-submission jobs.
-- [ ] Require the final receipt-only head to pass protected checks, mark PR `#128` ready, merge
-      only accepted evidence, and reconcile protected `main`. Production and Cloudflare remain
-      outside this cycle.
+- [x] Require the final PR `#128` head to pass protected checks before merge. Exact head
+      `8aec61bb05b45213ee1bc27b7c1c98f11ae42a1c` passed push CI run `29798632628` and
+      pull-request CI run `29798634349`, including two independent 140/140 web jobs, plus CodeQL
+      run `29798632819` and release-provenance runs `29798632624` and `29798634244`. It then
+      merged as protected-main commit `26811fd3f5e4332a264af9e4e7c3f9078e745caf`.
+- [x] Classify that merge commit's failed web job rather than rerunning it. Main CI run
+      `29799012204` passed API, pipeline, and dependency submission but passed 139/140 mobile
+      cases: one WebKit trip-recovery setup never received `Limantour Beach`. The app loads its
+      site catalog and 2.9 MB forecast snapshot atomically, and the Vinext test server's recorded
+      premature close on the snapshot correctly left the app on its three-site emergency
+      fallback. CodeQL run `29799011924` and release-provenance run `29799012244` passed.
+- [x] Classify draft follow-up PR `#129`'s first exact head rather than rerunning it. Its push web
+      job passed 140/140 while its pull-request web job passed 139/140; the same WebKit setup
+      missed `Limantour Beach`. Routing the exact 2.9 MB forecast around Vinext had removed the
+      premature-close dependency but still made catalog publication wait for an irrelevant large
+      transfer and parse. That transport is not part of trip-mutation recovery.
+- [x] Classify PR `#129`'s second exact head rather than rerunning it. Its push web job again
+      passed 140/140 while its pull-request web job passed 139/140 at the same setup. Reducing the
+      forecast to a tiny schema-valid payload ruled out forecast size. A subsequent local WebKit
+      trace showed the trip form already held a valid selected location while the driver waited
+      for a replaceable combobox option. The failure was in unrelated catalog interaction, not the
+      mutation-recovery behavior under test.
+- [x] Isolate the mutation-recovery boundary completely. Only the three trip-recovery cases now
+      use the form's already-valid default location and assert its stable selected-status contract.
+      The past-report endpoint remains mocked, and the cases no longer type into the catalog,
+      inspect transient option DOM, route static data, or make any catalog-ready timing assumption.
+      Product behavior, public data, timeouts, retries, Cloudflare, and production are unchanged.
+      With a fresh server on every run, the final driver passed 60/60 focused iPhone SE and WebKit
+      repetitions and the exact two-worker four-project matrix passed 140/140, including while
+      Vinext reproduced the irrelevant static-file premature-close warning. ESLint, TypeScript,
+      the Cloudflare build, 456/456 Node tests, secret and install-policy checks, and both complete
+      and production-only npm audits also passed. Hosted exact-head evidence remains required below.
+- [ ] Publish the isolated follow-up, require complete exact-head protected checks, merge only
+      accepted evidence, and reconcile protected `main`. Production and Cloudflare remain outside
+      this cycle.
 
 ## Completed work cycle — default-off asynchronous privacy exports
 
