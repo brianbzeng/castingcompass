@@ -13,6 +13,39 @@ Current provider truth overrides historical “paused” language in completed r
 2026-07-19 read-only reconciliation found an active Worker; no production mutation is authorized
 by that discovery.
 
+## Active checkpoint — complete launch-catalog water-quality negative evidence
+
+- [x] Preserve draft PR `#143` at exact green receipt head
+      `1845894b3464708ae16e37b78e419e6bf52197b9` as the stacked base. This follow-up is
+      isolated from the dirty primary checkout and does not merge, deploy, mutate Cloudflare or
+      D1, change the public advisory artifact, alter a site prior, or turn water quality into a
+      numeric fishing score.
+- [x] Reconcile all 61 launch-catalog sites against the five-source repository artifact and four
+      existing source-specific mapping audits. Thirty-nine sites have provisional official-source
+      mappings; 22 correctly remain `not-covered`, unknown, and null-score. Twenty-one of those 22
+      already had explicit negative-evidence receipts, leaving Dumbarton Fishing Pier as the sole
+      inventory gap.
+- [x] Audit the fixed State Water Board BeachWatch county directory and the two relevant station
+      option sets read-only at `2026-07-21T16:22:00Z`. The directory exposes no Alameda County
+      program; East Bay Parks District exposes eight station identities, Water Boards exposes
+      zero, and neither contains a Dumbarton identity. This is directory/station-identity evidence
+      only, never current status, clean-water, seafood-safety, or score evidence.
+- [x] Add a strict hash-bound coverage inventory that requires each not-covered site to appear in
+      exactly one negative-evidence receipt, refuses duplicate or missing evidence, fails closed
+      if a Dumbarton candidate appears, cannot edit policy, and leaves all 22 sites unmapped.
+      Deterministic and adversarial tests pass against bounded fixtures; independent review stays
+      required.
+- [x] Complete the clean local release matrix under pinned Node `22.23.1` and the locked Python
+      environments: a fresh zero-script install, both zero-vulnerability npm audits, Cloudflare
+      build, 509/509 Node tests, ESLint, TypeScript, the complete offline security/SBOM/source-
+      integrity chain, Ruff and Python syntax, 29/29 API tests, 83/83 pipeline tests with one
+      documented optional-`rasterio` skip, deterministic synthetic smoke, and all 19 critical D1
+      query plans passed. The complete Chromium/WebKit phone matrix passed 188/188 cases.
+- [ ] Publish a protected stacked draft PR with exact-head hosted evidence. Exact official
+      coverage changes must trigger a new review rather than automatic mapping. Independent
+      review, guarded deployment, provider/database mutation, production activation, and every
+      numeric-contribution gate remain separate open work.
+
 ## Active checkpoint — Seal Point water-quality negative evidence
 
 - [x] Preserve draft PR `#142` at exact receipt head
@@ -1563,6 +1596,12 @@ by that discovery.
       districtwide action identity, absence remains unknown, and every numeric `scoreDelta` stays
       null. Full local/hosted acceptance, independent mapping review, guarded deployment, and
       every numeric-score gate remain open.
+      **Launch-catalog negative-evidence inventory locally complete:** 39 of 61 catalog sites have
+      provisional official-source mappings; all 22 not-covered sites now bind to an explicit
+      hash-checked review receipt. The final Dumbarton review found no Alameda County program or
+      Dumbarton station identity in the relevant State directory scope, so it remains unknown and
+      null-score. This inventory does not expand current-status coverage or close independent,
+      deployment, freshness, or numeric-validation gates.
 - [ ] Enrich the map one available location at a time with reviewed notable structure and useful
       depth levels. Every feature needs reproducible official/licensed source provenance, units,
       vertical datum, resolution, retrieval date, checksum, uncertainty, allowed use, sensitive-

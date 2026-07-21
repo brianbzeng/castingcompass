@@ -678,6 +678,11 @@ after its acceptance checks pass in the intended environment.
       Shoreline. Their nearest reviewed County stations are different named public locations at
       1,944 m and 2,102 m, so neither site inherits a nearby status; both remain `not-covered`,
       unknown, and null-score pending exact official coverage and independent review.
+    - [x] Complete a hash-bound negative-evidence inventory for the current 61-site launch catalog.
+      All 22 sites without a provisional source mapping now bind to an explicit review receipt.
+      Dumbarton Fishing Pier remains unmapped because the State directory exposes no Alameda
+      County program and neither relevant option set contains a Dumbarton identity; the audit
+      fails closed if a candidate later appears instead of creating a mapping automatically.
 - [ ] Build the map location by location until every available location has a reviewed inventory
   of notable structure and useful depth levels. Bind each feature to a reproducible official or
   licensed bathymetry/chart source, units, vertical datum, resolution, retrieval date, checksum,

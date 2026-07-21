@@ -276,6 +276,23 @@ therefore suppressed in the repository artifact. This is time-bound evidence;
 absence from the action table remains unknown, and the official table and posted
 signs remain authoritative.
 
+## Launch-catalog negative-evidence inventory
+
+`water-quality/audits/launch-catalog-coverage.json` reconciles the current
+61-site catalog, five-source advisory artifact, policy, and four source-specific
+mapping audits. Thirty-nine sites have provisional official-source mappings.
+All 22 remaining sites are deliberately `not-covered`, unknown, and null-score,
+and each now binds to exactly one negative-evidence receipt.
+
+Dumbarton Fishing Pier was the only prior receipt gap. The fixed State Board
+directory captured at `2026-07-21T16:22:00Z` exposes no Alameda County program;
+its East Bay Parks District option set contains eight stations and its Water
+Boards option set contains none. Neither contains a Dumbarton identity. The
+audit therefore preserves Dumbarton as unmapped and fails closed if a candidate
+later appears. Directory absence is not a clean-water conclusion and does not
+show that another official source cannot exist; exact coverage and independent
+review remain open.
+
 ## Integrity and failure behavior
 
 `scripts/refresh_water_quality.py`:
@@ -321,6 +338,13 @@ only the fixed district identifier to the official station selector. It binds
 two exact mappings and 11 negative mapping results to the bounded eight-station
 response, rejects malformed or missing registry identities, and cannot infer a
 mapping or modify policy.
+
+`scripts/audit_water_quality_coverage_inventory.py` closes the audit inventory,
+not the source-coverage gap. It requires all prior negative receipts to match
+the exact site catalog, validates that every published not-covered site remains
+unknown and null-score, and submits only the fixed East Bay Parks and Water
+Boards identifiers while reviewing Dumbarton. Missing, duplicate, drifted, or
+new candidate evidence fails closed without changing policy.
 
 The browser independently expires neutral SFPUC sample evidence on the same
 Pacific-calendar freshness rule. The scheduled snapshot workflow refreshes and
