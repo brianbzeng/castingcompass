@@ -1,7 +1,19 @@
 #!/usr/bin/env node
 
-import { lstatSync, readFileSync, realpathSync } from "node:fs";
-import { dirname, isAbsolute, relative, resolve } from "node:path";
+import {
+  closeSync,
+  constants,
+  fchmodSync,
+  fstatSync,
+  fsyncSync,
+  lstatSync,
+  openSync,
+  readFileSync,
+  realpathSync,
+  unlinkSync,
+  writeFileSync,
+} from "node:fs";
+import { basename, dirname, isAbsolute, relative, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
 export const POLICY_SCHEMA_VERSION =
@@ -10,6 +22,8 @@ export const EVIDENCE_SCHEMA_VERSION =
   "castingcompass.observability-activation-evidence/1.0.0";
 export const RECEIPT_SCHEMA_VERSION =
   "castingcompass.observability-activation-receipt/1.0.0";
+export const TEMPLATE_WRITE_RECEIPT_SCHEMA_VERSION =
+  "castingcompass.observability-activation-template-write-receipt/1.0.0";
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const POLICY_PATH = resolve(ROOT, "security", "observability-activation-policy.json");
@@ -119,8 +133,7 @@ function exactArray(value, expected, label, code = "policy-invalid") {
   }
 }
 
-function readJson(path, maximumBytes, label) {
-  const bytes = readFileSync(path);
+function parseJsonBytes(bytes, maximumBytes, label) {
   if (bytes.length === 0 || bytes.length > maximumBytes) {
     refuse("file-invalid", `${label} is empty or exceeds its byte limit`);
   }
@@ -129,6 +142,10 @@ function readJson(path, maximumBytes, label) {
   } catch {
     refuse("file-invalid", `${label} is not valid JSON`);
   }
+}
+
+function readJson(path, maximumBytes, label) {
+  return parseJsonBytes(readFileSync(path), maximumBytes, label);
 }
 
 function boolean(value, label) {
@@ -493,8 +510,189 @@ export function assertPublicReceipt(receipt, policy = loadPolicy()) {
   return receipt;
 }
 
-function loadPrivateEvidence(path, policy) {
-  if (!isAbsolute(path)) {
+export function createObservabilityActivationTemplate({
+  policy = loadPolicy(),
+  reviewedCommit,
+} = {}) {
+  const lockedPolicy = validatePolicy(policy);
+  if (!COMMIT_PATTERN.test(reviewedCommit ?? "")) {
+    refuse("template-invalid",
+      "Template reviewed commit must be a full lowercase Git commit");
+  }
+  return {
+    schema_version: EVIDENCE_SCHEMA_VERSION,
+    observed_at: "",
+    evidence_packet_sha256: "",
+    release_binding: {
+      reviewed_commit: reviewedCommit,
+      preview_evidence_sha256: "",
+      production_evidence_sha256: "",
+      preview_matches_reviewed_commit: false,
+      production_matches_reviewed_commit: false,
+    },
+    log_hygiene: {
+      preview_evidence_sha256: "",
+      production_evidence_sha256: "",
+      preview_structured_only: false,
+      production_structured_only: false,
+      preview_raw_invocation_absent: false,
+      production_raw_invocation_absent: false,
+    },
+    dashboards: {
+      evidence_sha256: "",
+      saved_views: [...lockedPolicy.required_saved_views],
+    },
+    access: {
+      evidence_sha256: "",
+      mfa_enforced: false,
+      least_privilege_role: false,
+      access_review_completed: false,
+    },
+    retention_and_cost: {
+      evidence_sha256: "",
+      plan_recorded: false,
+      retention_days: lockedPolicy.limits.minimum_retention_days,
+      sampling_percent: 0.01,
+      estimated_daily_events: 0,
+      estimated_monthly_events: 0,
+      monthly_cost_ceiling_usd: 0,
+      owner_assigned: false,
+    },
+    alerts: {
+      evidence_sha256: "",
+      drills: lockedPolicy.required_alert_drills.map((name) => ({
+        name,
+        delivered: false,
+        acknowledged: false,
+        closed: false,
+        redaction_tested: false,
+      })),
+    },
+    uptime: {
+      evidence_sha256: "",
+      checks: lockedPolicy.required_uptime_checks.map((name) => ({
+        name,
+        configured: false,
+        delivered: false,
+        acknowledged: false,
+      })),
+    },
+    reconstruction: {
+      evidence_sha256: "",
+      drills: lockedPolicy.required_reconstruction_drills.map((name) => ({
+        name,
+        completed: false,
+        structured_only: false,
+        redaction_passed: false,
+      })),
+    },
+    pseudonym_key: {
+      evidence_sha256: "",
+      distinct_from_session_secret: false,
+      access_separated: false,
+      rotation_owner_assigned: false,
+    },
+    posthog: {
+      enabled: false,
+      separate_approval_recorded: false,
+    },
+    production_change_authorized: false,
+  };
+}
+
+function privateTemplateOutputPath(outputFile) {
+  if (typeof outputFile !== "string" || !isAbsolute(outputFile)) {
+    refuse("private-file-required", "Template output path must be absolute");
+  }
+  const requested = resolve(outputFile);
+  if (requested !== outputFile) {
+    refuse("private-file-required", "Template output path must already be normalized");
+  }
+  const parent = dirname(requested);
+  const parentMetadata = lstatSync(parent, { throwIfNoEntry: false });
+  if (!parentMetadata || !parentMetadata.isDirectory() || parentMetadata.isSymbolicLink()) {
+    refuse("private-file-required",
+      "Template output directory must be an existing non-symlink directory");
+  }
+  const parentReal = realpathSync(parent);
+  const rootReal = realpathSync(ROOT);
+  const fromRoot = relative(rootReal, parentReal);
+  if (fromRoot === "" || (!fromRoot.startsWith("..") && !isAbsolute(fromRoot))) {
+    refuse("private-file-required", "Template output must remain outside the repository");
+  }
+  if ((parentMetadata.mode & 0o077) !== 0) {
+    refuse("private-file-required",
+      "Template output directory must not grant group or other permissions");
+  }
+  if (typeof process.getuid === "function" && parentMetadata.uid !== process.getuid()) {
+    refuse("private-file-required",
+      "Template output directory must be owned by the current user");
+  }
+  const filename = basename(requested);
+  if (!filename || filename === "." || filename === "..") {
+    refuse("private-file-required", "Template output path must name a file");
+  }
+  return resolve(parentReal, filename);
+}
+
+export function writeObservabilityActivationTemplate({ outputFile, reviewedCommit } = {}) {
+  const outputPath = privateTemplateOutputPath(outputFile);
+  const policy = loadPolicy();
+  const template = createObservabilityActivationTemplate({ policy, reviewedCommit });
+  const body = `${JSON.stringify(template, null, 2)}\n`;
+  const expectedBytes = Buffer.byteLength(body);
+  let descriptor;
+  try {
+    descriptor = openSync(outputPath,
+      constants.O_CREAT | constants.O_EXCL | constants.O_WRONLY
+        | (constants.O_NOFOLLOW ?? 0),
+      0o600);
+  } catch (error) {
+    if (error?.code === "EEXIST") {
+      refuse("private-file-required", "Template output file must not already exist");
+    }
+    refuse("private-file-required", "Template output file could not be created safely");
+  }
+  let complete = false;
+  try {
+    fchmodSync(descriptor, 0o600);
+    writeFileSync(descriptor, body, "utf8");
+    fsyncSync(descriptor);
+    const metadata = fstatSync(descriptor);
+    if (!metadata.isFile()
+      || metadata.nlink !== 1
+      || (metadata.mode & 0o777) !== 0o600
+      || (typeof process.getuid === "function" && metadata.uid !== process.getuid())
+      || metadata.size !== expectedBytes) {
+      refuse("private-file-required",
+        "Template output file did not preserve its private boundary");
+    }
+    complete = true;
+  } finally {
+    closeSync(descriptor);
+    if (!complete) {
+      try {
+        unlinkSync(outputPath);
+      } catch {
+        // Preserve the original refusal while making a best-effort cleanup.
+      }
+    }
+  }
+  return {
+    schema_version: TEMPLATE_WRITE_RECEIPT_SCHEMA_VERSION,
+    evidence_schema_version: EVIDENCE_SCHEMA_VERSION,
+    policy_id: policy.policy_id,
+    reviewed_commit: reviewedCommit,
+    owner_only_file_written: true,
+    existing_file_overwritten: false,
+    activation_ready: false,
+    provider_query_performed: false,
+    production_change_authorized: false,
+  };
+}
+
+export function loadPrivateEvidence(path, policy = loadPolicy()) {
+  if (typeof path !== "string" || !isAbsolute(path)) {
     refuse("private-file-required", "Evidence file path must be absolute and outside Git");
   }
   const requested = resolve(path);
@@ -502,16 +700,57 @@ function loadPrivateEvidence(path, policy) {
   if (!metadata || !metadata.isFile() || metadata.isSymbolicLink()) {
     refuse("private-file-required", "Evidence must be a regular, non-symlink file");
   }
+  if (metadata.nlink !== 1) {
+    refuse("private-file-required", "Evidence file must not be hard-linked");
+  }
+  if ((metadata.mode & 0o777) !== 0o600) {
+    refuse("private-file-required", "Evidence file permissions must be exactly 0600");
+  }
+  if (typeof process.getuid === "function" && metadata.uid !== process.getuid()) {
+    refuse("private-file-required", "Evidence file must be owned by the current user");
+  }
+  if (metadata.size === 0 || metadata.size > policy.limits.maximum_evidence_bytes) {
+    refuse("private-file-required", "Evidence file is empty or exceeds its byte limit");
+  }
   const actual = realpathSync(requested);
   const fromRoot = relative(ROOT, actual);
   if (fromRoot === "" || (!fromRoot.startsWith("..") && !isAbsolute(fromRoot))) {
     refuse("private-file-required", "Evidence file must remain outside the repository");
   }
-  if ((metadata.mode & 0o077) !== 0) {
-    refuse("private-file-required", "Evidence file permissions must be owner-only (chmod 600)");
+  let descriptor;
+  try {
+    descriptor = openSync(actual, constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0));
+  } catch {
+    refuse("private-file-required", "Evidence file could not be opened safely");
   }
-  return readJson(actual, policy.limits.maximum_evidence_bytes,
-    "Private observability activation evidence");
+  try {
+    const opened = fstatSync(descriptor);
+    if (!opened.isFile()
+      || opened.dev !== metadata.dev
+      || opened.ino !== metadata.ino
+      || opened.nlink !== 1
+      || (opened.mode & 0o777) !== 0o600
+      || (typeof process.getuid === "function" && opened.uid !== process.getuid())
+      || opened.size === 0
+      || opened.size > policy.limits.maximum_evidence_bytes) {
+      refuse("private-file-required", "Evidence file changed while it was being opened");
+    }
+    const bytes = readFileSync(descriptor);
+    const completed = fstatSync(descriptor);
+    if (completed.dev !== opened.dev
+      || completed.ino !== opened.ino
+      || completed.nlink !== 1
+      || completed.size !== opened.size
+      || completed.size !== bytes.length
+      || completed.mtimeMs !== opened.mtimeMs
+      || completed.ctimeMs !== opened.ctimeMs) {
+      refuse("private-file-required", "Evidence file changed while it was being read");
+    }
+    return parseJsonBytes(bytes, policy.limits.maximum_evidence_bytes,
+      "Private observability activation evidence");
+  } finally {
+    closeSync(descriptor);
+  }
 }
 
 function parseEvaluateArgs(args) {
@@ -537,6 +776,29 @@ function parseEvaluateArgs(args) {
   return { evidencePath, expectedCommit };
 }
 
+function parseWriteArgs(args) {
+  const usage = "Usage: node scripts/verify-observability-activation.mjs write-template "
+    + "--output-file /private/path.json --expected-commit 40-character-commit";
+  if (args.length !== 4) refuse("usage-invalid", usage);
+  const values = new Map();
+  for (let index = 0; index < args.length; index += 2) {
+    const flag = args[index];
+    const value = args[index + 1];
+    if (!["--output-file", "--expected-commit"].includes(flag)
+      || typeof value !== "string" || value.length === 0 || value.startsWith("--")
+      || values.has(flag)) {
+      refuse("usage-invalid", usage);
+    }
+    values.set(flag, value);
+  }
+  const outputFile = values.get("--output-file");
+  const expectedCommit = values.get("--expected-commit");
+  if (!outputFile || !COMMIT_PATTERN.test(expectedCommit ?? "")) {
+    refuse("usage-invalid", usage);
+  }
+  return { outputFile, expectedCommit };
+}
+
 function main(args) {
   const policy = loadPolicy();
   const [command, ...rest] = args;
@@ -555,9 +817,18 @@ function main(args) {
       { expectedCommit }), null, 2));
     return;
   }
+  if (command === "write-template") {
+    const { outputFile, expectedCommit } = parseWriteArgs(rest);
+    console.log(JSON.stringify(writeObservabilityActivationTemplate({
+      outputFile,
+      reviewedCommit: expectedCommit,
+    }), null, 2));
+    return;
+  }
   refuse("usage-invalid",
-    "Usage: node scripts/verify-observability-activation.mjs verify-policy|evaluate "
-      + "--evidence-file /private/path.json --expected-commit 40-character-commit");
+    "Usage: node scripts/verify-observability-activation.mjs verify-policy | "
+      + "write-template --output-file /private/path.json --expected-commit 40-character-commit | "
+      + "evaluate --evidence-file /private/path.json --expected-commit 40-character-commit");
 }
 
 if (import.meta.url === pathToFileURL(process.argv[1]).href) {

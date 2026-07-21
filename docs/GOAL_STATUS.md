@@ -24,8 +24,8 @@ by that discovery.
 - [x] Retarget existing draft PR `#146` to protected `main` as the single integration review
       surface and document the complete regional, chart-context, water-quality, and pollution-
       boundary scope. The PR remains draft and mergeable. PRs `#118` and `#130`–`#145`
-      remain open as immutable audit checkpoints until the replacement head passes main-based
-      review; none should be merged individually or out of order.
+      remained open only until the replacement head passed main-based review; they are now closed
+      as superseded and none was merged individually or out of order.
 - [x] Pass fresh exact-head checks against `main` at integration head
       `02388cdea067fcffaea4fab984fed3360d3d2495`. Push and pull-request CI runs
       `29856511274` and `29856516395` each passed 188/188 Chromium/WebKit phone cases plus
@@ -39,6 +39,37 @@ by that discovery.
       every one of their exact heads was proven to be an ancestor of the green integration
       commit. Their branches, comments, commits, and hosted evidence remain preserved for audit
       and rollback reference; `#146` is now the repository's only open PR and remains a draft.
+
+## Active checkpoint — observability activation private-evidence handoff
+
+- [x] Bind the unfilled handoff to consolidated draft PR `#146` receipt head
+      `377dec41c9fc1842c682b7556f2b0a8b1b83e87c`. No provider query, dashboard change,
+      PostHog activation, secret access, production mutation, deployment, merge, or new PR occurs.
+- [x] Add an exclusive guarded writer for the complete activation manifest. It accepts only a
+      normalized absolute destination in a current-user-owned private directory outside the
+      checkout, creates one synchronized `0600` regular file without following links, never
+      overwrites, and emits only a minimized non-authorizing receipt.
+- [x] Make the template visibly incomplete and fail closed. Provider timestamps and evidence
+      digests start blank, every operational claim starts false, PostHog remains disabled, and the
+      exact required view/drill names are present without claiming that they exist in a provider.
+- [x] Harden private evidence ingestion before any bytes are parsed: current-user ownership,
+      exactly one hard link, exact `0600` mode, nonempty size at most 256 KiB, repository
+      exclusion, no-follow open, and pre/post-read device, inode, link, mode, owner, size, and
+      modification checks are required.
+- [x] Pass 14/14 focused deterministic and adversarial tests for the policy, template, writer,
+      reader, receipt minimization, commit binding, chronology, no-overwrite behavior, checkout/
+      permission/symlink/hard-link/empty/oversized rejection, and provider/production separation.
+- [x] Materialize one unfilled commit-bound private manifest outside Git and Codex. This is only
+      an operator aid: no provider evidence was supplied and `activation_ready` remains false.
+- [x] Verify the repository-only follow-up under pinned Node `22.23.1`/npm `10.9.8`: the
+      Cloudflare build, ESLint, TypeScript, all 537/537 Node tests, both zero-vulnerability npm
+      audits, secret and install-policy checks, deterministic SBOMs, source integrity, D1 query
+      inventory, production-change boundary, and every offline security policy pass. The API,
+      pipeline, browser runtime, provider state, public artifacts, and model are unchanged.
+- [ ] Capture fresh least-privilege preview and production evidence for structured-only logs,
+      saved views, access, retention/cost ownership, alert delivery and acknowledgement, uptime,
+      reconstruction, pseudonym-key separation, and exact release binding. PostHog remains
+      separately deferred; hosted review, deployment, and production acceptance remain open.
 
 ## Active checkpoint — launch-catalog water-quality mapping independent-review handoff
 
@@ -1679,7 +1710,9 @@ by that discovery.
       refuses a missing or mismatched expected commit and requires structured-only logs, access
       review, retention/cost ownership, delivered/acknowledged/closed/redaction-tested alerts, uptime,
       preview/production reconstruction, and pseudonym-key separation within 72 hours; it neither
-      queries a provider nor authorizes production. Preview/production evidence, provider
+      queries a provider nor authorizes production. A guarded owner-only writer and hardened
+      no-follow reader now prepare the complete unfilled private manifest without overwrite or
+      path disclosure. Preview/production evidence, provider
       dashboard, access, retention, cost, uptime, and delivered-alert evidence remain. PostHog
       remains deferred pending privacy review.
 - [ ] Make data and execution paths measurably scalable: query plans/indexes, bounded access,
