@@ -65,9 +65,11 @@ Implementation commit `ec2d5bc26429eca1a7e45bbef62bfc5c0775d198` passed the Clou
 Chromium/WebKit cases, ESLint, TypeScript, the complete security and source-
 integrity chain, zero-vulnerability full and production npm audits, 29 API tests,
 83 pipeline tests (one documented optional-`rasterio` skip), Ruff, the synthetic
-pipeline smoke, and all 19 critical D1 query-plan checks. The documentation-only
-receipt commit and its hosted checks are still required before this section can
-name a final review head.
+pipeline smoke, and all 19 critical D1 query-plan checks. Documentation-only
+review head `378079d1613e3ef8c73505d44c1a496bff56f7ca` then passed both independent
+hosted 144-case web/mobile jobs, API, pipeline, dependency review, all three
+CodeQL languages, release provenance, both native API-image architectures, and
+both optional research-stack platforms. PR `#131` remains draft-only.
 
 ## Deliberately unfinished
 

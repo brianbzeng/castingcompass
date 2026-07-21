@@ -57,13 +57,19 @@ by that discovery.
       `ec2d5bc26429eca1a7e45bbef62bfc5c0775d198`, whose parents are the reviewed regional head
       `0c90f1afe08b9f8866b26d3bfeef07f541d226e8` and water-quality receipt head
       `3ac7bec5a3410bf0bdeb0de500e43a1fa7b1025b`.
-- [ ] Publish the documentation-only receipt head as a draft integration PR and obtain its exact
-      protected hosted checks. Separate branch receipts and local verification are not proof of
-      the final review head.
-- [ ] Keep the candidate local or draft-only for the ML-engineer demo. It must not merge or deploy
-      until the Santa Barbara access review, guarded production checklist, and every other open
-      gate above are independently satisfied. Structure/depth mapping and broader official
-      water-quality coverage remain separate unchecked roadmap goals.
+- [x] Publish documentation-only receipt head
+      `378079d1613e3ef8c73505d44c1a496bff56f7ca` as draft integration PR `#131` and require
+      exact-head hosted evidence. Push CI `29808408226` and pull-request CI `29808462035` passed,
+      including two independent 144/144 mobile browser matrices, API, pipeline, dependency review,
+      and zero-vulnerability audits. CodeQL `29808460165` passed all three languages; release-
+      provenance runs `29808408273` and `29808461894`, native API-image run `29808461966`, and
+      optional research-stack run `29808462019` also passed. Event-inapplicable attestation and
+      dependency-submission jobs skipped as designed.
+- [x] Keep the candidate draft-only for the ML-engineer demo. PR `#131` remains a draft; no merge,
+      deployment, Cloudflare/provider mutation, database migration, or production activation ran.
+      It must not merge or deploy until the Santa Barbara access review, guarded production
+      checklist, and every other open gate above are independently satisfied. Structure/depth
+      mapping and broader official water-quality coverage remain separate unchecked roadmap goals.
 
 ## Completed work cycle — deterministic mobile release evidence
 
