@@ -37,11 +37,18 @@ by that discovery.
       29/29 API tests, all 19 critical D1 query plans, 83/83 pipeline tests with one documented
       optional-`rasterio` skip, deterministic synthetic smoke, and 188/188 Chromium/WebKit phone
       cases.
-- [ ] Publish a protected stacked draft PR with exact-head hosted evidence. Before any future
-      activation, freeze and pre-register a distinct fishing-quality target and held-out
-      validation protocol, prove incremental value with uncertainty, and obtain independent
-      fisheries-methods and public-health risk-communication review. Deployment and production
-      remain separate gates.
+- [x] Publish protected stacked draft PR `#145` without merge or deployment. Exact implementation
+      head `a03c4e2d97adae2fbef5e73ac3b73eb2175f88db` passed push and pull-request CI runs
+      `29851557748` and `29851574693`, including two independent 188/188 Chromium/WebKit phone
+      matrices; release-provenance runs `29851556959` and `29851574519`; native API-image run
+      `29851574565` on Linux AMD64 and ARM64; and explicitly dispatched optional research-stack
+      run `29851601034` on Linux CPU and macOS ARM64. Event-inapplicable dependency and release-
+      attestation jobs skipped as designed.
+- [ ] Obtain CodeQL evidence when this stack is eventually reviewed against protected `main`;
+      default setup does not trigger on a non-default stacked base. Before any future activation,
+      freeze and pre-register a distinct fishing-quality target and held-out validation protocol,
+      prove incremental value with uncertainty, and obtain independent fisheries-methods and
+      public-health risk-communication review. Deployment and production remain separate gates.
 
 ## Active checkpoint — complete launch-catalog water-quality negative evidence
 
