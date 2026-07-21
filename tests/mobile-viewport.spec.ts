@@ -26,6 +26,14 @@ const TURNSTILE_MOCK_SCRIPT = `(() => {
   };
 })();`;
 
+const TRIP_RECOVERY_FORECAST = JSON.stringify({
+  generatedAt: "2026-07-21T00:00:00.000Z",
+  modelVersion: "mobile-trip-recovery-fixture/1.0.0",
+  methodology: "Deterministic empty forecast for trip mutation recovery tests.",
+  sources: [],
+  windows: [],
+});
+
 async function preparePastTripForSubmission(page: Page) {
   const trigger = page.locator(".log-trip-button");
   const modal = page.locator(".trip-modal");
@@ -162,14 +170,15 @@ test.beforeEach(async ({ page }, testInfo) => {
     testTitle.includes("slow saved-location removal stays unconfirmed") ||
     testTitle.includes("malformed saved-location receipt stays unresolved");
   if (tripRecoveryTest) {
-    // Trip mutation recovery is the boundary under test. Serve the committed catalog and
-    // forecast through Playwright so a transient static-server stream failure cannot leave the
-    // app on its three-site emergency fallback and turn this into an unrelated data-load test.
+    // Trip mutation recovery is the boundary under test. Serve the committed catalog and a
+    // schema-valid empty forecast through Playwright so a transient static-server stream failure
+    // cannot leave the app on its three-site emergency fallback or delay catalog publication.
     await page.route("**/data/sites.json", (route) => route.fulfill({
       path: "public/data/sites.json",
     }));
     await page.route("**/data/opportunities.json", (route) => route.fulfill({
-      path: "public/data/opportunities.json",
+      contentType: "application/json",
+      body: TRIP_RECOVERY_FORECAST,
     }));
   }
   if (savedSiteRecoveryTest) {

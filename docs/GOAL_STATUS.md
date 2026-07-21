@@ -72,12 +72,20 @@ by that discovery.
       site catalog and 2.9 MB forecast snapshot atomically, and the Vinext test server's recorded
       premature close on the snapshot correctly left the app on its three-site emergency
       fallback. CodeQL run `29799011924` and release-provenance run `29799012244` passed.
-- [x] Isolate the mutation-recovery boundary from that unrelated static-file transport. Only the
-      three trip-recovery cases now receive the exact committed site catalog and forecast fixture
-      through Playwright routing, bypassing the local Vinext static stream. Product behavior,
-      fixture contents, timeouts, retries, Cloudflare, and production are unchanged. The affected
+- [x] Classify draft follow-up PR `#129`'s first exact head rather than rerunning it. Its push web
+      job passed 140/140 while its pull-request web job passed 139/140; the same WebKit setup
+      missed `Limantour Beach`. Routing the exact 2.9 MB forecast around Vinext had removed the
+      premature-close dependency but still made catalog publication wait for an irrelevant large
+      transfer and parse. That transport is not part of trip-mutation recovery.
+- [x] Isolate the mutation-recovery boundary completely. Only the three trip-recovery cases now
+      receive the exact committed site catalog plus a tiny schema-valid empty forecast through
+      Playwright routing. Product behavior, committed forecast data, timeouts, retries,
+      Cloudflare, and production are unchanged. Before the final payload reduction, the affected
       iPhone SE and WebKit slice passed 60/60 two-worker repetitions; ESLint, TypeScript, the
-      Cloudflare build, and the complete four-project mobile matrix passed 140/140 locally.
+      Cloudflare build, 456/456 Node tests, and the complete four-project mobile matrix passed
+      140/140 locally. The final payload boundary then passed another 60/60 focused repetitions
+      and the exact hosted two-worker shape passed 140/140 locally. Hosted evidence remains
+      required below.
 - [ ] Publish the isolated follow-up, require complete exact-head protected checks, merge only
       accepted evidence, and reconcile protected `main`. Production and Cloudflare remain outside
       this cycle.
