@@ -128,6 +128,11 @@ backup key is data loss; unauthorized disclosure is a security incident.
 
 Keep this gate open until the account-level evidence exists:
 
+Use [Key-custody independent-review handoff](KEY-CUSTODY-INDEPENDENT-REVIEW.md) to prepare the
+private source-bound manifest and distinct qualified review without exposing key material. Even
+an accepted handoff receipt does not approve custody or authorize restoration, deployment, or
+production; it only validates the supplied evidence boundary.
+
 - [ ] Exact secret names exist in the intended environment, with distinct opaque key IDs and
       no values captured in evidence.
 - [ ] Named account/provider roles, MFA, scoped deploy access, emergency recovery, and removal

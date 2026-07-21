@@ -107,6 +107,9 @@ gate open until those live synthetic checks pass on the exact deployed version.
 Use [Key custody and encryption](KEY-CUSTODY-AND-ENCRYPTION.md) as the source of truth for the
 seven runtime secret names, separation rules, managed D1 encryption boundary, local backup
 encryption, semantic rotation hazards, incident path, and account-level acceptance evidence.
+Use [Key-custody independent review](KEY-CUSTODY-INDEPENDENT-REVIEW.md) for the guarded private
+evidence and qualified-review handoff. Its minimized receipt cannot approve custody or authorize
+restoration, deployment, or production.
 Never include a secret value in this runbook, a release record, monitoring, or the future
 operator dashboard. A local scanner pass does not prove production custody, least-privilege
 roles, MFA, correct environment bindings, revocation, recovery, or rotation.

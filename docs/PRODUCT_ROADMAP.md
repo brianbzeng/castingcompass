@@ -71,6 +71,16 @@ after its acceptance checks pass in the intended environment.
         file requires stable current-user-owned `0600` identity through a bounded no-follow read.
         The actual second-person review, key-custody approval, and provider/production evidence
         remain open.
+      - [x] Prepare the separate fail-closed production key-custody evidence handoff. Its locked
+        policy covers all seven runtime-secret roles and four backup-key roles; guarded exclusive
+        writers create a source-bound evidence manifest and an evidence-hash-bound independent
+        review, while stable owner-only readers reject checkout files, broad permissions, links,
+        stale evidence, chronology errors, digest reuse, incomplete accepted reviews, and secret
+        material. Even an accepted review leaves custody, restore, deployment, and production
+        authority false. No provider evidence, secret value, actual custodian, or qualified review
+        was supplied during this repository-only preparation. The Cloudflare build, ESLint,
+        TypeScript, all 545/545 Node tests, the complete offline security/SBOM/source-integrity
+        chain, and both zero-vulnerability npm audits pass under the pinned Node/npm toolchain.
 - [ ] Make account privacy promises durable: deletion queue/tombstones for photos and public
   copies, truthful completion semantics, and an age-only first step before email/password.
   - [x] Implement and locally verify single-use age proofs, consent-safe reacceptance,

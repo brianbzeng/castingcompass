@@ -41,6 +41,7 @@ jobs:
       - run: npm run security:observability-activation
       - run: npm run security:production-change-policy
       - run: npm run security:operational-restore-review
+      - run: npm run security:key-custody-review
       - run: npm run security:pollution-score-independent-review
       - run: npm run security:water-quality-mapping-independent-review
       - run: npm run security:santa-barbara-access-review

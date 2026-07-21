@@ -173,8 +173,10 @@ that could become a privacy, integrity, or availability incident.
 - **Residual risk:** The project currently has a solo product owner and no mandatory qualified
   second-person review for every security-sensitive change. Automated checks can share the same
   mistaken assumption as generated code.
-- **Next gate:** Assign an independent reviewer for cryptography/key custody and require targeted
-  review for future auth, access-control, privacy, and release-control changes.
+- **Next gate:** Use the locked private key-custody evidence/review handoff, assign the qualified
+  independent reviewer, and require targeted review for future auth, access-control, privacy,
+  and release-control changes. The repository handoff is ready; no reviewer or production
+  approval is implied.
 
 ### L06 — Managed authentication
 

@@ -71,6 +71,44 @@ by that discovery.
       reconstruction, pseudonym-key separation, and exact release binding. PostHog remains
       separately deferred; hosted review, deployment, and production acceptance remain open.
 
+## Active checkpoint — production key-custody independent-review handoff
+
+- [x] Freeze a locked non-authorizing policy for all seven runtime-secret roles and the four
+      distinct operational/validation backup-key roles. The contract requires exact production
+      scope, independently supplied source binding, current evidence, role ordering, six distinct
+      private evidence artifacts, and an independent cryptography/key-custody reviewer.
+- [x] Add exclusive guarded writers for the unfilled private evidence manifest and review record.
+      Both require a normalized absolute destination in an existing current-user-owned `0700`
+      directory outside the checkout, create one synchronized exact-`0600` file without following
+      links, never overwrite, and emit only minimized receipts with every authority boundary false.
+- [x] Validate the complete canonical evidence manifest before binding its exact SHA-256 into the
+      review template. The manifest exposes no key IDs or values to Git; it references runtime
+      inventory, backup custody, access/MFA, rotation/recovery, restore/deletion replay, and
+      redaction evidence only by six distinct digests. Stale evidence, source mismatch, role drift,
+      digest reuse, secret capture, or reordered scope fails closed.
+- [x] Require an exact current independent review: competence, custody-manifest, and review-note
+      digests are distinct; the review cannot predate evidence capture; all 15 checks and zero
+      blocking findings are required for `accepted_evidence_boundary`; and `changes_required`
+      cannot falsely present a complete result. Private identity/evidence fields never enter the
+      public-safe aggregate receipt.
+- [x] Preserve the launch boundary even after a valid accepted review. Production key custody,
+      the restore gate, deployment, and release remain false until current provider bindings,
+      separate action-specific authorization, current production restore/deletion-ledger evidence,
+      deployment, and live smoke evidence pass independently.
+- [x] Pass 6/6 focused deterministic and adversarial tests covering locked policy/schema/workflow
+      integration, both writers, exact evidence binding, accepted and changes-required semantics,
+      chronology, source/role/digest mutation, checkout/permission/symlink/hard-link rejection,
+      no-overwrite behavior, receipt minimization, and permanent production-authority separation.
+- [x] Verify the repository-only handoff under pinned Node `22.23.1`/npm `10.9.8`: the
+      Cloudflare build, ESLint, TypeScript, all 545/545 Node tests, the complete offline
+      security/SBOM/source-integrity chain, and both zero-vulnerability npm audits pass. The
+      Worker/API behavior, database, model, browser UI, private evidence, provider state, and
+      production are unchanged.
+- [ ] Collect the real private provider/custody evidence, assign the qualified independent
+      reviewer, and evaluate the record outside Git. No provider query, secret value, custodian
+      identity, private evidence, rotation/recovery exercise, reviewer acceptance, deployment, or
+      production mutation occurred during this repository-only handoff.
+
 ## Active checkpoint — launch-catalog water-quality mapping independent-review handoff
 
 - [x] Bind this local-only follow-up to consolidated draft PR `#146`'s exact receipt head
