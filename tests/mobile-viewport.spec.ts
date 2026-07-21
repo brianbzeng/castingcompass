@@ -1,4 +1,12 @@
 import { expect, test, type Page, type Route } from "@playwright/test";
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
+
+const SITES_FIXTURE = readFileSync(resolve(process.cwd(), "public/data/sites.json"), "utf8");
+const OPPORTUNITIES_FIXTURE = readFileSync(
+  resolve(process.cwd(), "public/data/opportunities.json"),
+  "utf8",
+);
 
 const TURNSTILE_MOCK_SCRIPT = `(() => {
   let sequence = 0;
@@ -160,6 +168,19 @@ test.beforeEach(async ({ page }, testInfo) => {
   const waterQualityAdvisoryTest = testTitle.includes("official water-quality status suppresses recommendations");
   if (waterQualityAdvisoryTest) {
     await page.clock.setFixedTime(new Date("2026-07-17T12:00:00.000Z"));
+    // Keep this guardrail test independent of Vinext's static-file stream. A transport-level
+    // failure for the large forecast fixture is exercised elsewhere; here the committed catalog
+    // and forecast must be deterministic so the test isolates water-quality suppression.
+    await page.route("**/data/sites.json", (route) => route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: SITES_FIXTURE,
+    }));
+    await page.route("**/data/opportunities.json", (route) => route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: OPPORTUNITIES_FIXTURE,
+    }));
     const assessment = (overrides: Record<string, unknown>) => ({
       status: "no-active-posting",
       recommendationEffect: "neutral",
