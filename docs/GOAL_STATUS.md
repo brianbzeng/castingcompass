@@ -44,8 +44,16 @@ by that discovery.
       19 critical D1 query plans passed. The full Chromium/WebKit phone matrix passed 188/188 cases
       and proves Keller and Crown suppression is visible, source-linked, score-excluded, and
       mobile-safe.
-- [ ] Publish and seal a protected stacked draft PR. Independent mapping/source-latency review,
-      CodeQL on protected `main`, guarded deployment, post-deployment freshness, provider/database
+- [x] Publish protected stacked draft PR `#142` without merge or deployment. Exact implementation
+      head `bdf1e696c2ca52b5623ddd30ff3801ac7d5d1d38` passed push and pull-request CI runs
+      `29843797530` and `29843816686`, including two independent 188/188 Chromium/WebKit phone
+      matrices; release-provenance runs `29843796840` and `29843816690`; native API-image run
+      `29843816787` on Linux AMD64 and ARM64; and explicitly dispatched optional research-stack
+      run `29843823150` on Linux CPU and macOS ARM64. Event-inapplicable dependency and release-
+      attestation jobs skipped as designed.
+- [ ] Obtain independent mapping and source-latency review and CodeQL evidence when this stack is
+      eventually reviewed against protected `main`; default setup did not trigger on the non-
+      default stacked base. Guarded deployment, post-deployment freshness, provider/database
       mutation, production activation, and every numeric-contribution validation gate remain
       separate open work.
 
