@@ -81,6 +81,10 @@ test("the committed inventory covers every Worker prepare site and its reviewed 
   assert.ok(inventory.queries.some(({ executionMode, sql }) =>
     executionMode === "first"
       && sql === "SELECT 1 AS present FROM saved_sites WHERE user_id = ? AND site_id = ? LIMIT 1"));
+  assert.ok(inventory.queries.some(({ executionMode, statementClass, sql }) =>
+    executionMode === "run"
+      && statementClass === "DELETE"
+      && sql === "DELETE FROM saved_sites WHERE user_id = ? AND site_id = ?"));
 
   assert.ok(inventory.queries.some(({ executionMode, statementClass, sql }) =>
     executionMode === "run"

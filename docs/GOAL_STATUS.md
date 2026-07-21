@@ -70,6 +70,29 @@ by that discovery.
       deployment, provider query, D1 mutation, model change, UI change, or production
       authorization belongs to this work.
 
+## Active checkpoint — database-confirmed saved-location receipts
+
+- [x] Continue the database-authority audit through the saved-location control. The browser
+      deliberately updates its confirmed local state only after an exact `{ saved, siteId }`
+      receipt, but removal returned that receipt without inspecting the D1 DELETE result.
+- [x] Normalize both creation and removal through the strict mutation-receipt parser. Confirmed
+      zero removal remains an idempotent success because the owner/site row is absent; missing,
+      malformed, or impossible metadata is an ambiguous `503` and cannot manufacture the exact
+      browser receipt.
+- [x] Force committed creation and deletion with omitted metadata in the direct D1 runtime. Both
+      routes return `503` while their database effects remain discoverable through the existing
+      read-only saved-location reconciliation flow; no write is automatically replayed.
+- [x] Retain the authenticated `user_id` plus curated `site_id` predicates, the atomic 100-row
+      creation ceiling, and duplicate-at-limit idempotency. The complete generated D1 inventory
+      continues to bind both saved-location writes and now explicitly machine-checks the scoped
+      DELETE.
+- [x] Pass the pinned Cloudflare build, ESLint, TypeScript, all repository Node tests, the complete
+      offline security/SBOM/source-integrity chain, both zero-vulnerability npm audits, Ruff,
+      API and pipeline tests, the pipeline smoke test, and the Chromium/WebKit phone matrix.
+      Preserve a clean local commit and deterministic release-bundle receipt. No push, pull
+      request, merge, deployment, provider query, D1 mutation, model change, UI change, or
+      production authorization belongs to this work.
+
 ## Active checkpoint — database-confirmed session issuance
 
 - [x] Continue the credential boundary through the final shared session-creation helper. Login,

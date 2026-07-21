@@ -1872,6 +1872,50 @@ test("gear mutations never manufacture success when D1 omits the change receipt"
   assert.equal(sqlite.prepare("SELECT name FROM gear_profiles WHERE id = ?").get(gearId).name, "Unconfirmed gear");
 });
 
+test("saved-location removal requires authoritative D1 metadata", async () => {
+  const { sqlite, d1 } = await database();
+  const owner = await addUser(sqlite, "saved-site-receipt-owner-138");
+  const sites = [
+    { id: "saved-site-receipt", type: "Beach" },
+    { id: "already-absent-site", type: "Beach" },
+  ];
+  sqlite.prepare("INSERT INTO saved_sites (user_id, site_id, created_at) VALUES (?, ?, ?)")
+    .run(owner.id, sites[0].id, "2026-07-21T20:45:00.000Z");
+
+  d1.omitOnceMutationMetadataSubstring = "DELETE FROM saved_sites WHERE user_id = ? AND site_id = ?";
+  const ambiguous = await handleAccountRequest(request(`/api/saved-sites/${sites[0].id}`, {
+    method: "DELETE",
+    cookie: owner.cookie,
+  }), { DB: d1 }, sites);
+  assert.equal(ambiguous?.status, 503);
+  assert.equal((await ambiguous?.json()).error.code, "saved_site_write_unconfirmed");
+  assert.equal(sqlite.prepare("SELECT COUNT(*) AS count FROM saved_sites WHERE user_id = ? AND site_id = ?")
+    .get(owner.id, sites[0].id).count, 0);
+
+  const idempotent = await handleAccountRequest(request(`/api/saved-sites/${sites[1].id}`, {
+    method: "DELETE",
+    cookie: owner.cookie,
+  }), { DB: d1 }, sites);
+  assert.equal(idempotent?.status, 200);
+  assert.deepEqual(await idempotent?.json(), { saved: false, siteId: sites[1].id });
+});
+
+test("saved-location creation never returns an exact receipt without mutation metadata", async () => {
+  const { sqlite, d1 } = await database();
+  const owner = await addUser(sqlite, "saved-site-insert-receipt-owner-139");
+  const sites = [{ id: "saved-site-insert-receipt", type: "Beach" }];
+
+  d1.omitOnceMutationMetadataSubstring = "INSERT OR IGNORE INTO saved_sites";
+  const ambiguous = await handleAccountRequest(request(`/api/saved-sites/${sites[0].id}`, {
+    method: "POST",
+    cookie: owner.cookie,
+  }), { DB: d1 }, sites);
+  assert.equal(ambiguous?.status, 503);
+  assert.equal((await ambiguous?.json()).error.code, "saved_site_write_unconfirmed");
+  assert.equal(sqlite.prepare("SELECT COUNT(*) AS count FROM saved_sites WHERE user_id = ? AND site_id = ?")
+    .get(owner.id, sites[0].id).count, 1);
+});
+
 test("active trip completion and cancellation bind the authenticated account even with the exact token", async () => {
   const { sqlite, d1 } = await database();
   const owner = await addUser(sqlite, "trip-terminal-owner-131");

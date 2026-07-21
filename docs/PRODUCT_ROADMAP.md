@@ -152,6 +152,12 @@ after its acceptance checks pass in the intended environment.
       deletion race made the final statement change zero rows. Both routes now require exactly
       one confirmed D1 change, return the same `404` for zero, and fail `503` when the result is
       unconfirmable. Race tests preserve the other owner's row and prevent false client success.
+    - [x] Make saved-location receipts database-authoritative. The browser changes its confirmed
+      saved state only after an exact server receipt, so creation and removal now require
+      authoritative D1 change metadata before returning that receipt. A confirmed zero removal
+      stays idempotent because the owner/site row is absent; missing or impossible metadata returns
+      an ambiguous `503` and the existing read-only reconciliation flow determines committed state
+      without replaying the write.
     - [x] Separate pending-trip moderation conflicts from missing mutation receipts. PATCH and
       DELETE keep the final `id` plus `user_id` plus pending-state predicate; an authoritative zero
       remains `409`, while malformed D1 metadata is now a replay-blocking `503` rather than a

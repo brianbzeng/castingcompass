@@ -1667,22 +1667,27 @@ export async function handleAccountRequest(
         SELECT ?, ?, ? WHERE (SELECT COUNT(*) FROM saved_sites WHERE user_id = ?) < 100`)
         .bind(user.id, siteId, new Date().toISOString(), user.id)
         .run();
-      if (result.meta?.changes === 0) {
+      const changes = confirmedMutationChanges(result);
+      if (changes === 0) {
         const existing = await db.prepare(
           "SELECT 1 AS present FROM saved_sites WHERE user_id = ? AND site_id = ? LIMIT 1",
         ).bind(user.id, siteId).first<{ present: number }>();
         if (!existing) {
           throw new AuthError(409, "saved_site_limit_reached", "Remove a saved location before adding another.");
         }
-      } else if (result.meta?.changes !== 1) {
+      } else if (changes !== 1) {
         throw new AuthError(503, "saved_site_write_unconfirmed", "The saved location could not be confirmed.");
       }
       return jsonResponse({ saved: true, siteId });
     }
     if (request.method === "DELETE") {
-      await db.prepare("DELETE FROM saved_sites WHERE user_id = ? AND site_id = ?")
+      const result = await db.prepare("DELETE FROM saved_sites WHERE user_id = ? AND site_id = ?")
         .bind(user.id, siteId)
         .run();
+      const changes = confirmedMutationChanges(result);
+      if (changes === null || changes > 1) {
+        throw new AuthError(503, "saved_site_write_unconfirmed", "The saved location removal could not be confirmed.");
+      }
       return jsonResponse({ saved: false, siteId });
     }
     return methodNotAllowed("POST, DELETE");
