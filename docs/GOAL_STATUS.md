@@ -26,12 +26,19 @@ by that discovery.
       boundary scope. The PR remains draft and mergeable. PRs `#118` and `#130`–`#145`
       remain open as immutable audit checkpoints until the replacement head passes main-based
       review; none should be merged individually or out of order.
-- [ ] Pass fresh exact-head CI, CodeQL, release-provenance, native API-image, and optional-platform
-      checks against `main`, then record the immutable consolidated receipt without merging or
-      deploying.
-- [ ] Only after the consolidated receipt is green, close the 17 ancestor drafts as superseded by
-      `#146`, preserving their branches, comments, commits, and hosted evidence for audit and
-      rollback reference.
+- [x] Pass fresh exact-head checks against `main` at integration head
+      `02388cdea067fcffaea4fab984fed3360d3d2495`. Push and pull-request CI runs
+      `29856511274` and `29856516395` each passed 188/188 Chromium/WebKit phone cases plus
+      API and pipeline; CodeQL run `29856511663` passed Actions, JavaScript/TypeScript, and
+      Python; release-provenance runs `29856511359` and `29856516304`, native AMD64/ARM64
+      API-image run `29856516190`, and automatic Linux CPU/macOS ARM64 optional-platform run
+      `29856516287` passed. Pull-request dependency review passed, event-inapplicable jobs
+      skipped as designed, and code-scanning, dependency, and secret-scanning alerts were all
+      zero. No merge, deployment, or provider mutation occurred.
+- [x] Close the 17 ancestor drafts `#118` and `#130`–`#145` as superseded only after
+      every one of their exact heads was proven to be an ancestor of the green integration
+      commit. Their branches, comments, commits, and hosted evidence remain preserved for audit
+      and rollback reference; `#146` is now the repository's only open PR and remains a draft.
 
 ## Active checkpoint — pollution-score independent-review handoff
 
