@@ -15,6 +15,7 @@ const inputPaths = [
   "pipeline/requirements-ci.lock",
   "contracts/ai-review-queue-message.schema.json",
   "contracts/pollution-score-independent-review.schema.json",
+  "contracts/water-quality-mapping-independent-review.schema.json",
   "contracts/privacy-export-queue-message.schema.json",
   "security/api-image-policy.json",
   "security/ai-review-queue-policy.json",
@@ -30,6 +31,14 @@ const inputPaths = [
   "services/api/.python-version",
   "services/api/Dockerfile",
   "services/api/requirements-runtime.lock",
+  "data/sites.json",
+  "public/data/water-quality.json",
+  "water-quality/audits/east-bay-parks-beachwatch-station-mappings.json",
+  "water-quality/audits/launch-catalog-coverage.json",
+  "water-quality/audits/marin-beachwatch-station-mappings.json",
+  "water-quality/audits/san-mateo-station-mappings.json",
+  "water-quality/audits/sf-unmapped-station-candidates.json",
+  "water-quality/policy.json",
   "water-quality/pollution-score-source-policy.json",
   "wrangler.jsonc",
 ];
@@ -132,9 +141,10 @@ test("CI verifies the combined inventory and the signer rejects a narrowed hando
   assert.match(release, /npm run security:sbom\n\s+- run: npm run security:d1-query-inventory\n\s+- run: npm run security:release-sbom/u);
   assert.match(manifest, /"security:operational-restore-review": "node scripts\/verify-operational-restore-review\.mjs verify-policy"/u);
   assert.match(manifest, /"security:pollution-score-independent-review": "node scripts\/verify-pollution-score-independent-review\.mjs verify-policy"/u);
+  assert.match(manifest, /"security:water-quality-mapping-independent-review": "node scripts\/verify-water-quality-mapping-independent-review\.mjs verify-policy"/u);
   assert.match(manifest, /"security:santa-barbara-access-review": "node scripts\/verify-santa-barbara-access-review\.mjs verify-policy"/u);
-  assert.match(ci, /npm run security:production-change-policy\n\s+- run: npm run security:operational-restore-review\n\s+- run: npm run security:pollution-score-independent-review\n\s+- run: npm run security:santa-barbara-access-review/u);
-  assert.match(release, /npm run security:production-change-policy\n\s+- run: npm run security:operational-restore-review\n\s+- run: npm run security:pollution-score-independent-review\n\s+- run: npm run security:santa-barbara-access-review/u);
+  assert.match(ci, /npm run security:production-change-policy\n\s+- run: npm run security:operational-restore-review\n\s+- run: npm run security:pollution-score-independent-review\n\s+- run: npm run security:water-quality-mapping-independent-review\n\s+- run: npm run security:santa-barbara-access-review/u);
+  assert.match(release, /npm run security:production-change-policy\n\s+- run: npm run security:operational-restore-review\n\s+- run: npm run security:pollution-score-independent-review\n\s+- run: npm run security:water-quality-mapping-independent-review\n\s+- run: npm run security:santa-barbara-access-review/u);
   const signingJob = release.slice(release.indexOf("  attest-release:"));
   assert.match(signingJob, /castingcompass-release[\s\S]+not Cloudflare deployment provenance/u);
   assert.match(signingJob, /\.type == "container"[\s\S]+\.type == "operating-system"[\s\S]+pkg:pypi\//u);

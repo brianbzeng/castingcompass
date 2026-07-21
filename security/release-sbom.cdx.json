@@ -1,7 +1,7 @@
 {
   "bomFormat": "CycloneDX",
   "specVersion": "1.5",
-  "serialNumber": "urn:uuid:ac5272a9-a22f-50b6-9543-d9fc9972c1b6",
+  "serialNumber": "urn:uuid:e0fa32c9-915c-506c-bbae-6d37a3c4a954",
   "version": 1,
   "metadata": {
     "component": {
@@ -41,6 +41,14 @@
         },
         {
           "name": "castingcompass:input-sha256",
+          "value": "contracts/water-quality-mapping-independent-review.schema.json:4124bd5652c58c15a26f727d72700f199e99a767b88f14ac83c1aea4cf848cff"
+        },
+        {
+          "name": "castingcompass:input-sha256",
+          "value": "data/sites.json:a7145a66368c6dd5dd13b6bec421d430d228a3082d2fa8ad31941fc84e14078d"
+        },
+        {
+          "name": "castingcompass:input-sha256",
           "value": "field-review/santa-barbara-access-review-policy.json:123b115fdda8b0adf856e14d2cc7c5674737fca8a9c54fe3b638ce69a11c81e6"
         },
         {
@@ -49,7 +57,7 @@
         },
         {
           "name": "castingcompass:input-sha256",
-          "value": "package.json:2b7a8738f9ab2b11e3f0abf8db63b1a563a89657a48906aae6a2106efc443c3e"
+          "value": "package.json:a120c1085e501b0cf1d5d01dbfcefb4b223ff21f2531bd403c3957f2212d5960"
         },
         {
           "name": "castingcompass:input-sha256",
@@ -58,6 +66,10 @@
         {
           "name": "castingcompass:input-sha256",
           "value": "pipeline/requirements-ci.lock:cc5dc54a4434aa143abdad44cde47e368cd8d6a880f7eb26fb1d836e6fd60fda"
+        },
+        {
+          "name": "castingcompass:input-sha256",
+          "value": "public/data/water-quality.json:0cfa6842b353fbc42753f0cfe3a4923e35ae4484321102e69b7f148b8676e6c1"
         },
         {
           "name": "castingcompass:input-sha256",
@@ -114,6 +126,30 @@
         {
           "name": "castingcompass:input-sha256",
           "value": "services/api/requirements-runtime.lock:296d1f0bf782a6a044e86706ab06bcd45890c48730d7f0760e78b496eda34202"
+        },
+        {
+          "name": "castingcompass:input-sha256",
+          "value": "water-quality/audits/east-bay-parks-beachwatch-station-mappings.json:8e002941c5f757d78367b41c643e269b1841fb754caed6923a340c5638c0c3e9"
+        },
+        {
+          "name": "castingcompass:input-sha256",
+          "value": "water-quality/audits/launch-catalog-coverage.json:759de44313ecf3e07c7d7827cd6c5eaf78f15ab6966fdffa99d21312d61fff2f"
+        },
+        {
+          "name": "castingcompass:input-sha256",
+          "value": "water-quality/audits/marin-beachwatch-station-mappings.json:c37c334e1753f1d2b894c20d7030e8c09214425ac59671088ce9794779c65800"
+        },
+        {
+          "name": "castingcompass:input-sha256",
+          "value": "water-quality/audits/san-mateo-station-mappings.json:b435a55cc2ded36bbb3f80d520e72a6fb13d788f46221792e9216b27cac1a1c4"
+        },
+        {
+          "name": "castingcompass:input-sha256",
+          "value": "water-quality/audits/sf-unmapped-station-candidates.json:86006d8bac5a91acfd7e42d61f8df6dcb16381c402df5a5a7a7f4285e816fa86"
+        },
+        {
+          "name": "castingcompass:input-sha256",
+          "value": "water-quality/policy.json:13914b407929b98f804874e04ae4d474a4a6acd0f9d91ce4d25aa44927a65445"
         },
         {
           "name": "castingcompass:input-sha256",

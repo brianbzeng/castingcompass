@@ -380,7 +380,10 @@ score component, CastingCompass still needs:
 1. reviewed official-source adapters and exact mappings for the remaining
    launch catalog;
 2. independent local review of the Santa Barbara, San Mateo, Marin, and East Bay Parks station mappings,
-   source latency, rainfall semantics, geographic support, and outage behavior;
+   source latency, rainfall semantics, geographic support, and outage behavior. The exhaustive
+   two-role private handoff is prepared in
+   [WATER-QUALITY-MAPPING-INDEPENDENT-REVIEW.md](WATER-QUALITY-MAPPING-INDEPENDENT-REVIEW.md),
+   but no real independent review has been conducted or accepted;
 3. frozen retrospective and prospective baselines that test whether any fishing-
    quality contribution improves ranking without creating misleading health
    claims;

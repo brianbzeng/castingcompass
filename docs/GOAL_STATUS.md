@@ -40,6 +40,44 @@ by that discovery.
       commit. Their branches, comments, commits, and hosted evidence remain preserved for audit
       and rollback reference; `#146` is now the repository's only open PR and remains a draft.
 
+## Active checkpoint — launch-catalog water-quality mapping independent-review handoff
+
+- [x] Bind this local-only follow-up to consolidated draft PR `#146`'s exact receipt head
+      `377dec41c9fc1842c682b7556f2b0a8b1b83e87c`. No push, new PR, merge, deployment,
+      Cloudflare or D1 mutation, source collection, public-artifact change, site-prior change, or
+      numeric fishing-score contribution occurred.
+- [x] Freeze the complete review target instead of sampling convenient sites. Eight hash-locked
+      repository inputs produce aggregate digest
+      `6cb921149782483338f602b5b3df09ae41243e6a05743ae1534a0fe6892d3346` and exactly
+      61 mutually exclusive outcomes: 39 provisionally mapped and 22 `not-covered`. Every
+      `scoreDelta` remains null, and absence, staleness, or missing coverage remains unknown.
+- [x] Add a strict private review contract for two distinct qualified roles: official-source
+      mapping and public-health risk communication. Owner-only regular files outside the checkout
+      must bind the exact source commit, aggregate target, policy version, reviewer independence,
+      ten inventory checks, and three checks for each of all 61 sites; private identity,
+      qualifications, notes, paths, and findings enter the public receipt only as digests.
+- [x] Preserve honest outcomes and fail closed. Acceptance requires all ten inventory checks and
+      all 183 site checks with zero blocking findings. A valid `changes_required` review stays
+      incomplete, while omission, reordering, remapping, station substitution, input drift,
+      reviewer reuse, role reuse, symlinks, hard links, broad file permissions, and non-canonical
+      JSON are rejected by deterministic adversarial coverage.
+- [x] Keep every authority boundary false even if both reviewers accept the frozen target:
+      mapping changes, runtime status, numeric scoring, catch-probability claims, water-contact or
+      seafood-safety claims, merge, deployment, and production all remain unauthorized. The gate
+      is bound into pull-request and release security workflows, the release SBOM/source inventory,
+      and the deterministic release bundle.
+- [x] Complete the clean local release matrix under pinned Node `22.23.1`/npm `10.9.8` and the
+      available Python environments: fresh zero-script install, both zero-vulnerability npm
+      audits, Cloudflare build, 527/527 Node tests including 9/9 focused mapping-review tests,
+      ESLint, TypeScript, the full security/SBOM/source-integrity chain, Ruff, 29/29 API tests,
+      all 19 critical D1 query plans, 83/83 pipeline tests with one documented optional-`rasterio`
+      skip, deterministic synthetic smoke, 188/188 Chromium/WebKit phone cases, and a 157-file
+      deterministic release bundle whose manifest, SBOM, and archive checksums verified.
+- [ ] Obtain the two real qualified independent reviews outside Git and evaluate their private
+      records. Exact-head hosted CI, dependency review, CodeQL, release provenance, merge,
+      deployment, provider/database mutation, and post-deployment evidence remain separate open
+      gates. This repository handoff is not an independent-review receipt.
+
 ## Active checkpoint — pollution-score independent-review handoff
 
 - [x] Preserve protected draft PR `#145` at exact final receipt head
