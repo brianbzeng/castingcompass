@@ -15,14 +15,15 @@ import { ArrowIcon, ClockIcon, CloseIcon } from "./icons";
 import { GearCatalogFields } from "./GearCatalogFields";
 import { SiteCombobox } from "./SiteCombobox";
 import { useClientNetworkState } from "../lib/use-client-network-state";
-
-const ACTIVE_TRIP_KEY = "castingcompass.active-trip.v1";
-const LEGACY_ACTIVE_TRIP_KEY = "contourcast.active-trip.v1";
-const REPORTER_KEY = "castingcompass.reporter-key.v1";
-const LEGACY_REPORTER_KEY = "contourcast.reporter-key.v1";
-const TRIP_DRAFT_PREFIX = "castingcompass.trip-draft.v1.";
-const TRIP_REQUEST_PREFIX = "castingcompass.trip-request.v1.";
-const TRIP_PENDING_PREFIX = "castingcompass.trip-pending.v1.";
+import {
+  ACTIVE_TRIP_KEY,
+  LEGACY_ACTIVE_TRIP_KEY,
+  LEGACY_REPORTER_KEY,
+  REPORTER_KEY,
+  TRIP_DRAFT_PREFIX,
+  TRIP_PENDING_PREFIX,
+  TRIP_REQUEST_PREFIX,
+} from "../lib/account-browser-storage";
 const MAX_PHOTO_BYTES = 5 * 1024 * 1024;
 const ACCEPTED_PHOTO_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
 const PHOTO_UPLOADS_ENABLED = process.env.NEXT_PUBLIC_PHOTO_UPLOADS !== "false";

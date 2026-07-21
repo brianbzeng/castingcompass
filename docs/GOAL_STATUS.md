@@ -86,6 +86,33 @@ by that discovery.
       receipt close this repository-only checkpoint; no push, new pull request, merge,
       deployment, provider query, D1 mutation, model change, or UI change occurred.
 
+## Active checkpoint — confirmed-session browser privacy cleanup
+
+- [x] Audit every browser-persisted account/trip recovery value and both account-exit paths. The
+      existing account-deletion cleanup omitted stable trip request tokens and pending-operation
+      markers, while successful sign-out cleared none of the account-bound browser recovery state.
+      The secure account session itself remains an opaque `HttpOnly` cookie and is not stored in
+      browser script storage.
+- [x] Move the active-trip secret, anonymous reporter identifier, trip/profile draft prefixes,
+      stable idempotency request material, pending-operation markers, and actual legacy names into
+      one shared manifest consumed by both trip recovery and account cleanup. Removal is scoped to
+      those exact keys/prefixes across `localStorage` and `sessionStorage`; unrelated CastingCompass
+      preferences and unrelated application keys on the same origin are preserved.
+- [x] Run cleanup only after an exact logout receipt, a read-only session check that confirms the
+      logout, or an accepted account-deletion receipt. Offline, dropped, malformed, rejected, or
+      otherwise ambiguous sign-out outcomes keep both the server session status and browser data
+      explicitly unresolved instead of erasing the user's only safe retry material.
+- [x] Verify rather than assume removal. If browser storage access or deletion is blocked, the
+      server-side sign-out/deletion remains authoritative while the signed-out interface warns
+      that local trip recovery data may remain and directs the user to clear CastingCompass site
+      data before sharing the device.
+- [x] Pass the pinned Cloudflare build, ESLint, TypeScript, all 547/547 Node tests, the complete
+      offline security/SBOM/source-integrity chain, both zero-vulnerability npm audits, 44/44
+      focused account-exit browser cases, and the full 200/200 Chromium/WebKit phone matrix.
+      Preserve the clean local commit and exact release-bundle receipts for this repository-only
+      checkpoint. No push, pull request, merge, deployment, provider query, D1 mutation, model
+      change, or production authorization occurred.
+
 ## Active checkpoint — observability activation private-evidence handoff
 
 - [x] Bind the unfilled handoff to consolidated draft PR `#146` receipt head

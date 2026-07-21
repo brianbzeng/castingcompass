@@ -110,6 +110,14 @@ after its acceptance checks pass in the intended environment.
       mutation checks, equal-work invalid login, and generic deferred recovery behavior across
       request, resend, and invalid-code paths. Live cookie, email-delivery, expiry, and revocation
       evidence remains required after the guarded production deployment.
+    - [x] Centralize the complete account-bound browser recovery manifest and clear it from both
+      `localStorage` and `sessionStorage` only after an exact sign-out receipt, a read-only session
+      check that confirms logout, or an accepted account-deletion receipt. Cleanup now covers the
+      active-trip recovery secret, anonymous reporter identifier, trip/profile drafts, stable
+      idempotency request material, pending-operation markers, and actual legacy keys; unrelated
+      site preferences remain untouched. Ambiguous sign-out preserves the data, and blocked local
+      cleanup leaves the server sign-out authoritative while visibly directing the user to clear
+      site data before sharing the browser.
   - [ ] Define and approve a deny-by-default access-control matrix for anonymous users, account
     owners, moderators, support, operators, and administrators. Enforce it server-side on every
     route and object lookup, with privilege-escalation, insecure direct-object reference, and
@@ -833,7 +841,10 @@ after its acceptance checks pass in the intended environment.
     reconciled. Never discard a creation draft without authoritative confirmation.
   - [x] Make sign-out fail safe: do not imply that the secure server session ended while offline
     or after a dropped or unverifiable response, require an exact server receipt, and use an
-    explicit read-only session check before permitting a retry after an ambiguous outcome.
+    explicit read-only session check before permitting a retry after an ambiguous outcome. After
+    authoritative confirmation only, remove the complete account-bound recovery manifest from
+    both browser stores, verify that it is gone, preserve unrelated preferences, and disclose any
+    browser-blocked cleanup instead of silently claiming the shared device is clean.
   - [x] Make saved-location creation and removal fail safe: block writes while offline, retain
     the last confirmed local state, require an exact action/site receipt, keep slow or dropped
     responses visibly unconfirmed, block conflicting location writes, and reconcile an ambiguous

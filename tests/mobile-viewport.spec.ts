@@ -19,6 +19,49 @@ const OPPORTUNITY_FIXTURE_VALID_FROM = JSON.parse(readFileSync(
   "utf8",
 )).validFrom as string;
 
+const ACCOUNT_BROWSER_STORAGE_KEYS = [
+  "castingcompass.active-trip.v1",
+  "castingcompass.reporter-key.v1",
+  "contourcast.active-trip.v1",
+  "contourcast.reporter-key.v1",
+  "castingcompass.trip-draft.v1.past",
+  "castingcompass.profile-trip-draft.v1.trip_edit",
+  "castingcompass.trip-request.v1.past",
+  "castingcompass.trip-pending.v1.past",
+  "contourcast.trip-draft.v1.past",
+  "contourcast.profile-trip-draft.v1.trip_edit",
+] as const;
+
+async function seedAccountBrowserStorage(page: Page) {
+  await page.evaluate((keys) => {
+    for (const storage of [window.localStorage, window.sessionStorage]) {
+      for (const key of keys) storage.setItem(key, `private:${key}`);
+      storage.setItem("castingcompass.respect-water.v1", "dismissed");
+      storage.setItem("unrelated.site.preference", "preserve");
+    }
+  }, ACCOUNT_BROWSER_STORAGE_KEYS);
+}
+
+async function accountBrowserStorageSnapshot(page: Page) {
+  return page.evaluate((keys) => ({
+    localAccountValues: keys.map((key) => window.localStorage.getItem(key)),
+    sessionAccountValues: keys.map((key) => window.sessionStorage.getItem(key)),
+    localPreference: window.localStorage.getItem("castingcompass.respect-water.v1"),
+    sessionPreference: window.sessionStorage.getItem("castingcompass.respect-water.v1"),
+    localUnrelated: window.localStorage.getItem("unrelated.site.preference"),
+    sessionUnrelated: window.sessionStorage.getItem("unrelated.site.preference"),
+  }), ACCOUNT_BROWSER_STORAGE_KEYS);
+}
+
+function expectAccountBrowserStorageCleared(snapshot: Awaited<ReturnType<typeof accountBrowserStorageSnapshot>>) {
+  expect(snapshot.localAccountValues.every((value) => value === null)).toBe(true);
+  expect(snapshot.sessionAccountValues.every((value) => value === null)).toBe(true);
+  expect(snapshot.localPreference).toBe("dismissed");
+  expect(snapshot.sessionPreference).toBe("dismissed");
+  expect(snapshot.localUnrelated).toBe("preserve");
+  expect(snapshot.sessionUnrelated).toBe("preserve");
+}
+
 const TURNSTILE_MOCK_SCRIPT = `(() => {
   let sequence = 0;
   const widgets = new Map();
@@ -172,6 +215,7 @@ test.beforeEach(async ({ page }, testInfo) => {
     testTitle.includes("slow trip save stays pending") ||
     testTitle.includes("failed trip save remains ambiguous");
   const accountDeletionRecoveryTest = testTitle.includes("account deletion pauses while offline") ||
+    testTitle.includes("confirmed account deletion clears only") ||
     testTitle.includes("slow account deletion stays unconfirmed") ||
     testTitle.includes("failed account deletion stays ambiguous");
   const tripDeletionRecoveryTest = testTitle.includes("trip deletion pauses while offline") ||
@@ -187,6 +231,8 @@ test.beforeEach(async ({ page }, testInfo) => {
     testTitle.includes("rejected gear creation remains correctable") ||
     testTitle.includes("failed gear removal stays ambiguous");
   const signOutRecoveryTest = testTitle.includes("sign-out pauses while offline") ||
+    testTitle.includes("exact sign-out receipt clears only") ||
+    testTitle.includes("sign-out warns when browser storage cleanup is blocked") ||
     testTitle.includes("slow sign-out stays unconfirmed") ||
     testTitle.includes("malformed sign-out receipt stays unresolved") ||
     testTitle.includes("session check confirms sign-out") ||
@@ -1044,6 +1090,26 @@ test.describe("account deletion recovery", () => {
     expect(deletionAttempts).toBe(0);
   });
 
+  test("confirmed account deletion clears only account-bound browser recovery state", async ({ page }) => {
+    await page.route("**/api/profile", (route) => {
+      if (route.request().method() === "GET") {
+        return route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ savedSites: [], trips: [], gearProfiles: [] }) });
+      }
+      return route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ deleted: true, deletion: { status: "completed", scope: "account", objectsTotal: 0, objectsDeleted: 0 } }),
+      });
+    });
+
+    const { modal, deletion } = await prepareAccountDeletion(page);
+    await seedAccountBrowserStorage(page);
+    page.once("dialog", (dialog) => dialog.accept());
+    await deletion.getByRole("button", { name: "Permanently delete account" }).click();
+    await expect(modal.getByRole("heading", { name: "Account access removed." })).toBeVisible();
+    expectAccountBrowserStorageCleared(await accountBrowserStorageSnapshot(page));
+  });
+
   test("a slow account deletion stays unconfirmed until the receipt arrives", async ({ page }) => {
     await page.route("**/api/profile", async (route) => {
       if (route.request().method() === "GET") {
@@ -1448,6 +1514,46 @@ test.describe("sign-out recovery", () => {
     expect(signOutAttempts).toBe(0);
   });
 
+  test("an exact sign-out receipt clears only account-bound browser recovery state", async ({ page }) => {
+    await page.route("**/api/auth/logout", (route) => route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({ signedOut: true, user: null }),
+    }));
+
+    const { modal, controls } = await prepareSignOut(page);
+    await seedAccountBrowserStorage(page);
+    await controls.getByRole("button", { name: "Sign out" }).click();
+    await expect(modal.getByRole("heading", { name: "Welcome back." })).toBeVisible();
+    expectAccountBrowserStorageCleared(await accountBrowserStorageSnapshot(page));
+  });
+
+  test("confirmed sign-out warns when browser storage cleanup is blocked", async ({ page }) => {
+    await page.route("**/api/auth/logout", (route) => route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({ signedOut: true, user: null }),
+    }));
+
+    const { modal, controls } = await prepareSignOut(page);
+    await seedAccountBrowserStorage(page);
+    await page.evaluate(() => {
+      Object.defineProperty(Storage.prototype, "removeItem", {
+        configurable: true,
+        value() {
+          throw new DOMException("Storage access blocked", "SecurityError");
+        },
+      });
+    });
+    await controls.getByRole("button", { name: "Sign out" }).click();
+    await expect(modal.getByRole("heading", { name: "Welcome back." })).toBeVisible();
+    await expect(modal.getByText("Signed out. This browser blocked removal of locally stored trip recovery data.", { exact: false })).toBeVisible();
+    await expect(modal.getByText("Clear CastingCompass site data before sharing this device.", { exact: false })).toBeVisible();
+    const snapshot = await accountBrowserStorageSnapshot(page);
+    expect(snapshot.localAccountValues.every((value) => value !== null)).toBe(true);
+    expect(snapshot.sessionAccountValues.every((value) => value !== null)).toBe(true);
+  });
+
   test("slow sign-out stays unconfirmed until the exact receipt arrives", async ({ page }) => {
     await page.route("**/api/auth/logout", async (route) => {
       await new Promise((resolve) => setTimeout(resolve, 6_000));
@@ -1459,6 +1565,7 @@ test.describe("sign-out recovery", () => {
     });
 
     const { modal, controls } = await prepareSignOut(page);
+    await seedAccountBrowserStorage(page);
     await controls.getByRole("button", { name: "Sign out" }).click();
     const status = controls.getByRole("status");
     await expect(status).toContainText("sign-out is not confirmed yet", { timeout: 5_500 });
@@ -1466,6 +1573,7 @@ test.describe("sign-out recovery", () => {
     await expect(controls.getByRole("button", { name: "Signing out…" })).toBeDisabled();
     await expect(modal.getByRole("heading", { name: "Welcome back." })).toBeVisible({ timeout: 8_000 });
     await expect(controls).toBeHidden();
+    expectAccountBrowserStorageCleared(await accountBrowserStorageSnapshot(page));
   });
 
   test("malformed sign-out receipt stays unresolved and preserves local account state", async ({ page, context }) => {
@@ -1480,6 +1588,7 @@ test.describe("sign-out recovery", () => {
     });
 
     const { modal, controls } = await prepareSignOut(page);
+    await seedAccountBrowserStorage(page);
     await controls.getByRole("button", { name: "Sign out" }).click();
     const alert = controls.getByRole("alert");
     await expect(alert).toContainText("Your session may still be active");
@@ -1492,6 +1601,9 @@ test.describe("sign-out recovery", () => {
     await context.setOffline(false);
     await expect(controls.getByRole("button", { name: "Check sign-out status" })).toBeEnabled();
     expect(signOutAttempts).toBe(1);
+    const snapshot = await accountBrowserStorageSnapshot(page);
+    expect(snapshot.localAccountValues.every((value) => value !== null)).toBe(true);
+    expect(snapshot.sessionAccountValues.every((value) => value !== null)).toBe(true);
   });
 
   test("session check confirms sign-out after a dropped mutation response without replay", async ({ page }) => {
@@ -1502,6 +1614,7 @@ test.describe("sign-out recovery", () => {
     });
 
     const { modal, controls } = await prepareSignOut(page);
+    await seedAccountBrowserStorage(page);
     await controls.getByRole("button", { name: "Sign out" }).click();
     await expect(controls.getByRole("button", { name: "Check sign-out status" })).toBeEnabled();
     await page.route("**/api/auth/session", (route) => route.fulfill({
@@ -1513,6 +1626,7 @@ test.describe("sign-out recovery", () => {
     await expect(modal.getByRole("heading", { name: "Welcome back." })).toBeVisible();
     await expect(controls).toBeHidden();
     expect(signOutAttempts).toBe(1);
+    expectAccountBrowserStorageCleared(await accountBrowserStorageSnapshot(page));
   });
 
   test("session check permits a retry only when the server confirms the session is active", async ({ page }) => {

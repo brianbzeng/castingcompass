@@ -11,6 +11,10 @@ import {
   type TurnstileChallengeState,
 } from "./TurnstileChallenge";
 import type { FishingSite } from "../types";
+import {
+  clearCastingCompassAccountStorage,
+  PROFILE_TRIP_DRAFT_PREFIX,
+} from "../lib/account-browser-storage";
 import { useClientNetworkState } from "../lib/use-client-network-state";
 
 // A privileged write may commit before its response is lost. Never abort or replay it
@@ -396,20 +400,6 @@ interface ProfileTripEditFields {
   notes: string;
 }
 
-const PROFILE_TRIP_DRAFT_PREFIX = "castingcompass.profile-trip-draft.v1.";
-const ACCOUNT_STORAGE_KEYS = new Set([
-  "castingcompass.active-trip.v1",
-  "castingcompass.reporter-key.v1",
-  "contourcast.active-trip.v1",
-  "contourcast.reporter-key.v1",
-]);
-const ACCOUNT_STORAGE_PREFIXES = [
-  "castingcompass.trip-draft.v1.",
-  "castingcompass.profile-trip-draft.v1.",
-  "contourcast.trip-draft.v1.",
-  "contourcast.profile-trip-draft.v1.",
-];
-
 type DeletionStatus = "completed" | "processing" | "needs_attention";
 
 interface DeletionDetails {
@@ -419,25 +409,6 @@ interface DeletionDetails {
   completedAt?: string;
   objectsTotal: number;
   objectsDeleted: number;
-}
-
-function clearCastingCompassAccountStorage() {
-  let cleared = true;
-  for (const storageName of ["localStorage", "sessionStorage"] as const) {
-    try {
-      const storage = window[storageName];
-      const keys = Array.from({ length: storage.length }, (_, index) => storage.key(index)).filter((key): key is string => Boolean(key));
-      for (const key of keys) {
-        if (ACCOUNT_STORAGE_KEYS.has(key) || ACCOUNT_STORAGE_PREFIXES.some((prefix) => key.startsWith(prefix))) {
-          storage.removeItem(key);
-        }
-      }
-    } catch {
-      // A browser can block storage access; server-side deletion must still remain accepted.
-      cleared = false;
-    }
-  }
-  return cleared;
 }
 
 function deletionDetailsFromResponse(body: Record<string, unknown>): DeletionDetails {
@@ -594,11 +565,17 @@ export function useAccount(): AccountController {
   }, []);
 
   const completeLocalSignOut = useCallback(() => {
+    const browserStorageCleared = clearCastingCompassAccountStorage();
     setUser(null);
     setSavedSiteIds(new Set());
     setSavedSiteRequest(null);
     setSignOutRequest(null);
-    closeAccount();
+    if (browserStorageCleared) {
+      closeAccount();
+      return;
+    }
+    setModalMessage("Signed out. This browser blocked removal of locally stored trip recovery data. Clear CastingCompass site data before sharing this device.");
+    setModalOpen(true);
   }, [closeAccount]);
 
   const signOut = useCallback(async () => {
@@ -1710,8 +1687,8 @@ export function AccountModal({
             ) : null}
             {deletionStatusError ? <p className="account-error" role="alert">{deletionStatusError}</p> : null}
             {deletionDetails.scope === "account" ? <p><small>{browserAccountStorageCleared === false
-              ? "This browser blocked access to local storage, so CastingCompass could not verify removal of its stored trip drafts and anonymous reporting identifier. Clear site data in your browser settings."
-              : "CastingCompass cleared its browser-stored trip drafts and anonymous reporting identifier. A short-lived, secure status receipt lets this page check any remaining cleanup without restoring account access."}</small></p> : null}
+              ? "This browser blocked access to local storage, so CastingCompass could not verify removal of its stored trip drafts, recovery request tokens, pending-operation markers, and anonymous reporting identifier. Clear site data in your browser settings."
+              : "CastingCompass cleared its browser-stored trip drafts, recovery request tokens, pending-operation markers, and anonymous reporting identifier. A short-lived, secure status receipt lets this page check any remaining cleanup without restoring account access."}</small></p> : null}
             <button className="account-primary" type="button" disabled={deletionStatusAction !== null} onClick={() => deletionDetails.scope === "account" ? window.location.assign("/") : void dismissDeletionStatus()}>{deletionDetails.scope === "account" ? "Return to forecast" : deletionStatusAction === "dismissing" ? "Returning…" : "Return to profile"}</button>
             {deletionDetails.scope === "account" ? <button className="account-text-button" type="button" disabled={deletionStatusAction !== null} onClick={() => void dismissDeletionStatus()}>{deletionStatusAction === "dismissing" ? "Dismissing…" : "Dismiss status and continue"}</button> : null}
             <small>Dismissing clears this browser’s status receipt. It does not cancel any remaining cleanup or remove the server-side deletion record.</small>
