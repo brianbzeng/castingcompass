@@ -1,6 +1,6 @@
 # CastingCompass goal status
 
-Last reconciled: **2026-07-20 UTC**
+Last reconciled: **2026-07-21 UTC**
 
 This is the owner-facing dashboard for the complete goal list. The detailed acceptance
 criteria and immutable receipts remain in [PRODUCT_ROADMAP.md](PRODUCT_ROADMAP.md); provider
@@ -50,19 +50,143 @@ by that discovery.
   counts plus a private-evidence digest. It has not been executed or accepted; all sites remain
   pending and no deployment, safety/legal, or validation authority follows from it.
 - **Current-main reconciliation receipt:** the regional draft now includes protected `main`
-  `a9f1efc1d0b7d095ed8b71738b403d1cdc1b23f9` while preserving both the regional access-review
+  `086b2055f44ba5e2595d6bd249866ffb20c3c461` while preserving both the regional access-review
   gate and the complete D1 query-inventory gate. A fresh zero-script npm install contained 533
   packages and both npm audits reported zero vulnerabilities; every offline security/SBOM gate,
-  ESLint, TypeScript, the Cloudflare build, 449/449 Node tests, and 140/140 Chromium/WebKit mobile
+  ESLint, TypeScript, the Cloudflare build, 464/464 Node tests, and 140/140 Chromium/WebKit mobile
   cases passed. The saved-location recovery matrix now derives its fixed clock from the committed
   forecast fixture rather than a stale calendar date. Exact locked Python graphs passed 29/29 API
   tests, 83/83 pipeline tests with one documented optional-raster skip, Ruff, a fresh deterministic
-  synthetic smoke, all 18 migrations, 15 representative query plans, and every foreign-key child
+  synthetic smoke, all 19 migrations, 19 critical query plans, and every foreign-key child
   index contract. Hosted exact-head checks remain pending until the draft is pushed; no deployment,
   D1 migration, provider query, Cloudflare mutation, or production action is part of this receipt.
 - **Resume point:** after this regional branch is reviewed, resume the earliest open P0 release
   gate in [PRODUCT_ROADMAP.md](PRODUCT_ROADMAP.md). Do not ship either track until the guarded
   production checklist clears.
+
+## Completed work cycle — deterministic mobile release evidence
+
+- [x] Reconcile protected `main` after privacy-export PR `#127`. Exact merge commit
+      `5756146d061dce9aa3ba63aef73f0d34bde4a21b` passed release provenance, both native API-image
+      architectures, all three CodeQL languages, API, pipeline, dependency submission, and the
+      complete web job after one failed-job rerun on the unchanged commit. No deployment,
+      provider query, binding, migration, or production mutation ran.
+- [x] Classify the failed main web result from run `29794888259` using its exact log rather than
+      rerunning blindly. One WebKit case missed the reopened trip dialog; the exact case passed
+      12/12 local repetitions and both pre-merge hosted web jobs. The prior main failure was a
+      different WebKit lazy-map detachment, establishing a release-gate synchronization risk
+      rather than a privacy-export regression.
+- [x] Harden only the observed test boundaries. Recovery setup waits for the mocked authenticated
+      `Profile` state and uses the fixed topbar trip control; close/reopen coverage proves the old
+      dialog is hidden and the replacement is visible before checking the restored ambiguous
+      state. Lazy-map scrolling now runs inside the existing retry and re-resolves the map after
+      React replacement. Product behavior, timeouts, retries, and provider state are unchanged.
+- [x] Stress the two revised WebKit boundaries sequentially in the clean worktree: trip recovery
+      passed 10/10 and lazy-map loading passed 10/10. Earlier artificial concurrent repetition
+      attempts were discarded after the machine reached temporary-storage and unrelated system-
+      load saturation; no assertion result from that polluted environment is treated as evidence.
+- [x] Classify draft PR `#128`'s first exact head rather than rerunning it. Both independent hosted
+      web jobs passed 137/140 and failed the same three WebKit trip-network cases at one redundant
+      location-option click: entering the exact site name had already committed the selection, then
+      React replaced the suggestion during that second action. The helper no longer clicks
+      replaceable option DOM, with no product or timeout change. The exact three-case cluster then
+      passed 30/30 concurrent WebKit repetitions and the complete two-worker mobile matrix passed
+      140/140 locally.
+- [x] Classify the final receipt head's asymmetric hosted result. Its push web job passed 140/140;
+      its pull-request web job passed 139/140 and showed one iPhone SE worker receiving the location
+      catalog after the exact query was entered, leaving one matching result but no committed
+      selection. The helper now waits for that result and selects it through the stable combobox
+      keyboard contract, then proves the selected-site status and moves focus through the next real
+      form control. The affected slice passed 60/60 two-worker repetitions across iPhone SE and
+      WebKit, then 12/12 across all four mobile projects. No timeout, product behavior, provider
+      state, or production state changed.
+- [x] Complete the ordinary local release matrix. The exact two-worker hosted-CI shape passed all
+      140 mobile cases, including both revised WebKit boundaries. Fresh npm installation, the
+      Cloudflare build, 456/456 Node tests, ESLint, TypeScript, the complete security/SBOM/query-
+      inventory chain and both zero-vulnerability npm audits, 29/29 API tests, Ruff, 19/19 D1
+      query plans with every foreign-key child path indexed, 81/81 pipeline tests with one
+      documented optional-raster skip, and the deterministic pipeline smoke all passed.
+- [x] Publish protected draft PR `#128` and obtain complete exact-head hosted evidence for repaired
+      implementation head `d7c02e5867657a16f3e51f0bec559c2297d8572d`. Push CI run
+      `29797876950` and pull-request CI run `29797878595` each passed the complete web job with
+      140/140 mobile cases plus API and pipeline; CodeQL run `29797877045` passed all three
+      languages; release-provenance runs `29797876952` and `29797878558` passed. Skips were the
+      event-inapplicable attestation, dependency-review, and dependency-submission jobs.
+- [x] Require the final PR `#128` head to pass protected checks before merge. Exact head
+      `8aec61bb05b45213ee1bc27b7c1c98f11ae42a1c` passed push CI run `29798632628` and
+      pull-request CI run `29798634349`, including two independent 140/140 web jobs, plus CodeQL
+      run `29798632819` and release-provenance runs `29798632624` and `29798634244`. It then
+      merged as protected-main commit `26811fd3f5e4332a264af9e4e7c3f9078e745caf`.
+- [x] Classify that merge commit's failed web job rather than rerunning it. Main CI run
+      `29799012204` passed API, pipeline, and dependency submission but passed 139/140 mobile
+      cases: one WebKit trip-recovery setup never received `Limantour Beach`. The app loads its
+      site catalog and 2.9 MB forecast snapshot atomically, and the Vinext test server's recorded
+      premature close on the snapshot correctly left the app on its three-site emergency
+      fallback. CodeQL run `29799011924` and release-provenance run `29799012244` passed.
+- [x] Classify draft follow-up PR `#129`'s first exact head rather than rerunning it. Its push web
+      job passed 140/140 while its pull-request web job passed 139/140; the same WebKit setup
+      missed `Limantour Beach`. Routing the exact 2.9 MB forecast around Vinext had removed the
+      premature-close dependency but still made catalog publication wait for an irrelevant large
+      transfer and parse. That transport is not part of trip-mutation recovery.
+- [x] Classify PR `#129`'s second exact head rather than rerunning it. Its push web job again
+      passed 140/140 while its pull-request web job passed 139/140 at the same setup. Reducing the
+      forecast to a tiny schema-valid payload ruled out forecast size. A subsequent local WebKit
+      trace showed the trip form already held a valid selected location while the driver waited
+      for a replaceable combobox option. The failure was in unrelated catalog interaction, not the
+      mutation-recovery behavior under test.
+- [x] Isolate the mutation-recovery boundary completely. Only the three trip-recovery cases now
+      use the form's already-valid default location and assert its stable selected-status contract.
+      The past-report endpoint remains mocked, and the cases no longer type into the catalog,
+      inspect transient option DOM, route static data, or make any catalog-ready timing assumption.
+      Product behavior, public data, timeouts, retries, Cloudflare, and production are unchanged.
+      With a fresh server on every run, the final driver passed 60/60 focused iPhone SE and WebKit
+      repetitions and the exact two-worker four-project matrix passed 140/140, including while
+      Vinext reproduced the irrelevant static-file premature-close warning. ESLint, TypeScript,
+      the Cloudflare build, 456/456 Node tests, secret and install-policy checks, and both complete
+      and production-only npm audits also passed. Hosted exact-head evidence remains required below.
+- [x] Publish isolated follow-up PR `#129`, require complete exact-head protected checks, merge
+      only accepted evidence, and reconcile protected `main`. Exact head
+      `02d0789cda4c05d5d9ea81557aea31ec66a8b6c0` passed duplicate push and pull-request web,
+      API, pipeline, release-provenance, and CodeQL checks before merging as
+      `086b2055f44ba5e2595d6bd249866ffb20c3c461`. Main CI `29801749298`, CodeQL
+      `29801748832`, and release provenance `29801749264` passed that merge commit, including
+      the complete 140-case Chromium/WebKit matrix. Production and Cloudflare remained outside
+      this cycle.
+
+## Completed work cycle — default-off asynchronous privacy exports
+
+- [x] Reconcile protected `main`, draft regional PR `#118`, draft asynchronous-export PR `#127`,
+      issue `#86`, and the P1 scale roadmap without touching Cloudflare or production. Starting
+      `main` is `a9f1efc1d0b7d095ed8b71738b403d1cdc1b23f9`; both draft PRs remain open.
+- [x] Independently audit the complete default-off export path. Queue messages remain limited to
+      an opaque job ID, D1 remains authoritative, objects remain private and owner-bound for 24
+      hours, retries and expiry are bounded, account deletion adopts committed objects, and no
+      producer/consumer or R2 provider binding is configured. Migration `0019` remains unapplied,
+      the feature remains off, and no provider or production change was made.
+- [x] Close the download-integrity gap found during that audit. Every download now recomputes the
+      D1 object-locator hash and rejects any mismatch in the recorded byte count, SHA-256 upload
+      metadata, or export-contract version before reading or streaming the private object. All
+      integrity failures use one generic 503 response and a bounded error code; adversarial tests
+      prove neither responses nor logs expose account, job, email, or object-locator identity.
+- [x] Freeze the four download-integrity bindings in the machine-checked export policy, document
+      the boundary in the export and data-lifecycle runbooks, regenerate the D1 source inventory,
+      and bind the revised artifacts into the combined release SBOM. The check does not claim a
+      full byte rehash on download or any provider/deployment evidence.
+- [x] Complete the local release-sized verification matrix. A fresh npm `10.9.8` no-script install
+      restored 533 packages and both audits found zero vulnerabilities; Cloudflare build,
+      456/456 Node tests, 140/140 Chromium/WebKit mobile cases, ESLint, TypeScript, and every
+      offline security/SBOM/query-inventory gate passed. Exact Python environments passed 29/29
+      API tests, Ruff, 81/81 pipeline tests with one documented optional-raster skip, the
+      deterministic synthetic smoke, 19 migrations, 19 critical query plans, and every
+      foreign-key child index contract.
+- [x] Complete the protected workflow without provider mutation. PR `#127` exact implementation
+      head `719d4c3c142dbb0e029a6583aa86f122777fbc6a` passed push and pull-request CI, release
+      provenance, CodeQL, and both native API-image architectures, then merged as protected-main
+      commit `5756146d061dce9aa3ba63aef73f0d34bde4a21b`. Main CI run `29794888259` attempt 2 passed
+      the unchanged commit, including 140/140 mobile cases; release provenance `29794888254`,
+      API image security `29794888264`, and CodeQL `29794887894` also passed. Provider setup,
+      migration `0019`, Queue/DLQ/R2/IAM/alerts, staging failure and deletion drills, activation,
+      and production release remain separate reviewed gates.
 
 ## Completed work cycle — complete D1 query inventory
 
@@ -72,9 +196,9 @@ by that discovery.
 - [x] Identify the earliest repository-actionable P1 gap. Existing evidence covered 14
       representative plans but did not inventory every production D1 statement, so query source
       coverage and remaining unbounded reads could not be independently audited.
-- [x] Implement a deterministic TypeScript-AST inventory for all 187 direct Worker `.prepare()`
-      sites across seven files: 162 literal statements, 25 exact reviewed nonliteral expressions,
-      and 11 reviewed literal multi-row reads without `LIMIT`. The gate rejects source drift,
+- [x] Implement a deterministic TypeScript-AST inventory for all 221 direct Worker `.prepare()`
+      sites across eight files: 195 literal statements, 26 exact reviewed nonliteral expressions,
+      and 12 reviewed literal multi-row reads without `LIMIT`. The gate rejects source drift,
       computed/aliased prepare access, unreviewed dynamic SQL, unscoped literal writes, and
       unreviewed multi-row reads.
 - [x] Preserve truthful scale boundaries. Nine reads are complete authenticated rights exports
@@ -834,16 +958,22 @@ by that discovery.
       remains deferred pending privacy review.
 - [ ] Make data and execution paths measurably scalable: query plans/indexes, bounded access,
       cache matrix, justified asynchronous work, D1-managed connections, optional API pooling,
-      and isolated load/soak/spike/failure tests. **A complete static inventory now covers all 187
+      and isolated load/soak/spike/failure tests. **A complete static inventory now covers all 221
       Worker prepare sites, and exact 100-item saved-location/gear-preset account ceilings now
       fail closed on overflow without truncating rights exports, while local query/index/cache/
-      connection contracts,
-      production-refusing harness, and the default-off advisory Queue adapter with its opaque
-      message, D1 outbox/lease/attention ledger, bounded retries, deletion/maintenance recovery,
-      DLQ policy, and guarded replay planner are complete;** migrations, provider Queue/DLQ
-      bindings, IAM/alerts, asynchronous complete export packaging, staging measurements,
+      connection contracts, production-refusing harness, the default-off advisory Queue adapter,
+      and a default-off complete privacy-export adapter with an opaque message, owner-bound D1
+      lease ledger, private 24-hour object, progress UI, bounded expiry/retries, and account-delete
+      race adoption are complete;** migrations, provider Queue/DLQ/R2 bindings, IAM/alerts,
+      export activation, staging measurements,
       child-cascade cost evidence, failure injection,
       rollback evidence, and authorized penetration testing remain.
+      Local acceptance for the default-off export adapter passed the Cloudflare build and
+      456/456 Node tests, 140/140 Chromium/WebKit mobile cases, ESLint, TypeScript, the complete
+      security/SBOM/query-inventory chain and both zero-vulnerability npm audits, 29/29 API tests,
+      the 19-plan D1/index contract, Ruff, 81/81 pipeline tests with one documented optional-
+      raster skip, and deterministic pipeline smoke. This is repository evidence only; no
+      migration, Queue, R2, variable, deployment, or production request was made.
 - [ ] Freeze and deploy the species-aware observation/model-run contract. **Local contract
       complete;** production migration, legacy-row audit, and first approved ingestion manifest
       remain.

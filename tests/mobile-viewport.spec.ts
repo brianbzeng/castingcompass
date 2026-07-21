@@ -33,16 +33,18 @@ const TURNSTILE_MOCK_SCRIPT = `(() => {
 })();`;
 
 async function preparePastTripForSubmission(page: Page) {
-  const trigger = page.getByRole("button", { name: "Log a past trip" });
+  const trigger = page.locator(".log-trip-button");
   const modal = page.locator(".trip-modal");
   const location = modal.getByRole("combobox", { name: "Fishing location" });
-  await expect(async () => {
-    if (!(await modal.isVisible())) await trigger.click();
-    await expect(location).toBeVisible({ timeout: 1_000 });
-  }).toPass({ intervals: [100, 250, 500], timeout: 8_000 });
-  await location.fill("Limantour Beach");
-  await modal.getByRole("option", { name: /Limantour Beach/ }).click();
-  await modal.getByLabel("Fishing mode for the whole trip").selectOption("shore");
+  await expect(page.locator(".account-label-compact")).toHaveText("Profile");
+  await trigger.click();
+  await expect(modal).toBeVisible({ timeout: 8_000 });
+  await expect(location).toBeVisible({ timeout: 8_000 });
+  await expect(modal.locator(".site-combobox-status")).toHaveText(/^Selected: .+$/);
+  const fishingMode = modal.getByLabel("Fishing mode for the whole trip");
+  await fishingMode.focus();
+  await expect(location).toHaveAttribute("aria-expanded", "false");
+  await fishingMode.selectOption("shore");
   await modal.getByLabel("Did the score influence this trip?").selectOption("no");
   await modal.getByRole("button", { name: "Continue to gear + result" }).click();
   for (const checkbox of await modal.locator(".consent-field input").all()) await checkbox.check();
@@ -414,11 +416,12 @@ test("safe-area contract keeps fixed controls inside simulated insets", async ({
 });
 
 test("map overlays do not collide or clip", async ({ page }) => {
-  const map = page.locator(".map-wrap");
   const centerButton = page.getByRole("button", { name: /fit sites/i });
   const loadMap = page.getByRole("button", { name: /open interactive map/i });
-  await map.scrollIntoViewIfNeeded();
   await expect(async () => {
+    const map = page.locator(".map-wrap");
+    await expect(map).toBeVisible({ timeout: 1_000 });
+    await map.scrollIntoViewIfNeeded({ timeout: 1_000 });
     if (await centerButton.isVisible()) return;
     if (await loadMap.isVisible()) await loadMap.click({ timeout: 1_000 });
     await expect(centerButton).toBeVisible({ timeout: 1_000 });
@@ -579,7 +582,9 @@ test.describe("trip network recovery", () => {
     expect(await page.evaluate(() => window.localStorage.getItem("castingcompass.trip-pending.v1.past"))).not.toBeNull();
 
     await modal.getByRole("button", { name: "Close trip report" }).click();
-    await page.getByRole("button", { name: "Log a past trip" }).click();
+    await expect(modal).toBeHidden();
+    await page.locator(".log-trip-button").click();
+    await expect(modal).toBeVisible();
     await expect(modal.getByRole("button", { name: "Retry safely" })).toBeEnabled();
     await expect(modal.locator("fieldset.trip-write-fields input").first()).toBeDisabled();
     await modal.getByRole("button", { name: "Retry safely" }).click();
