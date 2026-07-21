@@ -199,7 +199,8 @@ test.beforeEach(async ({ page }, testInfo) => {
     || testTitle.includes("source-bound San Francisco chart context")
     || testTitle.includes("source-bound San Mateo Coast")
     || testTitle.includes("source-bound Marin Coast")
-    || testTitle.includes("source-bound North and East Bay");
+    || testTitle.includes("source-bound North and East Bay")
+    || testTitle.includes("source-bound Oakland through South Bay");
   if (structureDepthEvidenceTest) {
     // Keep the committed opportunity fixture selectable so the stable site deep link opens its
     // detail sheet instead of expiring as wall-clock time advances.
@@ -627,6 +628,34 @@ test("source-bound North and East Bay chart context preserves Berkeley date prec
   await expect(evidence).toContainText("0–1.8 m");
   await expect(evidence).toContainText("0.3–1.8 m across 8 deduplicated records within 1,000 m");
   await expect(evidence).toContainText("Charted obstruction");
+  await expect(evidence).toContainText("some dates have year/month precision");
+  await expect(evidence).toContainText("some records have no source date");
+  await expect(evidence).toContainText("does not change the fishing score");
+  await expectSelectorInsideViewport(page, ".structure-depth-evidence");
+});
+
+test("source-bound Oakland through South Bay chart context preserves Port View depth and date limits", async ({ page }) => {
+  await page.goto("/?site=port-view-park-pier");
+  const evidence = page.locator(".structure-depth-evidence");
+
+  await expect(evidence).toBeVisible();
+  await expect(evidence).toContainText("5.4–9.1 m");
+  await expect(evidence).toContainText("2.1–13.1 m across 12 deduplicated records within 1,000 m");
+  await expect(evidence).toContainText("Charted dredged area");
+  await expect(evidence).toContainText("some dates have year/month precision");
+  await expect(evidence).toContainText("some records have no source date");
+  await expect(evidence).toContainText("does not change the fishing score");
+  await expectSelectorInsideViewport(page, ".structure-depth-evidence");
+});
+
+test("source-bound Oakland through South Bay chart context keeps Coyote Point display-only", async ({ page }) => {
+  await page.goto("/?site=coyote-point-jetty");
+  const evidence = page.locator(".structure-depth-evidence");
+
+  await expect(evidence).toBeVisible();
+  await expect(evidence).toContainText("0–1.8 m");
+  await expect(evidence).toContainText("0.6–2.1 m across 12 deduplicated records within 1,000 m");
+  await expect(evidence).toContainText("Charted pile or piling");
   await expect(evidence).toContainText("some dates have year/month precision");
   await expect(evidence).toContainText("some records have no source date");
   await expect(evidence).toContainText("does not change the fishing score");

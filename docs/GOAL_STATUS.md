@@ -13,6 +13,40 @@ Current provider truth overrides historical “paused” language in completed r
 2026-07-19 read-only reconciliation found an active Worker; no production mutation is authorized
 by that discovery.
 
+## Active checkpoint — Oakland through South Bay source-bound chart context
+
+- [x] Preserve draft PR `#137` at exact final receipt head
+      `488f8f78b4b292db88fd83800e9df4a46a9fc384` as the reviewed stacked base. This
+      final catalog-extension work uses another isolated worktree and does not merge, deploy,
+      mutate Cloudflare or D1, change a catalog prior, or alter the attested fishing score.
+- [x] Select the final coherent ten-site launch-catalog cohort: Port View Park Fishing Pier,
+      Middle Harbor Shoreline Park, Alameda South Shore Rock Wall, Crown Memorial State Beach,
+      Oyster Bay Regional Shoreline, San Leandro Marina Shore, Dumbarton Fishing Pier, Coyote
+      Point Jetty, Seal Point Park Shoreline, and Oyster Point Fishing Pier. The same NOAA ENC
+      Direct `Approach` source, 13-layer inventory, meters/MLLW meaning, bounded geometry, and
+      fail-closed drift rules apply.
+- [x] Capture and normalize a fixed `2026-07-21T12:10:36Z` source snapshot for all 61 covered
+      sites using 854 bounded layer queries. All ten new configured sectors intersect one or more
+      depth-area bands and have nearby deduplicated soundings. The prior 51 site records and
+      reviewed service metadata are unchanged; old, month-precision, and undated source records
+      remain explicit.
+- [x] Extend the strict artifact/schema/type contract to version 1.5 and add deterministic cohort,
+      partial-date, score-exclusion, navigation-exclusion, and mobile truthfulness coverage. All
+      ten locations retain `scoreDelta: null`; chart context cannot authorize access or imply
+      shore-reachable depth, castability, wading safety, or navigation use.
+- [x] Complete the fresh full local release matrix under pinned Node `22.23.1` and the
+      hash-locked Python environments: fresh zero-script installation, both zero-vulnerability
+      npm audits, Cloudflare build, 487/487 Node tests, ESLint, TypeScript, the complete
+      security/SBOM/source-integrity chain, 12 deterministic/adversarial structure-depth tests,
+      Python syntax/Ruff, 29/29 API tests, 83/83 pipeline tests with one documented optional-
+      `rasterio` skip, deterministic synthetic smoke, and all 19 critical D1 query plans passed.
+      The complete CI-profile Chromium/WebKit phone matrix passed 188/188 cases. Port View depth
+      and date evidence plus Coyote Point display-only evidence were visually inspected from the
+      production build at iPhone width.
+- [ ] Publish a protected stacked draft PR, obtain exact-head hosted receipts, and keep CodeQL,
+      independent location/chart review, merge, deployment, provider/database mutation, and
+      production activation as explicit separate gates.
+
 ## Active checkpoint — North and East Bay source-bound chart context
 
 - [x] Preserve draft PR `#136` at exact final receipt head

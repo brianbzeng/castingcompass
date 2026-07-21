@@ -4,10 +4,11 @@
 
 ## Frozen meaning
 
-`castingcompass.structure-depth-evidence/1.4.0` is planning context for 51
+`castingcompass.structure-depth-evidence/1.5.0` is planning context for 61
 reviewed catalog locations: all 14 Santa Barbara South Coast locations, ten San
 Francisco coast and waterfront locations, ten San Mateo Coast/Half Moon Bay
 locations, seven Point Reyes/Marin Coast locations, and ten North/East Bay
+locations, plus the final ten Oakland-through-South-Bay launch-catalog
 locations. It shows broad NOAA chart depth bands intersecting a configured
 offshore sector and selected chart-feature classes within one kilometer. It is not:
 
@@ -74,6 +75,12 @@ McNears Beach Pier and Ferry Point Fishing Pier do not; each remains explicitly
 records exist. Neither catalog clues nor soundings are substituted for the
 missing area-band evidence.
 
+The Oakland-through-South-Bay extension completes source-bound coverage of the
+61-site launch catalog with the same fixed service and layer inventory. All ten
+new configured sectors intersect one or more depth-area records and have nearby
+deduplicated soundings. The chart records still do not establish shore-reachable
+depth, castability, access, wading safety, or navigation suitability.
+
 ## Geometry and interpretation
 
 For each site, the collector constructs a WGS84 sector from the public catalog
@@ -96,9 +103,9 @@ selected layers also do not publish numeric positional accuracy or vertical
 uncertainty. Those fields therefore remain explicit `not-exposed` states rather
 than zeros.
 
-## Captured 51-site inventory
+## Captured 61-site inventory
 
-The normalized source snapshot was captured at `2026-07-21T11:15:36Z` from the
+The normalized source snapshot was captured at `2026-07-21T12:10:36Z` from the
 fixed NOAA `enc_approach` ArcGIS service. Point-sounding counts are deduplicated
 across overlapping ENC cells. “No selected feature record” never means “no
 structure.”
@@ -169,9 +176,22 @@ structure.”
 | Cesar Chavez Park Shoreline | Charted context | 0–1.8 m | 13 | Obstruction; seabed description; shoreline construction |
 | Emeryville Marina Fishing Pier | Charted context | 0–1.8 m | 16 | Obstruction; pile/piling; seabed description; shoreline construction |
 
+| Oakland through South Bay location | ENC bands intersecting sector | Deduplicated soundings within 1 km | Selected chart-feature classes within 1 km |
+| --- | --- | ---: | --- |
+| Port View Park Fishing Pier | 1.8–3.6 m; 3.6–5.4 m; 5.4–9.1 m | 12 | Dredged area; obstruction; seabed description; shoreline construction |
+| Middle Harbor Shoreline Park | -1.7–0 m; 0–5.4 m | 4 | Dredged area; obstruction; pile/piling; shoreline construction |
+| Alameda South Shore Rock Wall | 0–1.8 m | 12 | Obstruction; seabed description; shoreline construction |
+| Crown Memorial State Beach | -2.4–0 m; 0–1.8 m; 1.8–3.6 m | 8 | Obstruction; shoreline construction; wreck |
+| Oyster Bay Regional Shoreline | -2.4–0 m; 0–1.8 m | 13 | Obstruction; shoreline construction; wreck |
+| San Leandro Marina Shore | -2.4–0 m; 0–1.8 m | 15 | Obstruction; shoreline construction; wreck |
+| Dumbarton Fishing Pier | 9.1–18.2 m | 13 | Obstruction; shoreline construction |
+| Coyote Point Jetty | -2.4–0 m; 0–1.8 m | 12 | Pile/piling; shoreline construction |
+| Seal Point Park Shoreline | 0–1.8 m | 22 | Obstruction; shoreline construction |
+| Oyster Point Fishing Pier | 0–1.8 m | 22 | Pile/piling; shoreline construction |
+
 The exact full-date depth records range from 1999 through 2025. The source also
 publishes valid month-precision values such as `2013-06` and a year-only `2005`
-for the charted wreck near Stearns Wharf. Contract version 1.4 preserves those
+for the charted wreck near Stearns Wharf. Contract version 1.5 preserves those
 values separately in `partialSourceDates`; it never invents a day. A record with
 no `SORDAT` sets `hasUndatedRecords`. Source age and precision are displayed
 because a current service response does not make an old underlying survey new.
@@ -198,14 +218,14 @@ because a current service response does not make an old underlying survey new.
 Any required depth-query failure makes that site's depth unavailable. Any
 selected structure-query failure makes the structure section unavailable while
 retaining catalog clues as explicitly unvalidated. Service metadata drift makes
-all 51 sites unavailable. Errors are fixed categories and never expose local
+all 61 sites unavailable. Errors are fixed categories and never expose local
 paths or exception text.
 
 ## Remaining acceptance work
 
-This completes the San Francisco, San Mateo, Point Reyes/Marin, and North/East
-Bay extensions of the source-bound inventory, not the parent map goal. Before
-a location can be called fully reviewed:
+This completes source-bound chart-context coverage of all 61 launch-catalog
+locations, not the parent map goal. Before a location can be called fully
+reviewed:
 
 1. a local reviewer must confirm the sector orientation, public access context,
    and whether the displayed chart classes are useful rather than misleading;

@@ -11,7 +11,7 @@ import addFormats from "ajv-formats";
 const root = new URL("../", import.meta.url);
 const snapshotPath = "structure-depth/noaa-enc-approach-snapshot.json";
 const artifactPath = "public/data/structure-depth.json";
-const fixedAsOf = "2026-07-21T11:15:36Z";
+const fixedAsOf = "2026-07-21T12:10:36Z";
 
 async function readJson(path) {
   return JSON.parse(await readFile(new URL(path, root), "utf8"));
@@ -41,7 +41,7 @@ function runCollector(output, sourceSnapshot = snapshotPath) {
   );
 }
 
-test("published 51-site chart context is contract-bound, display-only, and non-navigational", async () => {
+test("published 61-site chart context is contract-bound, display-only, and non-navigational", async () => {
   const [schema, policy, sites, artifact, policyBytes, collectorBytes, siteBytes, snapshotBytes, interfaceSource, disclosure] = await Promise.all([
     readJson("contracts/structure-depth-evidence.schema.json"),
     readJson("structure-depth/policy.json"),
@@ -242,6 +242,44 @@ test("North and East Bay chart context keeps two missing sector bands explicit a
   assert.equal(berkeley.depth.hasUndatedRecords, true);
 });
 
+test("Oakland through South Bay chart context covers the final cohort without score or navigation authority", async () => {
+  const artifact = await readJson(artifactPath);
+  const siteIds = [
+    "port-view-park-pier",
+    "middle-harbor-shoreline",
+    "alameda-south-shore-rockwall",
+    "crown-memorial-state-beach",
+    "oyster-bay-shoreline",
+    "san-leandro-marina-shore",
+    "dumbarton-pier",
+    "coyote-point-jetty",
+    "seal-point-park",
+    "oyster-point-fishing-pier",
+  ];
+  assert.ok(siteIds.every((siteId) => artifact.sites[siteId].status === "charted-context"));
+  assert.ok(siteIds.every((siteId) => artifact.sites[siteId].depth.status === "charted-sector-bands"));
+  assert.ok(siteIds.every((siteId) => artifact.sites[siteId].scoreDelta === null));
+  assert.ok(siteIds.every((siteId) => artifact.sites[siteId].navigationUseAllowed === false));
+
+  const portView = artifact.sites["port-view-park-pier"];
+  assert.deepEqual(portView.depth.chartedBandsMeters, [[1.8, 3.6], [3.6, 5.4], [5.4, 9.1]]);
+  assert.deepEqual(portView.depth.contextSoundingDepthRangeMeters, [2.1, 13.1]);
+  assert.equal(portView.depth.contextSoundingCount, 12);
+  assert.deepEqual(portView.depth.partialSourceDates, ["2013-12"]);
+  assert.equal(portView.depth.hasUndatedRecords, true);
+
+  const dumbarton = artifact.sites["dumbarton-pier"];
+  assert.deepEqual(dumbarton.depth.chartedBandsMeters, [[9.1, 18.2]]);
+  assert.deepEqual(dumbarton.depth.contextSoundingDepthRangeMeters, [0.3, 15.2]);
+  assert.equal(dumbarton.depth.contextSoundingCount, 13);
+  assert.deepEqual(dumbarton.depth.partialSourceDates, ["2003-02"]);
+  assert.equal(dumbarton.depth.hasUndatedRecords, true);
+
+  const coyotePoint = artifact.sites["coyote-point-jetty"];
+  assert.deepEqual(coyotePoint.depth.partialSourceDates, ["2013-12"]);
+  assert.equal(coyotePoint.depth.hasUndatedRecords, true);
+});
+
 test("one required site query fails only that evidence slice closed", async (t) => {
   const directory = await mkdtemp(join(tmpdir(), "castingcompass-structure-depth-partial-"));
   t.after(() => rm(directory, { recursive: true, force: true }));
@@ -311,7 +349,7 @@ test("source-selection receipt preserves incomplete alternatives instead of over
   ]);
   assert.equal(receipt.blue_topo.unpublished_site_count, 11);
   assert.equal(receipt.usgs_santa_barbara_channel_10m.configured_sector_coverage_site_count, 6);
-  assert.equal(receipt.noaa_enc_direct.configured_sector_depth_area_site_count, 46);
+  assert.equal(receipt.noaa_enc_direct.configured_sector_depth_area_site_count, 56);
   assert.equal(receipt.san_francisco_extension.site_ids.length, 10);
   assert.equal(receipt.san_francisco_extension.selection_result, "accepted-with-one-explicit-partial-depth-sector");
   assert.equal(receipt.san_mateo_coast_extension.site_ids.length, 10);
@@ -320,6 +358,8 @@ test("source-selection receipt preserves incomplete alternatives instead of over
   assert.equal(receipt.marin_coast_extension.selection_result, "accepted-with-two-explicit-partial-depth-sectors");
   assert.equal(receipt.north_east_bay_extension.site_ids.length, 10);
   assert.equal(receipt.north_east_bay_extension.selection_result, "accepted-with-two-explicit-partial-depth-sectors");
+  assert.equal(receipt.oakland_south_bay_extension.site_ids.length, 10);
+  assert.equal(receipt.oakland_south_bay_extension.selection_result, "accepted-with-all-ten-configured-sectors");
   assert.match(receipt.blue_topo.tile_scheme_sha256, /^[a-f0-9]{64}$/);
   assert.match(receipt.usgs_santa_barbara_channel_10m.archive_sha256, /^[a-f0-9]{64}$/);
 });
