@@ -1,6 +1,6 @@
 {
   "schemaVersion": "castingcompass.water-quality-mapping-audit/1.0.0",
-  "generatedAt": "2026-07-21T13:54:25Z",
+  "generatedAt": "2026-07-21T15:46:25Z",
   "meaning": "historical station identity and coordinate support for local preliminary review; not current water quality, safety, or score evidence",
   "automaticMappingAllowed": false,
   "independentReviewRequired": true,
@@ -10,13 +10,13 @@
     "currentStatusUrl": "https://www.smchealth.org/node/1201",
     "registryUrl": "https://data.smcgov.org/Environment/Beach-and-Creek-Monitoring-Results/kpd9-xf4h/about",
     "registryMachineUrl": "https://datahub.smcgov.org/api/id/kpd9-xf4h.json",
-    "registryResponseSha256": "a760d76a97e4883eb158e65b7c99b5f7f5a0cfef80e6e435b07f015ec0406c04",
+    "registryResponseSha256": "799f73522d11eb8e72ed07531c3fcfb09a9b3a9e9b072e2a41dd8def80164578",
     "stationCount": 17,
     "latestRecordDate": "2023-06-29",
     "registryUse": "station identity and spatial context only; never current status"
   },
   "policySha256": "13914b407929b98f804874e04ae4d474a4a6acd0f9d91ce4d25aa44927a65445",
-  "auditToolSha256": "4f0c5cf832aab5043437c2b0e1dfe4c437d404d26ce2893414658d6b3dbb1cc5",
+  "auditToolSha256": "53b1ef9f32394a3f8450c937c2059079dcaf6fb1259a2cd75ea1d01ec60e593c",
   "siteCatalogSha256": "a7145a66368c6dd5dd13b6bec421d430d228a3082d2fa8ad31941fc84e14078d",
   "method": {
     "distance": "haversine",
@@ -354,6 +354,23 @@
         "latitude": 37.46721323586502,
         "longitude": -122.44688517501581,
         "distanceMeters": 1944
+      },
+      "reason": "No exact station identity or defensible local spatial support was established."
+    },
+    {
+      "siteId": "seal-point-park",
+      "siteName": "Seal Point Park Shoreline",
+      "policyMapped": false,
+      "reviewStatus": "local-preliminary-do-not-map",
+      "automaticMappingAllowed": false,
+      "nearestReviewedStation": {
+        "stationId": "AB18762",
+        "stationName": "COYOTE POINT",
+        "stationType": "BEACH",
+        "recordDate": "2023-06-29",
+        "latitude": 37.59003457074558,
+        "longitude": -122.32530115041247,
+        "distanceMeters": 2102
       },
       "reason": "No exact station identity or defensible local spatial support was established."
     }

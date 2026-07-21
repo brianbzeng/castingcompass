@@ -183,10 +183,12 @@ station identity and coordinate support, never for current water-quality
 status. The receipt marks every mapping local-preliminary and still requiring
 independent review. Its tool cannot edit policy or infer coverage automatically.
 
-Poplar Beach remains deliberately unmapped. Its nearest station among the
-reviewed set is Francis Beach, 1,944 m away, without exact identity or separately
-documented local spatial authority. Poplar therefore remains `not-covered`,
-`unknown`, and null-score.
+Poplar Beach and Seal Point Park Shoreline remain deliberately unmapped. Poplar's
+nearest station among the reviewed set is Francis Beach, 1,944 m away. Seal
+Point's nearest reviewed station is Coyote Point, 2,102 m away. Neither has an
+exact station identity or separately documented local spatial authority, and a
+nearby place cannot lend its official status to a different public location.
+Both therefore remain `not-covered`, `unknown`, and null-score.
 
 The checked-in current-status snapshot was refreshed at
 `2026-07-21T15:16:01Z`. The County notice itself was last updated July 15 based

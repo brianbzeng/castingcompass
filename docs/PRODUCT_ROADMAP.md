@@ -674,6 +674,10 @@ after its acceptance checks pass in the intended environment.
     rainfall/geographic support, licensing, and outage behavior; validate any proposed numeric
     fishing-quality contribution against frozen baselines; obtain independent product/safety
     review; and collect guarded deployment plus post-deployment freshness evidence.
+    - [x] Preserve the San Mateo negative-evidence boundary for Poplar Beach and Seal Point Park
+      Shoreline. Their nearest reviewed County stations are different named public locations at
+      1,944 m and 2,102 m, so neither site inherits a nearby status; both remain `not-covered`,
+      unknown, and null-score pending exact official coverage and independent review.
 - [ ] Build the map location by location until every available location has a reviewed inventory
   of notable structure and useful depth levels. Bind each feature to a reproducible official or
   licensed bathymetry/chart source, units, vertical datum, resolution, retrieval date, checksum,

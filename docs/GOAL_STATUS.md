@@ -13,6 +13,32 @@ Current provider truth overrides historical “paused” language in completed r
 2026-07-19 read-only reconciliation found an active Worker; no production mutation is authorized
 by that discovery.
 
+## Active checkpoint — Seal Point water-quality negative evidence
+
+- [x] Preserve draft PR `#142` at exact receipt head
+      `1bf7037a88f74830d42d5062e492a2f3d26715bd` as the stacked base. This follow-up is
+      isolated from the dirty primary checkout and does not merge, deploy, mutate Cloudflare or
+      D1, alter a site prior, or turn water quality into a numeric fishing score.
+- [x] Audit San Mateo County's fixed public station registry read-only at
+      `2026-07-21T15:46:25Z`. The exact County station identity nearest Seal Point Park Shoreline
+      is Coyote Point, 2,102 m away at a different named public location; the registry exposes no
+      Seal Point identity in the reviewed set.
+- [x] Preserve the negative mapping result rather than inheriting Coyote Point's current status.
+      Seal Point remains `not-covered`, unknown, and null-score; the policy and generated public
+      advisory artifact are unchanged.
+- [x] Extend the deterministic San Mateo audit receipt and regression contract to bind both
+      negative results—Poplar Beach and Seal Point—to source/tool/policy/catalog hashes, forbid
+      automatic mapping, and continue requiring independent review.
+- [x] Complete the clean local release matrix under pinned Node `22.23.1` and the locked Python
+      environments: a fresh zero-script install, both zero-vulnerability npm audits, Cloudflare
+      build, 506/506 Node tests, ESLint, TypeScript, the complete offline security/SBOM/source-
+      integrity chain, Ruff and Python syntax, 29/29 API tests, 83/83 pipeline tests with one
+      documented optional-`rasterio` skip, deterministic synthetic smoke, and all 19 critical D1
+      query plans passed. The complete Chromium/WebKit phone matrix passed 188/188 cases.
+- [ ] Publish a protected stacked draft PR and require exact-head hosted evidence. Independent
+      mapping review, guarded deployment, provider or database mutation, production activation,
+      and every numeric-contribution gate remain separate open work.
+
 ## Active checkpoint — East Bay Parks District action-only water-quality coverage
 
 - [x] Preserve draft PR `#141` at exact receipt head
@@ -1509,9 +1535,10 @@ by that discovery.
       documented spatial authority and independent review.
       **Third local advisory slice implemented:** a strict San Mateo County Health action-only
       adapter provisionally maps 11 catalog sites to 17 stable official station IDs. Exact current
-      listings suppress; absence stays unknown; Poplar remains uncovered; historical registry
-      coordinates are identity/spatial support only; independent mapping review is still required;
-      and every numeric `scoreDelta` remains null. Full local/hosted acceptance, guarded
+      listings suppress; absence stays unknown; Poplar and Seal Point remain uncovered after the
+      fixed registry shows no exact identity for either; historical registry coordinates are
+      identity/spatial support only; independent mapping review is still required; and every
+      numeric `scoreDelta` remains null. Full local/hosted acceptance, guarded
       deployment, post-deployment freshness, and every numeric-score gate remain open.
       **Fourth local advisory slice implemented:** a fixed Marin BeachWatch action request maps
       six catalog sites only through exact official station identities and leaves four ambiguous

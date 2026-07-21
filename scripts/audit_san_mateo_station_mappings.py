@@ -36,7 +36,7 @@ DEFAULT_OUTPUT = ROOT / "water-quality" / "audits" / "san-mateo-station-mappings
 REGISTRY_MACHINE_URL = "https://datahub.smcgov.org/api/id/kpd9-xf4h.json"
 MAX_RECORD_BYTES = 64 * 1024
 EARTH_RADIUS_METERS = 6_371_008.8
-UNMAPPED_REVIEW_SITE_IDS = ("poplar-beach",)
+UNMAPPED_REVIEW_SITE_IDS = ("poplar-beach", "seal-point-park")
 
 
 def coordinate(value: Any, *, latitude: bool) -> float:

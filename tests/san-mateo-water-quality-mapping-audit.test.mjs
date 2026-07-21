@@ -35,11 +35,17 @@ test("San Mateo mapping audit is deterministic, bounded, and review-only", async
   assert.equal(payload.source.stationCount, 17);
   assert.equal(payload.source.registryUse, "station identity and spatial context only; never current status");
   assert.equal(payload.mappedSites.length, 11);
-  assert.deepEqual(payload.unmappedSites.map((site) => site.siteId), ["poplar-beach"]);
+  assert.deepEqual(
+    payload.unmappedSites.map((site) => site.siteId),
+    ["poplar-beach", "seal-point-park"],
+  );
   assert.ok(payload.mappedSites.every((site) => site.policyMapped));
   assert.ok(payload.mappedSites.every((site) => site.reviewStatus === "local-preliminary-independent-review-required"));
   assert.ok(payload.mappedSites.every((site) => site.stationSupport.every((station) => station.distanceMeters <= 995)));
   assert.equal(payload.unmappedSites[0].nearestReviewedStation.distanceMeters, 1944);
+  assert.equal(payload.unmappedSites[1].nearestReviewedStation.stationId, "AB18762");
+  assert.equal(payload.unmappedSites[1].nearestReviewedStation.stationName, "COYOTE POINT");
+  assert.equal(payload.unmappedSites[1].nearestReviewedStation.distanceMeters, 2102);
 });
 
 test("San Mateo mapping audit rejects malformed registry coordinates", async (t) => {
@@ -62,7 +68,7 @@ test("San Mateo mapping audit rejects malformed registry coordinates", async (t)
   await assert.rejects(readFile(output));
 });
 
-test("checked-in San Mateo receipt binds every provisional mapping and preserves Poplar unknown", async () => {
+test("checked-in San Mateo receipt binds every provisional mapping and preserves reviewed gaps unknown", async () => {
   const [audit, policy, overlay, auditTool, policyBytes, siteBytes] = await Promise.all([
     readJson("water-quality/audits/san-mateo-station-mappings.json"),
     readJson("water-quality/policy.json"),
@@ -90,8 +96,10 @@ test("checked-in San Mateo receipt binds every provisional mapping and preserves
     );
     assert.equal(overlay.sites[site.siteId].scoreDelta, null);
   }
-  assert.equal(policy.site_mappings["poplar-beach"], undefined);
-  assert.equal(overlay.sites["poplar-beach"].status, "not-covered");
-  assert.equal(overlay.sites["poplar-beach"].recommendationEffect, "unknown");
-  assert.equal(overlay.sites["poplar-beach"].scoreDelta, null);
+  for (const siteId of ["poplar-beach", "seal-point-park"]) {
+    assert.equal(policy.site_mappings[siteId], undefined);
+    assert.equal(overlay.sites[siteId].status, "not-covered");
+    assert.equal(overlay.sites[siteId].recommendationEffect, "unknown");
+    assert.equal(overlay.sites[siteId].scoreDelta, null);
+  }
 });
