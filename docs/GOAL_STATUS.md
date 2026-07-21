@@ -13,6 +13,39 @@ Current provider truth overrides historical “paused” language in completed r
 2026-07-19 read-only reconciliation found an active Worker; no production mutation is authorized
 by that discovery.
 
+## Active checkpoint — pollution-score independent-review handoff
+
+- [x] Preserve protected draft PR `#145` at exact final receipt head
+      `9fd337d561056fef5227eb013fa8f7b909f69343` as the immutable policy source. This
+      follow-up is isolated from the dirty primary checkout and does not merge, deploy, mutate
+      Cloudflare or D1, collect pollution data, admit a source, change the advisory runtime or
+      public artifact, alter a site prior, or authorize a numeric fishing-score contribution.
+- [x] Freeze a strict private review schema and source-bound verifier for the two required
+      disciplines. Separate owner-only non-symlink files must bind the exact source commit, policy
+      version, and policy digest; identify distinct fisheries/marine-ecology and public-health/
+      risk-communication roles; preserve qualification and substantive notes outside Git by
+      digest only; and assert independence from implementation.
+- [x] Preserve honest review outcomes. An accepted boundary requires all ten safety/meaning checks
+      and zero blocking findings, while a valid `changes_required` record must expose at least one
+      failed check or blocking finding and produces an explicitly incomplete receipt. Reviewer
+      IDs, private evidence digests, notes, findings, and paths never enter the aggregate receipt.
+- [x] Keep every authority boundary false even when both reviews accept the inactive policy:
+      runtime collection, positive or negative numeric scoring, catch-probability claims, water-
+      contact or seafood-safety claims, merge, deployment, and production remain unauthorized.
+      Focused deterministic and adversarial tests pass 6/6, and the policy/contract are bound into
+      the CI security chain, release-source inventory, and deterministic release bundle.
+- [x] Complete the clean full local release matrix under pinned Node `22.23.1` and the locked
+      Python environments: fresh zero-script install, both zero-vulnerability npm audits,
+      Cloudflare build, 518/518 Node tests, ESLint, TypeScript, the complete offline security/
+      SBOM/source-integrity chain, Ruff, 29/29 API tests, all 19 critical D1 query plans, 83/83
+      pipeline tests with one documented optional-`rasterio` skip, deterministic synthetic smoke,
+      deterministic release-bundle tamper checks, and 188/188 Chromium/WebKit phone cases passed.
+- [ ] Publish the protected stacked draft PR, pass exact hosted checks, and record immutable
+      implementation and receipt heads without merging or deploying.
+- [ ] Obtain the two real qualified independent reviews outside Git and verify their private
+      records. CodeQL against protected `main`, every future source/target/measurement/validation
+      gate, guarded deployment, and production evidence remain separate open work.
+
 ## Active checkpoint — pollution-score source and meaning boundary
 
 - [x] Preserve draft PR `#144` at exact final receipt head

@@ -35,6 +35,7 @@ const sourcePaths = [
   ["pipeline/.python-version", "pipeline/.python-version"],
   ["pipeline/requirements-ci.lock", "pipeline/requirements-ci.lock"],
   ["contracts/ai-review-queue-message.schema.json", "contracts/ai-review-queue-message.schema.json"],
+  ["contracts/pollution-score-independent-review.schema.json", "contracts/pollution-score-independent-review.schema.json"],
   ["contracts/privacy-export-queue-message.schema.json", "contracts/privacy-export-queue-message.schema.json"],
   ["security/api-image-policy.json", "security/api-image-policy.json"],
   ["security/ai-review-queue-policy.json", "security/ai-review-queue-policy.json"],
@@ -51,6 +52,7 @@ const sourcePaths = [
   ["services/api/.python-version", "services/api/.python-version"],
   ["services/api/Dockerfile", "services/api/Dockerfile"],
   ["services/api/requirements-runtime.lock", "services/api/requirements-runtime.lock"],
+  ["water-quality/pollution-score-source-policy.json", "water-quality/pollution-score-source-policy.json"],
   ["wrangler.jsonc", "wrangler.jsonc"],
 ];
 const releaseSbomInputs = [
@@ -63,6 +65,7 @@ const releaseSbomInputs = [
   "pipeline/.python-version",
   "pipeline/requirements-ci.lock",
   "contracts/ai-review-queue-message.schema.json",
+  "contracts/pollution-score-independent-review.schema.json",
   "contracts/privacy-export-queue-message.schema.json",
   "security/api-image-policy.json",
   "security/ai-review-queue-policy.json",
@@ -78,6 +81,7 @@ const releaseSbomInputs = [
   "services/api/.python-version",
   "services/api/Dockerfile",
   "services/api/requirements-runtime.lock",
+  "water-quality/pollution-score-source-policy.json",
   "wrangler.jsonc",
 ];
 
@@ -475,6 +479,7 @@ export function verifyReleaseArtifacts({ outputDirectory, commitSha, repository 
     `${RELEASE_PREFIX}/drizzle/0018_ai_review_queue.sql`,
     `${RELEASE_PREFIX}/drizzle/0019_async_privacy_exports.sql`,
     `${RELEASE_PREFIX}/contracts/ai-review-queue-message.schema.json`,
+    `${RELEASE_PREFIX}/contracts/pollution-score-independent-review.schema.json`,
     `${RELEASE_PREFIX}/contracts/privacy-export-queue-message.schema.json`,
     `${RELEASE_PREFIX}/security/ai-review-queue-policy.json`,
     `${RELEASE_PREFIX}/security/privacy-export-queue-policy.json`,
@@ -496,6 +501,7 @@ export function verifyReleaseArtifacts({ outputDirectory, commitSha, repository 
     `${RELEASE_PREFIX}/services/api/.python-version`,
     `${RELEASE_PREFIX}/services/api/Dockerfile`,
     `${RELEASE_PREFIX}/services/api/requirements-runtime.lock`,
+    `${RELEASE_PREFIX}/water-quality/pollution-score-source-policy.json`,
     `${RELEASE_PREFIX}/wrangler.jsonc`,
   ];
   for (const required of requiredEntries) {

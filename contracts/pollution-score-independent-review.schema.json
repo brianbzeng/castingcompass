@@ -1,0 +1,105 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://castingcompass.com/contracts/pollution-score-independent-review.schema.json",
+  "title": "CastingCompass private pollution score source-boundary independent review",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "review_id",
+    "source_commit",
+    "pollution_policy_sha256",
+    "policy_version",
+    "reviewed_at",
+    "reviewer_role",
+    "reviewer_independent_of_implementation",
+    "reviewer_competence_evidence_sha256",
+    "review_evidence_sha256",
+    "disposition",
+    "blocking_finding_count",
+    "review_checklist"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "castingcompass.pollution-score-independent-review/1.0.0"
+    },
+    "review_id": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$"
+    },
+    "source_commit": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{40}$"
+    },
+    "pollution_policy_sha256": {
+      "$ref": "#/$defs/sha256"
+    },
+    "policy_version": {
+      "const": "castingcompass.pollution-score-candidates/0.1.0"
+    },
+    "reviewed_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "reviewer_role": {
+      "enum": [
+        "fisheries_or_marine_ecology_methods_reviewer",
+        "public_health_risk_communication_reviewer"
+      ]
+    },
+    "reviewer_independent_of_implementation": {
+      "const": true
+    },
+    "reviewer_competence_evidence_sha256": {
+      "$ref": "#/$defs/sha256"
+    },
+    "review_evidence_sha256": {
+      "$ref": "#/$defs/sha256"
+    },
+    "disposition": {
+      "enum": [
+        "accepted_boundary",
+        "changes_required"
+      ]
+    },
+    "blocking_finding_count": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 100
+    },
+    "review_checklist": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "source_meanings_are_separated",
+        "spatial_temporal_quality_boundaries_are_explicit",
+        "agency_advice_remains_authoritative",
+        "runtime_collection_remains_disabled",
+        "numeric_scoring_remains_disabled",
+        "catch_probability_claim_remains_prohibited",
+        "water_contact_safety_claim_remains_prohibited",
+        "seafood_safety_claim_remains_prohibited",
+        "activation_gates_are_sufficient_for_this_boundary",
+        "no_merge_deployment_or_activation_authority_is_granted"
+      ],
+      "properties": {
+        "source_meanings_are_separated": { "type": "boolean" },
+        "spatial_temporal_quality_boundaries_are_explicit": { "type": "boolean" },
+        "agency_advice_remains_authoritative": { "type": "boolean" },
+        "runtime_collection_remains_disabled": { "type": "boolean" },
+        "numeric_scoring_remains_disabled": { "type": "boolean" },
+        "catch_probability_claim_remains_prohibited": { "type": "boolean" },
+        "water_contact_safety_claim_remains_prohibited": { "type": "boolean" },
+        "seafood_safety_claim_remains_prohibited": { "type": "boolean" },
+        "activation_gates_are_sufficient_for_this_boundary": { "type": "boolean" },
+        "no_merge_deployment_or_activation_authority_is_granted": { "type": "boolean" }
+      }
+    }
+  },
+  "$defs": {
+    "sha256": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    }
+  }
+}

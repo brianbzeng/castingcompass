@@ -690,6 +690,12 @@ after its acceptance checks pass in the intended environment.
       measurement sources stay research-only; CalEnviroScreen is rejected for site scoring; and
       both positive and negative score contribution remain disabled pending pre-registered
       held-out validation and independent fisheries plus public-health review.
+    - [x] Prepare a fail-closed two-discipline independent-review handoff for that exact inactive
+      boundary. Private canonical records bind the final PR `#145` policy commit and digest,
+      require distinct fisheries/marine-ecology and public-health/risk-communication reviewers,
+      accept honest changes-required outcomes, and emit only an aggregate receipt. Even two
+      accepted reviews authorize no collection, score, model claim, merge, deployment, or
+      production action. No real independent review has yet been supplied.
 - [ ] Build the map location by location until every available location has a reviewed inventory
   of notable structure and useful depth levels. Bind each feature to a reproducible official or
   licensed bathymetry/chart source, units, vertical datum, resolution, retrieval date, checksum,

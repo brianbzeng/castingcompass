@@ -71,3 +71,9 @@ rollback and drift monitoring.
 
 Agency contact and consumption advice remains visible and authoritative regardless of
 whether a future fishing-quality research component ever validates.
+
+The two required disciplines have a fail-closed private handoff in
+[`POLLUTION-SCORE-INDEPENDENT-REVIEW.md`](POLLUTION-SCORE-INDEPENDENT-REVIEW.md).
+That handoff has not been executed. It can record either acceptance of this inactive boundary or
+changes required, but it cannot admit a source, authorize collection or scoring, merge a PR, or
+deploy anything.

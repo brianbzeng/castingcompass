@@ -1,7 +1,7 @@
 {
   "bomFormat": "CycloneDX",
   "specVersion": "1.5",
-  "serialNumber": "urn:uuid:6eb3181a-a3c6-5207-ad6d-f60c4ab24d04",
+  "serialNumber": "urn:uuid:ac5272a9-a22f-50b6-9543-d9fc9972c1b6",
   "version": 1,
   "metadata": {
     "component": {
@@ -33,6 +33,10 @@
         },
         {
           "name": "castingcompass:input-sha256",
+          "value": "contracts/pollution-score-independent-review.schema.json:c3c67fdf02e39f20729c71ca3c5ceb3a0f734fe7a6d96de3590ead63065cd60e"
+        },
+        {
+          "name": "castingcompass:input-sha256",
           "value": "contracts/privacy-export-queue-message.schema.json:064bb98f847826df49f49a5ab3eab26521c858afcd17118049c59ff0bf47fcad"
         },
         {
@@ -45,7 +49,7 @@
         },
         {
           "name": "castingcompass:input-sha256",
-          "value": "package.json:6aa4edc5f76555638c272faf488f68f44bfddde50a8b45dd4c17fb99b0b8beba"
+          "value": "package.json:2b7a8738f9ab2b11e3f0abf8db63b1a563a89657a48906aae6a2106efc443c3e"
         },
         {
           "name": "castingcompass:input-sha256",
@@ -110,6 +114,10 @@
         {
           "name": "castingcompass:input-sha256",
           "value": "services/api/requirements-runtime.lock:296d1f0bf782a6a044e86706ab06bcd45890c48730d7f0760e78b496eda34202"
+        },
+        {
+          "name": "castingcompass:input-sha256",
+          "value": "water-quality/pollution-score-source-policy.json:1061fcffec8283bf48e333a20a58ac8ea77545f5537f1d68685dda267d89d250"
         },
         {
           "name": "castingcompass:input-sha256",

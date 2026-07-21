@@ -22,6 +22,7 @@ const inputPaths = [
   "package.json",
   "pipeline/requirements-ci.lock",
   "contracts/ai-review-queue-message.schema.json",
+  "contracts/pollution-score-independent-review.schema.json",
   "contracts/privacy-export-queue-message.schema.json",
   "security/api-image-policy.json",
   "security/ai-review-queue-policy.json",
@@ -38,6 +39,7 @@ const inputPaths = [
   "services/api/Dockerfile",
   "services/api/requirements-runtime.lock",
   "pipeline/.python-version",
+  "water-quality/pollution-score-source-policy.json",
   "wrangler.jsonc",
 ];
 const inputs = new Map(inputPaths.map((path) => [path, readFileSync(resolve(root, path))]));
