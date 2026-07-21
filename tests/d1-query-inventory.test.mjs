@@ -81,6 +81,16 @@ test("the committed inventory covers every Worker prepare site and its reviewed 
   assert.ok(inventory.queries.some(({ executionMode, sql }) =>
     executionMode === "first"
       && sql === "SELECT 1 AS present FROM saved_sites WHERE user_id = ? AND site_id = ? LIMIT 1"));
+
+  const terminalTripWrites = inventory.queries.filter(({ executionMode, statementClass, sql }) =>
+    executionMode === "prepared-statement"
+      && statementClass === "UPDATE"
+      && /UPDATE trips SET/u.test(sql ?? "")
+      && /WHERE id = \? AND user_id IS \? AND status = 'active' AND token_hash = \?$/u.test(sql ?? ""));
+  assert.equal(terminalTripWrites.length, 2);
+  assert.ok(terminalTripWrites.some(({ sql }) => /status = 'completed'/u.test(sql ?? "")));
+  assert.ok(terminalTripWrites.some(({ sql }) =>
+    sql === "UPDATE trips SET token_hash = NULL, updated_at = ? WHERE id = ? AND user_id IS ? AND status = 'active' AND token_hash = ?"));
 });
 
 test("unscoped writes and unreviewed multi-row reads fail closed", async () => {

@@ -971,6 +971,144 @@ test("per-record authorization denies cross-account reads and mutations", async 
     .get(gearId, owner.id).count, 1);
 });
 
+test("active trip completion and cancellation bind the authenticated account even with the exact token", async () => {
+  const { sqlite, d1 } = await database();
+  const owner = await addUser(sqlite, "trip-terminal-owner-131");
+  const other = await addUser(sqlite, "trip-terminal-other-132");
+  const sites = [{ id: "ocean-beach", type: "Beach" }];
+  const startedAt = "2026-07-21T18:00:00.000Z";
+  const reporterKey = "owner-bound-terminal-reporter-key-123456789";
+  const material = tripRequestMaterial();
+  const startedResponse = await handleTripRequest(new Request(
+    "https://castingcompass.com/api/trips/start",
+    {
+      method: "POST",
+      headers: { Origin: "https://castingcompass.com", "Content-Type": "application/json" },
+      body: JSON.stringify({
+        ...material,
+        siteId: "ocean-beach",
+        startedAt,
+        mode: "beach",
+        anglerCount: 1,
+        consent: true,
+        primaryTargetConfirmed: true,
+        scoreInfluencedChoice: false,
+        reporterKey,
+        website: "",
+      }),
+    },
+  ), { DB: d1 }, sites, { accountId: owner.id, now: () => new Date(startedAt) });
+  assert.equal(startedResponse.status, 201, JSON.stringify(await startedResponse.clone().json()));
+  const started = await startedResponse.json();
+
+  const deniedCancel = await handleTripRequest(new Request(
+    `https://castingcompass.com/api/trips/${started.trip.id}/cancel`,
+    {
+      method: "POST",
+      headers: { Origin: "https://castingcompass.com", "Content-Type": "application/json" },
+      body: JSON.stringify({ token: started.token, reason: "other" }),
+    },
+  ), { DB: d1 }, sites, {
+    accountId: other.id,
+    now: () => new Date("2026-07-21T18:15:00.000Z"),
+  });
+  assert.equal(deniedCancel.status, 404);
+  assert.equal((await deniedCancel.json()).error.code, "trip_not_found");
+  const store = createTripStore(d1);
+  await store.initialize();
+  assert.equal(await store.cancelTrip?.(
+    started.trip.id,
+    await sha256(started.token),
+    other.id,
+    "2026-07-21T18:20:00.000Z",
+    null,
+  ), false);
+
+  const completionForm = () => {
+    const form = new FormData();
+    form.set("token", started.token);
+    form.set("reporterKey", reporterKey);
+    form.set("mode", "beach");
+    form.set("anglerCount", "1");
+    form.set("keeperCount", "0");
+    form.set("shortReleasedCount", "0");
+    form.set("otherCatchCount", "0");
+    form.set("consent", "true");
+    form.set("primaryTargetConfirmed", "true");
+    form.set("completeAttempt", "true");
+    form.set("website", "");
+    return form;
+  };
+  const deniedCompletion = await handleTripRequest(new Request(
+    `https://castingcompass.com/api/trips/${started.trip.id}/complete`,
+    {
+      method: "POST",
+      headers: { Origin: "https://castingcompass.com" },
+      body: completionForm(),
+    },
+  ), { DB: d1 }, sites, {
+    accountId: other.id,
+    now: () => new Date("2026-07-21T18:30:00.000Z"),
+  });
+  assert.equal(deniedCompletion.status, 404);
+  assert.equal((await deniedCompletion.json()).error.code, "trip_not_found");
+  assert.deepEqual(
+    { ...sqlite.prepare("SELECT user_id, status, token_hash FROM trips WHERE id = ?").get(started.trip.id) },
+    {
+      user_id: owner.id,
+      status: "active",
+      token_hash: await sha256(started.token),
+    },
+  );
+
+  const ownershipRaceStore = {
+    ...store,
+    async completeTrip(...arguments_) {
+      sqlite.prepare("UPDATE trips SET user_id = ? WHERE id = ?").run(other.id, started.trip.id);
+      return store.completeTrip(...arguments_);
+    },
+  };
+  const deniedOwnershipRace = await handleTripRequest(new Request(
+    `https://castingcompass.com/api/trips/${started.trip.id}/complete`,
+    {
+      method: "POST",
+      headers: { Origin: "https://castingcompass.com" },
+      body: completionForm(),
+    },
+  ), { DB: d1 }, sites, {
+    accountId: owner.id,
+    now: () => new Date("2026-07-21T18:40:00.000Z"),
+    store: ownershipRaceStore,
+  });
+  assert.equal(deniedOwnershipRace.status, 404);
+  assert.deepEqual(
+    { ...sqlite.prepare("SELECT user_id, status, token_hash FROM trips WHERE id = ?").get(started.trip.id) },
+    {
+      user_id: other.id,
+      status: "active",
+      token_hash: await sha256(started.token),
+    },
+  );
+  sqlite.prepare("UPDATE trips SET user_id = ? WHERE id = ?").run(owner.id, started.trip.id);
+
+  const completed = await handleTripRequest(new Request(
+    `https://castingcompass.com/api/trips/${started.trip.id}/complete`,
+    {
+      method: "POST",
+      headers: { Origin: "https://castingcompass.com" },
+      body: completionForm(),
+    },
+  ), { DB: d1 }, sites, {
+    accountId: owner.id,
+    now: () => new Date("2026-07-21T18:45:00.000Z"),
+  });
+  assert.equal(completed.status, 200, JSON.stringify(await completed.clone().json()));
+  assert.deepEqual(
+    { ...sqlite.prepare("SELECT user_id, status, token_hash FROM trips WHERE id = ?").get(started.trip.id) },
+    { user_id: owner.id, status: "completed", token_hash: null },
+  );
+});
+
 test("saved-location and gear-preset reads and writes enforce exact account ceilings", async () => {
   const { sqlite, d1 } = await database();
   const user = await addUser(sqlite, "resource-ceilings");

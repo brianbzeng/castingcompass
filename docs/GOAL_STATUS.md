@@ -40,6 +40,27 @@ by that discovery.
       commit. Their branches, comments, commits, and hosted evidence remain preserved for audit
       and rollback reference; `#146` is now the repository's only open PR and remains a draft.
 
+## Active checkpoint — terminal trip ownership predicates
+
+- [x] Audit owner-scoped trip mutations against the documented D1/SQLite row-security
+      equivalent. Active completion and cancellation authenticated the route and required the
+      recovery token, but their final D1 updates did not repeat the authenticated `user_id`, so
+      the database statement itself did not satisfy the atomic ownership rule.
+- [x] Bind the server-derived account identity into both the handler precheck and final D1
+      completion/cancellation update. The terminal writes now require the same `id`, `user_id`,
+      active state, and token hash; no submitted account identifier or browser state grants
+      authority.
+- [x] Add exact-token cross-account tests for cancellation and completion plus an ownership-
+      change race between the handler read and final update. Every mismatch returns the same
+      `404`, leaves the trip active, and preserves its recovery token hash.
+- [x] Regenerate the complete 221-site D1 query inventory and assert that both terminal updates
+      retain the account predicate in the committed machine-readable ledger.
+- [x] Pass the complete pinned repository verification: Cloudflare build, ESLint, TypeScript,
+      all 546/546 Node tests, the complete offline security/SBOM/source-integrity chain, and both
+      zero-vulnerability npm audits are green. Commit and exact bundle receipts are recorded in
+      the local checkpoint; no push, pull request, merge, deployment, provider query, D1
+      mutation, model change, or UI change is part of this work.
+
 ## Active checkpoint — observability activation private-evidence handoff
 
 - [x] Bind the unfilled handoff to consolidated draft PR `#146` receipt head

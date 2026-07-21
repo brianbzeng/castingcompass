@@ -577,6 +577,7 @@ export interface TripStore {
   completeTrip(
     id: string,
     tokenHash: string,
+    accountId: string | null,
     completion: CompletionRecord,
     provenance?: ValidationProvenanceRecord,
     feasibilityTerminal?: FeasibilityEventRecord | null,
@@ -584,6 +585,7 @@ export interface TripStore {
   cancelTrip?(
     id: string,
     tokenHash: string,
+    accountId: string | null,
     timestamp: string,
     feasibilityTerminal: FeasibilityEventRecord | null,
   ): Promise<boolean>;
@@ -1703,7 +1705,7 @@ export function createTripStore(db: D1DatabaseLike): TripStore {
         .first<StoredForecastImpression>();
     },
 
-    async completeTrip(id, tokenHash, completion, provenance, feasibilityTerminal) {
+    async completeTrip(id, tokenHash, accountId, completion, provenance, feasibilityTerminal) {
       const update = db.prepare(`UPDATE trips SET
           status = 'completed',
           opportunity_window_id = CASE WHEN mode = ? THEN opportunity_window_id ELSE NULL END,
@@ -1724,7 +1726,7 @@ export function createTripStore(db: D1DatabaseLike): TripStore {
           notes = ?, consent = 1, consent_at = ?,
           moderation_status = 'pending', photo_key = ?,
           photo_content_type = ?, photo_size_bytes = ?, updated_at = ?, completed_at = ?, token_hash = NULL
-        WHERE id = ? AND status = 'active' AND token_hash = ?`)
+        WHERE id = ? AND user_id IS ? AND status = 'active' AND token_hash = ?`)
         .bind(
           completion.mode,
           completion.mode,
@@ -1769,6 +1771,7 @@ export function createTripStore(db: D1DatabaseLike): TripStore {
           completion.updatedAt,
           completion.updatedAt,
           id,
+          accountId,
           tokenHash,
         );
 
@@ -1797,10 +1800,10 @@ export function createTripStore(db: D1DatabaseLike): TripStore {
       return getTrip(id);
     },
 
-    async cancelTrip(id, tokenHash, timestamp, feasibilityTerminal) {
+    async cancelTrip(id, tokenHash, accountId, timestamp, feasibilityTerminal) {
       const update = db.prepare(`UPDATE trips SET token_hash = NULL, updated_at = ?
-        WHERE id = ? AND status = 'active' AND token_hash = ?`)
-        .bind(timestamp, id, tokenHash);
+        WHERE id = ? AND user_id IS ? AND status = 'active' AND token_hash = ?`)
+        .bind(timestamp, id, accountId, tokenHash);
       const results = feasibilityTerminal
         ? await db.batch([
             update,
@@ -2859,7 +2862,8 @@ export async function handleTripRequest(
       }
       const reason = parseSafeCancellationReason(body.reason);
       const existing = await store.getTrip(id);
-      if (!existing || existing.status !== "active" || !store.cancelTrip) {
+      if (!existing || existing.status !== "active"
+        || !sameTripAccount(existing, options.accountId) || !store.cancelTrip) {
         throw new ApiError(404, "trip_not_found", "The active trip could not be found.");
       }
       const timestamp = now.toISOString();
@@ -2870,7 +2874,13 @@ export async function handleTripRequest(
       if (feasibilityStart && !feasibilityTerminal) {
         throw new ApiError(409, "validation_pilot_terminal_invalid", "The pilot cancellation could not be reconciled.");
       }
-      const canceled = await store.cancelTrip(id, await sha256(token), timestamp, feasibilityTerminal);
+      const canceled = await store.cancelTrip(
+        id,
+        await sha256(token),
+        options.accountId ?? null,
+        timestamp,
+        feasibilityTerminal,
+      );
       if (!canceled) throw new ApiError(404, "trip_not_found", "The active trip could not be found.");
       return jsonResponse({ canceled: true, id, reason });
     }
@@ -2912,7 +2922,7 @@ export async function handleTripRequest(
           receipt: { operation: "complete", tripId: id },
         }, 200, reporter.setCookie);
       }
-      if (!existing || existing.status !== "active") {
+      if (!existing || existing.status !== "active" || !sameTripAccount(existing, options.accountId)) {
         throw new ApiError(404, "trip_not_found", "The active trip could not be found.");
       }
 
@@ -2986,7 +2996,7 @@ export async function handleTripRequest(
       const uploaded = await processPhoto(form.get("photo"), id, env);
 
       try {
-        const completed = await store.completeTrip(id, tokenHash, {
+        const completed = await store.completeTrip(id, tokenHash, options.accountId ?? null, {
           endedAt,
           mode,
           fishingMethod:
@@ -3781,8 +3791,11 @@ function parseRequestToken(value: unknown) {
 }
 
 function sameTripPrincipal(row: TripRow, reporterKeyHash: string, accountId?: string | null) {
-  return row.reporter_key_hash === reporterKeyHash &&
-    (row.user_id ?? null) === (accountId ?? null);
+  return row.reporter_key_hash === reporterKeyHash && sameTripAccount(row, accountId);
+}
+
+function sameTripAccount(row: TripRow, accountId?: string | null) {
+  return (row.user_id ?? null) === (accountId ?? null);
 }
 
 function isMatchingLiveStart(

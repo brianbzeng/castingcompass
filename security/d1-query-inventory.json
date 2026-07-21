@@ -35,7 +35,7 @@
     },
     {
       "file": "worker/trips.ts",
-      "sha256": "06c80a894ed9006dab0dbef1ef1bc117494d6fa34dfc3273c6253f7de2d9f5b8",
+      "sha256": "1e9dd79461eeb42a39181becf9a757abf3a48dcca83e39cc42425b94fa42308d",
       "prepareCallCount": 25
     },
     {
@@ -4294,7 +4294,7 @@
     {
       "callSiteId": "66c4551e6e6477b62fe71c53",
       "file": "worker/trips.ts",
-      "line": 1487,
+      "line": 1489,
       "containingFunction": "initialize",
       "occurrence": 1,
       "executionMode": "batch",
@@ -4303,7 +4303,7 @@
       "expressionSha256": "a30d43434bf332af4ac7a1121a25f2e8a539a880f8dd3e32719465d1da25f46c",
       "declarationReference": {
         "name": "CREATE_TRIPS_SQL",
-        "declarationLine": 600,
+        "declarationLine": 602,
         "initializerSha256": "64ca82831a7847f77b596831ae44ee8c768be4485ba95d280b24705d115eac41"
       },
       "statementClass": "UNRESOLVED",
@@ -4318,7 +4318,7 @@
     {
       "callSiteId": "1dcb1a0d157d5082ea29ac24",
       "file": "worker/trips.ts",
-      "line": 1488,
+      "line": 1490,
       "containingFunction": "initialize",
       "occurrence": 2,
       "executionMode": "batch",
@@ -4327,7 +4327,7 @@
       "expressionSha256": "b54adea780f2574650cbc99cf741678af37c3417c4734bb0138c3ed1a12c25af",
       "declarationReference": {
         "name": "CREATE_FORECAST_IMPRESSIONS_SQL",
-        "declarationLine": 778,
+        "declarationLine": 780,
         "initializerSha256": "a370a3d68d7fc6f1ae3ca466db2a26bbd464e6ea96e3539887396c31bee132c2"
       },
       "statementClass": "UNRESOLVED",
@@ -4342,7 +4342,7 @@
     {
       "callSiteId": "07eb0899fbe3e17b6ae9033a",
       "file": "worker/trips.ts",
-      "line": 1489,
+      "line": 1491,
       "containingFunction": "initialize",
       "occurrence": 3,
       "executionMode": "batch",
@@ -4351,7 +4351,7 @@
       "expressionSha256": "cfd1855de8f1e1f5c1702d15ab4a99ba89eae74f097d6efb1ed6f079c6ac8dcf",
       "declarationReference": {
         "name": "CREATE_TRIP_VALIDATION_PROVENANCE_SQL",
-        "declarationLine": 825,
+        "declarationLine": 827,
         "initializerSha256": "fc9ccbb6a78be3625961bab0d73e330e067cc2bd1d9c5d148a2518168a391f4c"
       },
       "statementClass": "UNRESOLVED",
@@ -4366,7 +4366,7 @@
     {
       "callSiteId": "9280d6b7baa7b3c9abd1612d",
       "file": "worker/trips.ts",
-      "line": 1491,
+      "line": 1493,
       "containingFunction": "map-callback",
       "occurrence": 4,
       "executionMode": "batch",
@@ -4390,7 +4390,7 @@
     {
       "callSiteId": "b5e79e84df3dc1af139c0682",
       "file": "worker/trips.ts",
-      "line": 1502,
+      "line": 1504,
       "containingFunction": "getTrip",
       "occurrence": 5,
       "executionMode": "first",
@@ -4412,7 +4412,7 @@
     {
       "callSiteId": "b1aff5ba9723a50230cb15eb",
       "file": "worker/trips.ts",
-      "line": 1512,
+      "line": 1514,
       "containingFunction": "assertSubmissionAllowed",
       "occurrence": 6,
       "executionMode": "first",
@@ -4434,7 +4434,7 @@
     {
       "callSiteId": "44d142e47be3a6cb2886d813",
       "file": "worker/trips.ts",
-      "line": 1516,
+      "line": 1518,
       "containingFunction": "assertSubmissionAllowed",
       "occurrence": 7,
       "executionMode": "first",
@@ -4456,7 +4456,7 @@
     {
       "callSiteId": "d0305042278bab73dda9e750",
       "file": "worker/trips.ts",
-      "line": 1520,
+      "line": 1522,
       "containingFunction": "assertSubmissionAllowed",
       "occurrence": 8,
       "executionMode": "first",
@@ -4478,7 +4478,7 @@
     {
       "callSiteId": "19eecc024dc360f6e8ea0c94",
       "file": "worker/trips.ts",
-      "line": 1534,
+      "line": 1536,
       "containingFunction": "insertTrip",
       "occurrence": 9,
       "executionMode": "prepared-statement",
@@ -4487,7 +4487,7 @@
       "expressionSha256": "19036a22fb241a794a5512e92b28132551cb2192ef0f0537c35f9f05b278e833",
       "declarationReference": {
         "name": "INSERT_TRIP_SQL",
-        "declarationLine": 1198,
+        "declarationLine": 1200,
         "initializerSha256": "5a3d25a56c06665dc6f10e360e1b73fb2316bfcd35fd3614434a5e0f3909ada7"
       },
       "statementClass": "UNRESOLVED",
@@ -4502,7 +4502,7 @@
     {
       "callSiteId": "d567becd21d5d806ff61fafd",
       "file": "worker/trips.ts",
-      "line": 1610,
+      "line": 1612,
       "containingFunction": "getFeasibilityActivation",
       "occurrence": 10,
       "executionMode": "first",
@@ -4524,7 +4524,7 @@
     {
       "callSiteId": "f51d56e9d67a19b0129996f2",
       "file": "worker/trips.ts",
-      "line": 1621,
+      "line": 1623,
       "containingFunction": "getFeasibilityRecruitment",
       "occurrence": 11,
       "executionMode": "first",
@@ -4546,7 +4546,7 @@
     {
       "callSiteId": "0ccd3f8b5f04681067242a2d",
       "file": "worker/trips.ts",
-      "line": 1632,
+      "line": 1634,
       "containingFunction": "getFeasibilityRecruitmentCampaign",
       "occurrence": 12,
       "executionMode": "first",
@@ -4568,7 +4568,7 @@
     {
       "callSiteId": "52c2a75547407de594433579",
       "file": "worker/trips.ts",
-      "line": 1642,
+      "line": 1644,
       "containingFunction": "getFeasibilityStart",
       "occurrence": 13,
       "executionMode": "first",
@@ -4590,7 +4590,7 @@
     {
       "callSiteId": "dbeeb4ffcafbc6494ee3b823",
       "file": "worker/trips.ts",
-      "line": 1655,
+      "line": 1657,
       "containingFunction": "getValidationEnrollment",
       "occurrence": 14,
       "executionMode": "first",
@@ -4612,7 +4612,7 @@
     {
       "callSiteId": "f1c0d5b08aecee277e045dae",
       "file": "worker/trips.ts",
-      "line": 1674,
+      "line": 1676,
       "containingFunction": "getRecruitmentEvent",
       "occurrence": 15,
       "executionMode": "first",
@@ -4634,7 +4634,7 @@
     {
       "callSiteId": "2ea7468ee647d94218d6937c",
       "file": "worker/trips.ts",
-      "line": 1700,
+      "line": 1702,
       "containingFunction": "getForecastImpression",
       "occurrence": 16,
       "executionMode": "first",
@@ -4654,45 +4654,45 @@
       "hasLimit": true
     },
     {
-      "callSiteId": "f4160bcc9ae59456d898e45b",
+      "callSiteId": "67f74fea8df082b4c54e4081",
       "file": "worker/trips.ts",
-      "line": 1707,
+      "line": 1709,
       "containingFunction": "completeTrip",
       "occurrence": 17,
       "executionMode": "prepared-statement",
       "argumentKind": "literal",
-      "expression": "`UPDATE trips SET\n          status = 'completed',\n          opportunity_window_id = CASE WHEN mode = ? THEN opportunity_window_id ELSE NULL END,\n          opportunity_score = CASE WHEN mode = ? THEN opportunity_score ELSE NULL END,\n          habitat_score = CASE WHEN mode = ? THEN habitat_score ELSE NULL END,\n          seasonality_score = CASE WHEN mode = ? THEN seasonality_score ELSE NULL END,\n          conditions_score = CASE WHEN mode = ? THEN conditions_score ELSE NULL END,\n          fishability_score = CASE WHEN mode = ? THEN fishability_score ELSE NULL END,\n          model_version = CASE WHEN mode = ? THEN model_version ELSE NULL END,\n          prediction_metadata_json = CASE WHEN mode = ? THEN prediction_metadata_json ELSE NULL END,\n          ended_at = ?, mode = ?, fishing_method = ?, gear = ?,\n          gear_profile_id = ?, rod = ?, reel = ?, bait_lure = ?, rig = ?,\n          angler_count = ?, angler_hours = ?, keeper_count = ?, short_released_count = ?,\n          halibut_encounters = ?, no_catch = ?, other_catch_count = ?, other_species = ?, observations_json = ?,\n          observation_contract_version = ?, taxon_catalog_version = ?, target_taxon_id = ?,\n          contract_status = ?, taxon_observations_json = ?, outcome_class = ?,\n          target_encounter_count = ?, any_fish_encounter_count = ?, target_identification_confidence = ?,\n          notes = ?, consent = 1, consent_at = ?,\n          moderation_status = 'pending', photo_key = ?,\n          photo_content_type = ?, photo_size_bytes = ?, updated_at = ?, completed_at = ?, token_hash = NULL\n        WHERE id = ? AND status = 'active' AND token_hash = ?`",
-      "expressionSha256": "27fb48da2090c3bf36b63be02a3da5f605181ede8346b13c7e16a1952c599e87",
+      "expression": "`UPDATE trips SET\n          status = 'completed',\n          opportunity_window_id = CASE WHEN mode = ? THEN opportunity_window_id ELSE NULL END,\n          opportunity_score = CASE WHEN mode = ? THEN opportunity_score ELSE NULL END,\n          habitat_score = CASE WHEN mode = ? THEN habitat_score ELSE NULL END,\n          seasonality_score = CASE WHEN mode = ? THEN seasonality_score ELSE NULL END,\n          conditions_score = CASE WHEN mode = ? THEN conditions_score ELSE NULL END,\n          fishability_score = CASE WHEN mode = ? THEN fishability_score ELSE NULL END,\n          model_version = CASE WHEN mode = ? THEN model_version ELSE NULL END,\n          prediction_metadata_json = CASE WHEN mode = ? THEN prediction_metadata_json ELSE NULL END,\n          ended_at = ?, mode = ?, fishing_method = ?, gear = ?,\n          gear_profile_id = ?, rod = ?, reel = ?, bait_lure = ?, rig = ?,\n          angler_count = ?, angler_hours = ?, keeper_count = ?, short_released_count = ?,\n          halibut_encounters = ?, no_catch = ?, other_catch_count = ?, other_species = ?, observations_json = ?,\n          observation_contract_version = ?, taxon_catalog_version = ?, target_taxon_id = ?,\n          contract_status = ?, taxon_observations_json = ?, outcome_class = ?,\n          target_encounter_count = ?, any_fish_encounter_count = ?, target_identification_confidence = ?,\n          notes = ?, consent = 1, consent_at = ?,\n          moderation_status = 'pending', photo_key = ?,\n          photo_content_type = ?, photo_size_bytes = ?, updated_at = ?, completed_at = ?, token_hash = NULL\n        WHERE id = ? AND user_id IS ? AND status = 'active' AND token_hash = ?`",
+      "expressionSha256": "85b2103828f8c8c1dcd44f7d934256afbb8787c33ce77371abe46394f1b91151",
       "declarationReference": null,
       "statementClass": "UPDATE",
-      "sql": "UPDATE trips SET status = 'completed', opportunity_window_id = CASE WHEN mode = ? THEN opportunity_window_id ELSE NULL END, opportunity_score = CASE WHEN mode = ? THEN opportunity_score ELSE NULL END, habitat_score = CASE WHEN mode = ? THEN habitat_score ELSE NULL END, seasonality_score = CASE WHEN mode = ? THEN seasonality_score ELSE NULL END, conditions_score = CASE WHEN mode = ? THEN conditions_score ELSE NULL END, fishability_score = CASE WHEN mode = ? THEN fishability_score ELSE NULL END, model_version = CASE WHEN mode = ? THEN model_version ELSE NULL END, prediction_metadata_json = CASE WHEN mode = ? THEN prediction_metadata_json ELSE NULL END, ended_at = ?, mode = ?, fishing_method = ?, gear = ?, gear_profile_id = ?, rod = ?, reel = ?, bait_lure = ?, rig = ?, angler_count = ?, angler_hours = ?, keeper_count = ?, short_released_count = ?, halibut_encounters = ?, no_catch = ?, other_catch_count = ?, other_species = ?, observations_json = ?, observation_contract_version = ?, taxon_catalog_version = ?, target_taxon_id = ?, contract_status = ?, taxon_observations_json = ?, outcome_class = ?, target_encounter_count = ?, any_fish_encounter_count = ?, target_identification_confidence = ?, notes = ?, consent = 1, consent_at = ?, moderation_status = 'pending', photo_key = ?, photo_content_type = ?, photo_size_bytes = ?, updated_at = ?, completed_at = ?, token_hash = NULL WHERE id = ? AND status = 'active' AND token_hash = ?",
-      "sqlSha256": "5fdbf0a5425dc8c0f51f9e4be989e244dfe62b25aafa0649cf9d27a4138d6b1f",
+      "sql": "UPDATE trips SET status = 'completed', opportunity_window_id = CASE WHEN mode = ? THEN opportunity_window_id ELSE NULL END, opportunity_score = CASE WHEN mode = ? THEN opportunity_score ELSE NULL END, habitat_score = CASE WHEN mode = ? THEN habitat_score ELSE NULL END, seasonality_score = CASE WHEN mode = ? THEN seasonality_score ELSE NULL END, conditions_score = CASE WHEN mode = ? THEN conditions_score ELSE NULL END, fishability_score = CASE WHEN mode = ? THEN fishability_score ELSE NULL END, model_version = CASE WHEN mode = ? THEN model_version ELSE NULL END, prediction_metadata_json = CASE WHEN mode = ? THEN prediction_metadata_json ELSE NULL END, ended_at = ?, mode = ?, fishing_method = ?, gear = ?, gear_profile_id = ?, rod = ?, reel = ?, bait_lure = ?, rig = ?, angler_count = ?, angler_hours = ?, keeper_count = ?, short_released_count = ?, halibut_encounters = ?, no_catch = ?, other_catch_count = ?, other_species = ?, observations_json = ?, observation_contract_version = ?, taxon_catalog_version = ?, target_taxon_id = ?, contract_status = ?, taxon_observations_json = ?, outcome_class = ?, target_encounter_count = ?, any_fish_encounter_count = ?, target_identification_confidence = ?, notes = ?, consent = 1, consent_at = ?, moderation_status = 'pending', photo_key = ?, photo_content_type = ?, photo_size_bytes = ?, updated_at = ?, completed_at = ?, token_hash = NULL WHERE id = ? AND user_id IS ? AND status = 'active' AND token_hash = ?",
+      "sqlSha256": "cf95cb31d8f2540b1e90feb6b3220047265f2e98db87b5c4ac5116863ec7f899",
       "tables": [
         "trips"
       ],
-      "placeholderCount": 44,
+      "placeholderCount": 45,
       "hasWhere": true,
       "hasOrderBy": false,
       "hasLimit": false
     },
     {
-      "callSiteId": "6a84c852b15a83778212ea69",
+      "callSiteId": "2ec9c29e5668482d27009b3e",
       "file": "worker/trips.ts",
-      "line": 1801,
+      "line": 1804,
       "containingFunction": "cancelTrip",
       "occurrence": 18,
       "executionMode": "prepared-statement",
       "argumentKind": "literal",
-      "expression": "`UPDATE trips SET token_hash = NULL, updated_at = ?\n        WHERE id = ? AND status = 'active' AND token_hash = ?`",
-      "expressionSha256": "5e8c8b99508f040d84e958d21bad6e36fc6433360908658dc929acfe40fa2ccf",
+      "expression": "`UPDATE trips SET token_hash = NULL, updated_at = ?\n        WHERE id = ? AND user_id IS ? AND status = 'active' AND token_hash = ?`",
+      "expressionSha256": "1185acd3137fca9301ac596a04fb87b8f5d1f9aabcc4917ac53a746f12b1c097",
       "declarationReference": null,
       "statementClass": "UPDATE",
-      "sql": "UPDATE trips SET token_hash = NULL, updated_at = ? WHERE id = ? AND status = 'active' AND token_hash = ?",
-      "sqlSha256": "c66e4652ae613d7dae433503fe0d4b476cdde17b0ca883e97e61ea1b5e8d5369",
+      "sql": "UPDATE trips SET token_hash = NULL, updated_at = ? WHERE id = ? AND user_id IS ? AND status = 'active' AND token_hash = ?",
+      "sqlSha256": "4a22d086c45b6ab6145ef38b388487e314097f3b08a0f638a76061d3450ebdc9",
       "tables": [
         "trips"
       ],
-      "placeholderCount": 3,
+      "placeholderCount": 4,
       "hasWhere": true,
       "hasOrderBy": false,
       "hasLimit": false
@@ -4700,7 +4700,7 @@
     {
       "callSiteId": "632f4b5f4d865e8a38f26f05",
       "file": "worker/trips.ts",
-      "line": 1816,
+      "line": 1819,
       "containingFunction": "getSummary",
       "occurrence": 19,
       "executionMode": "first",
@@ -4722,7 +4722,7 @@
     {
       "callSiteId": "69bfc49c6b01dd0843cee027",
       "file": "worker/trips.ts",
-      "line": 1877,
+      "line": 1880,
       "containingFunction": "prepareForecastImpressionInsert",
       "occurrence": 20,
       "executionMode": "returned-statement",
@@ -4731,7 +4731,7 @@
       "expressionSha256": "6a41d4d7c954377901e9fdca7500c2a3f4f86cf5dd3c001467a54098aae4264e",
       "declarationReference": {
         "name": "INSERT_FORECAST_IMPRESSION_SQL",
-        "declarationLine": 1219,
+        "declarationLine": 1221,
         "initializerSha256": "a3fe715a5989a64a0462ad049204c82ab28758a04c2308661e79266b08034716"
       },
       "statementClass": "UNRESOLVED",
@@ -4746,7 +4746,7 @@
     {
       "callSiteId": "d8725287db7c4dea8f9a4293",
       "file": "worker/trips.ts",
-      "line": 1965,
+      "line": 1968,
       "containingFunction": "prepareValidationProvenanceInsert",
       "occurrence": 21,
       "executionMode": "returned-statement",
@@ -4755,7 +4755,7 @@
       "expressionSha256": "f3104c843d944b95799af1a8c17b1898764478361956507abd1b6f5d09830162",
       "declarationReference": {
         "name": "INSERT_VALIDATION_PROVENANCE_SQL",
-        "declarationLine": 1246,
+        "declarationLine": 1248,
         "initializerSha256": "adefb9aaf915ce64a3884e057ae34fa209bd1f672c9a858582b03eb98cb93b84"
       },
       "statementClass": "UNRESOLVED",
@@ -4770,7 +4770,7 @@
     {
       "callSiteId": "69026e39efa7ee214c9df64f",
       "file": "worker/trips.ts",
-      "line": 2011,
+      "line": 2014,
       "containingFunction": "prepareFeasibilityEventInsert",
       "occurrence": 22,
       "executionMode": "returned-statement",
@@ -4779,7 +4779,7 @@
       "expressionSha256": "9fc9d0e4184ac21095ecef76483c6b724485615bd624ed0bf9499811a03316a5",
       "declarationReference": {
         "name": "INSERT_FEASIBILITY_EVENT_SQL",
-        "declarationLine": 1263,
+        "declarationLine": 1265,
         "initializerSha256": "996c8c189db04bfec574b19433a9a5f75cb9fbe53d6af6ed91e31af7192aabce"
       },
       "statementClass": "UNRESOLVED",
@@ -4794,7 +4794,7 @@
     {
       "callSiteId": "5727a7f275058abe32aa39f8",
       "file": "worker/trips.ts",
-      "line": 2018,
+      "line": 2021,
       "containingFunction": "prepareFeasibilityRecruitmentInsert",
       "occurrence": 23,
       "executionMode": "returned-statement",
@@ -4803,7 +4803,7 @@
       "expressionSha256": "1f8b71cbc1d3dd64fabcedc99fb6d2089a62bc9346314ebb8b6fd356425e175a",
       "declarationReference": {
         "name": "INSERT_FEASIBILITY_RECRUITMENT_SQL",
-        "declarationLine": 1274,
+        "declarationLine": 1276,
         "initializerSha256": "baebc33411d1e71fde44c4e25b4fb900bc4d11c4336f3ecdb0ff2201633eeae0"
       },
       "statementClass": "UNRESOLVED",
@@ -4818,7 +4818,7 @@
     {
       "callSiteId": "a788a74dd194566ac3147f2b",
       "file": "worker/trips.ts",
-      "line": 2048,
+      "line": 2051,
       "containingFunction": "prepareConditionalFeasibilityEventInsert",
       "occurrence": 24,
       "executionMode": "returned-statement",
@@ -4838,7 +4838,7 @@
     {
       "callSiteId": "795ffb124a6dc5263ab67794",
       "file": "worker/trips.ts",
-      "line": 2062,
+      "line": 2065,
       "containingFunction": "prepareConditionalCompletionProvenanceInsert",
       "occurrence": 25,
       "executionMode": "returned-statement",

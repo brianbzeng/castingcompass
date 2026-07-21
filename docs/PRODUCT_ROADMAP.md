@@ -120,6 +120,11 @@ after its acceptance checks pass in the intended environment.
       by routing and abuse controls, and locally verify that a second authenticated account
       cannot read an owner's photo/export data or delete the owner's trip/gear. Approval of
       future moderator, support, and operator roles remains open.
+    - [x] Bind active-trip completion and cancellation to the authenticated account in both
+      the handler precheck and the final D1 update. The write now requires the same trip ID,
+      account ID, active state, and token hash atomically; exact-token cross-account and
+      ownership-change race regressions prove mismatched identity remains an indistinguishable
+      `404` without completing or canceling the row.
   - [ ] Verify strict schema/size/type validation, contextual output encoding, safe database
     binding, upload signature and metadata checks, and AI prompt-injection boundaries. Model
     instructions and user content remain data, never authority; models receive no ambient

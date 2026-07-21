@@ -272,9 +272,10 @@ class MemoryTripStore {
     };
   }
 
-  async completeTrip(id, tokenHash, completion, provenance) {
+  async completeTrip(id, tokenHash, accountId, completion, provenance) {
     const row = this.trips.get(id);
-    if (!row || row.status !== "active" || row.token_hash !== tokenHash) return null;
+    if (!row || row.status !== "active" || row.token_hash !== tokenHash
+      || (row.user_id ?? null) !== accountId) return null;
     const forecastAttributionCleared = row.mode !== completion.mode;
     Object.assign(row, {
       status: "completed",
