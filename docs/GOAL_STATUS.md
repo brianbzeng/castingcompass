@@ -40,8 +40,14 @@ by that discovery.
       SBOM/source-integrity chain, Ruff, 29/29 API tests, all 19 critical D1 query plans, 83/83
       pipeline tests with one documented optional-`rasterio` skip, deterministic synthetic smoke,
       deterministic release-bundle tamper checks, and 188/188 Chromium/WebKit phone cases passed.
-- [ ] Publish the protected stacked draft PR, pass exact hosted checks, and record immutable
-      implementation and receipt heads without merging or deploying.
+- [x] Publish protected stacked draft PR `#146` without merge or deployment. Exact implementation
+      head `8b1e120095541c5c833efd812140090221c9831a` passed push and pull-request CI runs
+      `29854838680` and `29854880247`, including two independent 188/188 Chromium/WebKit phone
+      matrices; release-provenance runs `29854838744` and `29854880224`; native API-image run
+      `29854880183` on Linux AMD64 and ARM64; and explicitly dispatched optional research-stack
+      run `29854908836` on Linux CPU and macOS ARM64. Event-inapplicable dependency and release-
+      attestation jobs skipped as designed; the immutable final receipt head is recorded on the
+      draft PR.
 - [ ] Obtain the two real qualified independent reviews outside Git and verify their private
       records. CodeQL against protected `main`, every future source/target/measurement/validation
       gate, guarded deployment, and production evidence remain separate open work.
