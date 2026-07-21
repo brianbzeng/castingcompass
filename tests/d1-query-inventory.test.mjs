@@ -56,13 +56,13 @@ test("the committed inventory covers every Worker prepare site and its reviewed 
   validatePolicy(policy, inventory);
   assert.deepEqual(JSON.parse(committed), inventory);
   assert.deepEqual(inventory.summary, {
-    prepareCallCount: 223,
-    literalCallCount: 197,
+    prepareCallCount: 220,
+    literalCallCount: 194,
     nonLiteralCallCount: 26,
     multiRowLiteralWithoutLimitCount: 12,
   });
   assert.equal(inventory.sourceFiles.length, 8);
-  assert.equal(new Set(inventory.queries.map(({ callSiteId }) => callSiteId)).size, 223);
+  assert.equal(new Set(inventory.queries.map(({ callSiteId }) => callSiteId)).size, 220);
   assert.equal(policy.multiRowReadContracts.filter(({ rowBoundStatus }) => rowBoundStatus === "open-account-cardinality").length, 0);
   assert.equal(policy.multiRowReadContracts.filter(({ rowBoundStatus }) => rowBoundStatus === "complete-rights-export").length, 9);
   assert.equal(policy.multiRowReadContracts.filter(({ rowBoundStatus }) => rowBoundStatus === "owner-lifecycle-cleanup").length, 3);
@@ -114,6 +114,26 @@ test("the committed inventory covers every Worker prepare site and its reviewed 
     executionMode === "run"
       && statementClass === "DELETE"
       && sql === "DELETE FROM auth_sessions WHERE token_hash = ?"));
+
+  const signInAttemptClaim = inventory.queries.find(({ sql }) =>
+    sql?.startsWith("INSERT INTO auth_attempts (id, email_hash, attempted_at, successful) SELECT"));
+  assert.equal(signInAttemptClaim?.executionMode, "run");
+  assert.match(signInAttemptClaim?.sql ?? "", /WHERE \(SELECT COUNT\(\*\) FROM auth_attempts WHERE email_hash = \? AND successful = 0 AND attempted_at >= \?\) < 10$/u);
+  assert.ok(inventory.queries.some(({ executionMode, statementClass, sql }) =>
+    executionMode === "run"
+      && statementClass === "UPDATE"
+      && sql === "UPDATE auth_attempts SET successful = 1 WHERE id = ? AND email_hash = ? AND attempted_at = ? AND successful = 0"));
+
+  const challengeIssuanceClaims = inventory.queries.filter(({ executionMode, statementClass, sql }) =>
+    executionMode === "run"
+      && statementClass === "INSERT"
+      && sql?.startsWith("INSERT INTO email_challenges")
+      && /WHERE \(SELECT COUNT\(\*\) FROM email_challenges WHERE email = \? AND created_at >= \?\) < 5$/u.test(sql));
+  assert.equal(challengeIssuanceClaims.length, 2);
+  assert.ok(inventory.queries.some(({ executionMode, statementClass, sql }) =>
+    executionMode === "run"
+      && statementClass === "UPDATE"
+      && sql === "UPDATE email_challenges SET attempts = ? WHERE id = ? AND kind = ? AND code_hash = ? AND created_at = ? AND attempts = ? AND resend_count = ? AND expires_at = ? AND expires_at > ?"));
 
   const terminalTripWrites = inventory.queries.filter(({ executionMode, statementClass, sql }) =>
     executionMode === "prepared-statement"

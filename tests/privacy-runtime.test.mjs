@@ -474,6 +474,306 @@ test("known and unknown invalid logins perform password derivation and return th
   }
 });
 
+test("sign-in failure ceilings are claimed atomically under a concurrent tenth attempt", async () => {
+  const { sqlite, d1 } = await database();
+  const user = await addUser(sqlite, "login-ceiling-148");
+  const emailHash = await sha256(user.email);
+  const attemptedAt = new Date().toISOString();
+  const insertAttempt = sqlite.prepare(`INSERT INTO auth_attempts
+    (id, email_hash, attempted_at, successful) VALUES (?, ?, ?, 0)`);
+  for (let index = 0; index < 9; index += 1) {
+    insertAttempt.run(`seed-attempt-${index}`, emailHash, attemptedAt);
+  }
+  d1.beforeOnceQuerySubstring = "INSERT INTO auth_attempts";
+  d1.beforeOnceQuery = () => insertAttempt.run("concurrent-tenth-attempt", emailHash, attemptedAt);
+
+  const response = await handleAccountRequest(request("/api/auth/login", {
+    method: "POST",
+    body: { email: user.email, password: user.password },
+  }), { DB: d1 }, []);
+
+  assert.equal(response?.status, 429);
+  assert.equal((await response.json()).error.code, "too_many_attempts");
+  assert.equal(sqlite.prepare(`SELECT COUNT(*) AS count FROM auth_attempts
+    WHERE email_hash = ? AND successful = 0`).get(emailHash).count, 10);
+});
+
+test("sign-in stops before credential verification when its attempt claim is unconfirmed", async () => {
+  const { sqlite, d1 } = await database();
+  const user = await addUser(sqlite, "login-claim-receipt-149");
+  sqlite.prepare("DELETE FROM auth_sessions WHERE user_id = ?").run(user.id);
+  d1.omitOnceMutationMetadataSubstring = "INSERT INTO auth_attempts";
+
+  const response = await handleAccountRequest(request("/api/auth/login", {
+    method: "POST",
+    body: { email: user.email, password: user.password },
+  }), { DB: d1 }, []);
+
+  assert.equal(response?.status, 503);
+  assert.equal((await response.json()).error.code, "sign_in_accounting_unconfirmed");
+  assert.equal(sessionCookieFrom(response), null);
+  assert.equal(sqlite.prepare("SELECT COUNT(*) AS count FROM auth_sessions WHERE user_id = ?").get(user.id).count, 0);
+  assert.equal(sqlite.prepare("SELECT COUNT(*) AS count FROM auth_attempts WHERE successful = 0").get().count, 1);
+});
+
+test("sign-in never issues a session without confirmed success classification", async () => {
+  const { sqlite, d1 } = await database();
+  const user = await addUser(sqlite, "login-success-receipt-150");
+  sqlite.prepare("DELETE FROM auth_sessions WHERE user_id = ?").run(user.id);
+  d1.omitOnceMutationMetadataSubstring = "UPDATE auth_attempts SET successful = 1";
+
+  const ambiguous = await handleAccountRequest(request("/api/auth/login", {
+    method: "POST",
+    body: { email: user.email, password: user.password },
+  }), { DB: d1 }, []);
+
+  assert.equal(ambiguous?.status, 503);
+  assert.equal((await ambiguous.json()).error.code, "sign_in_accounting_unconfirmed");
+  assert.equal(sessionCookieFrom(ambiguous), null);
+  assert.equal(sqlite.prepare("SELECT COUNT(*) AS count FROM auth_sessions WHERE user_id = ?").get(user.id).count, 0);
+  assert.equal(sqlite.prepare("SELECT COUNT(*) AS count FROM auth_attempts WHERE successful = 1").get().count, 1);
+
+  const retry = await handleAccountRequest(request("/api/auth/login", {
+    method: "POST",
+    body: { email: user.email, password: user.password },
+  }), { DB: d1 }, []);
+  assert.equal(retry?.status, 200);
+  assert.match(sessionCookieFrom(retry) ?? "", /^__Host-cc_session=/u);
+});
+
+test("email-code attempts are snapshot-bound before credential authorization", async () => {
+  const { sqlite, d1 } = await database();
+  const challengeId = `challenge_${crypto.randomUUID()}`;
+  const code = "624817";
+  const email = "challenge-attempt-race@example.com";
+  const password = "challenge attempt race passphrase";
+  const salt = Buffer.alloc(18, 151).toString("base64url");
+  const now = new Date();
+  sqlite.prepare(`INSERT INTO email_challenges
+      (id, kind, email, user_id, code_hash, password_salt, password_hash,
+        age_eligibility_confirmed_at, terms_version, privacy_version, expires_at,
+        attempts, resend_count, created_at)
+    VALUES (?, 'signup', ?, NULL, ?, ?, ?, ?, ?, ?, ?, 0, 0, ?)`).run(
+    challengeId,
+    email,
+    await sha256(`${challengeId}:${code}`),
+    salt,
+    await passwordHash(password, salt),
+    now.toISOString(),
+    LEGAL_VERSION,
+    LEGAL_VERSION,
+    new Date(now.getTime() + 15 * 60_000).toISOString(),
+    now.toISOString(),
+  );
+  const replacementHash = "a".repeat(64);
+  d1.beforeOnceQuerySubstring = "UPDATE email_challenges SET attempts = ?";
+  d1.beforeOnceQuery = () => sqlite.prepare("UPDATE email_challenges SET code_hash = ? WHERE id = ?")
+    .run(replacementHash, challengeId);
+
+  const response = await handleAccountRequest(request("/api/auth/signup/verify", {
+    method: "POST",
+    body: { challengeId, code },
+  }), { DB: d1 }, []);
+
+  assert.equal(response?.status, 409);
+  assert.equal((await response.json()).error.code, "challenge_changed");
+  assert.equal(sqlite.prepare("SELECT COUNT(*) AS count FROM users WHERE email = ?").get(email).count, 0);
+  const preserved = sqlite.prepare("SELECT code_hash, attempts FROM email_challenges WHERE id = ?").get(challengeId);
+  assert.equal(preserved.code_hash, replacementHash);
+  assert.equal(preserved.attempts, 0);
+});
+
+test("email-code success waits for a confirmed atomic attempt claim", async () => {
+  const { sqlite, d1 } = await database();
+  const challengeId = `challenge_${crypto.randomUUID()}`;
+  const code = "624818";
+  const email = "challenge-attempt-receipt@example.com";
+  const password = "challenge attempt receipt passphrase";
+  const salt = Buffer.alloc(18, 152).toString("base64url");
+  const now = new Date();
+  sqlite.prepare(`INSERT INTO email_challenges
+      (id, kind, email, user_id, code_hash, password_salt, password_hash,
+        age_eligibility_confirmed_at, terms_version, privacy_version, expires_at,
+        attempts, resend_count, created_at)
+    VALUES (?, 'signup', ?, NULL, ?, ?, ?, ?, ?, ?, ?, 0, 0, ?)`).run(
+    challengeId,
+    email,
+    await sha256(`${challengeId}:${code}`),
+    salt,
+    await passwordHash(password, salt),
+    now.toISOString(),
+    LEGAL_VERSION,
+    LEGAL_VERSION,
+    new Date(now.getTime() + 15 * 60_000).toISOString(),
+    now.toISOString(),
+  );
+  d1.omitOnceMutationMetadataSubstring = "UPDATE email_challenges SET attempts = ?";
+
+  const ambiguous = await handleAccountRequest(request("/api/auth/signup/verify", {
+    method: "POST",
+    body: { challengeId, code },
+  }), { DB: d1 }, []);
+
+  assert.equal(ambiguous?.status, 503);
+  assert.equal((await ambiguous.json()).error.code, "challenge_attempt_unconfirmed");
+  assert.equal(sessionCookieFrom(ambiguous), null);
+  assert.equal(sqlite.prepare("SELECT COUNT(*) AS count FROM users WHERE email = ?").get(email).count, 0);
+  assert.equal(sqlite.prepare("SELECT attempts FROM email_challenges WHERE id = ?").get(challengeId).attempts, 1);
+
+  const retry = await handleAccountRequest(request("/api/auth/signup/verify", {
+    method: "POST",
+    body: { challengeId, code },
+  }), { DB: d1 }, []);
+  assert.equal(retry?.status, 201);
+  assert.match(sessionCookieFrom(retry) ?? "", /^__Host-cc_session=/u);
+});
+
+test("email-code ceilings remain bounded and fail closed after the sixth claim", async () => {
+  const { sqlite, d1 } = await database();
+  const challengeId = `challenge_${crypto.randomUUID()}`;
+  const correctCode = "624819";
+  const wrongCode = "000000";
+  const email = "challenge-attempt-ceiling@example.com";
+  const now = new Date();
+  sqlite.prepare(`INSERT INTO email_challenges
+      (id, kind, email, code_hash, expires_at, attempts, resend_count, created_at)
+    VALUES (?, 'signup', ?, ?, ?, 5, 0, ?)`).run(
+    challengeId,
+    email,
+    await sha256(`${challengeId}:${correctCode}`),
+    new Date(now.getTime() + 15 * 60_000).toISOString(),
+    now.toISOString(),
+  );
+
+  const sixth = await handleAccountRequest(request("/api/auth/signup/verify", {
+    method: "POST",
+    body: { challengeId, code: wrongCode },
+  }), { DB: d1 }, []);
+  assert.equal(sixth?.status, 401);
+  assert.equal(sqlite.prepare("SELECT attempts FROM email_challenges WHERE id = ?").get(challengeId).attempts, 6);
+
+  const blocked = await handleAccountRequest(request("/api/auth/signup/verify", {
+    method: "POST",
+    body: { challengeId, code: correctCode },
+  }), { DB: d1 }, []);
+  assert.equal(blocked?.status, 429);
+  assert.equal((await blocked.json()).error.code, "too_many_code_attempts");
+  assert.equal(sqlite.prepare("SELECT attempts FROM email_challenges WHERE id = ?").get(challengeId).attempts, 6);
+  assert.equal(sqlite.prepare("SELECT COUNT(*) AS count FROM users WHERE email = ?").get(email).count, 0);
+});
+
+test("password reset keeps an unconfirmed attempt claim generic and changes no credential", async () => {
+  const { sqlite, d1 } = await database();
+  const user = await addUser(sqlite, "reset-attempt-receipt-154");
+  const originalPasswordHash = sqlite.prepare("SELECT password_hash FROM users WHERE id = ?").get(user.id).password_hash;
+  const challengeId = `challenge_${crypto.randomUUID()}`;
+  const code = "624820";
+  const now = new Date();
+  sqlite.prepare(`INSERT INTO email_challenges
+      (id, kind, email, user_id, code_hash, expires_at, attempts, resend_count, created_at)
+    VALUES (?, 'password_reset', ?, ?, ?, ?, 0, 0, ?)`).run(
+    challengeId,
+    user.email,
+    user.id,
+    await sha256(`${challengeId}:${code}`),
+    new Date(now.getTime() + 15 * 60_000).toISOString(),
+    now.toISOString(),
+  );
+  d1.omitOnceMutationMetadataSubstring = "UPDATE email_challenges SET attempts = ?";
+
+  const response = await handleAccountRequest(request("/api/auth/password/reset", {
+    method: "POST",
+    cookie: user.cookie,
+    body: { challengeId, code, password: "unconfirmed attempt replacement passphrase" },
+  }), { DB: d1 }, []);
+
+  assert.equal(response?.status, 401);
+  assert.equal((await response.json()).error.code, "invalid_code");
+  assert.equal(sessionCookieFrom(response), null);
+  assert.equal(sqlite.prepare("SELECT attempts FROM email_challenges WHERE id = ?").get(challengeId).attempts, 1);
+  assert.equal(sqlite.prepare("SELECT password_hash FROM users WHERE id = ?").get(user.id).password_hash, originalPasswordHash);
+  assert.equal(sqlite.prepare("SELECT COUNT(*) AS count FROM auth_sessions WHERE user_id = ?").get(user.id).count, 1);
+});
+
+test("email challenge issuance ceilings are claimed atomically before provider delivery", async () => {
+  const { sqlite, d1 } = await database();
+  const user = await addUser(sqlite, "challenge-issuance-ceiling-153");
+  const timestamp = new Date().toISOString();
+  const expiresAt = new Date(Date.now() + 15 * 60_000).toISOString();
+  const insertReset = sqlite.prepare(`INSERT INTO email_challenges
+    (id, kind, email, user_id, code_hash, expires_at, attempts, resend_count, created_at)
+    VALUES (?, 'password_reset', ?, ?, ?, ?, 0, 0, ?)`);
+  for (let index = 0; index < 4; index += 1) {
+    insertReset.run(`challenge_${crypto.randomUUID()}`, user.email, user.id, `${index}`.repeat(64), expiresAt, timestamp);
+  }
+  d1.beforeOnceQuerySubstring = "INSERT INTO email_challenges";
+  d1.beforeOnceQuery = () => insertReset.run(
+    `challenge_${crypto.randomUUID()}`,
+    user.email,
+    user.id,
+    "f".repeat(64),
+    expiresAt,
+    timestamp,
+  );
+
+  const originalFetch = globalThis.fetch;
+  let providerCalls = 0;
+  globalThis.fetch = async (input) => {
+    if (String(input).includes("api.resend.com")) providerCalls += 1;
+    return new Response(`${"0".repeat(35)}:0`);
+  };
+  try {
+    const reset = await handleAccountRequest(request("/api/auth/password/request", {
+      method: "POST",
+      body: { email: user.email },
+    }), { DB: d1, RESEND_API_KEY: "test" }, []);
+    assert.equal(reset?.status, 200);
+    assert.equal((await reset.json()).requested, true);
+    assert.equal(sqlite.prepare("SELECT COUNT(*) AS count FROM email_challenges WHERE email = ?").get(user.email).count, 5);
+    assert.equal(providerCalls, 0);
+
+    const { sqlite: signupSqlite, d1: signupD1 } = await database();
+    const eligible = await handleAccountRequest(request("/api/auth/signup/eligibility", {
+      method: "POST",
+      body: { birthDate: "2000-01-01" },
+    }), { DB: signupD1 }, []);
+    const eligibilityProof = (await eligible.json()).eligibilityProof;
+    const signupEmail = "challenge-issuance-ceiling@example.com";
+    const insertSignup = signupSqlite.prepare(`INSERT INTO email_challenges
+      (id, kind, email, code_hash, expires_at, attempts, resend_count, created_at)
+      VALUES (?, 'signup', ?, ?, ?, 0, 0, ?)`);
+    for (let index = 0; index < 4; index += 1) {
+      insertSignup.run(`challenge_${crypto.randomUUID()}`, signupEmail, `${index + 4}`.repeat(64), expiresAt, timestamp);
+    }
+    signupD1.beforeOnceQuerySubstring = "INSERT INTO email_challenges";
+    signupD1.beforeOnceQuery = () => insertSignup.run(
+      `challenge_${crypto.randomUUID()}`,
+      signupEmail,
+      "e".repeat(64),
+      expiresAt,
+      timestamp,
+    );
+
+    const signup = await handleAccountRequest(request("/api/auth/signup/request", {
+      method: "POST",
+      body: {
+        eligibilityProof,
+        email: signupEmail,
+        password: "a distinct rate ceiling passphrase",
+        termsAccepted: true,
+        privacyAccepted: true,
+      },
+    }), { DB: signupD1, RESEND_API_KEY: "test" }, []);
+    assert.equal(signup?.status, 429);
+    assert.equal((await signup.json()).error.code, "too_many_codes");
+    assert.equal(signupSqlite.prepare("SELECT COUNT(*) AS count FROM email_challenges WHERE email = ?")
+      .get(signupEmail).count, 5);
+    assert.equal(providerCalls, 0);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
 test("password recovery remains enumeration-resistant through request, resend, and reset", async () => {
   const { sqlite, d1 } = await database();
   const user = await addUser(sqlite, "43");

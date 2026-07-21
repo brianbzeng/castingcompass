@@ -51,6 +51,65 @@ CHECKS = (
         ("auth_attempts_attempted_idx",),
     ),
     PlanCheck(
+        "atomic sign-in attempt ceiling",
+        """INSERT INTO auth_attempts (id, email_hash, attempted_at, successful)
+           SELECT ?, ?, ?, 0
+           WHERE (SELECT COUNT(*) FROM auth_attempts
+                  WHERE email_hash = ? AND successful = 0 AND attempted_at >= ?) < 10""",
+        (
+            "attempt_fixture",
+            "email_hash_fixture",
+            "2026-07-17T00:00:00.000Z",
+            "email_hash_fixture",
+            "2026-07-16T23:00:00.000Z",
+        ),
+        ("auth_attempts_email_time_idx",),
+    ),
+    PlanCheck(
+        "sign-in success classification",
+        """UPDATE auth_attempts SET successful = 1
+           WHERE id = ? AND email_hash = ? AND attempted_at = ? AND successful = 0""",
+        ("attempt_fixture", "email_hash_fixture", "2026-07-17T00:00:00.000Z"),
+        ("sqlite_autoindex_auth_attempts_1",),
+    ),
+    PlanCheck(
+        "atomic email challenge issuance ceiling",
+        """INSERT INTO email_challenges
+             (id, kind, email, user_id, code_hash, expires_at, attempts, created_at)
+           SELECT ?, 'password_reset', ?, ?, ?, ?, 0, ?
+           WHERE (SELECT COUNT(*) FROM email_challenges
+                  WHERE email = ? AND created_at >= ?) < 5""",
+        (
+            "challenge_fixture",
+            "angler@example.com",
+            "user_fixture",
+            "code_hash_fixture",
+            "2026-07-17T00:15:00.000Z",
+            "2026-07-17T00:00:00.000Z",
+            "angler@example.com",
+            "2026-07-16T23:00:00.000Z",
+        ),
+        ("email_challenges_email_time_idx",),
+    ),
+    PlanCheck(
+        "atomic email challenge attempt claim",
+        """UPDATE email_challenges SET attempts = ?
+           WHERE id = ? AND kind = ? AND code_hash = ? AND created_at = ?
+             AND attempts = ? AND resend_count = ? AND expires_at = ? AND expires_at > ?""",
+        (
+            1,
+            "challenge_fixture",
+            "signup",
+            "code_hash_fixture",
+            "2026-07-17T00:00:00.000Z",
+            0,
+            0,
+            "2026-07-17T00:15:00.000Z",
+            "2026-07-17T00:00:00.000Z",
+        ),
+        ("sqlite_autoindex_email_challenges_1",),
+    ),
+    PlanCheck(
         "expired or consumed age proofs",
         """DELETE FROM signup_age_proofs WHERE token_hash IN (
              SELECT token_hash FROM signup_age_proofs

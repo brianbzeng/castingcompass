@@ -484,10 +484,12 @@ export async function handleAccountRequest(
       const codeHash = await sha256(`${id}:${code}`);
       const salt = randomSecret(18);
       const timestamp = new Date();
+      const challengeCutoff = new Date(timestamp.getTime() - 60 * 60 * 1000).toISOString();
       const challengeResult = await db.prepare(`INSERT INTO email_challenges
         (id, kind, email, user_id, code_hash, password_salt, password_hash,
           age_eligibility_confirmed_at, terms_version, privacy_version, expires_at, attempts, created_at)
-        VALUES (?, 'signup', ?, NULL, ?, ?, ?, ?, ?, ?, ?, 0, ?)`)
+        SELECT ?, 'signup', ?, NULL, ?, ?, ?, ?, ?, ?, ?, 0, ?
+        WHERE (SELECT COUNT(*) FROM email_challenges WHERE email = ? AND created_at >= ?) < 5`)
         .bind(
           id,
           email,
@@ -499,9 +501,15 @@ export async function handleAccountRequest(
           LEGAL_VERSION,
           new Date(timestamp.getTime() + 15 * 60 * 1000).toISOString(),
           timestamp.toISOString(),
+          email,
+          challengeCutoff,
         )
         .run();
-      if (confirmedMutationChanges(challengeResult) !== 1) {
+      const challengeChanges = confirmedMutationChanges(challengeResult);
+      if (challengeChanges === 0) {
+        throw new AuthError(429, "too_many_codes", "Too many email codes were requested. Try again in an hour.");
+      }
+      if (challengeChanges !== 1) {
         await cleanupEmailChallengeCandidate(db, id, codeHash, timestamp.toISOString());
         throw new AuthError(
           503,
@@ -739,10 +747,21 @@ export async function handleAccountRequest(
       const code = randomCode();
       const codeHash = await sha256(`${id}:${code}`);
       const timestamp = new Date();
+      const challengeCutoff = new Date(timestamp.getTime() - 60 * 60 * 1000).toISOString();
       const challengeResult = await db.prepare(`INSERT INTO email_challenges
         (id, kind, email, user_id, code_hash, expires_at, attempts, created_at)
-        VALUES (?, 'password_reset', ?, ?, ?, ?, 0, ?)`)
-        .bind(id, email, user.id, codeHash, new Date(timestamp.getTime() + 15 * 60 * 1000).toISOString(), timestamp.toISOString())
+        SELECT ?, 'password_reset', ?, ?, ?, ?, 0, ?
+        WHERE (SELECT COUNT(*) FROM email_challenges WHERE email = ? AND created_at >= ?) < 5`)
+        .bind(
+          id,
+          email,
+          user.id,
+          codeHash,
+          new Date(timestamp.getTime() + 15 * 60 * 1000).toISOString(),
+          timestamp.toISOString(),
+          email,
+          challengeCutoff,
+        )
         .run();
       if (confirmedMutationChanges(challengeResult) !== 1) {
         await cleanupEmailChallengeCandidate(db, id, codeHash, timestamp.toISOString());
@@ -869,13 +888,26 @@ export async function handleAccountRequest(
       const email = parseEmail(body.email);
       const password = parsePassword(body.password);
       const emailHash = await sha256(email);
-      const cutoff = new Date(Date.now() - 60 * 60 * 1000).toISOString();
-      const recent = await db
-        .prepare("SELECT COUNT(*) AS count FROM auth_attempts WHERE email_hash = ? AND successful = 0 AND attempted_at >= ?")
-        .bind(emailHash, cutoff)
-        .first<{ count: number }>();
-      if (Number(recent?.count ?? 0) >= 10) {
+      const attemptedAt = new Date();
+      const cutoff = new Date(attemptedAt.getTime() - 60 * 60 * 1000).toISOString();
+      const attemptId = `attempt_${crypto.randomUUID()}`;
+      const attemptResult = await db.prepare(`INSERT INTO auth_attempts
+        (id, email_hash, attempted_at, successful)
+        SELECT ?, ?, ?, 0
+        WHERE (SELECT COUNT(*) FROM auth_attempts
+          WHERE email_hash = ? AND successful = 0 AND attempted_at >= ?) < 10`)
+        .bind(attemptId, emailHash, attemptedAt.toISOString(), emailHash, cutoff)
+        .run();
+      const attemptChanges = confirmedMutationChanges(attemptResult);
+      if (attemptChanges === 0) {
         return errorResponse(429, "too_many_attempts", "Too many sign-in attempts. Try again in an hour.");
+      }
+      if (attemptChanges !== 1) {
+        return errorResponse(
+          503,
+          "sign_in_accounting_unconfirmed",
+          "The sign-in attempt could not be confirmed. Try again shortly.",
+        );
       }
 
       const row = await db
@@ -896,10 +928,18 @@ export async function handleAccountRequest(
       const valid = row
         ? await verifyPassword(password, row.password_salt, row.password_hash)
         : (await hashPassword(password, DUMMY_PASSWORD_SALT), false);
-      await db.prepare("INSERT INTO auth_attempts (id, email_hash, attempted_at, successful) VALUES (?, ?, ?, ?)")
-        .bind(`attempt_${crypto.randomUUID()}`, emailHash, new Date().toISOString(), Number(valid))
-        .run();
       if (!row || !valid) return errorResponse(401, "invalid_credentials", "Email or password is incorrect.");
+      const successResult = await db.prepare(`UPDATE auth_attempts SET successful = 1
+        WHERE id = ? AND email_hash = ? AND attempted_at = ? AND successful = 0`)
+        .bind(attemptId, emailHash, attemptedAt.toISOString())
+        .run();
+      if (confirmedMutationChanges(successResult) !== 1) {
+        return errorResponse(
+          503,
+          "sign_in_accounting_unconfirmed",
+          "The sign-in attempt could not be confirmed. Try again shortly.",
+        );
+      }
       return createSessionResponse(db, request, {
         id: row.id,
         email: row.email,
@@ -2614,8 +2654,8 @@ async function verifyEmailChallenge(
   const row = await db.prepare("SELECT * FROM email_challenges WHERE id = ? AND kind = ? LIMIT 1")
     .bind(challengeId, kind)
     .first<EmailChallengeRow>();
-  if (!row || row.expires_at <= new Date().toISOString()) {
-    if (row) await db.prepare("DELETE FROM email_challenges WHERE id = ?").bind(challengeId).run();
+  const verifiedAt = new Date().toISOString();
+  if (!row || row.expires_at <= verifiedAt) {
     if (kind === "password_reset") {
       throw new AuthError(401, "invalid_code", "That code is invalid or expired. Request a new one.");
     }
@@ -2623,24 +2663,44 @@ async function verifyEmailChallenge(
   }
   if (Number(row.attempts) >= 6) {
     if (kind === "password_reset") {
-      await db.prepare("DELETE FROM email_challenges WHERE id = ?").bind(challengeId).run();
       throw new AuthError(401, "invalid_code", "That code is invalid or expired. Request a new one.");
     }
     throw new AuthError(429, "too_many_code_attempts", "Too many code attempts. Request a new code.");
   }
+  const claimedAttempts = Number(row.attempts) + 1;
+  const attemptResult = await db.prepare(`UPDATE email_challenges SET attempts = ?
+    WHERE id = ? AND kind = ? AND code_hash = ? AND created_at = ?
+      AND attempts = ? AND resend_count = ? AND expires_at = ? AND expires_at > ?`)
+    .bind(
+      claimedAttempts,
+      row.id,
+      row.kind,
+      row.code_hash,
+      row.created_at,
+      Number(row.attempts),
+      Number(row.resend_count ?? 0),
+      row.expires_at,
+      verifiedAt,
+    )
+    .run();
+  const attemptChanges = confirmedMutationChanges(attemptResult);
+  if (attemptChanges !== 1) {
+    if (kind === "password_reset") {
+      throw new AuthError(401, "invalid_code", "That code is invalid or expired. Request a new one.");
+    }
+    if (attemptChanges === 0) {
+      throw new AuthError(409, "challenge_changed", "That verification request changed. Use its latest code or start again.");
+    }
+    throw new AuthError(503, "challenge_attempt_unconfirmed", "That code attempt could not be confirmed. Try again.");
+  }
   const valid = (await sha256(`${challengeId}:${code}`)) === row.code_hash;
   if (!valid) {
-    if (kind === "password_reset" && Number(row.attempts) >= 5) {
-      await db.prepare("DELETE FROM email_challenges WHERE id = ?").bind(challengeId).run();
-    } else {
-      await db.prepare("UPDATE email_challenges SET attempts = attempts + 1 WHERE id = ?").bind(challengeId).run();
-    }
     if (kind === "password_reset") {
       throw new AuthError(401, "invalid_code", "That code is invalid or expired. Request a new one.");
     }
     throw new AuthError(401, "invalid_code", "That verification code is incorrect.");
   }
-  return row;
+  return { ...row, attempts: claimedAttempts };
 }
 
 async function sendVerificationEmail(

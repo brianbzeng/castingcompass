@@ -40,6 +40,36 @@ by that discovery.
       commit. Their branches, comments, commits, and hosted evidence remain preserved for audit
       and rollback reference; `#146` is now the repository's only open PR and remains a draft.
 
+## Active checkpoint — atomic authentication attempt accounting
+
+- [x] Continue the authentication audit through abuse-control accounting. Sign-in and initial
+      email-challenge creation checked recent counts before recording the new event, while code
+      verification incremented attempts after comparing the submitted code; concurrent requests
+      could therefore cross the documented ceilings or authorize a stale challenge version.
+- [x] Claim each failed-or-pending sign-in attempt with one conditional D1 insert and require its
+      exact receipt before credential verification. A valid credential must then classify that
+      exact row as successful before session creation; missing, malformed, zero, or impossible
+      metadata fails closed and exposes no session.
+- [x] Make the five-per-hour initial signup and password-recovery challenge ceiling authoritative
+      in the insert itself. Provider delivery follows only a confirmed one-row claim; password
+      recovery preserves its deliberately generic response when accounting is ambiguous.
+- [x] Claim every submitted code attempt with an exact challenge-version compare-and-set before
+      accepting the code. The six-attempt ceiling is atomic, concurrent resend makes the old
+      version ineligible, and final signup or reset transactions repeat the claimed snapshot.
+      Password-recovery ambiguity remains enumeration-resistant and cannot change credentials or
+      create a session.
+- [x] Force concurrent ceiling crossings, missing mutation receipts, success-classification
+      ambiguity, a resend race, and a terminal sixth attempt in direct D1 runtime tests. Regenerate
+      the complete 220-site query inventory and verify 23 critical plans, including use of the
+      existing email/time and primary-key indexes for all new claims.
+- [x] Pass the pinned Cloudflare build, ESLint, TypeScript, all 569/569 Node tests, the complete
+      offline security/SBOM/source-integrity chain, both zero-vulnerability npm audits, Ruff,
+      29/29 API tests, 83/83 pipeline tests with one documented optional-`rasterio` skip, the
+      pipeline smoke test, and the full 200/200 Chromium/WebKit phone matrix. Preserve a clean
+      local commit and deterministic release-bundle receipt. No push, pull request, merge,
+      deployment, provider query, D1 mutation, model change, UI change, or production
+      authorization belongs to this work.
+
 ## Active checkpoint — database-confirmed session issuance
 
 - [x] Continue the credential boundary through the final shared session-creation helper. Login,

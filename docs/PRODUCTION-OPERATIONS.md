@@ -7,9 +7,9 @@ the production environment.
 
 ## Abuse controls
 
-The Worker enforces request-body limits, per-email authentication ceilings, failed-login
-ceilings, and per-reporter trip ceilings. Those durable D1 controls remain the authoritative
-ceilings for the identities they cover. The repository also declares six Cloudflare Workers
+The Worker enforces request-body limits, atomic per-email challenge issuance/verification
+ceilings, atomic failed-login ceilings, and per-reporter trip ceilings. Those durable D1 controls
+remain the authoritative ceilings for the identities they cover. The repository also declares six Cloudflare Workers
 Rate Limiting bindings, but enforcement remains deliberately off through
 `RATE_LIMITING_ENABLED=false` until the production secret, bindings, outer rules, monitoring,
 and synthetic checks below are ready.

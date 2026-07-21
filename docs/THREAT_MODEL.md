@@ -186,8 +186,10 @@ that could become a privacy, integrity, or availability incident.
 - **State:** partial.
 - **Evidence:** CastingCompass deliberately uses server-side opaque sessions rather than JWTs:
   HTTPS `__Host-` cookies, `HttpOnly`, `Secure`, scoped `SameSite`, hashed 256-bit tokens,
-  rotation, expiry, revocation, fixation resistance, same-origin mutation checks, and generic
-  equal-work login/recovery behavior are covered by auth and password security tests.
+  rotation, expiry, revocation, fixation resistance, same-origin mutation checks, generic
+  equal-work login/recovery behavior, and database-atomic login/challenge attempt claims are
+  covered by auth and password security tests. Credential success also waits for authoritative
+  attempt-classification and exact challenge-version receipts before session issuance.
 - **Alert:** Authentication regression tests and structured auth outcomes locally; production
   anomaly alerts and email-delivery/revocation drills remain absent.
 - **Recovery:** Enter maintenance or disable signup/recovery, revoke affected sessions and

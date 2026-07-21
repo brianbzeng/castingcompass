@@ -216,6 +216,13 @@ after its acceptance checks pass in the intended environment.
       configuration is missing or unavailable. Existing D1 login/email/trip ceilings remain the
       durable exact controls. Production secret provisioning, activation, outer WAF rules,
       threshold tuning, monitoring, and live endpoint evidence remain open.
+    - [x] Make the durable D1 login and email-code ceilings atomic under concurrency. Sign-in
+      claims one of ten rolling failure slots before credential work and issues no session until
+      the exact claim is confirmed successful. Signup and recovery challenge creation recheck the
+      five-per-hour ceiling inside their INSERT, before provider delivery. Every verification or
+      reset code submission compare-and-sets the exact challenge version to its next attempt count,
+      caps at six, and cannot increment or authorize a concurrently resent code. Missing mutation
+      receipts fail closed without weakening password-recovery enumeration resistance.
   - [ ] Verify encryption in transit and at rest, key separation/rotation/recovery, least
     privilege, secret scanning, dependency/runtime/action version locks, reproducible builds,
     an SBOM, vulnerability-response ownership, and restore-tested backups. Pinning must include
