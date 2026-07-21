@@ -239,7 +239,8 @@ async function sha256(value: string) {
 export async function reviewTripBacklog(env: ReviewEnv, sites: readonly CuratedSite[], limit = 10) {
   if (!env.DB || !env.MIMO_API_KEY) return 0;
   const rows = await env.DB.prepare(`SELECT id FROM trips
-    WHERE status = 'completed' AND (ai_review_status IS NULL OR ai_review_status = 'retry')
+    WHERE status = 'completed'
+      AND (ai_review_status IS NULL OR ai_review_status = 'queued' OR ai_review_status = 'retry')
     ORDER BY COALESCE(completed_at, ended_at, started_at) ASC
     LIMIT ?`)
     .bind(limit)

@@ -159,6 +159,12 @@ test("the committed inventory covers every Worker prepare site and its reviewed 
     manualReviewRetryWrites[0].sql,
     "UPDATE trips SET ai_review_status = 'queued' WHERE id = ? AND user_id = ? AND (ai_review_status IS NULL OR ai_review_status = 'retry')",
   );
+  const legacyReviewBacklog = inventory.queries.find(({ containingFunction }) =>
+    containingFunction === "reviewTripBacklog");
+  assert.match(
+    legacyReviewBacklog?.sql ?? "",
+    /ai_review_status IS NULL OR ai_review_status = 'queued' OR ai_review_status = 'retry'/u,
+  );
 
   const exactOwnerTripRead = inventory.queries.find(({ sql }) =>
     sql === "SELECT * FROM trips WHERE id = ? AND user_id IS ? LIMIT 1");

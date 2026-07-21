@@ -4,7 +4,7 @@ import { DatabaseSync } from "node:sqlite";
 import test from "node:test";
 import { cleanupAuthData, LEGAL_VERSION, evaluateAgeEligibility, handleAccountRequest, processPrivacyDeletionTasks } from "../worker/auth.ts";
 import { createTripStore, handleTripRequest } from "../worker/trips.ts";
-import { reviewTripWithMimo } from "../worker/trip-review.ts";
+import { reviewTripBacklog, reviewTripWithMimo } from "../worker/trip-review.ts";
 import { consumePrivacyExportQueue, requestPrivacyExport } from "../worker/privacy-export.ts";
 import { buildFeasibilityReconciliationExport } from "../worker/validation-feasibility-export.ts";
 import {
@@ -1794,6 +1794,45 @@ test("manual review retry repeats owner identity in the final write and dispatch
   assert.deepEqual(await confirmed?.json(), { queued: 1 });
   assert.deepEqual(dispatched, [tripId]);
   assert.equal(sqlite.prepare("SELECT ai_review_status FROM trips WHERE id = ?").get(tripId).ai_review_status, "queued");
+});
+
+test("ambiguous manual review retry is recovered by the bounded legacy backlog", async () => {
+  const { sqlite, d1 } = await database();
+  const owner = await addUser(sqlite, "review-retry-receipt-owner-140");
+  const tripId = addTrip(sqlite, owner);
+  sqlite.prepare("UPDATE trips SET ai_review_status = 'retry' WHERE id = ?").run(tripId);
+  const dispatched = [];
+
+  d1.omitOnceMutationMetadataSubstring = "UPDATE trips SET ai_review_status = 'queued'";
+  const ambiguous = await handleAccountRequest(request("/api/profile/reviews/retry", {
+    method: "POST",
+    cookie: owner.cookie,
+  }), { DB: d1 }, [], {
+    onTripsReviewRequested: (trips) => dispatched.push(...trips.map(({ id }) => id)),
+  });
+  assert.equal(ambiguous?.status, 503);
+  assert.equal((await ambiguous?.json()).error.code, "review_retry_unconfirmed");
+  assert.deepEqual(dispatched, []);
+  assert.equal(sqlite.prepare("SELECT ai_review_status FROM trips WHERE id = ?").get(tripId).ai_review_status, "queued");
+
+  let providerCalls = 0;
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async () => {
+    providerCalls += 1;
+    return Response.json({ choices: [] });
+  };
+  try {
+    const recovered = await reviewTripBacklog(
+      { DB: d1, MIMO_API_KEY: "test" },
+      [{ id: "ocean-beach", type: "Beach" }],
+      10,
+    );
+    assert.equal(recovered, 1);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+  assert.equal(providerCalls, 1);
+  assert.equal(sqlite.prepare("SELECT ai_review_status FROM trips WHERE id = ?").get(tripId).ai_review_status, "retry");
 });
 
 test("gear mutations fail closed when ownership or existence changes after the owner pre-read", async () => {

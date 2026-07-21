@@ -93,6 +93,31 @@ by that discovery.
       request, merge, deployment, provider query, D1 mutation, model change, UI change, or
       production authorization belongs to this work.
 
+## Active checkpoint — recover ambiguous manual review retries
+
+- [x] Continue the database-receipt audit through manual advisory-review retry. Missing D1
+      metadata was collapsed into an authoritative zero: a committed row could become `queued`
+      without entering the immediate scheduler, while the default-off legacy backlog selected
+      only new and `retry` rows and therefore could leave that work stranded.
+- [x] Parse every owner-bound retry result with the strict receipt helper. Dispatch only exact
+      one-row transitions, preserve authoritative zero as an ownership/state race, and return
+      `503 review_retry_unconfirmed` when any result is missing, malformed, truncated, or
+      impossible instead of manufacturing the exact queued-count receipt.
+- [x] Extend the bounded legacy scheduled backlog to select `queued` rows as well as new and
+      retry rows. This reconciles a committed ambiguous transition without replaying the owner
+      request and matches the already queue-enabled backlog and processing claim; AI output stays
+      private, schema-bound, and unable to publish without separate human approval.
+- [x] Force a committed retry transition with omitted metadata in direct D1 runtime tests. The
+      route returns `503`, invokes no immediate callback, and leaves the row discoverably queued;
+      the bounded backlog later claims it exactly once and reaches the provider boundary. The
+      generated D1 inventory locks both the owner-scoped transition and queued recovery query.
+- [x] Pass the pinned Cloudflare build, ESLint, TypeScript, all repository Node tests, the complete
+      offline security/SBOM/source-integrity chain, both zero-vulnerability npm audits, Ruff,
+      API and pipeline tests, the pipeline smoke test, and the Chromium/WebKit phone matrix.
+      Preserve a clean local commit and deterministic release-bundle receipt. No push, pull
+      request, merge, deployment, provider query, D1 mutation, model promotion, public AI output,
+      UI change, or production authorization belongs to this work.
+
 ## Active checkpoint — database-confirmed session issuance
 
 - [x] Continue the credential boundary through the final shared session-creation helper. Login,

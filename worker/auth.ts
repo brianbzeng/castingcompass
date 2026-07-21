@@ -1170,8 +1170,16 @@ export async function handleAccountRequest(
             WHERE id = ? AND user_id = ?
               AND (ai_review_status IS NULL OR ai_review_status = 'retry')`,
         ).bind(trip.id, user.id)));
-        const queuedTrips = trips.filter((_, index) => mutationChanges(results[index]) === 1);
+        const changes = trips.map((_, index) => confirmedMutationChanges(results[index]));
+        const queuedTrips = trips.filter((_, index) => changes[index] === 1);
         if (queuedTrips.length) options.onTripsReviewRequested?.(queuedTrips);
+        if (changes.some((change) => change === null || change > 1)) {
+          return errorResponse(
+            503,
+            "review_retry_unconfirmed",
+            "The review retry could not be confirmed. Its status will be checked without repeating the request.",
+          );
+        }
         return jsonResponse({ queued: queuedTrips.length }, 202);
       }
       return jsonResponse({ queued: 0 }, 202);
@@ -1905,13 +1913,6 @@ async function prepareDeletionJob(
       WHERE EXISTS (SELECT 1 FROM trips WHERE id = ? AND user_id = ? AND moderation_status = 'pending')`)
       .bind(task.id, id, task.objectKey, task.objectKeyHash, task.objectStore, timestamp, timestamp, timestamp, tripId, userId)),
   };
-}
-
-function mutationChanges(result: unknown) {
-  if (!result || typeof result !== "object") return 0;
-  const meta = (result as { meta?: { changes?: unknown } }).meta;
-  const changes = Number(meta?.changes ?? 0);
-  return Number.isFinite(changes) ? changes : 0;
 }
 
 function confirmedMutationChanges(result: unknown) {

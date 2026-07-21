@@ -147,6 +147,12 @@ after its acceptance checks pass in the intended environment.
       D1 change reach the internal scheduler. An ownership-change race proves the prior owner
       queues and dispatches nothing while the new owner can request the retry normally; the
       generated D1 inventory rejects regression to the old unscoped statement.
+    - [x] Preserve manual advisory-review retry after an ambiguous committed D1 response. Missing,
+      truncated, malformed, or impossible per-row metadata now returns `503` instead of the exact
+      `queued` receipt and dispatches no unconfirmed row. The default-off legacy scheduled backlog
+      now includes `queued` alongside new and retry rows, so bounded reconciliation recovers a
+      committed transition without replaying the owner mutation; queue-enabled reconciliation
+      retains the same state coverage and all model output remains private and human-gated.
     - [x] Make owner gear mutation receipts database-authoritative. PATCH and DELETE already
       repeated `id` plus `user_id`, but they reported success even when a concurrent ownership or
       deletion race made the final statement change zero rows. Both routes now require exactly
