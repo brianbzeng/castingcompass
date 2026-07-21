@@ -31,7 +31,7 @@ output never grants authority.
 | --- | --- | --- |
 | Session | `token_hash = sha256(cookie)` and `expires_at > now` | Authentication atomically replaces any session presented by that browser and HTTPS uses `__Host-cc_session`; the prior cookie is accepted only for migration and rotated on session refresh; logout revokes presented sessions, while password reset and account deletion revoke every session for the account |
 | Saved site | `user_id = authenticated_user.id` | Owner may add/remove only their row |
-| Gear profile | `id = requested_id AND user_id = authenticated_user.id` | Owner may create, patch, or delete; an unknown or other-owned ID is `404` |
+| Gear profile | `id = requested_id AND user_id = authenticated_user.id` | Owner may create, patch, or delete; an unknown, other-owned, or concurrently changed ID is `404`; PATCH/DELETE success requires exactly one D1 change and any unconfirmed result fails closed |
 | Trip/profile record | `id = requested_id AND user_id = authenticated_user.id`; enrollment, forecast-impression, feasibility-start, and prior-recruitment sidecars repeat the owner predicate directly or through the parent trip | Owner may patch/delete only while `moderation_status = 'pending'`; active completion and cancellation bind `id`, `user_id`, `status = 'active'`, and `token_hash` together in the final D1 statement; manual advisory-review retry binds `id`, `user_id`, and retryable state in every final update and dispatches only D1-confirmed rows; server-controlled contract fields cannot be overridden |
 | Stored trip photo | Trip predicate above before any R2 key is read | Owner-only authenticated download with `no-store`; object key is never accepted from the URL or request body |
 | Account export | Every account-linked query and status/download lookup binds `authenticated_user.id`; asynchronous Queue messages contain only an opaque job ID | Export is owner-only and omits internal object locators and moderator identity. The default-off package is private, expires after 24 hours, and is canceled/adopted atomically by account deletion |
@@ -94,6 +94,11 @@ not authorize a later ID-only mutation: every final state transition repeats the
 `user_id`, and only statements that D1 confirms changed exactly one row enter the internal
 review scheduler. A forced ownership change between selection and batch execution therefore
 queues and dispatches zero rows; the new owner can subsequently request the retry normally.
+
+Gear mutation receipts are equally database-authoritative. PATCH and DELETE retain the owner
+predicate in the final statement and return success only when D1 confirms exactly one changed
+row. A row that changes owner or disappears after the pre-read produces the same generic `404`;
+unknown mutation metadata produces a retry-safe `503` rather than a false success receipt.
 
 ## Open gates
 

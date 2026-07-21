@@ -147,6 +147,11 @@ after its acceptance checks pass in the intended environment.
       D1 change reach the internal scheduler. An ownership-change race proves the prior owner
       queues and dispatches nothing while the new owner can request the retry normally; the
       generated D1 inventory rejects regression to the old unscoped statement.
+    - [x] Make owner gear mutation receipts database-authoritative. PATCH and DELETE already
+      repeated `id` plus `user_id`, but they reported success even when a concurrent ownership or
+      deletion race made the final statement change zero rows. Both routes now require exactly
+      one confirmed D1 change, return the same `404` for zero, and fail `503` when the result is
+      unconfirmable. Race tests preserve the other owner's row and prevent false client success.
   - [ ] Verify strict schema/size/type validation, contextual output encoding, safe database
     binding, upload signature and metadata checks, and AI prompt-injection boundaries. Model
     instructions and user content remain data, never authority; models receive no ambient

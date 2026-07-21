@@ -82,6 +82,15 @@ test("the committed inventory covers every Worker prepare site and its reviewed 
     executionMode === "first"
       && sql === "SELECT 1 AS present FROM saved_sites WHERE user_id = ? AND site_id = ? LIMIT 1"));
 
+  assert.ok(inventory.queries.some(({ executionMode, statementClass, sql }) =>
+    executionMode === "run"
+      && statementClass === "UPDATE"
+      && sql === "UPDATE gear_profiles SET name = ?, rod = ?, reel = ?, bait_lure = ?, rig = ?, updated_at = ? WHERE id = ? AND user_id = ?"));
+  assert.ok(inventory.queries.some(({ executionMode, statementClass, sql }) =>
+    executionMode === "run"
+      && statementClass === "DELETE"
+      && sql === "DELETE FROM gear_profiles WHERE id = ? AND user_id = ?"));
+
   const terminalTripWrites = inventory.queries.filter(({ executionMode, statementClass, sql }) =>
     executionMode === "prepared-statement"
       && statementClass === "UPDATE"

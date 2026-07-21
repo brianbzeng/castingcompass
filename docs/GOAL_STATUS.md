@@ -107,6 +107,26 @@ by that discovery.
       request, merge, deployment, provider query, D1 mutation, model change, or UI change belongs
       to this work.
 
+## Active checkpoint — database-confirmed owner gear mutations
+
+- [x] Continue the private-object audit from identity predicates into mutation receipts. Gear
+      PATCH and DELETE already repeated the authenticated `user_id`, so they could not mutate
+      another owner's row, but both returned success without verifying that the final statement
+      changed anything.
+- [x] Require exactly one D1 change for both operations. A row that changes owner or disappears
+      after the owner pre-read now returns the same generic `404`; missing or impossible mutation
+      metadata fails with a retry-safe `503` instead of manufacturing a success receipt.
+- [x] Force both concurrent states in the direct D1 runtime: one row moves to a second account
+      immediately before PATCH and retains its original fields, while another disappears before
+      DELETE. Neither request reports success, and the generated 222-site inventory separately
+      locks both final SQL statements to `id` plus `user_id`.
+- [x] Pass the pinned Cloudflare build, ESLint, TypeScript, all 550/550 Node tests, the complete
+      offline security/SBOM/source-integrity chain, both zero-vulnerability npm audits, and the
+      full 200/200 Chromium/WebKit phone matrix. Preserve the clean local commit and exact
+      deterministic release-bundle receipts for this repository-only checkpoint. No push, pull
+      request, merge, deployment, provider query, D1 mutation, model change, or UI change belongs
+      to this work.
+
 ## Active checkpoint — confirmed-session browser privacy cleanup
 
 - [x] Audit every browser-persisted account/trip recovery value and both account-exit paths. The

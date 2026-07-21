@@ -70,6 +70,11 @@ class D1StatementAdapter {
   async run() {
     this.owner.assertQueryAllowed(this.query);
     const result = this.statement.run(...this.values);
+    if (this.owner.omitOnceMutationMetadataSubstring
+      && this.query.includes(this.owner.omitOnceMutationMetadataSubstring)) {
+      this.owner.omitOnceMutationMetadataSubstring = null;
+      return { success: true };
+    }
     return { success: true, meta: { changes: Number(result.changes) } };
   }
 }
@@ -83,6 +88,7 @@ class TransactionalD1Adapter {
     this.postCommitFailureActive = false;
     this.beforeOnceQuerySubstring = null;
     this.beforeOnceQuery = null;
+    this.omitOnceMutationMetadataSubstring = null;
   }
 
   prepare(query) {
@@ -1008,6 +1014,82 @@ test("manual review retry repeats owner identity in the final write and dispatch
   assert.deepEqual(await confirmed?.json(), { queued: 1 });
   assert.deepEqual(dispatched, [tripId]);
   assert.equal(sqlite.prepare("SELECT ai_review_status FROM trips WHERE id = ?").get(tripId).ai_review_status, "queued");
+});
+
+test("gear mutations fail closed when ownership or existence changes after the owner pre-read", async () => {
+  const { sqlite, d1 } = await database();
+  const owner = await addUser(sqlite, "gear-race-owner-135");
+  const other = await addUser(sqlite, "gear-race-other-136");
+  const timestamp = "2026-07-21T20:00:00.000Z";
+  const updateId = `gear_${crypto.randomUUID()}`;
+  const deleteId = `gear_${crypto.randomUUID()}`;
+  const insert = sqlite.prepare(`INSERT INTO gear_profiles
+      (id, user_id, name, rod, reel, bait_lure, rig, created_at, updated_at)
+    VALUES (?, ?, ?, 'Original rod', 'Original reel', 'Original lure', 'Original rig', ?, ?)`);
+  insert.run(updateId, owner.id, "Original update", timestamp, timestamp);
+  insert.run(deleteId, owner.id, "Original delete", timestamp, timestamp);
+
+  d1.beforeOnceQuerySubstring = "UPDATE gear_profiles SET name = ?";
+  d1.beforeOnceQuery = () => {
+    sqlite.prepare("UPDATE gear_profiles SET user_id = ? WHERE id = ?").run(other.id, updateId);
+  };
+  const racedUpdate = await handleAccountRequest(request(`/api/gear-profiles/${updateId}`, {
+    method: "PATCH",
+    cookie: owner.cookie,
+    body: {
+      name: "Raced update",
+      rod: "New rod",
+      reel: "New reel",
+      baitLure: "New lure",
+      rig: "New rig",
+    },
+  }), { DB: d1 }, []);
+  assert.equal(racedUpdate?.status, 404);
+  assert.equal((await racedUpdate?.json()).error.code, "gear_profile_not_found");
+  assert.deepEqual(
+    { ...sqlite.prepare("SELECT user_id, name, rod FROM gear_profiles WHERE id = ?").get(updateId) },
+    { user_id: other.id, name: "Original update", rod: "Original rod" },
+  );
+
+  d1.beforeOnceQuerySubstring = "DELETE FROM gear_profiles WHERE id = ?";
+  d1.beforeOnceQuery = () => {
+    sqlite.prepare("DELETE FROM gear_profiles WHERE id = ?").run(deleteId);
+  };
+  const racedDelete = await handleAccountRequest(request(`/api/gear-profiles/${deleteId}`, {
+    method: "DELETE",
+    cookie: owner.cookie,
+  }), { DB: d1 }, []);
+  assert.equal(racedDelete?.status, 404);
+  assert.equal((await racedDelete?.json()).error.code, "gear_profile_not_found");
+  assert.equal(sqlite.prepare("SELECT COUNT(*) AS count FROM gear_profiles WHERE id = ?").get(deleteId).count, 0);
+});
+
+test("gear mutations never manufacture success when D1 omits the change receipt", async () => {
+  const { sqlite, d1 } = await database();
+  const owner = await addUser(sqlite, "gear-receipt-owner-137");
+  const timestamp = "2026-07-21T20:30:00.000Z";
+  const gearId = `gear_${crypto.randomUUID()}`;
+  sqlite.prepare(`INSERT INTO gear_profiles
+      (id, user_id, name, rod, reel, bait_lure, rig, created_at, updated_at)
+    VALUES (?, ?, 'Original gear', 'Original rod', 'Original reel', 'Original lure', 'Original rig', ?, ?)`)
+    .run(gearId, owner.id, timestamp, timestamp);
+
+  d1.omitOnceMutationMetadataSubstring = "UPDATE gear_profiles SET name = ?";
+  const response = await handleAccountRequest(request(`/api/gear-profiles/${gearId}`, {
+    method: "PATCH",
+    cookie: owner.cookie,
+    body: {
+      name: "Unconfirmed gear",
+      rod: "New rod",
+      reel: "New reel",
+      baitLure: "New lure",
+      rig: "New rig",
+    },
+  }), { DB: d1 }, []);
+
+  assert.equal(response?.status, 503);
+  assert.equal((await response?.json()).error.code, "gear_profile_write_unconfirmed");
+  assert.equal(sqlite.prepare("SELECT name FROM gear_profiles WHERE id = ?").get(gearId).name, "Unconfirmed gear");
 });
 
 test("active trip completion and cancellation bind the authenticated account even with the exact token", async () => {

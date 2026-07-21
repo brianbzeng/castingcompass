@@ -1045,7 +1045,16 @@ export async function handleAccountRequest(
         .first();
       if (!existing) return errorResponse(404, "gear_profile_not_found", "That gear preset could not be found.");
       if (request.method === "DELETE") {
-        await db.prepare("DELETE FROM gear_profiles WHERE id = ? AND user_id = ?").bind(id, user.id).run();
+        const result = await db.prepare("DELETE FROM gear_profiles WHERE id = ? AND user_id = ?")
+          .bind(id, user.id)
+          .run();
+        const changes = confirmedMutationChanges(result);
+        if (changes === 0) {
+          return errorResponse(404, "gear_profile_not_found", "That gear preset could not be found.");
+        }
+        if (changes !== 1) {
+          throw new AuthError(503, "gear_profile_write_unconfirmed", "The gear preset removal could not be confirmed.");
+        }
         return jsonResponse({ deleted: true, id });
       }
       if (request.method === "PATCH") {
@@ -1053,10 +1062,17 @@ export async function handleAccountRequest(
         assertOnlyFields(body, ["name", "rod", "reel", "baitLure", "rig"]);
         const gear = parseGearProfile(body);
         const timestamp = new Date().toISOString();
-        await db.prepare(`UPDATE gear_profiles SET name = ?, rod = ?, reel = ?, bait_lure = ?, rig = ?, updated_at = ?
+        const result = await db.prepare(`UPDATE gear_profiles SET name = ?, rod = ?, reel = ?, bait_lure = ?, rig = ?, updated_at = ?
           WHERE id = ? AND user_id = ?`)
           .bind(gear.name, gear.rod, gear.reel, gear.baitLure, gear.rig, timestamp, id, user.id)
           .run();
+        const changes = confirmedMutationChanges(result);
+        if (changes === 0) {
+          return errorResponse(404, "gear_profile_not_found", "That gear preset could not be found.");
+        }
+        if (changes !== 1) {
+          throw new AuthError(503, "gear_profile_write_unconfirmed", "The gear preset update could not be confirmed.");
+        }
         return jsonResponse({ updated: true, id });
       }
       return methodNotAllowed("PATCH, DELETE");
@@ -1653,6 +1669,14 @@ function mutationChanges(result: unknown) {
   const meta = (result as { meta?: { changes?: unknown } }).meta;
   const changes = Number(meta?.changes ?? 0);
   return Number.isFinite(changes) ? changes : 0;
+}
+
+function confirmedMutationChanges(result: unknown) {
+  if (!result || typeof result !== "object") return null;
+  const changesValue = (result as { meta?: { changes?: unknown } }).meta?.changes;
+  if (changesValue === undefined || changesValue === null) return null;
+  const changes = Number(changesValue);
+  return Number.isSafeInteger(changes) && changes >= 0 ? changes : null;
 }
 
 function prepareConditionalFeasibilityCorrectionInsert(
