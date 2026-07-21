@@ -12,6 +12,7 @@ const root = new URL("../", import.meta.url);
 const sfpucFixture = "tests/fixtures/sfpuc-beaches-water-quality.xml";
 const beachwatchFixture = "tests/fixtures/california-beachwatch-santa-barbara.html";
 const marinBeachwatchFixture = "tests/fixtures/california-beachwatch-marin.html";
+const eastBayParksBeachwatchFixture = "tests/fixtures/california-beachwatch-east-bay-parks.html";
 const sanMateoFixture = "tests/fixtures/san-mateo-current-water-quality.html";
 
 async function readJson(path) {
@@ -29,6 +30,8 @@ function runCollector(output, options = {}) {
     "--sfpuc-source-file", options.sfpucSource ?? sfpucFixture,
     "--beachwatch-source-file", options.beachwatchSource ?? beachwatchFixture,
     "--marin-beachwatch-source-file", options.marinBeachwatchSource ?? marinBeachwatchFixture,
+    "--east-bay-parks-beachwatch-source-file",
+    options.eastBayParksBeachwatchSource ?? eastBayParksBeachwatchFixture,
     "--san-mateo-source-file", options.sanMateoSource ?? sanMateoFixture,
     "--output", output,
   ];
@@ -87,6 +90,7 @@ test("deterministic fixtures preserve source-specific suppression, neutral, unkn
       "pacifica-state-beach", "pillar-point-west-jetty", "pillar-point-east-jetty",
       "rockaway-beach", "sharp-park-beach", "francis-state-beach", "poplar-beach",
       "bolinas-beach", "muir-beach", "mcnears-beach-pier", "limantour-beach",
+      "keller-beach", "crown-memorial-state-beach", "alameda-south-shore-rockwall",
     ].map((siteId) => [siteId, [payload.sites[siteId].status, payload.sites[siteId].recommendationEffect]])),
     {
       "baker-beach": ["posted", "suppress"],
@@ -112,6 +116,9 @@ test("deterministic fixtures preserve source-specific suppression, neutral, unkn
       "muir-beach": ["unknown", "unknown"],
       "mcnears-beach-pier": ["unknown", "unknown"],
       "limantour-beach": ["not-covered", "unknown"],
+      "keller-beach": ["posted", "suppress"],
+      "crown-memorial-state-beach": ["posted", "suppress"],
+      "alameda-south-shore-rockwall": ["not-covered", "unknown"],
     },
   );
   assert.equal(payload.sites["crissy-field-east-beach"].scoreDelta, null);
@@ -133,6 +140,10 @@ test("deterministic fixtures preserve source-specific suppression, neutral, unkn
       "All_Marin_County_Beaches",
     ],
   );
+  assert.deepEqual(payload.sites["keller-beach"].stationIds, ["Keller North Beach"]);
+  assert.deepEqual(payload.sites["keller-beach"].actionStartDates, ["2026-05-05"]);
+  assert.deepEqual(payload.sites["crown-memorial-state-beach"].stationIds, ["Crown Crab Cove"]);
+  assert.deepEqual(payload.sites["crown-memorial-state-beach"].actionStartDates, ["2026-06-23"]);
 });
 
 test("one unavailable source fails closed without erasing the independent source", async (t) => {
@@ -167,6 +178,26 @@ test("an unavailable Marin action source fails only Marin mappings closed", asyn
   );
   assert.equal(payload.sites["bolinas-beach"].status, "source-unavailable");
   assert.equal(payload.sites["bolinas-beach"].recommendationEffect, "unknown");
+  assert.equal(payload.sites["gaviota-state-park-beach"].status, "posted");
+  assert.equal(payload.sites["pacifica-state-beach"].status, "posted");
+});
+
+test("an unavailable East Bay Parks action source fails only its mappings closed", async (t) => {
+  const directory = await mkdtemp(join(tmpdir(), "castingcompass-east-bay-parks-error-"));
+  t.after(() => rm(directory, { recursive: true, force: true }));
+  const output = join(directory, "water-quality.json");
+  const result = runCollector(output, {
+    eastBayParksBeachwatchSource: join(directory, "missing.html"),
+  });
+  assert.equal(result.status, 0, result.stderr || result.stdout);
+  const payload = JSON.parse(await readFile(output, "utf8"));
+  assert.equal(
+    payload.sources["california-beachwatch-east-bay-parks"].errorCategory,
+    "source-file-unavailable",
+  );
+  assert.equal(payload.sites["keller-beach"].status, "source-unavailable");
+  assert.equal(payload.sites["crown-memorial-state-beach"].recommendationEffect, "unknown");
+  assert.equal(payload.sites["bolinas-beach"].status, "posted");
   assert.equal(payload.sites["gaviota-state-park-beach"].status, "posted");
   assert.equal(payload.sites["pacifica-state-beach"].status, "posted");
 });

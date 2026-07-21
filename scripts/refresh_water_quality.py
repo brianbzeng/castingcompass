@@ -32,9 +32,11 @@ DEFAULT_OUTPUT = ROOT / "public" / "data" / "water-quality.json"
 SFP_SOURCE_ID = "sfpuc"
 SANTA_BARBARA_BEACHWATCH_SOURCE_ID = "california-beachwatch-santa-barbara"
 MARIN_BEACHWATCH_SOURCE_ID = "california-beachwatch-marin"
+EAST_BAY_PARKS_BEACHWATCH_SOURCE_ID = "california-beachwatch-east-bay-parks"
 BEACHWATCH_SOURCE_IDS = (
     SANTA_BARBARA_BEACHWATCH_SOURCE_ID,
     MARIN_BEACHWATCH_SOURCE_ID,
+    EAST_BAY_PARKS_BEACHWATCH_SOURCE_ID,
 )
 SAN_MATEO_SOURCE_ID = "san-mateo-county-health"
 EXPECTED_SOURCES = {
@@ -47,6 +49,7 @@ EXPECTED_SOURCES = {
         "machine_url": "https://beachwatch.waterboards.ca.gov/public/advisory.php",
         "county_id": "14",
         "county_name": "Santa Barbara",
+        "global_station_ids": ["All_Santa_Barbara_County_Beaches"],
     },
     MARIN_BEACHWATCH_SOURCE_ID: {
         "source_type": "california-beachwatch-action-html",
@@ -55,6 +58,16 @@ EXPECTED_SOURCES = {
         "station_registry_machine_url": "https://beachwatch.waterboards.ca.gov/public/getstation.php",
         "county_id": "6",
         "county_name": "Marin",
+        "global_station_ids": ["All_Marin_County_Beaches"],
+    },
+    EAST_BAY_PARKS_BEACHWATCH_SOURCE_ID: {
+        "source_type": "california-beachwatch-action-html",
+        "machine_url": "https://beachwatch.waterboards.ca.gov/public/advisory.php",
+        "station_registry_url": "https://beachwatch.waterboards.ca.gov/public/result.php",
+        "station_registry_machine_url": "https://beachwatch.waterboards.ca.gov/public/getstation.php",
+        "county_id": "19",
+        "county_name": "East Bay Parks District",
+        "global_station_ids": [],
     },
     SAN_MATEO_SOURCE_ID: {
         "source_type": "san-mateo-current-posting-html",
@@ -202,7 +215,7 @@ def load_inputs() -> tuple[dict[str, Any], list[dict[str, Any]], bytes]:
         global_station_ids = beachwatch_source.get("global_station_ids")
         if (
             not isinstance(global_station_ids, list)
-            or not global_station_ids
+            or global_station_ids != EXPECTED_SOURCES[source_id]["global_station_ids"]
             or not all(
                 isinstance(value, str) and BEACHWATCH_STATION_ID_PATTERN.fullmatch(value)
                 for value in global_station_ids
@@ -919,6 +932,11 @@ def main() -> None:
         help="Read a Marin California BeachWatch HTML fixture instead of the network",
     )
     parser.add_argument(
+        "--east-bay-parks-beachwatch-source-file",
+        type=Path,
+        help="Read an East Bay Parks California BeachWatch HTML fixture instead of the network",
+    )
+    parser.add_argument(
         "--san-mateo-source-file",
         type=Path,
         help="Read a San Mateo County Health HTML fixture instead of the network",
@@ -931,6 +949,7 @@ def main() -> None:
         SFP_SOURCE_ID: args.sfpuc_source_file,
         SANTA_BARBARA_BEACHWATCH_SOURCE_ID: args.beachwatch_source_file,
         MARIN_BEACHWATCH_SOURCE_ID: args.marin_beachwatch_source_file,
+        EAST_BAY_PARKS_BEACHWATCH_SOURCE_ID: args.east_bay_parks_beachwatch_source_file,
         SAN_MATEO_SOURCE_ID: args.san_mateo_source_file,
     }
     source_records: dict[str, Any] = {}

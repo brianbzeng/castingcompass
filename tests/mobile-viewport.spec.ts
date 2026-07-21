@@ -271,6 +271,14 @@ test.beforeEach(async ({ page }, testInfo) => {
             absenceBehavior: "unknown",
             errorCategory: null,
           },
+          "california-beachwatch-east-bay-parks": {
+            agency: "California State Water Resources Control Board",
+            programUrl: "https://www.waterboards.ca.gov/water_issues/programs/beaches/beach_surveys/index.html",
+            statusUrl: "https://beachwatch.waterboards.ca.gov/public/advisory.php",
+            machineUrl: "https://beachwatch.waterboards.ca.gov/public/advisory.php",
+            absenceBehavior: "unknown",
+            errorCategory: null,
+          },
           "san-mateo-county-health": {
             agency: "San Mateo County Health",
             programUrl: "https://www.smchealth.org/node/1201",
@@ -324,6 +332,32 @@ test.beforeEach(async ({ page }, testInfo) => {
             stationNames: ["Bolinas Beach"],
             sampleDates: [],
             actionStartDates: ["2026-07-15"],
+            actionEndDates: [],
+            sourceUrl: "https://beachwatch.waterboards.ca.gov/public/advisory.php",
+          }),
+          "keller-beach": assessment({
+            status: "posted",
+            recommendationEffect: "suppress",
+            officialLabel: "Official water-contact posting",
+            detail: "A current district-submitted action in the official State Board table suppresses this site from recommendations.",
+            sourceId: "california-beachwatch-east-bay-parks",
+            stationIds: ["Keller North Beach"],
+            stationNames: ["North Beach"],
+            sampleDates: [],
+            actionStartDates: ["2026-05-05"],
+            actionEndDates: [],
+            sourceUrl: "https://beachwatch.waterboards.ca.gov/public/advisory.php",
+          }),
+          "crown-memorial-state-beach": assessment({
+            status: "posted",
+            recommendationEffect: "suppress",
+            officialLabel: "Official water-contact posting",
+            detail: "A current district-submitted action in the official State Board table suppresses this site from recommendations.",
+            sourceId: "california-beachwatch-east-bay-parks",
+            stationIds: ["Crown Crab Cove"],
+            stationNames: ["Crab Cove"],
+            sampleDates: [],
+            actionStartDates: ["2026-06-23"],
             actionEndDates: [],
             sourceUrl: "https://beachwatch.waterboards.ca.gov/public/advisory.php",
           }),
@@ -517,12 +551,14 @@ test("primary controls stay inside common phone viewports", async ({ page }) => 
 
 test("official water-quality status suppresses recommendations and keeps neutral status explicit", async ({ page }) => {
   await expect(page.locator(".water-quality-suppression-notice")).toContainText(
-    "4 sites are excluded from recommendations",
+    "6 sites are excluded from recommendations",
   );
   await expect(page.locator(".site-card").filter({ hasText: "Baker Beach" })).toHaveCount(0);
   await expect(page.locator(".site-card").filter({ hasText: "Gaviota State Park Beach" })).toHaveCount(0);
   await expect(page.locator(".site-card").filter({ hasText: "Pacifica State Beach" })).toHaveCount(0);
   await expect(page.locator(".site-card").filter({ hasText: "Bolinas Beach" })).toHaveCount(0);
+  await expect(page.locator(".site-card").filter({ hasText: "Keller Beach" })).toHaveCount(0);
+  await expect(page.locator(".site-card").filter({ hasText: "Crown Memorial State Beach" })).toHaveCount(0);
   await page.goto("/?site=gaviota-state-park-beach");
   const actionAdvisory = page.locator(".water-quality-advisory");
   await expect(actionAdvisory).toBeVisible();
@@ -553,6 +589,15 @@ test("official water-quality status suppresses recommendations and keeps neutral
     "href",
     "https://beachwatch.waterboards.ca.gov/public/advisory.php",
   );
+  await page.goto("/?site=keller-beach");
+  const eastBayParksAdvisory = page.locator(".water-quality-advisory");
+  await expect(eastBayParksAdvisory).toBeVisible();
+  await expect(eastBayParksAdvisory).toContainText("Official water-contact posting");
+  await expect(eastBayParksAdvisory).toContainText("Agency action start date: 2026-05-05");
+  await expect(eastBayParksAdvisory).toContainText("does not improve this fishing score");
+  await expect(
+    eastBayParksAdvisory.getByRole("link", { name: /official agency status/i }),
+  ).toHaveAttribute("href", "https://beachwatch.waterboards.ca.gov/public/advisory.php");
   // Open the exact site through the product's stable deep-link contract. Its rank can move as
   // regional sites are added, so the advisory test must not assume it appears in the first cards.
   await page.goto("/?site=crissy-field-east-beach");

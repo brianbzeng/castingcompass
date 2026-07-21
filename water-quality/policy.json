@@ -1,6 +1,6 @@
 {
   "schema_version": "castingcompass.water-quality-policy/2.0.0",
-  "policy_version": "castingcompass.water-quality-advisory/official-programs-0.4.0",
+  "policy_version": "castingcompass.water-quality-advisory/official-programs-0.5.0",
   "meaning": "human-health water-contact advisory overlay; never a catch-probability or seafood-safety signal",
   "score_contribution": "excluded-pending-frozen-baseline-validation",
   "freshness": {
@@ -37,6 +37,19 @@
       "county_id": "6",
       "county_name": "Marin",
       "global_station_ids": ["All_Marin_County_Beaches"],
+      "absence_behavior": "unknown"
+    },
+    "california-beachwatch-east-bay-parks": {
+      "source_type": "california-beachwatch-action-html",
+      "agency": "California State Water Resources Control Board",
+      "program_url": "https://www.waterboards.ca.gov/water_issues/programs/beaches/beach_surveys/index.html",
+      "status_url": "https://beachwatch.waterboards.ca.gov/public/advisory.php",
+      "machine_url": "https://beachwatch.waterboards.ca.gov/public/advisory.php",
+      "station_registry_url": "https://beachwatch.waterboards.ca.gov/public/result.php",
+      "station_registry_machine_url": "https://beachwatch.waterboards.ca.gov/public/getstation.php",
+      "county_id": "19",
+      "county_name": "East Bay Parks District",
+      "global_station_ids": [],
       "absence_behavior": "unknown"
     },
     "san-mateo-county-health": {
@@ -161,6 +174,14 @@
     "mcnears-beach-pier": {
       "source_id": "california-beachwatch-marin",
       "station_ids": ["McNEARS BEACH"]
+    },
+    "keller-beach": {
+      "source_id": "california-beachwatch-east-bay-parks",
+      "station_ids": ["Keller North Beach", "Keller South Beach"]
+    },
+    "crown-memorial-state-beach": {
+      "source_id": "california-beachwatch-east-bay-parks",
+      "station_ids": ["Crown 2001 Shoreline Dr.", "Crown Bath House", "Crown Bird Sanctuary", "Crown Crab Cove", "Crown Sunset Rd.", "Crown Windsurfer Corner"]
     },
     "gaviota-state-park-beach": {
       "source_id": "california-beachwatch-santa-barbara",

@@ -13,6 +13,42 @@ Current provider truth overrides historical “paused” language in completed r
 2026-07-19 read-only reconciliation found an active Worker; no production mutation is authorized
 by that discovery.
 
+## Active checkpoint — East Bay Parks District action-only water-quality coverage
+
+- [x] Preserve draft PR `#141` at exact receipt head
+      `8b1f05ac43509fae112b583549eb58431c84fab0` as the stacked base. This follow-up is
+      isolated from the dirty primary checkout and does not merge, deploy, mutate Cloudflare or
+      D1, alter site priors, or turn water quality into a numeric fishing score.
+- [x] Add a fifth independently failing official adapter request using only the fixed State Water
+      Board BeachWatch East Bay Parks District identifier `19`. It shares the reviewed action-only
+      semantics but cannot erase Santa Barbara, Marin, SFPUC, or San Mateo evidence when its own
+      response fails.
+- [x] Bind Keller Beach to its exact North and South station identities and Crown Memorial State
+      Beach to its six exact Crown station identities. The official registry exposes no explicit
+      districtwide action identity, so this source inherits none; absence remains unknown and
+      every numeric `scoreDelta` remains null.
+- [x] Preserve 11 negative mapping results for the other Richmond-through-San Leandro catalog
+      sites reviewed in this slice. In particular, Ferry Point does not inherit Keller and the
+      Alameda South Shore Rock Wall does not inherit Crown Windsurfer Corner; similar area and
+      proximity do not authorize a public-location mapping.
+- [x] Capture the bounded eight-station registry and five-source action snapshot at
+      `2026-07-21T15:16:01Z`, with response/policy/tool/catalog hashes and an independent-review
+      requirement. All five current-source reads succeeded; open-ended postings beginning May 5
+      at Keller North and June 23 at Crown Crab Cove suppress both catalog sites in the repository
+      artifact.
+- [x] Complete the clean local release matrix under pinned Node `22.23.1` and the locked Python
+      environments: a fresh zero-script install, both zero-vulnerability npm audits, Cloudflare
+      build, 506/506 Node tests, ESLint, TypeScript, the complete offline security/SBOM/source-
+      integrity chain, Ruff and Python syntax, 29/29 API tests, 82 passed pipeline tests with one
+      documented optional-`rasterio` skip and 138 subtests, deterministic synthetic smoke, and all
+      19 critical D1 query plans passed. The full Chromium/WebKit phone matrix passed 188/188 cases
+      and proves Keller and Crown suppression is visible, source-linked, score-excluded, and
+      mobile-safe.
+- [ ] Publish and seal a protected stacked draft PR. Independent mapping/source-latency review,
+      CodeQL on protected `main`, guarded deployment, post-deployment freshness, provider/database
+      mutation, production activation, and every numeric-contribution validation gate remain
+      separate open work.
+
 ## Active checkpoint — Marin County action-only water-quality coverage
 
 - [x] Preserve draft PR `#140` at exact receipt head
@@ -1475,6 +1511,13 @@ by that discovery.
       absence remains unknown, all numeric `scoreDelta` values stay null, and the registry audit
       cannot infer mappings or establish current status. Full local/hosted acceptance, independent
       mapping review, guarded deployment, and every numeric-score gate remain open.
+      **Fifth local advisory slice implemented:** a fixed East Bay Parks District BeachWatch
+      action request maps Keller and Crown Memorial only through exact official station
+      identities and preserves 11 negative mapping results. Current open-ended Keller North and
+      Crown Crab Cove postings suppress both catalog sites; the registry exposes no explicit
+      districtwide action identity, absence remains unknown, and every numeric `scoreDelta` stays
+      null. Full local/hosted acceptance, independent mapping review, guarded deployment, and
+      every numeric-score gate remain open.
 - [ ] Enrich the map one available location at a time with reviewed notable structure and useful
       depth levels. Every feature needs reproducible official/licensed source provenance, units,
       vertical datum, resolution, retrieval date, checksum, uncertainty, allowed use, sensitive-
