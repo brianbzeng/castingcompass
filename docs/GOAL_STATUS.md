@@ -41,10 +41,16 @@ by that discovery.
       passed. A resource-saturated four-worker phone attempt passed 133/148; all 15 unrelated
       timing/setup failures then passed 15/15 alone, and the clean bounded two-worker Chromium/
       WebKit matrix passed 148/148.
-- [ ] Publish a protected stacked draft PR and require its exact hosted head to pass every
-      applicable CI, CodeQL, release-provenance, API-image, and optional research-stack check.
-      Independent local-angler/site review, higher-resolution coverage, scoring validation, merge,
-      and guarded production acceptance all remain separate open gates.
+- [x] Publish stacked draft PR `#133` without merge or deployment. Exact implementation head
+      `9be895b3ee60f1027af6de332288e8ab22a680c2` passed push and pull-request CI runs
+      `29815841424` and `29815908208`, release-provenance runs `29815841377` and `29815908222`,
+      native API-image run `29815908219` on both architectures, and explicitly dispatched optional
+      research-stack run `29816379172` on Linux CPU and macOS ARM64. Event-inapplicable dependency
+      and release-attestation jobs skipped as designed.
+- [ ] Obtain CodeQL evidence when this stack is eventually reviewed against protected `main`;
+      GitHub default setup did not trigger on the non-default stacked base, so this checkpoint makes
+      no CodeQL claim. Independent local-angler/site review, higher-resolution coverage, scoring
+      validation, merge, and guarded production acceptance also remain separate open gates.
 
 ## Active checkpoint — Santa Barbara exclusion-only water-contact actions
 
