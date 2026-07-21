@@ -424,13 +424,22 @@ export async function handleAccountRequest(
         throw error;
       }
       const proof = randomSecret(32);
+      const proofHash = await sha256(proof);
       const createdAt = new Date();
       const expiresAt = new Date(createdAt.getTime() + AGE_PROOF_SECONDS * 1000);
-      await db.prepare(`INSERT INTO signup_age_proofs
+      const proofResult = await db.prepare(`INSERT INTO signup_age_proofs
         (token_hash, confirmed_at, gate_version, expires_at, consumed_at, created_at)
         VALUES (?, ?, ?, ?, NULL, ?)`)
-        .bind(await sha256(proof), confirmedAt, AGE_GATE_VERSION, expiresAt.toISOString(), createdAt.toISOString())
+        .bind(proofHash, confirmedAt, AGE_GATE_VERSION, expiresAt.toISOString(), createdAt.toISOString())
         .run();
+      if (confirmedMutationChanges(proofResult) !== 1) {
+        await cleanupSignupAgeProofCandidate(db, proofHash);
+        return errorResponse(
+          503,
+          "eligibility_proof_unconfirmed",
+          "Age eligibility could not be confirmed. Retry the age step.",
+        );
+      }
       return jsonResponse({
         eligibilityProof: proof,
         expiresInMinutes: AGE_PROOF_SECONDS / 60,
@@ -472,16 +481,17 @@ export async function handleAccountRequest(
       await assertEmailChallengeAllowed(db, email);
       const id = `challenge_${crypto.randomUUID()}`;
       const code = randomCode();
+      const codeHash = await sha256(`${id}:${code}`);
       const salt = randomSecret(18);
       const timestamp = new Date();
-      await db.prepare(`INSERT INTO email_challenges
+      const challengeResult = await db.prepare(`INSERT INTO email_challenges
         (id, kind, email, user_id, code_hash, password_salt, password_hash,
           age_eligibility_confirmed_at, terms_version, privacy_version, expires_at, attempts, created_at)
         VALUES (?, 'signup', ?, NULL, ?, ?, ?, ?, ?, ?, ?, 0, ?)`)
         .bind(
           id,
           email,
-          await sha256(`${id}:${code}`),
+          codeHash,
           salt,
           await hashPassword(password, salt),
           ageEligibilityConfirmedAt,
@@ -491,10 +501,18 @@ export async function handleAccountRequest(
           timestamp.toISOString(),
         )
         .run();
+      if (confirmedMutationChanges(challengeResult) !== 1) {
+        await cleanupEmailChallengeCandidate(db, id, codeHash, timestamp.toISOString());
+        throw new AuthError(
+          503,
+          "challenge_creation_unconfirmed",
+          "Email verification could not be confirmed. Restart signup from the age step.",
+        );
+      }
       try {
         await sendVerificationEmail(env, email, code, "Confirm your CastingCompass account");
       } catch (error) {
-        await db.prepare("DELETE FROM email_challenges WHERE id = ?").bind(id).run();
+        await cleanupEmailChallengeCandidate(db, id, codeHash, timestamp.toISOString());
         throw error;
       }
       return jsonResponse({ challengeId: id, expiresInMinutes: 15 });
@@ -571,21 +589,35 @@ export async function handleAccountRequest(
           return passwordRecoveryResendResponse(challengeId);
         }
         const code = randomCode();
+        const codeHash = await sha256(`${challenge.id}:${code}`);
         const timestamp = new Date();
-        await db.prepare(`UPDATE email_challenges
+        const updateResult = await db.prepare(`UPDATE email_challenges
           SET code_hash = ?, expires_at = ?, attempts = 0, resend_count = resend_count + 1, created_at = ?
-          WHERE id = ?`)
+          WHERE id = ? AND kind = 'password_reset' AND code_hash = ? AND created_at = ? AND resend_count = ?`)
           .bind(
-            await sha256(`${challenge.id}:${code}`),
+            codeHash,
             new Date(timestamp.getTime() + 15 * 60 * 1000).toISOString(),
             timestamp.toISOString(),
             challenge.id,
+            challenge.code_hash,
+            challenge.created_at,
+            Number(challenge.resend_count ?? 0),
           )
           .run();
+        const updateChanges = confirmedMutationChanges(updateResult);
+        if (updateChanges !== 1) {
+          if (updateChanges === null) {
+            await cleanupEmailChallengeCandidate(db, challenge.id, codeHash, timestamp.toISOString());
+          }
+          await responseNotBefore;
+          return passwordRecoveryResendResponse(challengeId);
+        }
         const delivery = deferPasswordRecoveryEmail(
           options,
           db,
           challenge.id,
+          codeHash,
+          timestamp.toISOString(),
           sendVerificationEmail(
             env,
             challenge.email,
@@ -611,24 +643,45 @@ export async function handleAccountRequest(
         throw new AuthError(429, "too_many_codes", "Too many email codes were requested. Start again in an hour.");
       }
       const code = randomCode();
+      const codeHash = await sha256(`${challenge.id}:${code}`);
       const timestamp = new Date();
-      await sendVerificationEmail(
-        env,
-        challenge.email,
-        code,
-        challenge.kind === "signup" ? "Confirm your CastingCompass account" : "Reset your CastingCompass password",
-        `${challenge.id}:resend:${Number(challenge.resend_count ?? 0) + 1}`,
-      );
-      await db.prepare(`UPDATE email_challenges
+      const updateResult = await db.prepare(`UPDATE email_challenges
         SET code_hash = ?, expires_at = ?, attempts = 0, resend_count = resend_count + 1, created_at = ?
-        WHERE id = ?`)
+        WHERE id = ? AND kind = 'signup' AND code_hash = ? AND created_at = ? AND resend_count = ?`)
         .bind(
-          await sha256(`${challenge.id}:${code}`),
+          codeHash,
           new Date(timestamp.getTime() + 15 * 60 * 1000).toISOString(),
           timestamp.toISOString(),
           challenge.id,
+          challenge.code_hash,
+          challenge.created_at,
+          Number(challenge.resend_count ?? 0),
         )
         .run();
+      const updateChanges = confirmedMutationChanges(updateResult);
+      if (updateChanges !== 1) {
+        if (updateChanges === null) {
+          await cleanupEmailChallengeCandidate(db, challenge.id, codeHash, timestamp.toISOString());
+          throw new AuthError(
+            503,
+            "challenge_update_unconfirmed",
+            "The new verification code could not be confirmed. Restart email verification.",
+          );
+        }
+        throw new AuthError(409, "challenge_changed", "That verification request changed. Use its latest code or start again.");
+      }
+      try {
+        await sendVerificationEmail(
+          env,
+          challenge.email,
+          code,
+          "Confirm your CastingCompass account",
+          `${challenge.id}:resend:${Number(challenge.resend_count ?? 0) + 1}`,
+        );
+      } catch (error) {
+        await cleanupEmailChallengeCandidate(db, challenge.id, codeHash, timestamp.toISOString());
+        throw error;
+      }
       return jsonResponse({ requested: true, challengeId, expiresInMinutes: 15, retryAfterSeconds: 60 });
     }
 
@@ -661,16 +714,24 @@ export async function handleAccountRequest(
       }
       const id = `challenge_${crypto.randomUUID()}`;
       const code = randomCode();
+      const codeHash = await sha256(`${id}:${code}`);
       const timestamp = new Date();
-      await db.prepare(`INSERT INTO email_challenges
+      const challengeResult = await db.prepare(`INSERT INTO email_challenges
         (id, kind, email, user_id, code_hash, expires_at, attempts, created_at)
         VALUES (?, 'password_reset', ?, ?, ?, ?, 0, ?)`)
-        .bind(id, email, user.id, await sha256(`${id}:${code}`), new Date(timestamp.getTime() + 15 * 60 * 1000).toISOString(), timestamp.toISOString())
+        .bind(id, email, user.id, codeHash, new Date(timestamp.getTime() + 15 * 60 * 1000).toISOString(), timestamp.toISOString())
         .run();
+      if (confirmedMutationChanges(challengeResult) !== 1) {
+        await cleanupEmailChallengeCandidate(db, id, codeHash, timestamp.toISOString());
+        await responseNotBefore;
+        return passwordRecoveryRequestedResponse();
+      }
       const delivery = deferPasswordRecoveryEmail(
         options,
         db,
         id,
+        codeHash,
+        timestamp.toISOString(),
         sendVerificationEmail(env, email, code, "Reset your CastingCompass password"),
       );
       if (!options.waitUntil) await delivery;
@@ -2356,8 +2417,16 @@ async function consumeSignupAgeProof(db: D1DatabaseLike, proof: ValidSignupAgePr
     WHERE token_hash = ? AND consumed_at IS NULL AND expires_at > ? AND gate_version = ?`)
     .bind(consumedAt, proof.tokenHash, consumedAt, AGE_GATE_VERSION)
     .run();
-  if (Number(result.meta?.changes ?? 0) !== 1) {
+  const changes = confirmedMutationChanges(result);
+  if (changes === 0) {
     throw new AuthError(410, "eligibility_proof_expired", "Age eligibility expired or was already used. Start the age step again.");
+  }
+  if (changes !== 1) {
+    throw new AuthError(
+      503,
+      "eligibility_proof_consumption_unconfirmed",
+      "Age eligibility use could not be confirmed. Restart signup from the age step.",
+    );
   }
   return proof.confirmedAt;
 }
@@ -2657,18 +2726,39 @@ function deferPasswordRecoveryEmail(
   options: AccountRequestOptions,
   db: D1DatabaseLike,
   challengeId: string,
+  codeHash: string,
+  createdAt: string,
   delivery: Promise<void>,
 ) {
   const guardedDelivery = delivery.catch(async (error) => {
-    try {
-      await db.prepare("DELETE FROM email_challenges WHERE id = ?").bind(challengeId).run();
-    } catch (cleanupError) {
-      logEvent("error", "password_recovery.challenge_cleanup_failed", safeErrorContext(cleanupError));
-    }
+    await cleanupEmailChallengeCandidate(db, challengeId, codeHash, createdAt);
     logEvent("error", "password_recovery.email_delivery_deferred", safeErrorContext(error));
   });
   options.waitUntil?.(guardedDelivery);
   return guardedDelivery;
+}
+
+async function cleanupSignupAgeProofCandidate(db: D1DatabaseLike, tokenHash: string) {
+  try {
+    await db.prepare("DELETE FROM signup_age_proofs WHERE token_hash = ?").bind(tokenHash).run();
+  } catch (error) {
+    logEvent("error", "signup.age_proof_cleanup_failed", safeErrorContext(error));
+  }
+}
+
+async function cleanupEmailChallengeCandidate(
+  db: D1DatabaseLike,
+  challengeId: string,
+  codeHash: string,
+  createdAt: string,
+) {
+  try {
+    await db.prepare("DELETE FROM email_challenges WHERE id = ? AND code_hash = ? AND created_at = ?")
+      .bind(challengeId, codeHash, createdAt)
+      .run();
+  } catch (error) {
+    logEvent("error", "email.challenge_cleanup_failed", safeErrorContext(error));
+  }
 }
 
 function assertSameOrigin(request: Request) {

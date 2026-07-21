@@ -800,6 +800,183 @@ function isoDate({ year, month, day }) {
   return `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
 }
 
+test("signup secrets are disclosed only after confirmed age-proof and challenge receipts", async () => {
+  const { sqlite, d1 } = await database();
+  d1.omitOnceMutationMetadataSubstring = "INSERT INTO signup_age_proofs";
+  const unconfirmedProof = await handleAccountRequest(request("/api/auth/signup/eligibility", {
+    method: "POST",
+    body: { birthDate: "2000-01-01" },
+  }), { DB: d1 }, []);
+  const unconfirmedProofBody = await unconfirmedProof.json();
+  assert.equal(unconfirmedProof.status, 503);
+  assert.equal(unconfirmedProofBody.error.code, "eligibility_proof_unconfirmed");
+  assert.equal(unconfirmedProofBody.eligibilityProof, undefined);
+  assert.equal(sqlite.prepare("SELECT COUNT(*) AS count FROM signup_age_proofs").get().count, 0);
+
+  const originalFetch = globalThis.fetch;
+  let providerCalls = 0;
+  globalThis.fetch = async (input) => {
+    if (String(input).startsWith("https://api.pwnedpasswords.com/range/")) {
+      return new Response(`${"0".repeat(35)}:0`);
+    }
+    providerCalls += 1;
+    return Response.json({ id: "must-not-run" });
+  };
+  try {
+    const consumedProofResponse = await handleAccountRequest(request("/api/auth/signup/eligibility", {
+      method: "POST",
+      body: { birthDate: "2000-01-01" },
+    }), { DB: d1 }, []);
+    const consumedProof = (await consumedProofResponse.json()).eligibilityProof;
+    d1.omitOnceMutationMetadataSubstring = "UPDATE signup_age_proofs SET consumed_at";
+    const unconfirmedConsumption = await handleAccountRequest(request("/api/auth/signup/request", {
+      method: "POST",
+      body: {
+        eligibilityProof: consumedProof,
+        email: "unconfirmed-consumption@example.com",
+        password: "receipt-bound signup passphrase",
+        termsAccepted: true,
+        privacyAccepted: true,
+      },
+    }), { DB: d1, RESEND_API_KEY: "test" }, []);
+    assert.equal(unconfirmedConsumption.status, 503);
+    assert.equal((await unconfirmedConsumption.json()).error.code, "eligibility_proof_consumption_unconfirmed");
+    assert.notEqual(
+      sqlite.prepare("SELECT consumed_at FROM signup_age_proofs WHERE token_hash = ?").get(await sha256(consumedProof)).consumed_at,
+      null,
+    );
+    assert.equal(sqlite.prepare("SELECT COUNT(*) AS count FROM email_challenges").get().count, 0);
+    assert.equal(providerCalls, 0);
+
+    const challengeProofResponse = await handleAccountRequest(request("/api/auth/signup/eligibility", {
+      method: "POST",
+      body: { birthDate: "2000-01-01" },
+    }), { DB: d1 }, []);
+    const challengeProof = (await challengeProofResponse.json()).eligibilityProof;
+    d1.omitOnceMutationMetadataSubstring = "INSERT INTO email_challenges";
+    const unconfirmedChallenge = await handleAccountRequest(request("/api/auth/signup/request", {
+      method: "POST",
+      body: {
+        eligibilityProof: challengeProof,
+        email: "unconfirmed-challenge@example.com",
+        password: "another receipt-bound passphrase",
+        termsAccepted: true,
+        privacyAccepted: true,
+      },
+    }), { DB: d1, RESEND_API_KEY: "test" }, []);
+    assert.equal(unconfirmedChallenge.status, 503);
+    assert.equal((await unconfirmedChallenge.json()).error.code, "challenge_creation_unconfirmed");
+    assert.equal(sqlite.prepare("SELECT COUNT(*) AS count FROM email_challenges").get().count, 0);
+    assert.equal(providerCalls, 0);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("signup resend records one conditional challenge update before provider delivery", async () => {
+  const { sqlite, d1 } = await database();
+  const originalFetch = globalThis.fetch;
+  let providerCalls = 0;
+  globalThis.fetch = async () => {
+    providerCalls += 1;
+    return Response.json({ id: "must-not-run" });
+  };
+  try {
+    const timestamp = new Date(Date.now() - 61_000).toISOString();
+    const challengeId = `challenge_${crypto.randomUUID()}`;
+    sqlite.prepare(`INSERT INTO email_challenges
+        (id, kind, email, code_hash, expires_at, attempts, resend_count, created_at)
+      VALUES (?, 'signup', ?, ?, ?, 0, 0, ?)`).run(
+      challengeId,
+      "signup-resend-receipt@example.com",
+      await sha256(`${challengeId}:123456`),
+      new Date(Date.now() + 15 * 60_000).toISOString(),
+      timestamp,
+    );
+    d1.omitOnceMutationMetadataSubstring = "UPDATE email_challenges";
+    const ambiguous = await handleAccountRequest(request("/api/auth/challenge/resend", {
+      method: "POST",
+      body: { challengeId },
+    }), { DB: d1, RESEND_API_KEY: "test" }, []);
+    assert.equal(ambiguous.status, 503);
+    assert.equal((await ambiguous.json()).error.code, "challenge_update_unconfirmed");
+    assert.equal(sqlite.prepare("SELECT COUNT(*) AS count FROM email_challenges WHERE id = ?").get(challengeId).count, 0);
+    assert.equal(providerCalls, 0);
+
+    const racedId = `challenge_${crypto.randomUUID()}`;
+    const racedHash = await sha256(`${racedId}:123456`);
+    sqlite.prepare(`INSERT INTO email_challenges
+        (id, kind, email, code_hash, expires_at, attempts, resend_count, created_at)
+      VALUES (?, 'signup', ?, ?, ?, 0, 0, ?)`).run(
+      racedId,
+      "signup-resend-race@example.com",
+      racedHash,
+      new Date(Date.now() + 15 * 60_000).toISOString(),
+      timestamp,
+    );
+    const replacementHash = "f".repeat(64);
+    d1.beforeOnceQuerySubstring = "UPDATE email_challenges";
+    d1.beforeOnceQuery = () => sqlite.prepare("UPDATE email_challenges SET code_hash = ? WHERE id = ?")
+      .run(replacementHash, racedId);
+    const raced = await handleAccountRequest(request("/api/auth/challenge/resend", {
+      method: "POST",
+      body: { challengeId: racedId },
+    }), { DB: d1, RESEND_API_KEY: "test" }, []);
+    assert.equal(raced.status, 409);
+    assert.equal((await raced.json()).error.code, "challenge_changed");
+    assert.equal(sqlite.prepare("SELECT code_hash FROM email_challenges WHERE id = ?").get(racedId).code_hash, replacementHash);
+    assert.equal(providerCalls, 0);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("password recovery keeps generic responses while suppressing unconfirmed provider work", async () => {
+  const { sqlite, d1 } = await database();
+  const user = await addUser(sqlite, "challenge-receipt-145");
+  const originalFetch = globalThis.fetch;
+  let providerCalls = 0;
+  globalThis.fetch = async () => {
+    providerCalls += 1;
+    return Response.json({ id: "must-not-run" });
+  };
+  try {
+    d1.omitOnceMutationMetadataSubstring = "INSERT INTO email_challenges";
+    const requested = await handleAccountRequest(request("/api/auth/password/request", {
+      method: "POST",
+      body: { email: user.email },
+    }), { DB: d1, RESEND_API_KEY: "test" }, []);
+    assert.equal(requested.status, 200);
+    assert.equal((await requested.json()).requested, true);
+    assert.equal(sqlite.prepare("SELECT COUNT(*) AS count FROM email_challenges WHERE email = ?").get(user.email).count, 0);
+    assert.equal(providerCalls, 0);
+
+    const challengeId = `challenge_${crypto.randomUUID()}`;
+    const timestamp = new Date(Date.now() - 61_000).toISOString();
+    sqlite.prepare(`INSERT INTO email_challenges
+        (id, kind, email, user_id, code_hash, expires_at, attempts, resend_count, created_at)
+      VALUES (?, 'password_reset', ?, ?, ?, ?, 0, 0, ?)`).run(
+      challengeId,
+      user.email,
+      user.id,
+      await sha256(`${challengeId}:123456`),
+      new Date(Date.now() + 15 * 60_000).toISOString(),
+      timestamp,
+    );
+    d1.omitOnceMutationMetadataSubstring = "UPDATE email_challenges";
+    const resent = await handleAccountRequest(request("/api/auth/challenge/resend", {
+      method: "POST",
+      body: { challengeId },
+    }), { DB: d1, RESEND_API_KEY: "test" }, []);
+    assert.equal(resent.status, 200);
+    assert.equal((await resent.json()).requested, true);
+    assert.equal(sqlite.prepare("SELECT COUNT(*) AS count FROM email_challenges WHERE id = ?").get(challengeId).count, 0);
+    assert.equal(providerCalls, 0);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
 test("age eligibility is isolated, one-use, non-retaining, and fail-closed", async () => {
   const { sqlite, d1 } = await database();
   const eligible = await handleAccountRequest(request("/api/auth/signup/eligibility", {

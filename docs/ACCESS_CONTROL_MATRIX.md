@@ -30,8 +30,8 @@ output never grants authority.
 | Resource | Required server predicate | Current mutation rules |
 | --- | --- | --- |
 | Session | `token_hash = sha256(cookie)` and `expires_at > now` | Authentication atomically replaces any session presented by that browser and HTTPS uses `__Host-cc_session`; the prior cookie is accepted only for migration and rotated on session refresh; a new cookie is issued only after exactly one confirmed session INSERT, while an unconfirmed INSERT triggers token-hash cleanup and clears both cookie forms; logout returns its exact success receipt only when every presented token deletion has authoritative zero-or-one change metadata, while an ambiguous result returns `503` for read-only status recovery; password reset and account deletion revoke every session for the account |
-| Account creation | One-use signup challenge containing server-created credential hash, age-eligibility timestamp, and exact current legal versions | User insertion and challenge deletion are one D1 batch; welcome delivery and the first authenticated session occur only after exactly one confirmed user insert. An unconfirmed committed batch returns `503` and directs normal sign-in rather than replaying the consumed challenge |
-| Password reset | One-use verified challenge bound server-side to `email_challenges.user_id`; final credential update repeats that user ID | Password change, all-session revocation, and challenge consumption are one D1 batch; a new session is issued only after exactly one confirmed user-row change. Missing mutation metadata returns `503`, clears stale browser session cookies, and instructs sign-in with the submitted password instead of replaying the consumed challenge |
+| Account creation | One-use signup challenge containing server-created credential hash, age-eligibility timestamp, and exact current legal versions | The plaintext age proof is exposed only after one confirmed proof INSERT; proof consumption distinguishes authoritative zero from missing metadata; the initial challenge email follows one confirmed challenge INSERT. Resends use a conditional prior-hash/time/count predicate, update D1 before provider delivery, and clean up only their exact candidate version after an ambiguous receipt or provider failure. User insertion and challenge deletion are one D1 batch; welcome delivery and the first authenticated session occur only after exactly one confirmed user insert |
+| Password reset | One-use verified challenge bound server-side to `email_challenges.user_id`; final credential update repeats that user ID | Enumeration-resistant request/resend responses remain identical for missing accounts and unconfirmed D1 work, but email delivery is scheduled only after one confirmed challenge INSERT or conditional UPDATE. Candidate-only cleanup removes an ambiguous or undelivered version without deleting a newer concurrent code. Password change, all-session revocation, and challenge consumption are one D1 batch; a new session is issued only after exactly one confirmed user-row change |
 | Legal acceptance | `users.id = authenticated_user.id` after an active server-side session lookup | The server preserves the prior age-eligibility proof, records only the current Terms/Privacy versions, and returns accepted only for exactly one confirmed D1 change; a deleted-account race clears stale session cookies, and missing mutation metadata returns `503` instead of a compliance receipt |
 | Saved site | `user_id = authenticated_user.id` | Owner may add/remove only their row |
 | Gear profile | `id = requested_id AND user_id = authenticated_user.id` | Owner may create, patch, or delete; an unknown, other-owned, or concurrently changed ID is `404`; PATCH/DELETE success requires exactly one D1 change and any unconfirmed result fails closed |
@@ -136,6 +136,17 @@ two exact values and the result count must match the submitted token count. Miss
 truncated, or impossible batch metadata returns `503 sign_out_unconfirmed` with clearing cookies;
 the browser preserves local recovery state and uses the existing read-only session check rather
 than accepting or replaying an unproven destructive action.
+
+Secret-bearing age and email steps apply that boundary before disclosure or external side effects.
+An age proof is returned only after its exact INSERT reports one change; otherwise the candidate
+hash is deleted and the plaintext proof never leaves the server. Consuming a proof treats an
+authoritative zero as expired but missing metadata as unconfirmed, so no email challenge begins.
+Initial challenge creation likewise requires one confirmed INSERT before provider delivery.
+Resends compare the prior kind, code hash, creation time, and resend count in the final UPDATE,
+require exactly one change, and call the provider only afterward. Cleanup repeats the new code hash
+and creation time, so it cannot delete a newer concurrent challenge version. Password recovery
+keeps its intentionally generic anti-enumeration response while suppressing provider work whenever
+the internal INSERT or UPDATE receipt is absent.
 
 ## Open gates
 

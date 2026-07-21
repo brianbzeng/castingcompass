@@ -176,6 +176,12 @@ after its acceptance checks pass in the intended environment.
       receipt that permits browser recovery-state deletion. Every presented token DELETE must
       report zero or one change and the batch cardinality must match; ambiguous metadata returns
       `503`, clears browser cookies, and directs the existing read-only status check without replay.
+    - [x] Bind every secret-bearing age-proof and email-challenge side effect to an authoritative
+      D1 receipt. Plaintext age proofs and verification delivery now follow exactly one confirmed
+      INSERT; missing proof-consumption metadata stops before challenge creation. Resends use a
+      prior-kind/hash/time/count compare-and-set, record the new code before provider delivery,
+      and candidate-only cleanup cannot delete a newer concurrent code. Password recovery retains
+      its generic anti-enumeration response while suppressing unconfirmed provider work.
   - [ ] Verify strict schema/size/type validation, contextual output encoding, safe database
     binding, upload signature and metadata checks, and AI prompt-injection boundaries. Model
     instructions and user content remain data, never authority; models receive no ambient

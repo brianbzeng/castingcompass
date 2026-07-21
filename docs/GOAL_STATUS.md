@@ -82,6 +82,31 @@ by that discovery.
       release-bundle receipt. No push, pull request, merge, deployment, provider query, D1 mutation,
       model change, UI change, or production authorization belongs to this work.
 
+## Active checkpoint — database-confirmed challenge issuance
+
+- [x] Continue the credential audit upstream of verification. Age eligibility returned a plaintext
+      bearer proof after an unchecked D1 INSERT; signup and password recovery could invoke the
+      email provider after unchecked challenge INSERTs or UPDATEs.
+- [x] Require exactly one confirmed age-proof INSERT before disclosing its plaintext token and
+      delete the candidate hash after an ambiguous receipt. Treat an authoritative zero during
+      one-use consumption as expired, but missing metadata as explicitly unconfirmed, and stop
+      before challenge creation in both cases.
+- [x] Require exactly one confirmed initial challenge INSERT before provider delivery. Signup
+      returns `503` and candidate-only cleanup after an ambiguous receipt; password recovery keeps
+      its deliberately generic anti-enumeration response but performs no provider work.
+- [x] Replace ID-only resend writes with prior-kind, code-hash, creation-time, and resend-count
+      compare-and-set updates. Delivery follows the exact one-row receipt, never precedes it;
+      candidate-only cleanup after ambiguity or provider failure cannot delete a newer code.
+- [x] Force missing metadata for proof creation, proof consumption, signup challenge creation,
+      signup resend, password-recovery creation, and password-recovery resend. No secret or provider
+      side effect escapes an unconfirmed boundary; a deterministic concurrent signup-resend race
+      preserves the newer challenge version and performs no provider call.
+- [x] Pass the pinned Cloudflare build, ESLint, TypeScript, all 559/559 Node tests, the complete
+      offline security/SBOM/source-integrity chain, both zero-vulnerability npm audits, and the
+      full 200/200 Chromium/WebKit phone matrix. Preserve a clean local commit and deterministic
+      release-bundle receipt. No push, pull request, merge, deployment, provider query, D1 mutation,
+      model change, UI change, or production authorization belongs to this work.
+
 ## Active checkpoint — terminal trip ownership predicates
 
 - [x] Audit owner-scoped trip mutations against the documented D1/SQLite row-security
