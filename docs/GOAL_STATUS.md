@@ -42,8 +42,16 @@ by that discovery.
       query plans passed. The full Chromium/WebKit phone matrix passed 188/188 cases, and a focused
       four-browser check proves Bolinas suppression is visible, linked to the State Board source,
       score-excluded, and mobile-safe.
-- [ ] Publish and seal a protected stacked draft PR. Independent mapping/source-latency review,
-      CodeQL on protected `main`, guarded deployment, post-deployment freshness, provider/database
+- [x] Publish protected stacked draft PR `#141` without merge or deployment. Exact implementation
+      head `200459d6f0ddbe40a7c74e3370d32766d7e9f7a9` passed push and pull-request CI runs
+      `29841027844` and `29841054518`, including two independent 188/188 Chromium/WebKit phone
+      matrices; release-provenance runs `29841028020` and `29841053253`; native API-image run
+      `29841056083` on Linux AMD64 and ARM64; and explicitly dispatched optional research-stack
+      run `29841066358` on Linux CPU and macOS ARM64. Event-inapplicable dependency and release-
+      attestation jobs skipped as designed.
+- [ ] Obtain independent mapping and source-latency review and CodeQL evidence when this stack is
+      eventually reviewed against protected `main`; default setup did not trigger on the non-
+      default stacked base. Guarded deployment, post-deployment freshness, provider/database
       mutation, production activation, and every numeric-contribution validation gate remain
       separate open work.
 
