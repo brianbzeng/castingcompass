@@ -160,6 +160,10 @@ after its acceptance checks pass in the intended environment.
       versions are returned as accepted only after exactly one confirmed owner-row change; a
       deleted-account race clears stale session cookies, while missing D1 metadata returns `503`
       instead of a false compliance receipt. Prior age eligibility remains untouched.
+    - [x] Require a database-confirmed credential change before completing password reset. The
+      password update, all-session revocation, and challenge consumption remain one atomic batch,
+      but an unconfirmed D1 receipt returns `503`, clears stale cookies, and creates no replacement
+      session. Direct runtime proof confirms the submitted password works without replaying code.
   - [ ] Verify strict schema/size/type validation, contextual output encoding, safe database
     binding, upload signature and metadata checks, and AI prompt-injection boundaries. Model
     instructions and user content remain data, never authority; models receive no ambient

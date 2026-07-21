@@ -588,6 +588,51 @@ test("password reset revokes every prior session before issuing a fresh one", as
   }
 });
 
+test("password reset never issues a fresh session without a confirmed credential mutation", async () => {
+  const { sqlite, d1 } = await database();
+  const user = await addUser(sqlite, "password-receipt-141");
+  const challengeId = `challenge_${crypto.randomUUID()}`;
+  const code = "624811";
+  const now = new Date();
+  sqlite.prepare(`INSERT INTO email_challenges
+      (id, kind, email, user_id, code_hash, expires_at, attempts, resend_count, created_at)
+    VALUES (?, 'password_reset', ?, ?, ?, ?, 0, 0, ?)`)
+    .run(
+      challengeId,
+      user.email,
+      user.id,
+      await sha256(`${challengeId}:${code}`),
+      new Date(now.getTime() + 15 * 60_000).toISOString(),
+      now.toISOString(),
+    );
+
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async () => new Response(`${"0".repeat(35)}:0`);
+  try {
+    d1.omitOnceMutationMetadataSubstring = "UPDATE users SET password_salt";
+    const reset = await handleAccountRequest(request("/api/auth/password/reset", {
+      method: "POST",
+      cookie: user.cookie,
+      body: { challengeId, code, password: "another unique replacement passphrase" },
+    }), { DB: d1 }, []);
+    assert.equal(reset?.status, 503);
+    assert.equal((await reset.json()).error.code, "password_reset_unconfirmed");
+    assert.equal(sessionCookieFrom(reset), null);
+    assert.match(reset.headers.get("Set-Cookie") ?? "", /cc_session=;.*Max-Age=0/u);
+    assert.equal(sqlite.prepare("SELECT COUNT(*) AS count FROM auth_sessions WHERE user_id = ?").get(user.id).count, 0);
+    assert.equal(sqlite.prepare("SELECT COUNT(*) AS count FROM email_challenges WHERE id = ?").get(challengeId).count, 0);
+
+    const login = await handleAccountRequest(request("/api/auth/login", {
+      method: "POST",
+      body: { email: user.email, password: "another unique replacement passphrase" },
+    }), { DB: d1 }, []);
+    assert.equal(login?.status, 200);
+    assert.match(sessionCookieFrom(login) ?? "", /^__Host-cc_session=/u);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
 function addTrip(sqlite, user, {
   id = `trip_${crypto.randomUUID()}`,
   photoKey = null,

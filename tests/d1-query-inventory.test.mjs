@@ -98,6 +98,10 @@ test("the committed inventory covers every Worker prepare site and its reviewed 
     executionMode === "run"
       && statementClass === "UPDATE"
       && sql === "UPDATE users SET terms_accepted_at = ?, terms_version = ?, privacy_accepted_at = ?, privacy_version = ?, updated_at = ? WHERE id = ?"));
+  assert.ok(inventory.queries.some(({ executionMode, statementClass, sql }) =>
+    executionMode === "batch"
+      && statementClass === "UPDATE"
+      && sql === "UPDATE users SET password_salt = ?, password_hash = ?, updated_at = ? WHERE id = ?"));
 
   const terminalTripWrites = inventory.queries.filter(({ executionMode, statementClass, sql }) =>
     executionMode === "prepared-statement"

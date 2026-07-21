@@ -107,6 +107,27 @@ by that discovery.
       request, merge, deployment, provider query, D1 mutation, model change, or UI change belongs
       to this work.
 
+## Active checkpoint — database-confirmed password reset
+
+- [x] Continue the credential-lifecycle audit through password reset. Credential replacement,
+      all-session revocation, and one-use challenge consumption were already one D1 batch, but the
+      handler created a fresh authenticated session without inspecting the credential-write result.
+- [x] Require exactly one confirmed user-row change before creating that replacement session. A
+      confirmed zero returns `404 account_not_found`; missing, malformed, or impossible metadata
+      returns `503 password_reset_unconfirmed`. Both paths clear stale browser session cookies.
+- [x] Preserve safe recovery for an ambiguous committed batch. The consumed challenge cannot be
+      replayed and no fresh session is issued; the response directs the owner to sign in with the
+      submitted password before requesting another code.
+- [x] Force the missing-receipt path in the direct D1 runtime. The password changes, every prior
+      session and the challenge disappear, the reset response remains `503` with clearing cookies,
+      and a subsequent sign-in with the submitted password succeeds and creates the only session.
+- [x] Pass the pinned Cloudflare build, ESLint, TypeScript, all 553/553 Node tests, the complete
+      offline security/SBOM/source-integrity chain, both zero-vulnerability npm audits, and the
+      full 200/200 Chromium/WebKit phone matrix. Preserve the clean local commit and exact
+      deterministic release-bundle receipts for this repository-only checkpoint. No push, pull
+      request, merge, deployment, provider query, D1 mutation, model change, or UI change belongs
+      to this work.
+
 ## Active checkpoint — database-confirmed legal acceptance
 
 - [x] Continue the authenticated-receipt audit through current Terms and Privacy reacceptance.

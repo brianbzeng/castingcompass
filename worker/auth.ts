@@ -689,12 +689,29 @@ export async function handleAccountRequest(
       await assertNewPasswordAllowed(password, challenge.email);
       const salt = randomSecret(18);
       const timestamp = new Date().toISOString();
-      await db.batch([
+      const [passwordResult] = await db.batch([
         db.prepare("UPDATE users SET password_salt = ?, password_hash = ?, updated_at = ? WHERE id = ?")
           .bind(salt, await hashPassword(password, salt), timestamp, challenge.user_id),
         db.prepare("DELETE FROM auth_sessions WHERE user_id = ?").bind(challenge.user_id),
         db.prepare("DELETE FROM email_challenges WHERE id = ?").bind(challenge.id),
       ]);
+      const passwordChanges = confirmedMutationChanges(passwordResult);
+      if (passwordChanges === 0) {
+        return errorResponse(
+          404,
+          "account_not_found",
+          "The account could not be found.",
+          clearSessionCookies(request),
+        );
+      }
+      if (passwordChanges !== 1) {
+        return errorResponse(
+          503,
+          "password_reset_unconfirmed",
+          "The password reset could not be confirmed. Try signing in with the new password before requesting another code.",
+          clearSessionCookies(request),
+        );
+      }
       const user = await selectUserForSession(db, challenge.user_id);
       if (!user) throw new AuthError(404, "account_not_found", "The account could not be found.");
       return createSessionResponse(db, request, user);
