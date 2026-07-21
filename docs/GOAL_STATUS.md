@@ -42,9 +42,20 @@ by that discovery.
       The complete CI-profile Chromium/WebKit phone matrix passed 180/180 cases. McNears partial
       evidence and Berkeley chart/date evidence were visually inspected from the production build
       at iPhone width.
-- [ ] Publish a protected stacked draft PR, obtain exact-head hosted receipts, and keep CodeQL,
-      independent location/chart review, merge, deployment, provider/database mutation, and
-      production activation as explicit separate gates.
+- [x] Publish protected stacked draft PR `#137` without merge or deployment. Exact implementation
+      head `88f307fd85cc7b1aadfad0c4d1dc2c19c233c5cb` passed push and pull-request CI runs
+      `29826805729` (successful attempt 2 after attempt 1 was canceled when hosted browser
+      installation stalled) and `29826824190`; release-provenance runs `29826805768` and
+      `29826824260`; native API-image run `29826824184` on Linux AMD64 and ARM64; and explicitly
+      dispatched optional research-stack run `29826828121` on Linux CPU and macOS ARM64. Hosted
+      proof includes 486/486 Node tests, a 180/180 Chromium/WebKit mobile matrix, both zero-
+      vulnerability audits, the secret/source-integrity/security chain, API and pipeline checks,
+      and all 19 critical D1 query plans. Event-inapplicable dependency and release-attestation
+      jobs skipped as designed.
+- [ ] Obtain CodeQL evidence when this stack is eventually reviewed against protected `main`;
+      default setup did not trigger on the non-default stacked base. Independent location/chart
+      review, merge, deployment, provider/database mutation, and production activation remain
+      separate open gates.
 
 ## Active checkpoint — Point Reyes and Marin Coast source-bound chart context
 
