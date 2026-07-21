@@ -47,9 +47,15 @@ by that discovery.
       inventory chain and both zero-vulnerability npm audits, 29/29 API tests, Ruff, 19/19 D1
       query plans with every foreign-key child path indexed, 81/81 pipeline tests with one
       documented optional-raster skip, and the deterministic pipeline smoke all passed.
-- [ ] Publish a protected draft PR, require the full exact-head hosted mobile/CI/CodeQL/provenance
-      evidence, merge only accepted evidence, and reconcile protected `main`. Production and
-      Cloudflare remain outside this cycle.
+- [x] Publish protected draft PR `#128` and obtain complete exact-head hosted evidence for repaired
+      implementation head `d7c02e5867657a16f3e51f0bec559c2297d8572d`. Push CI run
+      `29797876950` and pull-request CI run `29797878595` each passed the complete web job with
+      140/140 mobile cases plus API and pipeline; CodeQL run `29797877045` passed all three
+      languages; release-provenance runs `29797876952` and `29797878558` passed. Skips were the
+      event-inapplicable attestation, dependency-review, and dependency-submission jobs.
+- [ ] Require the final receipt-only head to pass protected checks, mark PR `#128` ready, merge
+      only accepted evidence, and reconcile protected `main`. Production and Cloudflare remain
+      outside this cycle.
 
 ## Completed work cycle — default-off asynchronous privacy exports
 
