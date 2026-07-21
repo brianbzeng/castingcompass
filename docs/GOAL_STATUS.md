@@ -101,6 +101,11 @@ by that discovery.
       version, and policy digest; identify distinct fisheries/marine-ecology and public-health/
       risk-communication roles; preserve qualification and substantive notes outside Git by
       digest only; and assert independence from implementation.
+- [x] Add a guarded writer for both private role templates. It requires an existing owner-only
+      non-symlink directory outside the checkout, creates canonical `0600` files exclusively,
+      never overwrites, synchronizes before success, and emits only a minimized non-authorizing
+      receipt. Both unfilled templates were materialized privately as `changes_required`; no
+      independent review has been conducted or accepted.
 - [x] Preserve honest review outcomes. An accepted boundary requires all ten safety/meaning checks
       and zero blocking findings, while a valid `changes_required` record must expose at least one
       failed check or blocking finding and produces an explicitly incomplete receipt. Reviewer
@@ -124,6 +129,17 @@ by that discovery.
       run `29854908836` on Linux CPU and macOS ARM64. Event-inapplicable dependency and release-
       attestation jobs skipped as designed; the immutable final receipt head is recorded on the
       draft PR.
+- [x] Verify the guarded-writer follow-up under pinned Node `22.23.1`/npm `10.9.8`. The
+      Cloudflare build and 531/531 Node tests passed, including 8/8 focused pollution-review
+      tests; the exact package, offline CLI, runbook, and SBOM changes do not alter the inactive
+      policy, source admission, runtime collection, score, model, API, pipeline, browser behavior,
+      provider state, or production authority.
+- [x] Respond to newly published high-severity `fast-uri` advisory
+      `GHSA-4c8g-83qw-93j6` without widening the dependency surface. Ajv `8.20.0` already permits
+      the patched `fast-uri` `3.1.3`, so only that transitive lock entry, its integrity hash, the
+      deterministic SBOMs, and the expected production-SBOM serial changed. A fresh zero-script
+      install completed with 534 audited packages and zero vulnerabilities; no direct dependency,
+      install hook, major version, runtime feature, provider, database, or production state changed.
 - [ ] Obtain the two real qualified independent reviews outside Git and verify their private
       records. CodeQL against protected `main`, every future source/target/measurement/validation
       gate, guarded deployment, and production evidence remain separate open work.

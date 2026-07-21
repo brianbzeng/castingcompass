@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { createHash, randomUUID } from "node:crypto";
-import { chmod, mkdtemp, rm, symlink, writeFile } from "node:fs/promises";
+import { chmod, lstat, mkdir, mkdtemp, readFile, rm, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
@@ -14,6 +14,7 @@ import {
   stableJson,
   validateReviewRecord,
   verifyPolicy,
+  writeReviewTemplate,
 } from "../scripts/verify-pollution-score-independent-review.mjs";
 
 const root = new URL("../", import.meta.url).pathname;
@@ -204,4 +205,76 @@ test("private review files reject repository paths, permissive modes, and symlin
     expectedSourceCommit: LOCKED_SOURCE_COMMIT,
     now: Date.parse("2026-07-21T19:00:00.000Z"),
   }), /regular non-symlink file/u);
+});
+
+test("private template writer creates canonical owner-only pollution records without overwrite", async (t) => {
+  const directory = await mkdtemp(join(tmpdir(), "castingcompass-pollution-review-template-"));
+  t.after(() => rm(directory, { recursive: true, force: true }));
+  await chmod(directory, 0o700);
+  const outputFile = join(directory, "fisheries-review.json");
+  const receipt = await writeReviewTemplate({
+    root,
+    role: REVIEW_ROLES[0],
+    outputFile,
+    now: Date.parse("2026-07-21T22:00:00.000Z"),
+  });
+  const metadata = await lstat(outputFile);
+  const source = await readFile(outputFile, "utf8");
+  const payload = JSON.parse(source);
+  assert.equal(metadata.isFile(), true);
+  assert.equal(metadata.isSymbolicLink(), false);
+  assert.equal(metadata.nlink, 1);
+  assert.equal(metadata.mode & 0o777, 0o600);
+  assert.equal(source, stableJson(payload));
+  assert.equal(payload.reviewer_role, REVIEW_ROLES[0]);
+  assert.equal(payload.reviewed_at, "2026-07-21T22:00:00.000Z");
+  assert.equal(payload.disposition, "changes_required");
+  assert.ok(Object.values(payload.review_checklist).every((value) => value === false));
+  assert.equal(receipt.owner_only_file_written, true);
+  assert.equal(receipt.existing_file_overwritten, false);
+  assert.equal(receipt.runtime_collection_authorized, false);
+  assert.equal(receipt.numeric_score_authorized, false);
+  assert.equal(receipt.merge_authorized, false);
+  assert.equal(receipt.deployment_authorized, false);
+  assert.equal(receipt.production_authorized, false);
+  await assert.rejects(writeReviewTemplate({
+    root,
+    role: REVIEW_ROLES[0],
+    outputFile,
+  }), /must not already exist/u);
+  assert.equal(await readFile(outputFile, "utf8"), source);
+});
+
+test("private pollution template writer rejects unsafe destination paths", async (t) => {
+  await assert.rejects(writeReviewTemplate({
+    root,
+    role: REVIEW_ROLES[0],
+    outputFile: "fisheries-review.json",
+  }), /must be absolute/u);
+  await assert.rejects(writeReviewTemplate({
+    root,
+    role: REVIEW_ROLES[0],
+    outputFile: join(root, "fisheries-review.json"),
+  }), /outside the repository checkout/u);
+
+  const directory = await mkdtemp(join(tmpdir(), "castingcompass-pollution-review-output-"));
+  t.after(() => rm(directory, { recursive: true, force: true }));
+  const permissive = join(directory, "permissive");
+  await mkdir(permissive, { mode: 0o755 });
+  await chmod(permissive, 0o755);
+  await assert.rejects(writeReviewTemplate({
+    root,
+    role: REVIEW_ROLES[0],
+    outputFile: join(permissive, "fisheries-review.json"),
+  }), /must not grant group or other permissions/u);
+
+  const privateDirectory = join(directory, "private");
+  const linkedDirectory = join(directory, "linked");
+  await mkdir(privateDirectory, { mode: 0o700 });
+  await symlink(privateDirectory, linkedDirectory);
+  await assert.rejects(writeReviewTemplate({
+    root,
+    role: REVIEW_ROLES[0],
+    outputFile: join(linkedDirectory, "fisheries-review.json"),
+  }), /existing non-symlink directory/u);
 });

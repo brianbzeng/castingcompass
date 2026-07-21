@@ -56,16 +56,24 @@ carried forward automatically.
 5. Run the verifier with both private files and the independently confirmed commit. Review its
    minimized stdout receipt before preserving it in the private owner record.
 
-Generate one template per reviewer:
+Create a dedicated directory on the encrypted private volume, make the directory owner-only, and
+use the guarded writer. The directory must already exist, must not itself be a symlink, must be
+owned by the current user, and must grant no group or other permissions. The writer resolves the
+directory's canonical parent path before creating either file.
 
 ```sh
-npm run template:pollution-score-fisheries-review > /PRIVATE/PATH/fisheries-review.json
-npm run template:pollution-score-public-health-review > /PRIVATE/PATH/public-health-review.json
-chmod 600 /PRIVATE/PATH/fisheries-review.json /PRIVATE/PATH/public-health-review.json
+mkdir -p /PRIVATE/PATH
+chmod 700 /PRIVATE/PATH
+npm run write:pollution-score-fisheries-review-template -- --output-file /PRIVATE/PATH/fisheries-review.json
+npm run write:pollution-score-public-health-review-template -- --output-file /PRIVATE/PATH/public-health-review.json
 ```
 
 The template deliberately starts with `changes_required`, one blocking finding, and every check
-false. Passing review is a human evidence decision, never a template default.
+false. The guarded writer creates canonical `0600` JSON exclusively, refuses to overwrite an
+existing destination, synchronizes the file before reporting success, and emits only a minimized
+non-authorizing receipt without the private path. The older `template:*` commands remain available
+for read-only inspection, but shell redirection is not the approved private-record path. Passing
+review is a human evidence decision, never a template default.
 
 ## Verification
 

@@ -58,6 +58,8 @@
     "verify:pollution-score-independent-review": "node scripts/verify-pollution-score-independent-review.mjs evaluate --fisheries-review-file \"$POLLUTION_FISHERIES_REVIEW_FILE\" --public-health-review-file \"$POLLUTION_PUBLIC_HEALTH_REVIEW_FILE\" --expected-source-commit \"$POLLUTION_REVIEW_EXPECTED_SOURCE_COMMIT\"",
     "template:pollution-score-fisheries-review": "node scripts/verify-pollution-score-independent-review.mjs print-template --role fisheries_or_marine_ecology_methods_reviewer",
     "template:pollution-score-public-health-review": "node scripts/verify-pollution-score-independent-review.mjs print-template --role public_health_risk_communication_reviewer",
+    "write:pollution-score-fisheries-review-template": "node scripts/verify-pollution-score-independent-review.mjs write-template --role fisheries_or_marine_ecology_methods_reviewer",
+    "write:pollution-score-public-health-review-template": "node scripts/verify-pollution-score-independent-review.mjs write-template --role public_health_risk_communication_reviewer",
     "verify:water-quality-mapping-independent-review": "node scripts/verify-water-quality-mapping-independent-review.mjs evaluate --mapping-review-file \"$WATER_QUALITY_MAPPING_REVIEW_FILE\" --public-health-review-file \"$WATER_QUALITY_PUBLIC_HEALTH_REVIEW_FILE\" --expected-source-commit \"$WATER_QUALITY_REVIEW_EXPECTED_SOURCE_COMMIT\"",
     "template:water-quality-mapping-review": "node scripts/verify-water-quality-mapping-independent-review.mjs print-template --role official_source_mapping_reviewer",
     "template:water-quality-public-health-review": "node scripts/verify-water-quality-mapping-independent-review.mjs print-template --role public_health_risk_communication_reviewer",
