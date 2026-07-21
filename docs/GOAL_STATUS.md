@@ -37,10 +37,18 @@ by that discovery.
 - [x] Classify draft PR `#128`'s first exact head rather than rerunning it. Both independent hosted
       web jobs passed 137/140 and failed the same three WebKit trip-network cases at one redundant
       location-option click: entering the exact site name had already committed the selection, then
-      React replaced the suggestion during that second action. The helper now proves the selected-
-      site status and moves focus through the next real form control, with no product or timeout
-      change. The exact three-case cluster then passed 30/30 concurrent WebKit repetitions and the
-      complete two-worker mobile matrix passed 140/140 locally.
+      React replaced the suggestion during that second action. The helper no longer clicks
+      replaceable option DOM, with no product or timeout change. The exact three-case cluster then
+      passed 30/30 concurrent WebKit repetitions and the complete two-worker mobile matrix passed
+      140/140 locally.
+- [x] Classify the final receipt head's asymmetric hosted result. Its push web job passed 140/140;
+      its pull-request web job passed 139/140 and showed one iPhone SE worker receiving the location
+      catalog after the exact query was entered, leaving one matching result but no committed
+      selection. The helper now waits for that result and selects it through the stable combobox
+      keyboard contract, then proves the selected-site status and moves focus through the next real
+      form control. The affected slice passed 60/60 two-worker repetitions across iPhone SE and
+      WebKit, then 12/12 across all four mobile projects. No timeout, product behavior, provider
+      state, or production state changed.
 - [x] Complete the ordinary local release matrix. The exact two-worker hosted-CI shape passed all
       140 mobile cases, including both revised WebKit boundaries. Fresh npm installation, the
       Cloudflare build, 456/456 Node tests, ESLint, TypeScript, the complete security/SBOM/query-
