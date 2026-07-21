@@ -1,6 +1,6 @@
 # CastingCompass goal status
 
-Last reconciled: **2026-07-20 UTC**
+Last reconciled: **2026-07-21 UTC**
 
 This is the owner-facing dashboard for the complete goal list. The detailed acceptance
 criteria and immutable receipts remain in [PRODUCT_ROADMAP.md](PRODUCT_ROADMAP.md); provider
@@ -13,7 +13,37 @@ Current provider truth overrides historical “paused” language in completed r
 2026-07-19 read-only reconciliation found an active Worker; no production mutation is authorized
 by that discovery.
 
-## Active work cycle — complete D1 query inventory
+## Active work cycle — default-off asynchronous privacy exports
+
+- [x] Reconcile protected `main`, draft regional PR `#118`, draft asynchronous-export PR `#127`,
+      issue `#86`, and the P1 scale roadmap without touching Cloudflare or production. Starting
+      `main` is `a9f1efc1d0b7d095ed8b71738b403d1cdc1b23f9`; both draft PRs remain open.
+- [x] Independently audit the complete default-off export path. Queue messages remain limited to
+      an opaque job ID, D1 remains authoritative, objects remain private and owner-bound for 24
+      hours, retries and expiry are bounded, account deletion adopts committed objects, and no
+      producer/consumer or R2 provider binding is configured. Migration `0019` remains unapplied,
+      the feature remains off, and no provider or production change was made.
+- [x] Close the download-integrity gap found during that audit. Every download now recomputes the
+      D1 object-locator hash and rejects any mismatch in the recorded byte count, SHA-256 upload
+      metadata, or export-contract version before reading or streaming the private object. All
+      integrity failures use one generic 503 response and a bounded error code; adversarial tests
+      prove neither responses nor logs expose account, job, email, or object-locator identity.
+- [x] Freeze the four download-integrity bindings in the machine-checked export policy, document
+      the boundary in the export and data-lifecycle runbooks, regenerate the D1 source inventory,
+      and bind the revised artifacts into the combined release SBOM. The check does not claim a
+      full byte rehash on download or any provider/deployment evidence.
+- [x] Complete the local release-sized verification matrix. A fresh npm `10.9.8` no-script install
+      restored 533 packages and both audits found zero vulnerabilities; Cloudflare build,
+      456/456 Node tests, 140/140 Chromium/WebKit mobile cases, ESLint, TypeScript, and every
+      offline security/SBOM/query-inventory gate passed. Exact Python environments passed 29/29
+      API tests, Ruff, 81/81 pipeline tests with one documented optional-raster skip, the
+      deterministic synthetic smoke, 19 migrations, 19 critical query plans, and every
+      foreign-key child index contract.
+- [ ] Obtain exact-head hosted CI/CodeQL/release-provenance evidence and complete the protected PR
+      workflow. Provider setup, migration `0019`, Queue/DLQ/R2/IAM/alerts, staging failure and
+      deletion drills, activation, and production release remain separate reviewed gates.
+
+## Completed work cycle — complete D1 query inventory
 
 - [x] Reconcile protected `main`, draft regional PR `#118`, draft query-inventory PR `#125`, open
       issue `#86`, and the scale roadmap without touching Cloudflare or production. Starting

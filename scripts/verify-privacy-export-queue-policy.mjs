@@ -28,7 +28,7 @@ export async function verifyPrivacyExportQueuePolicy({ projectRoot = root } = {}
   exactKeys(policy.application, [
     "maximumAttempts", "leaseSeconds", "redispatchAfterSeconds", "maximumRetryDelaySeconds",
     "retentionSeconds", "expiryBatchSize", "photoManifestConcurrency", "messageContainsOnly",
-    "authoritativeState", "objectVisibility",
+    "authoritativeState", "objectVisibility", "downloadIntegrityBindings",
   ], "Privacy export application policy");
   if (policy.schemaVersion !== "castingcompass.privacy-export-queue-policy/1.0.0"
     || policy.messageContract !== "castingcompass.privacy-export-queue/1.0.0"
@@ -54,7 +54,13 @@ export async function verifyPrivacyExportQueuePolicy({ projectRoot = root } = {}
     || policy.application.photoManifestConcurrency !== 4
     || JSON.stringify(policy.application.messageContainsOnly) !== JSON.stringify(["version", "jobId"])
     || policy.application.authoritativeState !== "D1 privacy_export_jobs ledger"
-    || policy.application.objectVisibility !== "private owner-authenticated download only") {
+    || policy.application.objectVisibility !== "private owner-authenticated download only"
+    || JSON.stringify(policy.application.downloadIntegrityBindings) !== JSON.stringify([
+      "D1 object-key hash",
+      "D1 byte size",
+      "D1 SHA-256 metadata",
+      "object contract version",
+    ])) {
     throw new Error("Privacy export application safety policy changed");
   }
 
@@ -89,6 +95,13 @@ export async function verifyPrivacyExportQueuePolicy({ projectRoot = root } = {}
     "releaseMaintenanceEnabled",
     "user_id = NULL",
     "uncommitted_object_delete_failed",
+    "privacy_export.download.integrity_rejected",
+    "privacy_export_integrity_mismatch",
+    "PRIVACY_EXPORT_OBJECT_CONTRACT_VERSION = \"castingcompass.privacy-export/1.0.0\"",
+    "job.object_key_hash !== expectedObjectKeyHash",
+    "object.size !== expectedSize",
+    "object.customMetadata?.contentSha256 !== job.content_sha256",
+    "object.customMetadata?.contractVersion !== PRIVACY_EXPORT_OBJECT_CONTRACT_VERSION",
   ]) {
     if (!worker.includes(required)) throw new Error(`Privacy export runtime is missing ${required}`);
   }

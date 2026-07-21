@@ -22,6 +22,12 @@
     "photoManifestConcurrency": 4,
     "messageContainsOnly": ["version", "jobId"],
     "authoritativeState": "D1 privacy_export_jobs ledger",
-    "objectVisibility": "private owner-authenticated download only"
+    "objectVisibility": "private owner-authenticated download only",
+    "downloadIntegrityBindings": [
+      "D1 object-key hash",
+      "D1 byte size",
+      "D1 SHA-256 metadata",
+      "object contract version"
+    ]
   }
 }

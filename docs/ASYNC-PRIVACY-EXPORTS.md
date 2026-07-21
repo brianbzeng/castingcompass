@@ -28,7 +28,9 @@ packaged JSON contains only their manifest.
   still owns the same account/job lease. A stale attempt can never delete the newer attempt's
   object; every failed uncommitted-object cleanup retains its own attention-ledger locator.
 - `GET /api/profile/exports/{jobId}` and `/download` bind both the authenticated account and the
-  opaque job ID. Downloads are `private, no-store`, attachment-only JSON responses.
+  opaque job ID. Before streaming, the download fails closed unless the D1 locator hash and exact
+  byte count match the private object and its immutable upload SHA-256 and contract metadata match
+  the D1 completion record. Downloads are `private, no-store`, attachment-only JSON responses.
 - Completed files expire after 24 hours. Cleanup claims at most 50 objects per scheduled pass,
   removes the private object, clears its locator/digest/size/count, and retains only an expired
   tombstone until the ordinary 90-day ledger cleanup.

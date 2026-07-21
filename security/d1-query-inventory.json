@@ -15,7 +15,7 @@
     },
     {
       "file": "worker/privacy-export.ts",
-      "sha256": "751793bb6fb7c7d6005fec4ad63c0b8eef7f04cfe085de1f37a5de3a92cc24dd",
+      "sha256": "bc50a5f4cf36404570aa158fb7f9db5698a846f8148215bc013c5dc032e7e253",
       "prepareCallCount": 34
     },
     {
@@ -2945,7 +2945,7 @@
     {
       "callSiteId": "a369384e127414a97949c54b",
       "file": "worker/privacy-export.ts",
-      "line": 122,
+      "line": 125,
       "containingFunction": "requestPrivacyExport",
       "occurrence": 1,
       "executionMode": "run",
@@ -2967,7 +2967,7 @@
     {
       "callSiteId": "0d076858ddea1239427356d2",
       "file": "worker/privacy-export.ts",
-      "line": 134,
+      "line": 137,
       "containingFunction": "requestPrivacyExport",
       "occurrence": 2,
       "executionMode": "run",
@@ -2990,7 +2990,7 @@
     {
       "callSiteId": "b2cb206f0739d7126d27f63d",
       "file": "worker/privacy-export.ts",
-      "line": 159,
+      "line": 162,
       "containingFunction": "privacyExportJobForOwner",
       "occurrence": 3,
       "executionMode": "first",
@@ -3012,7 +3012,7 @@
     {
       "callSiteId": "6d2dcc9d99f36919548f8fd0",
       "file": "worker/privacy-export.ts",
-      "line": 227,
+      "line": 245,
       "containingFunction": "dispatchPrivacyExportBacklog",
       "occurrence": 4,
       "executionMode": "all",
@@ -3034,7 +3034,7 @@
     {
       "callSiteId": "9a41c88c69db9a66cebc91dd",
       "file": "worker/privacy-export.ts",
-      "line": 249,
+      "line": 267,
       "containingFunction": "dispatchPrivacyExportJob",
       "occurrence": 5,
       "executionMode": "run",
@@ -3056,7 +3056,7 @@
     {
       "callSiteId": "d17d2e21e5dcc13e6eaed0fa",
       "file": "worker/privacy-export.ts",
-      "line": 264,
+      "line": 282,
       "containingFunction": "dispatchPrivacyExportJob",
       "occurrence": 6,
       "executionMode": "run",
@@ -3078,7 +3078,7 @@
     {
       "callSiteId": "aa53f153d7797895623fa538",
       "file": "worker/privacy-export.ts",
-      "line": 313,
+      "line": 331,
       "containingFunction": "consumePrivacyExportMessage",
       "occurrence": 7,
       "executionMode": "run",
@@ -3100,7 +3100,7 @@
     {
       "callSiteId": "94b2c6a404fb86e39493c31d",
       "file": "worker/privacy-export.ts",
-      "line": 326,
+      "line": 344,
       "containingFunction": "consumePrivacyExportMessage",
       "occurrence": 8,
       "executionMode": "first",
@@ -3122,7 +3122,7 @@
     {
       "callSiteId": "49403585255d01ff93f4e704",
       "file": "worker/privacy-export.ts",
-      "line": 349,
+      "line": 367,
       "containingFunction": "consumePrivacyExportMessage",
       "occurrence": 9,
       "executionMode": "run",
@@ -3144,7 +3144,7 @@
     {
       "callSiteId": "df916f845cf9b92e6448b11e",
       "file": "worker/privacy-export.ts",
-      "line": 376,
+      "line": 394,
       "containingFunction": "consumePrivacyExportMessage",
       "occurrence": 10,
       "executionMode": "run",
@@ -3166,7 +3166,7 @@
     {
       "callSiteId": "9eeb3e1569f2f25bf55a0cf1",
       "file": "worker/privacy-export.ts",
-      "line": 419,
+      "line": 437,
       "containingFunction": "consumePrivacyExportMessage",
       "occurrence": 11,
       "executionMode": "first",
@@ -3188,7 +3188,7 @@
     {
       "callSiteId": "e55fb1c53a2ee741b172d765",
       "file": "worker/privacy-export.ts",
-      "line": 430,
+      "line": 448,
       "containingFunction": "consumePrivacyExportMessage",
       "occurrence": 12,
       "executionMode": "run",
@@ -3210,7 +3210,7 @@
     {
       "callSiteId": "7a562ac190431cace8112785",
       "file": "worker/privacy-export.ts",
-      "line": 453,
+      "line": 471,
       "containingFunction": "removeUncommittedObject",
       "occurrence": 13,
       "executionMode": "run",
@@ -3232,7 +3232,7 @@
     {
       "callSiteId": "959068abc2b30b9fbad3f38b",
       "file": "worker/privacy-export.ts",
-      "line": 464,
+      "line": 482,
       "containingFunction": "removeUncommittedObject",
       "occurrence": 14,
       "executionMode": "run",
@@ -3254,7 +3254,7 @@
     {
       "callSiteId": "ca0bad8b0d227f880b8f78ce",
       "file": "worker/privacy-export.ts",
-      "line": 483,
+      "line": 501,
       "containingFunction": "removeUncommittedObject",
       "occurrence": 15,
       "executionMode": "run",
@@ -3276,7 +3276,7 @@
     {
       "callSiteId": "6dc5c297b4a06d24cf77b61f",
       "file": "worker/privacy-export.ts",
-      "line": 514,
+      "line": 532,
       "containingFunction": "settleUnclaimedMessage",
       "occurrence": 16,
       "executionMode": "first",
@@ -3298,7 +3298,7 @@
     {
       "callSiteId": "9c9a30e01b606d46a465ff06",
       "file": "worker/privacy-export.ts",
-      "line": 534,
+      "line": 552,
       "containingFunction": "processExpiredPrivacyExports",
       "occurrence": 17,
       "executionMode": "all",
@@ -3320,7 +3320,7 @@
     {
       "callSiteId": "87112c1395358cf38e0ac459",
       "file": "worker/privacy-export.ts",
-      "line": 554,
+      "line": 572,
       "containingFunction": "processExpiredPrivacyExports",
       "occurrence": 18,
       "executionMode": "run",
@@ -3342,7 +3342,7 @@
     {
       "callSiteId": "594e7122432fa41c4bcacfe8",
       "file": "worker/privacy-export.ts",
-      "line": 561,
+      "line": 579,
       "containingFunction": "processExpiredPrivacyExports",
       "occurrence": 19,
       "executionMode": "run",
@@ -3364,7 +3364,7 @@
     {
       "callSiteId": "570162066cd5c9987f41bbac",
       "file": "worker/privacy-export.ts",
-      "line": 572,
+      "line": 590,
       "containingFunction": "processExpiredPrivacyExports",
       "occurrence": 20,
       "executionMode": "run",
@@ -3386,7 +3386,7 @@
     {
       "callSiteId": "af3fd6854c5f1b255e486655",
       "file": "worker/privacy-export.ts",
-      "line": 584,
+      "line": 602,
       "containingFunction": "processExpiredPrivacyExports",
       "occurrence": 21,
       "executionMode": "run",
@@ -3408,7 +3408,7 @@
     {
       "callSiteId": "cfdb9ccbd2d1c05c681f83b7",
       "file": "worker/privacy-export.ts",
-      "line": 594,
+      "line": 612,
       "containingFunction": "processExpiredPrivacyExports",
       "occurrence": 22,
       "executionMode": "run",
@@ -3430,7 +3430,7 @@
     {
       "callSiteId": "392ec08c95c79bac9752a0a9",
       "file": "worker/privacy-export.ts",
-      "line": 604,
+      "line": 622,
       "containingFunction": "processExpiredPrivacyExports",
       "occurrence": 23,
       "executionMode": "run",
@@ -3452,7 +3452,7 @@
     {
       "callSiteId": "a29703ef627d65012946de96",
       "file": "worker/privacy-export.ts",
-      "line": 623,
+      "line": 641,
       "containingFunction": "buildPrivacyExportPayload",
       "occurrence": 24,
       "executionMode": "first",
@@ -3474,7 +3474,7 @@
     {
       "callSiteId": "ede4481969504a5342786bde",
       "file": "worker/privacy-export.ts",
-      "line": 626,
+      "line": 644,
       "containingFunction": "buildPrivacyExportPayload",
       "occurrence": 25,
       "executionMode": "all",
@@ -3496,7 +3496,7 @@
     {
       "callSiteId": "12cda5350d4f0c599d064559",
       "file": "worker/privacy-export.ts",
-      "line": 628,
+      "line": 646,
       "containingFunction": "buildPrivacyExportPayload",
       "occurrence": 26,
       "executionMode": "all",
@@ -3518,7 +3518,7 @@
     {
       "callSiteId": "26ae0e0f2e25a801b3126712",
       "file": "worker/privacy-export.ts",
-      "line": 631,
+      "line": 649,
       "containingFunction": "buildPrivacyExportPayload",
       "occurrence": 27,
       "executionMode": "all",
@@ -3540,7 +3540,7 @@
     {
       "callSiteId": "05f1f6845a6b5fcb728994d3",
       "file": "worker/privacy-export.ts",
-      "line": 660,
+      "line": 678,
       "containingFunction": "buildPrivacyExportPayload",
       "occurrence": 28,
       "executionMode": "all",
@@ -3563,7 +3563,7 @@
     {
       "callSiteId": "c6b2f36428fbc68ccd411a95",
       "file": "worker/privacy-export.ts",
-      "line": 670,
+      "line": 688,
       "containingFunction": "buildPrivacyExportPayload",
       "occurrence": 29,
       "executionMode": "all",
@@ -3586,7 +3586,7 @@
     {
       "callSiteId": "623e192f595fda08eec5ee29",
       "file": "worker/privacy-export.ts",
-      "line": 674,
+      "line": 692,
       "containingFunction": "buildPrivacyExportPayload",
       "occurrence": 30,
       "executionMode": "all",
@@ -3609,7 +3609,7 @@
     {
       "callSiteId": "6aaa23dc0d3b397f3deb7c9c",
       "file": "worker/privacy-export.ts",
-      "line": 678,
+      "line": 696,
       "containingFunction": "buildPrivacyExportPayload",
       "occurrence": 31,
       "executionMode": "all",
@@ -3632,7 +3632,7 @@
     {
       "callSiteId": "fc514ef6283d281838ba5a79",
       "file": "worker/privacy-export.ts",
-      "line": 682,
+      "line": 700,
       "containingFunction": "buildPrivacyExportPayload",
       "occurrence": 32,
       "executionMode": "all",
@@ -3654,7 +3654,7 @@
     {
       "callSiteId": "d5a3056ecfcba3f58369d598",
       "file": "worker/privacy-export.ts",
-      "line": 691,
+      "line": 709,
       "containingFunction": "buildPrivacyExportPayload",
       "occurrence": 33,
       "executionMode": "all",
@@ -3677,7 +3677,7 @@
     {
       "callSiteId": "750e621a24fe1fade9bfd795",
       "file": "worker/privacy-export.ts",
-      "line": 757,
+      "line": 775,
       "containingFunction": "activeJobForUser",
       "occurrence": 34,
       "executionMode": "first",

@@ -5,8 +5,10 @@ import type { D1DatabaseLike, R2BucketLike } from "./trips.ts";
 
 export const PRIVACY_EXPORT_QUEUE_MESSAGE_VERSION = "castingcompass.privacy-export-queue/1.0.0";
 export const PRIVACY_EXPORT_RETENTION_SECONDS = 24 * 60 * 60;
+const PRIVACY_EXPORT_OBJECT_CONTRACT_VERSION = "castingcompass.privacy-export/1.0.0";
 
 const JOB_ID_PATTERN = /^pexj_[a-f0-9]{32}$/;
+const SHA256_HEX_PATTERN = /^[a-f0-9]{64}$/;
 const MAX_ATTEMPTS = 5;
 const MAX_BATCH_MESSAGES = 5;
 const LEASE_SECONDS = 5 * 60;
@@ -21,6 +23,7 @@ interface StoredObjectLike {
   arrayBuffer?(): Promise<ArrayBuffer>;
   size?: number;
   httpMetadata?: { contentType?: string };
+  customMetadata?: Record<string, string>;
 }
 
 export interface PrivateObjectBucketLike {
@@ -201,8 +204,24 @@ export async function downloadPrivacyExport(
     return jsonError(503, "privacy_export_storage_unavailable", "The export file cannot be downloaded right now.", 60);
   }
   try {
+    const expectedObjectKeyHash = await sha256Text(`privacy_exports\u0000${job.object_key}`);
+    if (job.object_key_hash !== expectedObjectKeyHash) {
+      return privacyExportIntegrityError("export_locator_hash_mismatch");
+    }
     const object = await env.PRIVACY_EXPORTS.get(job.object_key);
     if (!object) return jsonError(503, "privacy_export_object_missing", "The export file cannot be downloaded right now.", 60);
+    const expectedSize = Number(job.size_bytes);
+    if (job.size_bytes === null
+      || !Number.isSafeInteger(expectedSize)
+      || expectedSize < 0
+      || !Number.isSafeInteger(object.size)
+      || object.size !== expectedSize
+      || !job.content_sha256
+      || !SHA256_HEX_PATTERN.test(job.content_sha256)
+      || object.customMetadata?.contentSha256 !== job.content_sha256
+      || object.customMetadata?.contractVersion !== PRIVACY_EXPORT_OBJECT_CONTRACT_VERSION) {
+      return privacyExportIntegrityError("export_object_metadata_mismatch");
+    }
     const body = object.body ?? (object.arrayBuffer ? await object.arrayBuffer() : null);
     if (!body) return jsonError(503, "privacy_export_storage_unavailable", "The export file cannot be downloaded right now.", 60);
     const headers = new Headers({
@@ -211,8 +230,7 @@ export async function downloadPrivacyExport(
       "Cache-Control": "private, no-store, max-age=0",
       "X-Content-Type-Options": "nosniff",
     });
-    const size = object.size ?? job.size_bytes;
-    if (size !== null && size !== undefined) headers.set("Content-Length", String(size));
+    headers.set("Content-Length", String(object.size));
     return new Response(body, { status: 200, headers });
   } catch {
     return jsonError(503, "privacy_export_storage_unavailable", "The export file cannot be downloaded right now.", 60);
@@ -368,7 +386,7 @@ async function consumePrivacyExportMessage(
     objectReserved = true;
     await exportBucket.put(objectKey, bytes.buffer as ArrayBuffer, {
       httpMetadata: { contentType: "application/json; charset=utf-8" },
-      customMetadata: { contentSha256, contractVersion: "castingcompass.privacy-export/1.0.0" },
+      customMetadata: { contentSha256, contractVersion: PRIVACY_EXPORT_OBJECT_CONTRACT_VERSION },
     });
     const completedAt = new Date();
     const completedAtIso = completedAt.toISOString();
@@ -820,4 +838,16 @@ function jsonError(status: number, code: string, message: string, retryAfter?: n
   };
   if (retryAfter) headers["Retry-After"] = String(retryAfter);
   return new Response(JSON.stringify({ error: { code, message } }), { status, headers });
+}
+
+function privacyExportIntegrityError(
+  errorCode: "export_locator_hash_mismatch" | "export_object_metadata_mismatch",
+) {
+  logEvent("error", "privacy_export.download.integrity_rejected", { error_code: errorCode });
+  return jsonError(
+    503,
+    "privacy_export_integrity_mismatch",
+    "The export file could not be verified for download.",
+    60,
+  );
 }

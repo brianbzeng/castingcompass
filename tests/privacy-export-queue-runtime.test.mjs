@@ -123,6 +123,7 @@ function objectBucket({ onPut, deleteFailure } = {}) {
       return {
         size: object.value.byteLength,
         httpMetadata: object.options?.httpMetadata,
+        customMetadata: object.options?.customMetadata,
         async arrayBuffer() { return object.value.slice(0); },
       };
     },
@@ -223,6 +224,66 @@ test("the consumer packages every legacy row, publishes a private owner-bound do
   assert.equal(duplicate.acknowledgements, 1);
   assert.equal(bucket.objects.size, 1);
   assert.equal(sqlite.prepare("SELECT attempts FROM privacy_export_jobs WHERE id = ?").get(job.id).attempts, 1);
+});
+
+test("downloads fail closed when the D1 locator or private-object integrity binding drifts", async () => {
+  const { sqlite, d1 } = await database();
+  const userId = addUser(sqlite, "integrity");
+  const { env, queue, bucket, job } = await scheduledExport(sqlite, d1, userId);
+  await consumePrivacyExportQueue(
+    { queue: "privacy-export", messages: [queueMessage(queue.sent[0].body)] },
+    env,
+  );
+  const completed = await privacyExportJobForOwner(d1, userId, job.id);
+  const stored = bucket.objects.get(completed.object_key);
+  const originalValue = stored.value;
+  const originalMetadata = structuredClone(stored.options.customMetadata);
+  assert.equal((await downloadPrivacyExport(env, userId, job.id)).status, 200);
+
+  const loggedErrors = [];
+  const originalError = console.error;
+  console.error = (...args) => loggedErrors.push(args);
+  try {
+    stored.options.customMetadata.contentSha256 = "0".repeat(64);
+    const digestMismatch = await downloadPrivacyExport(env, userId, job.id);
+    assert.equal(digestMismatch.status, 503);
+    assert.equal((await digestMismatch.json()).error.code, "privacy_export_integrity_mismatch");
+
+    stored.options.customMetadata = structuredClone(originalMetadata);
+    stored.options.customMetadata.contractVersion = "castingcompass.privacy-export/0.0.0";
+    const contractMismatch = await downloadPrivacyExport(env, userId, job.id);
+    assert.equal(contractMismatch.status, 503);
+    assert.equal((await contractMismatch.json()).error.code, "privacy_export_integrity_mismatch");
+
+    stored.options.customMetadata = structuredClone(originalMetadata);
+    stored.value = new Uint8Array([...new Uint8Array(originalValue), 0]).buffer;
+    const sizeMismatch = await downloadPrivacyExport(env, userId, job.id);
+    assert.equal(sizeMismatch.status, 503);
+    assert.equal((await sizeMismatch.json()).error.code, "privacy_export_integrity_mismatch");
+
+    stored.value = originalValue;
+    sqlite.prepare("UPDATE privacy_export_jobs SET object_key_hash = ? WHERE id = ?")
+      .run("0".repeat(64), job.id);
+    const locatorMismatch = await downloadPrivacyExport(env, userId, job.id);
+    assert.equal(locatorMismatch.status, 503);
+    const errorPayload = await locatorMismatch.json();
+    assert.equal(errorPayload.error.code, "privacy_export_integrity_mismatch");
+    assert.doesNotMatch(
+      JSON.stringify(errorPayload),
+      /privacy-exports|pexj_|user_integrity|integrity@example\.test/,
+    );
+  } finally {
+    console.error = originalError;
+  }
+  assert.equal(loggedErrors.length, 4);
+  assert.deepEqual(
+    [...new Set(loggedErrors.map(([entry]) => entry.event))],
+    ["privacy_export.download.integrity_rejected"],
+  );
+  assert.doesNotMatch(
+    JSON.stringify(loggedErrors),
+    /privacy-exports|pexj_|user_integrity|integrity@example\.test/,
+  );
 });
 
 test("poison queue messages are acknowledged without database or object work", async () => {
