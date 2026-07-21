@@ -1,5 +1,14 @@
 import { readFileSync } from "node:fs";
 import { expect, test, type Page, type Route } from "@playwright/test";
+import { resolve } from "node:path";
+
+const SITES_FIXTURE = readFileSync(resolve(process.cwd(), "public/data/sites.json"), "utf8");
+const OPPORTUNITIES_FIXTURE = readFileSync(
+  resolve(process.cwd(), "public/data/opportunities.json"),
+  "utf8",
+);
+
+test.use({ serviceWorkers: "block" });
 
 const OPPORTUNITY_FIXTURE_VALID_FROM = JSON.parse(readFileSync(
   new URL("../public/data/opportunities.json", import.meta.url),
@@ -132,6 +141,19 @@ async function expectSelectorInsideViewport(page: Page, selector: string) {
 }
 
 test.beforeEach(async ({ page }, testInfo) => {
+  // These tests exercise responsive UI and recovery contracts, not the static server's stream
+  // implementation. Fulfill the committed catalog and forecast from memory so every project sees
+  // the same source data even when Vinext closes a large static-file stream under CI concurrency.
+  await page.route("**/data/sites.json", (route) => route.fulfill({
+    status: 200,
+    contentType: "application/json",
+    body: SITES_FIXTURE,
+  }));
+  await page.route("**/data/opportunities.json", (route) => route.fulfill({
+    status: 200,
+    contentType: "application/json",
+    body: OPPORTUNITIES_FIXTURE,
+  }));
   const testTitle = testInfo.titlePath.join(" ");
   if (testTitle.includes("failed lazy route dependency")) {
     await page.route("**/assets/ContourMap-*.js", (route) => route.abort());
@@ -163,6 +185,56 @@ test.beforeEach(async ({ page }, testInfo) => {
   const savedSiteRecoveryTest = testTitle.includes("saved-location changes pause while offline") ||
     testTitle.includes("slow saved-location removal stays unconfirmed") ||
     testTitle.includes("malformed saved-location receipt stays unresolved");
+  const waterQualityAdvisoryTest = testTitle.includes("official water-quality status suppresses recommendations");
+  if (waterQualityAdvisoryTest) {
+    // Keep both the advisory and the committed opportunity fixture current. Freezing the clock
+    // before the opportunity validity window leaves every site without a selectable "today"
+    // window, so a valid shared-site link cannot open its detail sheet.
+    await page.clock.setFixedTime(new Date(OPPORTUNITY_FIXTURE_VALID_FROM));
+    const assessment = (overrides: Record<string, unknown>) => ({
+      status: "no-active-posting",
+      recommendationEffect: "neutral",
+      officialLabel: "No active posting reported",
+      detail: "Neutral context only. This does not mean the water or seafood is safe and does not improve the fishing score.",
+      stationIds: ["4612"],
+      stationNames: ["Crissy Field Beach East"],
+      sampleDates: ["2026-07-13"],
+      checkedAt: "2026-07-17T12:00:00Z",
+      scoreDelta: null,
+      sourceUrl: "https://webapps.sfpuc.org/sapps/beachesandbay.html",
+      ...overrides,
+    });
+    await page.route("**/data/water-quality.json", (route) => route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        schemaVersion: "castingcompass.water-quality-advisory/1.0.0",
+        policyVersion: "test-policy",
+        generatedAt: "2026-07-17T12:00:00Z",
+        status: "partial",
+        freshness: { maximumSampleAgeDays: 10 },
+        scoreContribution: {
+          mode: "excluded-pending-frozen-baseline-validation",
+          positiveContributionAllowed: false,
+          activeAgencyStatusSuppressesRecommendation: true,
+        },
+        source: {
+          statusUrl: "https://webapps.sfpuc.org/sapps/beachesandbay.html",
+        },
+        sites: {
+          "baker-beach": assessment({
+            status: "posted",
+            recommendationEffect: "suppress",
+            officialLabel: "Official water-contact posting",
+            detail: "This active agency status suppresses the site from CastingCompass recommendations.",
+            stationIds: ["4608", "4609", "4610"],
+            stationNames: ["Baker Beach West", "Baker Beach East", "Baker Beach at Lobos Creek"],
+          }),
+          "crissy-field-east-beach": assessment({}),
+        },
+      }),
+    }));
+  }
   if (savedSiteRecoveryTest) {
     // Keep the committed forecast fixture inside its availability window so this mutation test
     // exercises recovery behavior instead of expiring as wall-clock time advances.
@@ -345,6 +417,25 @@ test("primary controls stay inside common phone viewports", async ({ page }) => 
   for (const selector of [".topbar", ".topbar-actions", ".availability-filter", ".availability-filter input"]) {
     await expectSelectorInsideViewport(page, selector);
   }
+});
+
+test("official water-quality status suppresses recommendations and keeps neutral status explicit", async ({ page }) => {
+  await expect(page.locator(".water-quality-suppression-notice")).toContainText(
+    "1 site is excluded from recommendations",
+  );
+  await expect(page.locator(".site-card").filter({ hasText: "Baker Beach" })).toHaveCount(0);
+  // Open the exact site through the product's stable deep-link contract. Its rank can move as
+  // regional sites are added, so the advisory test must not assume it appears in the first cards.
+  await page.goto("/?site=crissy-field-east-beach");
+  const advisory = page.locator(".water-quality-advisory");
+  await expect(advisory).toBeVisible();
+  await expect(advisory).toContainText("No active posting reported");
+  await expect(advisory).toContainText("does not improve this fishing score");
+  await expect(advisory.getByRole("link", { name: /official agency status/i })).toHaveAttribute(
+    "href",
+    "https://webapps.sfpuc.org/sapps/beachesandbay.html",
+  );
+  await expectSelectorInsideViewport(page, ".water-quality-advisory");
 });
 
 test("safe-area contract keeps fixed controls inside simulated insets", async ({ page }) => {

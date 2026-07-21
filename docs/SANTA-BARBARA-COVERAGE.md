@@ -73,21 +73,27 @@ the current catalog, not a calibrated chance of catching a fish.
 
 ## Queued data improvements
 
-Two owner-requested goals are recorded but not implemented:
+Two owner-requested goals remain incomplete:
 
-1. Add official pollution and recreational-water-quality conditions as a
-   source-bound score modifier or hard exclusion. A closure must suppress the
-   affected opportunity, stale or missing data must remain visibly unknown, and
-   no value may imply that water is clean, safe, or predictive of catch without
-   the required official and prospective evidence.
+1. Extend the separately versioned official water-quality overlay across the
+   Santa Barbara/Goleta catalog and the rest of the launch catalog. The first
+   implemented SFPUC slice covers six San Francisco sites and can suppress a
+   recommendation under a current official status, but it does not change the
+   numeric fishing score. Santa Barbara mappings, source-specific rainfall and
+   outage rules, independent review, guarded deployment, and any validated
+   fishing-quality contribution remain open. No value may imply that water is
+   clean, safe, or predictive of catch without the required official and
+   prospective evidence.
 2. Review every available catalog location one by one for notable structure and
    shore-reachable depth. Each annotation must retain its bathymetry or habitat
    source, resolution, positional accuracy, vertical datum, uncertainty, and
    display-versus-scoring permission. Coarse data cannot be converted into an
    invented precise casting spot.
 
-These goals remain unchecked in the product roadmap. They do not change the
-current snapshot, ranking identity, map annotations, or validation boundary.
+The broader goals remain unchecked in the product roadmap. The implemented
+advisory slice can exclude a currently posted San Francisco site from local
+recommendations without changing the opportunity-score bytes. It does not alter
+Santa Barbara ranking inputs, map structure annotations, or validation boundaries.
 
 ## Trip and validation boundary
 

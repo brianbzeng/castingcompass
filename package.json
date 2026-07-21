@@ -71,7 +71,7 @@
     "evaluate:santa-barbara-access-review": "node scripts/verify-santa-barbara-access-review.mjs evaluate",
     "verify:validation-successor": "node scripts/verify-validation-successor.mjs",
     "finance:ledger:verify": "node --test tests/provider-cost-ledger.test.mjs",
-    "data:refresh": "PYTHONPATH=. python3 scripts/generate_snapshot.py && PYTHONPATH=. python3 scripts/generate_opportunity_attestations.py",
+    "data:refresh": "PYTHONPATH=. python3 scripts/refresh_water_quality.py && PYTHONPATH=. python3 scripts/generate_snapshot.py && PYTHONPATH=. python3 scripts/generate_opportunity_attestations.py",
     "api:test": "python3 -m pytest services/api/tests -q"
   },
   "dependencies": {

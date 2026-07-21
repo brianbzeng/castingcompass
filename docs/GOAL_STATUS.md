@@ -13,56 +13,52 @@ Current provider truth overrides historical “paused” language in completed r
 2026-07-19 read-only reconciliation found an active Worker; no production mutation is authorized
 by that discovery.
 
-## Active checkpoint — Santa Barbara South Coast model track
+## Active checkpoint — non-production regional and water-quality demo integration
 
-- **Security/release checkpoint:** paused at the owner's request on 2026-07-19. All open P0/P1
-  provider, migration, independent-review, production-security, and live-evidence gates below
-  remain open exactly as written. This track does not deploy, mutate Cloudflare, activate a
-  provider, or treat local verification as production evidence.
-- **Active implementation:** expand the existing explainable California-halibut heuristic from
-  the Bay Area to the public Santa Barbara South Coast from Gaviota through Goleta and Santa
-  Barbara to Rincon. The work must preserve official access and MPA boundaries, use fresh
-  regional forecast anchors, adapt the map and truthful search language, and retain the score as
-  a relative ranking rather than a catch probability.
-- **Regional source audit:** the 2026-07-20 read-only recheck replaced the single Santa Barbara
-  tide proxy with NOAA's Gaviota (`9411399`), Santa Barbara (`9411340`), and Rincon (`9411270`)
-  prediction stations, and routes the Gaviota weather anchor to West Channel buoy `46054` while
-  Goleta through Carpinteria retain East Channel buoy `46053`. The official gap audit added
-  Summerland through Lookout Park while preserving the Campus Point no-take exclusion. The
-  regenerated 2,160-window snapshot reports no tide, weather, buoy, or marine-forecast fetch
-  failure. This is source coverage, not local-access or model-performance evidence.
-- **Evidence boundary:** the original Bay Area validation geography is preserved byte-for-byte
-  in a versioned catalog. Santa Barbara trip reports are ordinary private, reviewable product
-  observations only; they do not enter the frozen pilot or support a model-performance claim.
-- **Queued regional data goals:** add official pollution/water-quality conditions as a
-  source-bound score modifier or hard exclusion, and audit every catalog location one by one for
-  notable structure and shore-reachable depth. Both stay unchecked until their provenance,
-  resolution, uncertainty, freshness, missing-data, safety, and score-eligibility gates pass;
-  neither is a current product capability or a health/catch guarantee.
-- **Review receipt:** draft PR [#118](https://github.com/brianbzeng/castingcompass/pull/118)
-  carries the regional implementation. It must remain unmerged and undeployed until every
-  exact-head check passes, local anglers review the access list, and the guarded production
-  checklist clears.
-- **Local-review readiness:** the blank 14-site access-review packet and read-only evaluator are
-  machine-bound to the catalog and signed release inventory. The evaluator keeps raw responses
-  outside the repository, counts random pseudonymous reviewer keys, enforces recent observations
-  and seven-day official-source checks, blocks unresolved corrections, and emits only aggregate
-  counts plus a private-evidence digest. It has not been executed or accepted; all sites remain
-  pending and no deployment, safety/legal, or validation authority follows from it.
-- **Current-main reconciliation receipt:** the regional draft now includes protected `main`
-  `086b2055f44ba5e2595d6bd249866ffb20c3c461` while preserving both the regional access-review
-  gate and the complete D1 query-inventory gate. A fresh zero-script npm install contained 533
-  packages and both npm audits reported zero vulnerabilities; every offline security/SBOM gate,
-  ESLint, TypeScript, the Cloudflare build, 464/464 Node tests, and 140/140 Chromium/WebKit mobile
-  cases passed. The saved-location recovery matrix now derives its fixed clock from the committed
-  forecast fixture rather than a stale calendar date. Exact locked Python graphs passed 29/29 API
-  tests, 83/83 pipeline tests with one documented optional-raster skip, Ruff, a fresh deterministic
-  synthetic smoke, all 19 migrations, 19 critical query plans, and every foreign-key child
-  index contract. Hosted exact-head checks remain pending until the draft is pushed; no deployment,
-  D1 migration, provider query, Cloudflare mutation, or production action is part of this receipt.
-- **Resume point:** after this regional branch is reviewed, resume the earliest open P0 release
-  gate in [PRODUCT_ROADMAP.md](PRODUCT_ROADMAP.md). Do not ship either track until the guarded
-  production checklist clears.
+- [x] Reconcile protected `main` `086b2055f44ba5e2595d6bd249866ffb20c3c461`, draft
+      regional PR `#118`, draft water-quality PR `#130`, issue `#86`, and the ordered roadmap.
+      All remaining P0/P1 provider, counsel, staging, deployment, independent-review, and
+      real-data gates remain open; this integration cannot satisfy or bypass them.
+- [x] Preserve the reviewed Santa Barbara South Coast expansion from Gaviota through Rincon:
+      14 public-access catalog entries, three NOAA tide anchors, West/East Channel buoy routing,
+      the Campus Point no-take exclusion, a 2,160-window source-bound snapshot, truthful regional
+      search language, and the original Bay Area validation geography frozen byte-for-byte.
+      The score remains an explainable relative ranking, never a catch probability.
+- [x] Preserve the local-access evidence boundary. The blank 14-site packet and offline evaluator
+      remain machine-bound, privacy-minimizing, and non-authorizing. No review response has been
+      supplied or accepted; every regional site remains pending, including five limited-access
+      sites requiring two independent reviews. Regional trip reports remain ordinary private
+      product observations rather than validation evidence.
+- [x] Preserve water quality as a separately versioned human-health advisory overlay, not a
+      catch-probability, pollution-severity, or seafood-safety score. The fixed HTTPS SFPUC slice
+      maps six exact San Francisco sites, rejects malformed or unreviewed source states, binds
+      policy/collector/catalog hashes, independently expires neutral evidence, and suppresses a
+      recommendation under a current active official status without rewriting its fishing score.
+      Fresh no-posting evidence is neutral; stale, unavailable, unmapped, or incomplete evidence
+      remains explicitly unknown.
+- [x] Preserve the two independent exact-head receipts. Regional PR `#118` head
+      `0c90f1afe08b9f8866b26d3bfeef07f541d226e8` passed all applicable hosted checks, including
+      140/140 mobile cases. Water-quality PR `#130` implementation head
+      `c6d261925168cff33b930413ddf1b0c770ad215c` and receipt head
+      `3ac7bec5a3410bf0bdeb0de500e43a1fa7b1025b` passed push/PR CI, CodeQL, both native API-image
+      architectures, release provenance, and the complete 144/144 mobile matrix.
+- [x] Verify the combined non-production working tree from source. The advisory artifact was
+      regenerated against the 61-site catalog; the Cloudflare build and 472/472 Node tests,
+      144/144 Chromium/WebKit mobile cases, ESLint, TypeScript, the complete security/SBOM/source-
+      integrity chain and both zero-vulnerability npm audits passed under pinned Node `22.23.1`.
+      Exact Python environments passed 29/29 API tests, Ruff, 83/83 pipeline tests with one
+      documented optional-`rasterio` skip, the deterministic synthetic smoke, and 19 migrations /
+      19 critical D1 query plans with every foreign-key child path indexed.
+- [x] Add a bounded [ML-engineer demo runbook](ML-ENGINEER-DEMO.md) that identifies what the
+      local candidate demonstrates, what remains unvalidated, and which actions stay outside the
+      demo. Docker, provider access, production credentials, Cloudflare, and deployment are not
+      required.
+- [ ] Bind the verified tree to an exact integration commit and obtain protected hosted checks.
+      Separate branch receipts and an uncommitted local matrix are not proof of the final head.
+- [ ] Keep the candidate local or draft-only for the ML-engineer demo. It must not merge or deploy
+      until the Santa Barbara access review, guarded production checklist, and every other open
+      gate above are independently satisfied. Structure/depth mapping and broader official
+      water-quality coverage remain separate unchecked roadmap goals.
 
 ## Completed work cycle — deterministic mobile release evidence
 
@@ -144,14 +140,14 @@ by that discovery.
       Vinext reproduced the irrelevant static-file premature-close warning. ESLint, TypeScript,
       the Cloudflare build, 456/456 Node tests, secret and install-policy checks, and both complete
       and production-only npm audits also passed. Hosted exact-head evidence remains required below.
-- [x] Publish isolated follow-up PR `#129`, require complete exact-head protected checks, merge
-      only accepted evidence, and reconcile protected `main`. Exact head
-      `02d0789cda4c05d5d9ea81557aea31ec66a8b6c0` passed duplicate push and pull-request web,
-      API, pipeline, release-provenance, and CodeQL checks before merging as
-      `086b2055f44ba5e2595d6bd249866ffb20c3c461`. Main CI `29801749298`, CodeQL
-      `29801748832`, and release provenance `29801749264` passed that merge commit, including
-      the complete 140-case Chromium/WebKit matrix. Production and Cloudflare remained outside
-      this cycle.
+- [x] Publish the isolated follow-up, require complete exact-head protected checks, merge only
+      accepted evidence, and reconcile protected `main`. PR `#129` exact head
+      `02d0789cda4c05d5d9ea81557aea31ec66a8b6c0` passed push CI `29801444205` and
+      pull-request CI `29801446092`, including two independent 140/140 Chromium/WebKit web jobs,
+      plus CodeQL `29801444300` and release-provenance runs `29801444203` and `29801446067`.
+      It merged as protected-main commit `086b2055f44ba5e2595d6bd249866ffb20c3c461`;
+      main CI `29801749298`, CodeQL `29801748832`, and release provenance `29801749264`
+      passed that exact commit. Production and Cloudflare remained outside this cycle.
 
 ## Completed work cycle — default-off asynchronous privacy exports
 
@@ -1020,7 +1016,13 @@ by that discovery.
       after its meaning, official/licensed sources, spatial and temporal support, freshness,
       uncertainty, missing-data behavior, and validation gates are frozen. Agency advisories stay
       authoritative; the product must not turn a fishing score into a water-contact or seafood-
-      consumption safety claim.
+      consumption safety claim. **First local advisory slice complete:** the versioned SFPUC
+      policy maps six exact San Francisco sites, binds its policy/collector/catalog hashes,
+      fails stale, incomplete, unmonitored, unavailable, and unmapped status to unknown, gives
+      no score credit for a no-posting result, and suppresses recommendations under an active
+      official status without rewriting the attested fishing score. Broader Bay Area and Santa
+      Barbara/Goleta source coverage, rainfall semantics, numeric-contribution validation,
+      independent review, deployment, and post-deployment freshness evidence remain open.
 - [ ] Enrich the map one available location at a time with reviewed notable structure and useful
       depth levels. Every feature needs reproducible official/licensed source provenance, units,
       vertical datum, resolution, retrieval date, checksum, uncertainty, allowed use, sensitive-
