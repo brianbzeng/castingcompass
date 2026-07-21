@@ -11,7 +11,7 @@ import addFormats from "ajv-formats";
 const root = new URL("../", import.meta.url);
 const snapshotPath = "structure-depth/noaa-enc-approach-snapshot.json";
 const artifactPath = "public/data/structure-depth.json";
-const fixedAsOf = "2026-07-21T09:15:58Z";
+const fixedAsOf = "2026-07-21T09:58:54Z";
 
 async function readJson(path) {
   return JSON.parse(await readFile(new URL(path, root), "utf8"));
@@ -41,7 +41,7 @@ function runCollector(output, sourceSnapshot = snapshotPath) {
   );
 }
 
-test("published 24-site chart context is contract-bound, display-only, and non-navigational", async () => {
+test("published 34-site chart context is contract-bound, display-only, and non-navigational", async () => {
   const [schema, policy, sites, artifact, policyBytes, collectorBytes, siteBytes, snapshotBytes, interfaceSource, disclosure] = await Promise.all([
     readJson("contracts/structure-depth-evidence.schema.json"),
     readJson("structure-depth/policy.json"),
@@ -129,6 +129,36 @@ test("overlapping ENC cells are deduplicated and partial source dates remain exp
   assert.deepEqual(wreck.partialSourceDates, ["2005"]);
 });
 
+test("San Mateo coast chart context covers the selected cohort without score or access authority", async () => {
+  const [artifact, sites] = await Promise.all([readJson(artifactPath), readJson("data/sites.json")]);
+  const siteIds = [
+    "pacifica-municipal-pier",
+    "sharp-park-beach",
+    "rockaway-beach",
+    "pacifica-state-beach",
+    "montara-state-beach",
+    "pillar-point-west-jetty",
+    "pillar-point-east-jetty",
+    "surfers-beach",
+    "francis-state-beach",
+    "poplar-beach",
+  ];
+  assert.ok(siteIds.every((siteId) => artifact.sites[siteId].status === "charted-context"));
+  assert.ok(siteIds.every((siteId) => artifact.sites[siteId].depth.status === "charted-sector-bands"));
+  assert.ok(siteIds.every((siteId) => artifact.sites[siteId].scoreDelta === null));
+  assert.ok(siteIds.every((siteId) => artifact.sites[siteId].navigationUseAllowed === false));
+
+  const pacifica = artifact.sites["pacifica-municipal-pier"];
+  assert.deepEqual(pacifica.depth.chartedBandsMeters, [[-1.8, 0], [0, 3.6]]);
+  assert.deepEqual(pacifica.depth.contextSoundingDepthRangeMeters, [1.8, 2.7]);
+  assert.equal(pacifica.depth.contextSoundingCount, 2);
+  assert.equal(sites.find((site) => site.id === pacifica.siteId).accessStatus, "closed");
+
+  const francis = artifact.sites["francis-state-beach"];
+  assert.deepEqual(francis.depth.partialSourceDates, ["2003-11"]);
+  assert.equal(francis.depth.hasUndatedRecords, true);
+});
+
 test("one required site query fails only that evidence slice closed", async (t) => {
   const directory = await mkdtemp(join(tmpdir(), "castingcompass-structure-depth-partial-"));
   t.after(() => rm(directory, { recursive: true, force: true }));
@@ -198,9 +228,11 @@ test("source-selection receipt preserves incomplete alternatives instead of over
   ]);
   assert.equal(receipt.blue_topo.unpublished_site_count, 11);
   assert.equal(receipt.usgs_santa_barbara_channel_10m.configured_sector_coverage_site_count, 6);
-  assert.equal(receipt.noaa_enc_direct.configured_sector_depth_area_site_count, 23);
+  assert.equal(receipt.noaa_enc_direct.configured_sector_depth_area_site_count, 33);
   assert.equal(receipt.san_francisco_extension.site_ids.length, 10);
   assert.equal(receipt.san_francisco_extension.selection_result, "accepted-with-one-explicit-partial-depth-sector");
+  assert.equal(receipt.san_mateo_coast_extension.site_ids.length, 10);
+  assert.equal(receipt.san_mateo_coast_extension.selection_result, "accepted-with-all-ten-configured-sectors");
   assert.match(receipt.blue_topo.tile_scheme_sha256, /^[a-f0-9]{64}$/);
   assert.match(receipt.usgs_santa_barbara_channel_10m.archive_sha256, /^[a-f0-9]{64}$/);
 });

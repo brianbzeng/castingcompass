@@ -4,11 +4,11 @@
 
 ## Frozen meaning
 
-`castingcompass.structure-depth-evidence/1.1.0` is planning context for 24
-reviewed catalog locations: all 14 Santa Barbara South Coast locations plus the
-ten San Francisco coast and waterfront locations. It shows broad NOAA chart
-depth bands intersecting a configured offshore sector and selected chart-feature
-classes within one kilometer. It is not:
+`castingcompass.structure-depth-evidence/1.2.0` is planning context for 34
+reviewed catalog locations: all 14 Santa Barbara South Coast locations, ten San
+Francisco coast and waterfront locations, and ten San Mateo Coast/Half Moon Bay
+locations. It shows broad NOAA chart depth bands intersecting a configured
+offshore sector and selected chart-feature classes within one kilometer. It is not:
 
 - an exact depth at the map marker;
 - a promise that a depth is shore-reachable or castable;
@@ -52,6 +52,13 @@ more depth-area records. Crane Cove Park does not; it remains explicitly
 one kilometer. No other source or catalog prior is substituted to make that
 sector appear complete.
 
+The San Mateo Coast/Half Moon Bay extension uses the same fixed source and layer
+inventory. All ten configured sectors intersect one or more depth-area records
+and have at least one deduplicated sounding within one kilometer. This chart
+coverage does not override access: Pacifica Municipal Pier remains closed,
+excluded from recommendations, and absent from forecast/detail/trip-start flows;
+the main interface retains its official closure-status link.
+
 ## Geometry and interpretation
 
 For each site, the collector constructs a WGS84 sector from the public catalog
@@ -74,9 +81,9 @@ selected layers also do not publish numeric positional accuracy or vertical
 uncertainty. Those fields therefore remain explicit `not-exposed` states rather
 than zeros.
 
-## Captured 24-site inventory
+## Captured 34-site inventory
 
-The normalized source snapshot was captured at `2026-07-21T09:15:58Z` from the
+The normalized source snapshot was captured at `2026-07-21T09:58:54Z` from the
 fixed NOAA `enc_approach` ArcGIS service. Point-sounding counts are deduplicated
 across overlapping ENC cells. “No selected feature record” never means “no
 structure.”
@@ -111,6 +118,19 @@ structure.”
 | Crane Cove Park | Partial | No intersecting depth-area band | 7 | Obstruction; pile/piling; seabed description; shoreline construction; wreck |
 | Heron's Head Park Pier | Charted context | 0–3.6 m | 16 | Obstruction; seabed description; shoreline construction; wreck |
 
+| San Mateo Coast / Half Moon Bay location | ENC bands intersecting sector | Deduplicated soundings within 1 km | Selected chart-feature classes within 1 km |
+| --- | --- | ---: | --- |
+| Pacifica Municipal Pier | -1.8–0 m; 0–3.6 m | 2 | Shoreline construction |
+| Sharp Park Beach | -1.8–0 m; 0–3.6 m; 3.6–10.9 m | 3 | Shoreline construction |
+| Rockaway Beach | -1.8–0 m; 0–3.6 m; 3.6–10.9 m | 3 | Seabed description |
+| Pacifica State Beach (Linda Mar) | -1.8–0 m; 0–3.6 m; 3.6–10.9 m | 1 | Seabed description |
+| Montara State Beach | -1.8–0 m; 0–3.6 m; 3.6–10.9 m; 10.9–18.2 m | 2 | No selected feature record |
+| Pillar Point Harbor West Jetty | 0–1.8 m; 1.8–3.6 m; 3.6–5.4 m | 18 | Seabed description; shoreline construction |
+| Pillar Point Harbor East Jetty | 3.6–5.4 m; 5.4–9.1 m | 19 | Seabed description; shoreline construction |
+| Surfer's Beach | 5.4–9.1 m; 9.1–18.2 m | 11 | Pile/piling; seabed description; shoreline construction |
+| Francis State Beach | -1.5–0 m; 1.8–3.6 m; 3.6–5.4 m; 5.4–9.1 m | 9 | Obstruction; seabed description |
+| Poplar Beach | -1.5–0 m; 1.8–3.6 m; 3.6–5.4 m; 5.4–9.1 m | 11 | Seabed description |
+
 The exact full-date depth records range from 1999 through 2025. The source also
 publishes valid month-precision values such as `2013-06` and a year-only `2005`
 for the charted wreck near Stearns Wharf. Contract version 1.1 preserves those
@@ -140,13 +160,13 @@ because a current service response does not make an old underlying survey new.
 Any required depth-query failure makes that site's depth unavailable. Any
 selected structure-query failure makes the structure section unavailable while
 retaining catalog clues as explicitly unvalidated. Service metadata drift makes
-all 24 sites unavailable. Errors are fixed categories and never expose local
+all 34 sites unavailable. Errors are fixed categories and never expose local
 paths or exception text.
 
 ## Remaining acceptance work
 
-This completes the first San Francisco extension of the source-bound inventory,
-not the parent map goal. Before a location can be called fully reviewed:
+This completes the San Francisco and San Mateo coastal extensions of the source-
+bound inventory, not the parent map goal. Before a location can be called fully reviewed:
 
 1. a local reviewer must confirm the sector orientation, public access context,
    and whether the displayed chart classes are useful rather than misleading;

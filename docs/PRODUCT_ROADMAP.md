@@ -695,11 +695,17 @@ after its acceptance checks pass in the intended environment.
     seven deduplicated point soundings and selected chart features exist within 1 km. Contract
     version 1.1 preserves exact, month-precision, year-only, and missing source-date states
     separately instead of rejecting valid partial dates or inventing a day.
+  - [x] Extend the same contract to ten San Mateo Coast and Half Moon Bay locations. The fixed
+    2026-07-21 source snapshot provides depth-area bands and nearby soundings for all ten configured
+    sectors, keeps selected feature records display-only, and leaves every score/catalog value
+    unchanged. Pacifica Municipal Pier remains closed, excluded from ranking, and absent from
+    forecast/detail/trip-start flows instead of allowing chart context to imply access. Contract
+    version 1.2 binds exactly 34 reviewed sites.
   - [ ] Obtain location-by-location local-angler and independent chart review; verify sector
     orientation and usefulness; source dynamic bars, troughs, reef, vegetation, and other catalog
     clues separately or leave them explicitly unvalidated; add BlueTopo or another qualified
     uncertainty-bearing source only where coverage permits; extend the same contract to the
-    remaining 37 launch-catalog locations; and collect protected, guarded deployment plus post-deployment
+    remaining 27 launch-catalog locations; and collect protected, guarded deployment plus post-deployment
     evidence before calling any location fully reviewed or using this evidence in a score.
 - [ ] Add striped bass as the first new beta using a distinct estuary/migration model.
 - [ ] Define and evaluate explicit shore-relevant rockfish species/complexes next; then model

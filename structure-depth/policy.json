@@ -1,6 +1,6 @@
 {
   "schema_version": "castingcompass.structure-depth-policy/1.0.0",
-  "policy_version": "castingcompass.california-enc-approach/0.2.0",
+  "policy_version": "castingcompass.california-enc-approach/0.3.0",
   "meaning": "source-bound planning context for nearby charted depths and selected chart features at reviewed California catalog locations; never a casting-depth guarantee, navigation product, safety claim, or catch-probability input",
   "score_contribution": "excluded-pending-site-review-and-validation",
   "catalog_mutation": "forbidden",
@@ -126,6 +126,16 @@
     "pier-14",
     "crane-cove-park",
     "herons-head-park-pier",
+    "pacifica-municipal-pier",
+    "sharp-park-beach",
+    "rockaway-beach",
+    "pacifica-state-beach",
+    "montara-state-beach",
+    "pillar-point-west-jetty",
+    "pillar-point-east-jetty",
+    "surfers-beach",
+    "francis-state-beach",
+    "poplar-beach",
     "gaviota-state-park-beach",
     "refugio-state-beach",
     "el-capitan-state-beach",
@@ -142,7 +152,7 @@
     "rincon-beach-park"
   ],
   "source_selection_receipt": {
-    "reviewed_at": "2026-07-21T09:15:58Z",
+    "reviewed_at": "2026-07-21T09:58:54Z",
     "blue_topo": {
       "tile_scheme_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/_BlueTopo_Tile_Scheme/BlueTopo_Tile_Scheme_20260626_132625.gpkg",
       "tile_scheme_sha256": "dc854cc98608eaae19e5cc8e4ccf92f9f61af998cc135c61c649d2052c3fc319",
@@ -159,7 +169,7 @@
       "selection_result": "retained-as-future-secondary-reference-not-used-as-complete-regional-baseline"
     },
     "noaa_enc_direct": {
-      "configured_sector_depth_area_site_count": 23,
+      "configured_sector_depth_area_site_count": 33,
       "selection_result": "selected-as-consistent-reviewed-location-chart-context"
     },
     "san_francisco_extension": {
@@ -176,6 +186,21 @@
         "herons-head-park-pier"
       ],
       "selection_result": "accepted-with-one-explicit-partial-depth-sector"
+    },
+    "san_mateo_coast_extension": {
+      "site_ids": [
+        "pacifica-municipal-pier",
+        "sharp-park-beach",
+        "rockaway-beach",
+        "pacifica-state-beach",
+        "montara-state-beach",
+        "pillar-point-west-jetty",
+        "pillar-point-east-jetty",
+        "surfers-beach",
+        "francis-state-beach",
+        "poplar-beach"
+      ],
+      "selection_result": "accepted-with-all-ten-configured-sectors"
     }
   }
 }

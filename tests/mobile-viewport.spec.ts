@@ -196,7 +196,8 @@ test.beforeEach(async ({ page }, testInfo) => {
     testTitle.includes("malformed saved-location receipt stays unresolved");
   const waterQualityAdvisoryTest = testTitle.includes("official water-quality status suppresses recommendations");
   const structureDepthEvidenceTest = testTitle.includes("source-bound Santa Barbara chart context")
-    || testTitle.includes("source-bound San Francisco chart context");
+    || testTitle.includes("source-bound San Francisco chart context")
+    || testTitle.includes("source-bound San Mateo Coast");
   if (structureDepthEvidenceTest) {
     // Keep the committed opportunity fixture selectable so the stable site deep link opens its
     // detail sheet instead of expiring as wall-clock time advances.
@@ -543,6 +544,35 @@ test("source-bound San Francisco chart context keeps a missing sector band expli
   await expect(evidence).toContainText("4.9–12 m across 7 deduplicated records within 1,000 m");
   await expect(evidence).toContainText("Charted wreck");
   await expect(evidence).toContainText("the gap is not proof of shallow water, safe access, or castability");
+  await expectSelectorInsideViewport(page, ".structure-depth-evidence");
+});
+
+test("source-bound San Mateo Coast coverage preserves the closed-site recommendation boundary", async ({ page }) => {
+  await page.goto("/?site=pacifica-municipal-pier");
+  const closure = page.locator(".closure-notice").filter({ hasText: "temporarily closed access point" });
+
+  await expect(closure).toContainText("1 temporarily closed access point is excluded from ranking");
+  await expect(closure.getByRole("link", { name: /official status/i })).toHaveAttribute(
+    "href",
+    "https://www.cityofpacifica.org/departments/public-works/field-services/pacifica-pier",
+  );
+  await expect(page.locator(".site-card").filter({ hasText: "Pacifica Municipal Pier" })).toHaveCount(0);
+  await expect(page.locator(".detail-sheet")).toHaveCount(0);
+  await expect(page.locator(".fish-window-button")).toHaveCount(0);
+  await expectSelectorInsideViewport(page, ".closure-notice");
+});
+
+test("source-bound San Mateo Coast chart context preserves Half Moon Bay date precision", async ({ page }) => {
+  await page.goto("/?site=francis-state-beach");
+  const evidence = page.locator(".structure-depth-evidence");
+
+  await expect(evidence).toBeVisible();
+  await expect(evidence).toContainText("1.8–3.6 m");
+  await expect(evidence).toContainText("2.4–9.1 m across 9 deduplicated records within 1,000 m");
+  await expect(evidence).toContainText("Charted obstruction");
+  await expect(evidence).toContainText("some dates have year/month precision");
+  await expect(evidence).toContainText("some records have no source date");
+  await expect(evidence).toContainText("does not change the fishing score");
   await expectSelectorInsideViewport(page, ".structure-depth-evidence");
 });
 

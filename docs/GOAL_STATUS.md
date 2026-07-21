@@ -13,6 +13,40 @@ Current provider truth overrides historical “paused” language in completed r
 2026-07-19 read-only reconciliation found an active Worker; no production mutation is authorized
 by that discovery.
 
+## Active checkpoint — San Mateo Coast and Half Moon Bay source-bound chart context
+
+- [x] Preserve draft PR `#134` at exact final receipt head
+      `f2ab34c8ca9968983a49e364235f86f16f91b4fa` as the reviewed stacked base. This
+      follow-up is isolated from the dirty primary checkout and does not merge, deploy, mutate
+      Cloudflare or D1, change a catalog prior, or alter the attested fishing score.
+- [x] Select the next coherent ten-site cohort: Pacifica Municipal Pier, Sharp Park Beach,
+      Rockaway Beach, Pacifica State Beach, Montara State Beach, both Pillar Point Harbor jetties,
+      Surfer's Beach, Francis State Beach, and Poplar Beach. The same fixed NOAA ENC Direct
+      `Approach` source, 13-layer inventory, meters/MLLW meaning, bounded geometry, and fail-closed
+      drift rules apply.
+- [x] Capture and normalize a fixed `2026-07-21T09:58:54Z` source snapshot for all 34 covered
+      sites. Every new sector has one or more depth-area bands and at least one deduplicated
+      sounding within 1 km. Existing Crane Cove evidence remains explicitly partial; no substitute
+      source, catalog clue, or score value fills that gap.
+- [x] Preserve access authority independently of chart coverage. Pacifica Municipal Pier remains
+      closed and excluded from ranking and forecast/detail/trip-start flows; the main interface
+      retains its official closure-status link. Chart context cannot authorize entry or weaken the
+      closure.
+- [x] Extend the strict artifact/schema/type contract to version 1.2 and add deterministic source,
+      cohort, partial-date, score-exclusion, closed-access, and mobile truthfulness coverage.
+- [x] Complete the fresh full local release matrix under pinned Node `22.23.1` and the
+      hash-locked Python environments: fresh zero-script installation, both zero-vulnerability
+      npm audits, Cloudflare build, 484/484 Node tests, ESLint, TypeScript, the complete
+      security/SBOM/source-integrity chain, nine deterministic/adversarial structure-depth tests,
+      Python syntax/Ruff, 29/29 API tests, 83/83 pipeline tests with one documented optional-
+      `rasterio` skip, deterministic synthetic smoke, and all 19 critical D1 query plans passed.
+      The complete bounded two-worker Chromium/WebKit phone matrix passed 164/164 cases. Francis
+      State Beach chart evidence and Pacifica Municipal Pier's closed-access boundary were
+      visually inspected at iPhone width.
+- [ ] Publish a protected stacked draft PR, obtain exact-head hosted receipts, and keep CodeQL,
+      independent location/chart review, merge, deployment, provider/database mutation, and
+      production activation as explicit separate gates.
+
 ## Active checkpoint — San Francisco source-bound depth and structure
 
 - [x] Preserve draft PR `#133` at exact final receipt head
