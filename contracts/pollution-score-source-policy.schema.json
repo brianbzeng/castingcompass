@@ -1,0 +1,171 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://castingcompass.com/contracts/pollution-score-source-policy.schema.json",
+  "title": "CastingCompass pollution score source policy",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "policyVersion",
+    "status",
+    "reviewedAt",
+    "claimBoundary",
+    "currentRuntimeBoundary",
+    "candidateSources",
+    "activationGates",
+    "requiredIndependentReview"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "const": "castingcompass.pollution-score-source-policy/1.0.0"
+    },
+    "policyVersion": {
+      "const": "castingcompass.pollution-score-candidates/0.1.0"
+    },
+    "status": {
+      "const": "research-boundary-not-activated"
+    },
+    "reviewedAt": {
+      "type": "string",
+      "format": "date"
+    },
+    "claimBoundary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "runtimeCollectionActivated",
+        "scoreContributionActivated",
+        "positiveContributionAllowed",
+        "negativeContributionAllowed",
+        "numericScoreDelta",
+        "catchProbabilityClaimAllowed",
+        "waterContactSafetyClaimAllowed",
+        "seafoodSafetyClaimAllowed",
+        "agencyAdviceRemainsAuthoritative"
+      ],
+      "properties": {
+        "runtimeCollectionActivated": { "const": false },
+        "scoreContributionActivated": { "const": false },
+        "positiveContributionAllowed": { "const": false },
+        "negativeContributionAllowed": { "const": false },
+        "numericScoreDelta": { "type": "null" },
+        "catchProbabilityClaimAllowed": { "const": false },
+        "waterContactSafetyClaimAllowed": { "const": false },
+        "seafoodSafetyClaimAllowed": { "const": false },
+        "agencyAdviceRemainsAuthoritative": { "const": true }
+      }
+    },
+    "currentRuntimeBoundary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "meaning",
+        "waterQualityPolicySha256",
+        "waterQualityOverlaySha256",
+        "waterQualityCollectorSha256",
+        "siteCatalogSha256"
+      ],
+      "properties": {
+        "meaning": {
+          "const": "existing action-only advisory guardrail remains separate and unchanged"
+        },
+        "waterQualityPolicySha256": { "$ref": "#/$defs/sha256" },
+        "waterQualityOverlaySha256": { "$ref": "#/$defs/sha256" },
+        "waterQualityCollectorSha256": { "$ref": "#/$defs/sha256" },
+        "siteCatalogSha256": { "$ref": "#/$defs/sha256" }
+      }
+    },
+    "candidateSources": {
+      "type": "array",
+      "minItems": 6,
+      "maxItems": 6,
+      "items": { "$ref": "#/$defs/source" }
+    },
+    "activationGates": {
+      "type": "array",
+      "minItems": 10,
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "minLength": 16
+      }
+    },
+    "requiredIndependentReview": {
+      "type": "array",
+      "minItems": 2,
+      "maxItems": 2,
+      "uniqueItems": true,
+      "items": {
+        "enum": [
+          "fisheries-or-marine-ecology-methods-review",
+          "public-health-and-risk-communication-review"
+        ]
+      }
+    }
+  },
+  "$defs": {
+    "sha256": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "agency",
+        "authoritativeUrl",
+        "sourceClass",
+        "meaning",
+        "spatialSupport",
+        "temporalSupport",
+        "qualityBoundary",
+        "decision",
+        "allowedUses",
+        "prohibitedUses"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+        },
+        "agency": { "type": "string", "minLength": 4 },
+        "authoritativeUrl": { "type": "string", "format": "uri" },
+        "sourceClass": {
+          "enum": [
+            "water-contact-action",
+            "fecal-indicator-bacteria-sample",
+            "fish-consumption-advisory",
+            "fish-tissue-monitoring",
+            "ambient-water-quality-result",
+            "community-pollution-burden-screen"
+          ]
+        },
+        "meaning": { "type": "string", "minLength": 32 },
+        "spatialSupport": { "type": "string", "minLength": 24 },
+        "temporalSupport": { "type": "string", "minLength": 24 },
+        "qualityBoundary": { "type": "string", "minLength": 32 },
+        "decision": {
+          "enum": [
+            "existing-exclusion-only-runtime-guardrail",
+            "research-only-not-admitted",
+            "authoritative-safety-display-only",
+            "rejected-for-site-score"
+          ]
+        },
+        "allowedUses": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": { "type": "string", "minLength": 12 }
+        },
+        "prohibitedUses": {
+          "type": "array",
+          "minItems": 3,
+          "uniqueItems": true,
+          "items": { "type": "string", "minLength": 12 }
+        }
+      }
+    }
+  }
+}

@@ -13,6 +13,36 @@ Current provider truth overrides historical “paused” language in completed r
 2026-07-19 read-only reconciliation found an active Worker; no production mutation is authorized
 by that discovery.
 
+## Active checkpoint — pollution-score source and meaning boundary
+
+- [x] Preserve draft PR `#144` at exact final receipt head
+      `d3f30cdb1e90cd1a631ab4b55468ee30c1df75ad` as the stacked base. This follow-up is
+      isolated from the dirty primary checkout and does not merge, deploy, mutate Cloudflare or
+      D1, add a collector, change the advisory runtime or public artifact, alter a site prior, or
+      add a numeric fishing-score contribution.
+- [x] Separate six official-source meanings that the broad word “pollution” could otherwise
+      conflate: water-contact actions, fecal-indicator-bacteria samples, fish-consumption advice,
+      fish-tissue bioaccumulation monitoring, ambient multi-project measurements, and a community
+      pollution-burden screen. Each retains its own spatial, temporal, quality, and claim boundary.
+- [x] Freeze a strict research-only source policy. Existing exact current BeachWatch actions stay
+      an exclusion-only guardrail; OEHHA advice stays authoritative safety display; BeachWatch
+      samples, SWAMP tissue data, and CEDEN results stay unadmitted research candidates; and
+      CalEnviroScreen is rejected for fishing-site scoring. Collection and positive or negative
+      score contribution remain disabled and `numericScoreDelta` remains null.
+- [x] Complete strict schema and semantic checks that reject premature scoring, non-null deltas,
+      source promotion, or relabeling community burden as a site measurement. The clean local
+      release matrix passed under pinned Node `22.23.1` and the locked Python environments: fresh
+      zero-script install, both zero-vulnerability npm audits, Cloudflare build, 512/512 Node
+      tests, ESLint, TypeScript, the complete offline security/SBOM/source-integrity chain, Ruff,
+      29/29 API tests, all 19 critical D1 query plans, 83/83 pipeline tests with one documented
+      optional-`rasterio` skip, deterministic synthetic smoke, and 188/188 Chromium/WebKit phone
+      cases.
+- [ ] Publish a protected stacked draft PR with exact-head hosted evidence. Before any future
+      activation, freeze and pre-register a distinct fishing-quality target and held-out
+      validation protocol, prove incremental value with uncertainty, and obtain independent
+      fisheries-methods and public-health risk-communication review. Deployment and production
+      remain separate gates.
+
 ## Active checkpoint — complete launch-catalog water-quality negative evidence
 
 - [x] Preserve draft PR `#143` at exact green receipt head

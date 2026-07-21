@@ -293,6 +293,18 @@ later appears. Directory absence is not a clean-water conclusion and does not
 show that another official source cannot exist; exact coverage and independent
 review remain open.
 
+## Future pollution-score research boundary
+
+[`POLLUTION-SCORE-SOURCE-BOUNDARY.md`](POLLUTION-SCORE-SOURCE-BOUNDARY.md)
+and `water-quality/pollution-score-source-policy.json` separate water-contact
+actions, bacteria samples, fish-consumption advice, fish-tissue monitoring,
+ambient multi-project results, and community pollution-burden screening. The
+policy is research governance only: it adds no collector or runtime value,
+allows neither positive nor negative score contribution, and hash-binds the
+unchanged advisory runtime and site catalog. Existing current official actions
+remain exclusion-only, while agency contact and consumption advice remains
+authoritative outside the fishing score.
+
 ## Integrity and failure behavior
 
 `scripts/refresh_water_quality.py`:

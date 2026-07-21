@@ -683,6 +683,13 @@ after its acceptance checks pass in the intended environment.
       Dumbarton Fishing Pier remains unmapped because the State directory exposes no Alameda
       County program and neither relevant option set contains a Dumbarton identity; the audit
       fails closed if a candidate later appears instead of creating a mapping automatically.
+    - [x] Freeze a machine-checked source and meaning boundary before considering any numeric
+      pollution component. Water-contact actions, bacteria samples, consumption advisories,
+      tissue monitoring, ambient results, and community-burden screening remain separate.
+      Existing exact current actions stay exclusion-only; OEHHA advice stays authoritative;
+      measurement sources stay research-only; CalEnviroScreen is rejected for site scoring; and
+      both positive and negative score contribution remain disabled pending pre-registered
+      held-out validation and independent fisheries plus public-health review.
 - [ ] Build the map location by location until every available location has a reviewed inventory
   of notable structure and useful depth levels. Bind each feature to a reproducible official or
   licensed bathymetry/chart source, units, vertical datum, resolution, retrieval date, checksum,
