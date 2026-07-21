@@ -38,10 +38,17 @@ by that discovery.
       documented optional-`rasterio` skip, deterministic synthetic smoke, and all 19 critical D1
       query plans passed. No application UI or runtime behavior changed, so the preceding exact
       base's 188-case mobile receipt remains the relevant visual boundary pending hosted CI.
+- [x] Publish protected stacked draft PR `#139` without merge or deployment. Exact implementation
+      head `8fa57c5c5a08d663ce9371428e25970f3bd46f41` passed push and pull-request CI runs
+      `29832866054` and `29832885780`, including two independent 188/188 Chromium/WebKit phone
+      matrices; release-provenance runs `29832866449` and `29832885652`; native API-image run
+      `29833491767` on Linux AMD64 and ARM64; and explicitly dispatched optional research-stack
+      run `29833494290` on Linux CPU and macOS ARM64. Event-inapplicable dependency and release-
+      attestation jobs skipped as designed.
 - [ ] Obtain independent spatial-support review or a more exact official source before mapping any
       of these four sites. Broader launch-catalog coverage, numeric-contribution validation,
-      merge, deployment, provider/database mutation, and production activation remain separate
-      open gates.
+      CodeQL on protected `main`, merge, deployment, provider/database mutation, and production
+      activation remain separate open gates.
 
 ## Active checkpoint — Oakland through South Bay source-bound chart context
 
