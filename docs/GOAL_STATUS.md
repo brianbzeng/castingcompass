@@ -35,9 +35,19 @@ by that discovery.
       integrity chain, Ruff and Python syntax, 29/29 API tests, 83/83 pipeline tests with one
       documented optional-`rasterio` skip, deterministic synthetic smoke, and all 19 critical D1
       query plans passed. The complete Chromium/WebKit phone matrix passed 188/188 cases.
-- [ ] Publish a protected stacked draft PR and require exact-head hosted evidence. Independent
-      mapping review, guarded deployment, provider or database mutation, production activation,
-      and every numeric-contribution gate remain separate open work.
+- [x] Publish protected stacked draft PR `#143` without merge or deployment. Exact implementation
+      head `370bd43a86fe76ecab0c2fdb643385fb972807f4` passed push and pull-request CI runs
+      `29846031359` and `29846052760`, including two independent 188/188 Chromium/WebKit phone
+      matrices; release-provenance runs `29846031486` and `29846053718`; and explicitly
+      dispatched optional research-stack run `29846067566` on Linux CPU and macOS ARM64. Native
+      API-image run `29846801493` passed on Linux AMD64 and ARM64 after rerunning an unchanged
+      AMD64 job whose first attempt failed only because GitHub returned an HTTP 302 while the
+      pinned Grype installer fetched its checksum. Event-inapplicable dependency jobs skipped as
+      designed.
+- [ ] Obtain independent mapping review and CodeQL evidence when this stack is eventually
+      reviewed against protected `main`; default setup does not trigger on a non-default stacked
+      base. Guarded deployment, provider or database mutation, production activation, and every
+      numeric-contribution gate remain separate open work.
 
 ## Active checkpoint — East Bay Parks District action-only water-quality coverage
 
