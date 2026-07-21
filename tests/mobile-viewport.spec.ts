@@ -8,6 +8,8 @@ const OPPORTUNITIES_FIXTURE = readFileSync(
   "utf8",
 );
 
+test.use({ serviceWorkers: "block" });
+
 const TURNSTILE_MOCK_SCRIPT = `(() => {
   let sequence = 0;
   const widgets = new Map();
@@ -134,6 +136,19 @@ async function expectSelectorInsideViewport(page: Page, selector: string) {
 }
 
 test.beforeEach(async ({ page }, testInfo) => {
+  // These tests exercise responsive UI and recovery contracts, not the static server's stream
+  // implementation. Fulfill the committed catalog and forecast from memory so every project sees
+  // the same source data even when Vinext closes a large static-file stream under CI concurrency.
+  await page.route("**/data/sites.json", (route) => route.fulfill({
+    status: 200,
+    contentType: "application/json",
+    body: SITES_FIXTURE,
+  }));
+  await page.route("**/data/opportunities.json", (route) => route.fulfill({
+    status: 200,
+    contentType: "application/json",
+    body: OPPORTUNITIES_FIXTURE,
+  }));
   const testTitle = testInfo.titlePath.join(" ");
   if (testTitle.includes("failed lazy route dependency")) {
     await page.route("**/assets/ContourMap-*.js", (route) => route.abort());
@@ -168,19 +183,6 @@ test.beforeEach(async ({ page }, testInfo) => {
   const waterQualityAdvisoryTest = testTitle.includes("official water-quality status suppresses recommendations");
   if (waterQualityAdvisoryTest) {
     await page.clock.setFixedTime(new Date("2026-07-17T12:00:00.000Z"));
-    // Keep this guardrail test independent of Vinext's static-file stream. A transport-level
-    // failure for the large forecast fixture is exercised elsewhere; here the committed catalog
-    // and forecast must be deterministic so the test isolates water-quality suppression.
-    await page.route("**/data/sites.json", (route) => route.fulfill({
-      status: 200,
-      contentType: "application/json",
-      body: SITES_FIXTURE,
-    }));
-    await page.route("**/data/opportunities.json", (route) => route.fulfill({
-      status: 200,
-      contentType: "application/json",
-      body: OPPORTUNITIES_FIXTURE,
-    }));
     const assessment = (overrides: Record<string, unknown>) => ({
       status: "no-active-posting",
       recommendationEffect: "neutral",
