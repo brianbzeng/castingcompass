@@ -263,6 +263,14 @@ test.beforeEach(async ({ page }, testInfo) => {
             absenceBehavior: "unknown",
             errorCategory: null,
           },
+          "san-mateo-county-health": {
+            agency: "San Mateo County Health",
+            programUrl: "https://www.smchealth.org/node/1201",
+            statusUrl: "https://www.smchealth.org/node/1201",
+            machineUrl: "https://www.smchealth.org/node/1201",
+            absenceBehavior: "unknown",
+            errorCategory: null,
+          },
         },
         sites: {
           "baker-beach": assessment({
@@ -286,6 +294,17 @@ test.beforeEach(async ({ page }, testInfo) => {
             actionStartDates: ["2026-06-15"],
             actionEndDates: [],
             sourceUrl: "https://beachwatch.waterboards.ca.gov/public/advisory.php",
+          }),
+          "pacifica-state-beach": assessment({
+            status: "posted",
+            recommendationEffect: "suppress",
+            officialLabel: "Official water-contact warning or closure",
+            detail: "The current County Health posting list names an exact reviewed station for this site, so the recommendation is suppressed.",
+            sourceId: "san-mateo-county-health",
+            stationIds: ["AB4116"],
+            stationNames: ["Linda Mar #5 (at San Pedro Creek)"],
+            sampleDates: ["2026-07-13"],
+            sourceUrl: "https://www.smchealth.org/node/1201",
           }),
         },
       }),
@@ -477,10 +496,11 @@ test("primary controls stay inside common phone viewports", async ({ page }) => 
 
 test("official water-quality status suppresses recommendations and keeps neutral status explicit", async ({ page }) => {
   await expect(page.locator(".water-quality-suppression-notice")).toContainText(
-    "2 sites are excluded from recommendations",
+    "3 sites are excluded from recommendations",
   );
   await expect(page.locator(".site-card").filter({ hasText: "Baker Beach" })).toHaveCount(0);
   await expect(page.locator(".site-card").filter({ hasText: "Gaviota State Park Beach" })).toHaveCount(0);
+  await expect(page.locator(".site-card").filter({ hasText: "Pacifica State Beach" })).toHaveCount(0);
   await page.goto("/?site=gaviota-state-park-beach");
   const actionAdvisory = page.locator(".water-quality-advisory");
   await expect(actionAdvisory).toBeVisible();
@@ -490,6 +510,16 @@ test("official water-quality status suppresses recommendations and keeps neutral
   await expect(actionAdvisory.getByRole("link", { name: /official agency status/i })).toHaveAttribute(
     "href",
     "https://beachwatch.waterboards.ca.gov/public/advisory.php",
+  );
+  await page.goto("/?site=pacifica-state-beach");
+  const countyAdvisory = page.locator(".water-quality-advisory");
+  await expect(countyAdvisory).toBeVisible();
+  await expect(countyAdvisory).toContainText("Official water-contact warning or closure");
+  await expect(countyAdvisory).toContainText("Agency sample date: 2026-07-13");
+  await expect(countyAdvisory).toContainText("does not improve this fishing score");
+  await expect(countyAdvisory.getByRole("link", { name: /official agency status/i })).toHaveAttribute(
+    "href",
+    "https://www.smchealth.org/node/1201",
   );
   // Open the exact site through the product's stable deep-link contract. Its rank can move as
   // regional sites are added, so the advisory test must not assume it appears in the first cards.

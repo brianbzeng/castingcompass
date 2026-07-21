@@ -1,6 +1,6 @@
 {
   "schema_version": "castingcompass.water-quality-policy/2.0.0",
-  "policy_version": "castingcompass.water-quality-advisory/official-programs-0.2.0",
+  "policy_version": "castingcompass.water-quality-advisory/official-programs-0.3.0",
   "meaning": "human-health water-contact advisory overlay; never a catch-probability or seafood-safety signal",
   "score_contribution": "excluded-pending-frozen-baseline-validation",
   "freshness": {
@@ -25,6 +25,35 @@
       "county_name": "Santa Barbara",
       "global_station_ids": ["All_Santa_Barbara_County_Beaches"],
       "absence_behavior": "unknown"
+    },
+    "san-mateo-county-health": {
+      "source_type": "san-mateo-current-posting-html",
+      "agency": "San Mateo County Health",
+      "program_url": "https://www.smchealth.org/node/1201",
+      "status_url": "https://www.smchealth.org/node/1201",
+      "machine_url": "https://www.smchealth.org/node/1201",
+      "station_registry_url": "https://data.smcgov.org/Environment/Beach-and-Creek-Monitoring-Results/kpd9-xf4h/about",
+      "station_registry_machine_url": "https://datahub.smcgov.org/api/id/kpd9-xf4h.json",
+      "absence_behavior": "unknown",
+      "station_aliases": {
+        "AB4111": ["Sharp Park Beach #6", "Sharp Park #6"],
+        "AB4112": ["Sharp Park Beach #3", "Sharp Park #3"],
+        "AB4113": ["Rockaway Beach"],
+        "AB4114": ["Calera Creek"],
+        "AB4116": ["Linda Mar #5 (at San Pedro Creek)", "Linda Mar Beach #5"],
+        "AB41141": ["Linda Mar #7 (S. pump station)", "Linda Mar Beach #7"],
+        "AB4117": ["San Pedro Creek"],
+        "AB41110": ["Montara State Beach", "Montara Beach"],
+        "AB41111": ["Martini Creek"],
+        "AB41117": ["Pillar Point #5 (Capistrano Beach)", "Pillar Point #5"],
+        "AB41116": ["Pillar Point #7 (Surf-West Point Ave)", "Pillar Point #7"],
+        "AB41115": ["Pillar Point #8 (Mavericks Parking lot)", "Pillar Point #8"],
+        "AB41140": ["Pillar Point #9 (Outer Harbor)", "Pillar Point #9"],
+        "AB41120": ["Surfers Beach", "Surfer's Beach"],
+        "AB41128": ["Francis State Beach", "Francis Beach"],
+        "AB18762": ["Coyote Point County Park", "Coyote Point"],
+        "AB18761": ["Oyster Point Marina", "Oyster Point"]
+      }
     }
   },
   "site_mappings": {
@@ -51,6 +80,50 @@
     "ocean-beach-south": {
       "source_id": "sfpuc",
       "station_ids": ["4602"]
+    },
+    "pacifica-municipal-pier": {
+      "source_id": "san-mateo-county-health",
+      "station_ids": ["AB4111", "AB4112"]
+    },
+    "sharp-park-beach": {
+      "source_id": "san-mateo-county-health",
+      "station_ids": ["AB4111", "AB4112"]
+    },
+    "rockaway-beach": {
+      "source_id": "san-mateo-county-health",
+      "station_ids": ["AB4113", "AB4114"]
+    },
+    "pacifica-state-beach": {
+      "source_id": "san-mateo-county-health",
+      "station_ids": ["AB4116", "AB41141", "AB4117"]
+    },
+    "montara-state-beach": {
+      "source_id": "san-mateo-county-health",
+      "station_ids": ["AB41110", "AB41111"]
+    },
+    "pillar-point-west-jetty": {
+      "source_id": "san-mateo-county-health",
+      "station_ids": ["AB41117", "AB41116", "AB41115"]
+    },
+    "pillar-point-east-jetty": {
+      "source_id": "san-mateo-county-health",
+      "station_ids": ["AB41140"]
+    },
+    "surfers-beach": {
+      "source_id": "san-mateo-county-health",
+      "station_ids": ["AB41120"]
+    },
+    "francis-state-beach": {
+      "source_id": "san-mateo-county-health",
+      "station_ids": ["AB41128"]
+    },
+    "coyote-point-jetty": {
+      "source_id": "san-mateo-county-health",
+      "station_ids": ["AB18762"]
+    },
+    "oyster-point-fishing-pier": {
+      "source_id": "san-mateo-county-health",
+      "station_ids": ["AB18761"]
     },
     "gaviota-state-park-beach": {
       "source_id": "california-beachwatch-santa-barbara",

@@ -11,6 +11,7 @@ import addFormats from "ajv-formats";
 const root = new URL("../", import.meta.url);
 const sfpucFixture = "tests/fixtures/sfpuc-beaches-water-quality.xml";
 const beachwatchFixture = "tests/fixtures/california-beachwatch-santa-barbara.html";
+const sanMateoFixture = "tests/fixtures/san-mateo-current-water-quality.html";
 
 async function readJson(path) {
   return JSON.parse(await readFile(new URL(path, root), "utf8"));
@@ -26,6 +27,7 @@ function runCollector(output, options = {}) {
     "--as-of", options.asOf ?? "2026-07-20T20:00:00Z",
     "--sfpuc-source-file", options.sfpucSource ?? sfpucFixture,
     "--beachwatch-source-file", options.beachwatchSource ?? beachwatchFixture,
+    "--san-mateo-source-file", options.sanMateoSource ?? sanMateoFixture,
     "--output", output,
   ];
   return spawnSync("python3", args, {
@@ -80,6 +82,8 @@ test("deterministic fixtures preserve source-specific suppression, neutral, unkn
       "baker-beach", "china-beach", "crane-cove-park", "crissy-field-east-beach",
       "ocean-beach-north", "ocean-beach-south", "gaviota-state-park-beach",
       "refugio-state-beach", "leadbetter-beach", "goleta-beach", "mesa-lane-beach", "pier-7",
+      "pacifica-state-beach", "pillar-point-west-jetty", "pillar-point-east-jetty",
+      "rockaway-beach", "sharp-park-beach", "francis-state-beach", "poplar-beach",
     ].map((siteId) => [siteId, [payload.sites[siteId].status, payload.sites[siteId].recommendationEffect]])),
     {
       "baker-beach": ["posted", "suppress"],
@@ -94,6 +98,13 @@ test("deterministic fixtures preserve source-specific suppression, neutral, unkn
       "goleta-beach": ["unknown", "unknown"],
       "mesa-lane-beach": ["unknown", "unknown"],
       "pier-7": ["not-covered", "unknown"],
+      "pacifica-state-beach": ["posted", "suppress"],
+      "pillar-point-west-jetty": ["posted", "suppress"],
+      "pillar-point-east-jetty": ["posted", "suppress"],
+      "rockaway-beach": ["posted", "suppress"],
+      "sharp-park-beach": ["unknown", "unknown"],
+      "francis-state-beach": ["unknown", "unknown"],
+      "poplar-beach": ["not-covered", "unknown"],
     },
   );
   assert.equal(payload.sites["crissy-field-east-beach"].scoreDelta, null);
@@ -101,6 +112,11 @@ test("deterministic fixtures preserve source-specific suppression, neutral, unkn
   assert.deepEqual(payload.sites["gaviota-state-park-beach"].actionStartDates, ["2026-06-15"]);
   assert.deepEqual(payload.sites["gaviota-state-park-beach"].actionEndDates, []);
   assert.match(payload.sites["leadbetter-beach"].detail, /absence does not prove/i);
+  assert.deepEqual(payload.sites["pacifica-state-beach"].stationIds, ["AB4116"]);
+  assert.deepEqual(payload.sites["pillar-point-west-jetty"].stationIds, ["AB41117"]);
+  assert.deepEqual(payload.sites["pillar-point-east-jetty"].stationIds, ["AB41140"]);
+  assert.match(payload.sites["sharp-park-beach"].detail, /does not prove no posting/i);
+  assert.deepEqual(payload.sites["sharp-park-beach"].sampleDates, []);
 });
 
 test("one unavailable source fails closed without erasing the independent source", async (t) => {
@@ -115,7 +131,52 @@ test("one unavailable source fails closed without erasing the independent source
   assert.equal(payload.sources.sfpuc.errorCategory, "source-file-unavailable");
   assert.equal(payload.sites["baker-beach"].status, "source-unavailable");
   assert.equal(payload.sites["gaviota-state-park-beach"].status, "posted");
+  assert.equal(payload.sites["pacifica-state-beach"].status, "posted");
   assert.equal(JSON.stringify(payload).includes(directory), false);
+});
+
+test("an unavailable County page fails only San Mateo mappings closed", async (t) => {
+  const directory = await mkdtemp(join(tmpdir(), "castingcompass-san-mateo-error-"));
+  t.after(() => rm(directory, { recursive: true, force: true }));
+  const output = join(directory, "water-quality.json");
+  const result = runCollector(output, { sanMateoSource: join(directory, "missing.html") });
+  assert.equal(result.status, 0, result.stderr || result.stdout);
+  const payload = JSON.parse(await readFile(output, "utf8"));
+  assert.equal(payload.sources["san-mateo-county-health"].errorCategory, "source-file-unavailable");
+  assert.equal(payload.sites["pacifica-state-beach"].status, "source-unavailable");
+  assert.equal(payload.sites["pacifica-state-beach"].recommendationEffect, "unknown");
+  assert.equal(payload.sites["gaviota-state-park-beach"].status, "posted");
+  assert.equal(payload.sites["crissy-field-east-beach"].status, "no-active-posting");
+});
+
+test("malformed or future County notice dates fail that source closed", async (t) => {
+  const directory = await mkdtemp(join(tmpdir(), "castingcompass-san-mateo-date-"));
+  t.after(() => rm(directory, { recursive: true, force: true }));
+  const source = join(directory, "source.html");
+  const output = join(directory, "water-quality.json");
+  const fixture = await readFile(new URL(sanMateoFixture, root), "utf8");
+  await writeFile(source, fixture.replace("July 15, 2026", "July 25, 2026"));
+  const result = runCollector(output, { sanMateoSource: source });
+  assert.equal(result.status, 0, result.stderr || result.stdout);
+  const payload = JSON.parse(await readFile(output, "utf8"));
+  assert.equal(payload.sources["san-mateo-county-health"].errorCategory, "invalid-source-date");
+  assert.equal(payload.sites["rockaway-beach"].status, "source-unavailable");
+  assert.equal(payload.sites["gaviota-state-park-beach"].status, "posted");
+});
+
+test("reordered or incomplete County posting sections fail closed", async (t) => {
+  const directory = await mkdtemp(join(tmpdir(), "castingcompass-san-mateo-structure-"));
+  t.after(() => rm(directory, { recursive: true, force: true }));
+  const source = join(directory, "source.html");
+  const output = join(directory, "water-quality.json");
+  const fixture = await readFile(new URL(sanMateoFixture, root), "utf8");
+  await writeFile(source, fixture.replace("Ocean Beaches", "Bay Beaches"));
+  const result = runCollector(output, { sanMateoSource: source });
+  assert.equal(result.status, 0, result.stderr || result.stdout);
+  const payload = JSON.parse(await readFile(output, "utf8"));
+  assert.equal(payload.sources["san-mateo-county-health"].errorCategory, "invalid-source-record-set");
+  assert.equal(payload.sites["pacifica-state-beach"].status, "source-unavailable");
+  assert.equal(payload.sites["gaviota-state-park-beach"].status, "posted");
 });
 
 test("an unreviewed SFPUC status encoding fails closed to unknown", async (t) => {

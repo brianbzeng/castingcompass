@@ -13,6 +13,44 @@ Current provider truth overrides historical “paused” language in completed r
 2026-07-19 read-only reconciliation found an active Worker; no production mutation is authorized
 by that discovery.
 
+## Active checkpoint — San Mateo County action-only water-quality coverage
+
+- [x] Preserve draft PR `#139` at exact receipt head
+      `6c0c2a3b4dde9dfab005936b0c94d07a5c69e9f2` as the stacked base. This
+      follow-up is isolated from the dirty primary checkout and does not merge, deploy, mutate
+      Cloudflare or D1, alter site priors, or turn water quality into a numeric fishing score.
+- [x] Add a third fixed official adapter for San Mateo County Health's current posting page. It
+      accepts only the single dated `IMPORTANT NOTICE`, exact warning/closure statement, and
+      ordered Ocean, Creek, and Bay sections. Drift, duplicate structure, future notice dates,
+      response failures, and malformed records fail only this source closed.
+- [x] Freeze action-only semantics: an exact current County listing suppresses a reviewed mapped
+      recommendation; an absent listing stays unknown because missing or unsampled status cannot
+      prove no warning. Every numeric `scoreDelta` remains null, the fishing score is unchanged,
+      and official notices and posted signs stay authoritative.
+- [x] Add local preliminary support for 11 catalog sites using 17 stable County station IDs. A
+      bounded official-registry receipt records identity, historical coordinates, 140–995 m
+      reviewed distances, response/policy/tool/catalog hashes, and the explicit requirement for
+      independent mapping review. The registry is not used as current-status evidence.
+- [x] Preserve the negative mapping result for Poplar Beach. Its nearest station in the reviewed
+      set is Francis Beach at 1,944 m without exact identity or defensible local authority, so
+      Poplar remains `not-covered`, unknown, and null-score.
+- [x] Refresh the three-source repository snapshot at `2026-07-21T14:05:00Z`. All source reads
+      succeeded. The County notice was updated July 15 from July 13 samples; exact current
+      listings suppress Pacifica State Beach, Rockaway Beach through Calera Creek, and both
+      Pillar Point jetty mappings. The time-bound artifact is not a live guarantee.
+- [x] Complete the full fresh local release matrix under pinned Node `22.23.1` and the locked
+      Python environments: a fresh zero-script install, both zero-vulnerability npm audits,
+      Cloudflare build, 496/496 Node tests, ESLint, TypeScript, the complete offline
+      security/SBOM/source-integrity chain, Ruff and Python syntax, 29/29 API tests, 83/83
+      pipeline tests with one documented optional-`rasterio` skip, deterministic synthetic smoke,
+      and all 19 critical D1 query plans passed. The complete Chromium/WebKit phone matrix passed
+      188/188 cases, and a focused four-browser check proves the San Mateo suppression is visible,
+      linked to the County source, score-excluded, and mobile-safe.
+- [ ] Publish and seal a protected stacked draft PR. Independent local mapping/source-latency
+      review, CodeQL on protected `main`, guarded deployment, post-deployment freshness,
+      provider/database mutation, production activation, and every numeric-contribution
+      validation gate remain separate open work.
+
 ## Active checkpoint — San Francisco water-quality coverage negative evidence
 
 - [x] Preserve draft PR `#138` at exact receipt head
@@ -1374,6 +1412,12 @@ by that discovery.
       creates no mappings. Candidate distances range from 792 m to 2,520 m and station identities
       differ, so all four sites stay `not-covered`, unknown, and null-score pending separately
       documented spatial authority and independent review.
+      **Third local advisory slice implemented:** a strict San Mateo County Health action-only
+      adapter provisionally maps 11 catalog sites to 17 stable official station IDs. Exact current
+      listings suppress; absence stays unknown; Poplar remains uncovered; historical registry
+      coordinates are identity/spatial support only; independent mapping review is still required;
+      and every numeric `scoreDelta` remains null. Full local/hosted acceptance, guarded
+      deployment, post-deployment freshness, and every numeric-score gate remain open.
 - [ ] Enrich the map one available location at a time with reviewed notable structure and useful
       depth levels. Every feature needs reproducible official/licensed source provenance, units,
       vertical datum, resolution, retrieval date, checksum, uncertainty, allowed use, sensitive-

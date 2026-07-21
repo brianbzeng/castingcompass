@@ -135,31 +135,85 @@ only a date-order anomaly that has already been wholly historical for more than
 exception covers a documented old row without letting an old data defect disable
 current actions or become a no-posting inference.
 
-The checked-in review snapshot was refreshed from both official endpoints at
-`2026-07-21T07:20:00Z`. At that instant the State Board table returned
+The checked-in three-source snapshot was refreshed at
+`2026-07-21T14:05:00Z`. At that instant the State Board table returned
 open-ended postings for Gaviota (`2026-06-15`) and Refugio (`2026-06-08`), so
 those two recommendations are suppressed in this repository artifact. That is a
 time-stamped review snapshot, not a live guarantee; users must check the linked
 agency source and posted signs.
 
+## San Mateo County current-posting source
+
+Source `san-mateo-county-health` uses San Mateo County Health's current beach,
+creek, and bay posting page:
+
+- current official posting list: <https://www.smchealth.org/node/1201>
+- public station registry:
+  <https://data.smcgov.org/Environment/Beach-and-Creek-Monitoring-Results/kpd9-xf4h/about>
+
+The County page is an action-only source. CastingCompass parses only its single
+dated `IMPORTANT NOTICE` block, the exact warning/closure statement, and the
+ordered Ocean Beaches, Creeks, and Bay Beaches lists. Missing, duplicated,
+reordered, future-dated, or otherwise drifted structure fails this source
+closed. An exact active listing suppresses a mapped recommendation. The County
+also explains that access conditions can prevent sampling, so absence from the
+current list stays **unknown**; it never becomes neutral, open, clean, or safe.
+
+Eleven catalog sites have local preliminary station support:
+
+| CastingCompass site | County station IDs | Reviewed distances |
+| --- | --- | ---: |
+| Pacifica Municipal Pier | AB4111, AB4112 | 140 m, 176 m |
+| Sharp Park Beach | AB4111, AB4112 | 743 m, 449 m |
+| Rockaway Beach | AB4113, AB4114 | 327 m, 394 m |
+| Pacifica State Beach (Linda Mar) | AB4116, AB41141, AB4117 | 372 m, 347 m, 446 m |
+| Montara State Beach | AB41110, AB41111 | 767 m, 795 m |
+| Pillar Point Harbor West Jetty | AB41117, AB41116, AB41115 | 278 m, 716 m, 995 m |
+| Pillar Point Harbor East Jetty | AB41140 | 736 m |
+| Surfer's Beach | AB41120 | 866 m |
+| Francis State Beach | AB41128 | 143 m |
+| Coyote Point Jetty | AB18762 | 541 m |
+| Oyster Point Fishing Pier | AB18761 | 597 m |
+
+The reproducible receipt in
+`water-quality/audits/san-mateo-station-mappings.json` binds the 17 registry
+records, policy, audit tool, and exact site catalog by SHA-256. The registry's
+latest selected record date is `2023-06-29`; it is used only for historical
+station identity and coordinate support, never for current water-quality
+status. The receipt marks every mapping local-preliminary and still requiring
+independent review. Its tool cannot edit policy or infer coverage automatically.
+
+Poplar Beach remains deliberately unmapped. Its nearest station among the
+reviewed set is Francis Beach, 1,944 m away, without exact identity or separately
+documented local spatial authority. Poplar therefore remains `not-covered`,
+`unknown`, and null-score.
+
+The checked-in current-status snapshot was refreshed at
+`2026-07-21T14:05:00Z`. The County notice itself was last updated July 15 based
+on July 13 samples. Exact active listings suppressed Pacifica State Beach,
+Rockaway Beach through Calera Creek, and both Pillar Point jetty mappings at
+that instant. This is time-bound repository evidence, not a live guarantee;
+the official page and posted signs remain authoritative.
+
 ## Integrity and failure behavior
 
 `scripts/refresh_water_quality.py`:
 
-- permits only the two fixed HTTPS machine endpoints and rejects redirects;
+- permits only the three fixed HTTPS current-status endpoints and rejects
+  redirects;
 - caps every response at 2 MiB and rejects malformed source structure;
 - binds the artifact to SHA-256 digests of the policy, collector, and exact site
   catalog;
 - isolates source failures so one unavailable program cannot erase a valid
-  active action from the other;
+  active action from the other independent sources;
 - rejects duplicate SFPUC station records, unreviewed SFPUC status codes,
   unreviewed BeachWatch action types, unexpected counties, invalid station IDs,
-  and recent malformed action dates;
+  recent malformed action dates, and drifted San Mateo notice structure;
 - keeps missing BeachWatch actions unknown instead of inferring a neutral state;
 - sanitizes source failures into fixed categories without publishing exception
   text or local paths; and
-- supports separate local XML and HTML fixtures plus `--as-of` for deterministic
-  adversarial tests.
+- supports separate local XML and two HTML fixtures plus `--as-of` for
+  deterministic adversarial tests.
 
 `scripts/audit_sfpuc_station_coverage.py` separately creates a reproducible,
 tool-hash-bound nearest-station review receipt. It uses the same fixed endpoint
@@ -167,14 +221,22 @@ and parser, validates coordinates, computes bounded haversine distances, and
 emits only candidate evidence. It never changes `water-quality/policy.json`,
 never treats distance as coverage, and never emits a score or safety conclusion.
 
+`scripts/audit_san_mateo_station_mappings.py` separately queries a fixed County
+open-data endpoint for one latest coordinate-bearing record per reviewed station.
+It caps responses, rejects redirects and malformed coordinates, calculates
+haversine distances, records Poplar's unsupported nearest candidate, and binds
+the receipt to policy, tool, source response, and catalog hashes. The registry
+is explicitly barred from supplying current status, and independent local
+mapping review remains open.
+
 The browser independently expires neutral SFPUC sample evidence on the same
 Pacific-calendar freshness rule. The scheduled snapshot workflow refreshes and
 validates `public/data/water-quality.json` before opening its ordinary review PR.
 
 ## Local implementation receipt
 
-The exact follow-up tree passed the Cloudflare build and 475 Node tests, the
-complete 144-case Chromium/WebKit phone matrix, ESLint, TypeScript, the full
+The exact follow-up tree passed the Cloudflare build and 496 Node tests, the
+complete 188-case Chromium/WebKit phone matrix, ESLint, TypeScript, the full
 security/SBOM/source-integrity chain, both zero-vulnerability npm audits, 29 API
 tests, Ruff, 83 pipeline tests with one documented optional-`rasterio` skip, the
 deterministic synthetic smoke, and all 19 critical D1 query-plan checks. This is
@@ -188,7 +250,7 @@ score component, CastingCompass still needs:
 
 1. reviewed official-source adapters and exact mappings for the remaining
    launch catalog;
-2. independent local review of the Santa Barbara station/countywide mappings,
+2. independent local review of the Santa Barbara and San Mateo station mappings,
    source latency, rainfall semantics, geographic support, and outage behavior;
 3. frozen retrospective and prospective baselines that test whether any fishing-
    quality contribution improves ranking without creating misleading health

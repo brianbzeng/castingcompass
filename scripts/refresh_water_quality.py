@@ -31,6 +31,7 @@ SITES_PATH = ROOT / "data" / "sites.json"
 DEFAULT_OUTPUT = ROOT / "public" / "data" / "water-quality.json"
 SFP_SOURCE_ID = "sfpuc"
 BEACHWATCH_SOURCE_ID = "california-beachwatch-santa-barbara"
+SAN_MATEO_SOURCE_ID = "san-mateo-county-health"
 EXPECTED_SOURCES = {
     SFP_SOURCE_ID: {
         "source_type": "sfpuc-sample-status-xml",
@@ -42,11 +43,16 @@ EXPECTED_SOURCES = {
         "county_id": "14",
         "county_name": "Santa Barbara",
     },
+    SAN_MATEO_SOURCE_ID: {
+        "source_type": "san-mateo-current-posting-html",
+        "machine_url": "https://www.smchealth.org/node/1201",
+    },
 }
 USER_AGENT = "CastingCompass/0.1 (public-data demo; contact: bzeng0000@gmail.com)"
 PACIFIC = ZoneInfo("America/Los_Angeles")
 MAX_RESPONSE_BYTES = 2 * 1024 * 1024
 MAX_BEACHWATCH_ROWS = 5_000
+MAX_SAN_MATEO_POSTINGS = 200
 HISTORICAL_MALFORMED_ACTION_GRACE_DAYS = 90
 STATION_ID_PATTERN = re.compile(r"^[A-Za-z0-9_]+$")
 BEACHWATCH_HEADERS = [
@@ -62,6 +68,11 @@ BEACHWATCH_HEADERS = [
     "End Date",
     "Indicators",
 ]
+SAN_MATEO_SECTIONS = (
+    "ocean beaches",
+    "creeks (where they meet or cross the beach)",
+    "bay beaches",
+)
 
 
 class WaterQualityError(RuntimeError):
@@ -104,6 +115,34 @@ class BeachwatchTableParser(HTMLParser):
             elif tags == {"td"} and len(values) == len(BEACHWATCH_HEADERS):
                 self.rows.append(values)
             self._row = None
+
+
+class SanMateoStatusParser(HTMLParser):
+    """Collect the bounded block structure around the County's current notice."""
+
+    def __init__(self) -> None:
+        super().__init__(convert_charrefs=True)
+        self._tag: str | None = None
+        self._parts: list[str] = []
+        self.blocks: list[tuple[str, str]] = []
+
+    def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+        del attrs
+        if tag in {"h3", "h6", "p", "li"} and self._tag is None:
+            self._tag = tag
+            self._parts = []
+
+    def handle_data(self, data: str) -> None:
+        if self._tag is not None:
+            self._parts.append(data)
+
+    def handle_endtag(self, tag: str) -> None:
+        if tag == self._tag:
+            text = normalize_label(" ".join(self._parts), preserve_case=True)
+            if text:
+                self.blocks.append((tag, text))
+            self._tag = None
+            self._parts = []
 
 
 def sha256(path: Path) -> str:
@@ -152,6 +191,31 @@ def load_inputs() -> tuple[dict[str, Any], list[dict[str, Any]], bytes]:
         or not all(isinstance(value, str) and STATION_ID_PATTERN.fullmatch(value) for value in global_station_ids)
     ):
         raise WaterQualityError("invalid-global-station-map")
+    san_mateo_source = sources[SAN_MATEO_SOURCE_ID]
+    if (
+        not isinstance(san_mateo_source.get("station_registry_url"), str)
+        or not san_mateo_source["station_registry_url"].startswith("https://data.smcgov.org/")
+        or san_mateo_source.get("station_registry_machine_url")
+        != "https://datahub.smcgov.org/api/id/kpd9-xf4h.json"
+    ):
+        raise WaterQualityError("invalid-station-registry-url")
+    station_aliases = san_mateo_source.get("station_aliases")
+    if not isinstance(station_aliases, dict) or not station_aliases:
+        raise WaterQualityError("invalid-station-alias-map")
+    normalized_aliases: set[str] = set()
+    for station_id, aliases in station_aliases.items():
+        if (
+            not isinstance(station_id, str)
+            or not STATION_ID_PATTERN.fullmatch(station_id)
+            or not isinstance(aliases, list)
+            or not aliases
+        ):
+            raise WaterQualityError("invalid-station-alias-map")
+        for alias in aliases:
+            normalized = normalize_label(alias)
+            if not normalized or normalized in normalized_aliases:
+                raise WaterQualityError("invalid-station-alias-map")
+            normalized_aliases.add(normalized)
     site_ids = {site.get("id") for site in sites}
     mappings = policy.get("site_mappings")
     if not isinstance(mappings, dict) or not mappings:
@@ -172,6 +236,10 @@ def load_inputs() -> tuple[dict[str, Any], list[dict[str, Any]], bytes]:
             not station_ids or not all(station_id.isdigit() for station_id in station_ids)
         ):
             raise WaterQualityError("invalid-sfpuc-station-map")
+        if source_id == SAN_MATEO_SOURCE_ID and (
+            not station_ids or not all(station_id in station_aliases for station_id in station_ids)
+        ):
+            raise WaterQualityError("invalid-san-mateo-station-map")
     return policy, sites, policy_bytes
 
 
@@ -193,6 +261,8 @@ def fetch_source(source_id: str, source: dict[str, Any]) -> bytes:
                 "submit": "Search",
             }
         ).encode("ascii")
+    elif source_id == SAN_MATEO_SOURCE_ID:
+        headers["Accept"] = "text/html"
     else:
         raise WaterQualityError("untrusted-source-id")
     request = urllib.request.Request(source["machine_url"], data=data, headers=headers)
@@ -284,6 +354,133 @@ def parse_beachwatch_records(
             }
         )
     return records
+
+
+def normalize_label(value: Any, *, preserve_case: bool = False) -> str:
+    text = clean_text(value, maximum=240) or ""
+    text = " ".join(text.replace("\u200b", "").split())
+    return text if preserve_case else text.casefold()
+
+
+def notice_date(value: str) -> date | None:
+    match = re.search(
+        r"\b(?:Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday),\s+"
+        r"(January|February|March|April|May|June|July|August|September|October|November|December)\s+"
+        r"(\d{1,2}),\s+(\d{4})\b",
+        value,
+    )
+    if match is None:
+        return None
+    try:
+        return datetime.strptime(" ".join(match.groups()), "%B %d %Y").date()
+    except ValueError:
+        return None
+
+
+def parse_san_mateo_records(
+    body: bytes, source: dict[str, Any], as_of: datetime
+) -> dict[str, Any]:
+    try:
+        text = body.decode("utf-8")
+    except UnicodeError as exc:
+        raise WaterQualityError("invalid-source-payload") from exc
+    parser = SanMateoStatusParser()
+    try:
+        parser.feed(text)
+        parser.close()
+    except Exception as exc:
+        raise WaterQualityError("invalid-source-payload") from exc
+    notice_indexes = [
+        index
+        for index, (tag, value) in enumerate(parser.blocks)
+        if tag == "h3" and normalize_label(value) == "important notice:"
+    ]
+    if len(notice_indexes) != 1:
+        raise WaterQualityError("invalid-source-record-set")
+    notice_index = notice_indexes[0]
+    notice_candidates = [
+        value
+        for tag, value in parser.blocks[notice_index + 1 :]
+        if tag == "p" and normalize_label(value).startswith("the following list was last updated ")
+    ]
+    if len(notice_candidates) != 1:
+        raise WaterQualityError("invalid-source-record-set")
+    notice = notice_candidates[0]
+    parts = re.split(r"\bbased on samples collected\b", notice, maxsplit=1, flags=re.IGNORECASE)
+    if len(parts) != 2:
+        raise WaterQualityError("invalid-source-record-set")
+    updated_date = notice_date(parts[0])
+    sample_date_value = notice_date(parts[1])
+    current_date = as_of.astimezone(PACIFIC).date()
+    if (
+        updated_date is None
+        or sample_date_value is None
+        or sample_date_value > updated_date
+        or updated_date > current_date
+    ):
+        raise WaterQualityError("invalid-source-date")
+    listing_indexes = [
+        index
+        for index, (tag, value) in enumerate(parser.blocks[notice_index + 1 :], start=notice_index + 1)
+        if tag == "p"
+        and normalize_label(value)
+        == "the following locations have elevated levels of indicator bacteria and are posted with warning and/or closure signs."
+    ]
+    if len(listing_indexes) != 1:
+        raise WaterQualityError("invalid-source-record-set")
+    sections: dict[str, list[str]] = {section: [] for section in SAN_MATEO_SECTIONS}
+    current_section: str | None = None
+    seen_sections: list[str] = []
+    reached_end = False
+    for tag, value in parser.blocks[listing_indexes[0] + 1 :]:
+        normalized = normalize_label(value).rstrip(":")
+        if tag == "p" and normalized.startswith("signs limiting the recreational use of these waters"):
+            reached_end = True
+            break
+        if tag == "h6":
+            expected_index = len(seen_sections)
+            if (
+                expected_index >= len(SAN_MATEO_SECTIONS)
+                or normalized != SAN_MATEO_SECTIONS[expected_index]
+            ):
+                raise WaterQualityError("invalid-source-record-set")
+            seen_sections.append(normalized)
+            current_section = normalized
+        elif tag == "li":
+            if current_section is None:
+                raise WaterQualityError("invalid-source-record-set")
+            sections[current_section].append(value)
+    listings = [item for section in SAN_MATEO_SECTIONS for item in sections[section]]
+    if (
+        not reached_end
+        or tuple(seen_sections) != SAN_MATEO_SECTIONS
+        or not listings
+        or len(listings) > MAX_SAN_MATEO_POSTINGS
+        or len({normalize_label(item) for item in listings}) != len(listings)
+    ):
+        raise WaterQualityError("invalid-source-record-set")
+    aliases_by_label = {
+        normalize_label(alias): station_id
+        for station_id, aliases in source["station_aliases"].items()
+        for alias in aliases
+    }
+    postings: dict[str, dict[str, str]] = {}
+    unknown_listings: list[str] = []
+    for section, values in sections.items():
+        for value in values:
+            station_id = aliases_by_label.get(normalize_label(value))
+            if station_id is None:
+                unknown_listings.append(value)
+                continue
+            if station_id in postings:
+                raise WaterQualityError("duplicate-source-station-id")
+            postings[station_id] = {"station_name": value, "section": section}
+    return {
+        "updated_date": updated_date,
+        "sample_date": sample_date_value,
+        "postings": postings,
+        "unknown_listings": unknown_listings,
+    }
 
 
 def clean_text(value: Any, *, maximum: int = 160) -> str | None:
@@ -502,6 +699,46 @@ def assess_beachwatch_site(
     }
 
 
+def assess_san_mateo_site(
+    station_ids: list[str],
+    records: dict[str, Any],
+    as_of: datetime,
+    source_url: str,
+) -> dict[str, Any]:
+    postings = records["postings"]
+    selected = [postings[station_id] for station_id in station_ids if station_id in postings]
+    sample_dates = [records["sample_date"].isoformat()]
+    if selected:
+        return {
+            **assessment_base(
+                source_id=SAN_MATEO_SOURCE_ID,
+                station_ids=[station_id for station_id in station_ids if station_id in postings],
+                station_names=sorted({record["station_name"] for record in selected}),
+                as_of=as_of,
+                source_url=source_url,
+                sample_dates=sample_dates,
+            ),
+            "status": "posted",
+            "recommendationEffect": "suppress",
+            "officialLabel": "Official water-contact warning or closure",
+            "detail": "The current County Health posting list names an exact reviewed station for this site, so the recommendation is suppressed.",
+        }
+    return {
+        **assessment_base(
+            source_id=SAN_MATEO_SOURCE_ID,
+            station_ids=station_ids,
+            station_names=[],
+            as_of=as_of,
+            source_url=source_url,
+            sample_dates=[],
+        ),
+        "status": "unknown",
+        "recommendationEffect": "unknown",
+        "officialLabel": "No current county posting verified",
+        "detail": "No exact mapped station appeared in the current County Health posting list. Because unlisted or unsampled status does not prove no posting, this site remains unknown.",
+    }
+
+
 def unavailable_assessment(
     *, source_id: str, station_ids: list[str], as_of: datetime, source_url: str
 ) -> dict[str, Any]:
@@ -573,6 +810,13 @@ def build_payload(
                     int(policy["freshness"]["maximum_sample_age_days"]),
                     source["status_url"],
                 )
+            elif source_id == SAN_MATEO_SOURCE_ID:
+                assessment = assess_san_mateo_site(
+                    station_ids,
+                    source_records[source_id],
+                    as_of,
+                    source["status_url"],
+                )
             else:
                 assessment = assess_beachwatch_site(
                     station_ids,
@@ -637,6 +881,11 @@ def main() -> None:
         type=Path,
         help="Read a California BeachWatch HTML fixture instead of the network",
     )
+    parser.add_argument(
+        "--san-mateo-source-file",
+        type=Path,
+        help="Read a San Mateo County Health HTML fixture instead of the network",
+    )
     parser.add_argument("--output", type=Path, default=DEFAULT_OUTPUT)
     args = parser.parse_args()
     as_of = parse_as_of(args.as_of)
@@ -644,6 +893,7 @@ def main() -> None:
     fixture_paths = {
         SFP_SOURCE_ID: args.sfpuc_source_file,
         BEACHWATCH_SOURCE_ID: args.beachwatch_source_file,
+        SAN_MATEO_SOURCE_ID: args.san_mateo_source_file,
     }
     source_records: dict[str, Any] = {}
     source_errors: dict[str, str | None] = {source_id: None for source_id in policy["sources"]}
@@ -653,10 +903,12 @@ def main() -> None:
             body = fixture_path.read_bytes() if fixture_path else fetch_source(source_id, source)
             if source_id == SFP_SOURCE_ID:
                 source_records[source_id] = parse_sfpuc_records(body)
-            else:
+            elif source_id == BEACHWATCH_SOURCE_ID:
                 source_records[source_id] = parse_beachwatch_records(
                     body, source["county_name"], as_of
                 )
+            else:
+                source_records[source_id] = parse_san_mateo_records(body, source, as_of)
         except (OSError, WaterQualityError) as exc:
             source_errors[source_id] = (
                 exc.args[0] if isinstance(exc, WaterQualityError) else "source-file-unavailable"
