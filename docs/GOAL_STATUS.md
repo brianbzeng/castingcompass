@@ -40,11 +40,17 @@ by that discovery.
       Python syntax/Ruff, 29/29 API tests, 83/83 pipeline tests with one documented optional-
       `rasterio` skip, deterministic synthetic smoke, and all 19 critical D1 query plans passed.
       The complete bounded two-worker Chromium/WebKit phone matrix passed 156/156 cases.
-- [ ] Publish a protected stacked draft PR and require exact-head hosted CI, release provenance,
-      both native API-image architectures, both optional research stacks, and applicable security
-      analysis. CodeQL may remain event-inapplicable while the PR targets a non-default stacked
-      base; merge, deployment, provider/database mutation, and production activation remain out of
-      scope.
+- [x] Publish protected stacked draft PR `#134` without merge or deployment. Exact implementation
+      head `a7b9fe41d37e8f30a725fe55c99b1d7d59537d3a` passed push and pull-request CI runs
+      `29819238921` and `29819273235`, including two independent 156/156 mobile matrices;
+      release-provenance runs `29819238944` and `29819273244`; native API-image run `29819273236`
+      on both architectures; and explicitly dispatched optional research-stack run `29819301646`
+      on Linux CPU and macOS ARM64. Event-inapplicable dependency and release-attestation jobs
+      skipped as designed.
+- [ ] Obtain CodeQL evidence when this stack is eventually reviewed against protected `main`;
+      default setup did not trigger on the non-default stacked base. Independent location/chart
+      review, merge, deployment, provider/database mutation, and production activation remain
+      separate open gates.
 
 ## Active checkpoint — Santa Barbara source-bound depth and structure
 
