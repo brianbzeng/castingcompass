@@ -13,6 +13,39 @@ Current provider truth overrides historical “paused” language in completed r
 2026-07-19 read-only reconciliation found an active Worker; no production mutation is authorized
 by that discovery.
 
+## Active checkpoint — Santa Barbara source-bound depth and structure
+
+- [x] Preserve the green stacked demo base on draft PR `#132` at exact head
+      `20b31eb31136481f160add020caa2f742a6da49a`. This work uses another isolated stacked
+      branch and does not merge, deploy, mutate Cloudflare, alter D1, or rewrite the attested
+      score or original Bay Area validation geography.
+- [x] Freeze a display-only source policy for the exact 14 Santa Barbara South Coast locations.
+      The source review records why current BlueTopo coverage (3/14 configured sectors) and the
+      USGS 2012 10 m NAVD88 grid (6/14) cannot support a uniform regional claim, then selects only
+      NOAA ENC Direct's `Approach` usage band. The product remains vector chart context in meters
+      and MLLW, with no fixed grid resolution or exposed numeric positional/vertical uncertainty.
+- [x] Capture a normalized fixed-source snapshot and produce a strict, hash-bound artifact for
+      all 14 sites. Every site has one or more charted sector bands and a deduplicated point
+      sounding within 1 km; selected nearby records are limited to reviewed chart feature classes.
+      Overlapping cells and partial source dates remain explicit. Exact feature geometry stays out
+      of the public artifact, `scoreDelta` is null, catalog mutation is forbidden, and source or
+      metadata drift fails closed.
+- [x] Add the chart evidence to each regional detail sheet without claiming a castable depth,
+      complete structure inventory, navigation use, access, wading safety, or score improvement.
+      The Goleta rendering was visually inspected at iPhone width, and the exact truthfulness and
+      viewport contract passed 4/4 Chromium/WebKit phone cases.
+- [x] Complete the final full local receipt under pinned Node `22.23.1`: Cloudflare build plus
+      482/482 Node tests, ESLint, TypeScript, Python syntax/Ruff, strict schema validation, seven
+      deterministic/adversarial collector tests, the complete security/SBOM/source-integrity
+      chain, five release-wrapper tests, and zero-vulnerability full and production npm audits
+      passed. A resource-saturated four-worker phone attempt passed 133/148; all 15 unrelated
+      timing/setup failures then passed 15/15 alone, and the clean bounded two-worker Chromium/
+      WebKit matrix passed 148/148.
+- [ ] Publish a protected stacked draft PR and require its exact hosted head to pass every
+      applicable CI, CodeQL, release-provenance, API-image, and optional research-stack check.
+      Independent local-angler/site review, higher-resolution coverage, scoring validation, merge,
+      and guarded production acceptance all remain separate open gates.
+
 ## Active checkpoint — Santa Barbara exclusion-only water-contact actions
 
 - [x] Preserve the green regional demo base on draft PR `#131` at exact head

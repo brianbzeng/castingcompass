@@ -417,10 +417,11 @@ after its acceptance checks pass in the intended environment.
       request. No local responses or accepted receipt exist yet.
   - [ ] Complete the separately prioritized P2 pollution/water-quality score contract and
     location-by-location structure/depth inventory before claiming either as regional capability.
-    The exclusion-only Santa Barbara BeachWatch action slice is locally implemented, but it is not
-    a numeric score input and does not satisfy that broader goal. Those deferred goals retain their
-    canonical acceptance boundaries in P2 below and do not block private trip logging or this
-    source-bound geographic checkpoint.
+    The exclusion-only Santa Barbara BeachWatch action slice and first display-only 14-site NOAA
+    chart inventory are locally implemented, but neither is a numeric score input or a substitute
+    for independent site review, complete structure coverage, or guarded production evidence.
+    Those goals retain their canonical acceptance boundaries in P2 below and do not block private
+    trip logging or this source-bound geographic checkpoint.
 
 - [ ] Establish privacy-preserving production observability and an operator console before
   scaling traffic. Evaluate Cloudflare-native logs/analytics and focused vendors such as
@@ -679,6 +680,20 @@ after its acceptance checks pass in the intended environment.
   uncertainty, and permitted display/model use; reject false precision and protect sensitive
   habitat or access information. Ship each location only after visual and data acceptance, while
   keeping unmapped locations explicitly incomplete.
+  - [x] Freeze and locally implement the first display-only Santa Barbara South Coast slice for all
+    14 regional catalog sites. A fixed NOAA ENC Direct `Approach` collector verifies 13 reviewed
+    layer identities, bounds responses, rejects redirects/truncation/schema or date drift,
+    deduplicates overlapping-cell soundings, and binds a normalized source snapshot plus strict
+    public artifact to exact policy/collector/catalog hashes. The UI exposes sector bands, nearby
+    chart features, record age, meters, MLLW, and the unavailable resolution/accuracy/uncertainty
+    fields while keeping `scoreDelta` null, catalog priors unchanged, exact structure geometry
+    private, and navigation/access/castability claims prohibited.
+  - [ ] Obtain location-by-location local-angler and independent chart review; verify sector
+    orientation and usefulness; source dynamic bars, troughs, reef, vegetation, and other catalog
+    clues separately or leave them explicitly unvalidated; add BlueTopo or another qualified
+    uncertainty-bearing source only where coverage permits; extend the same contract to the
+    remaining launch catalog; and collect protected, guarded deployment plus post-deployment
+    evidence before calling any location fully reviewed or using this evidence in a score.
 - [ ] Add striped bass as the first new beta using a distinct estuary/migration model.
 - [ ] Define and evaluate explicit shore-relevant rockfish species/complexes next; then model
   cabezon as its own taxon; then split surfperch into defensible habitat/taxon groups. Each beta

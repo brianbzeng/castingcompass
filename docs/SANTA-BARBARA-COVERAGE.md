@@ -86,17 +86,22 @@ Two owner-requested goals remain incomplete:
    fishing-quality contribution remain open. No value may imply that water is
    clean, safe, or predictive of catch without the required official and
    prospective evidence.
-2. Review every available catalog location one by one for notable structure and
-   shore-reachable depth. Each annotation must retain its bathymetry or habitat
-   source, resolution, positional accuracy, vertical datum, uncertainty, and
-   display-versus-scoring permission. Coarse data cannot be converted into an
-   invented precise casting spot.
+2. Complete independent location-by-location structure/depth acceptance. The
+   first regional source-bound slice now gives all 14 locations reproducible
+   NOAA ENC Approach depth-area intersections and selected chart-feature
+   context, bound to policy, collector, site-catalog, and normalized-source
+   hashes. It explicitly records meters, MLLW, source dates, missing fixed-grid
+   resolution, missing numeric positional accuracy/uncertainty, display-only
+   permission, and `scoreDelta: null`. Local sector review, dynamic habitat
+   sources, per-location visual acceptance, and any separately validated model
+   use remain open. See [STRUCTURE-DEPTH-EVIDENCE.md](STRUCTURE-DEPTH-EVIDENCE.md).
 
 The broader goals remain unchecked in the product roadmap. The implemented
 advisory slices can exclude an exactly mapped San Francisco site or a supported
 Santa Barbara action from local recommendations without changing the
-opportunity-score bytes. They do not alter Santa Barbara ranking inputs, map
-structure annotations, or validation boundaries.
+opportunity-score bytes. The structure/depth slice adds display-only chart
+context without altering Santa Barbara ranking inputs, catalog annotations, or
+validation boundaries.
 
 ## Trip and validation boundary
 

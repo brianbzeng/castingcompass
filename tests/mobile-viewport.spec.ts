@@ -7,6 +7,10 @@ const OPPORTUNITIES_FIXTURE = readFileSync(
   resolve(process.cwd(), "public/data/opportunities.json"),
   "utf8",
 );
+const STRUCTURE_DEPTH_FIXTURE = readFileSync(
+  resolve(process.cwd(), "public/data/structure-depth.json"),
+  "utf8",
+);
 
 test.use({ serviceWorkers: "block" });
 
@@ -154,6 +158,11 @@ test.beforeEach(async ({ page }, testInfo) => {
     contentType: "application/json",
     body: OPPORTUNITIES_FIXTURE,
   }));
+  await page.route("**/data/structure-depth.json", (route) => route.fulfill({
+    status: 200,
+    contentType: "application/json",
+    body: STRUCTURE_DEPTH_FIXTURE,
+  }));
   const testTitle = testInfo.titlePath.join(" ");
   if (testTitle.includes("failed lazy route dependency")) {
     await page.route("**/assets/ContourMap-*.js", (route) => route.abort());
@@ -186,6 +195,17 @@ test.beforeEach(async ({ page }, testInfo) => {
     testTitle.includes("slow saved-location removal stays unconfirmed") ||
     testTitle.includes("malformed saved-location receipt stays unresolved");
   const waterQualityAdvisoryTest = testTitle.includes("official water-quality status suppresses recommendations");
+  const structureDepthEvidenceTest = testTitle.includes("source-bound Santa Barbara chart context");
+  if (structureDepthEvidenceTest) {
+    // Keep the committed opportunity fixture selectable so the stable site deep link opens its
+    // detail sheet instead of expiring as wall-clock time advances.
+    await page.clock.setFixedTime(new Date(OPPORTUNITY_FIXTURE_VALID_FROM));
+    await page.route("**/api/discussions/*", (route) => route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({ posts: [] }),
+    }));
+  }
   if (waterQualityAdvisoryTest) {
     // Keep both the advisory and the committed opportunity fixture current. Freezing the clock
     // before the opportunity validity window leaves every site without a selectable "today"
@@ -478,6 +498,26 @@ test("official water-quality status suppresses recommendations and keeps neutral
     "https://webapps.sfpuc.org/sapps/beachesandbay.html",
   );
   await expectSelectorInsideViewport(page, ".water-quality-advisory");
+});
+
+test("source-bound Santa Barbara chart context stays truthful and mobile-safe", async ({ page }) => {
+  await page.goto("/?site=goleta-beach");
+  const evidence = page.locator(".structure-depth-evidence");
+
+  await expect(evidence).toBeVisible();
+  await expect(evidence).toContainText("NOAA chart context for this location");
+  await expect(evidence).toContainText("0–9.1 m");
+  await expect(evidence).toContainText("2.4–5.4 m across 3 deduplicated records within 1,000 m");
+  await expect(evidence).toContainText("Charted shoreline construction");
+  await expect(evidence).toContainText("not an exact depth at the marker");
+  await expect(evidence).toContainText("no fixed grid resolution");
+  await expect(evidence).toContainText("does not change the fishing score");
+  await expect(evidence).toContainText("not for navigation, wading, or access decisions");
+  await expect(evidence.getByRole("link", { name: /NOAA source notes/i })).toHaveAttribute(
+    "href",
+    "https://nauticalcharts.noaa.gov/learn/encdirect/",
+  );
+  await expectSelectorInsideViewport(page, ".structure-depth-evidence");
 });
 
 test("safe-area contract keeps fixed controls inside simulated insets", async ({ page }) => {

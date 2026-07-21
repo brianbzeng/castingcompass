@@ -31,6 +31,8 @@ import type {
   OpportunitySnapshot,
   OpportunityWindow,
   SourceFreshness,
+  StructureDepthSiteEvidence,
+  StructureDepthSnapshot,
   TimeFilter,
   TripReportRequest,
   WaterQualitySnapshot,
@@ -268,13 +270,20 @@ async function loadForecastData() {
       );
     })
     .catch(() => null as WaterQualitySnapshot | null);
+  const structureDepthPromise = fetch("/data/structure-depth.json")
+    .then(async (response) => {
+      if (!response.ok) return null;
+      return (await response.json()) as StructureDepthSnapshot;
+    })
+    .catch(() => null as StructureDepthSnapshot | null);
   const apiBase = process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, "");
 
   if (apiBase) {
-    const [staticSites, community, waterQuality] = await Promise.all([
+    const [staticSites, community, waterQuality, structureDepth] = await Promise.all([
       staticSitesPromise,
       communityPromise,
       waterQualityPromise,
+      structureDepthPromise,
     ]);
     try {
       const from = new Date().toISOString();
@@ -289,6 +298,7 @@ async function loadForecastData() {
         snapshot,
         community,
         waterQuality,
+        structureDepth,
         state: hasLiveForecastInputs(snapshot)
           ? "live" as const
           : "cached" as const,
@@ -302,6 +312,7 @@ async function loadForecastData() {
         snapshot,
         community,
         waterQuality,
+        structureDepth,
         state: hasLiveForecastInputs(snapshot)
           ? "live" as const
           : "cached" as const,
@@ -309,7 +320,7 @@ async function loadForecastData() {
     }
   }
 
-  const [staticSites, staticSnapshot, community, waterQuality] = await Promise.all([
+  const [staticSites, staticSnapshot, community, waterQuality, structureDepth] = await Promise.all([
     staticSitesPromise,
     fetch("/data/opportunities.json").then((response) => {
       if (!response.ok) throw new Error("snapshot unavailable");
@@ -317,6 +328,7 @@ async function loadForecastData() {
     }),
     communityPromise,
     waterQualityPromise,
+    structureDepthPromise,
   ]);
   const currentSnapshot = applyCurrentFreshness(staticSnapshot);
   const state = hasLiveForecastInputs(currentSnapshot) ? "live" : "cached";
@@ -325,6 +337,7 @@ async function loadForecastData() {
     snapshot: currentSnapshot,
     community,
     waterQuality,
+    structureDepth,
     state: state as "live" | "cached",
   };
 }
@@ -333,6 +346,23 @@ function waterQualityTone(assessment: WaterQualitySiteAssessment | null) {
   if (assessment?.recommendationEffect === "suppress") return "active";
   if (assessment?.status === "no-active-posting") return "neutral";
   return "unknown";
+}
+
+function depthNumber(value: number) {
+  return Number.isInteger(value) ? value.toFixed(0) : value.toFixed(1);
+}
+
+function chartedWaterBands(evidence: StructureDepthSiteEvidence) {
+  return evidence.depth.chartedBandsMeters
+    .filter(([, upper]) => upper > 0)
+    .map(([lower, upper]) => `${depthNumber(Math.max(0, lower))}–${depthNumber(upper)} m`);
+}
+
+function depthSourceDateLabel(evidence: StructureDepthSiteEvidence) {
+  const dates = evidence.depth.sourceDates;
+  if (!dates.length) return evidence.depth.hasUndatedRecords ? "Source records are undated" : "Source date unavailable";
+  const range = dates.length === 1 ? dates[0] : `${dates[0]} to ${dates.at(-1)}`;
+  return evidence.depth.hasUndatedRecords ? `${range}; some records are undated` : range;
 }
 
 function fallbackSnapshot(): OpportunitySnapshot {
@@ -1050,6 +1080,7 @@ export function OpportunityApp() {
   const [snapshot, setSnapshot] = useState<OpportunitySnapshot>(fallbackSnapshot);
   const [communityPulses, setCommunityPulses] = useState<CommunityPulse[]>([]);
   const [waterQuality, setWaterQuality] = useState<WaterQualitySnapshot | null>(null);
+  const [structureDepth, setStructureDepth] = useState<StructureDepthSnapshot | null>(null);
   const [discussionFeed, setDiscussionFeed] = useState<{ siteId: string; posts: LocationDiscussionPost[] } | null>(null);
   const [selectedSiteId, setSelectedSiteId] = useState<string | null>(null);
   const [selectedDetailWindowId, setSelectedDetailWindowId] = useState<string | null>(null);
@@ -1081,12 +1112,13 @@ export function OpportunityApp() {
   useEffect(() => {
     let active = true;
     loadForecastData()
-      .then(({ sites: nextSites, snapshot: nextSnapshot, community, waterQuality: nextWaterQuality, state }) => {
+      .then(({ sites: nextSites, snapshot: nextSnapshot, community, waterQuality: nextWaterQuality, structureDepth: nextStructureDepth, state }) => {
         if (!active) return;
         setSites(nextSites);
         setSnapshot(nextSnapshot);
         setCommunityPulses(community);
         setWaterQuality(nextWaterQuality);
+        setStructureDepth(nextStructureDepth);
         setDataState(state);
       })
       .catch(() => {
@@ -1330,6 +1362,9 @@ export function OpportunityApp() {
     : null;
   const selectedWaterQuality = selectedSiteId
     ? waterQuality?.sites[selectedSiteId] ?? null
+    : null;
+  const selectedStructureDepth = selectedSiteId
+    ? structureDepth?.sites[selectedSiteId] ?? null
     : null;
   const selectedStructureGuides = selectedSite ? structureGuidesForSite(selectedSite) : [];
   const hasHourFilter = Boolean(availableFrom || availableUntil);
@@ -1969,6 +2004,51 @@ export function OpportunityApp() {
                 Check the official agency status ↗
               </a>
             </section>
+
+            {selectedStructureDepth ? (
+              <section className="structure-depth-evidence" aria-labelledby="structure-depth-evidence-title">
+                <div className="structure-depth-evidence-heading">
+                  <span>Source-bound depth &amp; structure</span>
+                  <strong id="structure-depth-evidence-title">NOAA chart context for this location</strong>
+                </div>
+                {selectedStructureDepth.depth.status === "charted-sector-bands" ? (
+                  <dl>
+                    <div>
+                      <dt>Planning-sector depth bands</dt>
+                      <dd>{chartedWaterBands(selectedStructureDepth).join(", ") || "No submerged band published"}</dd>
+                    </div>
+                    <div>
+                      <dt>Nearby point soundings</dt>
+                      <dd>
+                        {selectedStructureDepth.depth.contextSoundingDepthRangeMeters
+                          ? `${depthNumber(selectedStructureDepth.depth.contextSoundingDepthRangeMeters[0])}–${depthNumber(selectedStructureDepth.depth.contextSoundingDepthRangeMeters[1])} m across ${selectedStructureDepth.depth.contextSoundingCount} deduplicated record${selectedStructureDepth.depth.contextSoundingCount === 1 ? "" : "s"} within ${selectedStructureDepth.geometry.contextRadiusMeters.toLocaleString()} m`
+                          : `No reviewed point sounding within ${selectedStructureDepth.geometry.contextRadiusMeters.toLocaleString()} m`}
+                      </dd>
+                    </div>
+                    <div>
+                      <dt>Selected chart features nearby</dt>
+                      <dd>
+                        {selectedStructureDepth.structure.chartedFeatures.length
+                          ? selectedStructureDepth.structure.chartedFeatures.map((feature) => feature.label).join(", ")
+                          : "No selected NOAA feature-class records; this does not mean structure is absent"}
+                      </dd>
+                    </div>
+                  </dl>
+                ) : (
+                  <p>NOAA chart context is unavailable for this location. No depth or structure inference is made.</p>
+                )}
+                <p>
+                  The bands intersect a configured {selectedStructureDepth.geometry.sectorRadiusMeters} m offshore planning sector;
+                  they are not an exact depth at the marker or a shore-reachable casting-depth promise.
+                </p>
+                <small>
+                  Record dates: {depthSourceDateLabel(selectedStructureDepth)} · units: meters · datum: Mean Lower Low Water.
+                  These are vector chart features with no fixed grid resolution; the selected service layers expose no numeric positional accuracy or uncertainty.
+                </small>
+                <small>This evidence does not change the fishing score and is not for navigation, wading, or access decisions.</small>
+                <a href={selectedStructureDepth.sourceUrl} target="_blank" rel="noreferrer">Read the NOAA source notes ↗</a>
+              </section>
+            ) : null}
 
             <div className="component-block">
               <h3>Why this time stands out</h3>

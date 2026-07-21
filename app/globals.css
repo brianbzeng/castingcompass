@@ -1940,6 +1940,81 @@ footer > div {
   font-weight: 700;
 }
 
+.structure-depth-evidence {
+  display: grid;
+  gap: 0.65rem;
+  margin-top: 0.75rem;
+  padding: 0.9rem 1rem;
+  border: 1px solid var(--line-strong);
+  border-left: 3px solid var(--ocean);
+  color: var(--ink-soft);
+  background: rgba(58, 126, 184, 0.09);
+}
+
+.structure-depth-evidence-heading {
+  display: grid;
+  gap: 0.2rem;
+}
+
+.structure-depth-evidence-heading span,
+.structure-depth-evidence small {
+  font-family: var(--font-mono);
+  font-size: 0.58rem;
+  line-height: 1.5;
+}
+
+.structure-depth-evidence-heading span {
+  color: var(--ink-soft);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.structure-depth-evidence-heading strong {
+  color: var(--ink);
+  font-size: 0.82rem;
+}
+
+.structure-depth-evidence dl {
+  display: grid;
+  gap: 0.45rem;
+  margin: 0;
+}
+
+.structure-depth-evidence dl > div {
+  display: grid;
+  gap: 0.15rem;
+  padding: 0.55rem 0;
+  border-top: 1px solid var(--line);
+}
+
+.structure-depth-evidence dt {
+  color: var(--seafoam);
+  font-family: var(--font-mono);
+  font-size: 0.56rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.structure-depth-evidence dd,
+.structure-depth-evidence p {
+  margin: 0;
+  font-size: 0.68rem;
+  line-height: 1.55;
+}
+
+.structure-depth-evidence dd {
+  color: var(--ink);
+}
+
+.structure-depth-evidence a {
+  width: fit-content;
+  border-bottom: 1px solid var(--line-strong);
+  color: var(--seafoam);
+  font-family: var(--font-mono);
+  font-size: 0.62rem;
+  font-weight: 700;
+}
+
 .component-block,
 .structure-guide-block,
 .access-block,

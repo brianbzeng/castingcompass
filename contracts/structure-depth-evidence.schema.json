@@ -1,0 +1,273 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "castingcompass.structure-depth-evidence/1.0.0",
+  "title": "CastingCompass source-bound structure and depth planning context",
+  "type": "object",
+  "required": [
+    "schemaVersion",
+    "policyVersion",
+    "policySha256",
+    "collectorSha256",
+    "siteCatalogSha256",
+    "sourceSnapshotSha256",
+    "generatedAt",
+    "status",
+    "meaning",
+    "scoreContribution",
+    "source",
+    "sites"
+  ],
+  "properties": {
+    "schemaVersion": { "const": "castingcompass.structure-depth-evidence/1.0.0" },
+    "policyVersion": { "type": "string", "minLength": 1, "maxLength": 160 },
+    "policySha256": { "$ref": "#/$defs/sha256" },
+    "collectorSha256": { "$ref": "#/$defs/sha256" },
+    "siteCatalogSha256": { "$ref": "#/$defs/sha256" },
+    "sourceSnapshotSha256": { "$ref": "#/$defs/sha256" },
+    "generatedAt": { "type": "string", "format": "date-time" },
+    "status": { "enum": ["complete", "partial", "unavailable"] },
+    "meaning": { "type": "string", "minLength": 40, "maxLength": 400 },
+    "scoreContribution": {
+      "type": "object",
+      "required": ["mode", "numericContributionAllowed", "catalogMutationAllowed"],
+      "properties": {
+        "mode": { "const": "excluded-pending-site-review-and-validation" },
+        "numericContributionAllowed": { "const": false },
+        "catalogMutationAllowed": { "const": false }
+      },
+      "additionalProperties": false
+    },
+    "source": { "$ref": "#/$defs/source" },
+    "sites": {
+      "type": "object",
+      "minProperties": 14,
+      "maxProperties": 14,
+      "propertyNames": { "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$" },
+      "additionalProperties": { "$ref": "#/$defs/siteEvidence" }
+    }
+  },
+  "additionalProperties": false,
+  "$defs": {
+    "sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "source": {
+      "type": "object",
+      "required": [
+        "sourceId",
+        "agency",
+        "product",
+        "programUrl",
+        "serviceUrl",
+        "usageBand",
+        "depthUnits",
+        "verticalDatum",
+        "verticalDatumBasis",
+        "resolutionStatus",
+        "positionalAccuracyStatus",
+        "uncertaintyStatus",
+        "notForNavigation",
+        "capturedAt",
+        "errorCategory"
+      ],
+      "properties": {
+        "sourceId": { "const": "noaa-enc-direct-approach" },
+        "agency": { "type": "string", "minLength": 3, "maxLength": 160 },
+        "product": { "type": "string", "minLength": 3, "maxLength": 160 },
+        "programUrl": { "type": "string", "format": "uri", "pattern": "^https://" },
+        "serviceUrl": { "type": "string", "format": "uri", "pattern": "^https://" },
+        "usageBand": { "const": "Approach" },
+        "depthUnits": { "const": "meters" },
+        "verticalDatum": { "const": "Mean Lower Low Water (MLLW)" },
+        "verticalDatumBasis": { "type": "string", "minLength": 30, "maxLength": 300 },
+        "resolutionStatus": { "const": "vector-chart-features-no-fixed-grid-resolution" },
+        "positionalAccuracyStatus": { "const": "not-exposed-by-selected-service-layers" },
+        "uncertaintyStatus": { "const": "not-exposed-by-selected-service-layers" },
+        "notForNavigation": { "const": true },
+        "capturedAt": { "type": "string", "format": "date-time" },
+        "errorCategory": { "type": ["string", "null"], "maxLength": 80 }
+      },
+      "additionalProperties": false
+    },
+    "siteEvidence": {
+      "type": "object",
+      "required": [
+        "siteId",
+        "siteName",
+        "status",
+        "coordinates",
+        "geometry",
+        "depth",
+        "structure",
+        "scoreDelta",
+        "navigationUseAllowed",
+        "sourceUrl"
+      ],
+      "properties": {
+        "siteId": { "type": "string", "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$" },
+        "siteName": { "type": "string", "minLength": 1, "maxLength": 160 },
+        "status": { "enum": ["charted-context", "partial", "source-unavailable"] },
+        "coordinates": {
+          "type": "object",
+          "required": ["latitude", "longitude"],
+          "properties": {
+            "latitude": { "type": "number", "minimum": -90, "maximum": 90 },
+            "longitude": { "type": "number", "minimum": -180, "maximum": 180 }
+          },
+          "additionalProperties": false
+        },
+        "geometry": {
+          "type": "object",
+          "required": ["sectorRadiusMeters", "sectorBearingDegrees", "sectorHalfWidthDegrees", "contextRadiusMeters"],
+          "properties": {
+            "sectorRadiusMeters": { "type": "integer", "minimum": 50, "maximum": 2000 },
+            "sectorBearingDegrees": { "type": "number", "minimum": 0, "exclusiveMaximum": 360 },
+            "sectorHalfWidthDegrees": { "type": "number", "exclusiveMinimum": 0, "maximum": 90 },
+            "contextRadiusMeters": { "type": "integer", "minimum": 100, "maximum": 5000 }
+          },
+          "additionalProperties": false
+        },
+        "depth": { "$ref": "#/$defs/depthEvidence" },
+        "structure": { "$ref": "#/$defs/structureEvidence" },
+        "scoreDelta": { "type": "null" },
+        "navigationUseAllowed": { "const": false },
+        "sourceUrl": { "type": "string", "format": "uri", "pattern": "^https://" }
+      },
+      "additionalProperties": false
+    },
+    "depthEvidence": {
+      "type": "object",
+      "required": [
+        "status",
+        "chartedBandsMeters",
+        "contourDepthsMeters",
+        "sectorSoundingDepthsMeters",
+        "contextSoundingCount",
+        "contextSoundingDepthRangeMeters",
+        "nearestContextSoundingDistanceMeters",
+        "sourceDates",
+        "hasUndatedRecords",
+        "sourceCells",
+        "uncertaintyMeters",
+        "uncertaintyStatus",
+        "detail"
+      ],
+      "properties": {
+        "status": { "enum": ["charted-sector-bands", "no-charted-sector-band", "source-unavailable"] },
+        "chartedBandsMeters": {
+          "type": "array",
+          "uniqueItems": true,
+          "maxItems": 40,
+          "items": { "$ref": "#/$defs/numberPair" }
+        },
+        "contourDepthsMeters": {
+          "type": "array",
+          "uniqueItems": true,
+          "maxItems": 80,
+          "items": { "type": "number", "minimum": -100, "maximum": 2000 }
+        },
+        "sectorSoundingDepthsMeters": {
+          "type": "array",
+          "uniqueItems": true,
+          "maxItems": 200,
+          "items": { "type": "number", "minimum": -100, "maximum": 2000 }
+        },
+        "contextSoundingCount": { "type": "integer", "minimum": 0, "maximum": 1000 },
+        "contextSoundingDepthRangeMeters": {
+          "oneOf": [
+            { "type": "null" },
+            { "$ref": "#/$defs/numberPair" }
+          ]
+        },
+        "nearestContextSoundingDistanceMeters": { "type": ["number", "null"], "minimum": 0, "maximum": 5000 },
+        "sourceDates": {
+          "type": "array",
+          "uniqueItems": true,
+          "maxItems": 80,
+          "items": { "type": "string", "format": "date" }
+        },
+        "hasUndatedRecords": { "type": "boolean" },
+        "sourceCells": {
+          "type": "array",
+          "uniqueItems": true,
+          "maxItems": 80,
+          "items": { "type": "string", "pattern": "^[A-Za-z0-9._-]{1,32}$" }
+        },
+        "uncertaintyMeters": { "type": "null" },
+        "uncertaintyStatus": { "const": "not-exposed-by-selected-service-layers" },
+        "detail": { "type": "string", "minLength": 30, "maxLength": 500 }
+      },
+      "additionalProperties": false
+    },
+    "structureEvidence": {
+      "type": "object",
+      "required": ["status", "chartedFeatures", "catalogClues", "detail"],
+      "properties": {
+        "status": { "enum": ["charted-features-present", "no-selected-feature-records", "source-unavailable"] },
+        "chartedFeatures": {
+          "type": "array",
+          "uniqueItems": true,
+          "maxItems": 20,
+          "items": { "$ref": "#/$defs/chartedFeature" }
+        },
+        "catalogClues": {
+          "type": "array",
+          "uniqueItems": true,
+          "maxItems": 12,
+          "items": {
+            "type": "object",
+            "required": ["tag", "reviewStatus"],
+            "properties": {
+              "tag": { "type": "string", "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$" },
+              "reviewStatus": { "const": "catalog-only-not-validated-by-this-source" }
+            },
+            "additionalProperties": false
+          }
+        },
+        "detail": { "type": "string", "minLength": 30, "maxLength": 500 }
+      },
+      "additionalProperties": false
+    },
+    "chartedFeature": {
+      "type": "object",
+      "required": ["category", "label", "recordCount", "sourceDates", "hasUndatedRecords", "sourceCells"],
+      "properties": {
+        "category": {
+          "enum": [
+            "charted-obstruction",
+            "charted-wreck",
+            "charted-pile",
+            "charted-seabed-description",
+            "charted-shoreline-construction",
+            "charted-dredged-area",
+            "charted-vegetation"
+          ]
+        },
+        "label": { "type": "string", "minLength": 3, "maxLength": 100 },
+        "recordCount": { "type": "integer", "minimum": 1, "maximum": 1000 },
+        "sourceDates": {
+          "type": "array",
+          "uniqueItems": true,
+          "maxItems": 80,
+          "items": { "type": "string", "format": "date" }
+        },
+        "hasUndatedRecords": { "type": "boolean" },
+        "sourceCells": {
+          "type": "array",
+          "uniqueItems": true,
+          "maxItems": 80,
+          "items": { "type": "string", "pattern": "^[A-Za-z0-9._-]{1,32}$" }
+        }
+      },
+      "additionalProperties": false
+    },
+    "numberPair": {
+      "type": "array",
+      "minItems": 2,
+      "maxItems": 2,
+      "prefixItems": [
+        { "type": "number", "minimum": -100, "maximum": 2000 },
+        { "type": "number", "minimum": -100, "maximum": 2000 }
+      ],
+      "items": false
+    }
+  }
+}
