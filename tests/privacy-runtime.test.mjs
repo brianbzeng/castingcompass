@@ -303,6 +303,22 @@ test("authentication rotates presented sessions into secure host cookies and log
   assert.equal(sqlite.prepare("SELECT COUNT(*) AS count FROM auth_sessions WHERE user_id = ?").get(user.id).count, 0);
 });
 
+test("session rotation never sets a cookie or leaves a hidden token without a confirmed insert", async () => {
+  const { sqlite, d1 } = await database();
+  const user = await addUser(sqlite, "session-receipt-143");
+  d1.omitOnceMutationMetadataSubstring = "INSERT INTO auth_sessions";
+
+  const response = await handleAccountRequest(request("/api/auth/session", {
+    cookie: user.cookie,
+  }), { DB: d1 }, []);
+
+  assert.equal(response?.status, 503);
+  assert.equal((await response.json()).error.code, "session_creation_unconfirmed");
+  assert.equal(sessionCookieFrom(response), null);
+  assert.match(response.headers.get("set-cookie") ?? "", /cc_session=;.*Max-Age=0/u);
+  assert.equal(sqlite.prepare("SELECT COUNT(*) AS count FROM auth_sessions WHERE user_id = ?").get(user.id).count, 0);
+});
+
 test("expired and deleted-account sessions fail closed", async () => {
   const { sqlite, d1 } = await database();
   const expired = await addUser(sqlite, "45");

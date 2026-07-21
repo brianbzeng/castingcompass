@@ -2088,15 +2088,29 @@ async function selectUserForSession(db: D1DatabaseLike, userId: string) {
 
 async function createSessionResponse(db: D1DatabaseLike, request: Request, user: AuthUser, status = 200) {
   const token = randomSecret(32);
+  const tokenHash = await sha256(token);
   const createdAt = new Date();
   const expiresAt = new Date(createdAt.getTime() + SESSION_SECONDS * 1000);
   const priorSessionDeletes = await Promise.all(presentedSessionTokens(request).map(async (presented) =>
     db.prepare("DELETE FROM auth_sessions WHERE token_hash = ?").bind(await sha256(presented.token))));
-  await db.batch([
+  const sessionResults = await db.batch([
     ...priorSessionDeletes,
     db.prepare("INSERT INTO auth_sessions (token_hash, user_id, expires_at, created_at) VALUES (?, ?, ?, ?)")
-      .bind(await sha256(token), user.id, expiresAt.toISOString(), createdAt.toISOString()),
+      .bind(tokenHash, user.id, expiresAt.toISOString(), createdAt.toISOString()),
   ]);
+  if (confirmedMutationChanges(sessionResults.at(-1)) !== 1) {
+    try {
+      await db.prepare("DELETE FROM auth_sessions WHERE token_hash = ?").bind(tokenHash).run();
+    } catch (error) {
+      logEvent("error", "auth.session.unconfirmed_cleanup_failed", safeErrorContext(error));
+    }
+    return errorResponse(
+      503,
+      "session_creation_unconfirmed",
+      "The new session could not be confirmed. Sign in again.",
+      clearSessionCookies(request),
+    );
+  }
   return jsonResponse({ user }, status, sessionCookie(request, token));
 }
 

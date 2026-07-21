@@ -168,6 +168,10 @@ after its acceptance checks pass in the intended environment.
       and one-use challenge deletion remain atomic, while welcome delivery and the first session
       now wait for exactly one D1 change. Missing metadata returns `503`; direct proof signs in to
       the committed account without replaying the consumed challenge or creating duplicate state.
+    - [x] Require a database-confirmed session insert before setting any login, signup, password-
+      reset, or legacy-rotation cookie. The candidate token is hashed once and exposed only after
+      exactly one D1 change; an unconfirmed commit returns `503`, clears both cookie forms, and
+      deletes the candidate hash so no usable or orphaned session survives an ambiguous receipt.
   - [ ] Verify strict schema/size/type validation, contextual output encoding, safe database
     binding, upload signature and metadata checks, and AI prompt-injection boundaries. Model
     instructions and user content remain data, never authority; models receive no ambient

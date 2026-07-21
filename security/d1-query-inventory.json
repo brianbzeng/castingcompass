@@ -1,12 +1,12 @@
 {
   "schemaVersion": "castingcompass.d1-query-inventory/1.0.0",
   "generatedFrom": "TypeScript AST; no runtime or provider query executed",
-  "policySha256": "5a7f622283d755c30531a733d6da510ed3e9643efc3604dfaf502fc91c105f16",
+  "policySha256": "1adfbfedc769b260827132a4ca8772616eedb6f6da25d5ce480abbec839e30c0",
   "sourceFiles": [
     {
       "file": "worker/auth.ts",
-      "sha256": "540d2ef8ff27a5116c6a3a6309914ea4dcf081333563d49df36d129e6cbd898a",
-      "prepareCallCount": 129
+      "sha256": "383845b9316481a95c14891adbab7e5c393c23665cf9d22667b07c611b28708e",
+      "prepareCallCount": 130
     },
     {
       "file": "worker/discussions.ts",
@@ -45,8 +45,8 @@
     }
   ],
   "summary": {
-    "prepareCallCount": 222,
-    "literalCallCount": 196,
+    "prepareCallCount": 223,
+    "literalCallCount": 197,
     "nonLiteralCallCount": 26,
     "multiRowLiteralWithoutLimitCount": 12
   },
@@ -2639,7 +2639,7 @@
     {
       "callSiteId": "26c26153d74eb5cc8736cee1",
       "file": "worker/auth.ts",
-      "line": 2094,
+      "line": 2095,
       "containingFunction": "map-callback",
       "occurrence": 119,
       "executionMode": "all",
@@ -2661,7 +2661,7 @@
     {
       "callSiteId": "f867c6aad53d0babbcbf2f10",
       "file": "worker/auth.ts",
-      "line": 2097,
+      "line": 2098,
       "containingFunction": "createSessionResponse",
       "occurrence": 120,
       "executionMode": "batch",
@@ -2681,11 +2681,33 @@
       "hasLimit": false
     },
     {
-      "callSiteId": "88003dcee41730babe7c4ee6",
+      "callSiteId": "7dd529d22643e04e3cfe82b4",
       "file": "worker/auth.ts",
-      "line": 2316,
-      "containingFunction": "validateSignupAgeProof",
+      "line": 2103,
+      "containingFunction": "createSessionResponse",
       "occurrence": 121,
+      "executionMode": "run",
+      "argumentKind": "literal",
+      "expression": "\"DELETE FROM auth_sessions WHERE token_hash = ?\"",
+      "expressionSha256": "f3ba06e33295efe8d95625d20085e34ef2ab511084d0a40321221072e0d61951",
+      "declarationReference": null,
+      "statementClass": "DELETE",
+      "sql": "DELETE FROM auth_sessions WHERE token_hash = ?",
+      "sqlSha256": "c55f4fd180db9968298d1dd655cf1929587c2e81026f831e3db70546f00cbd9e",
+      "tables": [
+        "auth_sessions"
+      ],
+      "placeholderCount": 1,
+      "hasWhere": true,
+      "hasOrderBy": false,
+      "hasLimit": false
+    },
+    {
+      "callSiteId": "40f03190249f098d9042ce33",
+      "file": "worker/auth.ts",
+      "line": 2330,
+      "containingFunction": "validateSignupAgeProof",
+      "occurrence": 122,
       "executionMode": "first",
       "argumentKind": "literal",
       "expression": "`SELECT confirmed_at FROM signup_age_proofs\n    WHERE token_hash = ? AND consumed_at IS NULL AND expires_at > ? AND gate_version = ?\n    LIMIT 1`",
@@ -2703,11 +2725,11 @@
       "hasLimit": true
     },
     {
-      "callSiteId": "a230ebbe7d9247c254256c2d",
+      "callSiteId": "3411836b2a61a9897b997c45",
       "file": "worker/auth.ts",
-      "line": 2329,
+      "line": 2343,
       "containingFunction": "consumeSignupAgeProof",
-      "occurrence": 122,
+      "occurrence": 123,
       "executionMode": "run",
       "argumentKind": "literal",
       "expression": "`UPDATE signup_age_proofs SET consumed_at = ?\n    WHERE token_hash = ? AND consumed_at IS NULL AND expires_at > ? AND gate_version = ?`",
@@ -2725,11 +2747,11 @@
       "hasLimit": false
     },
     {
-      "callSiteId": "0ba24ed48e6b39e73b873b62",
+      "callSiteId": "3daa23039cc6f25f0da911c6",
       "file": "worker/auth.ts",
-      "line": 2424,
+      "line": 2438,
       "containingFunction": "assertEmailChallengeAllowed",
-      "occurrence": 123,
+      "occurrence": 124,
       "executionMode": "first",
       "argumentKind": "literal",
       "expression": "\"SELECT COUNT(*) AS count FROM email_challenges WHERE email = ? AND created_at >= ?\"",
@@ -2747,11 +2769,11 @@
       "hasLimit": false
     },
     {
-      "callSiteId": "dcb25624cb743ef337910be2",
+      "callSiteId": "b7b5ba69f8fa3a94e4374f63",
       "file": "worker/auth.ts",
-      "line": 2443,
+      "line": 2457,
       "containingFunction": "verifyEmailChallenge",
-      "occurrence": 124,
+      "occurrence": 125,
       "executionMode": "first",
       "argumentKind": "literal",
       "expression": "\"SELECT * FROM email_challenges WHERE id = ? AND kind = ? LIMIT 1\"",
@@ -2769,31 +2791,9 @@
       "hasLimit": true
     },
     {
-      "callSiteId": "46d49c05fdd4b13b7835fefb",
-      "file": "worker/auth.ts",
-      "line": 2447,
-      "containingFunction": "verifyEmailChallenge",
-      "occurrence": 125,
-      "executionMode": "run",
-      "argumentKind": "literal",
-      "expression": "\"DELETE FROM email_challenges WHERE id = ?\"",
-      "expressionSha256": "003b1082b90dae073d66105ff3db4c4eb675969d0902e2de592942f743f95af8",
-      "declarationReference": null,
-      "statementClass": "DELETE",
-      "sql": "DELETE FROM email_challenges WHERE id = ?",
-      "sqlSha256": "e75a985affbec14e5d61e7cd15e6d54f39334f04f77a8f0b4acb2e8f1116e867",
-      "tables": [
-        "email_challenges"
-      ],
-      "placeholderCount": 1,
-      "hasWhere": true,
-      "hasOrderBy": false,
-      "hasLimit": false
-    },
-    {
       "callSiteId": "2d3ccd888360d9161aee36bf",
       "file": "worker/auth.ts",
-      "line": 2455,
+      "line": 2461,
       "containingFunction": "verifyEmailChallenge",
       "occurrence": 126,
       "executionMode": "run",
@@ -2815,7 +2815,7 @@
     {
       "callSiteId": "39509cafac7c48dead74692d",
       "file": "worker/auth.ts",
-      "line": 2463,
+      "line": 2469,
       "containingFunction": "verifyEmailChallenge",
       "occurrence": 127,
       "executionMode": "run",
@@ -2835,11 +2835,33 @@
       "hasLimit": false
     },
     {
-      "callSiteId": "4abfb7ddcec4486af9720b31",
+      "callSiteId": "9470315edc14de142482dd6d",
       "file": "worker/auth.ts",
-      "line": 2465,
+      "line": 2477,
       "containingFunction": "verifyEmailChallenge",
       "occurrence": 128,
+      "executionMode": "run",
+      "argumentKind": "literal",
+      "expression": "\"DELETE FROM email_challenges WHERE id = ?\"",
+      "expressionSha256": "003b1082b90dae073d66105ff3db4c4eb675969d0902e2de592942f743f95af8",
+      "declarationReference": null,
+      "statementClass": "DELETE",
+      "sql": "DELETE FROM email_challenges WHERE id = ?",
+      "sqlSha256": "e75a985affbec14e5d61e7cd15e6d54f39334f04f77a8f0b4acb2e8f1116e867",
+      "tables": [
+        "email_challenges"
+      ],
+      "placeholderCount": 1,
+      "hasWhere": true,
+      "hasOrderBy": false,
+      "hasLimit": false
+    },
+    {
+      "callSiteId": "afc97f15c1db912028d4cc97",
+      "file": "worker/auth.ts",
+      "line": 2479,
+      "containingFunction": "verifyEmailChallenge",
+      "occurrence": 129,
       "executionMode": "run",
       "argumentKind": "literal",
       "expression": "\"UPDATE email_challenges SET attempts = attempts + 1 WHERE id = ?\"",
@@ -2857,11 +2879,11 @@
       "hasLimit": false
     },
     {
-      "callSiteId": "73051e3a77a670057add1155",
+      "callSiteId": "eeb7a27a3b6e16e5b161ef3b",
       "file": "worker/auth.ts",
-      "line": 2638,
+      "line": 2652,
       "containingFunction": "catch-callback",
-      "occurrence": 129,
+      "occurrence": 130,
       "executionMode": "run",
       "argumentKind": "literal",
       "expression": "\"DELETE FROM email_challenges WHERE id = ?\"",

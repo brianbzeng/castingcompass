@@ -40,6 +40,27 @@ by that discovery.
       commit. Their branches, comments, commits, and hosted evidence remain preserved for audit
       and rollback reference; `#146` is now the repository's only open PR and remains a draft.
 
+## Active checkpoint — database-confirmed session issuance
+
+- [x] Continue the credential boundary through the final shared session-creation helper. Login,
+      verified signup, password reset, and legacy-cookie rotation all created an opaque token and
+      set it in the browser after a D1 batch, but did not inspect the session INSERT receipt.
+- [x] Hash the candidate token once and require exactly one confirmed `auth_sessions` change before
+      any path exposes it in a cookie. Missing, malformed, zero, or impossible metadata now returns
+      `503 session_creation_unconfirmed` and clears both secure and legacy cookie forms.
+- [x] Remove ambiguous committed state without creating a replay path. The unconfirmed response
+      deletes the candidate token hash before returning; cleanup failure is recorded as a redacted
+      structured event, but the unknown token is never disclosed and therefore cannot authenticate.
+- [x] Force a committed INSERT with missing metadata in the direct D1 runtime. Rotation deletes the
+      presented session, the candidate row is cleaned up, the response remains `503`, and no fresh
+      session cookie or hidden account session survives. The generated 223-site inventory locks the
+      shared batch INSERT and the exact cleanup DELETE.
+- [x] Pass the pinned Cloudflare build, ESLint, TypeScript, all 555/555 Node tests, the complete
+      offline security/SBOM/source-integrity chain, both zero-vulnerability npm audits, and the
+      full 200/200 Chromium/WebKit phone matrix. Preserve a clean local commit and deterministic
+      release-bundle receipt. No push, pull request, merge, deployment, provider query, D1 mutation,
+      model change, UI change, or production authorization belongs to this work.
+
 ## Active checkpoint — terminal trip ownership predicates
 
 - [x] Audit owner-scoped trip mutations against the documented D1/SQLite row-security
