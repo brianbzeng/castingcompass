@@ -34,6 +34,13 @@ by that discovery.
       passed 10/10 and lazy-map loading passed 10/10. Earlier artificial concurrent repetition
       attempts were discarded after the machine reached temporary-storage and unrelated system-
       load saturation; no assertion result from that polluted environment is treated as evidence.
+- [x] Classify draft PR `#128`'s first exact head rather than rerunning it. Both independent hosted
+      web jobs passed 137/140 and failed the same three WebKit trip-network cases at one redundant
+      location-option click: entering the exact site name had already committed the selection, then
+      React replaced the suggestion during that second action. The helper now proves the selected-
+      site status and moves focus through the next real form control, with no product or timeout
+      change. The exact three-case cluster then passed 30/30 concurrent WebKit repetitions and the
+      complete two-worker mobile matrix passed 140/140 locally.
 - [x] Complete the ordinary local release matrix. The exact two-worker hosted-CI shape passed all
       140 mobile cases, including both revised WebKit boundaries. Fresh npm installation, the
       Cloudflare build, 456/456 Node tests, ESLint, TypeScript, the complete security/SBOM/query-

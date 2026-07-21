@@ -35,8 +35,11 @@ async function preparePastTripForSubmission(page: Page) {
   await expect(modal).toBeVisible({ timeout: 8_000 });
   await expect(location).toBeVisible({ timeout: 8_000 });
   await location.fill("Limantour Beach");
-  await modal.getByRole("option", { name: /Limantour Beach/ }).click();
-  await modal.getByLabel("Fishing mode for the whole trip").selectOption("shore");
+  await expect(modal.locator(".site-combobox-status")).toHaveText("Selected: Limantour Beach");
+  const fishingMode = modal.getByLabel("Fishing mode for the whole trip");
+  await fishingMode.focus();
+  await expect(location).toHaveAttribute("aria-expanded", "false");
+  await fishingMode.selectOption("shore");
   await modal.getByLabel("Did the score influence this trip?").selectOption("no");
   await modal.getByRole("button", { name: "Continue to gear + result" }).click();
   for (const checkbox of await modal.locator(".consent-field input").all()) await checkbox.check();
