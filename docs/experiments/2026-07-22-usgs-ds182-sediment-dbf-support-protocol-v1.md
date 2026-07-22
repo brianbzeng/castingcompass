@@ -145,8 +145,8 @@ reference transform and bounds, never raster pixels.
 ### Pre-outcome computational bound
 
 Before any official dBASE record was parsed, implementation review identified that exhaustive
-bipartition reporting grows exponentially. The exact audit therefore admits at most 18
-endpoint-valid source groups, which bounds the unique candidate set at 131,071. More than 18 does
+bipartition reporting grows exponentially. The exact audit therefore admits at most 14
+endpoint-valid source groups, which bounds the unique candidate set at 8,191. More than 14 does
 not trigger sampling, pruning, greedy selection, or an outcome-adaptive split search: the audit
 fails closed with `source_group_count_exceeds_exhaustive_limit`, reports the observed group count
 and theoretical candidate count, and authorizes no next stage. This is a computational integrity
