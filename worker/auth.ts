@@ -51,7 +51,6 @@ const PASSWORD_RECOVERY_MINIMUM_RESPONSE_MS = 250;
 const DUMMY_PASSWORD_SALT = "Y2FzdGluZ2NvbXBhc3MtdGltaW5n";
 const PRIVACY_DELETION_TASK_BATCH = 5;
 const ACCOUNT_DELETION_INLINE_TASK_BATCH = 3;
-const MANUAL_REVIEW_IMMEDIATE_DISPATCH_LIMIT = 1;
 
 export interface AuthApiEnv extends TurnstileEnv, PrivacyExportEnv {
   DB?: D1DatabaseLike;
@@ -68,7 +67,7 @@ export interface AuthUser {
 
 interface AccountRequestOptions {
   onTripUpdated?(trip: TripRow): void;
-  onTripsReviewRequested?(trips: TripRow[]): void;
+  onTripReviewRequested?(trip: TripRow): void;
   waitUntil?(promise: Promise<unknown>): void;
   now?(): Date;
 }
@@ -1320,9 +1319,7 @@ export async function handleAccountRequest(
         // independent background pipelines inside one Worker invocation. Dispatch one now and
         // leave every other queued row to the bounded scheduled backlog.
         if (queuedTrips.length) {
-          options.onTripsReviewRequested?.(
-            queuedTrips.slice(0, MANUAL_REVIEW_IMMEDIATE_DISPATCH_LIMIT),
-          );
+          options.onTripReviewRequested?.(queuedTrips[0]);
         }
         if (receipts.includes("unconfirmed")) {
           return errorResponse(

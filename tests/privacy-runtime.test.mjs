@@ -2926,7 +2926,7 @@ test("manual review retry repeats owner identity in the final write and dispatch
     method: "POST",
     cookie: owner.cookie,
   }), { DB: d1 }, [], {
-    onTripsReviewRequested: (trips) => dispatched.push(...trips.map(({ id }) => id)),
+    onTripReviewRequested: (trip) => dispatched.push(trip.id),
   });
 
   assert.equal(raced?.status, 202);
@@ -2941,7 +2941,7 @@ test("manual review retry repeats owner identity in the final write and dispatch
     method: "POST",
     cookie: other.cookie,
   }), { DB: d1 }, [], {
-    onTripsReviewRequested: (trips) => dispatched.push(...trips.map(({ id }) => id)),
+    onTripReviewRequested: (trip) => dispatched.push(trip.id),
   });
   assert.equal(confirmed?.status, 202);
   assert.deepEqual(await confirmed?.json(), { queued: 1 });
@@ -2958,7 +2958,7 @@ test("manual review retry repeats owner identity in the final write and dispatch
     method: "POST",
     cookie: other.cookie,
   }), { DB: d1 }, [], {
-    onTripsReviewRequested: (trips) => dispatched.push(...trips.map(({ id }) => id)),
+    onTripReviewRequested: (trip) => dispatched.push(trip.id),
   });
   assert.equal(changed?.status, 202);
   assert.deepEqual(await changed?.json(), { queued: 0 });
@@ -2979,7 +2979,7 @@ test("manual review retry uses exact stored state across missing, lost, rolled-b
     method: "POST",
     cookie: owner.cookie,
   }), { DB: d1 }, [], {
-    onTripsReviewRequested: (trips) => dispatched.push(...trips.map(({ id }) => id)),
+    onTripReviewRequested: (trip) => dispatched.push(trip.id),
   });
 
   const missingMetadataTrip = retryTrip();
@@ -3081,14 +3081,14 @@ test("a ten-row manual retry admits every row but starts one bounded immediate d
         method: "POST",
         cookie: owner.cookie,
       }), { DB: d1 }, [], {
-        onTripsReviewRequested: (trips) => {
-          dispatched.push(...trips.map(({ id }) => id));
-          background.push(...trips.map(({ id }) => scheduleTripReview(
+        onTripReviewRequested: (trip) => {
+          dispatched.push(trip.id);
+          background.push(scheduleTripReview(
             env,
-            id,
+            trip.id,
             [{ id: "ocean-beach", type: "Beach" }],
             { expediteRetry: true },
-          )));
+          ));
         },
       });
       assert.equal(response?.status, 202);

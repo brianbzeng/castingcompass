@@ -37,9 +37,10 @@ by that discovery.
       rights multi-row reads; all 20 migrations and 50 critical plans include both retry shapes.
 - [x] Bound the complete ten-row request as one durable admission rather than ten immediate
       background pipelines. At most one exact queued row enters direct or Queue dispatch in the
-      originating invocation; the other nine remain in the scheduled backlog. A lost committed
-      ten-row batch now exercises both modes at 27 local D1 statements, one provider request or
-      Queue send, and zero dropped rows, preserving headroom below the 50-query Free ceiling.
+      originating invocation, enforced by a singular handler/caller callback contract; the other
+      nine remain in the scheduled backlog. A lost committed ten-row batch now exercises both
+      modes at 27 local D1 statements, one provider request or Queue send, and zero dropped rows,
+      preserving headroom below the 50-query Free ceiling.
 - [x] Seal the implementation with the pinned Cloudflare build; lint and type checks; all 646/646
       Node tests; 29/29 API tests; Ruff; 83/83 pipeline tests with one documented optional-
       `rasterio` skip; the complete offline security, SBOM, source-integrity, and two zero-

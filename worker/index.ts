@@ -164,11 +164,9 @@ async function routeRequest(request: Request, env: Env, ctx: ExecutionContext): 
   const accountResponse = await handleAccountRequest(request, env, sites, {
     waitUntil: (promise) => ctx.waitUntil(promise),
     onTripUpdated: (trip) => ctx.waitUntil(scheduleTripReview(env, trip.id, sites, { resetForNewInput: true })),
-    onTripsReviewRequested: (trips) => {
-      for (const trip of trips) {
-        ctx.waitUntil(scheduleTripReview(env, trip.id, sites, { expediteRetry: true }));
-      }
-    },
+    onTripReviewRequested: (trip) => ctx.waitUntil(
+      scheduleTripReview(env, trip.id, sites, { expediteRetry: true }),
+    ),
   });
   if (accountResponse) return accountResponse;
 
