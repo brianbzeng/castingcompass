@@ -142,6 +142,17 @@ anchor; train must contain at least three source groups and test at least one. A
 partitions are reported, and none may be selected from outcome balance. The audit reads only the
 reference transform and bounds, never raster pixels.
 
+### Pre-outcome computational bound
+
+Before any official dBASE record was parsed, implementation review identified that exhaustive
+bipartition reporting grows exponentially. The exact audit therefore admits at most 18
+endpoint-valid source groups, which bounds the unique candidate set at 131,071. More than 18 does
+not trigger sampling, pruning, greedy selection, or an outcome-adaptive split search: the audit
+fails closed with `source_group_count_exceeds_exhaustive_limit`, reports the observed group count
+and theoretical candidate count, and authorizes no next stage. This is a computational integrity
+limit, not a scientific support threshold; all endpoint, anchor, and per-side minimums above are
+unchanged.
+
 ## Fixed decisions and claim boundary
 
 - Structural, identity, geometry, or provenance failure: stop and preserve the failure.
