@@ -1,6 +1,7 @@
 # Authenticated isolated-staging drill
 
-Status: repository preparation complete; no staging execution or production authority
+Status: repository preparation complete; no staging provisioning, deployment, execution, or
+production authority
 
 This contract prepares the narrow authenticated test that remains open after local proof of the
 manual advisory-review retry path. It cannot execute a request. No staging host, provider, Queue,
@@ -20,7 +21,8 @@ synthetic completed trips:
 Every production hostname, every `*.castingcompass.com` subdomain, production binding, real user
 row, real email destination, outbound callback, and real AI-provider credential/request is out of
 scope. The authorization must bind a canonical named HTTPS staging origin, exact clean reviewed
-source commit, exact API/Worker/exercise identity, exact internal stub Worker version, the hashed
+source commit, exact API/exercise identity, distinct direct and durable-Queue application Worker
+versions, exact internal stub Worker version, a verified isolated-configuration receipt, the hashed
 synthetic account, all twenty hashed trips, a maximum two-hour window, a named independent
 authorization record, monitoring, emergency stop, and private evidence access.
 
@@ -30,6 +32,11 @@ The strict policy, authorization schema, deterministic plan builder, and refusal
 - `contracts/authenticated-staging-drill-authorization.schema.json`;
 - `scripts/authenticated-staging-drill.mjs`; and
 - `tests/authenticated-staging-drill.test.mjs`.
+
+The main Worker resource/configuration boundary is separately locked by
+[Isolated staging configuration](ISOLATED-STAGING-CONFIGURATION.md). Its verifier proves locally
+that direct and Queue configurations share only isolated resources and exclude every checked-in
+production identity. It does not provision or deploy them.
 
 ## Internal AI stub boundary
 
@@ -85,10 +92,14 @@ reachable from the reviewed official `origin/main`, create the private plan:
 ```sh
 npm run authenticated-staging-drill:plan -- \
   --authorization /absolute/private/path/authenticated-staging-authorization.json \
+  --configuration-receipt /absolute/private/path/isolated-staging-config-receipt.json \
   --output /absolute/private/path/authenticated-staging-plan.json
 ```
 
-Planning performs only local policy/schema/file/checkout verification. It performs no network
+Planning requires the receipt's canonical hash and exact source, target, exercise, synthetic
+account, and stub-version identities to match the authorization. Each scenario is pinned to its
+own distinct application Worker version. Planning performs only local policy/schema/file/checkout
+verification. It performs no network
 preflight and cannot execute the drill. There is deliberately no `run` command or package script.
 Actual execution requires a separately reviewed operator procedure, fault proxy, least-privilege
 read-only evidence access, and independent tester after the isolated provider resources exist.

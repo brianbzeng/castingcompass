@@ -1,7 +1,7 @@
 {
   "bomFormat": "CycloneDX",
   "specVersion": "1.5",
-  "serialNumber": "urn:uuid:2b1c73e6-0ef2-5051-8ec8-173b6b03e6ef",
+  "serialNumber": "urn:uuid:f77cbb84-2800-5da0-97c6-8547eef242ba",
   "version": 1,
   "metadata": {
     "component": {
@@ -33,7 +33,11 @@
         },
         {
           "name": "castingcompass:input-sha256",
-          "value": "contracts/authenticated-staging-drill-authorization.schema.json:d05b0bf399051e8671d51a98e54a98755570fc4aa39029c4cdf805db723d9139"
+          "value": "contracts/authenticated-staging-drill-authorization.schema.json:d782521d247e5b0e82d8788f8559a0ff04df656f8ac10bcff641cc5f5c5a3ab8"
+        },
+        {
+          "name": "castingcompass:input-sha256",
+          "value": "contracts/isolated-staging-wrangler.schema.json:3a2ede27362f54eaef447d1538464758efae884c585443816e3defd18afb05e4"
         },
         {
           "name": "castingcompass:input-sha256",
@@ -69,7 +73,7 @@
         },
         {
           "name": "castingcompass:input-sha256",
-          "value": "package.json:75e71cb3ec492307d86d8f190738c0444f449fba27e49138837fb928686004cc"
+          "value": "package.json:ada64839034af72d792696fe383dcf12c95906a95bb269cba5c6a5b98106c096"
         },
         {
           "name": "castingcompass:input-sha256",
@@ -93,7 +97,7 @@
         },
         {
           "name": "castingcompass:input-sha256",
-          "value": "security/authenticated-staging-drill-policy.json:7738d84062087385673ae1430c266747263565b19d70af8513bb89ef4057afb5"
+          "value": "security/authenticated-staging-drill-policy.json:f55994ffc2541a593ebd6e78177725bb22f7a5995c606861f0df8889807c03d8"
         },
         {
           "name": "castingcompass:input-sha256",
@@ -106,6 +110,10 @@
         {
           "name": "castingcompass:input-sha256",
           "value": "security/d1-query-inventory.json:f091cecf007ab5a38699884ee20dc89024fe9571409ef24394a4d85ad1e99658"
+        },
+        {
+          "name": "castingcompass:input-sha256",
+          "value": "security/isolated-staging-config-policy.json:81a14972236f39577595e6d3535aa6b6470cb49c9c7772a35dd21c51d23afcc0"
         },
         {
           "name": "castingcompass:input-sha256",

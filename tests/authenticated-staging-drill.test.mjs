@@ -17,6 +17,11 @@ import {
   validateAuthorization,
   validatePolicy,
 } from "../scripts/authenticated-staging-drill.mjs";
+import {
+  canonicalJson as stagingCanonicalJson,
+  loadPolicy as loadStagingConfigPolicy,
+  sha256 as stagingSha256,
+} from "../scripts/verify-isolated-staging-config.mjs";
 
 const NOW = new Date("2026-07-22T18:00:00.000Z");
 const EXERCISE_ID = "sec_0123456789abcdef0123456789abcdef";
@@ -25,16 +30,51 @@ function hashes(offset) {
   return Array.from({ length: 10 }, (_, index) => (offset + index).toString(16).padStart(64, "0"));
 }
 
+function configurationReceipt(overrides = {}) {
+  const policy = loadStagingConfigPolicy();
+  const base = {
+    schema_version: "castingcompass.isolated-staging-config-receipt/1.0.0",
+    policy_sha256: stagingSha256(stagingCanonicalJson(policy)),
+    source_commit: "a".repeat(40),
+    target_origin: "https://isolated.example.test",
+    config_sha256: { direct: "1".repeat(64), durable_queue: "2".repeat(64) },
+    exercise_id_sha256: stagingSha256(EXERCISE_ID),
+    synthetic_account_hash: "a".repeat(64),
+    exercise_provider_version_id: "stub-version-456",
+    resource_identity_sha256: {
+      d1: "3".repeat(64),
+      rate_limit_namespaces: "4".repeat(64),
+      exercise_service: "5".repeat(64),
+      queue: "6".repeat(64),
+      dead_letter_queue: "7".repeat(64),
+    },
+    mode_boundaries: [
+      { mode: "direct", queue_enabled: false, queue_bindings: 0 },
+      { mode: "durable_queue", queue_enabled: true, queue_bindings: 2 },
+    ],
+    production_resources_excluded: true,
+    provider_contacted: false,
+    deployment_performed: false,
+    production_ready: false,
+    production_authority: false,
+  };
+  return { ...base, ...overrides };
+}
+
 function authorization(overrides = {}) {
   const base = {
-    schema_version: "castingcompass.authenticated-staging-drill-authorization/1.0.0",
+    schema_version: "castingcompass.authenticated-staging-drill-authorization/1.1.0",
     exercise_id: EXERCISE_ID,
     source_commit: "a".repeat(40),
     environment: "isolated-staging",
     target_origin: "https://isolated.example.test",
     expected_api_compatibility_version: "1",
-    expected_worker_version_id: "worker-version-123",
+    expected_worker_version_ids: {
+      direct: "direct-worker-version-123",
+      durable_queue: "queue-worker-version-456",
+    },
     expected_exercise_provider_version_id: "stub-version-456",
+    isolated_configuration_receipt_sha256: stagingSha256(stagingCanonicalJson(configurationReceipt())),
     window_start_at: "2026-07-22T18:30:00.000Z",
     window_end_at: "2026-07-22T19:30:00.000Z",
     synthetic_subjects: {
@@ -81,6 +121,10 @@ function authorization(overrides = {}) {
     safety: { ...base.safety, ...(overrides.safety ?? {}) },
     fault_injection: { ...base.fault_injection, ...(overrides.fault_injection ?? {}) },
     evidence_access: { ...base.evidence_access, ...(overrides.evidence_access ?? {}) },
+    expected_worker_version_ids: {
+      ...base.expected_worker_version_ids,
+      ...(overrides.expected_worker_version_ids ?? {}),
+    },
   };
 }
 
@@ -129,6 +173,7 @@ test("authorization is exact, staging-only, synthetic-only, provider-isolated, a
     authorization({ safety: { exercise_service_binding_attached: false } }),
     authorization({ fault_injection: { maximum_dropped_responses: 2 } }),
     authorization({ window_end_at: "2026-07-22T21:00:00.000Z" }),
+    authorization({ expected_worker_version_ids: { durable_queue: "direct-worker-version-123" } }),
     authorization({
       synthetic_subjects: { queue_trip_hashes: hashes(1) },
     }),
@@ -146,7 +191,11 @@ test("the plan is non-executing and distinguishes client response loss from D1 r
     throw new Error("network must not be used by planning");
   };
   try {
-    const plan = buildPlan(validateAuthorization(authorization(), policy, { now: NOW }), policy);
+    const plan = buildPlan(
+      validateAuthorization(authorization(), policy, { now: NOW }),
+      policy,
+      configurationReceipt(),
+    );
     assert.equal(fetchCalls, 0);
     assert.equal(plan.execution_supported, false);
     assert.equal(plan.network_preflight_performed, false);
@@ -157,9 +206,25 @@ test("the plan is non-executing and distinguishes client response loss from D1 r
     assert.equal(plan.scenarios[0].overlapping_requests, 2);
     assert.match(plan.scenarios[0].claim_boundary, /does not claim D1 SDK mutation-receipt loss/u);
     assert.equal(plan.scenarios[1].duplicate_queue_delivery_required, true);
+    assert.notEqual(plan.scenarios[0].expected_worker_version_id, plan.scenarios[1].expected_worker_version_id);
+    assert.equal(plan.expected_application_deployments.direct.configuration_sha256, "1".repeat(64));
+    assert.equal(plan.expected_application_deployments.durable_queue.configuration_sha256, "2".repeat(64));
     assert.equal(plan.scenarios.every((scenario) => scenario.expected_unique_stub_requests === 10), true);
     assert.equal(plan.scenarios.every((scenario) => scenario.real_provider_expected_requests === 0), true);
     assert.doesNotMatch(JSON.stringify(plan), /Cookie|session=|private@example/u);
+    assert.throws(
+      () => buildPlan(validateAuthorization(authorization(), policy, { now: NOW }), policy),
+      /configuration receipt is required/iu,
+    );
+    const mismatchedReceipt = configurationReceipt({ source_commit: "b".repeat(40) });
+    assert.throws(
+      () => buildPlan(
+        validateAuthorization(authorization(), policy, { now: NOW }),
+        policy,
+        mismatchedReceipt,
+      ),
+      /does not match the exact authorization/iu,
+    );
   } finally {
     globalThis.fetch = originalFetch;
   }
@@ -204,6 +269,8 @@ test("plan input must be a private out-of-repository regular file before checkou
       "scripts/authenticated-staging-drill.mjs",
       "plan",
       "--authorization",
+      input,
+      "--configuration-receipt",
       input,
       "--output",
       output,

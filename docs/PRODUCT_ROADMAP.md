@@ -523,6 +523,16 @@ after its acceptance checks pass in the intended environment.
       none of these bindings or variables. No staging target, Queue, provider, D1, or production
       resource was contacted; provisioning, authorization, execution, remediation, and independent
       acceptance remain open.
+    - [x] Freeze the main isolated-staging Worker configuration before provider provisioning:
+      validate two private resolved Wrangler configurations against an exact schema and locked
+      production exclusion inventory; require one shared non-production host, D1 database, six
+      rate-limit namespaces, exercise service, synthetic account, and stub version; keep all public
+      features and undeclared providers/bindings off; and generate only a minimized hash receipt.
+      Correct the drill to require distinct direct and durable-Queue Worker versions because the
+      Queue feature flag and bindings are deployment configuration. The verifier has no deploy or
+      network command. Provider resources, both deployments, live identity evidence, written
+      authorization, exercise execution, remediation/retest, and independent acceptance remain
+      open. See [ISOLATED-STAGING-CONFIGURATION.md](ISOLATED-STAGING-CONFIGURATION.md).
 - [ ] Complete the privacy lifecycle and deletion policy before broader account recruitment.
   Maintain a data inventory and cascade map covering primary rows, public copies, objects,
   queues, logs, analytics, exports, derived artifacts, and backups; make deletion retries and

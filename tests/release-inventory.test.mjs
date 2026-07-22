@@ -15,6 +15,7 @@ const inputPaths = [
   "pipeline/requirements-ci.lock",
   "contracts/ai-review-queue-message.schema.json",
   "contracts/authenticated-staging-drill-authorization.schema.json",
+  "contracts/isolated-staging-wrangler.schema.json",
   "contracts/key-custody-evidence-manifest.schema.json",
   "contracts/key-custody-independent-review.schema.json",
   "contracts/pollution-score-independent-review.schema.json",
@@ -23,6 +24,7 @@ const inputPaths = [
   "security/api-image-policy.json",
   "security/ai-review-queue-policy.json",
   "security/authenticated-staging-drill-policy.json",
+  "security/isolated-staging-config-policy.json",
   "security/privacy-export-queue-policy.json",
   "security/cloudflare-provider-state-policy.json",
   "security/d1-query-inventory-policy.json",
@@ -144,8 +146,12 @@ test("CI verifies the combined inventory and the signer rejects a narrowed hando
   ]);
   assert.match(manifest, /"security:release-sbom": "node scripts\/generate-release-sbom\.mjs --check"/u);
   assert.match(manifest, /"security:d1-query-inventory": "node scripts\/generate-d1-query-inventory\.mjs --check"/u);
+  assert.match(manifest, /"security:isolated-staging-config-policy": "node scripts\/verify-isolated-staging-config\.mjs verify-policy"/u);
+  assert.match(manifest, /"security:authenticated-staging-drill-policy": "node scripts\/authenticated-staging-drill\.mjs verify-policy"/u);
   assert.match(ci, /npm run security:sbom\n\s+- run: npm run security:d1-query-inventory\n\s+- run: npm run security:release-sbom/u);
   assert.match(release, /npm run security:sbom\n\s+- run: npm run security:d1-query-inventory\n\s+- run: npm run security:release-sbom/u);
+  assert.match(ci, /npm run security:exercise-policy\n\s+- run: npm run security:isolated-staging-config-policy\n\s+- run: npm run security:authenticated-staging-drill-policy/u);
+  assert.match(release, /npm run security:exercise-policy\n\s+- run: npm run security:isolated-staging-config-policy\n\s+- run: npm run security:authenticated-staging-drill-policy/u);
   assert.match(manifest, /"security:operational-restore-review": "node scripts\/verify-operational-restore-review\.mjs verify-policy"/u);
   assert.match(manifest, /"security:key-custody-review": "node scripts\/verify-key-custody-review\.mjs verify-policy"/u);
   assert.match(manifest, /"security:pollution-score-independent-review": "node scripts\/verify-pollution-score-independent-review\.mjs verify-policy"/u);

@@ -18,13 +18,14 @@ import Ajv2020 from "ajv/dist/2020.js";
 import addFormats from "ajv-formats";
 
 import { verifyReleaseCheckout } from "./verify-release-checkout.mjs";
+import { validateConfigurationReceipt } from "./verify-isolated-staging-config.mjs";
 
 export const AUTHENTICATED_STAGING_DRILL_POLICY_VERSION =
-  "castingcompass.authenticated-staging-drill-policy/1.0.0";
+  "castingcompass.authenticated-staging-drill-policy/1.1.0";
 export const AUTHENTICATED_STAGING_DRILL_AUTHORIZATION_VERSION =
-  "castingcompass.authenticated-staging-drill-authorization/1.0.0";
+  "castingcompass.authenticated-staging-drill-authorization/1.1.0";
 export const AUTHENTICATED_STAGING_DRILL_PLAN_VERSION =
-  "castingcompass.authenticated-staging-drill-plan/1.0.0";
+  "castingcompass.authenticated-staging-drill-plan/1.1.0";
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const POLICY_PATH = join(ROOT, "security", "authenticated-staging-drill-policy.json");
@@ -49,6 +50,7 @@ const EXPECTED_LIMITS = {
   maximum_client_responses_dropped: 1,
   maximum_total_http_requests: 80,
   maximum_authorization_bytes: 65536,
+  maximum_configuration_receipt_bytes: 32768,
   maximum_plan_bytes: 131072,
 };
 const EXPECTED_TRUTH_BOUNDARIES = {
@@ -60,6 +62,7 @@ const EXPECTED_TRUTH_BOUNDARIES = {
 };
 const REQUIRED_EVIDENCE = [
   "exact_source_and_worker_identity",
+  "verified_isolated_staging_configuration_receipt",
   "exact_exercise_and_stub_worker_identity",
   "synthetic_account_and_twenty_trip_hash_inventory",
   "before_and_after_d1_read_only_snapshots",
@@ -120,7 +123,7 @@ function exactValue(value, expected, name) {
 export function validatePolicy(policy) {
   exactKeys(policy, [
     "schema_version", "policy_id", "authorization_contract_version", "plan_contract_version",
-    "api_compatibility_version", "production_hosts", "routes", "modes", "exercise_provider",
+    "api_compatibility_version", "production_hosts", "routes", "modes", "exercise_provider", "configuration_gate",
     "limits", "truth_boundaries", "required_evidence", "production_gates",
   ], "Authenticated staging drill policy");
   if (policy.schema_version !== AUTHENTICATED_STAGING_DRILL_POLICY_VERSION
@@ -143,6 +146,13 @@ export function validatePolicy(policy) {
     real_provider_model_must_be_absent: true,
     synthetic_account_hash_required: true,
   }, "Exercise provider boundary");
+  exactValue(policy.configuration_gate, {
+    policy: "security/isolated-staging-config-policy.json",
+    receipt_contract: "castingcompass.isolated-staging-config-receipt/1.0.0",
+    two_distinct_application_versions_required: true,
+    provider_contact_during_verification: false,
+    deployment_during_verification: false,
+  }, "Isolated-staging configuration gate");
   exactValue(policy.limits, EXPECTED_LIMITS, "Drill limits");
   exactValue(policy.truth_boundaries, EXPECTED_TRUTH_BOUNDARIES, "Truth boundaries");
   exactValue(policy.required_evidence, REQUIRED_EVIDENCE, "Evidence inventory");
@@ -217,6 +227,10 @@ export function validateAuthorization(authorization, policy = loadPolicy(), opti
   if (options.expectedSourceCommit && authorization.source_commit !== options.expectedSourceCommit) {
     refuse("source-mismatch", "Authorization source commit does not match the exact checkout");
   }
+  if (authorization.expected_worker_version_ids.direct
+    === authorization.expected_worker_version_ids.durable_queue) {
+    refuse("authorization-version", "Direct and durable Queue modes require distinct Worker versions");
+  }
   requireBooleanSet(authorization.authorization, {
     written_scope_approved: true,
     authenticated_testing_approved: true,
@@ -254,8 +268,26 @@ export function validateAuthorization(authorization, policy = loadPolicy(), opti
   return { authorization, targetOrigin, start, end };
 }
 
-export function buildPlan(validated, policy = loadPolicy()) {
+export function validateConfigurationReceiptForAuthorization(receipt, authorization, policy = loadPolicy()) {
+  validateConfigurationReceipt(receipt);
+  if (sha256(canonicalJson(receipt)) !== authorization.isolated_configuration_receipt_sha256
+    || receipt.source_commit !== authorization.source_commit
+    || receipt.target_origin !== authorization.target_origin
+    || receipt.exercise_id_sha256 !== sha256(authorization.exercise_id)
+    || receipt.synthetic_account_hash !== authorization.synthetic_subjects.account_hash
+    || receipt.exercise_provider_version_id !== authorization.expected_exercise_provider_version_id) {
+    refuse("configuration-receipt-mismatch", "Configuration receipt does not match the exact authorization");
+  }
+  if (policy.configuration_gate.receipt_contract !== receipt.schema_version) {
+    refuse("configuration-receipt-mismatch", "Configuration receipt contract disagrees with drill policy");
+  }
+  return receipt;
+}
+
+export function buildPlan(validated, policy = loadPolicy(), configurationReceipt) {
   const authorization = validated.authorization;
+  if (!configurationReceipt) refuse("configuration-receipt-required", "A verified isolated-staging configuration receipt is required");
+  validateConfigurationReceiptForAuthorization(configurationReceipt, authorization, policy);
   const common = {
     route: { method: "POST", path: "/api/profile/reviews/retry" },
     overlapping_requests: policy.limits.overlapping_retry_requests_per_mode,
@@ -269,11 +301,22 @@ export function buildPlan(validated, policy = loadPolicy()) {
     schema_version: AUTHENTICATED_STAGING_DRILL_PLAN_VERSION,
     policy_sha256: sha256(canonicalJson(policy)),
     authorization_sha256: sha256(canonicalJson(authorization)),
+    isolated_configuration_receipt_sha256: authorization.isolated_configuration_receipt_sha256,
     source_commit: authorization.source_commit,
     exercise_id_sha256: sha256(authorization.exercise_id),
     target_origin: validated.targetOrigin,
     expected_api_compatibility_version: authorization.expected_api_compatibility_version,
-    expected_worker_version_id: authorization.expected_worker_version_id,
+    expected_worker_version_ids: authorization.expected_worker_version_ids,
+    expected_application_deployments: {
+      direct: {
+        worker_version_id: authorization.expected_worker_version_ids.direct,
+        configuration_sha256: configurationReceipt.config_sha256.direct,
+      },
+      durable_queue: {
+        worker_version_id: authorization.expected_worker_version_ids.durable_queue,
+        configuration_sha256: configurationReceipt.config_sha256.durable_queue,
+      },
+    },
     expected_exercise_provider_version_id: authorization.expected_exercise_provider_version_id,
     window_start_at: authorization.window_start_at,
     window_end_at: authorization.window_end_at,
@@ -294,6 +337,7 @@ export function buildPlan(validated, policy = loadPolicy()) {
         mode: "direct",
         trip_hashes: authorization.synthetic_subjects.direct_trip_hashes,
         queue_feature_flag: "false",
+        expected_worker_version_id: authorization.expected_worker_version_ids.direct,
         client_response_drop_after_upstream_completion: 1,
         claim_boundary: "This proves client-to-Worker response loss and idempotent replay only; it does not claim D1 SDK mutation-receipt loss.",
         ...common,
@@ -303,6 +347,7 @@ export function buildPlan(validated, policy = loadPolicy()) {
         mode: "durable_queue",
         trip_hashes: authorization.synthetic_subjects.queue_trip_hashes,
         queue_feature_flag: "true",
+        expected_worker_version_id: authorization.expected_worker_version_ids.durable_queue,
         duplicate_queue_delivery_required: true,
         claim_boundary: "Queue delivery, D1 job state, and stub metrics must reconcile by unique opaque identity; HTTP queued counts are not dispatch receipts.",
         ...common,
@@ -391,8 +436,12 @@ function template(now = new Date()) {
     environment: "isolated-staging",
     target_origin: "https://isolated-staging.invalid",
     expected_api_compatibility_version: "1",
-    expected_worker_version_id: "REPLACE-WORKER-VERSION",
+    expected_worker_version_ids: {
+      direct: "REPLACE-DIRECT-WORKER-VERSION",
+      durable_queue: "REPLACE-QUEUE-WORKER-VERSION",
+    },
     expected_exercise_provider_version_id: "REPLACE-STUB-VERSION",
+    isolated_configuration_receipt_sha256: "0".repeat(64),
     window_start_at: start.toISOString(),
     window_end_at: end.toISOString(),
     synthetic_subjects: {
@@ -439,7 +488,7 @@ function parseArguments(args) {
   for (let index = 1; index < args.length; index += 2) {
     const flag = args[index];
     const value = args[index + 1];
-    if (!value || !["--authorization", "--output"].includes(flag)) refuse("arguments", `Unknown or incomplete argument: ${flag}`);
+    if (!value || !["--authorization", "--configuration-receipt", "--output"].includes(flag)) refuse("arguments", `Unknown or incomplete argument: ${flag}`);
     options[flag.slice(2)] = value;
   }
   return { command, options };
@@ -459,17 +508,24 @@ async function main() {
     return;
   }
   if (command === "write-template") {
-    if (!options.output || options.authorization) refuse("arguments", "write-template requires only --output");
+    if (!options.output || options.authorization || options["configuration-receipt"]) refuse("arguments", "write-template requires only --output");
     privateJsonWrite(options.output, template(), policy.limits.maximum_authorization_bytes);
     process.stdout.write(`${JSON.stringify({ written: true, private: true, approvals_recorded: false })}\n`);
     return;
   }
   if (command === "plan") {
-    if (!options.authorization || !options.output) refuse("arguments", "plan requires --authorization and --output");
+    if (!options.authorization || !options["configuration-receipt"] || !options.output) {
+      refuse("arguments", "plan requires --authorization, --configuration-receipt, and --output");
+    }
     const authorization = privateJsonRead(options.authorization, policy.limits.maximum_authorization_bytes);
+    const configurationReceipt = privateJsonRead(
+      options["configuration-receipt"],
+      policy.limits.maximum_configuration_receipt_bytes,
+    );
     await verifyReleaseCheckout({ root: ROOT, expectedCommit: authorization.source_commit });
     const validated = validateAuthorization(authorization, policy, { expectedSourceCommit: authorization.source_commit });
-    privateJsonWrite(options.output, buildPlan(validated, policy), policy.limits.maximum_plan_bytes);
+    validateConfigurationReceiptForAuthorization(configurationReceipt, authorization, policy);
+    privateJsonWrite(options.output, buildPlan(validated, policy, configurationReceipt), policy.limits.maximum_plan_bytes);
     process.stdout.write(`${JSON.stringify({ planned: true, network_contacted: false, execution_supported: false })}\n`);
     return;
   }

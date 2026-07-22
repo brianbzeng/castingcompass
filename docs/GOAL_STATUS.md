@@ -52,6 +52,16 @@ by that discovery.
       rows, so their counts cannot be summed. Ten unique D1 rows and ten unique stub requests per
       mode are authoritative. One fault-proxy response drop proves only client/Worker ambiguity,
       not D1 SDK mutation-receipt loss.
+- [x] Freeze the missing main-Worker staging boundary before any provider action. Two private
+      resolved Wrangler configurations now fail closed against the exact production Worker, D1,
+      host, and rate-limit inventory; require shared isolated resources, rate limiting, the private
+      exercise service, and no undeclared provider or feature binding; and emit only a minimized
+      no-provider/no-deployment receipt. The verifier has no run or deploy command.
+- [x] Correct an impossible drill identity claim: direct review and durable Queue review cannot
+      share one application Worker version because `AI_REVIEW_QUEUE_ENABLED` and Queue bindings
+      are deployment configuration. Authorization and planning now require two distinct exact
+      Worker versions plus the exact configuration-receipt hash, source, target, exercise,
+      synthetic-account, and stub identities.
 - [x] Reconcile the guarded security runner with the current Worker health contract. API
       compatibility discovery had added a sixth exact field after the original five-field
       preflight was sealed, so a real authorized exercise would have refused a healthy current
@@ -71,6 +81,14 @@ by that discovery.
       `rasterio` skip; deterministic smoke; and the 200/200 Chromium/WebKit phone matrix. The
       intentionally unsupported Node 24 shell was separately rejected by the existing restore-
       evidence runtime gate rather than being misreported as product failure.
+- [x] Seal the isolated main-Worker configuration checkpoint under the supported Node 22.23.1/
+      npm 10.9.8 toolchain: Cloudflare build and 668/668 Node tests; ESLint and TypeScript; the
+      complete security, source-integrity, SBOM, policy, and two zero-vulnerability audit chain;
+      all 50 D1 plans across 20 migrations; 29/29 API tests; Ruff; 82 passed plus one documented
+      optional-`rasterio` pipeline skip and 138 subtests; deterministic synthetic smoke; and an
+      isolated 200/200 Chromium/WebKit phone matrix. Preserve one clean local commit and a
+      reproducible deterministic release bundle. No provider, deployment, remote target, or
+      production operation is part of this checkpoint.
 - [ ] Provision the isolated synthetic target and obtain the documented independent written
       authorization before running any public, authenticated, load, or intrusive exercise. Keep
       every production hostname and binding permanently outside the harness.

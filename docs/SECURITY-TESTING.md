@@ -133,5 +133,11 @@ client-response-loss truth boundaries, and private evidence requirements. It del
 run command and is not a substitute for provisioning, written independent authorization, or real
 staging evidence.
 
+The application Worker also has a separate non-deploying configuration gate in
+[ISOLATED-STAGING-CONFIGURATION.md](ISOLATED-STAGING-CONFIGURATION.md). It rejects production
+resources and undeclared bindings and requires distinct direct and durable-Queue versions before
+the authenticated plan can be written. Its local receipt is configuration evidence only, not
+provider, deployment, scan, or production-readiness evidence.
+
 Never use this runner as permission to load-test or penetration-test a host. Written owner
 authorization, the isolated staging boundary, and applicable law/provider rules remain required.
