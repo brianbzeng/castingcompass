@@ -3212,6 +3212,13 @@ supersedes this mutation-metadata authority while preserving its fail-closed beh
       all zero, and the non-promoted terrain-probe result is explicitly not live-score evidence.
       Guarded deployment remains open, and actual performance validation cannot begin until a
       separately preregistered confirmatory study has eligible locked evidence.
+- [ ] Select the eventual production model through a preregistered, model-agnostic benchmark
+      after eligible labeled data exists. Compare representative linear/GAM, tree-based,
+      spatial/hierarchical, deep, and justified hybrid/ensemble candidates on the same locked
+      geographic/time splits, calibration, uncertainty, ranking, cost, latency, explainability,
+      and failure behavior. Deep learning is not presumed to win; prefer the simplest model with
+      a material reproducible held-out advantage, and do not start the benchmark before the
+      validation and data-eligibility gates are satisfied.
 - [ ] Define model promotion, drift, rollback, monitoring, and revalidation gates. **Local
       policy, schema, evaluator, CLI, and operator runbook complete;** the separate confirmatory
       protocol, eligible locked-test evidence, independent review, staged serving exercises,

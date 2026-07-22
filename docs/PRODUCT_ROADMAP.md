@@ -841,6 +841,17 @@ after its acceptance checks pass in the intended environment.
   claims; publish uncertainty, limitations, negative results, and the current all-zero sample
   constraint. Attempt probability calibration only after a trained occurrence model has a
   sufficiently representative held-out set of positive and negative outcomes.
+- [ ] Run a model-agnostic selection benchmark once eligible labeled data exists. Deep learning
+  is one candidate, not the default winner. Before opening the locked test data, preregister a
+  representative comparison set spanning naive and regularized linear/GAM models, tree-based
+  models, an appropriate spatial or hierarchical model, the bathymetric deep encoder, and
+  justified hybrid/ensemble candidates. Give every candidate the same source-separated
+  geographic/time folds, leakage checks, calibration and uncertainty evaluation, and ranking
+  metrics; also compare inference cost, latency, maintainability, explainability, and missing-
+  coverage behavior. Promote the simplest candidate that demonstrates a material, reproducible
+  held-out advantage. If candidates are statistically indistinguishable, prefer the simpler
+  model. Do not begin this benchmark or tune the comparison set against confirmation data before
+  the validation/data-eligibility gates above are satisfied.
 - [ ] Define model promotion, drift, and rollback gates: beat preregistered geographic/time
   holdout baselines before promotion; monitor by site, season, mode, and taxon; version every
   release; and require rollback/revalidation when performance or data support drifts. **Local
