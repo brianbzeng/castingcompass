@@ -37,6 +37,17 @@ The first official download must record the SHA-256 and byte count of the ZIP an
 member. A second independent official download must match exactly before any result is accepted.
 The source table is content-addressed separately. Raw source bytes are not committed.
 
+### Pre-result field-name erratum
+
+The first exact archive inspection produced no aggregate, partition, or admission result and found
+a source-documentation name difference. The published attribute metadata calls the field
+`DataType`, while both the exact `PAC_EXT.txt` header and dBASE schema call it `DataTypes`. The
+parser must require `DataTypes` in the source bytes and canonicalize that one exact name to the
+protocol term `DataType`. No other alias, substring, token expansion, or case repair is admitted.
+The outcome values, accepted exact values (`GRZ` and `TXR`), source selection, surface rule,
+composition checks, grouping, support thresholds, and decisions are unchanged. The exact archive
+member is uppercase `PAC_EXT.txt`; member-name matching remains case-sensitive.
+
 Only the laboratory-oriented extracted output (`EXT`) is admissible. Parsed (`PRS`) or calculated
 (`CLC`) outputs, later mapped products, and unlisted mirrors are out of scope. Published metadata
 reports 16,486 extracted point features assembled from more than 300 heterogeneous sources whose
