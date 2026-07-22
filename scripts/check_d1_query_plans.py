@@ -55,6 +55,12 @@ CHECKS = (
         ),
     ),
     PlanCheck(
+        "exact sign-out revocation receipt",
+        "SELECT COUNT(*) AS count FROM auth_sessions WHERE token_hash = ?",
+        ("session_hash_fixture",),
+        ("sqlite_autoindex_auth_sessions_1",),
+    ),
+    PlanCheck(
         "exact password reset receipt",
         """SELECT
              (SELECT COUNT(*) FROM users

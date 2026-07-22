@@ -56,13 +56,13 @@ test("the committed inventory covers every Worker prepare site and its reviewed 
   validatePolicy(policy, inventory);
   assert.deepEqual(JSON.parse(committed), inventory);
   assert.deepEqual(inventory.summary, {
-    prepareCallCount: 245,
-    literalCallCount: 231,
+    prepareCallCount: 246,
+    literalCallCount: 232,
     nonLiteralCallCount: 14,
     multiRowLiteralWithoutLimitCount: 9,
   });
   assert.equal(inventory.sourceFiles.length, 8);
-  assert.equal(new Set(inventory.queries.map(({ callSiteId }) => callSiteId)).size, 245);
+  assert.equal(new Set(inventory.queries.map(({ callSiteId }) => callSiteId)).size, 246);
   assert.equal(policy.multiRowReadContracts.filter(({ rowBoundStatus }) => rowBoundStatus === "open-account-cardinality").length, 0);
   assert.equal(policy.multiRowReadContracts.filter(({ rowBoundStatus }) => rowBoundStatus === "complete-rights-export").length, 9);
   assert.equal(policy.multiRowReadContracts.filter(({ rowBoundStatus }) => rowBoundStatus === "owner-lifecycle-cleanup").length, 0);
@@ -147,6 +147,10 @@ test("the committed inventory covers every Worker prepare site and its reviewed 
     executionMode === "run"
       && statementClass === "DELETE"
       && sql === "DELETE FROM auth_sessions WHERE token_hash = ?"));
+  assert.ok(inventory.queries.some(({ executionMode, statementClass, sql }) =>
+    executionMode === "first"
+      && statementClass === "SELECT"
+      && sql === "SELECT COUNT(*) AS count FROM auth_sessions WHERE token_hash = ?"));
 
   const signInAttemptClaim = inventory.queries.find(({ sql }) =>
     sql?.startsWith("INSERT INTO auth_attempts (id, email_hash, attempted_at, successful) SELECT"));

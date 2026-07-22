@@ -947,20 +947,11 @@ export async function handleAccountRequest(
       if (request.method !== "POST") return methodNotAllowed("POST");
       assertSameOrigin(request);
       const tokens = presentedSessionTokens(request);
-      let revocationResults: unknown[] = [];
-      if (tokens.length > 0) {
-        revocationResults = await db.batch(await Promise.all(tokens.map(async ({ token }) =>
-          db.prepare("DELETE FROM auth_sessions WHERE token_hash = ?").bind(await sha256(token)))));
-      }
-      if (revocationResults.length !== tokens.length || revocationResults.some((result) => {
-        const changes = confirmedMutationChanges(result);
-        return changes !== 0 && changes !== 1;
-      })) {
+      if (!await revokePresentedSessions(db, tokens)) {
         return errorResponse(
           503,
           "sign_out_unconfirmed",
-          "The server could not confirm that this session ended. Check sign-out status before retrying.",
-          clearSessionCookies(request),
+          "The server could not confirm that this session ended. Retry sign-out or check its status.",
         );
       }
       return jsonResponse({ signedOut: true, user: null }, 200, clearSessionCookies(request));
@@ -3983,6 +3974,34 @@ function presentedSessionTokens(request: Request) {
     tokens.push({ cookieName, token });
   }
   return tokens;
+}
+
+async function revokePresentedSessions(
+  db: D1DatabaseLike,
+  tokens: Array<{ cookieName: string; token: string }>,
+) {
+  if (tokens.length === 0) return true;
+  const tokenHashes = await Promise.all(tokens.map(({ token }) => sha256(token)));
+  try {
+    await db.batch(tokenHashes.map((tokenHash) =>
+      db.prepare("DELETE FROM auth_sessions WHERE token_hash = ?").bind(tokenHash)));
+  } catch {
+    // A transactional batch can commit and lose its response. Exact absence below
+    // is the only receipt that is allowed to clear the browser's session cookie.
+  }
+
+  try {
+    const receipts = await Promise.all(tokenHashes.map((tokenHash) =>
+      db.prepare("SELECT COUNT(*) AS count FROM auth_sessions WHERE token_hash = ?")
+        .bind(tokenHash)
+        .first<{ count: number }>()));
+    return receipts.every((receipt) => {
+      const count = Number(receipt?.count);
+      return receipt !== null && Number.isSafeInteger(count) && count === 0;
+    });
+  } catch {
+    return false;
+  }
 }
 
 function minimumDelay(milliseconds: number) {

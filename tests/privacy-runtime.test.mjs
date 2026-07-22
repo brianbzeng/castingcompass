@@ -370,7 +370,7 @@ test("authentication rotates presented sessions into secure host cookies and log
   assert.equal(sqlite.prepare("SELECT COUNT(*) AS count FROM auth_sessions WHERE user_id = ?").get(user.id).count, 0);
 });
 
-test("logout never returns an exact sign-out receipt without confirmed revocation metadata", async () => {
+test("logout follows exact session absence when revocation metadata is omitted", async () => {
   const { sqlite, d1 } = await database();
   const user = await addUser(sqlite, "signout-receipt-144");
   d1.omitOnceMutationMetadataSubstring = "DELETE FROM auth_sessions WHERE token_hash";
@@ -380,11 +380,117 @@ test("logout never returns an exact sign-out receipt without confirmed revocatio
     cookie: user.cookie,
   }), { DB: d1 }, []);
 
-  assert.equal(response?.status, 503);
-  assert.equal((await response.json()).error.code, "sign_out_unconfirmed");
+  assert.equal(response?.status, 200);
+  assert.deepEqual(await response.json(), { signedOut: true, user: null });
   assert.equal(sessionCookieFrom(response), null);
   assert.match(response.headers.get("set-cookie") ?? "", /cc_session=;.*Max-Age=0/u);
   assert.equal(sqlite.prepare("SELECT COUNT(*) AS count FROM auth_sessions WHERE user_id = ?").get(user.id).count, 0);
+});
+
+test("logout proves every distinct host and legacy session token absent", async () => {
+  const { sqlite, d1 } = await database();
+  const user = await addUser(sqlite, "signout-multi-token-145");
+  const hostToken = Buffer.alloc(32, 146).toString("base64url");
+  const timestamp = new Date().toISOString();
+  sqlite.prepare("INSERT INTO auth_sessions (token_hash, user_id, expires_at, created_at) VALUES (?, ?, ?, ?)")
+    .run(await sha256(hostToken), user.id, new Date(Date.now() + 86_400_000).toISOString(), timestamp);
+  d1.omitOnceMutationMetadataSubstring = "DELETE FROM auth_sessions WHERE token_hash";
+
+  const response = await handleAccountRequest(request("/api/auth/logout", {
+    method: "POST",
+    cookie: `__Host-cc_session=${hostToken}; ${user.cookie}`,
+  }), { DB: d1 }, []);
+
+  assert.equal(response?.status, 200);
+  assert.deepEqual(await response.json(), { signedOut: true, user: null });
+  assert.equal(sqlite.prepare("SELECT COUNT(*) AS count FROM auth_sessions WHERE user_id = ?").get(user.id).count, 0);
+});
+
+test("logout recovers an exact receipt after the committed revocation response is lost", async () => {
+  const { sqlite, d1 } = await database();
+  const user = await addUser(sqlite, "signout-response-loss-145");
+  d1.throwOnceAfterBatchMutationSubstring = "DELETE FROM auth_sessions WHERE token_hash";
+
+  const response = await handleAccountRequest(request("/api/auth/logout", {
+    method: "POST",
+    cookie: user.cookie,
+  }), { DB: d1 }, []);
+
+  assert.equal(response?.status, 200);
+  assert.deepEqual(await response.json(), { signedOut: true, user: null });
+  assert.match(response.headers.get("set-cookie") ?? "", /cc_session=;.*Max-Age=0/u);
+  assert.equal(sqlite.prepare("SELECT COUNT(*) AS count FROM auth_sessions WHERE user_id = ?").get(user.id).count, 0);
+});
+
+test("logout preserves the cookie unless exact D1 absence is readable", async () => {
+  {
+    const { sqlite, d1 } = await database();
+    const user = await addUser(sqlite, "signout-rollback-146");
+    d1.failOnceQuerySubstring = "DELETE FROM auth_sessions WHERE token_hash";
+
+    const response = await handleAccountRequest(request("/api/auth/logout", {
+      method: "POST",
+      cookie: user.cookie,
+    }), { DB: d1 }, []);
+
+    assert.equal(response?.status, 503);
+    assert.equal((await response.json()).error.code, "sign_out_unconfirmed");
+    assert.equal(response.headers.get("set-cookie"), null);
+    assert.equal(sqlite.prepare("SELECT COUNT(*) AS count FROM auth_sessions WHERE user_id = ?").get(user.id).count, 1);
+  }
+
+  {
+    const { sqlite, d1 } = await database();
+    const user = await addUser(sqlite, "signout-unreadable-147");
+    d1.failOnceQuerySubstring = "SELECT COUNT(*) AS count FROM auth_sessions WHERE token_hash";
+
+    const response = await handleAccountRequest(request("/api/auth/logout", {
+      method: "POST",
+      cookie: user.cookie,
+    }), { DB: d1 }, []);
+
+    assert.equal(response?.status, 503);
+    assert.equal((await response.json()).error.code, "sign_out_unconfirmed");
+    assert.equal(response.headers.get("set-cookie"), null);
+    assert.equal(sqlite.prepare("SELECT COUNT(*) AS count FROM auth_sessions WHERE user_id = ?").get(user.id).count, 0);
+  }
+});
+
+test("logout rejects a session row that appears before the exact revocation receipt", async () => {
+  const { sqlite, d1 } = await database();
+  const user = await addUser(sqlite, "signout-changed-148");
+  const tokenHash = await sha256(user.token);
+  const timestamp = new Date().toISOString();
+  d1.beforeOnceQuerySubstring = "SELECT COUNT(*) AS count FROM auth_sessions WHERE token_hash";
+  d1.beforeOnceQuery = () => {
+    sqlite.prepare("INSERT INTO auth_sessions (token_hash, user_id, expires_at, created_at) VALUES (?, ?, ?, ?)")
+      .run(tokenHash, user.id, new Date(Date.now() + 86_400_000).toISOString(), timestamp);
+  };
+
+  const response = await handleAccountRequest(request("/api/auth/logout", {
+    method: "POST",
+    cookie: user.cookie,
+  }), { DB: d1 }, []);
+
+  assert.equal(response?.status, 503);
+  assert.equal((await response.json()).error.code, "sign_out_unconfirmed");
+  assert.equal(response.headers.get("set-cookie"), null);
+  assert.equal(sqlite.prepare("SELECT COUNT(*) AS count FROM auth_sessions WHERE token_hash = ?").get(tokenHash).count, 1);
+});
+
+test("logout is idempotently exact when a presented token is already absent", async () => {
+  const { sqlite, d1 } = await database();
+  const user = await addUser(sqlite, "signout-idempotent-149");
+  sqlite.prepare("DELETE FROM auth_sessions WHERE user_id = ?").run(user.id);
+
+  const response = await handleAccountRequest(request("/api/auth/logout", {
+    method: "POST",
+    cookie: user.cookie,
+  }), { DB: d1 }, []);
+
+  assert.equal(response?.status, 200);
+  assert.deepEqual(await response.json(), { signedOut: true, user: null });
+  assert.match(response.headers.get("set-cookie") ?? "", /cc_session=;.*Max-Age=0/u);
 });
 
 test("session rotation follows exact D1 state when insert metadata is absent", async () => {

@@ -13,6 +13,40 @@ Current provider truth overrides historical “paused” language in completed r
 2026-07-19 read-only reconciliation found an active Worker; no production mutation is authorized
 by that discovery.
 
+## Active checkpoint — exact sign-out revocation receipts
+
+- [x] Reopen the account-exit boundary after exact session issuance was sealed. Sign-out still
+      treated per-DELETE mutation metadata as authority; a failed or lost batch response could
+      clear the browser cookie without proving whether the bearer session remained valid in D1,
+      removing the user's only practical handle for retrying revocation.
+- [x] Make stored absence the sole sign-out authority. Hash each distinct presented host or legacy
+      token, execute the deletes as one transactional batch, and read each random hash back through
+      the session primary key. Only readable zero cardinality for every token can return
+      `{ signedOut: true, user: null }` and clear cookies. Mutation metadata and transport success
+      grant nothing; an already-absent token remains exactly idempotent.
+- [x] Preserve the revocation handle on ambiguity. Rollback, an unreadable receipt, or a row that
+      appears before receipt read-back returns `503 sign_out_unconfirmed` without clearing either
+      cookie. A committed delete whose response was lost recovers from exact absence without
+      replay, while the existing read-only status check remains available.
+- [x] Force omitted mutation metadata, a lost committed batch response, an actual transactional
+      rollback, a receipt-read failure after commit, row reappearance before read-back, and an
+      already-absent token, plus simultaneous distinct host and legacy tokens. Exact absence
+      succeeds; every surviving or unreadable state fails closed. The source ledger now covers
+      246 prepare sites: 232 literal, 14 reviewed nonliteral, and nine reviewed complete-rights
+      multi-row reads; all 20 migrations and 41 critical D1 plans include the exact sign-out
+      primary-key receipt.
+- [x] Seal the checkpoint with the pinned Cloudflare build, lint, TypeScript, all 641/641 Node
+      tests, the complete offline security/source-integrity chain, two zero-vulnerability npm
+      audits, 29/29 API tests, Ruff, 82 passing pipeline tests with one documented optional-
+      `rasterio` skip, deterministic smoke, all 20 migrations and 41 query plans, and the isolated
+      200/200 Chromium/WebKit phone matrix. Verify byte-identical 162-file release artifacts,
+      preserve one clean local commit, and keep all production authority closed. No push, PR,
+      merge, deployment, provider query, production database mutation, feature activation, UI
+      change, or model claim belongs to this checkpoint.
+- [ ] Exercise multi-token revocation, response loss, latency, and rows-read/written behavior with
+      production-shaped synthetic data in isolated staging before treating local receipt proof as
+      deployed evidence.
+
 ## Active checkpoint — exact sign-in attempt receipts
 
 - [x] Continue the credential-boundary audit through login abuse accounting. The conditional
@@ -725,6 +759,9 @@ by that discovery.
       model change, UI change, or production authorization belongs to this work.
 
 ## Active checkpoint — database-confirmed sign-out receipts
+
+Historical implementation receipt: the newer exact stored-state sign-out checkpoint at the top
+supersedes this metadata-authoritative behavior and no longer clears cookies on ambiguity.
 
 - [x] Continue the session audit through account exit. The browser intentionally deletes local
       trip recovery state only after `{ signedOut: true, user: null }`, but the server returned that

@@ -200,10 +200,13 @@ after its acceptance checks pass in the intended environment.
       Missing metadata and lost committed batch responses resolve from that state without replay;
       unreadable or mismatched state returns `503`, clears both cookie forms, and deletes the
       candidate hash so no usable or orphaned session survives an ambiguous receipt.
-    - [x] Require database-authoritative revocation metadata before returning the exact sign-out
-      receipt that permits browser recovery-state deletion. Every presented token DELETE must
-      report zero or one change and the batch cardinality must match; ambiguous metadata returns
-      `503`, clears browser cookies, and directs the existing read-only status check without replay.
+    - [x] Require exact stored-state revocation receipts before returning the sign-out response
+      that permits browser recovery-state deletion. Every distinct presented token is hashed and
+      deleted transactionally, then read back by its primary key; only readable zero cardinality
+      for every token permits cookie clearing. Missing mutation metadata and a lost committed
+      response recover from exact absence. Rollback, unreadable state, or row reappearance returns
+      `503` while retaining the cookie so sign-out can be retried or checked without losing the
+      only revocation handle.
     - [x] Bind every secret-bearing age-proof and email-challenge side effect to an authoritative
       D1 receipt. Plaintext age proofs and verification delivery now follow exactly one confirmed
       INSERT; missing proof-consumption metadata stops before challenge creation. Resends use a
