@@ -110,12 +110,25 @@ by that discovery.
       [South Coast receipt](../pipeline/evidence/usgs-south-coast-video-endpoint-audit-v1.receipt.json)
       preserves the narrower Refugio-through-Carpinteria evidence boundary and confirms that no
       model, encoder, score, serving path, production state, or Gaviota coverage claim changed.
+- [x] Screen the six residual official USGS DS781 video archives under a protocol frozen before
+      their class values were read. Two independent downloads of 18,722 exact records match;
+      strict archive, SHP, DBF, class-domain, and whole-cruise checks are reproducible. The
+      [residual-screen receipt](../pipeline/evidence/usgs-residual-statewide-video-support-screen-v1.receipt.json)
+      binds the protocol, source manifest, result, archive hashes, and no-training decision.
+- [x] Preserve the residual catalog result as fail-closed rather than repairing labels or group
+      identity. Among 15,335 nonblank class rows, `s2210mb` has 444 raw class-`0` rows outside the
+      frozen domain and 26 rows without complete `LINE`/`TAPE` identity. Although 16 of 31
+      recognized-row partitions pass the numerical support floor, that diagnostic depends on the
+      invalid archive. Of the schema-valid archives, only `c0212sc` contains class 4; no valid
+      whole-cruise split can place that class on both sides. No rasters were acquired and no model,
+      encoder, score, serving path, production state, or deployment authority changed.
 - [ ] Acquire a genuinely support-complete independent endpoint before the next representation
-      comparison. Neither the San Francisco track groups nor the Santa Barbara South Coast cruises
-      support the frozen three-class question. Additional direct-video tracks must distribute
-      every class across separable groups, a prospective independent survey must be designed, or a
-      materially different scientific question must be preregistered before its labels are read;
-      post-outcome class dropping and row-randomized adjacent observations remain prohibited.
+      comparison. Neither the San Francisco track groups, the Santa Barbara South Coast cruises,
+      nor the residual statewide catalog provide a schema-valid distribution of every frozen class
+      across separable groups. Additional direct-video tracks must distribute every class across
+      separable groups, a prospective independent survey must be designed, or a materially
+      different scientific question must be preregistered before its labels are read; post-outcome
+      class dropping, schema repair, and row-randomized adjacent observations remain prohibited.
 
 This checkpoint changes no browser behavior, API, Worker, D1/R2/Queue state, production provider,
 live score, public model claim, or deployment authority.

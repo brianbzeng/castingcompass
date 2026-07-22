@@ -158,6 +158,42 @@ class VideoEndpointAuditTests(unittest.TestCase):
         self.assertFalse(receipt["decision"]["video_probe_admissible"])
         self.assertFalse(receipt["decision"]["model_training_run"])
 
+    def test_residual_statewide_receipt_binds_fail_closed_support_boundary(self):
+        receipt = json.loads(
+            (
+                ROOT
+                / "pipeline/evidence/usgs-residual-statewide-video-support-screen-v1.receipt.json"
+            ).read_text(encoding="utf-8")
+        )
+        for key in ("result", "protocol", "source_manifest"):
+            artifact_path = ROOT / receipt[key]["path"]
+            self.assertEqual(_sha(artifact_path.read_bytes()), receipt[key]["sha256"])
+
+        manifest = json.loads(
+            (ROOT / receipt["source_manifest"]["path"]).read_text(encoding="utf-8")
+        )
+        specs = {
+            item["cruise_id"]: item
+            for item in manifest["access"]["video_observation_assets"]
+        }
+        for cruise_id, recorded in receipt["official_inputs"]["archives"].items():
+            self.assertEqual(specs[cruise_id]["archive_sha256"], recorded["sha256"])
+            self.assertEqual(specs[cruise_id]["record_count"], recorded["record_count"])
+
+        audit = receipt["audit"]
+        self.assertEqual(audit["row_flow"]["official_records"], 18722)
+        self.assertEqual(audit["row_flow"]["unexpected_nonblank_class_rows"], 444)
+        self.assertEqual(audit["source_schema"]["unexpected_nonblank_class_values"], ["0"])
+        self.assertEqual(audit["source_schema"]["nonblank_rows_missing_line_or_tape"], 26)
+        self.assertFalse(audit["source_schema"]["repair_or_reinterpretation_performed"])
+        diagnostic = audit["recognized_rows_partition_diagnostic"]
+        self.assertEqual(diagnostic["eligible_whole_cruise_partitions"], 16)
+        self.assertFalse(diagnostic["authoritative_for_admission"])
+        self.assertFalse(receipt["decision"]["source_schema_valid"])
+        self.assertFalse(receipt["decision"]["raw_endpoint_support_admissible"])
+        self.assertFalse(receipt["decision"]["raster_acquisition_authorized"])
+        self.assertFalse(receipt["decision"]["model_training_run"])
+
     def test_strict_point_and_dbf_parsers(self):
         points = [(-122.5, 37.7), (-122.4, 37.8)]
         parsed_points = _parse_point_shapefile(_point_shapefile(points))

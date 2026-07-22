@@ -540,6 +540,20 @@ The frozen audit found zero raw class-4 observations across all four cruises, so
 training. This evidence boundary does not include Gaviota and has no score, serving, or deployment
 path.
 
+Screen the six residual official DS781 video archives before acquiring any additional rasters:
+
+```bash
+.venv/bin/python pipeline/scripts/run_usgs_residual_statewide_video_support_screen.py
+```
+
+The runner downloads each archive with an identifying user agent, verifies the exact ZIP and
+member inventory, parses Point and DBF bytes directly, and enumerates only whole-cruise
+bipartitions. The frozen execution found 444 nonblank class-`0` rows and 26 nonblank rows without
+complete `LINE`/`TAPE` identity in `s2210mb`, so the source schema fails closed. Recognized-row
+support is reported only as a non-authoritative diagnostic: without the invalid archive, class 4
+occurs in one cruise and cannot be distributed across train and test. The command never downloads
+rasters, trains a model, or changes a score, serving path, provider, or deployment.
+
 Run the strict substrate-component probe with:
 
 ```bash

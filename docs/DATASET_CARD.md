@@ -32,6 +32,7 @@ The machine-readable manifests are in `pipeline/sources/`.
 | CUDEM / Coastal Relief bathymetry | NOAA National Centers for Environmental Information | Elevation/bathymetry raster and published metadata | [NOAA Coastal Elevation Models](https://www.ncei.noaa.gov/products/coastal-elevation-models), [NOAA Bathymetry](https://www.ncei.noaa.gov/products/bathymetry) |
 | BlueTopo | NOAA Office of Coast Survey | Coverage backbone with elevation, uncertainty, and data-quality layers | [NOAA BlueTopo](https://www.nauticalcharts.noaa.gov/data/bluetopo.html) |
 | Offshore San Francisco State Waters | U.S. Geological Survey | 2 m bathymetry/backscatter, seafloor character, habitat, geology, and video ground truth | [USGS DS 781 data catalog](https://pubs.usgs.gov/ds/781/OffshoreSanFrancisco/data_catalog_OffshoreSanFrancisco.html) |
+| DS781 residual statewide video observations | U.S. Geological Survey | Raw endpoint-support auditing only; no training, validation, scoring, or raster-acquisition authority | [USGS DS 781 video-observation catalog](https://pubs.usgs.gov/ds/781/video_observations/data_catalog_video_observations.html) |
 | Central San Francisco Bay multibeam | U.S. Geological Survey | 4 m bathymetry/backscatter and bedform structure | [USGS DS 55](https://pubs.usgs.gov/dds/dds-55/pacmaps/sf_data.htm) |
 | California Recreational Fisheries Survey (CRFS) | California Department of Fish and Wildlife | California marine recreational catch/effort samples or estimates | [CDFW CRFS](https://wildlife.ca.gov/Conservation/Marine/CRFS/Additional-Information) |
 | RecFIN Data Warehouse | Pacific States Marine Fisheries Commission | Official distribution/query system for Pacific Coast recreational-fisheries data, including CRFS | [RecFIN](https://www.recfin.org/) |
@@ -370,3 +371,13 @@ have zero raw class-4 observations; the 1,327 complete hybrid rows therefore con
 297 mixed/rugose, and zero mobile-coarse observations. Zero of seven whole-cruise partitions pass.
 Two independent-download executions reproduce exact metrics. This narrower evidence footprint
 does not establish Gaviota coverage, and no model or serving path changes.
+
+The subsequent
+[residual statewide direct-video support screen](experiments/2026-07-22-usgs-residual-statewide-video-support-screen-v1.md)
+content-addresses the other six official DS781 video archives. They contain 18,722 records and
+15,335 nonblank class values. `s2210mb` has 444 nonblank class-`0` rows outside the frozen class
+domain and 26 nonblank rows without complete `LINE`/`TAPE` identity, so the source schema fails
+closed. Sixteen of 31 recognized-row whole-cruise partitions pass the numerical support floor,
+but that diagnostic is non-authoritative because it depends on the invalid archive. Among the
+five schema-valid archives, only `c0212sc` contains class 4. The screen therefore authorizes no
+raster acquisition, corpus construction, training, promotion, or serving change.

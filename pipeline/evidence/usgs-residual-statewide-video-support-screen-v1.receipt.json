@@ -1,0 +1,136 @@
+{
+  "schema_version": "castingcompass.usgs-video-support-screen-receipt/1.0.0",
+  "created_at": "2026-07-22T14:17:39Z",
+  "source_commit": "f7490b42676a4da08adf9e4314ee778b8186f709",
+  "result": {
+    "path": "docs/experiments/2026-07-22-usgs-residual-statewide-video-support-screen-v1.md",
+    "sha256": "d5c39c2472323449f0abed13d3dcd76ec599edfdf64dd4b8889c2ad727cd63cd"
+  },
+  "protocol": {
+    "path": "docs/experiments/2026-07-22-usgs-residual-statewide-video-support-screen-protocol-v1.md",
+    "sha256": "eb8312c854b2091ffbe055452d8477da5a6b02df03cd9bc7d7e24c48a6c2ab11",
+    "frozen_before_archive_label_read": true
+  },
+  "source_manifest": {
+    "path": "pipeline/sources/usgs_ds781_residual_video_observations.json",
+    "sha256": "4fac2afd03b268264b295313d4d1cfa811c2423663143d8b17eae69941004168"
+  },
+  "official_inputs": {
+    "independent_download_sets": 2,
+    "all_archive_bytes_match": true,
+    "total_archive_records": 18722,
+    "archives": {
+      "c0111sc": {
+        "bytes": 410485,
+        "sha256": "f61035c87259948397a19a3a7b368b1b5da43d62e560be25db04ee97528ec799",
+        "record_count": 4688,
+        "nonblank_class_count": 3590,
+        "raw_class_counts": {"1": 2627, "2": 580, "3": 383}
+      },
+      "c109nc": {
+        "bytes": 124313,
+        "sha256": "34350c87d9a0a2fe9ded024a093f7adf85d082e06668158a2c17698da7fe37f7",
+        "record_count": 1615,
+        "nonblank_class_count": 1087,
+        "raw_class_counts": {"1": 673, "2": 99, "3": 315}
+      },
+      "c210nc": {
+        "bytes": 240666,
+        "sha256": "f2cb502f075041760994197965716f33b448695bc1e9004368bd09b91f14fef8",
+        "record_count": 2718,
+        "nonblank_class_count": 2251,
+        "raw_class_counts": {"1": 1156, "2": 428, "3": 667}
+      },
+      "c0212sc": {
+        "bytes": 523434,
+        "sha256": "85f975c6b952a56acf92fee650a70dc55ef50a3747937581503587f678040409",
+        "published_metadata_record_count": 5937,
+        "record_count": 5936,
+        "nonblank_class_count": 4899,
+        "raw_class_counts": {"1": 2987, "2": 587, "3": 1272, "4": 53}
+      },
+      "l908nc": {
+        "bytes": 182145,
+        "sha256": "4970e9a26395cdf47868d72dab37ce1732eef4c65ea0fbb304a557ef5214d902",
+        "record_count": 1917,
+        "nonblank_class_count": 1660,
+        "raw_class_counts": {"1": 988, "2": 182, "3": 490},
+        "field_names_canonicalized_to_ascii_uppercase": true
+      },
+      "s2210mb": {
+        "bytes": 175868,
+        "sha256": "48283dc9362a1f3654ec24452f72cb84c25092157f2867d9cb6c060393bb44a6",
+        "record_count": 1848,
+        "nonblank_class_count": 1848,
+        "raw_class_counts": {"0": 444, "1": 780, "2": 242, "3": 297, "4": 85},
+        "unexpected_nonblank_class_values": ["0"],
+        "nonblank_rows_missing_line_or_tape": 26
+      }
+    }
+  },
+  "audit": {
+    "experiment_version": "exp-target-agnostic-e48ba638fc1e5ced6e3a842836fef316ef73c473019021c734ee200f22dfbe48",
+    "model_version": "model-target-agnostic-e6a5df5599b35b715392ef530dc6fb319e5c0096fa20aebcf477791f98aa8d48",
+    "design": {
+      "endpoint": "direct scientist-recorded camera-video seafloor class",
+      "class_collapse": {
+        "1": "smooth_fine_medium_sediment",
+        "2": "mixed_or_rugose_rock",
+        "3": "mixed_or_rugose_rock",
+        "4": "mobile_coarse_sediment"
+      },
+      "group_definition": "exact cruise_id; no LINE, TAPE, date, coordinate, or adjacent-row split",
+      "adjacent_row_split_allowed": false,
+      "minimum_rows_per_class_in_train_and_test": 16
+    },
+    "row_flow": {
+      "official_records": 18722,
+      "nonblank_class_rows": 15335,
+      "recognized_class_rows": 14884,
+      "unexpected_nonblank_class_rows": 444,
+      "nonblank_rows_missing_line_or_tape": 26,
+      "invalid_categories_may_overlap": true
+    },
+    "recognized_collapsed_class_counts": {
+      "smooth_fine_medium_sediment": 9204,
+      "mixed_or_rugose_rock": 5542,
+      "mobile_coarse_sediment": 138
+    },
+    "source_schema": {
+      "valid": false,
+      "unexpected_nonblank_class_values": ["0"],
+      "nonblank_rows_missing_line_or_tape": 26,
+      "repair_or_reinterpretation_performed": false
+    },
+    "recognized_rows_partition_diagnostic": {
+      "authoritative_for_admission": false,
+      "candidate_whole_cruise_partitions": 31,
+      "eligible_whole_cruise_partitions": 16,
+      "schema_valid_archives_with_raw_class_4": ["c0212sc"],
+      "invalid_archives_with_raw_class_4": ["s2210mb"]
+    },
+    "metrics_sha256": "af8d14f4326ebb688aebc0253536678477765a9bd02874543bc3d554791beeea"
+  },
+  "reproduction": {
+    "executions": 2,
+    "independent_archive_download_sets": 2,
+    "metrics_bytes_exact": true,
+    "run_metadata_sha256": [
+      "9ed0771e4d86b4ff3ca5a66dd2582840ef3632b325b4eb31eb7e946503acbd91",
+      "9364f121977d40ab95f704f9fac525e84eb1432683792e6747e9733d6c445af1"
+    ],
+    "normalized_run_metadata_bytes_exact": true,
+    "normalized_run_metadata_sha256": "c633195a571b9b58a5ff678140a2572cebfe01b37d7d76f99de9fa27c1834325",
+    "normalization": "Remove created_at and run_id; replace every input path with its basename."
+  },
+  "decision": {
+    "raw_endpoint_support_admissible": false,
+    "source_schema_valid": false,
+    "raster_acquisition_authorized": false,
+    "model_training_run": false,
+    "encoder_promoted": false,
+    "serving_or_score_changed": false,
+    "reason": "The s2210mb archive has 444 nonblank class-0 rows outside the frozen class domain and 26 nonblank rows without complete LINE/TAPE identity. Without that invalid archive, raw class 4 occurs in only c0212sc and cannot be placed on both sides of a whole-cruise split. No value or identity is repaired, reinterpreted, or silently dropped."
+  },
+  "claim_boundary": "This raw support screen does not establish raster coverage, spatial independence, current habitat, fish presence, catch skill, score calibration, model promotion, product readiness, or deployment authority."
+}
