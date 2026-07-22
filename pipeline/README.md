@@ -554,6 +554,18 @@ support is reported only as a non-authoritative diagnostic: without the invalid 
 occurs in one cruise and cannot be distributed across train and test. The command never downloads
 rasters, trains a model, or changes a score, serving path, provider, or deployment.
 
+Screen the preregistered direct sediment-composition endpoint with:
+
+```bash
+.venv/bin/python pipeline/scripts/run_usgs_ds182_sediment_endpoint_support_audit.py
+```
+
+The runner content-addresses the complete official USGS Data Series 182 EXT archive and source
+table, verifies the companion text/dBASE/Point record counts, and checks only the exact reference
+raster metadata. Under v1, `PAC_EXT.txt` fails before outcome aggregation because 14,950 of 16,485
+rows have 31 fields under its 32-field header. The command does not pad the missing field, switch
+to dBASE, read raster pixels, build patches, train, promote, score, serve, or deploy.
+
 Run the strict substrate-component probe with:
 
 ```bash

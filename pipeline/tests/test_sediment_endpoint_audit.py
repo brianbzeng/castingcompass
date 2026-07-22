@@ -23,6 +23,9 @@ from pipeline.contourcast.sediment_endpoint_audit import (
 )
 
 
+ROOT = Path(__file__).resolve().parents[2]
+
+
 def _sha(value: bytes) -> str:
     return hashlib.sha256(value).hexdigest()
 
@@ -110,6 +113,26 @@ def _outcome_row(
 
 
 class SedimentEndpointAuditTests(unittest.TestCase):
+    def test_receipt_binds_exact_fail_closed_result(self) -> None:
+        receipt = json.loads(
+            (
+                ROOT
+                / "pipeline/evidence/usgs-ds182-sediment-endpoint-support-v1.receipt.json"
+            ).read_text(encoding="utf-8")
+        )
+        for key in ("result", "protocol", "source_manifest"):
+            artifact = ROOT / receipt[key]["path"]
+            self.assertEqual(_sha(artifact.read_bytes()), receipt[key]["sha256"])
+        schema = receipt["audit"]["source_schema"]
+        self.assertFalse(schema["valid"])
+        self.assertEqual(schema["row_width_counts"], {"31": 14950, "32": 1535})
+        self.assertEqual(schema["invalid_row_count"], 14950)
+        self.assertFalse(schema["outcome_values_aggregated"])
+        self.assertFalse(receipt["audit"]["partition_audit"]["performed"])
+        self.assertFalse(receipt["decision"]["raw_endpoint_support_admissible"])
+        self.assertFalse(receipt["decision"]["model_training_run"])
+        self.assertFalse(receipt["official_inputs"]["reference_raster"]["pixels_read"])
+
     def test_exact_csv_parser_rejects_header_and_width_drift(self) -> None:
         valid = _csv_bytes(("a", "b"), [["1", "2"]])
         self.assertEqual(

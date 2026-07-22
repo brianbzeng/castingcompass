@@ -122,6 +122,17 @@ by that discovery.
       invalid archive. Of the schema-valid archives, only `c0212sc` contains class 4; no valid
       whole-cruise split can place that class on both sides. No rasters were acquired and no model,
       encoder, score, serving path, production state, or deployment authority changed.
+- [x] Preregister a materially different measured endpoint before computing its distribution.
+      USGS Data Series 182 laboratory-extracted bulk-surficial `Gravel`/`Sand`/`Mud` percentages,
+      strict surface and composition checks, whole-source transfer, continuous-support anchors,
+      and stop conditions are frozen separately from the rejected interpreted/video classes.
+- [x] Preserve the exact Data Series 182 text representation as another fail-closed source result.
+      Two independent downloads match every archive member, but 14,950 of 16,485 `PAC_EXT.txt`
+      rows have 31 fields under the exact 32-field header; only 1,535 have 32. The audit does not
+      pad an assumed trailing blank, shift fields, or silently switch to the companion dBASE
+      member. No composition aggregate or partition was computed, no raster pixel was read, and no
+      corpus, model, score, serving path, or production state changed. A new exploratory dBASE
+      protocol must disclose this exposure and remains insufficient for confirmatory promotion.
 - [ ] Acquire a genuinely support-complete independent endpoint before the next representation
       comparison. Neither the San Francisco track groups, the Santa Barbara South Coast cruises,
       nor the residual statewide catalog provide a schema-valid distribution of every frozen class

@@ -381,3 +381,11 @@ closed. Sixteen of 31 recognized-row whole-cruise partitions pass the numerical 
 but that diagnostic is non-authoritative because it depends on the invalid archive. Among the
 five schema-valid archives, only `c0212sc` contains class 4. The screen therefore authorizes no
 raster acquisition, corpus construction, training, promotion, or serving change.
+
+The next [direct sediment endpoint screen](experiments/2026-07-22-usgs-ds182-sediment-endpoint-support-v1.md)
+preregisters continuous bulk-surficial `Gravel`/`Sand`/`Mud` measurements from USGS Data Series
+182, with whole-source holdout and no derived dbSEABED class. Its exact `PAC_EXT.txt` member fails
+the frozen source schema before any outcome aggregate: 14,950 of 16,485 rows have 31 fields under
+the 32-field header. The audit does not pad the omitted field or switch source representations.
+Two independent downloads reproduce the same failure; no raster pixel, patch corpus, model, or
+serving path is involved.
