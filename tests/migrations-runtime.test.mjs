@@ -366,9 +366,10 @@ test("account routes fail closed without mutating an incomplete migration-owned 
   );
 });
 
-test("fresh runtime schema rejects malformed valid-contract evidence", async () => {
+test("migrated runtime schema rejects malformed valid-contract evidence", async () => {
   const sqlite = new DatabaseSync(":memory:");
-  sqlite.exec("PRAGMA foreign_keys = ON; CREATE TABLE users (id TEXT PRIMARY KEY NOT NULL);");
+  sqlite.exec("PRAGMA foreign_keys = ON;");
+  for (const file of await migrationFiles()) await applyMigration(sqlite, file);
   await createTripStore(new D1Adapter(sqlite)).initialize();
   assertObservationStorageGuards(sqlite, "fresh");
 

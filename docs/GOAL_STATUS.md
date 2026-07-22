@@ -13,6 +13,35 @@ Current provider truth overrides historical “paused” language in completed r
 2026-07-19 read-only reconciliation found an active Worker; no production mutation is authorized
 by that discovery.
 
+## Active checkpoint — aggregate scheduled-Worker budget
+
+- [x] Replace the four concurrent cron `waitUntil` pipelines with one deterministic sequential
+      lane per five-minute tick. Queue dispatch, trip-photo reconciliation, expired-export
+      cleanup, and auth retention/privacy deletion each run every 20 minutes, so no lane can
+      starve and no independently bounded task can silently borrow another task's invocation
+      allowance.
+- [x] Set explicit work caps of one advisory dispatch, five privacy-export dispatches, seven
+      photo reservations, seven expired exports, and three privacy-deletion tasks. Saturated
+      migration-complete D1 fixtures hold the four lanes below conservative query budgets of
+      32, 44, 36, and 40, each under Cloudflare's 50-query Free invocation ceiling; external
+      Queue/provider/R2 operations are sequential and capped at six, seven, seven, and three.
+- [x] Replace the trip store's cold 35-statement runtime schema bootstrap with one read-only
+      readiness probe over the migration-owned tables, 21 indexes, nine triggers, and photo hash
+      column. An incomplete schema returns `trip_schema_unavailable` without creating or changing
+      any table. The generated D1 ledger now covers 235 prepare sites: 221 literals, 14 reviewed
+      nonliterals, and nine complete-rights multi-row reads.
+- [x] Pass the pinned Cloudflare build, ESLint, TypeScript, all 609/609 repository Node tests,
+      the complete offline security/SBOM/source-integrity chain, both zero-vulnerability npm
+      audits, API 29/29, Ruff, 82 passed pipeline tests with one documented optional-`rasterio`
+      skip, 20 migrations / 29 critical indexed D1 plans, deterministic synthetic smoke, and the
+      full 200/200 Chromium/WebKit phone matrix. Preserve a clean local commit and deterministic
+      release artifact; no push, PR, merge, deployment, provider query, production mutation,
+      feature activation, UI change, or model claim belongs to this checkpoint.
+- [ ] Confirm the actual Cloudflare account plan, cron delivery, rows read/written, CPU, latency,
+      subrequests, durable backlog drain, cost, and alert delivery in isolated staging at the
+      exact release commit. No deployment, provider query, production D1/R2 mutation, or feature
+      activation belongs to this local checkpoint.
+
 ## Active checkpoint — consolidate the regional evidence stack
 
 - [x] Reconcile the 18 open drafts against current protected `main`

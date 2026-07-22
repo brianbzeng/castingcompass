@@ -2688,7 +2688,7 @@ test("an exact post-state proves account deletion after its committed batch resp
   assert.ok(d1.maximumBoundParameters <= 100);
 });
 
-test("trip writes serialize safely on both sides of account deletion and fallback DDL keeps ownership foreign keys", async () => {
+test("trip writes serialize around account deletion and incomplete migration-owned schemas fail closed", async () => {
   const { sqlite, d1 } = await database();
   const user = await addUser(sqlite, "19");
   const writeBeforeDeletion = addTrip(sqlite, user);
@@ -2704,12 +2704,20 @@ test("trip writes serialize safely on both sides of account deletion and fallbac
   assert.throws(() => addTrip(sqlite, user), /FOREIGN KEY constraint failed/);
   assert.equal(sqlite.prepare("SELECT COUNT(*) AS count FROM trips WHERE user_id = ?").get(user.id).count, 0);
 
-  const fallbackSqlite = new DatabaseSync(":memory:");
-  fallbackSqlite.exec("PRAGMA foreign_keys = ON; CREATE TABLE users (id TEXT PRIMARY KEY NOT NULL)");
-  const fallbackD1 = new TransactionalD1Adapter(fallbackSqlite);
-  await createTripStore(fallbackD1).initialize();
-  const foreignKeys = fallbackSqlite.prepare("PRAGMA foreign_key_list(trips)").all();
+  const foreignKeys = sqlite.prepare("PRAGMA foreign_key_list(trips)").all();
   assert.ok(foreignKeys.some((key) => key.table === "users" && key.from === "user_id" && key.on_delete === "SET NULL"));
+
+  const incompleteSqlite = new DatabaseSync(":memory:");
+  incompleteSqlite.exec("PRAGMA foreign_keys = ON; CREATE TABLE users (id TEXT PRIMARY KEY NOT NULL)");
+  await assert.rejects(
+    createTripStore(new TransactionalD1Adapter(incompleteSqlite)).initialize(),
+    (error) => error?.code === "trip_schema_unavailable",
+  );
+  assert.deepEqual(
+    incompleteSqlite.prepare("SELECT name FROM sqlite_master WHERE type = 'table' ORDER BY name").all()
+      .map((row) => row.name),
+    ["users"],
+  );
 });
 
 test("missing storage and retry failures stay truthful until an idempotent purge succeeds", async () => {

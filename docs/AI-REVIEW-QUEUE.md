@@ -82,6 +82,13 @@ a well-formed expired claim, and a late stale worker cannot overwrite a newer le
 redispatch deliberately does not reset trip state from a stale snapshot; the independently owned
 trip lease resolves it.
 
+The shared five-minute cron does not run every background pipeline at once. Its deterministic
+four-lane rotation reaches advisory/portability queue dispatch every 20 minutes; that lane
+dispatches at most one advisory-review job before at most five privacy-export jobs, sequentially.
+When the advisory Queue is deliberately disabled, the same one-trip cap applies to the direct
+backlog/provider fallback. This is a Free-tier query and subrequest safety bound, not a production
+throughput claim; backlog age/depth and activation capacity still require isolated staging.
+
 ## Operator replay without an admin backdoor
 
 There is deliberately no browser admin flag or public replay endpoint. To prepare a replay for

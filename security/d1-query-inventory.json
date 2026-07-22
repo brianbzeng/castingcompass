@@ -1,11 +1,11 @@
 {
   "schemaVersion": "castingcompass.d1-query-inventory/1.0.0",
   "generatedFrom": "TypeScript AST; no runtime or provider query executed",
-  "policySha256": "ada6b76c48c6c8ff4d3db719f179ef54c4dbc7a1583208de540f2de332226e26",
+  "policySha256": "579a5067127bcd989428a99c09886a2c387cfd60feb0e88e6a6a08bf8b2c174f",
   "sourceFiles": [
     {
       "file": "worker/auth.ts",
-      "sha256": "1c81642f2eeeba6d821f57fcd7273c8d8756dec9878260d94aa8d16a089a3a36",
+      "sha256": "635a73491bff3f0f98a7c25d43dba160cacf1a3944306c1978c0ebced36724f9",
       "prepareCallCount": 113
     },
     {
@@ -15,7 +15,7 @@
     },
     {
       "file": "worker/privacy-export.ts",
-      "sha256": "262405b7a8ea7ab4d4f3c42b1880cb6c8c4c645ade1fc8fdfbecac806b664e95",
+      "sha256": "8707c79856800e8b69359fdb67e42a094a53dc2c7c0b66856d5096adf850e5f3",
       "prepareCallCount": 45
     },
     {
@@ -35,8 +35,8 @@
     },
     {
       "file": "worker/trips.ts",
-      "sha256": "483f2ed765876203eee478c9dcc89cbe7a22a9506b60ae99617bd8382deb8572",
-      "prepareCallCount": 45
+      "sha256": "29a4669b7aec978614de6d61f9ec7969fab178263910a5142e93fc6f955de7df",
+      "prepareCallCount": 40
     },
     {
       "file": "worker/validation-feasibility-export.ts",
@@ -45,9 +45,9 @@
     }
   ],
   "summary": {
-    "prepareCallCount": 240,
+    "prepareCallCount": 235,
     "literalCallCount": 221,
-    "nonLiteralCallCount": 19,
+    "nonLiteralCallCount": 14,
     "multiRowLiteralWithoutLimitCount": 9
   },
   "queries": [
@@ -2225,10 +2225,10 @@
       "hasLimit": true
     },
     {
-      "callSiteId": "b9427a67a9d6364e4f012df9",
+      "callSiteId": "76f355525ac95a2bdb3d064d",
       "file": "worker/auth.ts",
       "line": 2660,
-      "containingFunction": "cleanupAuthData",
+      "containingFunction": "cleanupAuthRetentionData",
       "occurrence": 97,
       "executionMode": "batch",
       "argumentKind": "literal",
@@ -2247,10 +2247,10 @@
       "hasLimit": true
     },
     {
-      "callSiteId": "0bb8d3b4d72c60459ce801d7",
+      "callSiteId": "22756628e87600f70084aea0",
       "file": "worker/auth.ts",
       "line": 2664,
-      "containingFunction": "cleanupAuthData",
+      "containingFunction": "cleanupAuthRetentionData",
       "occurrence": 98,
       "executionMode": "batch",
       "argumentKind": "literal",
@@ -2269,10 +2269,10 @@
       "hasLimit": true
     },
     {
-      "callSiteId": "52554f664f14c8e87e8dfab2",
+      "callSiteId": "aa2f1809429a273cbbae580b",
       "file": "worker/auth.ts",
       "line": 2668,
-      "containingFunction": "cleanupAuthData",
+      "containingFunction": "cleanupAuthRetentionData",
       "occurrence": 99,
       "executionMode": "batch",
       "argumentKind": "literal",
@@ -2291,10 +2291,10 @@
       "hasLimit": true
     },
     {
-      "callSiteId": "97a2a817aeb2d59690cd799c",
+      "callSiteId": "6448655cc0f8c839ffc99fc4",
       "file": "worker/auth.ts",
       "line": 2672,
-      "containingFunction": "cleanupAuthData",
+      "containingFunction": "cleanupAuthRetentionData",
       "occurrence": 100,
       "executionMode": "batch",
       "argumentKind": "literal",
@@ -2313,10 +2313,10 @@
       "hasLimit": true
     },
     {
-      "callSiteId": "80636ab1b21cc61e0354741a",
+      "callSiteId": "e0f1270fa794c79f30244c68",
       "file": "worker/auth.ts",
       "line": 2677,
-      "containingFunction": "cleanupAuthData",
+      "containingFunction": "cleanupAuthRetentionData",
       "occurrence": 101,
       "executionMode": "batch",
       "argumentKind": "literal",
@@ -2336,10 +2336,10 @@
       "hasLimit": true
     },
     {
-      "callSiteId": "b1395554250fffd37fb9faab",
+      "callSiteId": "d544a0334451d6ea41ff48a2",
       "file": "worker/auth.ts",
       "line": 2688,
-      "containingFunction": "cleanupAuthData",
+      "containingFunction": "cleanupAuthRetentionData",
       "occurrence": 102,
       "executionMode": "batch",
       "argumentKind": "literal",
@@ -2360,7 +2360,7 @@
     {
       "callSiteId": "c3fbc9a34a7fe3e2c0787a91",
       "file": "worker/auth.ts",
-      "line": 2699,
+      "line": 2703,
       "containingFunction": "selectUserForSession",
       "occurrence": 103,
       "executionMode": "first",
@@ -2382,7 +2382,7 @@
     {
       "callSiteId": "360e714c5b23710be0cafe33",
       "file": "worker/auth.ts",
-      "line": 2720,
+      "line": 2724,
       "containingFunction": "map-callback",
       "occurrence": 104,
       "executionMode": "all",
@@ -2404,7 +2404,7 @@
     {
       "callSiteId": "4928ae204340e6fe7d1c3b73",
       "file": "worker/auth.ts",
-      "line": 2723,
+      "line": 2727,
       "containingFunction": "createSessionResponse",
       "occurrence": 105,
       "executionMode": "batch",
@@ -2428,7 +2428,7 @@
     {
       "callSiteId": "c3d7088da04fdeac46c456f6",
       "file": "worker/auth.ts",
-      "line": 2738,
+      "line": 2742,
       "containingFunction": "createSessionResponse",
       "occurrence": 106,
       "executionMode": "run",
@@ -2450,7 +2450,7 @@
     {
       "callSiteId": "4924fea75d3453aacfbd194c",
       "file": "worker/auth.ts",
-      "line": 2965,
+      "line": 2969,
       "containingFunction": "validateSignupAgeProof",
       "occurrence": 107,
       "executionMode": "first",
@@ -2472,7 +2472,7 @@
     {
       "callSiteId": "1d887eafec350ab3e9d8b19a",
       "file": "worker/auth.ts",
-      "line": 2978,
+      "line": 2982,
       "containingFunction": "consumeSignupAgeProof",
       "occurrence": 108,
       "executionMode": "run",
@@ -2494,7 +2494,7 @@
     {
       "callSiteId": "c811550c5030e0782f6f2573",
       "file": "worker/auth.ts",
-      "line": 3081,
+      "line": 3085,
       "containingFunction": "assertEmailChallengeAllowed",
       "occurrence": 109,
       "executionMode": "first",
@@ -2516,7 +2516,7 @@
     {
       "callSiteId": "1a4510bf2a0d7b62fff5f7c1",
       "file": "worker/auth.ts",
-      "line": 3100,
+      "line": 3104,
       "containingFunction": "verifyEmailChallenge",
       "occurrence": 110,
       "executionMode": "first",
@@ -2538,7 +2538,7 @@
     {
       "callSiteId": "a52d033f6bfddd8069e5baed",
       "file": "worker/auth.ts",
-      "line": 3117,
+      "line": 3121,
       "containingFunction": "verifyEmailChallenge",
       "occurrence": 111,
       "executionMode": "run",
@@ -2560,7 +2560,7 @@
     {
       "callSiteId": "891e0942272d6b6af41efd84",
       "file": "worker/auth.ts",
-      "line": 3325,
+      "line": 3329,
       "containingFunction": "cleanupSignupAgeProofCandidate",
       "occurrence": 112,
       "executionMode": "run",
@@ -2582,7 +2582,7 @@
     {
       "callSiteId": "905e07b990638cff2a61171c",
       "file": "worker/auth.ts",
-      "line": 3338,
+      "line": 3342,
       "containingFunction": "cleanupEmailChallengeCandidate",
       "occurrence": 113,
       "executionMode": "run",
@@ -3200,7 +3200,7 @@
     {
       "callSiteId": "2dc042432adc93a5c3ea702f",
       "file": "worker/privacy-export.ts",
-      "line": 760,
+      "line": 763,
       "containingFunction": "processExpiredPrivacyExports",
       "occurrence": 25,
       "executionMode": "all",
@@ -3222,7 +3222,7 @@
     {
       "callSiteId": "37cc9546eb96511ade7cc47d",
       "file": "worker/privacy-export.ts",
-      "line": 781,
+      "line": 791,
       "containingFunction": "processExpiredPrivacyExports",
       "occurrence": 26,
       "executionMode": "run",
@@ -3244,7 +3244,7 @@
     {
       "callSiteId": "2a1442704504e700b1f2d512",
       "file": "worker/privacy-export.ts",
-      "line": 789,
+      "line": 799,
       "containingFunction": "processExpiredPrivacyExports",
       "occurrence": 27,
       "executionMode": "run",
@@ -3266,7 +3266,7 @@
     {
       "callSiteId": "302fc65ea85f747ddaef5e12",
       "file": "worker/privacy-export.ts",
-      "line": 804,
+      "line": 814,
       "containingFunction": "processExpiredPrivacyExports",
       "occurrence": 28,
       "executionMode": "first",
@@ -3288,7 +3288,7 @@
     {
       "callSiteId": "80d13c11481e68bf8cf49f41",
       "file": "worker/privacy-export.ts",
-      "line": 821,
+      "line": 831,
       "containingFunction": "processExpiredPrivacyExports",
       "occurrence": 29,
       "executionMode": "run",
@@ -3310,7 +3310,7 @@
     {
       "callSiteId": "2ec6c9887531486036db39da",
       "file": "worker/privacy-export.ts",
-      "line": 834,
+      "line": 844,
       "containingFunction": "processExpiredPrivacyExports",
       "occurrence": 30,
       "executionMode": "run",
@@ -3332,7 +3332,7 @@
     {
       "callSiteId": "f775c32f9db6bd8ecc494c93",
       "file": "worker/privacy-export.ts",
-      "line": 845,
+      "line": 855,
       "containingFunction": "processExpiredPrivacyExports",
       "occurrence": 31,
       "executionMode": "run",
@@ -3354,7 +3354,7 @@
     {
       "callSiteId": "c4ec09a7f3e3b5c8f5ca2204",
       "file": "worker/privacy-export.ts",
-      "line": 859,
+      "line": 869,
       "containingFunction": "processExpiredPrivacyExports",
       "occurrence": 32,
       "executionMode": "first",
@@ -3376,7 +3376,7 @@
     {
       "callSiteId": "47ada15a88f4fa7b59df8db7",
       "file": "worker/privacy-export.ts",
-      "line": 875,
+      "line": 885,
       "containingFunction": "processExpiredPrivacyExports",
       "occurrence": 33,
       "executionMode": "run",
@@ -3398,7 +3398,7 @@
     {
       "callSiteId": "1e106ba47a881ddd3c6f3dae",
       "file": "worker/privacy-export.ts",
-      "line": 882,
+      "line": 892,
       "containingFunction": "processExpiredPrivacyExports",
       "occurrence": 34,
       "executionMode": "run",
@@ -3420,7 +3420,7 @@
     {
       "callSiteId": "c0f95c9dae5954142b328ece",
       "file": "worker/privacy-export.ts",
-      "line": 901,
+      "line": 911,
       "containingFunction": "buildPrivacyExportPayload",
       "occurrence": 35,
       "executionMode": "first",
@@ -3442,7 +3442,7 @@
     {
       "callSiteId": "12e288b54a92ed234f68330f",
       "file": "worker/privacy-export.ts",
-      "line": 904,
+      "line": 914,
       "containingFunction": "buildPrivacyExportPayload",
       "occurrence": 36,
       "executionMode": "all",
@@ -3464,7 +3464,7 @@
     {
       "callSiteId": "85b8d73c7e60dcc4cd0ba10c",
       "file": "worker/privacy-export.ts",
-      "line": 906,
+      "line": 916,
       "containingFunction": "buildPrivacyExportPayload",
       "occurrence": 37,
       "executionMode": "all",
@@ -3486,7 +3486,7 @@
     {
       "callSiteId": "4333dee6e402c1ef6c56e197",
       "file": "worker/privacy-export.ts",
-      "line": 909,
+      "line": 919,
       "containingFunction": "buildPrivacyExportPayload",
       "occurrence": 38,
       "executionMode": "all",
@@ -3508,7 +3508,7 @@
     {
       "callSiteId": "9bf9d6adc110e191fba10ef6",
       "file": "worker/privacy-export.ts",
-      "line": 940,
+      "line": 950,
       "containingFunction": "buildPrivacyExportPayload",
       "occurrence": 39,
       "executionMode": "all",
@@ -3531,7 +3531,7 @@
     {
       "callSiteId": "2454dbee231d6661c9ee1457",
       "file": "worker/privacy-export.ts",
-      "line": 950,
+      "line": 960,
       "containingFunction": "buildPrivacyExportPayload",
       "occurrence": 40,
       "executionMode": "all",
@@ -3554,7 +3554,7 @@
     {
       "callSiteId": "c71e30fc533941d004a3012f",
       "file": "worker/privacy-export.ts",
-      "line": 954,
+      "line": 964,
       "containingFunction": "buildPrivacyExportPayload",
       "occurrence": 41,
       "executionMode": "all",
@@ -3577,7 +3577,7 @@
     {
       "callSiteId": "782cdcc18fa9050a41592350",
       "file": "worker/privacy-export.ts",
-      "line": 958,
+      "line": 968,
       "containingFunction": "buildPrivacyExportPayload",
       "occurrence": 42,
       "executionMode": "all",
@@ -3600,7 +3600,7 @@
     {
       "callSiteId": "fda2eec1e4180b3b7aa43e67",
       "file": "worker/privacy-export.ts",
-      "line": 962,
+      "line": 972,
       "containingFunction": "buildPrivacyExportPayload",
       "occurrence": 43,
       "executionMode": "all",
@@ -3622,7 +3622,7 @@
     {
       "callSiteId": "247fb5e7599e7beb97b0b827",
       "file": "worker/privacy-export.ts",
-      "line": 971,
+      "line": 981,
       "containingFunction": "buildPrivacyExportPayload",
       "occurrence": 44,
       "executionMode": "all",
@@ -3645,7 +3645,7 @@
     {
       "callSiteId": "ed8a5ef4e296ce6bd1f6cfd5",
       "file": "worker/privacy-export.ts",
-      "line": 1037,
+      "line": 1047,
       "containingFunction": "activeJobForUser",
       "occurrence": 45,
       "executionMode": "first",
@@ -4351,19 +4351,19 @@
       "hasLimit": true
     },
     {
-      "callSiteId": "66c4551e6e6477b62fe71c53",
+      "callSiteId": "5a24e2fa70e7ca680852a10f",
       "file": "worker/trips.ts",
-      "line": 1569,
+      "line": 960,
       "containingFunction": "initialize",
       "occurrence": 1,
-      "executionMode": "batch",
+      "executionMode": "first",
       "argumentKind": "reviewed-nonliteral",
-      "expression": "CREATE_TRIPS_SQL",
-      "expressionSha256": "a30d43434bf332af4ac7a1121a25f2e8a539a880f8dd3e32719465d1da25f46c",
+      "expression": "TRIP_SCHEMA_READY_SQL",
+      "expressionSha256": "d0f0eb7b9a51d189a6cdcaaa7bfc7a4d212296854f13071dcef6d226e0315692",
       "declarationReference": {
-        "name": "CREATE_TRIPS_SQL",
-        "declarationLine": 637,
-        "initializerSha256": "a376498468038b66944c4ab13044e25e554f8b1715855e894e718f250015afc2"
+        "name": "TRIP_SCHEMA_READY_SQL",
+        "declarationLine": 726,
+        "initializerSha256": "8781022ce66cbe3392cff0059220ac6beaf38f2517ec906c8d4a8ffa98748e62"
       },
       "statementClass": "UNRESOLVED",
       "sql": null,
@@ -4375,131 +4375,11 @@
       "hasLimit": null
     },
     {
-      "callSiteId": "57b287a4cd642eb7caf7de9a",
+      "callSiteId": "ea6c9fe604f6a8ca10914cdc",
       "file": "worker/trips.ts",
-      "line": 1570,
-      "containingFunction": "initialize",
-      "occurrence": 2,
-      "executionMode": "batch",
-      "argumentKind": "reviewed-nonliteral",
-      "expression": "CREATE_ACCOUNT_DELETION_FENCES_SQL",
-      "expressionSha256": "eb10098ec91eda192303e0be80754a8b6e8fef5b6132d3d931f3f637b64e5076",
-      "declarationReference": {
-        "name": "CREATE_ACCOUNT_DELETION_FENCES_SQL",
-        "declarationLine": 836,
-        "initializerSha256": "ebd5bb667fa35f8886fd41f90675109ec190f8db59f50d03c64071833f9b588b"
-      },
-      "statementClass": "UNRESOLVED",
-      "sql": null,
-      "sqlSha256": null,
-      "tables": [],
-      "placeholderCount": null,
-      "hasWhere": null,
-      "hasOrderBy": null,
-      "hasLimit": null
-    },
-    {
-      "callSiteId": "0b64479e6e5b5925d34efee2",
-      "file": "worker/trips.ts",
-      "line": 1571,
-      "containingFunction": "initialize",
-      "occurrence": 3,
-      "executionMode": "batch",
-      "argumentKind": "reviewed-nonliteral",
-      "expression": "CREATE_TRIP_PHOTO_UPLOAD_RESERVATIONS_SQL",
-      "expressionSha256": "47d236de770bdf83ab62c8efa8eca6de193549035b8680e2c5aa75fb66734d97",
-      "declarationReference": {
-        "name": "CREATE_TRIP_PHOTO_UPLOAD_RESERVATIONS_SQL",
-        "declarationLine": 816,
-        "initializerSha256": "7ccdc3b5cd46b42674d045365fae9b1e238e2aadcddb4b6a3b49c3c958513bfc"
-      },
-      "statementClass": "UNRESOLVED",
-      "sql": null,
-      "sqlSha256": null,
-      "tables": [],
-      "placeholderCount": null,
-      "hasWhere": null,
-      "hasOrderBy": null,
-      "hasLimit": null
-    },
-    {
-      "callSiteId": "84305ebf8483a25391ef9d7a",
-      "file": "worker/trips.ts",
-      "line": 1572,
-      "containingFunction": "initialize",
-      "occurrence": 4,
-      "executionMode": "batch",
-      "argumentKind": "reviewed-nonliteral",
-      "expression": "CREATE_FORECAST_IMPRESSIONS_SQL",
-      "expressionSha256": "b54adea780f2574650cbc99cf741678af37c3417c4734bb0138c3ed1a12c25af",
-      "declarationReference": {
-        "name": "CREATE_FORECAST_IMPRESSIONS_SQL",
-        "declarationLine": 847,
-        "initializerSha256": "a370a3d68d7fc6f1ae3ca466db2a26bbd464e6ea96e3539887396c31bee132c2"
-      },
-      "statementClass": "UNRESOLVED",
-      "sql": null,
-      "sqlSha256": null,
-      "tables": [],
-      "placeholderCount": null,
-      "hasWhere": null,
-      "hasOrderBy": null,
-      "hasLimit": null
-    },
-    {
-      "callSiteId": "58682bf0aa7f762d51481867",
-      "file": "worker/trips.ts",
-      "line": 1573,
-      "containingFunction": "initialize",
-      "occurrence": 5,
-      "executionMode": "batch",
-      "argumentKind": "reviewed-nonliteral",
-      "expression": "CREATE_TRIP_VALIDATION_PROVENANCE_SQL",
-      "expressionSha256": "cfd1855de8f1e1f5c1702d15ab4a99ba89eae74f097d6efb1ed6f079c6ac8dcf",
-      "declarationReference": {
-        "name": "CREATE_TRIP_VALIDATION_PROVENANCE_SQL",
-        "declarationLine": 894,
-        "initializerSha256": "fc9ccbb6a78be3625961bab0d73e330e067cc2bd1d9c5d148a2518168a391f4c"
-      },
-      "statementClass": "UNRESOLVED",
-      "sql": null,
-      "sqlSha256": null,
-      "tables": [],
-      "placeholderCount": null,
-      "hasWhere": null,
-      "hasOrderBy": null,
-      "hasLimit": null
-    },
-    {
-      "callSiteId": "80214af7b489049518ac8c77",
-      "file": "worker/trips.ts",
-      "line": 1575,
-      "containingFunction": "map-callback",
-      "occurrence": 6,
-      "executionMode": "batch",
-      "argumentKind": "reviewed-nonliteral",
-      "expression": "statement",
-      "expressionSha256": "b111c6e1d318f203063e5c16bab43c108326af0aa2f7b65760c95547a43dbe52",
-      "declarationReference": {
-        "name": "statement",
-        "declarationLine": null,
-        "initializerSha256": null
-      },
-      "statementClass": "UNRESOLVED",
-      "sql": null,
-      "sqlSha256": null,
-      "tables": [],
-      "placeholderCount": null,
-      "hasWhere": null,
-      "hasOrderBy": null,
-      "hasLimit": null
-    },
-    {
-      "callSiteId": "a2290b2f90283bbc8c9b1d97",
-      "file": "worker/trips.ts",
-      "line": 1586,
+      "line": 987,
       "containingFunction": "getTrip",
-      "occurrence": 7,
+      "occurrence": 2,
       "executionMode": "first",
       "argumentKind": "literal",
       "expression": "\"SELECT * FROM trips WHERE id = ? AND user_id IS ? LIMIT 1\"",
@@ -4517,11 +4397,11 @@
       "hasLimit": true
     },
     {
-      "callSiteId": "36e025982b068c064e1fc7d3",
+      "callSiteId": "e6e5ab75ffa3bafb0c4c52c7",
       "file": "worker/trips.ts",
-      "line": 1598,
+      "line": 999,
       "containingFunction": "assertSubmissionAllowed",
-      "occurrence": 8,
+      "occurrence": 3,
       "executionMode": "first",
       "argumentKind": "literal",
       "expression": "\"SELECT COUNT(*) AS count FROM trips WHERE reporter_key_hash = ? AND created_at >= ?\"",
@@ -4539,11 +4419,11 @@
       "hasLimit": false
     },
     {
-      "callSiteId": "e2e26341a3c297d8c043cfbe",
+      "callSiteId": "15ef69a31966fdc39e400f7b",
       "file": "worker/trips.ts",
-      "line": 1602,
+      "line": 1003,
       "containingFunction": "assertSubmissionAllowed",
-      "occurrence": 9,
+      "occurrence": 4,
       "executionMode": "first",
       "argumentKind": "literal",
       "expression": "\"SELECT COUNT(*) AS count FROM trips WHERE reporter_key_hash = ? AND created_at >= ?\"",
@@ -4561,11 +4441,11 @@
       "hasLimit": false
     },
     {
-      "callSiteId": "cf11f82c949a62880482119a",
+      "callSiteId": "99e10debc4cc205ee8dd554e",
       "file": "worker/trips.ts",
-      "line": 1606,
+      "line": 1007,
       "containingFunction": "assertSubmissionAllowed",
-      "occurrence": 10,
+      "occurrence": 5,
       "executionMode": "first",
       "argumentKind": "literal",
       "expression": "\"SELECT COUNT(*) AS count FROM trips WHERE reporter_key_hash = ? AND status = 'active' AND created_at >= ?\"",
@@ -4583,18 +4463,18 @@
       "hasLimit": false
     },
     {
-      "callSiteId": "43d29f9559479bd2e5cadb7f",
+      "callSiteId": "b37e932418c6bc8c9e144e03",
       "file": "worker/trips.ts",
-      "line": 1620,
+      "line": 1021,
       "containingFunction": "insertTrip",
-      "occurrence": 11,
+      "occurrence": 6,
       "executionMode": "prepared-statement",
       "argumentKind": "reviewed-nonliteral",
       "expression": "INSERT_TRIP_SQL",
       "expressionSha256": "19036a22fb241a794a5512e92b28132551cb2192ef0f0537c35f9f05b278e833",
       "declarationReference": {
         "name": "INSERT_TRIP_SQL",
-        "declarationLine": 1273,
+        "declarationLine": 637,
         "initializerSha256": "10c60a5c500fa33a1a28183bb76f0f3874732f3d05bf05867767443082f0f022"
       },
       "statementClass": "UNRESOLVED",
@@ -4607,11 +4487,11 @@
       "hasLimit": null
     },
     {
-      "callSiteId": "80fa6b5053b986102df3f93c",
+      "callSiteId": "bafe209e096c47d22c3b55b4",
       "file": "worker/trips.ts",
-      "line": 1687,
+      "line": 1088,
       "containingFunction": "insertTrip",
-      "occurrence": 12,
+      "occurrence": 7,
       "executionMode": "prepared-statement",
       "argumentKind": "literal",
       "expression": "`DELETE FROM trip_photo_upload_reservations\n          WHERE trip_id = ? AND object_key = ? AND object_key_hash = ? AND state = 'pending'\n            AND EXISTS (SELECT 1 FROM trips\n              WHERE id = ? AND user_id IS ? AND photo_key = ? AND photo_key_hash = ?)`",
@@ -4630,11 +4510,11 @@
       "hasLimit": false
     },
     {
-      "callSiteId": "abb3af9fa04691f8e0489359",
+      "callSiteId": "9b885e2756541fff64723fc5",
       "file": "worker/trips.ts",
-      "line": 1719,
+      "line": 1120,
       "containingFunction": "isTripIdentityReserved",
-      "occurrence": 13,
+      "occurrence": 8,
       "executionMode": "first",
       "argumentKind": "literal",
       "expression": "\"SELECT 1 AS reserved FROM trips WHERE id = ? LIMIT 1\"",
@@ -4652,11 +4532,11 @@
       "hasLimit": true
     },
     {
-      "callSiteId": "7fd5a87f114c8830a8103920",
+      "callSiteId": "e9f976785a5e9070a2b7ba2a",
       "file": "worker/trips.ts",
-      "line": 1727,
+      "line": 1128,
       "containingFunction": "reservePhotoUpload",
-      "occurrence": 14,
+      "occurrence": 9,
       "executionMode": "run",
       "argumentKind": "literal",
       "expression": "`INSERT INTO trip_photo_upload_reservations (\n            id, trip_id, owner_subject_hash, object_key, object_key_hash, state, attempts, available_at,\n            lease_expires_at, lease_token, last_error_code, created_at, updated_at)\n          SELECT ?, ?, ?, ?, ?, 'pending', 0, ?, NULL, NULL, NULL, ?, ?\n          WHERE EXISTS (SELECT 1 FROM users WHERE id = ?)\n            AND NOT EXISTS (SELECT 1 FROM account_deletion_fences WHERE user_id = ?)`",
@@ -4676,11 +4556,11 @@
       "hasLimit": false
     },
     {
-      "callSiteId": "eebcdfddd7684c40cadbf0c7",
+      "callSiteId": "cbd3aaf02b5b0d17ed72874e",
       "file": "worker/trips.ts",
-      "line": 1749,
+      "line": 1150,
       "containingFunction": "reservePhotoUpload",
-      "occurrence": 15,
+      "occurrence": 10,
       "executionMode": "first",
       "argumentKind": "literal",
       "expression": "`SELECT id FROM trip_photo_upload_reservations\n        WHERE id = ? AND trip_id = ? AND owner_subject_hash = ?\n          AND object_key = ? AND object_key_hash = ?\n          AND state = 'pending' AND attempts = 0 AND available_at = ?\n          AND lease_expires_at IS NULL AND lease_token IS NULL AND last_error_code IS NULL\n          AND created_at = ? AND updated_at = ?\n        LIMIT 1`",
@@ -4698,11 +4578,11 @@
       "hasLimit": true
     },
     {
-      "callSiteId": "5d9cf56fc1acfff1701518a5",
+      "callSiteId": "b5fbfc58a8b2b89d41d65185",
       "file": "worker/trips.ts",
-      "line": 1772,
+      "line": 1173,
       "containingFunction": "releasePhotoUploadReservation",
-      "occurrence": 16,
+      "occurrence": 11,
       "executionMode": "run",
       "argumentKind": "literal",
       "expression": "`DELETE FROM trip_photo_upload_reservations\n          WHERE trip_id = ? AND object_key = ? AND object_key_hash = ? AND state = 'pending'`",
@@ -4720,11 +4600,11 @@
       "hasLimit": false
     },
     {
-      "callSiteId": "4c77e25b2929c7bac3b0b694",
+      "callSiteId": "48505c9879c5653ada578e1e",
       "file": "worker/trips.ts",
-      "line": 1779,
+      "line": 1180,
       "containingFunction": "releasePhotoUploadReservation",
-      "occurrence": 17,
+      "occurrence": 12,
       "executionMode": "first",
       "argumentKind": "literal",
       "expression": "`SELECT id FROM trip_photo_upload_reservations\n        WHERE trip_id = ? AND object_key = ? AND object_key_hash = ? LIMIT 1`",
@@ -4742,11 +4622,11 @@
       "hasLimit": true
     },
     {
-      "callSiteId": "0a9ee6722f4f0bd9dcb0e032",
+      "callSiteId": "e5741e68fda5eb4856f39175",
       "file": "worker/trips.ts",
-      "line": 1787,
+      "line": 1188,
       "containingFunction": "getFeasibilityActivation",
-      "occurrence": 18,
+      "occurrence": 13,
       "executionMode": "first",
       "argumentKind": "literal",
       "expression": "`SELECT id, protocol_id, protocol_version, protocol_sha256,\n          activation_commitment_sha256, activation_manifest_sha256, site_catalog_sha256,\n          scoring_system_kind, scoring_system_version, scoring_system_sha256,\n          worker_version_id, study_consent_version, start_at, end_at,\n          preregistered_at, receipt_verified_at, status\n        FROM validation_feasibility_activations WHERE id = ? LIMIT 1`",
@@ -4764,11 +4644,11 @@
       "hasLimit": true
     },
     {
-      "callSiteId": "f1d07cacf24bda1745f540bf",
+      "callSiteId": "b9bb36b9e9dd34ac29fa8421",
       "file": "worker/trips.ts",
-      "line": 1798,
+      "line": 1199,
       "containingFunction": "getFeasibilityRecruitment",
-      "occurrence": 19,
+      "occurrence": 14,
       "executionMode": "first",
       "argumentKind": "literal",
       "expression": "`SELECT event_id, activation_id, user_id, participant_group_id,\n          event_contract_version, recruitment_frame_id, recruitment_source_id,\n          selection_method, recruited_at, campaign_id, invite_issued_at, invite_expires_at,\n          community_approval_sha256, event_sha256, created_at, snapshot_suppression_sha256\n        FROM validation_feasibility_recruitment_events\n        WHERE activation_id = ? AND participant_group_id = ? AND user_id IS ? LIMIT 1`",
@@ -4786,11 +4666,11 @@
       "hasLimit": true
     },
     {
-      "callSiteId": "be6f7d83334f40b3ccd7c045",
+      "callSiteId": "51c999ac401d68bc27aa7f42",
       "file": "worker/trips.ts",
-      "line": 1809,
+      "line": 1210,
       "containingFunction": "getFeasibilityRecruitmentCampaign",
-      "occurrence": 20,
+      "occurrence": 15,
       "executionMode": "first",
       "argumentKind": "literal",
       "expression": "`SELECT activation_id, campaign_id, recruitment_source_id,\n          selection_method, invite_issued_at, invite_expires_at,\n          community_approval_sha256, token_payload_sha256, sealed_at\n        FROM validation_feasibility_recruitment_campaigns\n        WHERE activation_id = ? AND campaign_id = ? LIMIT 1`",
@@ -4808,11 +4688,11 @@
       "hasLimit": true
     },
     {
-      "callSiteId": "a1f221124e475c9a3867c03a",
+      "callSiteId": "540367bd34efaa3594ce69b1",
       "file": "worker/trips.ts",
-      "line": 1819,
+      "line": 1220,
       "containingFunction": "getFeasibilityStart",
-      "occurrence": 21,
+      "occurrence": 16,
       "executionMode": "first",
       "argumentKind": "literal",
       "expression": "`SELECT activation_id, trip_id, event_sha256, source_record_sha256,\n          participant_group_id, recruitment_frame_id, recruitment_source_id, selection_method,\n          score_influenced_choice, study_consent_version, study_consented_at, target_taxon_id,\n          site_id, geographic_panel, mode, segment_start_at, angler_count,\n          scoring_system_kind, scoring_system_version, scoring_system_sha256,\n          opportunity_score, opportunity_window_id, snapshot_sha256, snapshot_suppression_sha256\n        FROM validation_feasibility_events AS event\n        WHERE event.trip_id = ? AND event.event_type = 'started'\n          AND EXISTS (\n            SELECT 1 FROM trips AS owner_trip\n            WHERE owner_trip.id = event.trip_id AND owner_trip.user_id IS ?\n          )\n        LIMIT 1`",
@@ -4831,11 +4711,11 @@
       "hasLimit": true
     },
     {
-      "callSiteId": "1c36d93b17409d7dd10c90da",
+      "callSiteId": "ed91ad4cb9420a593c7f4b96",
       "file": "worker/trips.ts",
-      "line": 1837,
+      "line": 1238,
       "containingFunction": "getValidationEnrollment",
-      "occurrence": 22,
+      "occurrence": 17,
       "executionMode": "first",
       "argumentKind": "literal",
       "expression": "`SELECT collection_contract_version, source_role, cohort_id,\n          validation_protocol_id, activation_manifest_sha256, activated_at,\n          activation_scoring_system_sha256, participant_group_id, recruitment_frame_id,\n          recruitment_source_id, recruitment_event_contract_version, recruitment_event_at,\n          recruitment_event_sha256, community_approval_sha256,\n          assignment_id, source_record_sha256, effort_segment_id, effort_unit,\n          attempt_count, target_taxon_id, segment_start_at, incentive_policy_id,\n          selection_method, target_intent, primary_target_confirmed,\n          complete_attempt_confirmed, mode_at_enrollment, consent_version,\n          consented_at, score_influenced_choice, forecast_impression_id,\n          attestation_status\n        FROM trip_validation_provenance AS provenance\n        WHERE provenance.trip_id = ? AND provenance.event_type = 'enrollment'\n          AND EXISTS (\n            SELECT 1 FROM trips AS owner_trip\n            WHERE owner_trip.id = provenance.trip_id AND owner_trip.user_id IS ?\n          )\n        ORDER BY provenance.created_at ASC LIMIT 1`",
@@ -4854,11 +4734,11 @@
       "hasLimit": true
     },
     {
-      "callSiteId": "6a0ffa1a6d006ebb10367aec",
+      "callSiteId": "bb2f07849ae933c3c6ee0b3b",
       "file": "worker/trips.ts",
-      "line": 1860,
+      "line": 1261,
       "containingFunction": "getRecruitmentEvent",
-      "occurrence": 23,
+      "occurrence": 18,
       "executionMode": "first",
       "argumentKind": "literal",
       "expression": "`SELECT participant_group_id, recruitment_frame_id,\n          recruitment_source_id, recruitment_event_contract_version,\n          recruitment_event_at, recruitment_event_sha256, community_approval_sha256\n        FROM trip_validation_provenance AS provenance\n        WHERE provenance.participant_group_id = ?\n          AND provenance.event_type = 'enrollment'\n          AND provenance.source_role = 'prospective_secondary'\n          AND provenance.validation_protocol_id = ?\n          AND provenance.activation_manifest_sha256 = ?\n          AND provenance.activated_at = ?\n          AND provenance.activation_scoring_system_sha256 = ?\n          AND provenance.recruitment_frame_id = ?\n          AND provenance.recruitment_event_sha256 IS NOT NULL\n          AND EXISTS (\n            SELECT 1 FROM trips AS owner_trip\n            WHERE owner_trip.id = provenance.trip_id AND owner_trip.user_id IS ?\n          )\n        ORDER BY provenance.recruitment_event_at ASC, provenance.created_at ASC LIMIT 1`",
@@ -4877,11 +4757,11 @@
       "hasLimit": true
     },
     {
-      "callSiteId": "9f6b4cc63612a927f5e8e7aa",
+      "callSiteId": "79b6f5c8232ce5cce00d89be",
       "file": "worker/trips.ts",
-      "line": 1891,
+      "line": 1292,
       "containingFunction": "getForecastImpression",
-      "occurrence": 24,
+      "occurrence": 19,
       "executionMode": "first",
       "argumentKind": "literal",
       "expression": "`SELECT id, window_start, window_end, site_id\n        FROM forecast_impressions AS impression\n        WHERE impression.trip_id = ?\n          AND EXISTS (\n            SELECT 1 FROM trips AS owner_trip\n            WHERE owner_trip.id = impression.trip_id AND owner_trip.user_id IS ?\n          )\n        LIMIT 1`",
@@ -4900,11 +4780,11 @@
       "hasLimit": true
     },
     {
-      "callSiteId": "59b8d3c2e78ba656913c304f",
+      "callSiteId": "3db8883673f09c63cc27d925",
       "file": "worker/trips.ts",
-      "line": 1904,
+      "line": 1305,
       "containingFunction": "completeTrip",
-      "occurrence": 25,
+      "occurrence": 20,
       "executionMode": "prepared-statement",
       "argumentKind": "literal",
       "expression": "`UPDATE trips SET\n          status = 'completed',\n          opportunity_window_id = CASE WHEN mode = ? THEN opportunity_window_id ELSE NULL END,\n          opportunity_score = CASE WHEN mode = ? THEN opportunity_score ELSE NULL END,\n          habitat_score = CASE WHEN mode = ? THEN habitat_score ELSE NULL END,\n          seasonality_score = CASE WHEN mode = ? THEN seasonality_score ELSE NULL END,\n          conditions_score = CASE WHEN mode = ? THEN conditions_score ELSE NULL END,\n          fishability_score = CASE WHEN mode = ? THEN fishability_score ELSE NULL END,\n          model_version = CASE WHEN mode = ? THEN model_version ELSE NULL END,\n          prediction_metadata_json = CASE WHEN mode = ? THEN prediction_metadata_json ELSE NULL END,\n          ended_at = ?, mode = ?, fishing_method = ?, gear = ?,\n          gear_profile_id = ?, rod = ?, reel = ?, bait_lure = ?, rig = ?,\n          angler_count = ?, angler_hours = ?, keeper_count = ?, short_released_count = ?,\n          halibut_encounters = ?, no_catch = ?, other_catch_count = ?, other_species = ?, observations_json = ?,\n          observation_contract_version = ?, taxon_catalog_version = ?, target_taxon_id = ?,\n          contract_status = ?, taxon_observations_json = ?, outcome_class = ?,\n          target_encounter_count = ?, any_fish_encounter_count = ?, target_identification_confidence = ?,\n          notes = ?, consent = 1, consent_at = ?,\n          moderation_status = 'pending', photo_key = ?, photo_key_hash = ?,\n          photo_content_type = ?, photo_size_bytes = ?, updated_at = ?, completed_at = ?, token_hash = NULL\n        WHERE id = ? AND user_id IS ? AND status = 'active' AND token_hash = ?\n          AND (? IS NULL OR (\n            EXISTS (SELECT 1 FROM users WHERE id = ?)\n            AND NOT EXISTS (SELECT 1 FROM account_deletion_fences WHERE user_id = ?)\n          ))\n          AND (? IS NULL OR EXISTS (\n            SELECT 1 FROM trip_photo_upload_reservations\n            WHERE trip_id = ? AND object_key = ? AND object_key_hash = ? AND state = 'pending'\n          ))`",
@@ -4925,11 +4805,11 @@
       "hasLimit": false
     },
     {
-      "callSiteId": "cc7f1999841bddef60fc85c4",
+      "callSiteId": "c46515789e1b456918872199",
       "file": "worker/trips.ts",
-      "line": 1991,
+      "line": 1392,
       "containingFunction": "completeTrip",
-      "occurrence": 26,
+      "occurrence": 21,
       "executionMode": "prepared-statement",
       "argumentKind": "literal",
       "expression": "`DELETE FROM trip_photo_upload_reservations\n          WHERE trip_id = ? AND object_key = ? AND object_key_hash = ? AND state = 'pending'\n            AND EXISTS (SELECT 1 FROM trips\n              WHERE id = ? AND user_id IS ? AND status = 'completed' AND photo_key = ?\n                AND photo_key_hash = ?\n                AND updated_at = ?)`",
@@ -4948,11 +4828,11 @@
       "hasLimit": false
     },
     {
-      "callSiteId": "1c3965857b5a2f873327a5ec",
+      "callSiteId": "b4c289192dbe053fc8dbaa78",
       "file": "worker/trips.ts",
-      "line": 2045,
+      "line": 1446,
       "containingFunction": "cancelTrip",
-      "occurrence": 27,
+      "occurrence": 22,
       "executionMode": "prepared-statement",
       "argumentKind": "literal",
       "expression": "`UPDATE trips SET token_hash = NULL, updated_at = ?\n        WHERE id = ? AND user_id IS ? AND status = 'active' AND token_hash = ?`",
@@ -4970,11 +4850,11 @@
       "hasLimit": false
     },
     {
-      "callSiteId": "cedb54ec096d8c581973d167",
+      "callSiteId": "5498cd66b9730bf28403544f",
       "file": "worker/trips.ts",
-      "line": 2060,
+      "line": 1461,
       "containingFunction": "cancelTrip",
-      "occurrence": 28,
+      "occurrence": 23,
       "executionMode": "first",
       "argumentKind": "literal",
       "expression": "`SELECT 1 AS confirmed FROM trips\n        WHERE id = ? AND user_id IS ? AND source = 'live' AND status = 'active'\n          AND idempotency_key_hash = ? AND token_hash IS NULL AND updated_at = ?\n        LIMIT 1`",
@@ -4992,11 +4872,11 @@
       "hasLimit": true
     },
     {
-      "callSiteId": "21ed44bd50c87bf1145ce4df",
+      "callSiteId": "cacbf798c973fd8cfae1d936",
       "file": "worker/trips.ts",
-      "line": 2071,
+      "line": 1472,
       "containingFunction": "getSummary",
-      "occurrence": 29,
+      "occurrence": 24,
       "executionMode": "first",
       "argumentKind": "literal",
       "expression": "`SELECT\n          COUNT(*) AS completed_trips,\n          COALESCE(SUM(CASE WHEN no_catch = 1 THEN 1 ELSE 0 END), 0) AS no_catch_trips,\n          COALESCE(SUM(CASE WHEN halibut_encounters > 0 THEN 1 ELSE 0 END), 0) AS halibut_trips,\n          COALESCE(SUM(angler_hours), 0) AS angler_hours,\n          COALESCE(SUM(halibut_encounters), 0) AS halibut_encounters,\n          COUNT(DISTINCT site_id) AS sites_covered,\n          MAX(updated_at) AS last_updated,\n          COALESCE(SUM(CASE WHEN completed_at >= ? THEN 1 ELSE 0 END), 0) AS recent_completed_trips,\n          COALESCE(SUM(CASE WHEN completed_at >= ? THEN angler_hours ELSE 0 END), 0) AS recent_angler_hours,\n          COALESCE(SUM(CASE WHEN completed_at >= ? THEN halibut_encounters ELSE 0 END), 0) AS recent_halibut_encounters,\n          COUNT(DISTINCT CASE WHEN completed_at >= ? THEN site_id END) AS recent_sites_covered\n        FROM trips\n        WHERE status = 'completed' AND consent = 1 AND moderation_status != 'rejected'\n          AND contract_status = 'valid' AND observation_contract_version = ?\n          AND taxon_catalog_version = ? AND target_taxon_id = ?`",
@@ -5014,33 +4894,33 @@
       "hasLimit": false
     },
     {
-      "callSiteId": "b0ad6500c03593d391394a12",
+      "callSiteId": "d262ccceb29ca4a85535fb32",
       "file": "worker/trips.ts",
-      "line": 2149,
+      "line": 1554,
       "containingFunction": "processTripPhotoUploadReservations",
-      "occurrence": 30,
+      "occurrence": 25,
       "executionMode": "all",
       "argumentKind": "literal",
-      "expression": "`SELECT id, trip_id, object_key, object_key_hash, state,\n      attempts, available_at, lease_expires_at, lease_token, created_at\n    FROM trip_photo_upload_reservations\n    WHERE (state = 'pending' AND available_at <= ?)\n      OR (state = 'leased' AND (lease_expires_at IS NULL OR lease_expires_at <= ?))\n    ORDER BY available_at, created_at LIMIT 50`",
-      "expressionSha256": "3f10cd5e42064abdaadb21bbe9d96362a0890a5cfe6394398e781245e901de58",
+      "expression": "`SELECT id, trip_id, object_key, object_key_hash, state,\n      attempts, available_at, lease_expires_at, lease_token, created_at\n    FROM trip_photo_upload_reservations\n    WHERE (state = 'pending' AND available_at <= ?)\n      OR (state = 'leased' AND (lease_expires_at IS NULL OR lease_expires_at <= ?))\n    ORDER BY available_at, created_at LIMIT ?`",
+      "expressionSha256": "7c998d230dea498b7a8ceb301fa021579cc7893c95393293d4c30c14287ee0ea",
       "declarationReference": null,
       "statementClass": "SELECT",
-      "sql": "SELECT id, trip_id, object_key, object_key_hash, state, attempts, available_at, lease_expires_at, lease_token, created_at FROM trip_photo_upload_reservations WHERE (state = 'pending' AND available_at <= ?) OR (state = 'leased' AND (lease_expires_at IS NULL OR lease_expires_at <= ?)) ORDER BY available_at, created_at LIMIT 50",
-      "sqlSha256": "c7dbdfa53682faf17a9098089a87bea8cec21d00ed74331a21a2008e2ca135c4",
+      "sql": "SELECT id, trip_id, object_key, object_key_hash, state, attempts, available_at, lease_expires_at, lease_token, created_at FROM trip_photo_upload_reservations WHERE (state = 'pending' AND available_at <= ?) OR (state = 'leased' AND (lease_expires_at IS NULL OR lease_expires_at <= ?)) ORDER BY available_at, created_at LIMIT ?",
+      "sqlSha256": "c4390718981c38190030c6f9e361efaea9b7fe211644e0a9e0ae1cf6bb8fb498",
       "tables": [
         "trip_photo_upload_reservations"
       ],
-      "placeholderCount": 2,
+      "placeholderCount": 3,
       "hasWhere": true,
       "hasOrderBy": true,
       "hasLimit": true
     },
     {
-      "callSiteId": "88594888536940bf6fc6332b",
+      "callSiteId": "7ac5b171f37062360149ceb9",
       "file": "worker/trips.ts",
-      "line": 2161,
+      "line": 1572,
       "containingFunction": "processTripPhotoUploadReservations",
-      "occurrence": 31,
+      "occurrence": 26,
       "executionMode": "run",
       "argumentKind": "literal",
       "expression": "`UPDATE trip_photo_upload_reservations\n        SET state = 'needs_attention', lease_expires_at = NULL, lease_token = NULL,\n          last_error_code = 'photo_cleanup_attempts_exhausted', updated_at = ?\n        WHERE id = ? AND state != 'needs_attention' AND attempts >= ?\n          AND (lease_expires_at IS NULL OR lease_expires_at <= ?)`",
@@ -5058,11 +4938,11 @@
       "hasLimit": false
     },
     {
-      "callSiteId": "2115a80b1e83578677504208",
+      "callSiteId": "1b8cc37f3f0f2bce331489d5",
       "file": "worker/trips.ts",
-      "line": 2174,
+      "line": 1585,
       "containingFunction": "processTripPhotoUploadReservations",
-      "occurrence": 32,
+      "occurrence": 27,
       "executionMode": "run",
       "argumentKind": "literal",
       "expression": "`UPDATE trip_photo_upload_reservations\n        SET state = 'leased', attempts = attempts + 1, lease_expires_at = ?, lease_token = ?,\n          last_error_code = NULL, updated_at = ?\n        WHERE id = ? AND attempts = ?\n          AND ((state = 'pending' AND available_at <= ?)\n            OR (state = 'leased' AND (lease_expires_at IS NULL OR lease_expires_at <= ?)))`",
@@ -5080,11 +4960,11 @@
       "hasLimit": false
     },
     {
-      "callSiteId": "ff4a60b2df02d2d959972261",
+      "callSiteId": "57d13e84303bd0146e4dd255",
       "file": "worker/trips.ts",
-      "line": 2193,
+      "line": 1604,
       "containingFunction": "processTripPhotoUploadReservations",
-      "occurrence": 33,
+      "occurrence": 28,
       "executionMode": "first",
       "argumentKind": "literal",
       "expression": "`SELECT id, trip_id, object_key, object_key_hash, state,\n        attempts, available_at, lease_expires_at, lease_token, created_at\n      FROM trip_photo_upload_reservations\n      WHERE id = ? AND trip_id = ? AND object_key = ? AND object_key_hash = ?\n        AND state = 'leased' AND attempts = ? AND lease_expires_at = ? AND lease_token = ?\n      LIMIT 1`",
@@ -5102,11 +4982,11 @@
       "hasLimit": true
     },
     {
-      "callSiteId": "9dd24a1cafe72bea985dc5eb",
+      "callSiteId": "8f3476041f922a371957a181",
       "file": "worker/trips.ts",
-      "line": 2214,
+      "line": 1625,
       "containingFunction": "processTripPhotoUploadReservations",
-      "occurrence": 34,
+      "occurrence": 29,
       "executionMode": "run",
       "argumentKind": "literal",
       "expression": "`UPDATE trip_photo_upload_reservations\n          SET state = 'needs_attention', lease_expires_at = NULL, lease_token = NULL,\n            last_error_code = 'photo_locator_hash_mismatch', updated_at = ?\n          WHERE id = ? AND state = 'leased' AND lease_token = ?`",
@@ -5124,11 +5004,11 @@
       "hasLimit": false
     },
     {
-      "callSiteId": "400983f9a583ec39790fb51f",
+      "callSiteId": "f75ff84b7b4e9367f073248c",
       "file": "worker/trips.ts",
-      "line": 2223,
+      "line": 1634,
       "containingFunction": "processTripPhotoUploadReservations",
-      "occurrence": 35,
+      "occurrence": 30,
       "executionMode": "first",
       "argumentKind": "literal",
       "expression": "`SELECT 1 AS attached FROM trips\n        WHERE id = ? AND photo_key = ? AND photo_key_hash = ? LIMIT 1`",
@@ -5146,11 +5026,11 @@
       "hasLimit": true
     },
     {
-      "callSiteId": "85d9685a85a8d4efc03683ab",
+      "callSiteId": "0ba7bfb03c4a9816819278f6",
       "file": "worker/trips.ts",
-      "line": 2229,
+      "line": 1640,
       "containingFunction": "processTripPhotoUploadReservations",
-      "occurrence": 36,
+      "occurrence": 31,
       "executionMode": "run",
       "argumentKind": "literal",
       "expression": "`UPDATE trip_photo_upload_reservations\n            SET state = 'needs_attention', lease_expires_at = NULL, lease_token = NULL,\n              last_error_code = 'photo_storage_unavailable', updated_at = ?\n            WHERE id = ? AND state = 'leased' AND lease_token = ?`",
@@ -5168,11 +5048,11 @@
       "hasLimit": false
     },
     {
-      "callSiteId": "ab2b98904a169c1518ed7242",
+      "callSiteId": "425f0f1d24f2e77f8f401085",
       "file": "worker/trips.ts",
-      "line": 2241,
+      "line": 1652,
       "containingFunction": "processTripPhotoUploadReservations",
-      "occurrence": 37,
+      "occurrence": 32,
       "executionMode": "run",
       "argumentKind": "literal",
       "expression": "`DELETE FROM trip_photo_upload_reservations\n          WHERE id = ? AND trip_id = ? AND object_key = ? AND object_key_hash = ?\n            AND state = 'leased' AND attempts = ? AND lease_expires_at = ? AND lease_token = ?`",
@@ -5190,11 +5070,11 @@
       "hasLimit": false
     },
     {
-      "callSiteId": "f07be9edcd904ab06b7e1034",
+      "callSiteId": "51e4f4b0beeaf3c78e69207b",
       "file": "worker/trips.ts",
-      "line": 2257,
+      "line": 1668,
       "containingFunction": "processTripPhotoUploadReservations",
-      "occurrence": 38,
+      "occurrence": 33,
       "executionMode": "first",
       "argumentKind": "literal",
       "expression": "`SELECT id FROM trip_photo_upload_reservations\n        WHERE id = ? AND trip_id = ? AND object_key = ? AND object_key_hash = ? LIMIT 1`",
@@ -5212,11 +5092,11 @@
       "hasLimit": true
     },
     {
-      "callSiteId": "901697f916bf46e4049a91ee",
+      "callSiteId": "5cd6825e07699c044bd19def",
       "file": "worker/trips.ts",
-      "line": 2268,
+      "line": 1679,
       "containingFunction": "processTripPhotoUploadReservations",
-      "occurrence": 39,
+      "occurrence": 34,
       "executionMode": "run",
       "argumentKind": "literal",
       "expression": "`UPDATE trip_photo_upload_reservations\n        SET state = CASE WHEN attempts >= ? THEN 'needs_attention' ELSE 'pending' END,\n          available_at = ?, lease_expires_at = NULL, lease_token = NULL,\n          last_error_code = 'photo_cleanup_failed', updated_at = ?\n        WHERE id = ? AND state = 'leased' AND lease_token = ?`",
@@ -5234,18 +5114,18 @@
       "hasLimit": false
     },
     {
-      "callSiteId": "448a977c4c9f5ca22943ce95",
+      "callSiteId": "7c128418dfd5456866c830b8",
       "file": "worker/trips.ts",
-      "line": 2281,
+      "line": 1692,
       "containingFunction": "prepareForecastImpressionInsert",
-      "occurrence": 40,
+      "occurrence": 35,
       "executionMode": "returned-statement",
       "argumentKind": "reviewed-nonliteral",
       "expression": "INSERT_FORECAST_IMPRESSION_SQL",
       "expressionSha256": "6a41d4d7c954377901e9fdca7500c2a3f4f86cf5dd3c001467a54098aae4264e",
       "declarationReference": {
         "name": "INSERT_FORECAST_IMPRESSION_SQL",
-        "declarationLine": 1301,
+        "declarationLine": 665,
         "initializerSha256": "a3fe715a5989a64a0462ad049204c82ab28758a04c2308661e79266b08034716"
       },
       "statementClass": "UNRESOLVED",
@@ -5258,18 +5138,18 @@
       "hasLimit": null
     },
     {
-      "callSiteId": "505f3a2e47412272c29da720",
+      "callSiteId": "8e465cb58fba1840fa165a1a",
       "file": "worker/trips.ts",
-      "line": 2369,
+      "line": 1780,
       "containingFunction": "prepareValidationProvenanceInsert",
-      "occurrence": 41,
+      "occurrence": 36,
       "executionMode": "returned-statement",
       "argumentKind": "reviewed-nonliteral",
       "expression": "INSERT_VALIDATION_PROVENANCE_SQL",
       "expressionSha256": "f3104c843d944b95799af1a8c17b1898764478361956507abd1b6f5d09830162",
       "declarationReference": {
         "name": "INSERT_VALIDATION_PROVENANCE_SQL",
-        "declarationLine": 1328,
+        "declarationLine": 692,
         "initializerSha256": "adefb9aaf915ce64a3884e057ae34fa209bd1f672c9a858582b03eb98cb93b84"
       },
       "statementClass": "UNRESOLVED",
@@ -5282,18 +5162,18 @@
       "hasLimit": null
     },
     {
-      "callSiteId": "bf306dec2032bd901424f845",
+      "callSiteId": "8bd81decc08fac6ec11a8162",
       "file": "worker/trips.ts",
-      "line": 2415,
+      "line": 1826,
       "containingFunction": "prepareFeasibilityEventInsert",
-      "occurrence": 42,
+      "occurrence": 37,
       "executionMode": "returned-statement",
       "argumentKind": "reviewed-nonliteral",
       "expression": "INSERT_FEASIBILITY_EVENT_SQL",
       "expressionSha256": "9fc9d0e4184ac21095ecef76483c6b724485615bd624ed0bf9499811a03316a5",
       "declarationReference": {
         "name": "INSERT_FEASIBILITY_EVENT_SQL",
-        "declarationLine": 1345,
+        "declarationLine": 709,
         "initializerSha256": "996c8c189db04bfec574b19433a9a5f75cb9fbe53d6af6ed91e31af7192aabce"
       },
       "statementClass": "UNRESOLVED",
@@ -5306,18 +5186,18 @@
       "hasLimit": null
     },
     {
-      "callSiteId": "08b42afc3f3b0f8905a82ed7",
+      "callSiteId": "0d6b21d1433a56a8f6fef777",
       "file": "worker/trips.ts",
-      "line": 2422,
+      "line": 1833,
       "containingFunction": "prepareFeasibilityRecruitmentInsert",
-      "occurrence": 43,
+      "occurrence": 38,
       "executionMode": "returned-statement",
       "argumentKind": "reviewed-nonliteral",
       "expression": "INSERT_FEASIBILITY_RECRUITMENT_SQL",
       "expressionSha256": "1f8b71cbc1d3dd64fabcedc99fb6d2089a62bc9346314ebb8b6fd356425e175a",
       "declarationReference": {
         "name": "INSERT_FEASIBILITY_RECRUITMENT_SQL",
-        "declarationLine": 1356,
+        "declarationLine": 720,
         "initializerSha256": "baebc33411d1e71fde44c4e25b4fb900bc4d11c4336f3ecdb0ff2201633eeae0"
       },
       "statementClass": "UNRESOLVED",
@@ -5330,11 +5210,11 @@
       "hasLimit": null
     },
     {
-      "callSiteId": "2cdc67348c33d8f8ee292700",
+      "callSiteId": "8081f0530f4b9103e81a9459",
       "file": "worker/trips.ts",
-      "line": 2452,
+      "line": 1863,
       "containingFunction": "prepareConditionalFeasibilityEventInsert",
-      "occurrence": 44,
+      "occurrence": 39,
       "executionMode": "returned-statement",
       "argumentKind": "reviewed-nonliteral",
       "expression": "`INSERT INTO validation_feasibility_events (\n      ${FEASIBILITY_EVENT_COLUMNS.join(\", \")}\n    ) SELECT ${bindings.map(() => \"?\").join(\", \")}\n    WHERE EXISTS (\n      SELECT 1 FROM trips WHERE id = ? AND token_hash IS NULL AND ${completedCondition}\n    )`",
@@ -5350,11 +5230,11 @@
       "hasLimit": null
     },
     {
-      "callSiteId": "d00e19a574b269c6e6e45eb6",
+      "callSiteId": "57fad73eccf20ef5b96d518b",
       "file": "worker/trips.ts",
-      "line": 2466,
+      "line": 1877,
       "containingFunction": "prepareConditionalCompletionProvenanceInsert",
-      "occurrence": 45,
+      "occurrence": 40,
       "executionMode": "returned-statement",
       "argumentKind": "reviewed-nonliteral",
       "expression": "`INSERT INTO trip_validation_provenance (\n      ${VALIDATION_PROVENANCE_COLUMNS.join(\", \")}\n    ) SELECT ${placeholders}\n    WHERE EXISTS (\n      SELECT 1 FROM trips WHERE id = ? AND status = 'completed'\n        AND token_hash IS NULL AND completed_at = ?\n    )`",

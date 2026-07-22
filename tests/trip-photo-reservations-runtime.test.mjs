@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
+import { readdir, readFile } from "node:fs/promises";
 import { DatabaseSync } from "node:sqlite";
 import test from "node:test";
 
@@ -81,8 +82,22 @@ function objectKeyHash(key) {
 
 async function fixture() {
   const sqlite = new DatabaseSync(":memory:");
-  sqlite.exec("CREATE TABLE users (id TEXT PRIMARY KEY NOT NULL);");
-  sqlite.prepare("INSERT INTO users (id) VALUES (?)").run(TEST_ACCOUNT_ID);
+  sqlite.exec("PRAGMA foreign_keys = ON");
+  const directory = new URL("../drizzle/", import.meta.url);
+  const migrations = (await readdir(directory)).filter((name) => /^\d{4}_.+\.sql$/.test(name)).sort();
+  for (const migration of migrations) {
+    const sql = (await readFile(new URL(migration, directory), "utf8"))
+      .replaceAll("--> statement-breakpoint", "");
+    sqlite.exec(sql);
+  }
+  const timestamp = "2026-07-20T12:00:00.000Z";
+  sqlite.prepare(`INSERT INTO users (
+      id, email, password_salt, password_hash, age_eligibility_confirmed_at,
+      terms_accepted_at, terms_version, privacy_accepted_at, privacy_version,
+      created_at, updated_at)
+    VALUES (?, 'trip-photo@example.test', 'salt', 'hash', ?, ?, '2026-07-17.1',
+      ?, '2026-07-17.1', ?, ?)`)
+    .run(TEST_ACCOUNT_ID, timestamp, timestamp, timestamp, timestamp, timestamp);
   const db = new D1Adapter(sqlite);
   const store = createTripStore(db);
   await store.initialize();

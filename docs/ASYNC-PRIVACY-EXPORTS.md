@@ -36,7 +36,8 @@ packaged JSON contains only their manifest.
   opaque job ID. Before streaming, the download fails closed unless the D1 locator hash and exact
   byte count match the private object and its immutable upload SHA-256 and contract metadata match
   the D1 completion record. Downloads are `private, no-store`, attachment-only JSON responses.
-- Completed files expire after 24 hours. Cleanup claims at most 50 objects per scheduled pass,
+- Completed files expire after 24 hours. Cleanup claims at most seven objects in its scheduled
+  lane, which runs once per deterministic four-lane rotation,
   removes the private object, clears its locator/digest/size/count, and retains only an expired
   tombstone until the ordinary 90-day ledger cleanup.
 - Account deletion cancels export jobs in the same D1 batch that removes active account access.
@@ -49,6 +50,10 @@ packaged JSON contains only their manifest.
   `security/privacy-export-queue-policy.json`.
 - Maintenance mode stops backlog dispatch and defers Queue work. An invalid feature flag or
   incomplete binding set fails closed.
+- Queue dispatch shares a sequential cron lane with advisory review and selects at most five
+  export jobs after at most one advisory job. Expiry cleanup runs in a separate lane. Each lane
+  has a saturated local D1 query budget below Cloudflare's 50-query Free invocation ceiling;
+  deployed cadence, throughput, latency, and provider behavior remain activation evidence.
 
 ## Activation gate
 

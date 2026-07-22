@@ -11,9 +11,9 @@
     "worker/validation-feasibility-export.ts"
   ],
   "expectedSummary": {
-    "prepareCallCount": 240,
+    "prepareCallCount": 235,
     "literalCallCount": 221,
-    "nonLiteralCallCount": 19,
+    "nonLiteralCallCount": 14,
     "multiRowLiteralWithoutLimitCount": 9
   },
   "allowedNonLiteralExpressions": [
@@ -47,45 +47,10 @@
     },
     {
       "file": "worker/trips.ts",
-      "expressionSha256": "a30d43434bf332af4ac7a1121a25f2e8a539a880f8dd3e32719465d1da25f46c",
-      "staticAuthority": "module-level CREATE_TRIPS_SQL constant",
-      "executionContract": "schema bootstrap batch",
-      "rationale": "The runtime fallback schema uses one reviewed constant and no request input."
-    },
-    {
-      "file": "worker/trips.ts",
-      "expressionSha256": "47d236de770bdf83ab62c8efa8eca6de193549035b8680e2c5aa75fb66734d97",
-      "staticAuthority": "module-level CREATE_TRIP_PHOTO_UPLOAD_RESERVATIONS_SQL constant",
-      "executionContract": "schema bootstrap batch",
-      "rationale": "The default-off runtime fallback creates the reviewed durable pre-upload locator ledger without request-controlled SQL."
-    },
-    {
-      "file": "worker/trips.ts",
-      "expressionSha256": "eb10098ec91eda192303e0be80754a8b6e8fef5b6132d3d931f3f637b64e5076",
-      "staticAuthority": "module-level CREATE_ACCOUNT_DELETION_FENCES_SQL constant",
-      "executionContract": "schema bootstrap batch",
-      "rationale": "Trip mutation fallback DDL shares the reviewed account-deletion write-fence definition and contains no request-controlled SQL."
-    },
-    {
-      "file": "worker/trips.ts",
-      "expressionSha256": "b54adea780f2574650cbc99cf741678af37c3417c4734bb0138c3ed1a12c25af",
-      "staticAuthority": "module-level CREATE_FORECAST_IMPRESSIONS_SQL constant",
-      "executionContract": "schema bootstrap batch",
-      "rationale": "The runtime fallback schema uses one reviewed constant and no request input."
-    },
-    {
-      "file": "worker/trips.ts",
-      "expressionSha256": "cfd1855de8f1e1f5c1702d15ab4a99ba89eae74f097d6efb1ed6f079c6ac8dcf",
-      "staticAuthority": "module-level CREATE_TRIP_VALIDATION_PROVENANCE_SQL constant",
-      "executionContract": "schema bootstrap batch",
-      "rationale": "The runtime fallback schema uses one reviewed constant and no request input."
-    },
-    {
-      "file": "worker/trips.ts",
-      "expressionSha256": "b111c6e1d318f203063e5c16bab43c108326af0aa2f7b65760c95547a43dbe52",
-      "staticAuthority": "iteration over the fixed module-level CREATE_INDEX_STATEMENTS array",
-      "executionContract": "schema bootstrap batch",
-      "rationale": "The callback receives only reviewed index DDL constants."
+      "expressionSha256": "d0f0eb7b9a51d189a6cdcaaa7bfc7a4d212296854f13071dcef6d226e0315692",
+      "staticAuthority": "module-level TRIP_SCHEMA_READY_SQL constant",
+      "executionContract": "one read-only schema-readiness probe per D1 binding",
+      "rationale": "Production trip schema is migration-owned; the runtime fails closed with one static readiness query instead of issuing 35 DDL queries on a cold isolate."
     },
     {
       "file": "worker/trips.ts",

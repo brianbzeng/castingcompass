@@ -8,7 +8,7 @@ accounts, or production data.
 ## D1 query inventory
 
 `scripts/generate-d1-query-inventory.mjs` parses every Worker TypeScript source file and records
-all 240 direct `.prepare()` sites: 221 literal statements and 19 separately reviewed nonliteral
+all 235 direct `.prepare()` sites: 221 literal statements and 14 separately reviewed nonliteral
 expressions across eight source files. The committed policy and generated inventory are
 source-hash and call-site bound. CI rejects source-file/count drift, computed or aliased
 `prepare` access, a nonliteral expression without its exact static-authority review, an unscoped
@@ -31,9 +31,11 @@ measurements and provider activation remain open. An inventory proves source cov
 review identity; it does not prove query latency, production index selection, or safe load
 capacity.
 
-Cold authentication initialization performs one read-only schema-readiness query and fails
-closed if the migration-owned tables or `trips.photo_key_hash` column are absent. It no longer
-runs 35 `CREATE TABLE`/`CREATE INDEX` statements from a request. Scheduled authentication
+Cold authentication and trip-store initialization each perform one read-only schema-readiness
+query and fail closed if their migration-owned tables, indexes, triggers, or
+`trips.photo_key_hash` column are absent. Neither path runs request-time or scheduled-work DDL;
+the trip store no longer issues its prior 35 table/index/trigger statements on a cold isolate.
+Scheduled authentication
 retention selects at most 100 eligible primary keys per table and
 invocation before deleting sessions, challenges, attempts, age proofs, and completed deletion
 jobs. Backlogs drain on later scheduled runs, and regression coverage proves the first invocation
@@ -53,6 +55,18 @@ parameters. The same ceiling covers the lost-committed-response recovery path by
 inline cleanup to one object. These are deterministic local bounds, not deployed-plan or
 production-latency evidence. See [D1 limits](https://developers.cloudflare.com/d1/platform/limits/)
 and [D1 batch semantics](https://developers.cloudflare.com/d1/worker-api/d1-database/).
+
+The five-minute cron also uses the Free ceiling as one aggregate invocation boundary. It no
+longer starts four independent `waitUntil` pipelines concurrently. Instead, one deterministic
+lane runs sequentially per tick and the four lanes repeat every 20 minutes: queue dispatch,
+trip-photo reservation cleanup, expired-export cleanup, and auth retention plus privacy
+deletion. Saturated local D1 adapters execute every lane below its conservative 50-query budget:
+32, 44, 36, and 40 respectively. The corresponding work caps are one advisory-review dispatch,
+five privacy-export dispatches, seven photo reservations, seven expired exports, and three
+privacy-deletion tasks. Backlogs remain durable and drain on later rotations. This source and
+fixture proof is not evidence of the deployed plan, cron delivery, provider subrequest behavior,
+latency, or alerting; those remain isolated-staging gates. The complete contract is in
+[SCHEDULED-WORKER-BUDGET.md](SCHEDULED-WORKER-BUDGET.md).
 
 `scripts/check_d1_query_plans.py` separately applies every migration to an in-memory SQLite
 database, runs 29 representative `EXPLAIN QUERY PLAN` checks, and rejects missing leftmost

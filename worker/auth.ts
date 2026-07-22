@@ -2648,7 +2648,7 @@ function safePhotoContentType(value: unknown) {
     : "application/octet-stream";
 }
 
-export async function cleanupAuthData(env: AuthApiEnv) {
+export async function cleanupAuthRetentionData(env: AuthApiEnv) {
   if (!env.DB) return;
   await initialize(env.DB);
   const now = new Date();
@@ -2691,6 +2691,10 @@ export async function cleanupAuthData(env: AuthApiEnv) {
       ORDER BY updated_at, id LIMIT ?
     )`).bind(tombstoneCutoff, AUTH_RETENTION_DELETE_BATCH),
   ]);
+}
+
+export async function cleanupAuthData(env: AuthApiEnv) {
+  await cleanupAuthRetentionData(env);
   await processExpiredPrivacyExports(env);
   await processPrivacyDeletionTasks(env);
 }

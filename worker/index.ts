@@ -2,12 +2,11 @@
 import { handleImageOptimization, DEFAULT_DEVICE_SIZES, DEFAULT_IMAGE_SIZES } from "vinext/server/image-optimization";
 import handler from "vinext/server/app-router-entry";
 import sites from "../public/data/sites.json";
-import { handleTripRequest, processTripPhotoUploadReservations, type TripApiEnv } from "./trips";
-import { cleanupAuthData, getAuthenticatedUser, handleAccountRequest, legalAcceptanceRequiredResponse, unauthorizedResponse } from "./auth";
+import { handleTripRequest, type TripApiEnv } from "./trips";
+import { getAuthenticatedUser, handleAccountRequest, legalAcceptanceRequiredResponse, unauthorizedResponse } from "./auth";
 import {
   AI_REVIEW_QUEUE_MESSAGE_VERSION,
   consumeAiReviewQueue,
-  dispatchAiReviewBacklog,
   scheduleTripReview,
   type AiReviewQueueEnv,
   type QueueBatchLike,
@@ -16,7 +15,6 @@ import {
 import {
   PRIVACY_EXPORT_QUEUE_MESSAGE_VERSION,
   consumePrivacyExportQueue,
-  dispatchPrivacyExportBacklog,
   type PrivacyExportEnv,
 } from "./privacy-export.ts";
 import { handleDiscussionRequest } from "./discussions";
@@ -45,6 +43,7 @@ import {
   safeErrorFields,
   type ObservabilityEnv,
 } from "./observability";
+import { runScheduledLane, scheduledLaneFor } from "./scheduled.ts";
 
 interface AssetFetcher {
   fetch(request: Request): Promise<Response>;
@@ -88,12 +87,10 @@ const worker = {
     });
   },
 
-  async scheduled(_controller: unknown, env: Env, ctx: ExecutionContext) {
+  async scheduled(controller: unknown, env: Env, ctx: ExecutionContext) {
     if (releaseMaintenanceEnabled(env)) return;
-    ctx.waitUntil(observeScheduledTask(env, "trip_review_backlog", () => dispatchAiReviewBacklog(env, sites)));
-    ctx.waitUntil(observeScheduledTask(env, "trip_photo_reservations", () => processTripPhotoUploadReservations(env)));
-    ctx.waitUntil(observeScheduledTask(env, "privacy_export_backlog", () => dispatchPrivacyExportBacklog(env)));
-    ctx.waitUntil(observeScheduledTask(env, "auth_data_cleanup", () => cleanupAuthData(env)));
+    const lane = scheduledLaneFor(controller);
+    ctx.waitUntil(observeScheduledTask(env, lane, () => runScheduledLane(lane, env, sites)));
   },
 
   async queue(batch: QueueBatchLike, env: Env) {

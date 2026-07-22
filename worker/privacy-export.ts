@@ -752,7 +752,10 @@ function retryMessageAt(message: QueueMessageLike, timestamp: string | null) {
   message.retry({ delaySeconds });
 }
 
-export async function processExpiredPrivacyExports(env: PrivacyExportEnv) {
+export async function processExpiredPrivacyExports(
+  env: PrivacyExportEnv,
+  maximumJobs = EXPIRY_BATCH_SIZE,
+) {
   if (!env.DB) return 0;
   const db = env.DB;
   const now = new Date();
@@ -768,7 +771,14 @@ export async function processExpiredPrivacyExports(env: PrivacyExportEnv) {
         OR (state = 'processing' AND user_id IS NOT NULL
           AND (lease_expires_at IS NULL OR lease_expires_at <= ?)))
     ORDER BY COALESCE(expires_at, updated_at), id LIMIT ?`)
-    .bind(nowIso, nowIso, nowIso, EXPIRY_BATCH_SIZE)
+    .bind(
+      nowIso,
+      nowIso,
+      nowIso,
+      Number.isSafeInteger(maximumJobs)
+        ? Math.max(1, Math.min(EXPIRY_BATCH_SIZE, maximumJobs))
+        : EXPIRY_BATCH_SIZE,
+    )
     .all<PrivacyExportJobRow>();
   let deleted = 0;
   for (const job of rows.results ?? []) {
