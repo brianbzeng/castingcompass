@@ -13,6 +13,42 @@ Current provider truth overrides historical “paused” language in completed r
 2026-07-19 read-only reconciliation found an active Worker; no production mutation is authorized
 by that discovery.
 
+## Active checkpoint — exact sign-in attempt receipts
+
+- [x] Continue the credential-boundary audit through login abuse accounting. The conditional
+      failure-slot INSERT and correct-password success-classification UPDATE were atomic, but
+      still treated their D1 mutation metadata as authority and could not distinguish rollback
+      from an exact commit whose response was lost.
+- [x] Make the random server attempt ID authoritative before password work. Exact read-back must
+      prove the pending ID, email pseudonym, server timestamp, unsuccessful state, unique ID
+      cardinality, and a valid rolling failed-attempt count. Exact absence plus ten existing
+      failures is the only rate-limit receipt; unreadable, changed, colliding, or impossible state
+      remains `503` and performs no password derivation.
+- [x] Make successful classification a separate exact authority boundary. Correct credentials
+      can begin session issuance only after read-back proves that same ID/hash/timestamp row is
+      successful, the prior pending state is absent, and the opaque ID remains unique. Mutation
+      metadata and transport success grant nothing, so a committed response loss recovers without
+      replay while rollback or unreadable state exposes no session.
+- [x] Force omitted metadata and lost committed responses for both transitions, actual failed
+      writes, both receipt-read failures, a changed pending snapshot, a changed classified
+      snapshot, and the concurrent tenth-attempt crossing. Exact committed state proceeds;
+      rollback and changed or unreadable state fail closed; the tenth request remains `429`; known
+      and unknown bad credentials still perform equal password work and return the same generic
+      `401`; the exact one-hour cutoff remains inclusive and releases rows one millisecond after
+      expiry. The source ledger covers 245 prepare sites: 231 literal, 14 reviewed nonliteral, and
+      nine reviewed complete-rights multi-row reads; all 20 migrations and 40 critical D1 plans
+      pass with the attempt primary key and existing email/time index.
+- [x] Seal the checkpoint with the pinned Cloudflare build, lint, TypeScript, all 636/636 Node
+      tests, the complete security/source-integrity chain, two zero-vulnerability npm audits,
+      29/29 API tests, Ruff, 82 passing pipeline tests with one documented optional-`rasterio`
+      skip, deterministic smoke, all 20 migrations and 40 critical query plans, and the isolated
+      200/200 Chromium/WebKit phone matrix. Preserve one clean local commit and deterministic
+      release bundle. No push, PR, merge, deployment, provider query, production database
+      mutation, feature activation, UI change, or model claim belongs to this checkpoint.
+- [ ] Exercise simultaneous attempts, response loss, latency, and rows-read/written behavior with
+      production-shaped synthetic data in isolated staging before treating local receipt proof as
+      deployed evidence.
+
 ## Active checkpoint — exact email-code attempt receipts
 
 - [x] Continue the credential-boundary audit through the shared verification-code attempt claim.

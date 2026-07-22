@@ -270,9 +270,11 @@ after its acceptance checks pass in the intended environment.
       durable exact controls. Production secret provisioning, activation, outer WAF rules,
       threshold tuning, monitoring, and live endpoint evidence remain open.
     - [x] Make the durable D1 login and email-code ceilings atomic under concurrency. Sign-in
-      claims one of ten rolling failure slots before credential work and issues no session until
-      the exact claim is confirmed successful. Signup and recovery challenge creation recheck the
-      five-per-hour ceiling inside their INSERT, before provider delivery. Every verification or
+      claims one of ten rolling failure slots, requires exact pending-row and rolling-window
+      read-back before credential work, and issues no session until exact read-back proves that
+      same row successfully classified with its prior pending state absent. Signup and recovery
+      challenge creation recheck the five-per-hour ceiling inside their INSERT, before provider
+      delivery. Every verification or
       reset code submission compare-and-sets the complete challenge snapshot to its next attempt
       count, then requires exact read-back of that claimed version with the prior state absent.
       Missing metadata and lost committed responses recover without replay; rollback, unreadable

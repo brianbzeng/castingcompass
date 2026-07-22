@@ -893,21 +893,15 @@ export async function handleAccountRequest(
       const email = parseEmail(body.email);
       const password = parsePassword(body.password);
       const emailHash = await sha256(email);
-      const attemptedAt = new Date();
+      const attemptedAt = options.now?.() ?? new Date();
+      const attemptedAtIso = attemptedAt.toISOString();
       const cutoff = new Date(attemptedAt.getTime() - 60 * 60 * 1000).toISOString();
       const attemptId = `attempt_${crypto.randomUUID()}`;
-      const attemptResult = await db.prepare(`INSERT INTO auth_attempts
-        (id, email_hash, attempted_at, successful)
-        SELECT ?, ?, ?, 0
-        WHERE (SELECT COUNT(*) FROM auth_attempts
-          WHERE email_hash = ? AND successful = 0 AND attempted_at >= ?) < 10`)
-        .bind(attemptId, emailHash, attemptedAt.toISOString(), emailHash, cutoff)
-        .run();
-      const attemptChanges = confirmedMutationChanges(attemptResult);
-      if (attemptChanges === 0) {
+      const attemptClaim = await claimSignInAttempt(db, attemptId, emailHash, attemptedAtIso, cutoff);
+      if (attemptClaim === "rate_limited") {
         return errorResponse(429, "too_many_attempts", "Too many sign-in attempts. Try again in an hour.");
       }
-      if (attemptChanges !== 1) {
+      if (attemptClaim !== "claimed") {
         return errorResponse(
           503,
           "sign_in_accounting_unconfirmed",
@@ -934,11 +928,7 @@ export async function handleAccountRequest(
         ? await verifyPassword(password, row.password_salt, row.password_hash)
         : (await hashPassword(password, DUMMY_PASSWORD_SALT), false);
       if (!row || !valid) return errorResponse(401, "invalid_credentials", "Email or password is incorrect.");
-      const successResult = await db.prepare(`UPDATE auth_attempts SET successful = 1
-        WHERE id = ? AND email_hash = ? AND attempted_at = ? AND successful = 0`)
-        .bind(attemptId, emailHash, attemptedAt.toISOString())
-        .run();
-      if (confirmedMutationChanges(successResult) !== 1) {
+      if (!await classifySignInAttemptSuccessful(db, attemptId, emailHash, attemptedAtIso)) {
         return errorResponse(
           503,
           "sign_in_accounting_unconfirmed",
@@ -2529,6 +2519,114 @@ function confirmedMutationChanges(result: unknown) {
   if (changesValue === undefined || changesValue === null) return null;
   const changes = Number(changesValue);
   return Number.isSafeInteger(changes) && changes >= 0 ? changes : null;
+}
+
+type SignInAttemptClaim = "claimed" | "rate_limited" | "unconfirmed";
+
+interface SignInAttemptClaimReceiptRow {
+  pending_count: number;
+  any_count: number;
+  recent_failed_count: number;
+}
+
+async function claimSignInAttempt(
+  db: D1DatabaseLike,
+  attemptId: string,
+  emailHash: string,
+  attemptedAt: string,
+  cutoff: string,
+): Promise<SignInAttemptClaim> {
+  try {
+    await db.prepare(`INSERT INTO auth_attempts
+      (id, email_hash, attempted_at, successful)
+      SELECT ?, ?, ?, 0
+      WHERE (SELECT COUNT(*) FROM auth_attempts
+        WHERE email_hash = ? AND successful = 0 AND attempted_at >= ?) < 10`)
+      .bind(attemptId, emailHash, attemptedAt, emailHash, cutoff)
+      .run();
+  } catch {
+    // The insert can commit and lose its response. Only exact stored state decides.
+  }
+
+  let receipt: SignInAttemptClaimReceiptRow | null = null;
+  let receiptReadSucceeded = false;
+  try {
+    receipt = await db.prepare(`SELECT
+        (SELECT COUNT(*) FROM auth_attempts
+          WHERE id = ? AND email_hash = ? AND attempted_at = ? AND successful = 0) AS pending_count,
+        (SELECT COUNT(*) FROM auth_attempts WHERE id = ?) AS any_count,
+        (SELECT COUNT(*) FROM auth_attempts
+          WHERE email_hash = ? AND successful = 0 AND attempted_at >= ?) AS recent_failed_count`)
+      .bind(attemptId, emailHash, attemptedAt, attemptId, emailHash, cutoff)
+      .first<SignInAttemptClaimReceiptRow>();
+    receiptReadSucceeded = true;
+  } catch {
+    // Credential verification cannot follow an unreadable abuse-accounting claim.
+  }
+
+  const pendingCount = Number(receipt?.pending_count);
+  const anyCount = Number(receipt?.any_count);
+  const recentFailedCount = Number(receipt?.recent_failed_count);
+  const countsValid = [pendingCount, anyCount, recentFailedCount]
+    .every((count) => Number.isSafeInteger(count) && count >= 0)
+    && pendingCount <= 1
+    && anyCount <= 1
+    && pendingCount <= anyCount
+    && pendingCount <= recentFailedCount;
+  if (!receiptReadSucceeded || !countsValid) return "unconfirmed";
+  if (pendingCount === 1 && anyCount === 1 && recentFailedCount <= 10) return "claimed";
+  if (pendingCount === 0 && anyCount === 0 && recentFailedCount >= 10) return "rate_limited";
+  return "unconfirmed";
+}
+
+interface SignInAttemptClassificationReceiptRow {
+  classified_count: number;
+  pending_count: number;
+  any_count: number;
+}
+
+async function classifySignInAttemptSuccessful(
+  db: D1DatabaseLike,
+  attemptId: string,
+  emailHash: string,
+  attemptedAt: string,
+) {
+  try {
+    await db.prepare(`UPDATE auth_attempts SET successful = 1
+      WHERE id = ? AND email_hash = ? AND attempted_at = ? AND successful = 0`)
+      .bind(attemptId, emailHash, attemptedAt)
+      .run();
+  } catch {
+    // The update can commit and lose its response. Only exact stored state decides.
+  }
+
+  let receipt: SignInAttemptClassificationReceiptRow | null = null;
+  let receiptReadSucceeded = false;
+  try {
+    receipt = await db.prepare(`SELECT
+        (SELECT COUNT(*) FROM auth_attempts
+          WHERE id = ? AND email_hash = ? AND attempted_at = ? AND successful = 1) AS classified_count,
+        (SELECT COUNT(*) FROM auth_attempts
+          WHERE id = ? AND email_hash = ? AND attempted_at = ? AND successful = 0) AS pending_count,
+        (SELECT COUNT(*) FROM auth_attempts WHERE id = ?) AS any_count`)
+      .bind(attemptId, emailHash, attemptedAt, attemptId, emailHash, attemptedAt, attemptId)
+      .first<SignInAttemptClassificationReceiptRow>();
+    receiptReadSucceeded = true;
+  } catch {
+    // Session issuance cannot follow an unreadable success classification.
+  }
+
+  const classifiedCount = Number(receipt?.classified_count);
+  const pendingCount = Number(receipt?.pending_count);
+  const anyCount = Number(receipt?.any_count);
+  const countsValid = [classifiedCount, pendingCount, anyCount]
+    .every((count) => Number.isSafeInteger(count) && count >= 0 && count <= 1)
+    && classifiedCount + pendingCount <= anyCount;
+  return receiptReadSucceeded
+    && countsValid
+    && classifiedCount === 1
+    && pendingCount === 0
+    && anyCount === 1;
 }
 
 function prepareConditionalFeasibilityCorrectionInsert(

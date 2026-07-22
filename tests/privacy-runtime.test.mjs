@@ -640,6 +640,7 @@ test("sign-in failure ceilings are claimed atomically under a concurrent tenth a
   }
   d1.beforeOnceQuerySubstring = "INSERT INTO auth_attempts";
   d1.beforeOnceQuery = () => insertAttempt.run("concurrent-tenth-attempt", emailHash, attemptedAt);
+  d1.omitOnceMutationMetadataSubstring = "INSERT INTO auth_attempts";
 
   const response = await handleAccountRequest(request("/api/auth/login", {
     method: "POST",
@@ -652,7 +653,48 @@ test("sign-in failure ceilings are claimed atomically under a concurrent tenth a
     WHERE email_hash = ? AND successful = 0`).get(emailHash).count, 10);
 });
 
-test("sign-in stops before credential verification when its attempt claim is unconfirmed", async () => {
+test("sign-in failure accounting includes the exact one-hour boundary and releases older rows", async () => {
+  const now = new Date("2026-07-22T05:30:00.000Z");
+  const exactBoundary = new Date(now.getTime() - 60 * 60_000).toISOString();
+
+  const blocked = await database();
+  const blockedUser = await addUser(blocked.sqlite, "login-boundary-blocked-149");
+  const blockedEmailHash = await sha256(blockedUser.email);
+  const insertBlocked = blocked.sqlite.prepare(`INSERT INTO auth_attempts
+    (id, email_hash, attempted_at, successful) VALUES (?, ?, ?, 0)`);
+  for (let index = 0; index < 10; index += 1) {
+    insertBlocked.run(`boundary-blocked-${index}`, blockedEmailHash, exactBoundary);
+  }
+  const blockedResponse = await handleAccountRequest(request("/api/auth/login", {
+    method: "POST",
+    body: { email: blockedUser.email, password: blockedUser.password },
+  }), { DB: blocked.d1 }, [], { now: () => now });
+  assert.equal(blockedResponse?.status, 429);
+  assert.equal((await blockedResponse.json()).error.code, "too_many_attempts");
+  assert.equal(blocked.sqlite.prepare("SELECT COUNT(*) AS count FROM auth_attempts WHERE email_hash = ?")
+    .get(blockedEmailHash).count, 10);
+
+  const released = await database();
+  const releasedUser = await addUser(released.sqlite, "login-boundary-released-150");
+  released.sqlite.prepare("DELETE FROM auth_sessions WHERE user_id = ?").run(releasedUser.id);
+  const releasedEmailHash = await sha256(releasedUser.email);
+  const insertReleased = released.sqlite.prepare(`INSERT INTO auth_attempts
+    (id, email_hash, attempted_at, successful) VALUES (?, ?, ?, 0)`);
+  const justOutsideBoundary = new Date(now.getTime() - 60 * 60_000 - 1).toISOString();
+  for (let index = 0; index < 10; index += 1) {
+    insertReleased.run(`boundary-released-${index}`, releasedEmailHash, justOutsideBoundary);
+  }
+  const releasedResponse = await handleAccountRequest(request("/api/auth/login", {
+    method: "POST",
+    body: { email: releasedUser.email, password: releasedUser.password },
+  }), { DB: released.d1 }, [], { now: () => now });
+  assert.equal(releasedResponse?.status, 200);
+  assert.match(sessionCookieFrom(releasedResponse) ?? "", /^__Host-cc_session=/u);
+  assert.equal(released.sqlite.prepare(`SELECT COUNT(*) AS count FROM auth_attempts
+    WHERE email_hash = ? AND successful = 1`).get(releasedEmailHash).count, 1);
+});
+
+test("sign-in follows the exact attempt claim when mutation metadata is absent", async () => {
   const { sqlite, d1 } = await database();
   const user = await addUser(sqlite, "login-claim-receipt-149");
   sqlite.prepare("DELETE FROM auth_sessions WHERE user_id = ?").run(user.id);
@@ -663,36 +705,177 @@ test("sign-in stops before credential verification when its attempt claim is unc
     body: { email: user.email, password: user.password },
   }), { DB: d1 }, []);
 
-  assert.equal(response?.status, 503);
-  assert.equal((await response.json()).error.code, "sign_in_accounting_unconfirmed");
-  assert.equal(sessionCookieFrom(response), null);
-  assert.equal(sqlite.prepare("SELECT COUNT(*) AS count FROM auth_sessions WHERE user_id = ?").get(user.id).count, 0);
-  assert.equal(sqlite.prepare("SELECT COUNT(*) AS count FROM auth_attempts WHERE successful = 0").get().count, 1);
+  assert.equal(response?.status, 200);
+  assert.match(sessionCookieFrom(response) ?? "", /^__Host-cc_session=/u);
+  assert.equal(sqlite.prepare("SELECT COUNT(*) AS count FROM auth_sessions WHERE user_id = ?").get(user.id).count, 1);
+  assert.equal(sqlite.prepare("SELECT COUNT(*) AS count FROM auth_attempts WHERE successful = 1").get().count, 1);
 });
 
-test("sign-in never issues a session without confirmed success classification", async () => {
+test("sign-in recovers after a committed attempt-claim response is lost", async () => {
   const { sqlite, d1 } = await database();
-  const user = await addUser(sqlite, "login-success-receipt-150");
+  const user = await addUser(sqlite, "login-claim-lost-response-150");
+  sqlite.prepare("DELETE FROM auth_sessions WHERE user_id = ?").run(user.id);
+  d1.throwOnceAfterMutationSubstring = "INSERT INTO auth_attempts";
+
+  const recovered = await handleAccountRequest(request("/api/auth/login", {
+    method: "POST",
+    body: { email: user.email, password: user.password },
+  }), { DB: d1 }, []);
+
+  assert.equal(recovered?.status, 200);
+  assert.match(sessionCookieFrom(recovered) ?? "", /^__Host-cc_session=/u);
+  assert.equal(sqlite.prepare("SELECT COUNT(*) AS count FROM auth_sessions WHERE user_id = ?").get(user.id).count, 1);
+  assert.equal(sqlite.prepare("SELECT COUNT(*) AS count FROM auth_attempts WHERE successful = 1").get().count, 1);
+});
+
+test("sign-in rejects rolled-back, unreadable, and changed attempt claims before password work", async () => {
+  const originalDeriveBits = crypto.subtle.deriveBits;
+  let deriveCalls = 0;
+  crypto.subtle.deriveBits = function (...args) {
+    deriveCalls += 1;
+    return originalDeriveBits.apply(this, args);
+  };
+
+  try {
+    const rolledBack = await database();
+    const rollbackUser = await addUser(rolledBack.sqlite, "login-claim-rollback-151");
+    rolledBack.sqlite.prepare("DELETE FROM auth_sessions WHERE user_id = ?").run(rollbackUser.id);
+    rolledBack.d1.failOnceQuerySubstring = "INSERT INTO auth_attempts";
+    deriveCalls = 0;
+    const rollbackResponse = await handleAccountRequest(request("/api/auth/login", {
+      method: "POST",
+      body: { email: rollbackUser.email, password: rollbackUser.password },
+    }), { DB: rolledBack.d1 }, []);
+    assert.equal(rollbackResponse?.status, 503);
+    assert.equal((await rollbackResponse.json()).error.code, "sign_in_accounting_unconfirmed");
+    assert.equal(rolledBack.sqlite.prepare("SELECT COUNT(*) AS count FROM auth_attempts").get().count, 0);
+    assert.equal(rolledBack.sqlite.prepare("SELECT COUNT(*) AS count FROM auth_sessions WHERE user_id = ?")
+      .get(rollbackUser.id).count, 0);
+    assert.equal(deriveCalls, 0);
+
+    const unreadable = await database();
+    const unreadableUser = await addUser(unreadable.sqlite, "login-claim-unreadable-152");
+    unreadable.sqlite.prepare("DELETE FROM auth_sessions WHERE user_id = ?").run(unreadableUser.id);
+    unreadable.d1.failOnceQuerySubstring = "AS recent_failed_count";
+    deriveCalls = 0;
+    const unreadableResponse = await handleAccountRequest(request("/api/auth/login", {
+      method: "POST",
+      body: { email: unreadableUser.email, password: unreadableUser.password },
+    }), { DB: unreadable.d1 }, []);
+    assert.equal(unreadableResponse?.status, 503);
+    assert.equal((await unreadableResponse.json()).error.code, "sign_in_accounting_unconfirmed");
+    assert.equal(unreadable.sqlite.prepare("SELECT COUNT(*) AS count FROM auth_attempts WHERE successful = 0")
+      .get().count, 1);
+    assert.equal(unreadable.sqlite.prepare("SELECT COUNT(*) AS count FROM auth_sessions WHERE user_id = ?")
+      .get(unreadableUser.id).count, 0);
+    assert.equal(deriveCalls, 0);
+
+    const changed = await database();
+    const changedUser = await addUser(changed.sqlite, "login-claim-changed-153");
+    changed.sqlite.prepare("DELETE FROM auth_sessions WHERE user_id = ?").run(changedUser.id);
+    changed.d1.beforeOnceQuerySubstring = "AS recent_failed_count";
+    changed.d1.beforeOnceQuery = () => changed.sqlite
+      .prepare("UPDATE auth_attempts SET attempted_at = '2000-01-01T00:00:00.000Z' WHERE successful = 0")
+      .run();
+    deriveCalls = 0;
+    const changedResponse = await handleAccountRequest(request("/api/auth/login", {
+      method: "POST",
+      body: { email: changedUser.email, password: changedUser.password },
+    }), { DB: changed.d1 }, []);
+    assert.equal(changedResponse?.status, 503);
+    assert.equal((await changedResponse.json()).error.code, "sign_in_accounting_unconfirmed");
+    assert.equal(changed.sqlite.prepare("SELECT COUNT(*) AS count FROM auth_sessions WHERE user_id = ?")
+      .get(changedUser.id).count, 0);
+    assert.equal(deriveCalls, 0);
+  } finally {
+    crypto.subtle.deriveBits = originalDeriveBits;
+  }
+});
+
+test("sign-in follows exact success classification when mutation metadata is absent", async () => {
+  const { sqlite, d1 } = await database();
+  const user = await addUser(sqlite, "login-success-receipt-154");
   sqlite.prepare("DELETE FROM auth_sessions WHERE user_id = ?").run(user.id);
   d1.omitOnceMutationMetadataSubstring = "UPDATE auth_attempts SET successful = 1";
 
-  const ambiguous = await handleAccountRequest(request("/api/auth/login", {
+  const response = await handleAccountRequest(request("/api/auth/login", {
     method: "POST",
     body: { email: user.email, password: user.password },
   }), { DB: d1 }, []);
 
-  assert.equal(ambiguous?.status, 503);
-  assert.equal((await ambiguous.json()).error.code, "sign_in_accounting_unconfirmed");
-  assert.equal(sessionCookieFrom(ambiguous), null);
-  assert.equal(sqlite.prepare("SELECT COUNT(*) AS count FROM auth_sessions WHERE user_id = ?").get(user.id).count, 0);
+  assert.equal(response?.status, 200);
+  assert.match(sessionCookieFrom(response) ?? "", /^__Host-cc_session=/u);
+  assert.equal(sqlite.prepare("SELECT COUNT(*) AS count FROM auth_sessions WHERE user_id = ?").get(user.id).count, 1);
   assert.equal(sqlite.prepare("SELECT COUNT(*) AS count FROM auth_attempts WHERE successful = 1").get().count, 1);
+});
 
-  const retry = await handleAccountRequest(request("/api/auth/login", {
+test("sign-in recovers after a committed success-classification response is lost", async () => {
+  const { sqlite, d1 } = await database();
+  const user = await addUser(sqlite, "login-success-lost-response-155");
+  sqlite.prepare("DELETE FROM auth_sessions WHERE user_id = ?").run(user.id);
+  d1.throwOnceAfterMutationSubstring = "UPDATE auth_attempts SET successful = 1";
+
+  const recovered = await handleAccountRequest(request("/api/auth/login", {
     method: "POST",
     body: { email: user.email, password: user.password },
   }), { DB: d1 }, []);
-  assert.equal(retry?.status, 200);
-  assert.match(sessionCookieFrom(retry) ?? "", /^__Host-cc_session=/u);
+
+  assert.equal(recovered?.status, 200);
+  assert.match(sessionCookieFrom(recovered) ?? "", /^__Host-cc_session=/u);
+  assert.equal(sqlite.prepare("SELECT COUNT(*) AS count FROM auth_sessions WHERE user_id = ?").get(user.id).count, 1);
+  assert.equal(sqlite.prepare("SELECT COUNT(*) AS count FROM auth_attempts WHERE successful = 1").get().count, 1);
+});
+
+test("sign-in never issues a session from rolled-back, unreadable, or changed success state", async () => {
+  const rolledBack = await database();
+  const rollbackUser = await addUser(rolledBack.sqlite, "login-success-rollback-156");
+  rolledBack.sqlite.prepare("DELETE FROM auth_sessions WHERE user_id = ?").run(rollbackUser.id);
+  rolledBack.d1.failOnceQuerySubstring = "UPDATE auth_attempts SET successful = 1";
+  const rollbackResponse = await handleAccountRequest(request("/api/auth/login", {
+    method: "POST",
+    body: { email: rollbackUser.email, password: rollbackUser.password },
+  }), { DB: rolledBack.d1 }, []);
+  assert.equal(rollbackResponse?.status, 503);
+  assert.equal((await rollbackResponse.json()).error.code, "sign_in_accounting_unconfirmed");
+  assert.equal(sessionCookieFrom(rollbackResponse), null);
+  assert.equal(rolledBack.sqlite.prepare("SELECT COUNT(*) AS count FROM auth_attempts WHERE successful = 0")
+    .get().count, 1);
+  assert.equal(rolledBack.sqlite.prepare("SELECT COUNT(*) AS count FROM auth_sessions WHERE user_id = ?")
+    .get(rollbackUser.id).count, 0);
+
+  const unreadable = await database();
+  const unreadableUser = await addUser(unreadable.sqlite, "login-success-unreadable-157");
+  unreadable.sqlite.prepare("DELETE FROM auth_sessions WHERE user_id = ?").run(unreadableUser.id);
+  unreadable.d1.failOnceQuerySubstring = "AS classified_count";
+  const unreadableResponse = await handleAccountRequest(request("/api/auth/login", {
+    method: "POST",
+    body: { email: unreadableUser.email, password: unreadableUser.password },
+  }), { DB: unreadable.d1 }, []);
+  assert.equal(unreadableResponse?.status, 503);
+  assert.equal((await unreadableResponse.json()).error.code, "sign_in_accounting_unconfirmed");
+  assert.equal(sessionCookieFrom(unreadableResponse), null);
+  assert.equal(unreadable.sqlite.prepare("SELECT COUNT(*) AS count FROM auth_attempts WHERE successful = 1")
+    .get().count, 1);
+  assert.equal(unreadable.sqlite.prepare("SELECT COUNT(*) AS count FROM auth_sessions WHERE user_id = ?")
+    .get(unreadableUser.id).count, 0);
+
+  const changed = await database();
+  const changedUser = await addUser(changed.sqlite, "login-success-changed-158");
+  changed.sqlite.prepare("DELETE FROM auth_sessions WHERE user_id = ?").run(changedUser.id);
+  const changedEmailHash = await sha256(changedUser.email);
+  changed.d1.beforeOnceQuerySubstring = "AS classified_count";
+  changed.d1.beforeOnceQuery = () => changed.sqlite
+    .prepare("UPDATE auth_attempts SET email_hash = ? WHERE email_hash = ? AND successful = 1")
+    .run("f".repeat(64), changedEmailHash);
+  const changedResponse = await handleAccountRequest(request("/api/auth/login", {
+    method: "POST",
+    body: { email: changedUser.email, password: changedUser.password },
+  }), { DB: changed.d1 }, []);
+  assert.equal(changedResponse?.status, 503);
+  assert.equal((await changedResponse.json()).error.code, "sign_in_accounting_unconfirmed");
+  assert.equal(sessionCookieFrom(changedResponse), null);
+  assert.equal(changed.sqlite.prepare("SELECT COUNT(*) AS count FROM auth_sessions WHERE user_id = ?")
+    .get(changedUser.id).count, 0);
 });
 
 test("email-code attempts are snapshot-bound before credential authorization", async () => {

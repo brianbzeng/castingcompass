@@ -56,13 +56,13 @@ test("the committed inventory covers every Worker prepare site and its reviewed 
   validatePolicy(policy, inventory);
   assert.deepEqual(JSON.parse(committed), inventory);
   assert.deepEqual(inventory.summary, {
-    prepareCallCount: 243,
-    literalCallCount: 229,
+    prepareCallCount: 245,
+    literalCallCount: 231,
     nonLiteralCallCount: 14,
     multiRowLiteralWithoutLimitCount: 9,
   });
   assert.equal(inventory.sourceFiles.length, 8);
-  assert.equal(new Set(inventory.queries.map(({ callSiteId }) => callSiteId)).size, 243);
+  assert.equal(new Set(inventory.queries.map(({ callSiteId }) => callSiteId)).size, 245);
   assert.equal(policy.multiRowReadContracts.filter(({ rowBoundStatus }) => rowBoundStatus === "open-account-cardinality").length, 0);
   assert.equal(policy.multiRowReadContracts.filter(({ rowBoundStatus }) => rowBoundStatus === "complete-rights-export").length, 9);
   assert.equal(policy.multiRowReadContracts.filter(({ rowBoundStatus }) => rowBoundStatus === "owner-lifecycle-cleanup").length, 0);
@@ -156,6 +156,14 @@ test("the committed inventory covers every Worker prepare site and its reviewed 
     executionMode === "run"
       && statementClass === "UPDATE"
       && sql === "UPDATE auth_attempts SET successful = 1 WHERE id = ? AND email_hash = ? AND attempted_at = ? AND successful = 0"));
+  assert.ok(inventory.queries.some(({ executionMode, statementClass, sql }) =>
+    executionMode === "first"
+      && statementClass === "SELECT"
+      && sql === "SELECT (SELECT COUNT(*) FROM auth_attempts WHERE id = ? AND email_hash = ? AND attempted_at = ? AND successful = 0) AS pending_count, (SELECT COUNT(*) FROM auth_attempts WHERE id = ?) AS any_count, (SELECT COUNT(*) FROM auth_attempts WHERE email_hash = ? AND successful = 0 AND attempted_at >= ?) AS recent_failed_count"));
+  assert.ok(inventory.queries.some(({ executionMode, statementClass, sql }) =>
+    executionMode === "first"
+      && statementClass === "SELECT"
+      && sql === "SELECT (SELECT COUNT(*) FROM auth_attempts WHERE id = ? AND email_hash = ? AND attempted_at = ? AND successful = 1) AS classified_count, (SELECT COUNT(*) FROM auth_attempts WHERE id = ? AND email_hash = ? AND attempted_at = ? AND successful = 0) AS pending_count, (SELECT COUNT(*) FROM auth_attempts WHERE id = ?) AS any_count"));
 
   const challengeIssuanceClaims = inventory.queries.filter(({ executionMode, statementClass, sql }) =>
     executionMode === "run"

@@ -190,6 +190,43 @@ CHECKS = (
         ("sqlite_autoindex_auth_attempts_1",),
     ),
     PlanCheck(
+        "exact sign-in attempt claim receipt",
+        """SELECT
+             (SELECT COUNT(*) FROM auth_attempts
+               WHERE id = ? AND email_hash = ? AND attempted_at = ? AND successful = 0) AS pending_count,
+             (SELECT COUNT(*) FROM auth_attempts WHERE id = ?) AS any_count,
+             (SELECT COUNT(*) FROM auth_attempts
+               WHERE email_hash = ? AND successful = 0 AND attempted_at >= ?) AS recent_failed_count""",
+        (
+            "attempt_fixture",
+            "email_hash_fixture",
+            "2026-07-17T00:00:00.000Z",
+            "attempt_fixture",
+            "email_hash_fixture",
+            "2026-07-16T23:00:00.000Z",
+        ),
+        ("sqlite_autoindex_auth_attempts_1", "auth_attempts_email_time_idx"),
+    ),
+    PlanCheck(
+        "exact sign-in success-classification receipt",
+        """SELECT
+             (SELECT COUNT(*) FROM auth_attempts
+               WHERE id = ? AND email_hash = ? AND attempted_at = ? AND successful = 1) AS classified_count,
+             (SELECT COUNT(*) FROM auth_attempts
+               WHERE id = ? AND email_hash = ? AND attempted_at = ? AND successful = 0) AS pending_count,
+             (SELECT COUNT(*) FROM auth_attempts WHERE id = ?) AS any_count""",
+        (
+            "attempt_fixture",
+            "email_hash_fixture",
+            "2026-07-17T00:00:00.000Z",
+            "attempt_fixture",
+            "email_hash_fixture",
+            "2026-07-17T00:00:00.000Z",
+            "attempt_fixture",
+        ),
+        ("sqlite_autoindex_auth_attempts_1",),
+    ),
+    PlanCheck(
         "atomic email challenge issuance ceiling",
         """INSERT INTO email_challenges
              (id, kind, email, user_id, code_hash, expires_at, attempts, created_at)
