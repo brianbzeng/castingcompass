@@ -606,7 +606,7 @@ after its acceptance checks pass in the intended environment.
   - [ ] Inventory every production query, capture representative `EXPLAIN QUERY PLAN` evidence,
     add only workload-justified indexes, bound scans/pagination, eliminate N+1 patterns, verify
     cross-account predicates, and regression-test query latency and migration cost.
-    - [x] Add a deterministic AST-backed inventory for all 235 Worker `.prepare()` sites across
+    - [x] Add a deterministic AST-backed inventory for all 234 Worker `.prepare()` sites across
       eight files, including exact review contracts for 14 nonliteral expressions and nine literal
       multi-row reads without `LIMIT`. CI and release provenance fail closed on inventory drift,
       computed/aliased prepare access, unreviewed dynamic SQL, unscoped literal writes, and
@@ -626,8 +626,10 @@ after its acceptance checks pass in the intended environment.
       Saturation tests hold queue dispatch, trip-photo cleanup, expired-export cleanup, and auth
       retention/deletion below conservative D1 query budgets of 32, 44, 36, and 40 against the
       stricter 50-query Free ceiling. Trip schema initialization is now one fail-closed read-only
-      readiness probe instead of 35 runtime DDL statements. Deployed-plan, cron, latency, cost,
-      backlog, and alert evidence remain isolated-staging gates.
+      readiness probe instead of 35 runtime DDL statements. Enabled public discussions likewise
+      use one fail-closed read-only readiness probe instead of runtime table/index DDL, while the
+      default-off path makes no D1 call. Deployed-plan, cron, latency, cost, backlog, and alert
+      evidence remain isolated-staging gates.
     - [x] Locally move complete export packaging behind a default-off managed Queue adapter with
       an opaque two-field message, owner-bound D1 job/lease ledger, private 24-hour object,
       progress/download UI, bounded retries/expiry, and account-deletion race adoption. Direct

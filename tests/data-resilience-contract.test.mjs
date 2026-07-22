@@ -5,9 +5,10 @@ import test from "node:test";
 const root = new URL("../", import.meta.url);
 
 test("D1 migrations and schema own indexes while runtime bootstrap is read-only", async () => {
-  const [migration, auth, trips, schema, ci, checker] = await Promise.all([
+  const [migration, auth, discussions, trips, schema, ci, checker] = await Promise.all([
     readFile(new URL("drizzle/0016_data_resilience_indexes.sql", root), "utf8"),
     readFile(new URL("worker/auth.ts", root), "utf8"),
+    readFile(new URL("worker/discussions.ts", root), "utf8"),
     readFile(new URL("worker/trips.ts", root), "utf8"),
     readFile(new URL("db/schema.ts", root), "utf8"),
     readFile(new URL(".github/workflows/ci.yml", root), "utf8"),
@@ -39,6 +40,10 @@ test("D1 migrations and schema own indexes while runtime bootstrap is read-only"
   assert.match(auth, /FROM pragma_table_info\('trips'\) WHERE name = 'photo_key_hash'/);
   assert.match(auth, /"auth_schema_unavailable"/);
   assert.doesNotMatch(auth, /CREATE (?:TABLE|INDEX)/);
+  assert.match(discussions, /const DISCUSSION_SCHEMA_READY_SQL = `SELECT/);
+  assert.match(discussions, /FROM pragma_foreign_key_list\('site_discussion_posts'\)/);
+  assert.match(discussions, /"discussion_schema_unavailable"/);
+  assert.doesNotMatch(discussions, /CREATE (?:TABLE|INDEX)/);
   for (const name of names.slice(8, 13)) assert.match(trips, new RegExp(`\\b${name}\\b`));
   assert.match(ci, /python scripts\/check_d1_query_plans\.py/);
   assert.match(checker, /EXPLAIN QUERY PLAN/);

@@ -13,6 +13,32 @@ Current provider truth overrides historical “paused” language in completed r
 2026-07-19 read-only reconciliation found an active Worker; no production mutation is authorized
 by that discovery.
 
+## Active checkpoint — discussion schema authority
+
+- [x] Remove the public-discussion route's cold `CREATE TABLE IF NOT EXISTS` and `CREATE INDEX IF
+      NOT EXISTS` fallback. Migration files are now the only authority that can create or change
+      `site_discussion_posts`; request handling contains no table, index, or trigger DDL.
+- [x] Add one read-only readiness probe for the two required tables, 20 required columns, two
+      named indexes, and the exact cascading trip foreign key. An incomplete schema returns
+      non-cacheable `503 discussion_schema_unavailable` without changing schema state; an
+      unexpected read failure is logged only through the structured redaction boundary and
+      returns a generic non-cacheable error.
+- [x] Prove the default-off path performs zero D1 queries, the enabled cold path performs exactly
+      one readiness query plus one bounded public read, and the same binding's warm path performs
+      only the public read. The current source-bound ledger covers 234 prepare sites: 220 literal,
+      14 reviewed nonliteral, and nine reviewed complete-rights multi-row reads, with zero runtime
+      discussion DDL.
+- [x] Pass the pinned Cloudflare build, ESLint, TypeScript, all 611/611 repository Node tests,
+      the complete offline security/SBOM/source-integrity chain, both zero-vulnerability npm
+      audits, API 29/29, Ruff, 83 pipeline tests with one documented optional-`rasterio` skip,
+      20 migrations / 29 critical indexed D1 plans, deterministic synthetic smoke, and the full
+      200/200 Chromium/WebKit phone matrix. Preserve a clean local commit and deterministic
+      release artifact; no push, PR, merge, deployment, provider query, production database
+      mutation, feature activation, UI change, or model claim belongs to this checkpoint.
+- [ ] Apply and verify the migration chain, enabled-route behavior, latency, rows read, and alert
+      delivery in isolated staging before discussions can be enabled. Public discussions remain
+      default-off and human approval remains an independent release gate.
+
 ## Active checkpoint — aggregate scheduled-Worker budget
 
 - [x] Replace the four concurrent cron `waitUntil` pipelines with one deterministic sequential

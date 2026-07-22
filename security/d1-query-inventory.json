@@ -1,7 +1,7 @@
 {
   "schemaVersion": "castingcompass.d1-query-inventory/1.0.0",
   "generatedFrom": "TypeScript AST; no runtime or provider query executed",
-  "policySha256": "579a5067127bcd989428a99c09886a2c387cfd60feb0e88e6a6a08bf8b2c174f",
+  "policySha256": "ad1f0934620faa078785a44ab56eec1f4496f833a9d4c799cfb294f15aeaa998",
   "sourceFiles": [
     {
       "file": "worker/auth.ts",
@@ -10,8 +10,8 @@
     },
     {
       "file": "worker/discussions.ts",
-      "sha256": "f3bca7e212f21d93e40d1e9d01130c0747d32d256e238ff8e1d634dcf702f088",
-      "prepareCallCount": 3
+      "sha256": "430739564f2a355ef19ce0e30926355a9f2d05890154caa4dd23a669ecf01393",
+      "prepareCallCount": 2
     },
     {
       "file": "worker/privacy-export.ts",
@@ -45,8 +45,8 @@
     }
   ],
   "summary": {
-    "prepareCallCount": 235,
-    "literalCallCount": 221,
+    "prepareCallCount": 234,
+    "literalCallCount": 220,
     "nonLiteralCallCount": 14,
     "multiRowLiteralWithoutLimitCount": 9
   },
@@ -2602,19 +2602,19 @@
       "hasLimit": false
     },
     {
-      "callSiteId": "73b80fee55d77e864814de81",
+      "callSiteId": "3ac1464dfffa288915dbe473",
       "file": "worker/discussions.ts",
-      "line": 32,
+      "line": 48,
       "containingFunction": "initialize",
       "occurrence": 1,
-      "executionMode": "batch",
+      "executionMode": "first",
       "argumentKind": "reviewed-nonliteral",
-      "expression": "CREATE_DISCUSSIONS_SQL",
-      "expressionSha256": "d4365f061b288be8329a532ca6644afaef7c5a57ccfd6dc44cec65f325ff60c1",
+      "expression": "DISCUSSION_SCHEMA_READY_SQL",
+      "expressionSha256": "082697e4dd97c5c634eff29073f5552bc95d2a24a4ee39db84a4c6eba3f086b8",
       "declarationReference": {
-        "name": "CREATE_DISCUSSIONS_SQL",
-        "declarationLine": 11,
-        "initializerSha256": "771cb4865f719aa1986467daac2e3f8dfb0f0885ec1b8b3248be617058edd869"
+        "name": "DISCUSSION_SCHEMA_READY_SQL",
+        "declarationLine": 12,
+        "initializerSha256": "7944221ff7899c881a53e7dfa179f1cda07a1d7472935652e456003da88a6f44"
       },
       "statementClass": "UNRESOLVED",
       "sql": null,
@@ -2626,35 +2626,15 @@
       "hasLimit": null
     },
     {
-      "callSiteId": "bc9b2ee74ff2200674d8026d",
+      "callSiteId": "5801647d96420810cb3f57d0",
       "file": "worker/discussions.ts",
-      "line": 33,
-      "containingFunction": "initialize",
-      "occurrence": 2,
-      "executionMode": "batch",
-      "argumentKind": "literal",
-      "expression": "\"CREATE INDEX IF NOT EXISTS site_discussion_posts_site_time_idx ON site_discussion_posts (site_id, observed_at DESC)\"",
-      "expressionSha256": "a3c22974267102274c02884cb682905b39edd63c7e267ec2d79ed94b6baa232a",
-      "declarationReference": null,
-      "statementClass": "CREATE",
-      "sql": "CREATE INDEX IF NOT EXISTS site_discussion_posts_site_time_idx ON site_discussion_posts (site_id, observed_at DESC)",
-      "sqlSha256": "7eb455f5ee1634bccb2194e7d189655dc2a20b7a91d732abcb53d8d0e7ae1cc2",
-      "tables": [],
-      "placeholderCount": 0,
-      "hasWhere": false,
-      "hasOrderBy": false,
-      "hasLimit": false
-    },
-    {
-      "callSiteId": "2c59449abf5547e899cfe4a8",
-      "file": "worker/discussions.ts",
-      "line": 60,
+      "line": 94,
       "containingFunction": "handleDiscussionRequest",
-      "occurrence": 3,
+      "occurrence": 2,
       "executionMode": "all",
       "argumentKind": "literal",
-      "expression": "`SELECT post.id AS id, post.site_id AS site_id,\n      post.summary AS summary, post.gear_summary AS gear_summary,\n      post.technique_tags_json AS technique_tags_json,\n      substr(post.observed_at, 1, 10) AS observed_date,\n      post.approved_at AS approved_at\n    FROM site_discussion_posts AS post\n    INNER JOIN trips AS trip ON trip.id = post.trip_id\n    WHERE post.site_id = ?\n      AND post.site_id = trip.site_id\n      AND length(trim(post.approved_at)) > 0\n      AND length(trim(post.approved_by)) > 0\n      AND length(trim(post.source_ai_reviewed_at)) > 0\n      AND post.source_ai_reviewed_at = trip.ai_reviewed_at\n      AND trip.status = 'completed'\n      AND trip.consent = 1\n      AND trip.moderation_status = 'approved'\n      AND trip.ai_review_status = 'reviewed'\n    ORDER BY post.observed_at DESC\n    LIMIT 12`",
-      "expressionSha256": "a8f45f3b33b81582d3db4affd565c194dfa0c267a1c2ddbeb69ade989acfc127",
+      "expression": "`SELECT post.id AS id, post.site_id AS site_id,\n        post.summary AS summary, post.gear_summary AS gear_summary,\n        post.technique_tags_json AS technique_tags_json,\n        substr(post.observed_at, 1, 10) AS observed_date,\n        post.approved_at AS approved_at\n      FROM site_discussion_posts AS post\n      INNER JOIN trips AS trip ON trip.id = post.trip_id\n      WHERE post.site_id = ?\n        AND post.site_id = trip.site_id\n        AND length(trim(post.approved_at)) > 0\n        AND length(trim(post.approved_by)) > 0\n        AND length(trim(post.source_ai_reviewed_at)) > 0\n        AND post.source_ai_reviewed_at = trip.ai_reviewed_at\n        AND trip.status = 'completed'\n        AND trip.consent = 1\n        AND trip.moderation_status = 'approved'\n        AND trip.ai_review_status = 'reviewed'\n      ORDER BY post.observed_at DESC\n      LIMIT 12`",
+      "expressionSha256": "4f81a8e42d1c2f4e9de2a33907dba4577dfe3f4595e0c0f44226c6df42b79824",
       "declarationReference": null,
       "statementClass": "SELECT",
       "sql": "SELECT post.id AS id, post.site_id AS site_id, post.summary AS summary, post.gear_summary AS gear_summary, post.technique_tags_json AS technique_tags_json, substr(post.observed_at, 1, 10) AS observed_date, post.approved_at AS approved_at FROM site_discussion_posts AS post INNER JOIN trips AS trip ON trip.id = post.trip_id WHERE post.site_id = ? AND post.site_id = trip.site_id AND length(trim(post.approved_at)) > 0 AND length(trim(post.approved_by)) > 0 AND length(trim(post.source_ai_reviewed_at)) > 0 AND post.source_ai_reviewed_at = trip.ai_reviewed_at AND trip.status = 'completed' AND trip.consent = 1 AND trip.moderation_status = 'approved' AND trip.ai_review_status = 'reviewed' ORDER BY post.observed_at DESC LIMIT 12",

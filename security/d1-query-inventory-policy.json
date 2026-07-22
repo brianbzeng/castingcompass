@@ -11,8 +11,8 @@
     "worker/validation-feasibility-export.ts"
   ],
   "expectedSummary": {
-    "prepareCallCount": 235,
-    "literalCallCount": 221,
+    "prepareCallCount": 234,
+    "literalCallCount": 220,
     "nonLiteralCallCount": 14,
     "multiRowLiteralWithoutLimitCount": 9
   },
@@ -40,10 +40,10 @@
     },
     {
       "file": "worker/discussions.ts",
-      "expressionSha256": "d4365f061b288be8329a532ca6644afaef7c5a57ccfd6dc44cec65f325ff60c1",
-      "staticAuthority": "module-level CREATE_DISCUSSIONS_SQL constant",
-      "executionContract": "schema bootstrap batch",
-      "rationale": "The runtime fallback schema uses one reviewed constant and no request input."
+      "expressionSha256": "082697e4dd97c5c634eff29073f5552bc95d2a24a4ee39db84a4c6eba3f086b8",
+      "staticAuthority": "module-level DISCUSSION_SCHEMA_READY_SQL constant",
+      "executionContract": "one read-only schema-readiness probe per D1 binding when public discussions are enabled",
+      "rationale": "Production discussion schema is migration-owned; the default-off runtime fails closed with one static readiness query instead of issuing table or index DDL on a cold isolate."
     },
     {
       "file": "worker/trips.ts",

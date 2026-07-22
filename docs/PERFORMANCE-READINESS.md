@@ -8,7 +8,7 @@ accounts, or production data.
 ## D1 query inventory
 
 `scripts/generate-d1-query-inventory.mjs` parses every Worker TypeScript source file and records
-all 235 direct `.prepare()` sites: 221 literal statements and 14 separately reviewed nonliteral
+all 234 direct `.prepare()` sites: 220 literal statements and 14 separately reviewed nonliteral
 expressions across eight source files. The committed policy and generated inventory are
 source-hash and call-site bound. CI rejects source-file/count drift, computed or aliased
 `prepare` access, a nonliteral expression without its exact static-authority review, an unscoped
@@ -31,10 +31,13 @@ measurements and provider activation remain open. An inventory proves source cov
 review identity; it does not prove query latency, production index selection, or safe load
 capacity.
 
-Cold authentication and trip-store initialization each perform one read-only schema-readiness
-query and fail closed if their migration-owned tables, indexes, triggers, or
-`trips.photo_key_hash` column are absent. Neither path runs request-time or scheduled-work DDL;
-the trip store no longer issues its prior 35 table/index/trigger statements on a cold isolate.
+Cold authentication, trip-store initialization, and enabled public discussions each perform one
+read-only schema-readiness query and fail closed if their migration-owned tables, columns,
+indexes, triggers, foreign keys, or `trips.photo_key_hash` column are absent. Default-off public
+discussions return an empty public projection without touching D1. None of these paths runs
+request-time or scheduled-work DDL; the trip store no longer issues its prior 35
+table/index/trigger statements, and discussions no longer issue table/index DDL on a cold
+isolate.
 Scheduled authentication
 retention selects at most 100 eligible primary keys per table and
 invocation before deleting sessions, challenges, attempts, age proofs, and completed deletion

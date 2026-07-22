@@ -56,13 +56,13 @@ test("the committed inventory covers every Worker prepare site and its reviewed 
   validatePolicy(policy, inventory);
   assert.deepEqual(JSON.parse(committed), inventory);
   assert.deepEqual(inventory.summary, {
-    prepareCallCount: 235,
-    literalCallCount: 221,
+    prepareCallCount: 234,
+    literalCallCount: 220,
     nonLiteralCallCount: 14,
     multiRowLiteralWithoutLimitCount: 9,
   });
   assert.equal(inventory.sourceFiles.length, 8);
-  assert.equal(new Set(inventory.queries.map(({ callSiteId }) => callSiteId)).size, 235);
+  assert.equal(new Set(inventory.queries.map(({ callSiteId }) => callSiteId)).size, 234);
   assert.equal(policy.multiRowReadContracts.filter(({ rowBoundStatus }) => rowBoundStatus === "open-account-cardinality").length, 0);
   assert.equal(policy.multiRowReadContracts.filter(({ rowBoundStatus }) => rowBoundStatus === "complete-rights-export").length, 9);
   assert.equal(policy.multiRowReadContracts.filter(({ rowBoundStatus }) => rowBoundStatus === "owner-lifecycle-cleanup").length, 0);
@@ -75,6 +75,8 @@ test("the committed inventory covers every Worker prepare site and its reviewed 
   assert.equal(setBasedDeletionInventory.length, 4);
   assert.equal(inventory.queries.filter(({ file, statementClass }) =>
     file === "worker/auth.ts" && statementClass === "CREATE").length, 0);
+  assert.equal(inventory.queries.filter(({ file, statementClass }) =>
+    file === "worker/discussions.ts" && statementClass === "CREATE").length, 0);
   assert.ok(inventory.queries.every(({ placeholderCount }) =>
     placeholderCount === null || placeholderCount <= 100));
 
