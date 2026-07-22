@@ -1063,12 +1063,14 @@ def audit_usgs_residual_statewide_video_support(
         for index, raw_class in enumerate(fields["CLASS"]):
             if not raw_class:
                 continue
+            unexpected_row = raw_class not in VIDEO_CLASS_COLLAPSE
+            if unexpected_row:
+                unexpected_class_rows += 1
             if not fields["LINE"][index] or not fields["TAPE"][index]:
                 cruise_missing_group_identity += 1
                 missing_group_identity_rows += 1
                 continue
-            if raw_class not in VIDEO_CLASS_COLLAPSE:
-                unexpected_class_rows += 1
+            if unexpected_row:
                 continue
             class_index = VIDEO_CLASS_COLLAPSE[raw_class]
             labels.append(class_index)
@@ -1076,6 +1078,13 @@ def audit_usgs_residual_statewide_video_support(
             collapsed_counts[class_index] += 1
         asset_summaries[cruise_id] = {
             "record_count": len(points),
+            "published_metadata_record_count": spec.get(
+                "published_metadata_record_count", spec["record_count"]
+            ),
+            "published_metadata_count_matches_archive": (
+                spec.get("published_metadata_record_count", spec["record_count"])
+                == len(points)
+            ),
             "labeled_record_count": int(sum(raw_class_counts.values())),
             "raw_class_counts": dict(sorted(raw_class_counts.items())),
             "unexpected_nonblank_class_values": unexpected,
@@ -1145,6 +1154,7 @@ def audit_usgs_residual_statewide_video_support(
             "recognized_class_rows": len(labels),
             "unexpected_class_rows": unexpected_class_rows,
             "nonblank_rows_missing_line_or_tape": missing_group_identity_rows,
+            "invalid_row_categories_may_overlap": True,
         },
         "collapsed_class_counts": {
             name: int(count) for name, count in zip(VIDEO_CLASS_NAMES, total_counts)
