@@ -13,6 +13,35 @@ Current provider truth overrides historical “paused” language in completed r
 2026-07-19 read-only reconciliation found an active Worker; no production mutation is authorized
 by that discovery.
 
+## Active checkpoint — registry-owned API handler dispatch
+
+- [x] Reconcile the executable handler field against the actual Worker router. Although every
+      admitted path and method named one handler, the entry point still offered each request to
+      all five handler families in a fixed sequence and accepted the first non-null response. A
+      future overlapping or stale handler branch could therefore answer a request assigned to a
+      different policy owner.
+- [x] Make the singleton route policy the sole API dispatcher. Health, Turnstile, discussion,
+      account, and trip code now runs only from its named policy case; the existing owner-session
+      and current-legal-acceptance checks for protected trip mutations remain unchanged.
+- [x] Fail policy/implementation drift closed. An API request with no surviving policy, an
+      unknown handler value, or a named handler that no longer claims its assigned route receives
+      a generic non-cacheable `503`; it cannot fall through to another handler, image
+      optimization, or the static application. Non-API routing remains unchanged.
+- [x] Add an attack-oriented source contract that proves all five handler calls are unique to
+      their own registry cases and that the API branch returns before either non-API boundary.
+      A production-bundle exercise also reaches representative policies for all five families and
+      proves none consults static assets. The focused route suite passes 10/10 under pinned Node
+      22.23.1/npm 10.9.8; the production-off Cloudflare build, ESLint, and TypeScript pass.
+- [x] Complete local exact-tree acceptance. All 693/693 Node tests pass; the explicit feature-on
+      photo build and 8/8 Chromium/WebKit cases pass; the restored production-off phone matrix
+      passes 228/228 across four Chromium/WebKit profiles; and the complete security/SBOM/query-
+      policy chain plus both npm audits pass with zero reported vulnerabilities.
+- [ ] Obtain exact-head hosted CI and CodeQL evidence. This automation gate does not replace
+      independent review or authorize a release.
+- [ ] Obtain independent human review. This
+      repository boundary does not authorize merge, deployment, provider mutation, migration,
+      feature activation, staging exercise, or production acceptance.
+
 ## Active checkpoint — registry-enforced same-origin mutation boundary
 
 - [x] Reconcile the executable `sameOriginRequired` classification against request dispatch. Every
@@ -35,7 +64,12 @@ by that discovery.
       production-off phone matrix passes 228/228 across four Chromium/WebKit profiles; and the
       complete security/SBOM/query-policy chain plus both npm audits pass with zero reported
       vulnerabilities.
-- [ ] Obtain exact-head hosted CI and CodeQL evidence and independent human review. This
+- [x] Obtain exact-head hosted evidence through consolidated head
+      `35fa8c5b31145b821a359c8cc9c43face776be3b`: CI run `29962053974`, CodeQL run
+      `29962051684`, optional research-stack run `29962053954`, native API-image run
+      `29962054031`, and release-provenance run `29962053989` all passed. This is automation
+      evidence, not review.
+- [ ] Obtain independent human review. This
       repository boundary does not authorize merge, deployment, provider mutation, migration,
       feature activation, staging exercise, or production acceptance.
 

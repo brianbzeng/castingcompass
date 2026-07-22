@@ -156,6 +156,14 @@ after its acceptance checks pass in the intended environment.
       generic non-cacheable `403`. Conflict, unknown-path, and wrong-method rejection retain
       precedence, public/read routes stay origin-independent, and handler-local assertions remain
       as defense in depth.
+    - [x] Make the registry's handler field executable rather than descriptive. Every classified
+      API request now dispatches only to the health, Turnstile, discussion, account, or trip
+      handler named by its singleton policy. A missing policy, unknown handler value, or assigned
+      handler that returns null produces a generic non-cacheable `503` before the request can
+      reach another handler, image optimization, or the static application. The focused registry
+      suite passes 10/10, including representative production-bundle dispatch for all five
+      families, and the production-off build plus all 693/693 Node tests pass under the pinned
+      runtime; non-API routing and protected-trip owner/legal checks remain unchanged.
     - [x] Bind active-trip completion and cancellation to the authenticated account in both
       the handler precheck and the final D1 update. The write now requires the same trip ID,
       account ID, active state, and token hash atomically; exact-token cross-account and

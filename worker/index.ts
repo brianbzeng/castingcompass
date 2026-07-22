@@ -155,42 +155,73 @@ async function handleFetchRequest(request: Request, env: Env, ctx: ExecutionCont
   return routeRequest(routedRequest, env, ctx);
 }
 
+function routePolicyUnavailableResponse(): Response {
+  return new Response(JSON.stringify({
+    error: {
+      code: "route_unavailable",
+      message: "This API route is temporarily unavailable.",
+    },
+  }), {
+    status: 503,
+    headers: {
+      "Content-Type": "application/json; charset=utf-8",
+      "Cache-Control": "no-store",
+    },
+  });
+}
+
 async function routeRequest(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
   const url = new URL(request.url);
   const apiPolicy = apiRoutePolicyForRequest(request);
 
-  const turnstileConfig = handleTurnstileConfigRequest(request, env);
-  if (turnstileConfig) return turnstileConfig;
+  if (url.pathname.startsWith("/api/")) {
+    // The route registry is the sole API dispatcher. A handler that no longer
+    // claims its assigned route is policy drift, not permission to fall through
+    // to another handler or the static application.
+    if (!apiPolicy) return routePolicyUnavailableResponse();
 
-  const health = await healthResponse(request, env);
-  if (health) return health;
-
-  const discussionResponse = await handleDiscussionRequest(request, env, sites);
-  if (discussionResponse) return discussionResponse;
-
-  const accountResponse = await handleAccountRequest(request, env, sites, {
-    waitUntil: (promise) => ctx.waitUntil(promise),
-    onTripUpdated: (trip) => ctx.waitUntil(scheduleTripReview(env, trip.id, sites, { resetForNewInput: true })),
-    onTripReviewRequested: (trip) => ctx.waitUntil(
-      scheduleTripReview(env, trip.id, sites, { expediteRetry: true }),
-    ),
-  });
-  if (accountResponse) return accountResponse;
-
-  const protectedTripMutation = apiPolicy?.handler === "trips" && apiPolicy.authorization === "owner";
-  const authenticatedUser = protectedTripMutation ? await getAuthenticatedUser(request, env) : null;
-  if (protectedTripMutation && !authenticatedUser) {
-    return unauthorizedResponse();
+    let apiResponse: Response | null = null;
+    switch (apiPolicy.handler) {
+      case "turnstile":
+        apiResponse = handleTurnstileConfigRequest(request, env);
+        break;
+      case "health":
+        apiResponse = await healthResponse(request, env);
+        break;
+      case "discussions":
+        apiResponse = await handleDiscussionRequest(request, env, sites);
+        break;
+      case "account":
+        apiResponse = await handleAccountRequest(request, env, sites, {
+          waitUntil: (promise) => ctx.waitUntil(promise),
+          onTripUpdated: (trip) => ctx.waitUntil(
+            scheduleTripReview(env, trip.id, sites, { resetForNewInput: true }),
+          ),
+          onTripReviewRequested: (trip) => ctx.waitUntil(
+            scheduleTripReview(env, trip.id, sites, { expediteRetry: true }),
+          ),
+        });
+        break;
+      case "trips": {
+        const protectedTripMutation = apiPolicy.authorization === "owner";
+        const authenticatedUser = protectedTripMutation ? await getAuthenticatedUser(request, env) : null;
+        if (protectedTripMutation && !authenticatedUser) {
+          return unauthorizedResponse();
+        }
+        if (protectedTripMutation && !authenticatedUser?.legalAccepted) {
+          return legalAcceptanceRequiredResponse(authenticatedUser?.ageEligible ?? false);
+        }
+        apiResponse = await handleTripRequest(request, env, sites, {
+          accountId: authenticatedUser?.id ?? null,
+          onTripCompleted: (trip) => ctx.waitUntil(scheduleTripReview(env, trip.id, sites)),
+        });
+        break;
+      }
+      default:
+        return routePolicyUnavailableResponse();
+    }
+    return apiResponse ?? routePolicyUnavailableResponse();
   }
-  if (protectedTripMutation && !authenticatedUser?.legalAccepted) {
-    return legalAcceptanceRequiredResponse(authenticatedUser?.ageEligible ?? false);
-  }
-
-  const tripResponse = await handleTripRequest(request, env, sites, {
-    accountId: authenticatedUser?.id ?? null,
-    onTripCompleted: (trip) => ctx.waitUntil(scheduleTripReview(env, trip.id, sites)),
-  });
-  if (tripResponse) return tripResponse;
 
   if (url.pathname === "/_vinext/image") {
     const images = env.IMAGES;

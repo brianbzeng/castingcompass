@@ -272,7 +272,7 @@ test("the Worker entry point centrally denies unknown paths and unclassified met
   assert.match(source, /status: apiRejection\.status/);
   assert.match(source, /Allow: apiRejection\.allowedMethods\.join\(", "\)/);
   assert.doesNotMatch(source, /!apiPolicy && !isKnownApiPath/);
-  assert.match(source, /apiPolicy\?\.handler === "trips" && apiPolicy\.authorization === "owner"/);
+  assert.match(source, /const protectedTripMutation = apiPolicy\.authorization === "owner"/);
   assert.doesNotMatch(source, /url\.pathname\.startsWith\("\/api\/trips\/"\)/);
 
   const rejection = source.indexOf("apiRouteRejectionForRequest(request)");
@@ -287,4 +287,97 @@ test("the Worker entry point centrally denies unknown paths and unclassified met
   ]) {
     assert.ok(source.indexOf(dispatch) > rejection, `${dispatch} must follow the central rejection`);
   }
+});
+
+test("the route registry exclusively selects API handlers and handler drift fails closed", async () => {
+  const source = await readFile(new URL("../worker/index.ts", import.meta.url), "utf8");
+  const routeStart = source.indexOf("async function routeRequest(");
+  const apiBoundary = source.indexOf('if (url.pathname.startsWith("/api/"))', routeStart);
+  const dispatchStart = source.indexOf("switch (apiPolicy.handler)", apiBoundary);
+  const driftFallback = source.indexOf("return apiResponse ?? routePolicyUnavailableResponse();", dispatchStart);
+  const imageBoundary = source.indexOf('if (url.pathname === "/_vinext/image")', dispatchStart);
+  const staticFallback = source.indexOf("handler.fetch(request, env, ctx)", imageBoundary);
+
+  assert.ok(routeStart >= 0);
+  assert.ok(apiBoundary > routeStart);
+  assert.ok(dispatchStart > apiBoundary);
+  assert.ok(driftFallback > dispatchStart);
+  assert.ok(imageBoundary > driftFallback, "API dispatch must return before image handling");
+  assert.ok(staticFallback > imageBoundary, "API dispatch must return before the static application");
+  assert.match(source.slice(apiBoundary, dispatchStart), /if \(!apiPolicy\) return routePolicyUnavailableResponse\(\)/);
+  assert.match(source.slice(dispatchStart, driftFallback), /default:\s+return routePolicyUnavailableResponse\(\)/);
+  assert.match(source, /status: 503/);
+  assert.match(source, /code: "route_unavailable"/);
+  assert.match(source, /"Cache-Control": "no-store"/);
+
+  const handlers = [
+    ["turnstile", "handleTurnstileConfigRequest(request, env)"],
+    ["health", "healthResponse(request, env)"],
+    ["discussions", "handleDiscussionRequest(request, env, sites)"],
+    ["account", "handleAccountRequest(request, env, sites"],
+    ["trips", "handleTripRequest(request, env, sites"],
+  ];
+  const dispatchSource = source.slice(dispatchStart, driftFallback);
+  for (const [index, [handler, call]] of handlers.entries()) {
+    const handlerCase = dispatchSource.indexOf(`case "${handler}":`);
+    const handlerCall = dispatchSource.indexOf(call);
+    const nextHandler = handlers[index + 1]?.[0];
+    const nextCase = nextHandler
+      ? dispatchSource.indexOf(`case "${nextHandler}":`)
+      : dispatchSource.indexOf("default:");
+    assert.ok(handlerCase >= 0, `${handler} must have a registry dispatch case`);
+    assert.ok(handlerCall > handlerCase, `${handler} can only run from its registry dispatch case`);
+    assert.ok(handlerCall < nextCase, `${handler} cannot borrow a later handler's dispatch call`);
+    assert.equal(dispatchSource.indexOf(call, handlerCall + call.length), -1, `${handler} must have one dispatch call`);
+  }
+});
+
+test("the production bundle dispatches representative API policies without static fallthrough", async () => {
+  const workerUrl = new URL("../dist/server/index.js", import.meta.url);
+  workerUrl.searchParams.set("route-policy-test", `${process.pid}-${Date.now()}`);
+  const { default: worker } = await import(workerUrl.href);
+  let assetFetches = 0;
+  const baseEnv = {
+    ASSETS: {
+      fetch: async () => {
+        assetFetches += 1;
+        return new Response("static-fallback", { status: 418 });
+      },
+    },
+  };
+  const ctx = { waitUntil() {}, passThroughOnException() {} };
+
+  const turnstile = await worker.fetch(request("/api/auth/turnstile-config"), baseEnv, ctx);
+  assert.equal(turnstile.status, 200);
+  assert.deepEqual(await turnstile.json(), { turnstile: { enabled: false } });
+
+  const health = await worker.fetch(request("/api/health"), {
+    ...baseEnv,
+    DB: {
+      prepare(statement) {
+        assert.equal(statement, "SELECT 1 AS ok");
+        return { first: async () => ({ ok: 1 }) };
+      },
+    },
+  }, ctx);
+  assert.equal(health.status, 200);
+  assert.equal((await health.json()).status, "ok");
+
+  const discussions = await worker.fetch(request("/api/discussions/limantour-beach"), baseEnv, ctx);
+  assert.equal(discussions.status, 200);
+  assert.deepEqual(await discussions.json(), { posts: [] });
+
+  for (const [path, expectedCode] of [
+    ["/api/auth/session", "storage_unavailable"],
+    ["/api/trips/summary", "storage_unavailable"],
+  ]) {
+    const response = await worker.fetch(request(path), baseEnv, ctx);
+    assert.equal(response.status, 503, path);
+    assert.equal((await response.json()).error.code, expectedCode, path);
+  }
+
+  const unknown = await worker.fetch(request("/api/not-registered"), baseEnv, ctx);
+  assert.equal(unknown.status, 404);
+  assert.equal((await unknown.json()).error.code, "not_found");
+  assert.equal(assetFetches, 0, "no API response may fall through to static assets");
 });
