@@ -2438,6 +2438,179 @@ test("account deletion transaction removes public/account rows and completes suc
   assert.match(cleared.headers.get("set-cookie") ?? "", /cc_deletion_receipt=;.*Max-Age=0/);
 });
 
+test("a lost fence response still adopts a pre-fence photo locator without early R2 deletion", async () => {
+  const { sqlite, d1 } = await database();
+  const user = await addUser(sqlite, "photo-fence-adoption");
+  const store = createTripStore(d1);
+  const tripId = "trip_91000000-0000-4000-8000-000000000091";
+  const objectKey = `trip-photos/2099/01/${tripId}/pre-fence.webp`;
+  const ownerSubjectHash = await sha256(`account:${user.id}`);
+  const objectKeyHash = await sha256(`trip_photos\u0000${objectKey}`);
+  const availableAt = "2099-01-01T00:00:00.000Z";
+  assert.equal(await store.reservePhotoUpload({
+    id: "photo_reservation_91000000000000000000000000000091",
+    tripId,
+    accountId: user.id,
+    ownerSubjectHash,
+    objectKey,
+    objectKeyHash,
+    availableAt,
+    createdAt: "2026-07-21T18:00:00.000Z",
+  }), true);
+  d1.throwOnceAfterMutationSubstring = "INSERT INTO account_deletion_fences";
+  const deletedKeys = [];
+
+  const response = await handleAccountRequest(request("/api/profile", {
+    method: "DELETE",
+    cookie: user.cookie,
+    body: { confirmation: "DELETE", password: user.password },
+  }), {
+    DB: d1,
+    TRIP_PHOTOS: { delete: async (key) => deletedKeys.push(key) },
+  }, [], { now: () => new Date("2026-07-21T18:01:00.000Z") });
+
+  assert.equal(response?.status, 202);
+  assert.equal((await response.json()).deletion.status, "processing");
+  assert.deepEqual(deletedKeys, []);
+  assert.equal(sqlite.prepare("SELECT COUNT(*) AS count FROM users WHERE id = ?").get(user.id).count, 0);
+  assert.equal(sqlite.prepare("SELECT COUNT(*) AS count FROM account_deletion_fences").get().count, 0);
+  assert.equal(sqlite.prepare("SELECT COUNT(*) AS count FROM trip_photo_upload_reservations").get().count, 0);
+  assert.deepEqual(
+    { ...sqlite.prepare(`SELECT object_key, object_key_hash, object_store, state, available_at
+      FROM privacy_deletion_tasks`).get() },
+    {
+      object_key: objectKey,
+      object_key_hash: objectKeyHash,
+      object_store: "trip_photos",
+      state: "pending",
+      available_at: availableAt,
+    },
+  );
+});
+
+test("a stale authenticated photo request cannot cross an active deletion fence or write R2", async () => {
+  const { sqlite, d1 } = await database();
+  const user = await addUser(sqlite, "photo-fence-r2");
+  const ownerSubjectHash = await sha256(`account:${user.id}`);
+  sqlite.prepare(`INSERT INTO account_deletion_fences (
+      user_id, owner_subject_hash, lease_token, lease_expires_at, requested_at, updated_at)
+    VALUES (?, ?, ?, ?, ?, ?)`)
+    .run(
+      user.id,
+      ownerSubjectHash,
+      "account-deletion-fence-token-0000000000000002",
+      "2026-07-21T19:00:00.000Z",
+      "2026-07-21T18:00:00.000Z",
+      "2026-07-21T18:00:00.000Z",
+    );
+  const login = await handleAccountRequest(request("/api/auth/login", {
+    method: "POST",
+    body: { email: user.email, password: user.password },
+  }), { DB: d1 }, []);
+  assert.equal(login?.status, 503);
+  assert.equal((await login.json()).error.code, "session_creation_unconfirmed");
+  assert.equal(sqlite.prepare("SELECT COUNT(*) AS count FROM auth_sessions WHERE user_id = ?")
+    .get(user.id).count, 1);
+
+  const staleStart = tripRequestMaterial();
+  const startResponse = await handleTripRequest(new Request("https://castingcompass.com/api/trips/start", {
+    method: "POST",
+    headers: { Origin: "https://castingcompass.com", "Content-Type": "application/json" },
+    body: JSON.stringify({
+      ...staleStart,
+      siteId: "ocean-beach",
+      startedAt: "2026-07-21T18:00:00.000Z",
+      mode: "beach",
+      anglerCount: 1,
+      consent: true,
+      primaryTargetConfirmed: true,
+      scoreInfluencedChoice: false,
+      reporterKey: "fenced-start-request-device-key-123456789",
+      website: "",
+    }),
+  }), { DB: d1 }, [{ id: "ocean-beach", type: "Beach" }], {
+    accountId: user.id,
+    now: () => new Date("2026-07-21T18:00:00.000Z"),
+  });
+  assert.equal(startResponse.status, 500);
+  assert.equal(sqlite.prepare("SELECT COUNT(*) AS count FROM trips WHERE user_id = ?").get(user.id).count, 0);
+
+  const requestMaterial = tripRequestMaterial();
+  const form = new FormData();
+  form.set("clientTripId", requestMaterial.clientTripId);
+  form.set("requestToken", requestMaterial.requestToken);
+  form.set("siteId", "ocean-beach");
+  form.set("startedAt", "2026-07-21T15:00:00.000Z");
+  form.set("endedAt", "2026-07-21T17:00:00.000Z");
+  form.set("mode", "beach");
+  form.set("keeperCount", "0");
+  form.set("shortReleasedCount", "0");
+  form.set("otherCatchCount", "0");
+  form.set("scoreInfluencedChoice", "false");
+  form.set("consent", "true");
+  form.set("primaryTargetConfirmed", "true");
+  form.set("completeAttempt", "true");
+  form.set("reporterKey", "fenced-photo-request-device-key-123456789");
+  form.set("website", "");
+  form.set("photo", new File([
+    new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
+  ], "fenced.png", { type: "image/png" }));
+  let r2Puts = 0;
+  const response = await handleTripRequest(new Request("https://castingcompass.com/api/trips/report", {
+    method: "POST",
+    headers: { Origin: "https://castingcompass.com" },
+    body: form,
+  }), {
+    DB: d1,
+    TRIP_PHOTO_UPLOADS_ENABLED: "true",
+    IMAGES: {
+      input() {
+        return {
+          transform() {
+            return {
+              async output() {
+                return { response: () => new Response(new Uint8Array([1, 2, 3])) };
+              },
+            };
+          },
+        };
+      },
+    },
+    TRIP_PHOTOS: {
+      async put() { r2Puts += 1; },
+      async delete() {},
+    },
+  }, [{ id: "ocean-beach", type: "Beach" }], {
+    accountId: user.id,
+    now: () => new Date("2026-07-21T18:00:00.000Z"),
+  });
+
+  assert.equal(response.status, 503);
+  assert.equal((await response.json()).error.code, "photo_storage_unavailable");
+  assert.equal(r2Puts, 0);
+  assert.equal(sqlite.prepare("SELECT COUNT(*) AS count FROM trip_photo_upload_reservations").get().count, 0);
+  assert.equal(sqlite.prepare("SELECT COUNT(*) AS count FROM trips WHERE user_id = ?").get(user.id).count, 0);
+});
+
+test("an exact post-state proves account deletion after its committed batch response is lost", async () => {
+  const { sqlite, d1 } = await database();
+  const user = await addUser(sqlite, "account-delete-batch-receipt");
+  addTrip(sqlite, user);
+  d1.throwOnceAfterBatchMutationSubstring = "DELETE FROM users WHERE id = ?";
+
+  const response = await handleAccountRequest(request("/api/profile", {
+    method: "DELETE",
+    cookie: user.cookie,
+    body: { confirmation: "DELETE", password: user.password },
+  }), { DB: d1 }, [], { now: () => new Date("2026-07-21T18:00:00.000Z") });
+
+  assert.equal(response?.status, 200);
+  assert.equal((await response.json()).deleted, true);
+  assert.equal(sqlite.prepare("SELECT COUNT(*) AS count FROM users WHERE id = ?").get(user.id).count, 0);
+  assert.equal(sqlite.prepare("SELECT COUNT(*) AS count FROM account_deletion_fences").get().count, 0);
+  assert.equal(sqlite.prepare("SELECT COUNT(*) AS count FROM privacy_deletion_jobs").get().count, 1);
+});
+
 test("trip writes serialize safely on both sides of account deletion and fallback DDL keeps ownership foreign keys", async () => {
   const { sqlite, d1 } = await database();
   const user = await addUser(sqlite, "19");
@@ -3049,6 +3222,15 @@ test("transaction failures roll back deletion, while post-commit cleanup failure
   assert.equal(first.sqlite.prepare("SELECT COUNT(*) AS count FROM trips WHERE id = ?").get(tripId).count, 1);
   assert.equal(first.sqlite.prepare("SELECT COUNT(*) AS count FROM site_discussion_posts WHERE trip_id = ?").get(tripId).count, 1);
   assert.equal(first.sqlite.prepare("SELECT COUNT(*) AS count FROM privacy_deletion_jobs").get().count, 0);
+  assert.equal(first.sqlite.prepare("SELECT COUNT(*) AS count FROM account_deletion_fences WHERE user_id = ?")
+    .get(user.id).count, 1);
+  const fencedWrite = await handleAccountRequest(request("/api/saved-sites", {
+    method: "POST",
+    cookie: user.cookie,
+    body: { siteId: "ocean-beach" },
+  }), { DB: first.d1 }, [{ id: "ocean-beach" }]);
+  assert.equal(fencedWrite?.status, 409);
+  assert.equal((await fencedWrite.json()).error.code, "account_deletion_in_progress");
 
   const second = await database();
   const user2 = await addUser(second.sqlite, "5");

@@ -14,16 +14,21 @@ access/correction/portability/deletion workflow are maintained in
 - Signup eligibility accepts only a birth date. It stores a short-lived hash and timestamps,
   never the entered date, email, password, or legal choices. A proof is single use.
 - An ineligible response sets a bounded first-party marker without age or identity data.
-- Account/trip deletion inserts its job and the locators inventoried immediately before it in
-  the same D1 batch that removes active rows and linked public discussion copies. Because that
-  inventory is not fenced against a concurrent photo write, the Worker independently rejects
-  every photo upload unless `TRIP_PHOTO_UPLOADS_ENABLED` is explicitly `true`; production and
-  checked-in configuration keep it `false`.
+- After password reauthentication, account deletion first claims an exact, high-entropy leased
+  `account_deletion_fences` row. New sessions, account-bound trip inserts, photo reservations,
+  and photo attachment repeat the absence of that fence in their authoritative statements.
+  Only then does deletion inventory locators and atomically insert its job/tasks while removing
+  active rows and linked public copies. Production and checked-in upload gates remain `false`.
 - Before any enabled path writes R2, it must first commit and exactly read back a
   `trip_photo_upload_reservations` row containing the typed locator hash. Exact trip attachment
   removes the reservation; ambiguous D1/R2 responses retain it for leased scheduled
   reconciliation. The reconciler preserves an attached object, idempotently deletes an
   unattached object, and fails closed without R2 on a locator-hash mismatch.
+- Account deletion inventories every reservation by its pseudonymous owner hash and adopts its
+  locator into the deletion ledger before deleting the reservation row. The task preserves the
+  reservation's later `available_at`, preventing cleanup from racing an in-flight R2 write.
+  Every destructive statement repeats the exact fence lease. A rolled-back batch leaves the
+  fence in place, so account mutations stay frozen until a safe retry takes ownership.
 - HTTP `200` means active rows and all known objects are gone. HTTP `202` means active rows are
   gone while object cleanup is processing or needs attention.
 - Completed tasks erase their plaintext object locator. Pseudonymous completed tombstones
@@ -170,13 +175,13 @@ Time Travel window must remain shorter than the 90-day completed-tombstone reten
 the evidence and second-person-review requirements in `docs/PRODUCTION-OPERATIONS.md`.
 
 Photo uploads remain disabled in the reviewed production build, including a server-side gate
-that defaults off. Do not enable them until the private bucket binding, object inventory,
+that defaults off. Do not enable them until the `0020` account-fence and reservation tables are
+applied and initially empty, and the private bucket binding, object inventory,
 retry alert, export, deletion, orphan-upload cleanup, and R2 restore/deletion drill have all
 passed. Migration `0020` must be applied, its initial reservation count must be zero, and every
 aged `pending`, expired `leased`, or `needs_attention` row must be monitored without logging a
-locator. The reservation ledger does not replace the remaining account-deletion race control:
-before the first enablement, account deletion must establish a D1-serialized write
-fence before taking its photo inventory so an upload/attach request cannot commit a new R2
-locator between inventory and active-row removal. Cleanup must also be bounded below the
+locator. The local account-deletion fence and interleaving tests do not prove the production
+migration, intended bucket identity, alerting, provider behavior, or operational drill. Cleanup
+must also be bounded below the
 deployed Cloudflare plan's D1-query and subrequest limits, or the release record must include
 reviewed evidence that its plan safely covers the worst case.

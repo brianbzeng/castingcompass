@@ -221,6 +221,26 @@ CHECKS = (
         reject_temporary_sort=False,
     ),
     PlanCheck(
+        "account photo reservation inventory",
+        """SELECT object_key, available_at FROM trip_photo_upload_reservations
+           WHERE owner_subject_hash = ? ORDER BY created_at""",
+        ("a" * 64,),
+        ("trip_photo_upload_reservations_owner_idx",),
+    ),
+    PlanCheck(
+        "account deletion fence receipt",
+        """SELECT requested_at FROM account_deletion_fences
+           WHERE user_id = ? AND owner_subject_hash = ? AND lease_token = ?
+             AND lease_expires_at = ? LIMIT 1""",
+        (
+            "user_fixture",
+            "a" * 64,
+            "account-deletion-fence-token-0000000000000000",
+            "2026-07-17T00:05:00.000Z",
+        ),
+        ("account_deletion_fences_owner_unique",),
+    ),
+    PlanCheck(
         "active-trip abuse ceiling",
         """SELECT COUNT(*) FROM trips
            WHERE reporter_key_hash = ? AND status = 'active' AND created_at >= ?""",

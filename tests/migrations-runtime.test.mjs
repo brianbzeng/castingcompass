@@ -221,7 +221,7 @@ test("the complete migration chain applies atomically and produces the runtime s
   assert.deepEqual(
     sqlite.prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%' ORDER BY name").all()
       .map((row) => row.name),
-    ["ai_review_jobs", "auth_attempts", "auth_sessions", "email_challenges", "forecast_impressions", "gear_profiles", "privacy_deletion_jobs", "privacy_deletion_tasks", "privacy_export_jobs", "saved_sites", "signup_age_proofs", "site_discussion_posts", "trip_photo_upload_reservations", "trip_validation_provenance", "trips", "users", "validation_feasibility_activations", "validation_feasibility_correction_removals", "validation_feasibility_corrections", "validation_feasibility_events", "validation_feasibility_privacy_removals", "validation_feasibility_recruitment_campaigns", "validation_feasibility_recruitment_events", "validation_feasibility_recruitment_removals", "validation_feasibility_snapshot_suppressions"],
+    ["account_deletion_fences", "ai_review_jobs", "auth_attempts", "auth_sessions", "email_challenges", "forecast_impressions", "gear_profiles", "privacy_deletion_jobs", "privacy_deletion_tasks", "privacy_export_jobs", "saved_sites", "signup_age_proofs", "site_discussion_posts", "trip_photo_upload_reservations", "trip_validation_provenance", "trips", "users", "validation_feasibility_activations", "validation_feasibility_correction_removals", "validation_feasibility_corrections", "validation_feasibility_events", "validation_feasibility_privacy_removals", "validation_feasibility_recruitment_campaigns", "validation_feasibility_recruitment_events", "validation_feasibility_recruitment_removals", "validation_feasibility_snapshot_suppressions"],
   );
   assert.ok(columns(sqlite, "trips").includes("user_id"));
   assert.ok(columns(sqlite, "trips").includes("ai_reviewed_at"));
@@ -238,6 +238,8 @@ test("the complete migration chain applies atomically and produces the runtime s
   assert.ok(columns(sqlite, "privacy_deletion_tasks").includes("object_store"));
   assert.ok(columns(sqlite, "privacy_export_jobs").includes("lease_token"));
   assert.ok(columns(sqlite, "trip_photo_upload_reservations").includes("object_key_hash"));
+  assert.ok(columns(sqlite, "trip_photo_upload_reservations").includes("owner_subject_hash"));
+  assert.ok(columns(sqlite, "account_deletion_fences").includes("lease_token"));
   assert.ok(columns(sqlite, "trips").includes("observation_contract_version"));
   assert.ok(columns(sqlite, "trips").includes("taxon_observations_json"));
   assert.ok(columns(sqlite, "trips").includes("idempotency_key_hash"));
@@ -252,6 +254,10 @@ test("the complete migration chain applies atomically and produces the runtime s
     FROM pragma_foreign_key_list('trips')
     WHERE "table" = 'users' AND "from" = 'user_id' AND upper(on_delete) = 'SET NULL'`).get().count;
   assert.equal(tripOwnershipForeignKeys, 1);
+  const fenceOwnershipForeignKeys = sqlite.prepare(`SELECT COUNT(*) AS count
+    FROM pragma_foreign_key_list('account_deletion_fences')
+    WHERE "table" = 'users' AND "from" = 'user_id' AND upper(on_delete) = 'CASCADE'`).get().count;
+  assert.equal(fenceOwnershipForeignKeys, 1);
   const privacyAudit = await readFile(new URL("../scripts/privacy-post-migration-audit.sql", import.meta.url), "utf8");
   assert.match(privacyAudit, /trip_user_ownership_foreign_keys/);
   assert.equal(sqlite.prepare("PRAGMA foreign_key_check").all().length, 0);

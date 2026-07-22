@@ -211,7 +211,8 @@ The postflight must prove the exact full ledger; approval, privacy, species, val
 snapshot-suppression schema; all 15 workload-backed data-resilience indexes; the exact nullable
 text trip-idempotency column; the exact empty advisory-review job table and its two indexes;
 the exact empty privacy-export job table, its five indexes, and the deletion-task storage class;
-the exact empty trip-photo reservation table and its four indexes;
+the exact empty account-deletion-fence and trip-photo reservation tables, their six indexes, and
+the reservation owner-hash column;
 every pre-release trip classified `legacy_unverified`; zero photo
 locators; zero discussion approval metadata; zero validation activations/events; and no
 foreign-key violations. Preserve its aggregate evidence hash. Once `0011` begins, never route

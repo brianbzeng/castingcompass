@@ -58,16 +58,43 @@ by that discovery.
 - [x] Force a lost committed reservation response, a lost terminal D1 response for an attached
       object, a transient R2 deletion failure, and a tampered locator hash. Exact receipts resolve
       both lost responses, attached bytes remain, the orphan is later deleted, and the tampered
-      case makes zero R2 calls. The source-bound inventory now covers 261 prepare sites: 234
-      literal, 27 reviewed nonliteral, and 12 reviewed multi-row reads.
+      case makes zero R2 calls. The source-bound inventory now covers 274 prepare sites: 245
+      literal, 29 reviewed nonliteral, and 13 reviewed multi-row reads.
 - [x] Pass the pinned Cloudflare build, ESLint, TypeScript, all 597/597 repository Node tests,
       the complete offline security/SBOM/source-integrity chain, both zero-vulnerability npm
       audits, Ruff, 29/29 API tests, 82 passed pipeline tests with one documented optional-`rasterio`
-      skip, the deterministic synthetic smoke, 20 migrations / 24 critical indexed D1 plans,
-      and the full 200/200 Chromium/WebKit phone matrix. The separate serialized account-deletion
-      fence, production migration/bindings/alerts/drills, and explicit upload activation remain
+      skip, the deterministic synthetic smoke, 20 migrations / 26 critical indexed D1 plans,
+      and the full 200/200 Chromium/WebKit phone matrix. The serialized account-deletion
+      checkpoint below, production migration/bindings/alerts/drills, and explicit upload activation remain
       open; no push, PR, merge, deployment, provider query, D1/R2 production mutation, model
       change, UI change, or upload enablement belongs to this checkpoint.
+
+## Active checkpoint — serialized account deletion and private-photo writes
+
+- [x] Establish a durable D1 `account_deletion_fences` row immediately after password
+      reauthentication and before any private-object inventory. New sessions, account-bound trip
+      inserts, photo reservations, and trip-photo attachment repeat the absence of that fence in
+      their authoritative write statements; a stale authenticated request cannot cross it.
+- [x] Bind the destructive account batch to one high-entropy bounded lease. Every deletion
+      statement repeats the exact user, owner hash, and lease token; a lost fence response is
+      accepted only by exact readback, a lost committed deletion response is accepted only when
+      its receipt job exists and both user and fence are absent, and a failed batch leaves the
+      account frozen for a safe lease-owned retry.
+- [x] Adopt every pre-fence photo reservation into the account deletion ledger before removing
+      the reservation row. Its future `available_at` is preserved so deletion cleanup cannot race
+      an in-flight R2 write. Fault injection proves that the fenced request performs zero R2 puts,
+      pre-fence attachment is rejected, and the adopted object is not deleted before its safe time.
+- [x] Pass the pinned Cloudflare build, ESLint, TypeScript, all 601/601 repository Node tests,
+      the complete offline security/SBOM/source-integrity chain, both zero-vulnerability npm
+      audits, the 274-site D1 source inventory, 20 migrations / 26 critical indexed plans, Ruff,
+      29/29 API tests, 82 pipeline tests with one documented optional-`rasterio` skip, deterministic
+      synthetic smoke, and the full 200/200 Chromium/WebKit phone matrix. No push, PR, merge,
+      deployment, provider query, D1/R2 production mutation, UI/model change, or upload enablement
+      belongs to this local checkpoint.
+- [ ] Apply the reviewed `0020` schema in production, verify both new tables are initially empty,
+      exercise the lost-response and account-deletion/photo interleavings against the intended
+      private bucket, monitor fenced/aged/attention states without locators, and obtain the
+      independent release review. Uploads remain server-disabled until every activation gate passes.
 
 ## Active checkpoint — lease-owned direct advisory review
 

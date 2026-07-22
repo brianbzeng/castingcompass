@@ -227,8 +227,15 @@ after its acceptance checks pass in the intended environment.
       leased, bounded scheduled reconciler. Atomic pending-state predicates serialize attachment
       against cleanup ownership. Reconciliation preserves an attached object, deletes only an
       unattached object, and makes zero R2 calls on a locator-hash mismatch. Migration
-      `0020`, production alerts/drills, and the separate serialized account-deletion fence remain
-      required before enabling uploads.
+      `0020` plus production alerts/drills remain required before enabling uploads.
+    - [x] Locally serialize account deletion against private-photo writes. Password-confirmed
+      deletion establishes a leased D1 account fence before inventory; new sessions, trip inserts,
+      photo reservations, and photo attachment repeat that fence predicate in the authoritative
+      statement. Pre-fence reservations are adopted into the deletion ledger with their later
+      safe-cleanup time, every destructive statement repeats the exact fence lease, and exact
+      post-state resolves lost committed responses. Failed batches retain the fence and freeze
+      account mutations for a safe retry. Production migration, monitoring, bucket drills, plan-
+      budget evidence, independent review, and explicit upload activation remain open.
   - [ ] Verify endpoint-specific rate limits and abuse ceilings for login, recovery, signup,
     uploads, exports, deletion, reports, and AI routes. Adopt length-based password rules that
     allow password managers/passphrases, block breached/common passwords using a privacy-safe
@@ -589,8 +596,8 @@ after its acceptance checks pass in the intended environment.
   - [ ] Inventory every production query, capture representative `EXPLAIN QUERY PLAN` evidence,
     add only workload-justified indexes, bound scans/pagination, eliminate N+1 patterns, verify
     cross-account predicates, and regression-test query latency and migration cost.
-    - [x] Add a deterministic AST-backed inventory for all 244 Worker `.prepare()` sites across
-      eight files, including exact review contracts for 26 nonliteral expressions and 12 literal
+    - [x] Add a deterministic AST-backed inventory for all 274 Worker `.prepare()` sites across
+      eight files, including exact review contracts for 29 nonliteral expressions and 13 literal
       multi-row reads without `LIMIT`. CI and release provenance fail closed on inventory drift,
       computed/aliased prepare access, unreviewed dynamic SQL, unscoped literal writes, and
       unreviewed multi-row reads; the policy and generated ledger are SBOM-bound release inputs.
@@ -652,7 +659,7 @@ after its acceptance checks pass in the intended environment.
   - [ ] Define performance budgets and run isolated load, soak, spike, and failure-injection
     tests with production-shaped synthetic data. Record saturation points, tail latency, error
     rates, queue depth, database contention, cache effectiveness, cost, and a safe rollback plan.
-  - [x] Locally add workload-backed D1 indexes, machine-check 15 critical `EXPLAIN QUERY PLAN`
+  - [x] Locally add workload-backed D1 indexes, machine-check 26 critical `EXPLAIN QUERY PLAN`
     paths plus every foreign-key child index, remove the public-site N+1 behind a bounded cache,
     publish the cache/async/connection contracts, add a bounded Postgres process pool only for
     the optional API, and provide a read-only load harness that permanently refuses production.

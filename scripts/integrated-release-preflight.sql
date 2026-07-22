@@ -20,6 +20,7 @@ WITH expected_legal_columns(table_name, column_name) AS (
     ('privacy_deletion_jobs'),
     ('privacy_deletion_tasks'),
     ('privacy_export_jobs'),
+    ('account_deletion_fences'),
     ('trip_photo_upload_reservations'),
     ('ai_review_jobs'),
     ('forecast_impressions'),
@@ -69,10 +70,12 @@ WITH expected_legal_columns(table_name, column_name) AS (
     ('privacy_export_jobs_dispatch_idx'),
     ('privacy_export_jobs_expiry_idx'),
     ('privacy_export_jobs_owner_idx'),
+    ('account_deletion_fences_owner_unique'),
     ('trip_photo_upload_reservations_object_key_unique'),
     ('trip_photo_upload_reservations_object_key_hash_unique'),
     ('trip_photo_upload_reservations_retry_idx'),
-    ('trip_photo_upload_reservations_trip_idx')
+    ('trip_photo_upload_reservations_trip_idx'),
+    ('trip_photo_upload_reservations_owner_idx')
 )
 SELECT
   COALESCE((

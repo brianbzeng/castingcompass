@@ -224,11 +224,35 @@ export const privacyExportJobs = sqliteTable(
   ],
 );
 
+export const accountDeletionFences = sqliteTable(
+  "account_deletion_fences",
+  {
+    userId: text("user_id").primaryKey().references(() => users.id, { onDelete: "cascade" }),
+    ownerSubjectHash: text("owner_subject_hash").notNull(),
+    leaseToken: text("lease_token").notNull(),
+    leaseExpiresAt: text("lease_expires_at").notNull(),
+    requestedAt: text("requested_at").notNull(),
+    updatedAt: text("updated_at").notNull(),
+  },
+  (table) => [
+    uniqueIndex("account_deletion_fences_owner_unique").on(table.ownerSubjectHash),
+    check(
+      "account_deletion_fences_owner_hash_check",
+      sql`length(${table.ownerSubjectHash}) = 64 and ${table.ownerSubjectHash} not glob '*[^a-f0-9]*'`,
+    ),
+    check(
+      "account_deletion_fences_lease_token_check",
+      sql`length(${table.leaseToken}) >= 40 and length(${table.leaseToken}) <= 160`,
+    ),
+  ],
+);
+
 export const tripPhotoUploadReservations = sqliteTable(
   "trip_photo_upload_reservations",
   {
     id: text("id").primaryKey(),
     tripId: text("trip_id").notNull(),
+    ownerSubjectHash: text("owner_subject_hash").notNull(),
     objectKey: text("object_key").notNull(),
     objectKeyHash: text("object_key_hash").notNull(),
     state: text("state").notNull(),
@@ -249,6 +273,7 @@ export const tripPhotoUploadReservations = sqliteTable(
       table.leaseExpiresAt,
     ),
     index("trip_photo_upload_reservations_trip_idx").on(table.tripId, table.createdAt),
+    index("trip_photo_upload_reservations_owner_idx").on(table.ownerSubjectHash, table.createdAt),
     check(
       "trip_photo_upload_reservations_state_check",
       sql`${table.state} in ('pending', 'leased', 'needs_attention')`,
@@ -260,6 +285,10 @@ export const tripPhotoUploadReservations = sqliteTable(
     check(
       "trip_photo_upload_reservations_hash_check",
       sql`length(${table.objectKeyHash}) = 64 and ${table.objectKeyHash} not glob '*[^a-f0-9]*'`,
+    ),
+    check(
+      "trip_photo_upload_reservations_owner_hash_check",
+      sql`length(${table.ownerSubjectHash}) = 64 and ${table.ownerSubjectHash} not glob '*[^a-f0-9]*'`,
     ),
     check(
       "trip_photo_upload_reservations_lease_check",

@@ -8,7 +8,7 @@ accounts, or production data.
 ## D1 query inventory
 
 `scripts/generate-d1-query-inventory.mjs` parses every Worker TypeScript source file and records
-all 244 direct `.prepare()` sites: 218 literal statements and 26 separately reviewed nonliteral
+all 274 direct `.prepare()` sites: 245 literal statements and 29 separately reviewed nonliteral
 expressions across eight source files. The committed policy and generated inventory are
 source-hash and call-site bound. CI rejects source-file/count drift, computed or aliased
 `prepare` access, a nonliteral expression without its exact static-authority review, an unscoped
@@ -16,8 +16,9 @@ literal `UPDATE` or `DELETE`, and a literal multi-row `SELECT` without a reviewe
 cardinality contract. No database or provider is queried while generating the inventory.
 
 The inventory exposes rather than conceals the remaining scale boundaries. Nine unbounded
-multi-row reads are intentional complete authenticated privacy exports and three are complete
-owner-lifecycle cleanup reads. Account-facing saved-location and gear-preset reads now fetch at
+multi-row reads are intentional complete authenticated privacy exports and four are complete
+owner-lifecycle cleanup reads, including the owner-hash-bound pre-upload reservation inventory
+required after the deletion fence is established. Account-facing saved-location and gear-preset reads now fetch at
 most 101 rows, expose at most the exact 100-item account ceiling, and fail closed on a legacy
 overflow instead of silently truncating it. Their creates enforce the same ceiling inside the
 single `INSERT ... SELECT` statement so concurrent requests cannot both pass a separate count
@@ -38,7 +39,7 @@ production-shaped timing and rows-written evidence remains required before calli
 capacity proven.
 
 `scripts/check_d1_query_plans.py` separately applies every migration to an in-memory SQLite
-database, runs 23 representative `EXPLAIN QUERY PLAN` checks, and rejects missing leftmost
+database, runs 26 representative `EXPLAIN QUERY PLAN` checks, and rejects missing leftmost
 indexes for every foreign-key child path. The checked plans cover the highest-frequency or
 growth-sensitive access patterns:
 
@@ -54,6 +55,7 @@ growth-sensitive access patterns:
 | Advisory AI queue outbox | Due pending/retry/queued jobs and expired leases, bounded oldest-first | `(state, available_at, lease_expires_at)` dispatch index plus a unique trip index; D1 remains authoritative under at-least-once delivery |
 | Public discussions | One curated site, newest first, `LIMIT 12`, then a primary-key trip join | Existing `(site_id, observed_at)` index and trip primary key |
 | Privacy deletion receipts, tombstones, jobs, and tasks | Receipt lookup, subject/owner lookup, 50-task worker claims, 100-job reconciliation, and 100-job top-level retention selection; child cascades still require staging cost evidence | Unique receipt, scope/subject, owner/state, state/completion, task retry, and job/object indexes |
+| Account deletion fence and photo reservations | Exact fence-lease receipt; one pseudonymous owner reservation inventory; bounded due-reservation reconciliation | Unique owner fence identity plus `(owner_subject_hash, created_at)` and retry indexes |
 | Validation exports and cascades | Activation, trip, or user predicates with append-only sequence order | Existing activation/trip indexes plus user recruitment, activation correction, and forecast/trip foreign-key indexes |
 
 The inventory policy and generated artifact are inputs to the combined release SBOM and are

@@ -1140,7 +1140,11 @@ test("required confirmations fail closed and pre-trip influence is immutable", a
     })),
     {},
     SITES,
-    { store, now: () => new Date("2026-07-11T18:00:00.000Z") },
+    {
+      store,
+      accountId: "user_photo_upload_test",
+      now: () => new Date("2026-07-11T18:00:00.000Z"),
+    },
   );
   assert.equal(start.status, 201);
   const started = await start.json();
@@ -1155,7 +1159,11 @@ test("required confirmations fail closed and pre-trip influence is immutable", a
     multipartRequest(`/api/trips/${started.trip.id}/complete`, missingConsent),
     {},
     SITES,
-    { store, now: () => new Date("2026-07-11T18:31:00.000Z") },
+    {
+      store,
+      accountId: "user_photo_upload_test",
+      now: () => new Date("2026-07-11T18:31:00.000Z"),
+    },
   );
   assert.equal(missingConsentResponse.status, 422);
   assert.equal((await missingConsentResponse.json()).error.code, "consent_required");
@@ -1169,7 +1177,11 @@ test("required confirmations fail closed and pre-trip influence is immutable", a
     multipartRequest(`/api/trips/${started.trip.id}/complete`, changedInfluence),
     {},
     SITES,
-    { store, now: () => new Date("2026-07-11T18:31:00.000Z") },
+    {
+      store,
+      accountId: "user_photo_upload_test",
+      now: () => new Date("2026-07-11T18:31:00.000Z"),
+    },
   );
   assert.equal(changedInfluenceResponse.status, 422);
   assert.equal((await changedInfluenceResponse.json()).error.code, "score_influence_immutable");
@@ -1359,7 +1371,11 @@ test("past reports re-encode photos and the summary exposes validation totals", 
     multipartRequest("/api/trips/report", form),
     env,
     SITES,
-    { store, now: () => new Date("2026-07-11T18:00:00.000Z") },
+    {
+      store,
+      accountId: "user_photo_upload_test",
+      now: () => new Date("2026-07-11T18:00:00.000Z"),
+    },
   );
   assert.equal(response.status, 201);
   const reported = (await response.json()).trip;

@@ -143,13 +143,17 @@ const STAGE_ABSENCE_QUERIES = Object.freeze({
   "0020_trip_photo_upload_reservations.sql": `
     SELECT
       (SELECT COUNT(*) FROM sqlite_master
-        WHERE type = 'table' AND name = 'trip_photo_upload_reservations')
+        WHERE type = 'table' AND name IN (
+          'account_deletion_fences', 'trip_photo_upload_reservations'
+        ))
       + (SELECT COUNT(*) FROM sqlite_master
         WHERE type = 'index' AND name IN (
+          'account_deletion_fences_owner_unique',
           'trip_photo_upload_reservations_object_key_unique',
           'trip_photo_upload_reservations_object_key_hash_unique',
           'trip_photo_upload_reservations_retry_idx',
-          'trip_photo_upload_reservations_trip_idx'
+          'trip_photo_upload_reservations_trip_idx',
+          'trip_photo_upload_reservations_owner_idx'
         )) AS target_artifacts_found`,
 });
 
@@ -295,8 +299,12 @@ export function verifyFinalPostflight(payload) {
     privacy_export_queue_tables: 1,
     privacy_export_queue_indexes: 5,
     privacy_export_queue_rows: 0,
+    account_deletion_fence_tables: 1,
+    account_deletion_fence_indexes: 1,
+    account_deletion_fence_rows: 0,
     trip_photo_reservation_tables: 1,
-    trip_photo_reservation_indexes: 4,
+    trip_photo_reservation_indexes: 5,
+    trip_photo_reservation_owner_columns: 1,
     trip_photo_reservation_rows: 0,
     non_legacy_trip_rows: 0,
     trip_photo_locators: 0,

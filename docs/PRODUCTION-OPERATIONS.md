@@ -285,8 +285,9 @@ prove that the object is either attached to a live trip or durably queued for cl
       storage class. The production flag and bindings remain off until the separate export
       activation drill passes.
 - [ ] Migration `0020_trip_photo_upload_reservations.sql` completed before trip-photo uploads are
-      activated; postflight verified the empty reservation table and four indexes. Alert on every
-      `needs_attention` row before the upload gate can be enabled.
+      activated; postflight verified the empty account-deletion-fence and reservation tables plus
+      their six indexes. Alert on active/expired fences, aged reservations, and every
+      `needs_attention` row before the upload gate can be enabled, without logging identities or locators.
 - [ ] Privacy pre/postflight counts match; the missing-age and legal-reacceptance cohorts have
       an explicit support decision, while export and account deletion remain available.
 - [ ] Canonical, redirect-alias, and `workers.dev` smoke checks passed.

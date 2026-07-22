@@ -11,10 +11,10 @@
     "worker/validation-feasibility-export.ts"
   ],
   "expectedSummary": {
-    "prepareCallCount": 261,
-    "literalCallCount": 234,
-    "nonLiteralCallCount": 27,
-    "multiRowLiteralWithoutLimitCount": 12
+    "prepareCallCount": 274,
+    "literalCallCount": 245,
+    "nonLiteralCallCount": 29,
+    "multiRowLiteralWithoutLimitCount": 13
   },
   "allowedNonLiteralExpressions": [
     {
@@ -89,6 +89,13 @@
     },
     {
       "file": "worker/auth.ts",
+      "expressionSha256": "eb10098ec91eda192303e0be80754a8b6e8fef5b6132d3d931f3f637b64e5076",
+      "staticAuthority": "module-level CREATE_ACCOUNT_DELETION_FENCES_SQL constant",
+      "executionContract": "schema bootstrap batch",
+      "rationale": "The runtime fallback creates the reviewed account-deletion write fence without request-controlled SQL."
+    },
+    {
+      "file": "worker/auth.ts",
       "expressionSha256": "44a48319b3007a69ccc82ff6d97c890ddd0d4ce13d1f6e9d5728a3d22af2b905",
       "staticAuthority": "server-owned forecastInvalidation chooses one of two fixed column-reset fragments",
       "executionContract": "single pending-trip update bound by id and authenticated user_id",
@@ -121,6 +128,13 @@
       "staticAuthority": "module-level CREATE_TRIP_PHOTO_UPLOAD_RESERVATIONS_SQL constant",
       "executionContract": "schema bootstrap batch",
       "rationale": "The default-off runtime fallback creates the reviewed durable pre-upload locator ledger without request-controlled SQL."
+    },
+    {
+      "file": "worker/trips.ts",
+      "expressionSha256": "eb10098ec91eda192303e0be80754a8b6e8fef5b6132d3d931f3f637b64e5076",
+      "staticAuthority": "module-level CREATE_ACCOUNT_DELETION_FENCES_SQL constant",
+      "executionContract": "schema bootstrap batch",
+      "rationale": "Trip mutation fallback DDL shares the reviewed account-deletion write-fence definition and contains no request-controlled SQL."
     },
     {
       "file": "worker/trips.ts",
@@ -290,7 +304,7 @@
       "rationale": "Corrections remain owner-bound and complete for authenticated portability."
     },
     {
-      "callSiteId": "01edf07effe4374acb4ef391",
+      "callSiteId": "e7628b0708baf30c7fdfcdd7",
       "sqlSha256": "94a8641e2f59456aa737aebe11496255b41cbf8e563cc6df4ba3de3014578555",
       "scope": "owner account deletion",
       "boundPredicate": "user_id = ?",
@@ -298,7 +312,15 @@
       "rationale": "Every current photo key must enter the durable object-deletion ledger before active rows are removed."
     },
     {
-      "callSiteId": "6ba395e9e3e1d49db19491e2",
+      "callSiteId": "90e54e9418d82053f213d696",
+      "sqlSha256": "dec552e62e15f91f31c57aa4d652acc8d21ade63c9186df9262e3c66a6e1d157",
+      "scope": "owner account deletion",
+      "boundPredicate": "owner_subject_hash = ?",
+      "rowBoundStatus": "owner-lifecycle-cleanup",
+      "rationale": "Every pre-upload photo locator for the fenced owner must enter the durable deletion ledger before account rows are removed."
+    },
+    {
+      "callSiteId": "bf7b8fa22c4150fa9d659721",
       "sqlSha256": "54610b0da32d0986051a22f3b2bbf03209aa8e2c3f023fb1558517fd58395006",
       "scope": "owner account deletion",
       "boundPredicate": "privacy_deletion_jobs.owner_subject_hash = ?",
@@ -306,7 +328,7 @@
       "rationale": "Pending typed object keys for the same owner are deduplicated before the active-data deletion batch."
     },
     {
-      "callSiteId": "224892088c01ef12246acbc9",
+      "callSiteId": "7683c05e4903e0d390f195a9",
       "sqlSha256": "c9349672d601c7c1e393f9bbce92b3cfc1d6e26c4ad10e6dcb19f20c317b8bd8",
       "scope": "owner account deletion",
       "boundPredicate": "owner_subject_hash = ?",

@@ -556,6 +556,8 @@ interface ValidationCollectionIdentity {
 interface TripPhotoUploadReservation {
   id: string;
   tripId: string;
+  accountId: string;
+  ownerSubjectHash: string;
   objectKey: string;
   objectKeyHash: string;
   availableAt: string;
@@ -812,6 +814,7 @@ const CREATE_TRIPS_SQL = `CREATE TABLE IF NOT EXISTS trips (
 const CREATE_TRIP_PHOTO_UPLOAD_RESERVATIONS_SQL = `CREATE TABLE IF NOT EXISTS trip_photo_upload_reservations (
   id TEXT PRIMARY KEY NOT NULL,
   trip_id TEXT NOT NULL,
+  owner_subject_hash TEXT NOT NULL,
   object_key TEXT NOT NULL,
   object_key_hash TEXT NOT NULL,
   state TEXT NOT NULL CHECK (state IN ('pending', 'leased', 'needs_attention')),
@@ -823,8 +826,20 @@ const CREATE_TRIP_PHOTO_UPLOAD_RESERVATIONS_SQL = `CREATE TABLE IF NOT EXISTS tr
   created_at TEXT NOT NULL,
   updated_at TEXT NOT NULL,
   CHECK (length(object_key_hash) = 64 AND object_key_hash NOT GLOB '*[^a-f0-9]*'),
+  CHECK (length(owner_subject_hash) = 64 AND owner_subject_hash NOT GLOB '*[^a-f0-9]*'),
   CHECK ((state = 'leased' AND lease_expires_at IS NOT NULL AND lease_token IS NOT NULL)
     OR (state != 'leased' AND lease_expires_at IS NULL AND lease_token IS NULL))
+)`;
+
+const CREATE_ACCOUNT_DELETION_FENCES_SQL = `CREATE TABLE IF NOT EXISTS account_deletion_fences (
+  user_id TEXT PRIMARY KEY NOT NULL,
+  owner_subject_hash TEXT NOT NULL UNIQUE,
+  lease_token TEXT NOT NULL CHECK (length(lease_token) >= 40 AND length(lease_token) <= 160),
+  lease_expires_at TEXT NOT NULL,
+  requested_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL,
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+  CHECK (length(owner_subject_hash) = 64 AND owner_subject_hash NOT GLOB '*[^a-f0-9]*')
 )`;
 
 const CREATE_FORECAST_IMPRESSIONS_SQL = `CREATE TABLE IF NOT EXISTS forecast_impressions (
@@ -1139,6 +1154,8 @@ const CREATE_INDEX_STATEMENTS = [
   "CREATE UNIQUE INDEX IF NOT EXISTS trip_photo_upload_reservations_object_key_hash_unique ON trip_photo_upload_reservations (object_key_hash)",
   "CREATE INDEX IF NOT EXISTS trip_photo_upload_reservations_retry_idx ON trip_photo_upload_reservations (state, available_at, lease_expires_at)",
   "CREATE INDEX IF NOT EXISTS trip_photo_upload_reservations_trip_idx ON trip_photo_upload_reservations (trip_id, created_at)",
+  "CREATE INDEX IF NOT EXISTS trip_photo_upload_reservations_owner_idx ON trip_photo_upload_reservations (owner_subject_hash, created_at)",
+  "CREATE UNIQUE INDEX IF NOT EXISTS account_deletion_fences_owner_unique ON account_deletion_fences (owner_subject_hash)",
   "CREATE INDEX IF NOT EXISTS forecast_impressions_window_idx ON forecast_impressions (window_id, site_id, window_start)",
   "CREATE INDEX IF NOT EXISTS trip_validation_provenance_trip_created_idx ON trip_validation_provenance (trip_id, created_at)",
   `CREATE INDEX IF NOT EXISTS trip_validation_provenance_forecast_trip_idx
@@ -1270,10 +1287,14 @@ const INSERT_TRIP_SQL = `INSERT INTO trips (
   ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
   ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
   ?, ?, ?, ?, ?, ?
-WHERE ? IS NULL OR EXISTS (
+WHERE (? IS NULL OR (
+  EXISTS (SELECT 1 FROM users WHERE id = ?)
+  AND NOT EXISTS (SELECT 1 FROM account_deletion_fences WHERE user_id = ?)
+))
+AND (? IS NULL OR EXISTS (
   SELECT 1 FROM trip_photo_upload_reservations
   WHERE trip_id = ? AND object_key = ? AND object_key_hash = ? AND state = 'pending'
-)`;
+))`;
 
 const INSERT_FORECAST_IMPRESSION_SQL = `INSERT INTO forecast_impressions (
   id, trip_id, attestation_index_version, snapshot_sha256, site_catalog_sha256,
@@ -1544,6 +1565,7 @@ export function createTripStore(db: D1DatabaseLike): TripStore {
       pending = (async () => {
         await db.batch([
           db.prepare(CREATE_TRIPS_SQL),
+          db.prepare(CREATE_ACCOUNT_DELETION_FENCES_SQL),
           db.prepare(CREATE_TRIP_PHOTO_UPLOAD_RESERVATIONS_SQL),
           db.prepare(CREATE_FORECAST_IMPRESSIONS_SQL),
           db.prepare(CREATE_TRIP_VALIDATION_PROVENANCE_SQL),
@@ -1650,6 +1672,9 @@ export function createTripStore(db: D1DatabaseLike): TripStore {
           record.createdAt,
           record.updatedAt,
           record.completedAt,
+          record.userId,
+          record.userId,
+          record.userId,
           record.photoKey,
           record.id,
           record.photoKey,
@@ -1695,24 +1720,30 @@ export function createTripStore(db: D1DatabaseLike): TripStore {
     async reservePhotoUpload(reservation) {
       try {
         await db.prepare(`INSERT INTO trip_photo_upload_reservations (
-            id, trip_id, object_key, object_key_hash, state, attempts, available_at,
+            id, trip_id, owner_subject_hash, object_key, object_key_hash, state, attempts, available_at,
             lease_expires_at, lease_token, last_error_code, created_at, updated_at)
-          VALUES (?, ?, ?, ?, 'pending', 0, ?, NULL, NULL, NULL, ?, ?)`)
+          SELECT ?, ?, ?, ?, ?, 'pending', 0, ?, NULL, NULL, NULL, ?, ?
+          WHERE EXISTS (SELECT 1 FROM users WHERE id = ?)
+            AND NOT EXISTS (SELECT 1 FROM account_deletion_fences WHERE user_id = ?)`)
           .bind(
             reservation.id,
             reservation.tripId,
+            reservation.ownerSubjectHash,
             reservation.objectKey,
             reservation.objectKeyHash,
             reservation.availableAt,
             reservation.createdAt,
             reservation.createdAt,
+            reservation.accountId,
+            reservation.accountId,
           )
           .run();
       } catch {
         // A D1 response can be lost after the reservation commits. Exact read-back is authoritative.
       }
       const receipt = await db.prepare(`SELECT id FROM trip_photo_upload_reservations
-        WHERE id = ? AND trip_id = ? AND object_key = ? AND object_key_hash = ?
+        WHERE id = ? AND trip_id = ? AND owner_subject_hash = ?
+          AND object_key = ? AND object_key_hash = ?
           AND state = 'pending' AND attempts = 0 AND available_at = ?
           AND lease_expires_at IS NULL AND lease_token IS NULL AND last_error_code IS NULL
           AND created_at = ? AND updated_at = ?
@@ -1720,6 +1751,7 @@ export function createTripStore(db: D1DatabaseLike): TripStore {
         .bind(
           reservation.id,
           reservation.tripId,
+          reservation.ownerSubjectHash,
           reservation.objectKey,
           reservation.objectKeyHash,
           reservation.availableAt,
@@ -1885,6 +1917,10 @@ export function createTripStore(db: D1DatabaseLike): TripStore {
           moderation_status = 'pending', photo_key = ?,
           photo_content_type = ?, photo_size_bytes = ?, updated_at = ?, completed_at = ?, token_hash = NULL
         WHERE id = ? AND user_id IS ? AND status = 'active' AND token_hash = ?
+          AND (? IS NULL OR (
+            EXISTS (SELECT 1 FROM users WHERE id = ?)
+            AND NOT EXISTS (SELECT 1 FROM account_deletion_fences WHERE user_id = ?)
+          ))
           AND (? IS NULL OR EXISTS (
             SELECT 1 FROM trip_photo_upload_reservations
             WHERE trip_id = ? AND object_key = ? AND object_key_hash = ? AND state = 'pending'
@@ -1935,6 +1971,9 @@ export function createTripStore(db: D1DatabaseLike): TripStore {
           id,
           accountId,
           tokenHash,
+          accountId,
+          accountId,
+          accountId,
           completion.photoKey,
           id,
           completion.photoKey,
@@ -3368,7 +3407,14 @@ export async function handleTripRequest(
       if (feasibilityStart && !feasibilityTerminal) {
         throw new ApiError(409, "validation_pilot_terminal_invalid", "The pilot completion could not be reconciled.");
       }
-      const uploaded = await processPhoto(form.get("photo"), id, env, store, now);
+      const uploaded = await processPhoto(
+        form.get("photo"),
+        id,
+        options.accountId ?? null,
+        env,
+        store,
+        now,
+      );
 
       try {
         const completed = await store.completeTrip(id, tokenHash, options.accountId ?? null, {
@@ -3515,7 +3561,14 @@ export async function handleTripRequest(
         scoreInfluencedChoice,
         timestamp,
       });
-      const uploaded = await processPhoto(form.get("photo"), id, env, store, now);
+      const uploaded = await processPhoto(
+        form.get("photo"),
+        id,
+        options.accountId ?? null,
+        env,
+        store,
+        now,
+      );
 
       try {
         const trip = await store.insertTrip({
@@ -3707,6 +3760,7 @@ interface ProcessedTripPhoto {
 async function processPhoto(
   entry: FormDataEntryValue | null,
   tripId: string,
+  accountId: string | null,
   env: TripApiEnv,
   store: TripStore,
   now: Date,
@@ -3733,6 +3787,9 @@ async function processPhoto(
   if (!env.IMAGES || !env.TRIP_PHOTOS) {
     throw new ApiError(503, "photo_storage_unavailable", "Photo uploads are temporarily unavailable.");
   }
+  if (!accountId) {
+    throw new ApiError(401, "authentication_required", "Sign in before uploading a trip photo.");
+  }
 
   let transformed: Response;
   try {
@@ -3757,10 +3814,13 @@ async function processPhoto(
   const date = now;
   const key = `trip-photos/${date.getUTCFullYear()}/${String(date.getUTCMonth() + 1).padStart(2, "0")}/${tripId}/${crypto.randomUUID()}.webp`;
   const keyHash = await sha256(`trip_photos\0${key}`);
+  const ownerSubjectHash = await sha256(`account:${accountId}`);
   const createdAt = now.toISOString();
   const reserved = await store.reservePhotoUpload({
     id: `photo_reservation_${crypto.randomUUID()}`,
     tripId,
+    accountId,
+    ownerSubjectHash,
     objectKey: key,
     objectKeyHash: keyHash,
     availableAt: new Date(now.getTime() + TRIP_PHOTO_RESERVATION_GRACE_MS).toISOString(),

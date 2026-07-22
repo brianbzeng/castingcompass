@@ -5,6 +5,8 @@ import test from "node:test";
 
 import { createTripStore, processTripPhotoUploadReservations } from "../worker/trips.ts";
 
+const TEST_ACCOUNT_ID = "user_trip_photo_reservation";
+
 class D1StatementAdapter {
   constructor(owner, query, statement) {
     this.owner = owner;
@@ -80,6 +82,7 @@ function objectKeyHash(key) {
 async function fixture() {
   const sqlite = new DatabaseSync(":memory:");
   sqlite.exec("CREATE TABLE users (id TEXT PRIMARY KEY NOT NULL);");
+  sqlite.prepare("INSERT INTO users (id) VALUES (?)").run(TEST_ACCOUNT_ID);
   const db = new D1Adapter(sqlite);
   const store = createTripStore(db);
   await store.initialize();
@@ -91,6 +94,8 @@ function reservation(key, tripId, timestamp = "2026-07-21T18:00:00.000Z") {
   return {
     id: `photo_reservation_${crypto.randomUUID()}`,
     tripId,
+    accountId: TEST_ACCOUNT_ID,
+    ownerSubjectHash: createHash("sha256").update(`account:${TEST_ACCOUNT_ID}`).digest("hex"),
     objectKey: key,
     objectKeyHash: objectKeyHash(key),
     availableAt: timestamp,
@@ -108,15 +113,15 @@ function insertAttachedTrip(sqlite, tripId, key) {
     .run(tripId, key);
 }
 
-function insertCompletableTrip(sqlite, tripId, tokenHash) {
+function insertCompletableTrip(sqlite, tripId, tokenHash, userId = null) {
   sqlite.prepare(`INSERT INTO trips (
       id, user_id, status, source, site_id, started_at, mode, angler_count,
       consent, moderation_status, reporter_key_hash, token_hash, idempotency_key_hash,
       created_at, updated_at)
-    VALUES (?, NULL, 'active', 'live', 'crissy-field', '2026-07-21T17:00:00.000Z',
+    VALUES (?, ?, 'active', 'live', 'crissy-field', '2026-07-21T17:00:00.000Z',
       'beach', 1, 0, 'pending', 'reporter-hash', ?, ?,
       '2026-07-21T17:00:00.000Z', '2026-07-21T17:00:00.000Z')`)
-    .run(tripId, tokenHash, tokenHash);
+    .run(tripId, userId, tokenHash, tokenHash);
 }
 
 function completion(key, keyHash) {
@@ -301,4 +306,48 @@ test("trip attachment and cleanup claim are serialized by the reservation state"
   ), 1);
   assert.equal(second.bucket.objects.has(secondKey), false);
   assert.equal(second.sqlite.prepare("SELECT COUNT(*) AS count FROM trip_photo_upload_reservations").get().count, 0);
+});
+
+test("an account-deletion fence blocks both new reservations and pre-fence attachment", async () => {
+  const { sqlite, store } = await fixture();
+  const tripId = "trip_70000000-0000-4000-8000-000000000007";
+  const tokenHash = "7".repeat(64);
+  const key = `trip-photos/2026/07/${tripId}/pre-fence.webp`;
+  const keyHash = objectKeyHash(key);
+  insertCompletableTrip(sqlite, tripId, tokenHash, TEST_ACCOUNT_ID);
+  assert.equal(await store.reservePhotoUpload(reservation(key, tripId)), true);
+
+  const ownerSubjectHash = createHash("sha256")
+    .update(`account:${TEST_ACCOUNT_ID}`)
+    .digest("hex");
+  sqlite.prepare(`INSERT INTO account_deletion_fences (
+      user_id, owner_subject_hash, lease_token, lease_expires_at, requested_at, updated_at)
+    VALUES (?, ?, ?, ?, ?, ?)`)
+    .run(
+      TEST_ACCOUNT_ID,
+      ownerSubjectHash,
+      "account-deletion-fence-token-0000000000000001",
+      "2026-07-21T19:00:00.000Z",
+      "2026-07-21T18:00:00.000Z",
+      "2026-07-21T18:00:00.000Z",
+    );
+
+  const secondTripId = "trip_80000000-0000-4000-8000-000000000008";
+  const secondKey = `trip-photos/2026/07/${secondTripId}/post-fence.webp`;
+  assert.equal(await store.reservePhotoUpload(reservation(secondKey, secondTripId)), false);
+  assert.equal(sqlite.prepare(`SELECT COUNT(*) AS count FROM trip_photo_upload_reservations
+    WHERE trip_id = ?`).get(secondTripId).count, 0);
+
+  assert.equal(await store.completeTrip(
+    tripId,
+    tokenHash,
+    TEST_ACCOUNT_ID,
+    completion(key, keyHash),
+  ), null);
+  assert.deepEqual(
+    { ...sqlite.prepare("SELECT status, photo_key, token_hash FROM trips WHERE id = ?").get(tripId) },
+    { status: "active", photo_key: null, token_hash: tokenHash },
+  );
+  assert.equal(sqlite.prepare(`SELECT COUNT(*) AS count FROM trip_photo_upload_reservations
+    WHERE trip_id = ? AND object_key = ?`).get(tripId, key).count, 1);
 });

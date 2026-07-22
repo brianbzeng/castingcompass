@@ -33,6 +33,7 @@ const SESSION_SECONDS = 30 * 24 * 60 * 60;
 const DELETION_RECEIPT_SECONDS = 30 * 24 * 60 * 60;
 const AGE_PROOF_SECONDS = 10 * 60;
 const MAX_DELETION_ATTEMPTS = 8;
+const ACCOUNT_DELETION_FENCE_LEASE_MS = 5 * 60 * 1000;
 const MAX_SAVED_SITES_PER_ACCOUNT = 100;
 const MAX_GEAR_PROFILES_PER_ACCOUNT = 100;
 const AUTH_RETENTION_DELETE_BATCH = 100;
@@ -256,6 +257,17 @@ const CREATE_PRIVACY_EXPORT_JOBS_SQL = `CREATE TABLE IF NOT EXISTS privacy_expor
   CHECK (state != 'expired' OR (user_id IS NULL AND object_key IS NULL))
 )`;
 
+const CREATE_ACCOUNT_DELETION_FENCES_SQL = `CREATE TABLE IF NOT EXISTS account_deletion_fences (
+  user_id TEXT PRIMARY KEY NOT NULL,
+  owner_subject_hash TEXT NOT NULL UNIQUE,
+  lease_token TEXT NOT NULL CHECK (length(lease_token) >= 40 AND length(lease_token) <= 160),
+  lease_expires_at TEXT NOT NULL,
+  requested_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL,
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+  CHECK (length(owner_subject_hash) = 64 AND owner_subject_hash NOT GLOB '*[^a-f0-9]*')
+)`;
+
 async function initialize(db: D1DatabaseLike) {
   let pending = initializedDatabases.get(db as object);
   if (!pending) {
@@ -271,6 +283,7 @@ async function initialize(db: D1DatabaseLike) {
         db.prepare(CREATE_PRIVACY_DELETION_JOBS_SQL),
         db.prepare(CREATE_PRIVACY_DELETION_TASKS_SQL),
         db.prepare(CREATE_PRIVACY_EXPORT_JOBS_SQL),
+        db.prepare(CREATE_ACCOUNT_DELETION_FENCES_SQL),
       ]);
       await db.batch([
         db.prepare("CREATE INDEX IF NOT EXISTS auth_sessions_user_idx ON auth_sessions (user_id, expires_at)"),
@@ -296,6 +309,7 @@ async function initialize(db: D1DatabaseLike) {
         db.prepare("CREATE INDEX IF NOT EXISTS privacy_export_jobs_dispatch_idx ON privacy_export_jobs (state, available_at, lease_expires_at)"),
         db.prepare("CREATE INDEX IF NOT EXISTS privacy_export_jobs_expiry_idx ON privacy_export_jobs (state, expires_at, lease_expires_at)"),
         db.prepare("CREATE INDEX IF NOT EXISTS privacy_export_jobs_owner_idx ON privacy_export_jobs (owner_subject_hash, updated_at)"),
+        db.prepare("CREATE UNIQUE INDEX IF NOT EXISTS account_deletion_fences_owner_unique ON account_deletion_fences (owner_subject_hash)"),
       ]);
     })().catch((error) => {
       initializedDatabases.delete(db as object);
@@ -308,6 +322,7 @@ async function initialize(db: D1DatabaseLike) {
 
 interface AuthenticatedSession {
   user: AuthUser;
+  deletionFenced: boolean;
   cookieName: typeof SESSION_COOKIE | typeof LEGACY_SESSION_COOKIE;
 }
 
@@ -321,16 +336,26 @@ async function getAuthenticatedSession(request: Request, env: AuthApiEnv): Promi
           CASE WHEN users.age_eligibility_confirmed_at IS NOT NULL THEN 1 ELSE 0 END AS age_eligible,
           CASE WHEN users.age_eligibility_confirmed_at IS NOT NULL
             AND users.terms_version = ? AND users.privacy_version = ?
-            THEN 1 ELSE 0 END AS legal_accepted
+            THEN 1 ELSE 0 END AS legal_accepted,
+          CASE WHEN EXISTS (SELECT 1 FROM account_deletion_fences
+            WHERE account_deletion_fences.user_id = users.id)
+            THEN 1 ELSE 0 END AS deletion_fenced
         FROM auth_sessions
         JOIN users ON users.id = auth_sessions.user_id
         WHERE auth_sessions.token_hash = ? AND auth_sessions.expires_at > ?
         LIMIT 1`)
       .bind(LEGAL_VERSION, LEGAL_VERSION, await sha256(presented.token), now)
-      .first<{ id: string; email: string; age_eligible: number; legal_accepted: number }>();
+      .first<{
+        id: string;
+        email: string;
+        age_eligible: number;
+        legal_accepted: number;
+        deletion_fenced: number;
+      }>();
     if (row) {
       return {
         cookieName: presented.cookieName,
+        deletionFenced: Boolean(row.deletion_fenced),
         user: {
           id: row.id,
           email: row.email,
@@ -344,7 +369,20 @@ async function getAuthenticatedSession(request: Request, env: AuthApiEnv): Promi
 }
 
 export async function getAuthenticatedUser(request: Request, env: AuthApiEnv): Promise<AuthUser | null> {
-  return (await getAuthenticatedSession(request, env))?.user ?? null;
+  const session = await getAuthenticatedSession(request, env);
+  return session && !session.deletionFenced ? session.user : null;
+}
+
+function accountRequestAllowedWhileDeletionFenced(request: Request) {
+  const url = new URL(request.url);
+  if (url.pathname === "/api/profile") {
+    return request.method === "GET" || request.method === "DELETE";
+  }
+  if (request.method !== "GET") return false;
+  return url.pathname === "/api/profile/export" ||
+    API_ROUTE_PATTERNS.profileExportPhoto.test(url.pathname) ||
+    API_ROUTE_PATTERNS.profileExportStatus.test(url.pathname) ||
+    API_ROUTE_PATTERNS.profileExportDownload.test(url.pathname);
 }
 
 export async function handleAccountRequest(
@@ -391,7 +429,10 @@ export async function handleAccountRequest(
           presentedSessionTokens(request).length > 0 ? clearSessionCookies(request) : undefined,
         );
       }
-      if (session.cookieName === LEGACY_SESSION_COOKIE && new URL(request.url).protocol === "https:") {
+      if (
+        !session.deletionFenced && session.cookieName === LEGACY_SESSION_COOKIE &&
+        new URL(request.url).protocol === "https:"
+      ) {
         return createSessionResponse(db, request, session.user);
       }
       return jsonResponse({ user: session.user });
@@ -971,8 +1012,16 @@ export async function handleAccountRequest(
       return jsonResponse({ signedOut: true, user: null }, 200, clearSessionCookies(request));
     }
 
-    const user = await getAuthenticatedUser(request, env);
-    if (!user) return unauthorizedResponse();
+    const authenticatedSession = await getAuthenticatedSession(request, env);
+    if (!authenticatedSession) return unauthorizedResponse();
+    const user = authenticatedSession.user;
+    if (authenticatedSession.deletionFenced && !accountRequestAllowedWhileDeletionFenced(request)) {
+      return errorResponse(
+        409,
+        "account_deletion_in_progress",
+        "Account deletion is already in progress. Export or retry deletion from Profile.",
+      );
+    }
 
     if (url.pathname === "/api/auth/eligibility") {
       if (request.method !== "POST") return methodNotAllowed("POST");
@@ -1091,9 +1140,21 @@ export async function handleAccountRequest(
       if (!credentials || !await verifyPassword(password, credentials.password_salt, credentials.password_hash)) {
         throw new AuthError(401, "invalid_credentials", "Your password is incorrect.");
       }
+      const ownerSubjectHash = await sha256(`account:${user.id}`);
+      const fence = await claimAccountDeletionFence(
+        db,
+        user.id,
+        ownerSubjectHash,
+        options.now?.() ?? new Date(),
+      );
       const photos = await db.prepare("SELECT photo_key FROM trips WHERE user_id = ? AND photo_key IS NOT NULL")
         .bind(user.id).all<{ photo_key: string }>();
-      const ownerSubjectHash = await sha256(`account:${user.id}`);
+      const reservedPhotos = await db.prepare(`SELECT object_key, available_at
+        FROM trip_photo_upload_reservations
+        WHERE owner_subject_hash = ?
+        ORDER BY created_at`)
+        .bind(ownerSubjectHash)
+        .all<{ object_key: string; available_at: string }>();
       const pendingObjects = await db.prepare(`SELECT privacy_deletion_tasks.object_key,
           privacy_deletion_tasks.object_store
         FROM privacy_deletion_tasks
@@ -1107,33 +1168,101 @@ export async function handleAccountRequest(
         .bind(ownerSubjectHash).all<{ object_key: string }>();
       const deletionObjects: PrivacyDeletionObject[] = [
         ...(photos.results ?? []).map((photo) => ({ objectStore: "trip_photos" as const, objectKey: photo.photo_key })),
+        ...(reservedPhotos.results ?? []).map((photo) => ({
+          objectStore: "trip_photos" as const,
+          objectKey: photo.object_key,
+          availableAt: photo.available_at,
+        })),
         ...(pendingObjects.results ?? []).map((object) => ({ objectStore: object.object_store, objectKey: object.object_key })),
         ...(exportObjects.results ?? []).map((object) => ({ objectStore: "privacy_exports" as const, objectKey: object.object_key })),
       ];
-      const deletion = await prepareDeletionJob("account", user.id, user.id, deletionObjects);
-      await db.batch([
-        deletion.jobStatement(db),
-        ...deletion.taskStatements(db),
+      const deletion = await prepareDeletionJob(
+        "account",
+        user.id,
+        user.id,
+        deletionObjects,
+        fence.requestedAt,
+      );
+      let deletionResults: unknown[] = [];
+      try {
+        deletionResults = await db.batch([
+        deletion.jobStatementForAccountFence(db, user.id, fence.leaseToken),
+        ...deletion.taskStatementsForAccountFence(db, user.id, fence.leaseToken),
         db.prepare(`UPDATE privacy_deletion_tasks SET state = 'pending', available_at = ?,
           lease_expires_at = NULL, lease_token = NULL, last_error_code = NULL, updated_at = ?
           WHERE state = 'needs_attention' AND object_key IS NOT NULL
-            AND job_id IN (SELECT id FROM privacy_deletion_jobs WHERE owner_subject_hash = ?)`)
-          .bind(deletion.requestedAt, deletion.requestedAt, ownerSubjectHash),
+            AND job_id IN (SELECT id FROM privacy_deletion_jobs WHERE owner_subject_hash = ?)
+            AND EXISTS (SELECT 1 FROM account_deletion_fences
+              WHERE user_id = ? AND owner_subject_hash = ? AND lease_token = ?)`)
+          .bind(
+            deletion.requestedAt,
+            deletion.requestedAt,
+            ownerSubjectHash,
+            user.id,
+            ownerSubjectHash,
+            fence.leaseToken,
+          ),
         db.prepare(`UPDATE privacy_export_jobs
           SET state = 'canceled', user_id = NULL, lease_expires_at = NULL, lease_token = NULL,
             last_error_code = 'account_deleted', updated_at = ?
           WHERE owner_subject_hash = ?
-            AND state IN ('pending', 'queued', 'processing', 'retry', 'completed', 'needs_attention')`)
-          .bind(deletion.requestedAt, ownerSubjectHash),
-        db.prepare("DELETE FROM site_discussion_posts WHERE trip_id IN (SELECT id FROM trips WHERE user_id = ?)").bind(user.id),
-        db.prepare("DELETE FROM trips WHERE user_id = ?").bind(user.id),
-        db.prepare("DELETE FROM saved_sites WHERE user_id = ?").bind(user.id),
-        db.prepare("DELETE FROM gear_profiles WHERE user_id = ?").bind(user.id),
-        db.prepare("DELETE FROM auth_sessions WHERE user_id = ?").bind(user.id),
-        db.prepare("DELETE FROM email_challenges WHERE email = ? OR user_id = ?").bind(user.email, user.id),
-        db.prepare("DELETE FROM auth_attempts WHERE email_hash = ?").bind(await sha256(user.email)),
-        db.prepare("DELETE FROM users WHERE id = ?").bind(user.id),
-      ]);
+            AND state IN ('pending', 'queued', 'processing', 'retry', 'completed', 'needs_attention')
+            AND EXISTS (SELECT 1 FROM account_deletion_fences
+              WHERE user_id = ? AND owner_subject_hash = ? AND lease_token = ?)`)
+          .bind(deletion.requestedAt, ownerSubjectHash, user.id, ownerSubjectHash, fence.leaseToken),
+        db.prepare(`DELETE FROM trip_photo_upload_reservations
+          WHERE owner_subject_hash = ?
+            AND EXISTS (SELECT 1 FROM account_deletion_fences
+              WHERE user_id = ? AND owner_subject_hash = ? AND lease_token = ?)`)
+          .bind(ownerSubjectHash, user.id, ownerSubjectHash, fence.leaseToken),
+        db.prepare(`DELETE FROM site_discussion_posts
+          WHERE trip_id IN (SELECT id FROM trips WHERE user_id = ?)
+            AND EXISTS (SELECT 1 FROM account_deletion_fences
+              WHERE user_id = ? AND owner_subject_hash = ? AND lease_token = ?)`)
+          .bind(user.id, user.id, ownerSubjectHash, fence.leaseToken),
+        db.prepare(`DELETE FROM trips WHERE user_id = ?
+          AND EXISTS (SELECT 1 FROM account_deletion_fences
+            WHERE user_id = ? AND owner_subject_hash = ? AND lease_token = ?)`)
+          .bind(user.id, user.id, ownerSubjectHash, fence.leaseToken),
+        db.prepare(`DELETE FROM saved_sites WHERE user_id = ?
+          AND EXISTS (SELECT 1 FROM account_deletion_fences
+            WHERE user_id = ? AND owner_subject_hash = ? AND lease_token = ?)`)
+          .bind(user.id, user.id, ownerSubjectHash, fence.leaseToken),
+        db.prepare(`DELETE FROM gear_profiles WHERE user_id = ?
+          AND EXISTS (SELECT 1 FROM account_deletion_fences
+            WHERE user_id = ? AND owner_subject_hash = ? AND lease_token = ?)`)
+          .bind(user.id, user.id, ownerSubjectHash, fence.leaseToken),
+        db.prepare(`DELETE FROM auth_sessions WHERE user_id = ?
+          AND EXISTS (SELECT 1 FROM account_deletion_fences
+            WHERE user_id = ? AND owner_subject_hash = ? AND lease_token = ?)`)
+          .bind(user.id, user.id, ownerSubjectHash, fence.leaseToken),
+        db.prepare(`DELETE FROM email_challenges WHERE (email = ? OR user_id = ?)
+          AND EXISTS (SELECT 1 FROM account_deletion_fences
+            WHERE user_id = ? AND owner_subject_hash = ? AND lease_token = ?)`)
+          .bind(user.email, user.id, user.id, ownerSubjectHash, fence.leaseToken),
+        db.prepare(`DELETE FROM auth_attempts WHERE email_hash = ?
+          AND EXISTS (SELECT 1 FROM account_deletion_fences
+            WHERE user_id = ? AND owner_subject_hash = ? AND lease_token = ?)`)
+          .bind(await sha256(user.email), user.id, ownerSubjectHash, fence.leaseToken),
+        db.prepare(`DELETE FROM users WHERE id = ?
+          AND EXISTS (SELECT 1 FROM account_deletion_fences
+            WHERE user_id = ? AND owner_subject_hash = ? AND lease_token = ?)`)
+          .bind(user.id, user.id, ownerSubjectHash, fence.leaseToken),
+        ]);
+      } catch (error) {
+        const committed = await exactAccountDeletionCommit(db, user.id, deletion.receipt);
+        if (!committed) throw error;
+      }
+      const userDeleteChanges = confirmedMutationChanges(deletionResults.at(-1));
+      if (userDeleteChanges !== 1 && !await exactAccountDeletionCommit(db, user.id, deletion.receipt)) {
+        throw new AuthError(
+          userDeleteChanges === 0 ? 409 : 503,
+          userDeleteChanges === 0 ? "account_deletion_lease_changed" : "account_deletion_unconfirmed",
+          userDeleteChanges === 0
+            ? "Account deletion lost its bounded lease. Retry after the active request finishes."
+            : "Account deletion could not be confirmed. Check deletion status before retrying.",
+        );
+      }
       const status = await deletionStatusAfterCommit(env, deletion);
       return jsonResponse(
         { deleted: true, deletion: status },
@@ -1866,6 +1995,90 @@ type PrivacyObjectStore = "trip_photos" | "privacy_exports";
 interface PrivacyDeletionObject {
   objectStore: PrivacyObjectStore;
   objectKey: string;
+  availableAt?: string;
+}
+
+interface AccountDeletionFenceClaim {
+  leaseToken: string;
+  leaseExpiresAt: string;
+  requestedAt: string;
+}
+
+async function claimAccountDeletionFence(
+  db: D1DatabaseLike,
+  userId: string,
+  ownerSubjectHash: string,
+  now: Date,
+): Promise<AccountDeletionFenceClaim> {
+  const leaseToken = randomSecret(32);
+  const nowIso = now.toISOString();
+  const leaseExpiresAt = new Date(now.getTime() + ACCOUNT_DELETION_FENCE_LEASE_MS).toISOString();
+  try {
+    await db.prepare(`INSERT INTO account_deletion_fences (
+        user_id, owner_subject_hash, lease_token, lease_expires_at, requested_at, updated_at)
+      SELECT ?, ?, ?, ?, ?, ?
+      WHERE EXISTS (SELECT 1 FROM users WHERE id = ?)
+      ON CONFLICT(user_id) DO UPDATE SET
+        lease_token = excluded.lease_token,
+        lease_expires_at = excluded.lease_expires_at,
+        updated_at = excluded.updated_at
+      WHERE account_deletion_fences.owner_subject_hash = excluded.owner_subject_hash
+        AND account_deletion_fences.lease_expires_at <= ?`)
+      .bind(
+        userId,
+        ownerSubjectHash,
+        leaseToken,
+        leaseExpiresAt,
+        nowIso,
+        nowIso,
+        userId,
+        nowIso,
+      )
+      .run();
+  } catch {
+    // A D1 response can be lost after the fence commits. Exact read-back decides ownership.
+  }
+  const exact = await db.prepare(`SELECT requested_at FROM account_deletion_fences
+    WHERE user_id = ? AND owner_subject_hash = ? AND lease_token = ? AND lease_expires_at = ?
+    LIMIT 1`)
+    .bind(userId, ownerSubjectHash, leaseToken, leaseExpiresAt)
+    .first<{ requested_at: string }>();
+  if (exact) return { leaseToken, leaseExpiresAt, requestedAt: exact.requested_at };
+
+  const existing = await db.prepare(`SELECT lease_expires_at FROM account_deletion_fences
+    WHERE user_id = ? AND owner_subject_hash = ? LIMIT 1`)
+    .bind(userId, ownerSubjectHash)
+    .first<{ lease_expires_at: string }>();
+  if (existing) {
+    throw new AuthError(
+      409,
+      "account_deletion_in_progress",
+      "Another account-deletion request is in progress. Retry after its bounded lease expires.",
+    );
+  }
+  const userStillExists = await db.prepare("SELECT 1 AS present FROM users WHERE id = ? LIMIT 1")
+    .bind(userId)
+    .first<{ present: number }>();
+  if (!userStillExists) {
+    throw new AuthError(401, "authentication_required", "This account session has ended.");
+  }
+  throw new AuthError(
+    503,
+    "account_deletion_fence_unconfirmed",
+    "Account deletion could not establish its write fence. Retry before making other changes.",
+  );
+}
+
+function laterDeletionAvailableAt(
+  first: string | undefined,
+  second: string | undefined,
+  fallback: string,
+) {
+  let latest = fallback;
+  for (const candidate of [first, second]) {
+    if (candidate && Number.isFinite(Date.parse(candidate)) && candidate > latest) latest = candidate;
+  }
+  return latest;
 }
 
 async function prepareDeletionJob(
@@ -1873,19 +2086,26 @@ async function prepareDeletionJob(
   stableSubjectId: string,
   ownerStableId: string,
   objects: PrivacyDeletionObject[],
+  requestedAt?: string,
 ) {
   const id = `deletion_${crypto.randomUUID()}`;
   const receipt = randomSecret(32);
-  const timestamp = new Date().toISOString();
-  const uniqueObjects = [...new Map(objects.map((object) => [
-    `${object.objectStore}\u0000${object.objectKey}`,
-    object,
-  ])).values()];
-  const tasks = await Promise.all(uniqueObjects.map(async ({ objectStore, objectKey }) => ({
+  const timestamp = requestedAt ?? new Date().toISOString();
+  const uniqueObjects = [...objects.reduce((byLocator, object) => {
+    const identity = `${object.objectStore}\u0000${object.objectKey}`;
+    const existing = byLocator.get(identity);
+    byLocator.set(identity, {
+      ...object,
+      availableAt: laterDeletionAvailableAt(existing?.availableAt, object.availableAt, timestamp),
+    });
+    return byLocator;
+  }, new Map<string, PrivacyDeletionObject>()).values()];
+  const tasks = await Promise.all(uniqueObjects.map(async ({ objectStore, objectKey, availableAt }) => ({
     id: `deletion_task_${crypto.randomUUID()}`,
     objectStore,
     objectKey,
     objectKeyHash: await sha256(`${objectStore}\u0000${objectKey}`),
+    availableAt: availableAt ?? timestamp,
   })));
   const subjectHash = await sha256(`${scope}:${stableSubjectId}`);
   const ownerSubjectHash = await sha256(`account:${ownerStableId}`);
@@ -1914,6 +2134,32 @@ async function prepareDeletionJob(
         completed ? timestamp : null,
         timestamp,
       ),
+    jobStatementForAccountFence: (
+      db: D1DatabaseLike,
+      userId: string,
+      leaseToken: string,
+    ) => db.prepare(`INSERT INTO privacy_deletion_jobs
+      (id, receipt_hash, scope, subject_hash, owner_subject_hash, state, objects_total, objects_deleted,
+        last_error_code, requested_at, active_data_removed_at, completed_at, updated_at)
+      SELECT ?, ?, ?, ?, ?, ?, ?, 0, NULL, ?, ?, ?, ?
+      WHERE EXISTS (SELECT 1 FROM account_deletion_fences
+        WHERE user_id = ? AND owner_subject_hash = ? AND lease_token = ?)`)
+      .bind(
+        id,
+        receiptHash,
+        scope,
+        subjectHash,
+        ownerSubjectHash,
+        completed ? "completed" : "active_data_removed",
+        tasks.length,
+        timestamp,
+        timestamp,
+        completed ? timestamp : null,
+        timestamp,
+        userId,
+        ownerSubjectHash,
+        leaseToken,
+      ),
     jobStatementForPendingTrip: (db: D1DatabaseLike, tripId: string, userId: string) => db.prepare(`INSERT INTO privacy_deletion_jobs
       (id, receipt_hash, scope, subject_hash, owner_subject_hash, state, objects_total, objects_deleted,
         last_error_code, requested_at, active_data_removed_at, completed_at, updated_at)
@@ -1938,13 +2184,36 @@ async function prepareDeletionJob(
       (id, job_id, object_key, object_key_hash, object_store, state, attempts, available_at, lease_expires_at,
         lease_token, last_error_code, created_at, updated_at, completed_at)
       VALUES (?, ?, ?, ?, ?, 'pending', 0, ?, NULL, NULL, NULL, ?, ?, NULL)`)
-      .bind(task.id, id, task.objectKey, task.objectKeyHash, task.objectStore, timestamp, timestamp, timestamp)),
+      .bind(task.id, id, task.objectKey, task.objectKeyHash, task.objectStore, task.availableAt, timestamp, timestamp)),
+    taskStatementsForAccountFence: (
+      db: D1DatabaseLike,
+      userId: string,
+      leaseToken: string,
+    ) => tasks.map((task) => db.prepare(`INSERT INTO privacy_deletion_tasks
+      (id, job_id, object_key, object_key_hash, object_store, state, attempts, available_at, lease_expires_at,
+        lease_token, last_error_code, created_at, updated_at, completed_at)
+      SELECT ?, ?, ?, ?, ?, 'pending', 0, ?, NULL, NULL, NULL, ?, ?, NULL
+      WHERE EXISTS (SELECT 1 FROM account_deletion_fences
+        WHERE user_id = ? AND owner_subject_hash = ? AND lease_token = ?)`)
+      .bind(
+        task.id,
+        id,
+        task.objectKey,
+        task.objectKeyHash,
+        task.objectStore,
+        task.availableAt,
+        timestamp,
+        timestamp,
+        userId,
+        ownerSubjectHash,
+        leaseToken,
+      )),
     taskStatementsForPendingTrip: (db: D1DatabaseLike, tripId: string, userId: string) => tasks.map((task) => db.prepare(`INSERT INTO privacy_deletion_tasks
       (id, job_id, object_key, object_key_hash, object_store, state, attempts, available_at, lease_expires_at,
         lease_token, last_error_code, created_at, updated_at, completed_at)
       SELECT ?, ?, ?, ?, ?, 'pending', 0, ?, NULL, NULL, NULL, ?, ?, NULL
       WHERE EXISTS (SELECT 1 FROM trips WHERE id = ? AND user_id = ? AND moderation_status = 'pending')`)
-      .bind(task.id, id, task.objectKey, task.objectKeyHash, task.objectStore, timestamp, timestamp, timestamp, tripId, userId)),
+      .bind(task.id, id, task.objectKey, task.objectKeyHash, task.objectStore, task.availableAt, timestamp, timestamp, tripId, userId)),
   };
 }
 
@@ -2036,6 +2305,23 @@ async function selectDeletionJobByReceipt(db: D1DatabaseLike, receipt: string) {
     FROM privacy_deletion_jobs WHERE receipt_hash = ? LIMIT 1`)
     .bind(await sha256(receipt))
     .first<PrivacyDeletionJobRow>();
+}
+
+async function exactAccountDeletionCommit(
+  db: D1DatabaseLike,
+  userId: string,
+  receipt: string,
+) {
+  const [job, activeUser, activeFence] = await Promise.all([
+    selectDeletionJobByReceipt(db, receipt),
+    db.prepare("SELECT 1 AS present FROM users WHERE id = ? LIMIT 1")
+      .bind(userId)
+      .first<{ present: number }>(),
+    db.prepare("SELECT 1 AS present FROM account_deletion_fences WHERE user_id = ? LIMIT 1")
+      .bind(userId)
+      .first<{ present: number }>(),
+  ]);
+  return Boolean(job) && !activeUser && !activeFence;
 }
 
 function publicDeletionStatus(job: PrivacyDeletionJobRow) {
@@ -2393,8 +2679,18 @@ async function createSessionResponse(db: D1DatabaseLike, request: Request, user:
     db.prepare("DELETE FROM auth_sessions WHERE token_hash = ?").bind(await sha256(presented.token))));
   const sessionResults = await db.batch([
     ...priorSessionDeletes,
-    db.prepare("INSERT INTO auth_sessions (token_hash, user_id, expires_at, created_at) VALUES (?, ?, ?, ?)")
-      .bind(tokenHash, user.id, expiresAt.toISOString(), createdAt.toISOString()),
+    db.prepare(`INSERT INTO auth_sessions (token_hash, user_id, expires_at, created_at)
+      SELECT ?, ?, ?, ?
+      WHERE EXISTS (SELECT 1 FROM users WHERE id = ?)
+        AND NOT EXISTS (SELECT 1 FROM account_deletion_fences WHERE user_id = ?)`)
+      .bind(
+        tokenHash,
+        user.id,
+        expiresAt.toISOString(),
+        createdAt.toISOString(),
+        user.id,
+        user.id,
+      ),
   ]);
   if (confirmedMutationChanges(sessionResults.at(-1)) !== 1) {
     try {
