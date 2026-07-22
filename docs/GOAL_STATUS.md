@@ -13,6 +13,31 @@ Current provider truth overrides historical “paused” language in completed r
 2026-07-19 read-only reconciliation found an active Worker; no production mutation is authorized
 by that discovery.
 
+## Active checkpoint — fail-closed API path-and-method inventory
+
+- [x] Reconcile the executable access-control promise against the actual router. The registry
+      classified every current path and allowed method, but the entry point rejected only a wholly
+      unknown path; an unclassified method on a known path could still reach a handler and made a
+      future forgotten policy entry depend on handler-local checks rather than failing closed.
+- [x] Derive each recognized path's exact `Allow` set from the same policy rows that own actor,
+      legal-acceptance, same-origin, handler, and abuse-control classification. The retired signup
+      endpoint's deliberate all-method tombstone remains explicit; unknown paths have no inferred
+      methods.
+- [x] Reject every API request without an exact path-plus-method policy before health, Turnstile,
+      discussion, account, or trip dispatch. Recognized paths now return a generic non-cacheable
+      `405` with only the policy-derived `Allow` header; unknown paths remain generic non-cacheable
+      `404` responses. No handler branch can become executable merely because its path is known.
+- [x] Attack-test every registered example across GET, HEAD, POST, PUT, PATCH, DELETE, OPTIONS,
+      and an extension method, plus malformed and unknown paths and source-order enforcement. The
+      focused policy suite passes 6/6; the production-off Cloudflare build and all 689/689 Node
+      tests pass under pinned Node 22.23.1/npm 10.9.8; the explicit feature-on photo lane remains
+      8/8 across Chromium/WebKit; and the production-off phone matrix remains 228/228 across four
+      Chromium/WebKit profiles. ESLint, TypeScript, the complete security/SBOM/query-policy chain,
+      and both dependency audits pass with zero reported vulnerabilities.
+- [ ] Obtain exact-head hosted CI and CodeQL evidence plus independent human review. This
+      repository boundary does not authorize merge, deployment, provider mutation, migration,
+      feature activation, staging exercise, or production acceptance.
+
 ## Active checkpoint — truthful dormant trip-photo interaction boundary
 
 - [x] Reconcile the requested photo experience against the authoritative storage contract. D1 and
@@ -122,9 +147,13 @@ by that discovery.
       mobile cases, both zero-vulnerability npm audits, and the complete security/SBOM/query/
       provenance chain passed. The terminal's unsupported Node `24.18.0` correctly failed four
       restore-runtime tests before the suite was rerun under the repository/CI runtime.
-- [ ] Obtain exact-head hosted CI and CodeQL evidence and independent human review. This local UI
-      fix does not authorize a merge, dependency upgrade, deployment, provider mutation, DNS
-      change, migration, or production activation; the broader production gate remains closed.
+- [x] Obtain exact-head hosted CI and CodeQL evidence through consolidated head
+      `1198bd90b55b69d9e9a04a1c0daafbc4abd23668`: CI run `29956970498` passed the complete
+      web/security, API, pipeline, photo, and mobile boundaries; CodeQL run `29956967448` passed
+      Actions, JavaScript/TypeScript, and Python. This is automation evidence, not review.
+- [ ] Obtain independent human review. The local UI fix and hosted checks do not authorize a
+      merge, dependency upgrade, deployment, provider mutation, DNS change, migration, or
+      production activation; the broader production gate remains closed.
 
 ## Active checkpoint — consolidate the July 22 launch-readiness stack
 
@@ -3291,9 +3320,10 @@ supersedes this mutation-metadata authority while preserving its fail-closed beh
       abuse ceilings, password safety, encryption/custody, version locks, SBOMs, provenance,
       vulnerability response, restore testing, and authorized staging penetration testing.
       **Most repository controls complete; the 13-layer owner reference mapping and zero-execution
-      npm install-script boundary are locally complete;** production/provider/staging gates remain,
-      including isolated DAST, active edge filtering, live detection/alerting, key custody, and
-      independent review.
+      npm install-script boundary are locally complete.** The executable route registry also
+      rejects unclassified methods on known paths before body reads or handler dispatch.
+      Production/provider/staging gates remain, including isolated DAST, active edge filtering,
+      live detection/alerting, key custody, and independent review.
 - [ ] Complete the privacy lifecycle: data inventory, cascade map, deletion semantics,
       retention decision, rights workflows, processor handling, and counsel approval. **Local
       inventory/cascade/deletion checks complete;** the optional 30-day recovery decision and

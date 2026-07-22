@@ -29,7 +29,7 @@ import {
 } from "./security";
 import { handleTurnstileConfigRequest, type TurnstileEnv } from "./turnstile";
 import { enforceRequestRateLimit, type RateLimitEnv } from "./rate-limit";
-import { apiRoutePolicyForRequest, isKnownApiPath } from "./route-policy";
+import { apiRoutePolicyForRequest, apiRouteRejectionForRequest } from "./route-policy";
 import { unsupportedApiVersionResponse } from "./api-version.ts";
 import {
   attachRequestId,
@@ -132,6 +132,22 @@ async function handleFetchRequest(request: Request, env: Env, ctx: ExecutionCont
   const rateLimit = await enforceRequestRateLimit(request, env);
   if (rateLimit) return rateLimit;
 
+  const apiRejection = apiRouteRejectionForRequest(request);
+  if (apiRejection) {
+    return new Response(JSON.stringify({
+      error: { code: apiRejection.code, message: apiRejection.message },
+    }), {
+      status: apiRejection.status,
+      headers: {
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+        ...(apiRejection.status === 405 && !apiRejection.allowedMethods.includes("*")
+          ? { Allow: apiRejection.allowedMethods.join(", ") }
+          : {}),
+      },
+    });
+  }
+
   const guarded = await guardRequestBody(request);
   if (guarded.response) return guarded.response;
 
@@ -142,12 +158,6 @@ async function handleFetchRequest(request: Request, env: Env, ctx: ExecutionCont
 async function routeRequest(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
   const url = new URL(request.url);
   const apiPolicy = apiRoutePolicyForRequest(request);
-  if (url.pathname.startsWith("/api/") && !apiPolicy && !isKnownApiPath(url.pathname)) {
-    return new Response(JSON.stringify({ error: { code: "not_found", message: "API route not found." } }), {
-      status: 404,
-      headers: { "Content-Type": "application/json; charset=utf-8", "Cache-Control": "no-store" },
-    });
-  }
 
   const turnstileConfig = handleTurnstileConfigRequest(request, env);
   if (turnstileConfig) return turnstileConfig;

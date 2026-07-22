@@ -3,7 +3,9 @@ import { readFile } from "node:fs/promises";
 import test from "node:test";
 import {
   API_ROUTE_POLICIES,
+  allowedApiMethodsForPath,
   apiRoutePolicyForRequest,
+  apiRouteRejectionForRequest,
   isKnownApiPath,
   rateLimitClassesForRequest,
 } from "../worker/route-policy.ts";
@@ -113,7 +115,44 @@ test("unclassified and malformed API paths fail route discovery closed", () => {
 
   assert.equal(isKnownApiPath("/api/trips/start"), true);
   assert.equal(apiRoutePolicyForRequest(request("/api/trips/start", "GET")), null);
+  assert.deepEqual(allowedApiMethodsForPath("/api/trips/start"), ["POST"]);
+  assert.deepEqual(allowedApiMethodsForPath("/api/profile/export"), ["GET", "POST"]);
+  assert.deepEqual(allowedApiMethodsForPath("/api/auth/signup"), ["*"]);
+  assert.deepEqual(allowedApiMethodsForPath("/api/unclassified"), []);
   assert.deepEqual(rateLimitClassesForRequest(request("/api/unclassified", "POST")), ["write"]);
+});
+
+test("every unclassified method on a known API path has an exact central Allow contract", () => {
+  const candidateMethods = ["GET", "HEAD", "POST", "PUT", "PATCH", "DELETE", "OPTIONS", "PROPFIND"];
+  const examples = new Set(API_ROUTE_POLICIES.map((policy) => policy.examplePath));
+
+  for (const path of examples) {
+    const declared = allowedApiMethodsForPath(path);
+    assert.ok(declared.length > 0, path);
+    for (const method of candidateMethods) {
+      const policy = apiRoutePolicyForRequest(request(path, method));
+      if (declared.includes("*") || declared.includes(method)) {
+        assert.ok(policy, `${method} ${path} should resolve`);
+        assert.equal(apiRouteRejectionForRequest(request(path, method)), null, `${method} ${path}`);
+      } else {
+        assert.equal(policy, null, `${method} ${path} must remain unclassified`);
+        assert.deepEqual(apiRouteRejectionForRequest(request(path, method)), {
+          status: 405,
+          code: "method_not_allowed",
+          message: "That method is not available for this API route.",
+          allowedMethods: declared,
+        }, `${method} ${path}`);
+      }
+    }
+  }
+
+  assert.deepEqual(apiRouteRejectionForRequest(request("/api/unclassified", "POST")), {
+    status: 404,
+    code: "not_found",
+    message: "API route not found.",
+    allowedMethods: [],
+  });
+  assert.equal(apiRouteRejectionForRequest(request("/privacy", "POST")), null);
 });
 
 test("every literal route branch in Worker handlers is represented in the policy registry", async () => {
@@ -125,9 +164,26 @@ test("every literal route branch in Worker handlers is represented in the policy
   }
 });
 
-test("the Worker entry point denies unknown API paths and derives trip authorization from policy", async () => {
+test("the Worker entry point centrally denies unknown paths and unclassified methods", async () => {
   const source = await readFile(new URL("../worker/index.ts", import.meta.url), "utf8");
-  assert.match(source, /url\.pathname\.startsWith\("\/api\/"\) && !apiPolicy && !isKnownApiPath/);
+  assert.match(source, /apiRouteRejectionForRequest\(request\)/);
+  assert.match(source, /if \(apiRejection\)/);
+  assert.match(source, /status: apiRejection\.status/);
+  assert.match(source, /Allow: apiRejection\.allowedMethods\.join\(", "\)/);
+  assert.doesNotMatch(source, /!apiPolicy && !isKnownApiPath/);
   assert.match(source, /apiPolicy\?\.handler === "trips" && apiPolicy\.authorization === "owner"/);
   assert.doesNotMatch(source, /url\.pathname\.startsWith\("\/api\/trips\/"\)/);
+
+  const rejection = source.indexOf("apiRouteRejectionForRequest(request)");
+  assert.ok(rejection >= 0);
+  assert.ok(source.indexOf("guardRequestBody(request)") > rejection, "body reads must follow central rejection");
+  for (const dispatch of [
+    "handleTurnstileConfigRequest(request, env)",
+    "healthResponse(request, env)",
+    "handleDiscussionRequest(request, env, sites)",
+    "handleAccountRequest(request, env, sites",
+    "handleTripRequest(request, env, sites",
+  ]) {
+    assert.ok(source.indexOf(dispatch) > rejection, `${dispatch} must follow the central rejection`);
+  }
 });

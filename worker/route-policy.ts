@@ -2,8 +2,9 @@
  * Executable API access-control inventory.
  *
  * A Worker API route does not exist until it is classified here. The entry
- * point returns a generic 404 for unclassified API paths, so adding a handler
- * without adding its security policy fails closed.
+ * point returns a generic 404 for unclassified API paths and a registry-derived
+ * 405 for unclassified methods, so adding a handler branch without adding its
+ * security policy fails closed.
  */
 
 export type ApiAuthorization = "public" | "optional_session" | "receipt" | "owner";
@@ -23,6 +24,13 @@ export interface ApiRoutePolicy {
   currentLegalAcceptanceRequired: boolean;
   rateLimitTags: readonly Exclude<RequestLimitClass, "read" | "write">[];
   matches(pathname: string): boolean;
+}
+
+export interface ApiRouteRejection {
+  status: 404 | 405;
+  code: "not_found" | "method_not_allowed";
+  message: string;
+  allowedMethods: readonly ApiMethod[];
 }
 
 const exact = (expected: string) => (pathname: string) => pathname === expected;
@@ -364,6 +372,44 @@ export function apiRoutePolicyForRequest(request: Request): ApiRoutePolicy | nul
 
 export function isKnownApiPath(pathname: string) {
   return API_ROUTE_POLICIES.some((policy) => policy.matches(pathname));
+}
+
+const API_METHOD_ORDER: readonly ApiMethod[] = ["GET", "HEAD", "POST", "PUT", "PATCH", "DELETE"];
+
+/**
+ * Return the exact methods admitted by policy for a recognized API path.
+ *
+ * Handlers must not be the authority for discovering a method. Keeping this
+ * list derived from the registry lets the Worker reject an unclassified
+ * method before any handler can accidentally grow a new route outside the
+ * access-control matrix.
+ */
+export function allowedApiMethodsForPath(pathname: string): readonly ApiMethod[] {
+  const policies = API_ROUTE_POLICIES.filter((policy) => policy.matches(pathname));
+  if (policies.some((policy) => policy.methods.includes("*"))) return ["*"];
+  const allowed = new Set(policies.flatMap((policy) => policy.methods));
+  return API_METHOD_ORDER.filter((method) => allowed.has(method));
+}
+
+/** Classify only API requests that the executable policy does not admit. */
+export function apiRouteRejectionForRequest(request: Request): ApiRouteRejection | null {
+  const { pathname } = new URL(request.url);
+  if (!pathname.startsWith("/api/") || apiRoutePolicyForRequest(request)) return null;
+  const allowedMethods = allowedApiMethodsForPath(pathname);
+  if (allowedMethods.length > 0) {
+    return {
+      status: 405,
+      code: "method_not_allowed",
+      message: "That method is not available for this API route.",
+      allowedMethods,
+    };
+  }
+  return {
+    status: 404,
+    code: "not_found",
+    message: "API route not found.",
+    allowedMethods: [],
+  };
 }
 
 export function rateLimitClassesForRequest(request: Request): RequestLimitClass[] {

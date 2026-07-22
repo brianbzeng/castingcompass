@@ -136,6 +136,13 @@ after its acceptance checks pass in the intended environment.
       by routing and abuse controls, and locally verify that a second authenticated account
       cannot read an owner's photo/export data or delete the owner's trip/gear. Approval of
       future moderator, support, and operator roles remains open.
+    - [x] Close the registry's method-classification gap. A known path no longer permits an
+      unclassified method to reach handler-local checks: the Worker derives the exact method set
+      from the same executable policy, returns a generic non-cacheable `405` plus its narrow
+      `Allow` header for a method mismatch, preserves generic `404` for unknown paths, and performs
+      this rejection after the generic abuse ceiling but before body reads and every API handler
+      dispatch. Exhaustive policy examples cover ordinary and extension methods, and source-order
+      tests keep the central boundary ahead of request parsing and handlers.
     - [x] Bind active-trip completion and cancellation to the authenticated account in both
       the handler precheck and the final D1 update. The write now requires the same trip ID,
       account ID, active state, and token hash atomically; exact-token cross-account and
@@ -904,9 +911,10 @@ after its acceptance checks pass in the intended environment.
     Vinext development mode across five location reports produced no overlay or page error;
     adversarial unit coverage, the full 672-test Node
     suite, and all 208 Chromium/WebKit mobile cases passed under the pinned runtime. The
-    same-day `6.0.0` major upgrade was not taken without evidence that it fixes this path. This
-    closes the observed local demo defect only; hosted review and every deployment/provider gate
-    remain open.
+    same-day `6.0.0` major upgrade was not taken without evidence that it fixes this path. Exact
+    consolidated head `1198bd90b55b69d9e9a04a1c0daafbc4abd23668` then passed hosted CI run
+    `29956970498` and CodeQL run `29956967448`. This closes the observed defect and its automated
+    review boundary only; independent human review and every deployment/provider gate remain open.
   - [ ] Complete native-client contract/authentication work, isolated staging and provider setup,
     physical-device acceptance, deployment, and production-scale performance/failure evidence.
 
