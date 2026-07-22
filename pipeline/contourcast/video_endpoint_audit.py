@@ -370,6 +370,13 @@ def audit_usgs_sf_video_endpoint(
             )
         asset_summaries[cruise_id] = {
             "record_count": len(points),
+            "published_metadata_record_count": spec.get(
+                "published_metadata_record_count", spec["record_count"]
+            ),
+            "published_metadata_count_matches_archive": (
+                spec.get("published_metadata_record_count", spec["record_count"])
+                == len(points)
+            ),
             "labeled_record_count": int(sum(raw_class_counts.values())),
             "raw_class_counts": dict(sorted(raw_class_counts.items())),
             "archive_sha256": spec["archive_sha256"],

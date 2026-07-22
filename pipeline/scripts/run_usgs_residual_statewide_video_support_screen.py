@@ -37,7 +37,13 @@ def _materialize(url: str, expected_sha256: str, destination: Path) -> Path:
     partial = destination.with_suffix(destination.suffix + ".part")
     partial.unlink(missing_ok=True)
     try:
-        with urllib.request.urlopen(url, timeout=120) as response, partial.open("wb") as output:
+        request = urllib.request.Request(
+            url,
+            headers={"User-Agent": "CastingCompass/1.0 (+https://castingcompass.com)"},
+        )
+        with urllib.request.urlopen(request, timeout=120) as response, partial.open(
+            "wb"
+        ) as output:
             shutil.copyfileobj(response, output, length=1024 * 1024)
         if sha256_file(partial) != expected_sha256:
             raise ValueError(f"download checksum mismatch: {url}")

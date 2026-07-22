@@ -31,6 +31,16 @@ record counts, bounding coordinates, field definitions, one-minute observation c
 approximately 10 m variable horizontal accuracy, may be used to freeze this design. Archive DBF
 label values may not be inspected until this protocol commit exists.
 
+### Pre-result source-count erratum
+
+The first implementation execution produced no metrics or decision and stopped at the frozen
+record-count check. The published `c0212sc` metadata states 5,937 point features, while the exact
+content-addressed SHP record sequence and DBF header independently contain 5,936 records. The
+archive geometry and table agree with each other. Before rerunning or aggregating any outcome,
+the manifest was amended to retain both values and to enforce 5,936 as the exact archive count.
+This named source-documentation discrepancy does not change source selection, class collapse,
+grouping, support, or any downstream gate. Any SHP/DBF disagreement still fails closed.
+
 ## Endpoint and classes
 
 The endpoint is the direct scientist-recorded `CLASS` value in each official video-observation
@@ -41,8 +51,9 @@ DBF. The class collapse is unchanged from the two earlier audits:
 - raw `4` -> `mobile_coarse_sediment`.
 
 Blank `CLASS` rows are unlabeled and excluded. Any nonblank value outside `1` through `4`, a
-missing required `CLASS`, `LINE`, or `TAPE` field, an empty `LINE` or `TAPE` on a labeled row, a
-record-count mismatch, an unsafe archive member, or a checksum mismatch fails the audit closed.
+missing required `CLASS`, `LINE`, or `TAPE` field, an empty `LINE` or `TAPE` on a labeled row, an
+exact SHP/DBF count mismatch, an unsafe archive member, or a checksum mismatch fails the audit
+closed. The one published-metadata discrepancy above must remain explicit.
 No class may be dropped, merged differently, oversampled, or inferred from another field after
 the values are read.
 

@@ -63,7 +63,8 @@
         "dataset_stem": "C0212SC_video_observations",
         "url": "https://pubs.usgs.gov/ds/781/video_observations/data/c0212sc_video_observations.zip",
         "archive_sha256": "85f975c6b952a56acf92fee650a70dc55ef50a3747937581503587f678040409",
-        "record_count": 5937,
+        "record_count": 5936,
+        "published_metadata_record_count": 5937,
         "members": [
           {"path": "c0212sc_video_observations_metadata.txt", "bytes": 90400, "sha256": "f7f2931ee2c3eff371bc641d9686783063148561bfaf933e41fe6a9e83c14cc8"},
           {"path": "C0212SC_video_observations.dbf", "bytes": 18417218, "sha256": "f31b3efb740aedb904c0016e1422c4e0109790fe9452946101bcf4b62572d6ea"},
