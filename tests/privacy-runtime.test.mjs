@@ -4571,16 +4571,36 @@ test("pending-trip edits follow exact post-state when D1 omits the mutation rece
   assert.equal(sqlite.prepare("SELECT notes FROM trips WHERE id = ?").get(editTripId).notes, "Receipt missing");
 
   const deleteTripId = addTrip(sqlite, user, { photoKey: "private/unconfirmed-delete.jpg" });
+  let deletedPhotos = 0;
   d1.omitOnceMutationMetadataSubstring = "DELETE FROM trips WHERE id = ? AND user_id = ?";
   const deleteResponse = await handleAccountRequest(request(`/api/profile/trips/${deleteTripId}`, {
     method: "DELETE",
     cookie: user.cookie,
-  }), { DB: d1, TRIP_PHOTOS: { delete: async () => undefined } }, sites);
-  assert.equal(deleteResponse?.status, 503);
-  assert.equal((await deleteResponse.json()).error.code, "trip_delete_unconfirmed");
+  }), { DB: d1, TRIP_PHOTOS: { delete: async () => { deletedPhotos += 1; } } }, sites);
+  assert.equal(deleteResponse?.status, 200);
+  const deletePayload = await deleteResponse.json();
+  assert.equal(deletePayload.deleted, true);
+  assert.deepEqual({ ...deletePayload.deletion, requestedAt: null, completedAt: null }, {
+    status: "completed",
+    scope: "trip",
+    requestedAt: null,
+    completedAt: null,
+    objectsTotal: 1,
+    objectsDeleted: 1,
+  });
+  assert.match(deletePayload.deletion.requestedAt, /^\d{4}-\d{2}-\d{2}T/u);
+  assert.match(deletePayload.deletion.completedAt, /^\d{4}-\d{2}-\d{2}T/u);
+  assert.ok(deletePayload.deletion.completedAt >= deletePayload.deletion.requestedAt);
   assert.match(deleteResponse.headers.get("Set-Cookie") ?? "", /^cc_deletion_receipt=/u);
+  assert.equal(deletedPhotos, 1);
   assert.equal(sqlite.prepare("SELECT COUNT(*) AS count FROM trips WHERE id = ?").get(deleteTripId).count, 0);
   assert.equal(sqlite.prepare("SELECT COUNT(*) AS count FROM privacy_deletion_jobs WHERE scope = 'trip'").get().count, 1);
+  assert.deepEqual({ ...sqlite.prepare(`SELECT state, objects_total, objects_deleted
+      FROM privacy_deletion_jobs WHERE scope = 'trip'`).get() }, {
+    state: "completed",
+    objects_total: 1,
+    objects_deleted: 1,
+  });
 });
 
 test("a committed pending-trip edit survives a lost D1 batch response exactly once", async () => {
@@ -4627,6 +4647,62 @@ test("a committed pending-trip edit survives a lost D1 batch response exactly on
   assert.equal(sqlite.prepare("SELECT notes FROM trips WHERE id = ?").get(tripId).notes, "Lost committed batch response");
   assert.equal(sqlite.prepare(`SELECT COUNT(*) AS count FROM trip_validation_provenance
     WHERE trip_id = ? AND event_type = 'evidence_exclusion'`).get(tripId).count, 1);
+});
+
+test("a committed pending-trip deletion survives a lost D1 batch response exactly once", async () => {
+  const { sqlite, d1 } = await database();
+  const user = await addUser(sqlite, "trip-lost-delete-receipt-140");
+  const tripId = addTrip(sqlite, user, { photoKey: "private/lost-delete.jpg" });
+  addDiscussion(sqlite, tripId);
+  const deletedKeys = [];
+  d1.throwOnceAfterBatchMutationSubstring = "DELETE FROM trips WHERE id = ? AND user_id = ?";
+
+  const response = await handleAccountRequest(request(`/api/profile/trips/${tripId}`, {
+    method: "DELETE",
+    cookie: user.cookie,
+  }), {
+    DB: d1,
+    TRIP_PHOTOS: { delete: async (key) => { deletedKeys.push(key); } },
+  }, []);
+
+  assert.equal(response?.status, 200);
+  assert.equal((await response.json()).deleted, true);
+  assert.match(response.headers.get("Set-Cookie") ?? "", /^cc_deletion_receipt=/u);
+  assert.deepEqual(deletedKeys, ["private/lost-delete.jpg"]);
+  assert.equal(sqlite.prepare("SELECT COUNT(*) AS count FROM trips WHERE id = ?").get(tripId).count, 0);
+  assert.equal(sqlite.prepare("SELECT COUNT(*) AS count FROM site_discussion_posts WHERE trip_id = ?").get(tripId).count, 0);
+  assert.equal(sqlite.prepare("SELECT COUNT(*) AS count FROM privacy_deletion_jobs WHERE scope = 'trip'").get().count, 1);
+  assert.deepEqual({ ...sqlite.prepare(`SELECT state, object_key FROM privacy_deletion_tasks
+      WHERE job_id IN (SELECT id FROM privacy_deletion_jobs WHERE scope = 'trip')`).get() }, {
+    state: "completed",
+    object_key: null,
+  });
+});
+
+test("pending-trip deletion refuses a corrupted private-object ledger receipt", async () => {
+  const { sqlite, d1 } = await database();
+  const user = await addUser(sqlite, "trip-corrupt-delete-receipt-141");
+  const tripId = addTrip(sqlite, user, { photoKey: "private/corrupt-delete.jpg" });
+  let deleteCalls = 0;
+  d1.beforeOnceQuerySubstring = "SELECT job.id AS job_id";
+  d1.beforeOnceQuery = () => sqlite.prepare(
+    "UPDATE privacy_deletion_tasks SET object_store = 'privacy_exports' WHERE job_id IN (SELECT id FROM privacy_deletion_jobs WHERE scope = 'trip')",
+  ).run();
+
+  const response = await handleAccountRequest(request(`/api/profile/trips/${tripId}`, {
+    method: "DELETE",
+    cookie: user.cookie,
+  }), {
+    DB: d1,
+    TRIP_PHOTOS: { delete: async () => { deleteCalls += 1; } },
+  }, []);
+
+  assert.equal(response?.status, 503);
+  assert.equal((await response.json()).error.code, "trip_delete_unconfirmed");
+  assert.match(response.headers.get("Set-Cookie") ?? "", /^cc_deletion_receipt=/u);
+  assert.equal(deleteCalls, 0);
+  assert.equal(sqlite.prepare("SELECT COUNT(*) AS count FROM trips WHERE id = ?").get(tripId).count, 0);
+  assert.equal(sqlite.prepare("SELECT object_store FROM privacy_deletion_tasks").get().object_store, "privacy_exports");
 });
 
 test("AI provider payload omits hostile legacy forecast metadata at the egress boundary", async () => {

@@ -169,6 +169,28 @@ CHECKS = (
         ),
     ),
     PlanCheck(
+        "pending trip deletion exact receipt",
+        """SELECT job.id, task.id,
+             (SELECT COUNT(*) FROM privacy_deletion_tasks WHERE job_id = job.id),
+             (SELECT COUNT(*) FROM trips WHERE id = ? AND user_id = ?),
+             (SELECT COUNT(*) FROM site_discussion_posts WHERE trip_id = ?)
+           FROM privacy_deletion_jobs AS job
+           LEFT JOIN privacy_deletion_tasks AS task ON task.job_id = job.id
+           WHERE job.receipt_hash = ? LIMIT 1""",
+        (
+            "trip_fixture",
+            "user_fixture",
+            "trip_fixture",
+            "receipt_fixture",
+        ),
+        (
+            "privacy_deletion_jobs_receipt_unique",
+            "privacy_deletion_tasks_job_object_unique",
+            "sqlite_autoindex_trips_1",
+            "site_discussion_posts_trip_unique",
+        ),
+    ),
+    PlanCheck(
         "account trip export",
         "SELECT id FROM trips WHERE user_id = ? ORDER BY created_at DESC",
         ("user_fixture",),

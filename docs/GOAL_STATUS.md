@@ -13,6 +13,35 @@ Current provider truth overrides historical “paused” language in completed r
 2026-07-19 read-only reconciliation found an active Worker; no production mutation is authorized
 by that discovery.
 
+## Active checkpoint — exact pending-trip deletion receipts
+
+- [x] Continue the database-authority audit through owner deletion of pending trips. The prior
+      path trusted final mutation metadata, so a committed transactional delete with a lost D1
+      response returned `trip_delete_unconfirmed` after removing the trip and discussion while
+      leaving a valid private-object deletion job for the browser to recover.
+- [x] Make one high-entropy deletion receipt plus the complete transaction post-state
+      authoritative. Success requires the exact job, trip and owner subject hashes, initial state,
+      timestamps, object count, exact pending task identity/locator/hash/store, zero remaining
+      owner-trip rows, and zero discussion rows; mutation metadata and transport success grant no
+      receipt. A failed confirmation read returns an opaque recoverable receipt without replay.
+- [x] Force missing final mutation metadata and a lost post-commit batch response; both return one
+      truthful success and purge the private object exactly once. Deliberately corrupting the task
+      store fails closed before object deletion, while the concurrent-moderator race remains `409`
+      with no job or task. The current source ledger covers 237 prepare sites: 223 literal, 14
+      reviewed nonliteral, and nine reviewed complete-rights multi-row reads; 31 critical D1 plans
+      now include the receipt, task, trip, and discussion indexes.
+- [x] Seal the checkpoint locally: the production-style Cloudflare build, ESLint, TypeScript,
+      614/614 Node tests, the complete offline security/source-integrity chain, both zero-
+      vulnerability npm audits, API 29/29, Ruff, 83 pipeline tests with one documented optional-
+      `rasterio` skip, 20 migrations / 31 critical indexed D1 plans, deterministic synthetic
+      smoke, and the full 200/200 Chromium/WebKit phone matrix passed. Preserve one clean local
+      commit and its deterministic release bundle. No push, PR, merge, deployment, provider query,
+      production database mutation, feature activation, UI change, or model claim belongs to this
+      checkpoint.
+- [ ] Exercise lost-response, same-account overlap, moderator-race, task corruption, latency,
+      rows-read/written, and private-object purge behavior with production-shaped synthetic data
+      in isolated staging before treating local receipt proof as deployed evidence.
+
 ## Active checkpoint — exact profile-trip edit receipts
 
 - [x] Continue the database-authority audit through owner profile-trip edits. A committed D1

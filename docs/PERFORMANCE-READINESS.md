@@ -8,7 +8,7 @@ accounts, or production data.
 ## D1 query inventory
 
 `scripts/generate-d1-query-inventory.mjs` parses every Worker TypeScript source file and records
-all 235 direct `.prepare()` sites: 221 literal statements and 14 separately reviewed nonliteral
+all 237 direct `.prepare()` sites: 223 literal statements and 14 separately reviewed nonliteral
 expressions across eight source files. The committed policy and generated inventory are
 source-hash and call-site bound. CI rejects source-file/count drift, computed or aliased
 `prepare` access, a nonliteral expression without its exact static-authority review, an unscoped
@@ -72,7 +72,7 @@ latency, or alerting; those remain isolated-staging gates. The complete contract
 [SCHEDULED-WORKER-BUDGET.md](SCHEDULED-WORKER-BUDGET.md).
 
 `scripts/check_d1_query_plans.py` separately applies every migration to an in-memory SQLite
-database, runs 30 representative `EXPLAIN QUERY PLAN` checks, and rejects missing leftmost
+database, runs 31 representative `EXPLAIN QUERY PLAN` checks, and rejects missing leftmost
 indexes for every foreign-key child path. The checked plans cover the highest-frequency or
 growth-sensitive access patterns:
 
@@ -83,6 +83,7 @@ growth-sensitive access patterns:
 | Saved sites and gear profiles | One authenticated user; exact 100-item ceilings, `LIMIT 101` overflow detection, fail-closed legacy overflow, and atomic count-guarded creates | `(user_id, created_at)` and `(user_id, updated_at)` ordering indexes |
 | Profile trip history | One authenticated user, completed rows only, `LIMIT 100` | Partial expression index over user and effective completion time; no temporary sort |
 | Profile trip edit receipt | One server-generated evidence ID, owner/trip identity, and optional correction ID, `LIMIT 1` | Trip and evidence primary keys plus the unique correction-ID index; success separately requires exact normalized post-state |
+| Pending trip deletion receipt | One high-entropy receipt plus exact owner/trip/task state, `LIMIT 1`; scalar absence checks are exact-cardinality | Unique receipt, task job/object, trip primary-key, and discussion trip indexes; success requires the expected ledger and zero residual trip/discussion rows |
 | Complete account trip export | One authenticated user; intentionally complete rather than silently truncated | `(user_id, created_at)` index. Rare cross-child export ordering may sort; no speculative indexes are added solely for exports |
 | Trip submission ceilings | One reporter pseudonym and hour/day windows; active rows have a strict product ceiling | Existing reporter-time index plus a smaller partial active-trip index |
 | Advisory AI backlog | Completed new/queued/retry rows plus well-formed expired processing claims, oldest-first with `LIMIT 10` | Reviewed index hint over the completed-trip effective-time partial index; each provider dispatch requires an exact high-entropy read-back claim and stale terminal writes lose |

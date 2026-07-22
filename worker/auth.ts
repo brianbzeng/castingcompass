@@ -1351,20 +1351,37 @@ export async function handleAccountRequest(
           user.id,
           trip.photo_key ? [{ objectStore: "trip_photos", objectKey: trip.photo_key }] : [],
         );
-        const deletionResults = await db.batch([
-          deletion.jobStatementForPendingTrip(db, tripId, user.id),
-          ...deletion.taskStatementsForPendingTrip(db, tripId, user.id),
-          db.prepare(`DELETE FROM site_discussion_posts WHERE trip_id = ?
-            AND EXISTS (SELECT 1 FROM trips WHERE id = ? AND user_id = ? AND moderation_status = 'pending')`)
-            .bind(tripId, tripId, user.id),
-          db.prepare("DELETE FROM trips WHERE id = ? AND user_id = ? AND moderation_status = 'pending'")
-            .bind(tripId, user.id),
-        ]);
-        const deletionChanges = confirmedMutationChanges(deletionResults.at(-1));
-        if (deletionChanges === 0) {
-          return errorResponse(409, "trip_reviewed", "Reviewed trip logs can no longer be changed.");
+        try {
+          await db.batch([
+            deletion.jobStatementForPendingTrip(db, tripId, user.id),
+            ...deletion.taskStatementsForPendingTrip(db, tripId, user.id),
+            db.prepare(`DELETE FROM site_discussion_posts WHERE trip_id = ?
+              AND EXISTS (SELECT 1 FROM trips WHERE id = ? AND user_id = ? AND moderation_status = 'pending')`)
+              .bind(tripId, tripId, user.id),
+            db.prepare("DELETE FROM trips WHERE id = ? AND user_id = ? AND moderation_status = 'pending'")
+              .bind(tripId, user.id),
+          ]);
+        } catch {
+          // A D1 batch can commit and lose its response. Only the exact ledger and absence proof below grant a receipt.
         }
-        if (deletionChanges !== 1) {
+        let deletionCommitted = false;
+        try {
+          deletionCommitted = await exactPendingTripDeletionCommit(db, tripId, user.id, deletion);
+        } catch {
+          // A failed confirmation read is ambiguous and must keep the opaque deletion receipt recoverable.
+        }
+        if (!deletionCommitted) {
+          let current: { moderation_status: string } | null = null;
+          try {
+            current = await db.prepare("SELECT moderation_status FROM trips WHERE id = ? AND user_id = ? LIMIT 1")
+              .bind(tripId, user.id)
+              .first<{ moderation_status: string }>();
+          } catch {
+            // Preserve the ambiguity response and receipt cookie below.
+          }
+          if (current && current.moderation_status !== "pending") {
+            return errorResponse(409, "trip_reviewed", "Reviewed trip logs can no longer be changed.");
+          }
           return errorResponse(
             503,
             "trip_delete_unconfirmed",
@@ -2053,8 +2070,11 @@ async function prepareDeletionJob(
     id,
     receipt,
     scope,
+    subjectHash,
+    ownerSubjectHash,
     requestedAt: timestamp,
     objectsTotal: tasks.length,
+    taskReceipts: tasks.map((task) => ({ ...task })),
     jobStatement: (db: D1DatabaseLike) => db.prepare(`INSERT INTO privacy_deletion_jobs
       (id, receipt_hash, scope, subject_hash, owner_subject_hash, state, objects_total, objects_deleted,
         last_error_code, requested_at, active_data_removed_at, completed_at, updated_at)
@@ -2399,6 +2419,109 @@ async function exactAccountDeletionCommit(
       .first<{ present: number }>(),
   ]);
   return Boolean(job) && !activeUser && !activeFence;
+}
+
+async function exactPendingTripDeletionCommit(
+  db: D1DatabaseLike,
+  tripId: string,
+  userId: string,
+  deletion: {
+    id: string;
+    receipt: string;
+    scope: PrivacyDeletionJobRow["scope"];
+    subjectHash: string;
+    ownerSubjectHash: string;
+    requestedAt: string;
+    objectsTotal: number;
+    taskReceipts: Array<{
+      id: string;
+      objectStore: PrivacyObjectStore;
+      objectKey: string;
+      objectKeyHash: string;
+      availableAt: string;
+    }>;
+  },
+) {
+  if (deletion.scope !== "trip"
+    || deletion.taskReceipts.length > 1
+    || deletion.objectsTotal !== deletion.taskReceipts.length) return false;
+  const row = await db.prepare(`SELECT job.id AS job_id, job.scope, job.subject_hash,
+      job.owner_subject_hash, job.state AS job_state, job.objects_total, job.objects_deleted,
+      job.last_error_code AS job_error, job.requested_at, job.active_data_removed_at,
+      job.completed_at AS job_completed_at, job.updated_at AS job_updated_at,
+      task.id AS task_id, task.object_key, task.object_key_hash, task.object_store,
+      task.state AS task_state, task.attempts AS task_attempts, task.available_at,
+      task.lease_expires_at, task.lease_token, task.last_error_code AS task_error,
+      task.created_at AS task_created_at, task.updated_at AS task_updated_at,
+      task.completed_at AS task_completed_at,
+      (SELECT COUNT(*) FROM privacy_deletion_tasks WHERE job_id = job.id) AS task_count,
+      (SELECT COUNT(*) FROM trips WHERE id = ? AND user_id = ?) AS trip_count,
+      (SELECT COUNT(*) FROM site_discussion_posts WHERE trip_id = ?) AS discussion_count
+    FROM privacy_deletion_jobs AS job
+    LEFT JOIN privacy_deletion_tasks AS task ON task.job_id = job.id
+    WHERE job.receipt_hash = ? LIMIT 1`)
+    .bind(tripId, userId, tripId, await sha256(deletion.receipt))
+    .first<{
+      job_id: string;
+      scope: string;
+      subject_hash: string;
+      owner_subject_hash: string;
+      job_state: string;
+      objects_total: number;
+      objects_deleted: number;
+      job_error: string | null;
+      requested_at: string;
+      active_data_removed_at: string;
+      job_completed_at: string | null;
+      job_updated_at: string;
+      task_id: string | null;
+      object_key: string | null;
+      object_key_hash: string | null;
+      object_store: string | null;
+      task_state: string | null;
+      task_attempts: number | null;
+      available_at: string | null;
+      lease_expires_at: string | null;
+      lease_token: string | null;
+      task_error: string | null;
+      task_created_at: string | null;
+      task_updated_at: string | null;
+      task_completed_at: string | null;
+      task_count: number;
+      trip_count: number;
+      discussion_count: number;
+    }>();
+  if (!row) return false;
+  const expectedTask = deletion.taskReceipts[0] ?? null;
+  const expectedState = deletion.objectsTotal === 0 ? "completed" : "active_data_removed";
+  return row.job_id === deletion.id
+    && row.scope === deletion.scope
+    && row.subject_hash === deletion.subjectHash
+    && row.owner_subject_hash === deletion.ownerSubjectHash
+    && row.job_state === expectedState
+    && row.objects_total === deletion.objectsTotal
+    && row.objects_deleted === 0
+    && row.job_error === null
+    && row.requested_at === deletion.requestedAt
+    && row.active_data_removed_at === deletion.requestedAt
+    && row.job_completed_at === (deletion.objectsTotal === 0 ? deletion.requestedAt : null)
+    && row.job_updated_at === deletion.requestedAt
+    && row.task_count === deletion.objectsTotal
+    && row.trip_count === 0
+    && row.discussion_count === 0
+    && row.task_id === (expectedTask?.id ?? null)
+    && row.object_key === (expectedTask?.objectKey ?? null)
+    && row.object_key_hash === (expectedTask?.objectKeyHash ?? null)
+    && row.object_store === (expectedTask?.objectStore ?? null)
+    && row.task_state === (expectedTask ? "pending" : null)
+    && row.task_attempts === (expectedTask ? 0 : null)
+    && row.available_at === (expectedTask?.availableAt ?? null)
+    && row.lease_expires_at === null
+    && row.lease_token === null
+    && row.task_error === null
+    && row.task_created_at === (expectedTask ? deletion.requestedAt : null)
+    && row.task_updated_at === (expectedTask ? deletion.requestedAt : null)
+    && row.task_completed_at === null;
 }
 
 function publicDeletionStatus(job: PrivacyDeletionJobRow) {
