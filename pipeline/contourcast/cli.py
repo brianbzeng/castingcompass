@@ -35,6 +35,7 @@ from .training import (
     run_bathymetry_pretraining,
     run_hybrid_seafloor_pretraining,
 )
+from .video_endpoint_audit import audit_usgs_sf_video_endpoint
 from .validation_protocol import (
     DEFAULT_PROTOCOL_PATH,
     seal_validation_finalization,
@@ -228,6 +229,36 @@ def build_parser() -> argparse.ArgumentParser:
     shortcut_diagnostic.add_argument("--device", default="cpu")
     shortcut_diagnostic.add_argument("--bootstrap-samples", type=int, default=1000)
     shortcut_diagnostic.add_argument("--seed", type=int, default=42)
+
+    video_endpoint = subcommands.add_parser("audit-usgs-sf-video-endpoint")
+    video_endpoint.add_argument("--bathymetry", required=True, type=_path)
+    video_endpoint.add_argument(
+        "--aligned-layer",
+        action="append",
+        default=[],
+        metavar="NAME=PATH",
+        help="Repeat for each source-manifest backscatter layer.",
+    )
+    video_endpoint.add_argument(
+        "--video-archive",
+        action="append",
+        default=[],
+        metavar="CRUISE_ID=PATH",
+        help="Repeat for each source-manifest video cruise archive.",
+    )
+    video_endpoint.add_argument("--output-dir", required=True, type=_path)
+    video_endpoint.add_argument("--source-id", default="usgs_sf_state_waters_2m")
+    video_endpoint.add_argument("--vertical-datum", default="NAVD88")
+    video_endpoint.add_argument("--radii-m", type=float, nargs="+", default=[32, 128, 512])
+    video_endpoint.add_argument("--output-size", type=int, default=33)
+    video_endpoint.add_argument("--min-valid-fraction", type=float, default=0.8)
+    video_endpoint.add_argument("--min-aligned-valid-fraction", type=float, default=0.5)
+    video_endpoint.add_argument("--local-radius", type=int, default=4)
+    video_endpoint.add_argument("--broad-radius", type=int, default=24)
+    video_endpoint.add_argument("--relief-radius", type=int, default=8)
+    video_endpoint.add_argument("--horizontal-accuracy-m", type=float, default=2.0)
+    video_endpoint.add_argument("--tile-size", type=int, default=1024)
+    video_endpoint.add_argument("--min-group-class-rows", type=int, default=16)
 
     rare_corpus = subcommands.add_parser("build-rare-structure-corpus")
     rare_corpus.add_argument("--input", required=True, type=_path)
@@ -629,6 +660,27 @@ def main(argv: Sequence[str] | None = None) -> int:
                 device=args.device,
                 bootstrap_samples=args.bootstrap_samples,
                 seed=args.seed,
+            )
+        )
+    elif args.command == "audit-usgs-sf-video-endpoint":
+        _print(
+            audit_usgs_sf_video_endpoint(
+                args.bathymetry,
+                _named_values(args.aligned_layer, paths=True),
+                _named_values(args.video_archive, paths=True),
+                args.output_dir,
+                source_id=args.source_id,
+                vertical_datum=args.vertical_datum,
+                radii_m=args.radii_m,
+                output_size=args.output_size,
+                min_valid_fraction=args.min_valid_fraction,
+                min_aligned_valid_fraction=args.min_aligned_valid_fraction,
+                local_radius=args.local_radius,
+                broad_radius=args.broad_radius,
+                relief_radius=args.relief_radius,
+                horizontal_accuracy_m=args.horizontal_accuracy_m,
+                tile_size=args.tile_size,
+                min_group_class_rows=args.min_group_class_rows,
             )
         )
     elif args.command == "build-rare-structure-corpus":

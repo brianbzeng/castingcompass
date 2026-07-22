@@ -39,6 +39,42 @@
         "geotiff_sha256": "f44b5ebbabe5f979fbc49ce65704cf3b4f354a826cf7cab61f22f0dc64bdd972"
       }
     ],
+    "video_observation_assets": [
+      {
+        "cruise_id": "f208nc",
+        "dataset_stem": "F208NC_video_observations",
+        "url": "https://pubs.usgs.gov/ds/781/video_observations/data/f208nc_video_observations.zip",
+        "archive_sha256": "ed61ba3112690f69af0cdfc27d8b391d44e755931b5b22453c50552c056f4daf",
+        "record_count": 1103,
+        "members": [
+          {"path": "f208nc_video_observations_metadata.txt", "bytes": 105135, "sha256": "069e2fbd805f6fe2652860b12ec7c059591c8f0dadc565f44afca2302c065b15"},
+          {"path": "F208NC_video_observations.dbf", "bytes": 3113871, "sha256": "f1ed70a878afa8237e743819014e48d841e9cf0aed8202c8d0ca709ec86616ee"},
+          {"path": "F208NC_video_observations.prj", "bytes": 145, "sha256": "a02a27b1d1982c8516d83398e85a3c8b1aef1713c13ef4d84d7bde17430c07c4"},
+          {"path": "F208NC_video_observations.sbn", "bytes": 10788, "sha256": "c3ac8f68414f92d0b101de12d3edb9d1092a3b1b8b9a805d0e2e381b4aeb321b"},
+          {"path": "F208NC_video_observations.sbx", "bytes": 260, "sha256": "c03b6eb524261d795793abaf6162b9aee4293b81eccd03e344feab7991d9485d"},
+          {"path": "F208NC_video_observations.shp", "bytes": 30984, "sha256": "d5115f23f365416df27a5f7fb6f83afb6823b90d8de72bcb469c8f55ae83d8b3"},
+          {"path": "F208NC_video_observations.shp.xml", "bytes": 108149, "sha256": "56917e7701aefcb28b12b55822f3a8b09293f2f5bb5ecc632e2c44086a39020b"},
+          {"path": "F208NC_video_observations.shx", "bytes": 8924, "sha256": "44d0ccc8fa96bd5b7595d2dd0085a8d42c94e71b292844677ce3a58e20aa635b"}
+        ]
+      },
+      {
+        "cruise_id": "f307nc",
+        "dataset_stem": "F307NC_video_observations",
+        "url": "https://pubs.usgs.gov/ds/781/video_observations/data/f307nc_video_observations.zip",
+        "archive_sha256": "5a524a75155d953ac7b0808213741c9f0681d63a2c4f682fc39238413dec1d07",
+        "record_count": 2790,
+        "members": [
+          {"path": "f307nc_video_observations_metadata.txt", "bytes": 107344, "sha256": "2b5b798a973aa0595c2475b6c9ab40c7819999231cccae814f3a75750d1c7323"},
+          {"path": "F307NC_video_observations.dbf", "bytes": 11820516, "sha256": "070755ebb084db7d65c17d0643a61be30e78d317fb94003b038d631a2ca42306"},
+          {"path": "F307NC_video_observations.prj", "bytes": 145, "sha256": "a02a27b1d1982c8516d83398e85a3c8b1aef1713c13ef4d84d7bde17430c07c4"},
+          {"path": "F307NC_video_observations.sbn", "bytes": 26228, "sha256": "52038c5d498bdab2afc0360e80174d6c5c3d142f71ffffa99c9bb41285a3fdba"},
+          {"path": "F307NC_video_observations.sbx", "bytes": 492, "sha256": "633c01bfe76c9a1ded882aaf587d5158a0bee85283f1b535ada37a6b5277bf13"},
+          {"path": "F307NC_video_observations.shp", "bytes": 78220, "sha256": "b6ae94d2c55186992909a95a6dfde9e617e39ebbfca25b980bd6c15273405358"},
+          {"path": "F307NC_video_observations.shp.xml", "bytes": 136806, "sha256": "685f0dd840e344443b7346a6fbf51f0ff999aa1adcfce20be648cdebc996d728"},
+          {"path": "F307NC_video_observations.shx", "bytes": 22420, "sha256": "0b695a52d6b8bad9664157943466ca3800ffdecc86af7c23f1a6acd1266ac9ab"}
+        ]
+      }
+    ],
     "available_layers": [
       "2 m bathymetry",
       "2 m acoustic backscatter",
@@ -68,6 +104,8 @@
     "The source is high resolution but historical; structure may have changed since collection.",
     "Backscatter is published as survey-specific 8-bit relative intensity, not calibrated dB; survey channels must remain distinct and retain availability masks.",
     "The mapped area does not cover most interior San Francisco Bay shoreline sites.",
-    "A 2 m pixel does not prove that a 2 m feature is reliably identifiable; CastingCompass uses a conservative three-cell feature threshold."
+    "A 2 m pixel does not prove that a 2 m feature is reliably identifiable; CastingCompass uses a conservative three-cell feature threshold.",
+    "Video observations are direct visual measurements, but their tracks were selected to validate sonar interpretations, were recorded at adjacent one-minute intervals, have highly variable positional accuracy on the order of 10 m, and do not constitute a uniform sample.",
+    "Habitat polygons are not an independent endpoint for bathymetry/backscatter encoders: official metadata identifies bathymetry, backscatter, and hillshade as primary interpretation sources, with video and sediment samples used as support."
   ]
 }
