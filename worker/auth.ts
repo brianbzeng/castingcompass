@@ -1692,29 +1692,41 @@ export async function handleAccountRequest(
       return errorResponse(422, "invalid_site", "Choose a current CastingCompass location.");
     }
     if (request.method === "POST") {
-      const result = await db.prepare(`INSERT OR IGNORE INTO saved_sites (user_id, site_id, created_at)
-        SELECT ?, ?, ? WHERE (SELECT COUNT(*) FROM saved_sites WHERE user_id = ?) < 100`)
-        .bind(user.id, siteId, new Date().toISOString(), user.id)
-        .run();
-      const changes = confirmedMutationChanges(result);
-      if (changes === 0) {
-        const existing = await db.prepare(
-          "SELECT 1 AS present FROM saved_sites WHERE user_id = ? AND site_id = ? LIMIT 1",
-        ).bind(user.id, siteId).first<{ present: number }>();
-        if (!existing) {
+      try {
+        await db.prepare(`INSERT OR IGNORE INTO saved_sites (user_id, site_id, created_at)
+          SELECT ?, ?, ? WHERE (SELECT COUNT(*) FROM saved_sites WHERE user_id = ?) < 100`)
+          .bind(user.id, siteId, new Date().toISOString(), user.id)
+          .run();
+      } catch {
+        // A lost response after commit is resolved by the exact owner/site state below.
+      }
+      const present = await db.prepare(
+        "SELECT 1 AS present FROM saved_sites WHERE user_id = ? AND site_id = ? LIMIT 1",
+      ).bind(user.id, siteId).first<{ present: number }>();
+      if (Number(present?.present ?? 0) !== 1) {
+        const atLimit = await db.prepare(`SELECT 1 AS at_limit FROM saved_sites
+          WHERE user_id = ? LIMIT 1 OFFSET 99`)
+          .bind(user.id)
+          .first<{ at_limit: number }>();
+        if (Number(atLimit?.at_limit ?? 0) === 1) {
           throw new AuthError(409, "saved_site_limit_reached", "Remove a saved location before adding another.");
         }
-      } else if (changes !== 1) {
         throw new AuthError(503, "saved_site_write_unconfirmed", "The saved location could not be confirmed.");
       }
       return jsonResponse({ saved: true, siteId });
     }
     if (request.method === "DELETE") {
-      const result = await db.prepare("DELETE FROM saved_sites WHERE user_id = ? AND site_id = ?")
-        .bind(user.id, siteId)
-        .run();
-      const changes = confirmedMutationChanges(result);
-      if (changes === null || changes > 1) {
+      try {
+        await db.prepare("DELETE FROM saved_sites WHERE user_id = ? AND site_id = ?")
+          .bind(user.id, siteId)
+          .run();
+      } catch {
+        // Absence after a lost committed response is the exact idempotent removal receipt.
+      }
+      const present = await db.prepare(
+        "SELECT 1 AS present FROM saved_sites WHERE user_id = ? AND site_id = ? LIMIT 1",
+      ).bind(user.id, siteId).first<{ present: number }>();
+      if (Number(present?.present ?? 0) === 1) {
         throw new AuthError(503, "saved_site_write_unconfirmed", "The saved location removal could not be confirmed.");
       }
       return jsonResponse({ saved: false, siteId });

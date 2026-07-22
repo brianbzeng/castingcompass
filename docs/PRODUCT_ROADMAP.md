@@ -168,11 +168,10 @@ after its acceptance checks pass in the intended environment.
       timestamps must match an exact D1 row before the `201` receipt is returned; absence resolves
       to the documented 100-row limit only when an owner-bound bounded read confirms that limit.
     - [x] Make saved-location receipts database-authoritative. The browser changes its confirmed
-      saved state only after an exact server receipt, so creation and removal now require
-      authoritative D1 change metadata before returning that receipt. A confirmed zero removal
-      stays idempotent because the owner/site row is absent; missing or impossible metadata returns
-      an ambiguous `503` and the existing read-only reconciliation flow determines committed state
-      without replaying the write.
+      saved state only after an exact server receipt, so creation and removal now read the exact
+      owner/site row after D1. Presence authorizes saved state; absence authorizes idempotent
+      removal, and a bounded owner read distinguishes a real 100-location ceiling from an
+      unconfirmed write. Lost committed responses resolve without replaying the mutation.
     - [x] Separate pending-trip moderation conflicts from missing mutation receipts. PATCH and
       DELETE keep the final `id` plus `user_id` plus pending-state predicate; an authoritative zero
       remains `409`, while malformed D1 metadata is now a replay-blocking `503` rather than a
@@ -582,7 +581,7 @@ after its acceptance checks pass in the intended environment.
   - [ ] Inventory every production query, capture representative `EXPLAIN QUERY PLAN` evidence,
     add only workload-justified indexes, bound scans/pagination, eliminate N+1 patterns, verify
     cross-account predicates, and regression-test query latency and migration cost.
-    - [x] Add a deterministic AST-backed inventory for all 242 Worker `.prepare()` sites across
+    - [x] Add a deterministic AST-backed inventory for all 244 Worker `.prepare()` sites across
       eight files, including exact review contracts for 26 nonliteral expressions and 12 literal
       multi-row reads without `LIMIT`. CI and release provenance fail closed on inventory drift,
       computed/aliased prepare access, unreviewed dynamic SQL, unscoped literal writes, and

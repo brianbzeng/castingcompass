@@ -116,6 +116,31 @@ by that discovery.
       query, D1 mutation, R2 mutation, model change, UI change, or production authorization
       belongs to this local work.
 
+## Active checkpoint — exact saved-location state receipts
+
+- [x] Continue the database-authority audit through saved-location creation and removal. Both
+      idempotent operations still treated mutation metadata as the final receipt, so a committed
+      response lost in transit left the browser in an avoidable ambiguous state.
+- [x] Make the exact owner/site row authoritative after each write. Presence yields the exact
+      `{ saved: true, siteId }` receipt; absence yields `{ saved: false, siteId }`, including an
+      already-absent idempotent removal. Neither mutation metadata nor transport success decides
+      the browser-visible state.
+- [x] Preserve the 100-location ceiling with a bounded owner read. When creation has no exact row,
+      `LIMIT 1 OFFSET 99` confirms a genuinely full account before returning `409`; otherwise the
+      write remains an explicit `503` instead of inventing a limit result.
+- [x] Force both a committed insert and a committed delete to lose their responses. Exact D1
+      read-back returns the correct success receipt without replaying either mutation; the focused
+      privacy/owner runtime passes 67/67 cases. The source-bound D1 inventory covers all 244
+      prepare sites: 218 literal, 26 reviewed nonliteral, and 12 reviewed multi-row reads.
+- [x] Pass the pinned Cloudflare build, ESLint, TypeScript, all 592/592 repository Node tests,
+      the complete offline security/SBOM/source-integrity chain, both zero-vulnerability npm
+      audits, Ruff, 29/29 API tests, 83 pipeline tests with one documented optional-`rasterio`
+      skip, the deterministic pipeline smoke test, 19 migrations / 23 critical D1 query plans,
+      and the full 200/200 Chromium/WebKit phone matrix. Preserve a clean local commit and
+      deterministic release-bundle receipt. No push, pull request, merge, deployment, provider
+      query, D1 mutation, R2 mutation, model change, UI change, or production authorization
+      belongs to this local work.
+
 ## Active checkpoint — exact privacy-object deletion authority
 
 - [x] Continue the database-authority audit through the GDPR/account-deletion object ledger.

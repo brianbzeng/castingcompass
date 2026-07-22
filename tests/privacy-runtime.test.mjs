@@ -1961,7 +1961,7 @@ test("gear creation follows exact D1 state after the insert response is lost", a
   );
 });
 
-test("saved-location removal requires authoritative D1 metadata", async () => {
+test("saved-location removal follows exact D1 state after the delete response is lost", async () => {
   const { sqlite, d1 } = await database();
   const owner = await addUser(sqlite, "saved-site-receipt-owner-138");
   const sites = [
@@ -1971,13 +1971,13 @@ test("saved-location removal requires authoritative D1 metadata", async () => {
   sqlite.prepare("INSERT INTO saved_sites (user_id, site_id, created_at) VALUES (?, ?, ?)")
     .run(owner.id, sites[0].id, "2026-07-21T20:45:00.000Z");
 
-  d1.omitOnceMutationMetadataSubstring = "DELETE FROM saved_sites WHERE user_id = ? AND site_id = ?";
-  const ambiguous = await handleAccountRequest(request(`/api/saved-sites/${sites[0].id}`, {
+  d1.throwOnceAfterMutationSubstring = "DELETE FROM saved_sites WHERE user_id = ? AND site_id = ?";
+  const removed = await handleAccountRequest(request(`/api/saved-sites/${sites[0].id}`, {
     method: "DELETE",
     cookie: owner.cookie,
   }), { DB: d1 }, sites);
-  assert.equal(ambiguous?.status, 503);
-  assert.equal((await ambiguous?.json()).error.code, "saved_site_write_unconfirmed");
+  assert.equal(removed?.status, 200);
+  assert.deepEqual(await removed?.json(), { saved: false, siteId: sites[0].id });
   assert.equal(sqlite.prepare("SELECT COUNT(*) AS count FROM saved_sites WHERE user_id = ? AND site_id = ?")
     .get(owner.id, sites[0].id).count, 0);
 
@@ -1989,18 +1989,18 @@ test("saved-location removal requires authoritative D1 metadata", async () => {
   assert.deepEqual(await idempotent?.json(), { saved: false, siteId: sites[1].id });
 });
 
-test("saved-location creation never returns an exact receipt without mutation metadata", async () => {
+test("saved-location creation follows exact D1 state after the insert response is lost", async () => {
   const { sqlite, d1 } = await database();
   const owner = await addUser(sqlite, "saved-site-insert-receipt-owner-139");
   const sites = [{ id: "saved-site-insert-receipt", type: "Beach" }];
 
-  d1.omitOnceMutationMetadataSubstring = "INSERT OR IGNORE INTO saved_sites";
-  const ambiguous = await handleAccountRequest(request(`/api/saved-sites/${sites[0].id}`, {
+  d1.throwOnceAfterMutationSubstring = "INSERT OR IGNORE INTO saved_sites";
+  const saved = await handleAccountRequest(request(`/api/saved-sites/${sites[0].id}`, {
     method: "POST",
     cookie: owner.cookie,
   }), { DB: d1 }, sites);
-  assert.equal(ambiguous?.status, 503);
-  assert.equal((await ambiguous?.json()).error.code, "saved_site_write_unconfirmed");
+  assert.equal(saved?.status, 200);
+  assert.deepEqual(await saved?.json(), { saved: true, siteId: sites[0].id });
   assert.equal(sqlite.prepare("SELECT COUNT(*) AS count FROM saved_sites WHERE user_id = ? AND site_id = ?")
     .get(owner.id, sites[0].id).count, 1);
 });
