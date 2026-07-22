@@ -360,3 +360,13 @@ in one group. None of the seven unique whole-group partitions leaves 16 rows
 of every class on both sides, so a row-level split is prohibited and no model
 is fit. This negative support result is exactly reproduced and changes no
 serving path.
+
+The follow-up
+[Santa Barbara South Coast direct-video audit](experiments/2026-07-22-usgs-south-coast-video-endpoint-admissibility-audit-v1.md)
+locks four contiguous official map blocks from Refugio through Carpinteria, 11 survey-specific
+backscatter layers, and four video archives. Two archives remained label-unread until the class,
+region, patch, whole-cruise, and minimum-support rules were committed. All 4,251 labeled records
+have zero raw class-4 observations; the 1,327 complete hybrid rows therefore contain 1,030 smooth,
+297 mixed/rugose, and zero mobile-coarse observations. Zero of seven whole-cruise partitions pass.
+Two independent-download executions reproduce exact metrics. This narrower evidence footprint
+does not establish Gaviota coverage, and no model or serving path changes.

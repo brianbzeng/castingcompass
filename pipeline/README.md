@@ -526,6 +526,20 @@ adjacent one-minute track observations. Passing the support gate would still
 require a separately reviewed training protocol; failing it writes an exact
 no-training receipt. The command has no serving or deployment path.
 
+Audit the independently locked Santa Barbara South Coast map blocks and video cruises with:
+
+```bash
+.venv/bin/python pipeline/scripts/run_usgs_south_coast_video_endpoint_audit.py
+```
+
+The runner downloads and hashes every official archive, extracts only manifest-declared GeoTIFFs,
+and applies region-specific bathymetry/backscatter coverage from Refugio through Carpinteria. Map
+overlaps use a label-blind west-to-east priority. The split unit is the entire cruise—never a line,
+tape, or adjacent one-minute row—and every class needs at least 16 rows in both train and test.
+The frozen audit found zero raw class-4 observations across all four cruises, so it stops without
+training. This evidence boundary does not include Gaviota and has no score, serving, or deployment
+path.
+
 Run the strict substrate-component probe with:
 
 ```bash

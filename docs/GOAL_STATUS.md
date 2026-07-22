@@ -95,10 +95,27 @@ by that discovery.
       both sides. Two clean executions reproduced byte-identical metrics. The
       [video endpoint receipt](../pipeline/evidence/usgs-sf-video-endpoint-audit-v1.receipt.json)
       records that no model ran and no encoder, score, serving path, or production state changed.
+- [x] Expand the direct-video support search to the exact official Santa Barbara South Coast
+      footprint without changing the San Francisco result. Four content-addressed USGS map blocks
+      from Refugio through Carpinteria, 11 survey-specific backscatter layers, and four complete
+      video archives are locked in a fail-closed manifest. The class collapse, west-to-east overlap
+      assignment, three-scale patch contract, whole-cruise split, and 16-row per-class floor were
+      committed before reading the `sw109sc` or `z107sc` labels; earlier exposure of `s1c08sc` and
+      `z206sc` is disclosed rather than called confirmatory.
+- [x] Record the South Coast endpoint as another truthful negative result. The four archives
+      contain 4,251 labeled rows but zero raw class-4 observations. Of 1,327 complete hybrid rows,
+      1,030 are smooth, 297 mixed/rugose, and zero mobile coarse; therefore none of seven
+      whole-cruise partitions can meet the frozen three-class floor. Two independent-download
+      executions produced byte-identical metrics. The
+      [South Coast receipt](../pipeline/evidence/usgs-south-coast-video-endpoint-audit-v1.receipt.json)
+      preserves the narrower Refugio-through-Carpinteria evidence boundary and confirms that no
+      model, encoder, score, serving path, production state, or Gaviota coverage claim changed.
 - [ ] Acquire a genuinely support-complete independent endpoint before the next representation
-      comparison. Additional direct-video tracks must distribute every class across separable
-      groups, or a prospective independent survey must be designed; row-randomized results from
-      the current adjacent one-minute observations remain prohibited.
+      comparison. Neither the San Francisco track groups nor the Santa Barbara South Coast cruises
+      support the frozen three-class question. Additional direct-video tracks must distribute
+      every class across separable groups, a prospective independent survey must be designed, or a
+      materially different scientific question must be preregistered before its labels are read;
+      post-outcome class dropping and row-randomized adjacent observations remain prohibited.
 
 This checkpoint changes no browser behavior, API, Worker, D1/R2/Queue state, production provider,
 live score, public model claim, or deployment authority.

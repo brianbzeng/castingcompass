@@ -129,6 +129,33 @@ class VideoEndpointAuditTests(unittest.TestCase):
         self.assertFalse(receipt["decision"]["video_probe_admissible"])
         self.assertFalse(receipt["decision"]["model_training_run"])
 
+    def test_south_coast_receipt_binds_frozen_protocol_and_negative_decision(self):
+        receipt = json.loads(
+            (
+                ROOT
+                / "pipeline/evidence/usgs-south-coast-video-endpoint-audit-v1.receipt.json"
+            ).read_text(encoding="utf-8")
+        )
+        manifest_path = ROOT / receipt["source_manifest"]["path"]
+        protocol_path = ROOT / receipt["protocol"]["path"]
+        self.assertEqual(_sha(manifest_path.read_bytes()), receipt["source_manifest"]["sha256"])
+        self.assertEqual(_sha(protocol_path.read_bytes()), receipt["protocol"]["sha256"])
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+        specs = {
+            item["cruise_id"]: item
+            for item in manifest["access"]["video_observation_assets"]
+        }
+        for cruise_id, recorded in receipt["official_inputs"]["video_archives"].items():
+            self.assertEqual(specs[cruise_id]["archive_sha256"], recorded["sha256"])
+            self.assertEqual(specs[cruise_id]["record_count"], recorded["record_count"])
+        self.assertTrue(receipt["protocol"]["frozen_before_confirmatory_label_read"])
+        self.assertEqual(
+            receipt["audit"]["retained_class_counts"]["mobile_coarse_sediment"], 0
+        )
+        self.assertEqual(receipt["audit"]["eligible_whole_cruise_partitions"], 0)
+        self.assertFalse(receipt["decision"]["video_probe_admissible"])
+        self.assertFalse(receipt["decision"]["model_training_run"])
+
     def test_strict_point_and_dbf_parsers(self):
         points = [(-122.5, 37.7), (-122.4, 37.8)]
         parsed_points = _parse_point_shapefile(_point_shapefile(points))
