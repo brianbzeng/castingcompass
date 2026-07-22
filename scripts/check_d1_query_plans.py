@@ -33,6 +33,28 @@ CHECKS = (
         ("auth_sessions_expires_idx",),
     ),
     PlanCheck(
+        "exact session issuance receipt",
+        """SELECT token_hash, user_id, expires_at, created_at
+           FROM auth_sessions
+           WHERE token_hash = ? AND user_id = ? AND expires_at = ? AND created_at = ?
+             AND EXISTS (SELECT 1 FROM users WHERE id = ?)
+             AND NOT EXISTS (SELECT 1 FROM account_deletion_fences WHERE user_id = ?)
+           LIMIT 1""",
+        (
+            "session_hash_fixture",
+            "user_fixture",
+            "2026-08-16T00:00:00.000Z",
+            "2026-07-17T00:00:00.000Z",
+            "user_fixture",
+            "user_fixture",
+        ),
+        (
+            "sqlite_autoindex_auth_sessions_1",
+            "sqlite_autoindex_users_1",
+            "sqlite_autoindex_account_deletion_fences_1",
+        ),
+    ),
+    PlanCheck(
         "expired email challenges",
         """DELETE FROM email_challenges WHERE id IN (
              SELECT id FROM email_challenges WHERE expires_at <= ?

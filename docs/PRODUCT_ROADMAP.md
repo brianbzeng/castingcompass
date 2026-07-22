@@ -189,10 +189,12 @@ after its acceptance checks pass in the intended environment.
       and one-use challenge deletion remain atomic, while welcome delivery and the first session
       now wait for exactly one D1 change. Missing metadata returns `503`; direct proof signs in to
       the committed account without replaying the consumed challenge or creating duplicate state.
-    - [x] Require a database-confirmed session insert before setting any login, signup, password-
+    - [x] Require an exact database session receipt before setting any login, signup, password-
       reset, or legacy-rotation cookie. The candidate token is hashed once and exposed only after
-      exactly one D1 change; an unconfirmed commit returns `503`, clears both cookie forms, and
-      deletes the candidate hash so no usable or orphaned session survives an ambiguous receipt.
+      read-back proves its random hash, owner, timestamps, live user, and absent deletion fence.
+      Missing metadata and lost committed batch responses resolve from that state without replay;
+      unreadable or mismatched state returns `503`, clears both cookie forms, and deletes the
+      candidate hash so no usable or orphaned session survives an ambiguous receipt.
     - [x] Require database-authoritative revocation metadata before returning the exact sign-out
       receipt that permits browser recovery-state deletion. Every presented token DELETE must
       report zero or one change and the batch cardinality must match; ambiguous metadata returns

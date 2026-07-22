@@ -3081,12 +3081,34 @@ async function createSessionResponse(db: D1DatabaseLike, request: Request, user:
   const expiresAt = new Date(createdAt.getTime() + SESSION_SECONDS * 1000);
   const priorSessionDeletes = await Promise.all(presentedSessionTokens(request).map(async (presented) =>
     db.prepare("DELETE FROM auth_sessions WHERE token_hash = ?").bind(await sha256(presented.token))));
-  const sessionResults = await db.batch([
-    ...priorSessionDeletes,
-    db.prepare(`INSERT INTO auth_sessions (token_hash, user_id, expires_at, created_at)
-      SELECT ?, ?, ?, ?
-      WHERE EXISTS (SELECT 1 FROM users WHERE id = ?)
-        AND NOT EXISTS (SELECT 1 FROM account_deletion_fences WHERE user_id = ?)`)
+  try {
+    await db.batch([
+      ...priorSessionDeletes,
+      db.prepare(`INSERT INTO auth_sessions (token_hash, user_id, expires_at, created_at)
+        SELECT ?, ?, ?, ?
+        WHERE EXISTS (SELECT 1 FROM users WHERE id = ?)
+          AND NOT EXISTS (SELECT 1 FROM account_deletion_fences WHERE user_id = ?)`)
+        .bind(
+          tokenHash,
+          user.id,
+          expiresAt.toISOString(),
+          createdAt.toISOString(),
+          user.id,
+          user.id,
+        ),
+    ]);
+  } catch {
+    // D1 can commit an atomic batch and lose its response. The random token hash is the receipt key.
+  }
+  let receipt: { token_hash: string; user_id: string; expires_at: string; created_at: string } | null = null;
+  let receiptReadSucceeded = false;
+  try {
+    receipt = await db.prepare(`SELECT token_hash, user_id, expires_at, created_at
+      FROM auth_sessions
+      WHERE token_hash = ? AND user_id = ? AND expires_at = ? AND created_at = ?
+        AND EXISTS (SELECT 1 FROM users WHERE id = ?)
+        AND NOT EXISTS (SELECT 1 FROM account_deletion_fences WHERE user_id = ?)
+      LIMIT 1`)
       .bind(
         tokenHash,
         user.id,
@@ -3094,9 +3116,15 @@ async function createSessionResponse(db: D1DatabaseLike, request: Request, user:
         createdAt.toISOString(),
         user.id,
         user.id,
-      ),
-  ]);
-  if (confirmedMutationChanges(sessionResults.at(-1)) !== 1) {
+      )
+      .first<{ token_hash: string; user_id: string; expires_at: string; created_at: string }>();
+    receiptReadSucceeded = true;
+  } catch {
+    // Never disclose a bearer token until its complete post-state is readable.
+  }
+  if (!receiptReadSucceeded || !receipt
+    || receipt.token_hash !== tokenHash || receipt.user_id !== user.id
+    || receipt.expires_at !== expiresAt.toISOString() || receipt.created_at !== createdAt.toISOString()) {
     try {
       await db.prepare("DELETE FROM auth_sessions WHERE token_hash = ?").bind(tokenHash).run();
     } catch (error) {

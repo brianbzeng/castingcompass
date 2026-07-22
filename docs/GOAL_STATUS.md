@@ -13,6 +13,34 @@ Current provider truth overrides historical “paused” language in completed r
 2026-07-19 read-only reconciliation found an active Worker; no production mutation is authorized
 by that discovery.
 
+## Active checkpoint — exact session-issuance receipts
+
+- [x] Continue the database-authority audit through the shared login, verified-signup,
+      password-reset, and legacy-cookie rotation helper. It still treated final INSERT metadata
+      as the browser receipt and deleted a valid committed candidate when D1 omitted or lost the
+      response, forcing a safe but avoidable `503`.
+- [x] Make one random 256-bit token hash plus complete D1 post-state authoritative. The plaintext
+      token is disclosed only when its hash, authenticated owner, creation and expiry timestamps,
+      live user, and absent account-deletion fence match exactly. Transport success and mutation
+      metadata grant nothing; unreadable, absent, or mismatched state deletes the candidate and
+      clears both cookie forms.
+- [x] Force omitted INSERT metadata, a lost committed atomic-batch response, a receipt-read
+      failure, deliberately mutated session timestamps, and an account-deletion fence appearing
+      after commit but before confirmation. Exact committed states recover without replay; every
+      ambiguous or fenced state returns `503`, exposes no bearer token, and removes the candidate.
+      The source ledger covers 240 prepare sites: 226 literal, 14 reviewed nonliteral, and nine
+      reviewed complete-rights multi-row reads; 35 critical D1 plans include the complete receipt.
+- [x] Seal the checkpoint with the pinned Cloudflare build, lint, TypeScript, 622/622 Node tests,
+      complete security/source-integrity chain, two zero-vulnerability npm audits, 29/29 API
+      tests, Ruff, 83 pipeline tests with one documented optional-rasterio skip, deterministic
+      smoke, all 20 migrations and 35 critical query plans, and an isolated 200/200
+      Chromium/WebKit phone matrix. No push, PR, merge, deployment, provider query, production
+      database mutation, feature activation, UI change, or model claim belongs to this
+      checkpoint.
+- [ ] Exercise lost-response, concurrent rotation, deletion-fence, latency, and rows-read/written
+      behavior with production-shaped synthetic data in isolated staging before treating local
+      receipt proof as deployed evidence.
+
 ## Active checkpoint — exact gear-preset mutation receipts
 
 - [x] Continue the database-authority audit through owner PATCH and DELETE of existing gear

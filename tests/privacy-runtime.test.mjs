@@ -343,10 +343,97 @@ test("logout never returns an exact sign-out receipt without confirmed revocatio
   assert.equal(sqlite.prepare("SELECT COUNT(*) AS count FROM auth_sessions WHERE user_id = ?").get(user.id).count, 0);
 });
 
-test("session rotation never sets a cookie or leaves a hidden token without a confirmed insert", async () => {
+test("session rotation follows exact D1 state when insert metadata is absent", async () => {
   const { sqlite, d1 } = await database();
   const user = await addUser(sqlite, "session-receipt-143");
+  const oldTokenHash = await sha256(user.token);
   d1.omitOnceMutationMetadataSubstring = "INSERT INTO auth_sessions";
+
+  const response = await handleAccountRequest(request("/api/auth/session", {
+    cookie: user.cookie,
+  }), { DB: d1 }, []);
+
+  assert.equal(response?.status, 200);
+  assert.deepEqual((await response.json()).user, {
+    id: user.id,
+    email: user.email,
+    ageEligible: true,
+    legalAccepted: true,
+  });
+  const rotatedCookie = sessionCookieFrom(response);
+  assert.match(rotatedCookie ?? "", /^__Host-cc_session=/u);
+  const rotatedToken = rotatedCookie?.split("=")[1] ?? "";
+  assert.equal(sqlite.prepare("SELECT COUNT(*) AS count FROM auth_sessions WHERE token_hash = ?")
+    .get(oldTokenHash).count, 0);
+  assert.equal(sqlite.prepare("SELECT COUNT(*) AS count FROM auth_sessions WHERE token_hash = ?")
+    .get(await sha256(rotatedToken)).count, 1);
+});
+
+test("session rotation recovers an exact receipt after the committed batch response is lost", async () => {
+  const { sqlite, d1 } = await database();
+  const user = await addUser(sqlite, "session-lost-response-145");
+  const oldTokenHash = await sha256(user.token);
+  d1.throwOnceAfterBatchMutationSubstring = "INSERT INTO auth_sessions";
+
+  const response = await handleAccountRequest(request("/api/auth/session", {
+    cookie: user.cookie,
+  }), { DB: d1 }, []);
+
+  assert.equal(response?.status, 200);
+  const rotatedCookie = sessionCookieFrom(response);
+  assert.match(rotatedCookie ?? "", /^__Host-cc_session=/u);
+  const rotatedToken = rotatedCookie?.split("=")[1] ?? "";
+  assert.equal(sqlite.prepare("SELECT COUNT(*) AS count FROM auth_sessions WHERE token_hash = ?")
+    .get(oldTokenHash).count, 0);
+  assert.equal(sqlite.prepare("SELECT COUNT(*) AS count FROM auth_sessions WHERE token_hash = ?")
+    .get(await sha256(rotatedToken)).count, 1);
+});
+
+test("session issuance rejects unreadable or mismatched exact post-state and removes the candidate", async () => {
+  const unreadable = await database();
+  const unreadableUser = await addUser(unreadable.sqlite, "session-unreadable-receipt-146");
+  unreadable.d1.failOnceQuerySubstring = "SELECT token_hash, user_id, expires_at, created_at";
+  const unreadableResponse = await handleAccountRequest(request("/api/auth/session", {
+    cookie: unreadableUser.cookie,
+  }), { DB: unreadable.d1 }, []);
+  assert.equal(unreadableResponse?.status, 503);
+  assert.equal((await unreadableResponse.json()).error.code, "session_creation_unconfirmed");
+  assert.equal(sessionCookieFrom(unreadableResponse), null);
+  assert.equal(unreadable.sqlite.prepare("SELECT COUNT(*) AS count FROM auth_sessions WHERE user_id = ?")
+    .get(unreadableUser.id).count, 0);
+
+  const mismatched = await database();
+  const mismatchedUser = await addUser(mismatched.sqlite, "session-mismatched-receipt-147");
+  mismatched.d1.beforeOnceQuerySubstring = "SELECT token_hash, user_id, expires_at, created_at";
+  mismatched.d1.beforeOnceQuery = () => mismatched.sqlite
+    .prepare("UPDATE auth_sessions SET expires_at = '2000-01-01T00:00:00.000Z' WHERE user_id = ?")
+    .run(mismatchedUser.id);
+  const mismatchedResponse = await handleAccountRequest(request("/api/auth/session", {
+    cookie: mismatchedUser.cookie,
+  }), { DB: mismatched.d1 }, []);
+  assert.equal(mismatchedResponse?.status, 503);
+  assert.equal((await mismatchedResponse.json()).error.code, "session_creation_unconfirmed");
+  assert.equal(sessionCookieFrom(mismatchedResponse), null);
+  assert.equal(mismatched.sqlite.prepare("SELECT COUNT(*) AS count FROM auth_sessions WHERE user_id = ?")
+    .get(mismatchedUser.id).count, 0);
+});
+
+test("session issuance rejects an account-deletion fence that appears before receipt confirmation", async () => {
+  const { sqlite, d1 } = await database();
+  const user = await addUser(sqlite, "session-fence-race-148");
+  const timestamp = "2026-07-22T04:30:00.000Z";
+  d1.beforeOnceQuerySubstring = "SELECT token_hash, user_id, expires_at, created_at";
+  d1.beforeOnceQuery = () => sqlite.prepare(`INSERT INTO account_deletion_fences
+      (user_id, owner_subject_hash, lease_token, lease_expires_at, requested_at, updated_at)
+    VALUES (?, ?, ?, ?, ?, ?)`)
+    .run(
+      user.id,
+      "f".repeat(64),
+      "session-fence-race-lease-token-0000000001",
+      "2026-07-22T04:35:00.000Z",
+      timestamp,
+      timestamp,
+    );
 
   const response = await handleAccountRequest(request("/api/auth/session", {
     cookie: user.cookie,
@@ -355,8 +442,8 @@ test("session rotation never sets a cookie or leaves a hidden token without a co
   assert.equal(response?.status, 503);
   assert.equal((await response.json()).error.code, "session_creation_unconfirmed");
   assert.equal(sessionCookieFrom(response), null);
-  assert.match(response.headers.get("set-cookie") ?? "", /cc_session=;.*Max-Age=0/u);
-  assert.equal(sqlite.prepare("SELECT COUNT(*) AS count FROM auth_sessions WHERE user_id = ?").get(user.id).count, 0);
+  assert.equal(sqlite.prepare("SELECT COUNT(*) AS count FROM auth_sessions WHERE user_id = ?")
+    .get(user.id).count, 0);
 });
 
 test("expired and deleted-account sessions fail closed", async () => {

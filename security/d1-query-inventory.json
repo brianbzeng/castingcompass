@@ -1,12 +1,12 @@
 {
   "schemaVersion": "castingcompass.d1-query-inventory/1.0.0",
   "generatedFrom": "TypeScript AST; no runtime or provider query executed",
-  "policySha256": "e7dcafb189cbbce5d56216acc6214e5a983d76d749b9c8e07b676886fd0b6105",
+  "policySha256": "58bddeecab6d6528ee1b1a633385dfb7ce7dbc0a8134df980bff38fc53d76e30",
   "sourceFiles": [
     {
       "file": "worker/auth.ts",
-      "sha256": "2ddbec253063951346bb967b4f0b10ce87db1d3182693a063f6dce55a47cb29c",
-      "prepareCallCount": 118
+      "sha256": "6176a141b9fa8549e96e5f83af5d7e9cce53d97d1aed55ed262b09dd106aaa2e",
+      "prepareCallCount": 119
     },
     {
       "file": "worker/discussions.ts",
@@ -45,8 +45,8 @@
     }
   ],
   "summary": {
-    "prepareCallCount": 239,
-    "literalCallCount": 225,
+    "prepareCallCount": 240,
+    "literalCallCount": 226,
     "nonLiteralCallCount": 14,
     "multiRowLiteralWithoutLimitCount": 9
   },
@@ -2524,15 +2524,15 @@
       "hasLimit": false
     },
     {
-      "callSiteId": "3ae89189f72c7609471d0da9",
+      "callSiteId": "62ef2aa9c3bdf6c6441db10e",
       "file": "worker/auth.ts",
-      "line": 3086,
+      "line": 3087,
       "containingFunction": "createSessionResponse",
       "occurrence": 110,
       "executionMode": "batch",
       "argumentKind": "literal",
-      "expression": "`INSERT INTO auth_sessions (token_hash, user_id, expires_at, created_at)\n      SELECT ?, ?, ?, ?\n      WHERE EXISTS (SELECT 1 FROM users WHERE id = ?)\n        AND NOT EXISTS (SELECT 1 FROM account_deletion_fences WHERE user_id = ?)`",
-      "expressionSha256": "6f3ea05f144b668dd53c69d6e646bf548c0989fd9a3edd11b08cc07db1468e1c",
+      "expression": "`INSERT INTO auth_sessions (token_hash, user_id, expires_at, created_at)\n        SELECT ?, ?, ?, ?\n        WHERE EXISTS (SELECT 1 FROM users WHERE id = ?)\n          AND NOT EXISTS (SELECT 1 FROM account_deletion_fences WHERE user_id = ?)`",
+      "expressionSha256": "c05e52c5a177eb675c9c52aa11bf05d7011a03bad185abbec6d87aab93cdaf03",
       "declarationReference": null,
       "statementClass": "INSERT",
       "sql": "INSERT INTO auth_sessions (token_hash, user_id, expires_at, created_at) SELECT ?, ?, ?, ? WHERE EXISTS (SELECT 1 FROM users WHERE id = ?) AND NOT EXISTS (SELECT 1 FROM account_deletion_fences WHERE user_id = ?)",
@@ -2548,11 +2548,35 @@
       "hasLimit": false
     },
     {
-      "callSiteId": "ad19bfde207fe718b7fc2576",
+      "callSiteId": "31665567b7e25b061ca62e0a",
       "file": "worker/auth.ts",
-      "line": 3101,
+      "line": 3106,
       "containingFunction": "createSessionResponse",
       "occurrence": 111,
+      "executionMode": "first",
+      "argumentKind": "literal",
+      "expression": "`SELECT token_hash, user_id, expires_at, created_at\n      FROM auth_sessions\n      WHERE token_hash = ? AND user_id = ? AND expires_at = ? AND created_at = ?\n        AND EXISTS (SELECT 1 FROM users WHERE id = ?)\n        AND NOT EXISTS (SELECT 1 FROM account_deletion_fences WHERE user_id = ?)\n      LIMIT 1`",
+      "expressionSha256": "a25267fbee56e592eac3c99ecda245ac4282ce2a12f80ec23dcb3cde9e64308f",
+      "declarationReference": null,
+      "statementClass": "SELECT",
+      "sql": "SELECT token_hash, user_id, expires_at, created_at FROM auth_sessions WHERE token_hash = ? AND user_id = ? AND expires_at = ? AND created_at = ? AND EXISTS (SELECT 1 FROM users WHERE id = ?) AND NOT EXISTS (SELECT 1 FROM account_deletion_fences WHERE user_id = ?) LIMIT 1",
+      "sqlSha256": "5597983906b04b91200bb3a5a626ad85f532fe88d014d82878dcb5fedbb1df81",
+      "tables": [
+        "account_deletion_fences",
+        "auth_sessions",
+        "users"
+      ],
+      "placeholderCount": 6,
+      "hasWhere": true,
+      "hasOrderBy": false,
+      "hasLimit": true
+    },
+    {
+      "callSiteId": "8bef9e2cf416192fc7799be8",
+      "file": "worker/auth.ts",
+      "line": 3129,
+      "containingFunction": "createSessionResponse",
+      "occurrence": 112,
       "executionMode": "run",
       "argumentKind": "literal",
       "expression": "\"DELETE FROM auth_sessions WHERE token_hash = ?\"",
@@ -2570,11 +2594,11 @@
       "hasLimit": false
     },
     {
-      "callSiteId": "08b1938ba28457bfa5d57e59",
+      "callSiteId": "2b504dd1a82e294df6c9e621",
       "file": "worker/auth.ts",
-      "line": 3328,
+      "line": 3356,
       "containingFunction": "validateSignupAgeProof",
-      "occurrence": 112,
+      "occurrence": 113,
       "executionMode": "first",
       "argumentKind": "literal",
       "expression": "`SELECT confirmed_at FROM signup_age_proofs\n    WHERE token_hash = ? AND consumed_at IS NULL AND expires_at > ? AND gate_version = ?\n    LIMIT 1`",
@@ -2592,11 +2616,11 @@
       "hasLimit": true
     },
     {
-      "callSiteId": "b0e6f7bb89ca2813b07eb150",
+      "callSiteId": "bd84e188fab053a5134883a0",
       "file": "worker/auth.ts",
-      "line": 3341,
+      "line": 3369,
       "containingFunction": "consumeSignupAgeProof",
-      "occurrence": 113,
+      "occurrence": 114,
       "executionMode": "run",
       "argumentKind": "literal",
       "expression": "`UPDATE signup_age_proofs SET consumed_at = ?\n    WHERE token_hash = ? AND consumed_at IS NULL AND expires_at > ? AND gate_version = ?`",
@@ -2614,11 +2638,11 @@
       "hasLimit": false
     },
     {
-      "callSiteId": "e998554b1e1af09a6a15f927",
+      "callSiteId": "f4b3ee22a83fde8d200bc5f3",
       "file": "worker/auth.ts",
-      "line": 3444,
+      "line": 3472,
       "containingFunction": "assertEmailChallengeAllowed",
-      "occurrence": 114,
+      "occurrence": 115,
       "executionMode": "first",
       "argumentKind": "literal",
       "expression": "\"SELECT COUNT(*) AS count FROM email_challenges WHERE email = ? AND created_at >= ?\"",
@@ -2636,11 +2660,11 @@
       "hasLimit": false
     },
     {
-      "callSiteId": "59ecee4685c48910d8b5dcea",
+      "callSiteId": "75ebe07d454aa86ae964f3d1",
       "file": "worker/auth.ts",
-      "line": 3463,
+      "line": 3491,
       "containingFunction": "verifyEmailChallenge",
-      "occurrence": 115,
+      "occurrence": 116,
       "executionMode": "first",
       "argumentKind": "literal",
       "expression": "\"SELECT * FROM email_challenges WHERE id = ? AND kind = ? LIMIT 1\"",
@@ -2658,11 +2682,11 @@
       "hasLimit": true
     },
     {
-      "callSiteId": "3bba4cf82efd457381819b03",
+      "callSiteId": "b3513b95a66558e7b133e76c",
       "file": "worker/auth.ts",
-      "line": 3480,
+      "line": 3508,
       "containingFunction": "verifyEmailChallenge",
-      "occurrence": 116,
+      "occurrence": 117,
       "executionMode": "run",
       "argumentKind": "literal",
       "expression": "`UPDATE email_challenges SET attempts = ?\n    WHERE id = ? AND kind = ? AND code_hash = ? AND created_at = ?\n      AND attempts = ? AND resend_count = ? AND expires_at = ? AND expires_at > ?`",
@@ -2680,11 +2704,11 @@
       "hasLimit": false
     },
     {
-      "callSiteId": "2a5f159e7c8b00031f10bb5e",
+      "callSiteId": "ec7eb7b20ce6c83612624a8e",
       "file": "worker/auth.ts",
-      "line": 3688,
+      "line": 3716,
       "containingFunction": "cleanupSignupAgeProofCandidate",
-      "occurrence": 117,
+      "occurrence": 118,
       "executionMode": "run",
       "argumentKind": "literal",
       "expression": "\"DELETE FROM signup_age_proofs WHERE token_hash = ?\"",
@@ -2702,11 +2726,11 @@
       "hasLimit": false
     },
     {
-      "callSiteId": "9edc32320dc1c1d1e14e9a5c",
+      "callSiteId": "5a575f3eaa86e7f8be8a1360",
       "file": "worker/auth.ts",
-      "line": 3701,
+      "line": 3729,
       "containingFunction": "cleanupEmailChallengeCandidate",
-      "occurrence": 118,
+      "occurrence": 119,
       "executionMode": "run",
       "argumentKind": "literal",
       "expression": "\"DELETE FROM email_challenges WHERE id = ? AND code_hash = ? AND created_at = ?\"",

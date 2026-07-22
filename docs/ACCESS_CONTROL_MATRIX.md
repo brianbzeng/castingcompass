@@ -29,7 +29,7 @@ output never grants authority.
 
 | Resource | Required server predicate | Current mutation rules |
 | --- | --- | --- |
-| Session | `token_hash = sha256(cookie)` and `expires_at > now` | Authentication atomically replaces any session presented by that browser and HTTPS uses `__Host-cc_session`; the prior cookie is accepted only for migration and rotated on session refresh; a new cookie is issued only after exactly one confirmed session INSERT, while an unconfirmed INSERT triggers token-hash cleanup and clears both cookie forms; logout returns its exact success receipt only when every presented token deletion has authoritative zero-or-one change metadata, while an ambiguous result returns `503` for read-only status recovery; password reset and account deletion revoke every session for the account |
+| Session | `token_hash = sha256(cookie)` and `expires_at > now` | Authentication atomically replaces any session presented by that browser and HTTPS uses `__Host-cc_session`; the prior cookie is accepted only for migration and rotated on session refresh. The server discloses a new token only after exact read-back of its random hash, owner, creation, expiry, live user, and absent deletion fence; unreadable or mismatched state triggers candidate cleanup and clears both cookie forms. Logout returns its exact success receipt only when every presented-token deletion has authoritative zero-or-one change metadata; password reset and account deletion revoke every session for the account |
 | Sign-in attempt | `email_hash = sha256(normalized_email)` plus a rolling one-hour failed-attempt window | One atomic conditional INSERT claims one of ten failure slots before account lookup or password derivation. A confirmed zero is `429`; missing or impossible metadata is `503` and stops before credential verification. Correct credentials then classify that exact claim by ID, hash, timestamp, and prior state; a session cannot be issued without exactly one confirmed classification change. Unknown and wrong-password paths still perform equal password work and return the same response |
 | Email challenge attempt | Exact `id`, kind, code hash, creation time, prior attempt count, resend count, expiry value, and live expiry | Every submitted six-digit code first claims the next bounded attempt with one compare-and-set UPDATE. Only one concurrent request can advance a snapshot; a resend or competing attempt makes the stale request fail closed without incrementing or authorizing the newer version. Six claims are the hard ceiling. Signup requires an authoritative one-row receipt; password recovery preserves its generic anti-enumeration error when the receipt is ambiguous and never changes credentials or sessions |
 | Account creation | One-use signup challenge containing server-created credential hash, age-eligibility timestamp, and exact current legal versions | The plaintext age proof is exposed only after one confirmed proof INSERT; proof consumption distinguishes authoritative zero from missing metadata; the initial challenge INSERT atomically rechecks the five-per-hour email ceiling before provider delivery. Resends use a conditional prior-hash/time/count predicate, update D1 before provider delivery, and clean up only their exact candidate version after an ambiguous receipt or provider failure. Final user insertion repeats the verified challenge kind, code hash, creation time, claimed attempt count, and expiry in an atomic `EXISTS`; challenge deletion repeats the same snapshot. Welcome delivery and the first session require exact one-row receipts for both statements, so a concurrent resend makes the old code inert |
@@ -133,11 +133,12 @@ batch commits but D1 omits either receipt, the server returns `503`; the new acc
 with its submitted password, but no challenge replay or duplicate welcome/session is attempted.
 
 Every path that creates or rotates a session applies one final independent receipt boundary. The
-server hashes the candidate token once, requires exactly one confirmed `auth_sessions` INSERT
-before exposing the plaintext token in a cookie, and otherwise returns `503` with both session
-cookie forms cleared. Because D1 may have committed a write whose metadata is unavailable, the
-same token hash is deleted on the unconfirmed path; a cleanup execution failure is recorded only
-as a redacted structured error and the token is still never disclosed to the browser.
+server hashes the candidate token once, then reads back that random hash with the exact owner,
+creation time, expiry, live-user predicate, and absent account-deletion fence before exposing the
+plaintext token in a cookie. Mutation metadata and transport success grant nothing, so a lost
+committed batch response resolves without replay. Unreadable, absent, or mismatched state returns
+`503` with both session-cookie forms cleared and deletes the candidate hash; a cleanup execution
+failure is recorded only as a redacted structured error and the token is still never disclosed.
 
 Sign-out uses the same database-authoritative receipt rule. A presented token DELETE may correctly
 change one row or zero when that token is already absent, but every result must carry one of those
