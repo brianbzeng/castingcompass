@@ -167,17 +167,24 @@ def _assign_region_membership(
     latitudes: Sequence[float],
     region_metadata: Mapping[str, Mapping[str, Any]],
 ) -> tuple[list[str | None], int]:
-    try:
-        from rasterio.warp import transform as transform_coordinates
-    except ImportError as error:
-        raise RuntimeError("South Coast sediment support audit requires rasterio") from error
-
+    transform_coordinates = None
     hits: list[list[str]] = [[] for _ in longitudes]
     for region in REGION_PRIORITY:
         metadata = region_metadata[region]
-        xs, ys = transform_coordinates(
-            "EPSG:4326", str(metadata["crs"]), list(longitudes), list(latitudes)
-        )
+        target_crs = str(metadata["crs"])
+        if target_crs == "EPSG:4326":
+            xs, ys = list(longitudes), list(latitudes)
+        else:
+            if transform_coordinates is None:
+                try:
+                    from rasterio.warp import transform as transform_coordinates
+                except ImportError as error:
+                    raise RuntimeError(
+                        "South Coast sediment support audit requires rasterio"
+                    ) from error
+            xs, ys = transform_coordinates(
+                "EPSG:4326", target_crs, list(longitudes), list(latitudes)
+            )
         left, bottom, right, top = metadata["bounds"]
         for index, (x, y) in enumerate(zip(xs, ys)):
             if left <= x <= right and bottom <= y <= top:

@@ -2,9 +2,11 @@ from __future__ import annotations
 
 import hashlib
 import json
+import sys
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 from pipeline.contourcast.sediment_south_coast_support_audit import (
     REGION_PRIORITY,
@@ -73,11 +75,14 @@ class SedimentSouthCoastSupportAuditTests(unittest.TestCase):
                 "bounds": [-120.5, 34.0, -119.5, 35.0],
             },
         }
-        assignments, overlaps = _assign_region_membership(
-            [-122.25, -121.0, -120.0, -118.0],
-            [34.5, 34.5, 34.5, 34.5],
-            metadata,
-        )
+        with mock.patch.dict(
+            sys.modules, {"rasterio": None, "rasterio.warp": None}
+        ):
+            assignments, overlaps = _assign_region_membership(
+                [-122.25, -121.0, -120.0, -118.0],
+                [34.5, 34.5, 34.5, 34.5],
+                metadata,
+            )
         self.assertEqual(
             assignments,
             [
