@@ -1832,27 +1832,50 @@ export function createTripStore(db: D1DatabaseLike): TripStore {
           ),
         );
       }
-      const results = terminalStatements.length > 1
-        ? await db.batch(terminalStatements)
-        : [await update.run()];
-      const result = results[0] as { meta?: { changes?: number } } | undefined;
-
-      if (Number(result?.meta?.changes ?? 0) !== 1) return null;
-      return getTrip(id, accountId);
+      try {
+        if (terminalStatements.length > 1) {
+          await db.batch(terminalStatements);
+        } else {
+          await update.run();
+        }
+      } catch {
+        // A transport failure can arrive after the terminal transaction committed.
+        // The exact owner-bound trip state below is authoritative.
+      }
+      const completed = await getTrip(id, accountId);
+      if (
+        !completed || completed.status !== "completed" || completed.source !== "live" ||
+        completed.idempotency_key_hash !== tokenHash || completed.token_hash !== null ||
+        completed.ended_at !== completion.endedAt || completed.completed_at !== completion.updatedAt ||
+        completed.updated_at !== completion.updatedAt || completed.mode !== completion.mode ||
+        completed.photo_key !== completion.photoKey
+      ) return null;
+      return completed;
     },
 
     async cancelTrip(id, tokenHash, accountId, timestamp, feasibilityTerminal) {
       const update = db.prepare(`UPDATE trips SET token_hash = NULL, updated_at = ?
         WHERE id = ? AND user_id IS ? AND status = 'active' AND token_hash = ?`)
         .bind(timestamp, id, accountId, tokenHash);
-      const results = feasibilityTerminal
-        ? await db.batch([
+      try {
+        if (feasibilityTerminal) {
+          await db.batch([
             update,
             prepareConditionalFeasibilityEventInsert(db, feasibilityTerminal, "safe_canceled", timestamp),
-          ])
-        : [await update.run()];
-      const result = results[0] as { meta?: { changes?: number } } | undefined;
-      return Number(result?.meta?.changes ?? 0) === 1;
+          ]);
+        } else {
+          await update.run();
+        }
+      } catch {
+        // The exact terminal receipt resolves both an ordinary failure and a lost committed response.
+      }
+      const receipt = await db.prepare(`SELECT 1 AS confirmed FROM trips
+        WHERE id = ? AND user_id IS ? AND source = 'live' AND status = 'active'
+          AND idempotency_key_hash = ? AND token_hash IS NULL AND updated_at = ?
+        LIMIT 1`)
+        .bind(id, accountId, tokenHash, timestamp)
+        .first<{ confirmed: number }>();
+      return Number(receipt?.confirmed ?? 0) === 1;
     },
 
     async getSummary(now) {

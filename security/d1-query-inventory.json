@@ -1,7 +1,7 @@
 {
   "schemaVersion": "castingcompass.d1-query-inventory/1.0.0",
   "generatedFrom": "TypeScript AST; no runtime or provider query executed",
-  "policySha256": "c18dd2560124804ac146aec9df0755c830f5eeebb0b399472c200340376a6c1b",
+  "policySha256": "35c05b4d65f2d2c8b854fc6a95633c63b5e5b2ab9d93f0136b6aeee287026b02",
   "sourceFiles": [
     {
       "file": "worker/auth.ts",
@@ -35,8 +35,8 @@
     },
     {
       "file": "worker/trips.ts",
-      "sha256": "c1810344769e1beb2f84a8717787926f5a0db2bdc204958a84590b5dcb483d32",
-      "prepareCallCount": 26
+      "sha256": "4637b934bc9981e6684f2b52df6904064115a81f7b62e247495dae66bbf785f9",
+      "prepareCallCount": 27
     },
     {
       "file": "worker/validation-feasibility-export.ts",
@@ -45,8 +45,8 @@
     }
   ],
   "summary": {
-    "prepareCallCount": 239,
-    "literalCallCount": 213,
+    "prepareCallCount": 240,
+    "literalCallCount": 214,
     "nonLiteralCallCount": 26,
     "multiRowLiteralWithoutLimitCount": 12
   },
@@ -5087,7 +5087,7 @@
     {
       "callSiteId": "fb07b112f51d88eb30db4995",
       "file": "worker/trips.ts",
-      "line": 1845,
+      "line": 1857,
       "containingFunction": "cancelTrip",
       "occurrence": 19,
       "executionMode": "prepared-statement",
@@ -5107,11 +5107,33 @@
       "hasLimit": false
     },
     {
-      "callSiteId": "9ccef38cc9312a143e7f6b85",
+      "callSiteId": "b2a924f0ff40bdee789c0b05",
       "file": "worker/trips.ts",
-      "line": 1860,
-      "containingFunction": "getSummary",
+      "line": 1872,
+      "containingFunction": "cancelTrip",
       "occurrence": 20,
+      "executionMode": "first",
+      "argumentKind": "literal",
+      "expression": "`SELECT 1 AS confirmed FROM trips\n        WHERE id = ? AND user_id IS ? AND source = 'live' AND status = 'active'\n          AND idempotency_key_hash = ? AND token_hash IS NULL AND updated_at = ?\n        LIMIT 1`",
+      "expressionSha256": "bf79551ac45778101fc3e2a45d4d1df7e6783735cc3cf0efc3d58c7fd5842d22",
+      "declarationReference": null,
+      "statementClass": "SELECT",
+      "sql": "SELECT 1 AS confirmed FROM trips WHERE id = ? AND user_id IS ? AND source = 'live' AND status = 'active' AND idempotency_key_hash = ? AND token_hash IS NULL AND updated_at = ? LIMIT 1",
+      "sqlSha256": "34565d661749dbd55e7fb6c75359862824e6fb1fdb70d03a1ebb1cac2d309f6f",
+      "tables": [
+        "trips"
+      ],
+      "placeholderCount": 4,
+      "hasWhere": true,
+      "hasOrderBy": false,
+      "hasLimit": true
+    },
+    {
+      "callSiteId": "6683c8037c1f11baf0bb3543",
+      "file": "worker/trips.ts",
+      "line": 1883,
+      "containingFunction": "getSummary",
+      "occurrence": 21,
       "executionMode": "first",
       "argumentKind": "literal",
       "expression": "`SELECT\n          COUNT(*) AS completed_trips,\n          COALESCE(SUM(CASE WHEN no_catch = 1 THEN 1 ELSE 0 END), 0) AS no_catch_trips,\n          COALESCE(SUM(CASE WHEN halibut_encounters > 0 THEN 1 ELSE 0 END), 0) AS halibut_trips,\n          COALESCE(SUM(angler_hours), 0) AS angler_hours,\n          COALESCE(SUM(halibut_encounters), 0) AS halibut_encounters,\n          COUNT(DISTINCT site_id) AS sites_covered,\n          MAX(updated_at) AS last_updated,\n          COALESCE(SUM(CASE WHEN completed_at >= ? THEN 1 ELSE 0 END), 0) AS recent_completed_trips,\n          COALESCE(SUM(CASE WHEN completed_at >= ? THEN angler_hours ELSE 0 END), 0) AS recent_angler_hours,\n          COALESCE(SUM(CASE WHEN completed_at >= ? THEN halibut_encounters ELSE 0 END), 0) AS recent_halibut_encounters,\n          COUNT(DISTINCT CASE WHEN completed_at >= ? THEN site_id END) AS recent_sites_covered\n        FROM trips\n        WHERE status = 'completed' AND consent = 1 AND moderation_status != 'rejected'\n          AND contract_status = 'valid' AND observation_contract_version = ?\n          AND taxon_catalog_version = ? AND target_taxon_id = ?`",
@@ -5129,11 +5151,11 @@
       "hasLimit": false
     },
     {
-      "callSiteId": "8e7ff60416cd175c792e5dc9",
+      "callSiteId": "5d6482d01b5491782d1566b1",
       "file": "worker/trips.ts",
-      "line": 1921,
+      "line": 1944,
       "containingFunction": "prepareForecastImpressionInsert",
-      "occurrence": 21,
+      "occurrence": 22,
       "executionMode": "returned-statement",
       "argumentKind": "reviewed-nonliteral",
       "expression": "INSERT_FORECAST_IMPRESSION_SQL",
@@ -5153,11 +5175,11 @@
       "hasLimit": null
     },
     {
-      "callSiteId": "aedea8ddefb501009f4f8c37",
+      "callSiteId": "cc9e0e196a924acfe833490a",
       "file": "worker/trips.ts",
-      "line": 2009,
+      "line": 2032,
       "containingFunction": "prepareValidationProvenanceInsert",
-      "occurrence": 22,
+      "occurrence": 23,
       "executionMode": "returned-statement",
       "argumentKind": "reviewed-nonliteral",
       "expression": "INSERT_VALIDATION_PROVENANCE_SQL",
@@ -5177,11 +5199,11 @@
       "hasLimit": null
     },
     {
-      "callSiteId": "890f4e925b6b736752f6ec44",
+      "callSiteId": "1905dec3d2728775ea1435be",
       "file": "worker/trips.ts",
-      "line": 2055,
+      "line": 2078,
       "containingFunction": "prepareFeasibilityEventInsert",
-      "occurrence": 23,
+      "occurrence": 24,
       "executionMode": "returned-statement",
       "argumentKind": "reviewed-nonliteral",
       "expression": "INSERT_FEASIBILITY_EVENT_SQL",
@@ -5201,11 +5223,11 @@
       "hasLimit": null
     },
     {
-      "callSiteId": "6bf69651ca568e5ef7bf24a0",
+      "callSiteId": "d05421f36bd49d78dd1b2a6c",
       "file": "worker/trips.ts",
-      "line": 2062,
+      "line": 2085,
       "containingFunction": "prepareFeasibilityRecruitmentInsert",
-      "occurrence": 24,
+      "occurrence": 25,
       "executionMode": "returned-statement",
       "argumentKind": "reviewed-nonliteral",
       "expression": "INSERT_FEASIBILITY_RECRUITMENT_SQL",
@@ -5225,11 +5247,11 @@
       "hasLimit": null
     },
     {
-      "callSiteId": "9f57b0575589cf60ee371303",
+      "callSiteId": "57885fee5b616015bc677b78",
       "file": "worker/trips.ts",
-      "line": 2092,
+      "line": 2115,
       "containingFunction": "prepareConditionalFeasibilityEventInsert",
-      "occurrence": 25,
+      "occurrence": 26,
       "executionMode": "returned-statement",
       "argumentKind": "reviewed-nonliteral",
       "expression": "`INSERT INTO validation_feasibility_events (\n      ${FEASIBILITY_EVENT_COLUMNS.join(\", \")}\n    ) SELECT ${bindings.map(() => \"?\").join(\", \")}\n    WHERE EXISTS (\n      SELECT 1 FROM trips WHERE id = ? AND token_hash IS NULL AND ${completedCondition}\n    )`",
@@ -5245,11 +5267,11 @@
       "hasLimit": null
     },
     {
-      "callSiteId": "45eaf3b795d336bcd2c4c64e",
+      "callSiteId": "bf20f173d30abf8495e0af9f",
       "file": "worker/trips.ts",
-      "line": 2106,
+      "line": 2129,
       "containingFunction": "prepareConditionalCompletionProvenanceInsert",
-      "occurrence": 26,
+      "occurrence": 27,
       "executionMode": "returned-statement",
       "argumentKind": "reviewed-nonliteral",
       "expression": "`INSERT INTO trip_validation_provenance (\n      ${VALIDATION_PROVENANCE_COLUMNS.join(\", \")}\n    ) SELECT ${placeholders}\n    WHERE EXISTS (\n      SELECT 1 FROM trips WHERE id = ? AND status = 'completed'\n        AND token_hash IS NULL AND completed_at = ?\n    )`",

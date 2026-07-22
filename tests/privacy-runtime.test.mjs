@@ -2109,6 +2109,88 @@ test("active trip completion and cancellation bind the authenticated account eve
   );
 });
 
+test("live-trip terminal responses follow exact D1 state after mutation responses are lost", async () => {
+  const { sqlite, d1 } = await database();
+  const owner = await addUser(sqlite, "trip-terminal-receipt-owner");
+  const sites = [{ id: "ocean-beach", type: "Beach" }];
+  const reporterKey = "terminal-receipt-reporter-key-123456789";
+  const startTrip = async (startedAt) => {
+    const response = await handleTripRequest(new Request(
+      "https://castingcompass.com/api/trips/start",
+      {
+        method: "POST",
+        headers: { Origin: "https://castingcompass.com", "Content-Type": "application/json" },
+        body: JSON.stringify({
+          ...tripRequestMaterial(),
+          siteId: "ocean-beach",
+          startedAt,
+          mode: "beach",
+          anglerCount: 1,
+          consent: true,
+          primaryTargetConfirmed: true,
+          scoreInfluencedChoice: false,
+          reporterKey,
+          website: "",
+        }),
+      },
+    ), { DB: d1 }, sites, { accountId: owner.id, now: () => new Date(startedAt) });
+    assert.equal(response.status, 201, JSON.stringify(await response.clone().json()));
+    return response.json();
+  };
+
+  const completing = await startTrip("2026-07-21T19:00:00.000Z");
+  const completion = new FormData();
+  completion.set("token", completing.token);
+  completion.set("reporterKey", reporterKey);
+  completion.set("mode", "beach");
+  completion.set("anglerCount", "1");
+  completion.set("keeperCount", "0");
+  completion.set("shortReleasedCount", "0");
+  completion.set("otherCatchCount", "0");
+  completion.set("consent", "true");
+  completion.set("primaryTargetConfirmed", "true");
+  completion.set("completeAttempt", "true");
+  completion.set("website", "");
+  d1.throwOnceAfterBatchMutationSubstring = "UPDATE trips SET\n          status = 'completed'";
+  let completionCallbacks = 0;
+
+  const completed = await handleTripRequest(new Request(
+    `https://castingcompass.com/api/trips/${completing.trip.id}/complete`,
+    { method: "POST", headers: { Origin: "https://castingcompass.com" }, body: completion },
+  ), { DB: d1 }, sites, {
+    accountId: owner.id,
+    now: () => new Date("2026-07-21T20:00:00.000Z"),
+    onTripCompleted: () => { completionCallbacks += 1; },
+  });
+  assert.equal(completed.status, 200, JSON.stringify(await completed.clone().json()));
+  assert.deepEqual((await completed.json()).receipt, { operation: "complete", tripId: completing.trip.id });
+  assert.equal(completionCallbacks, 1);
+  assert.deepEqual(
+    { ...sqlite.prepare("SELECT status, token_hash, completed_at FROM trips WHERE id = ?").get(completing.trip.id) },
+    { status: "completed", token_hash: null, completed_at: "2026-07-21T20:00:00.000Z" },
+  );
+
+  const canceling = await startTrip("2026-07-21T21:00:00.000Z");
+  d1.throwOnceAfterMutationSubstring = "UPDATE trips SET token_hash = NULL";
+  const canceled = await handleTripRequest(new Request(
+    `https://castingcompass.com/api/trips/${canceling.trip.id}/cancel`,
+    {
+      method: "POST",
+      headers: { Origin: "https://castingcompass.com", "Content-Type": "application/json" },
+      body: JSON.stringify({ token: canceling.token, reason: "weather" }),
+    },
+  ), { DB: d1 }, sites, {
+    accountId: owner.id,
+    now: () => new Date("2026-07-21T21:30:00.000Z"),
+  });
+  assert.equal(canceled.status, 200, JSON.stringify(await canceled.clone().json()));
+  assert.deepEqual(await canceled.json(), { canceled: true, id: canceling.trip.id, reason: "weather" });
+  assert.deepEqual(
+    { ...sqlite.prepare("SELECT status, token_hash, updated_at FROM trips WHERE id = ?").get(canceling.trip.id) },
+    { status: "active", token_hash: null, updated_at: "2026-07-21T21:30:00.000Z" },
+  );
+});
+
 test("saved-location and gear-preset reads and writes enforce exact account ceilings", async () => {
   const { sqlite, d1 } = await database();
   const user = await addUser(sqlite, "resource-ceilings");

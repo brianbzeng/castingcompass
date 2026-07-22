@@ -65,6 +65,32 @@ by that discovery.
       provider query, D1 mutation, public AI output, model change, UI change, or production
       authorization belongs to this work.
 
+## Active checkpoint — exact live-trip terminal receipts
+
+- [x] Continue the database-authority audit through live-trip completion and safe cancellation.
+      Both owner-bound writes still decided success from D1 mutation counts; a committed response
+      lost in transit could produce a false `404` cancellation or an avoidable ambiguous
+      completion even though the recovery token was already consumed.
+- [x] Make the terminal D1 state authoritative. Completion requires the exact owner-bound live
+      row, persistent idempotency hash, cleared token, server timestamps, mode, and photo locator;
+      cancellation requires the exact owner-bound live row, same persistent hash, cleared token,
+      and request timestamp. Mutation metadata and transport success no longer grant or deny the
+      receipt.
+- [x] Force a committed completion batch and a committed cancellation update to lose their
+      responses. Both operations return success only after exact read-back; completion dispatches
+      its callback once, cancellation does not manufacture a `404`, and cross-account/token
+      predicates remain unchanged. The focused privacy/owner runtime passes 66/66 cases.
+- [x] Regenerate the source-bound D1 inventory for all 240 prepare sites: 214 literal, 26
+      reviewed nonliteral, and 12 reviewed multi-row reads.
+- [x] Pass the pinned Cloudflare build, ESLint, TypeScript, all 591/591 repository Node tests,
+      the complete offline security/SBOM/source-integrity chain, both zero-vulnerability npm
+      audits, Ruff, 29/29 API tests, 83 pipeline tests with one documented optional-`rasterio`
+      skip, the deterministic pipeline smoke test, 19 migrations / 23 critical D1 query plans,
+      and the full 200/200 Chromium/WebKit phone matrix. Preserve a clean local commit and
+      deterministic release-bundle receipt. No push, pull request, merge, deployment, provider
+      query, D1 mutation, R2 mutation, model change, UI change, or production authorization
+      belongs to this local work.
+
 ## Active checkpoint — exact privacy-object deletion authority
 
 - [x] Continue the database-authority audit through the GDPR/account-deletion object ledger.
@@ -80,7 +106,7 @@ by that discovery.
       stale worker cannot settle a newer lease.
 - [x] Add regressions for a lost committed claim response, a lost committed privacy-export
       terminal-batch response, and a corrupted locator binding. The focused privacy suite passes
-      65/65 cases, and the complete source-bound D1 inventory now covers 239 prepare sites: 213
+      65/65 cases, and its complete source-bound D1 inventory covered 239 prepare sites: 213
       literal, 26 reviewed nonliteral, and 12 reviewed multi-row reads.
 - [x] Pass the pinned Cloudflare build, ESLint, TypeScript, all 590/590 repository Node tests,
       the complete offline security/SBOM/source-integrity chain, both zero-vulnerability npm

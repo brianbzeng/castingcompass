@@ -133,6 +133,11 @@ after its acceptance checks pass in the intended environment.
       account ID, active state, and token hash atomically; exact-token cross-account and
       ownership-change race regressions prove mismatched identity remains an indistinguishable
       `404` without completing or canceling the row.
+    - [x] Resolve lost terminal-write responses from exact D1 post-state instead of mutation
+      metadata. Completion binds owner, live source, persistent idempotency hash, cleared token,
+      server timestamps, mode, and photo locator; cancellation binds owner, live source,
+      persistent hash, cleared token, and request timestamp. Lost committed-response regressions
+      prove truthful success without weakening the final ownership/token predicates.
     - [x] Remove fetch-then-check reads from owner trip flows. Trip rows and their enrollment,
       forecast-impression, feasibility-start, feasibility-recruitment, and prior-recruitment
       context now bind the server-derived account in the query itself. Profile-edit reads for
@@ -573,7 +578,7 @@ after its acceptance checks pass in the intended environment.
   - [ ] Inventory every production query, capture representative `EXPLAIN QUERY PLAN` evidence,
     add only workload-justified indexes, bound scans/pagination, eliminate N+1 patterns, verify
     cross-account predicates, and regression-test query latency and migration cost.
-    - [x] Add a deterministic AST-backed inventory for all 239 Worker `.prepare()` sites across
+    - [x] Add a deterministic AST-backed inventory for all 240 Worker `.prepare()` sites across
       eight files, including exact review contracts for 26 nonliteral expressions and 12 literal
       multi-row reads without `LIMIT`. CI and release provenance fail closed on inventory drift,
       computed/aliased prepare access, unreviewed dynamic SQL, unscoped literal writes, and
