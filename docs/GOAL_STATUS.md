@@ -35,7 +35,12 @@ by that discovery.
       post-state, and bounded backlog recovery in direct D1 runtime tests. The source ledger now
       covers 250 prepare sites: 236 literal, 14 reviewed nonliteral, and nine reviewed complete-
       rights multi-row reads; all 20 migrations and 50 critical plans include both retry shapes.
-- [x] Seal the implementation with the pinned Cloudflare build; lint and type checks; all 645/645
+- [x] Bound the complete ten-row request as one durable admission rather than ten immediate
+      background pipelines. At most one exact queued row enters direct or Queue dispatch in the
+      originating invocation; the other nine remain in the scheduled backlog. A lost committed
+      ten-row batch now exercises both modes at 27 local D1 statements, one provider request or
+      Queue send, and zero dropped rows, preserving headroom below the 50-query Free ceiling.
+- [x] Seal the implementation with the pinned Cloudflare build; lint and type checks; all 646/646
       Node tests; 29/29 API tests; Ruff; 83/83 pipeline tests with one documented optional-
       `rasterio` skip; the complete offline security, SBOM, source-integrity, and two zero-
       vulnerability audit chain; deterministic smoke; all 50 critical plans across 20 migrations;
@@ -43,9 +48,10 @@ by that discovery.
       release bundles plus the clean local commit complete this checkpoint receipt. No push, PR,
       merge, deployment, provider query, production database mutation, feature activation,
       public AI output, UI change, or model claim belongs to this checkpoint.
-- [ ] Exercise ten-row overlap, queue-enabled and direct-provider dispatch, response loss, latency,
-      and D1 rows-read/written behavior with production-shaped synthetic data in isolated staging
-      before treating local receipt proof as deployed evidence.
+- [ ] Exercise true ten-row overlap, queue-enabled and direct-provider dispatch, response loss,
+      provider/Queue latency, and actual D1 rows-read/written behavior with production-shaped
+      synthetic data in isolated staging before treating the bounded local statement proof as
+      deployed evidence.
 
 ## Active checkpoint — exact legal-acceptance receipts
 

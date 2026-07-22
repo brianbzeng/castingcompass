@@ -156,8 +156,10 @@ after its acceptance checks pass in the intended environment.
       or an unreadable receipt returns `503`; changed/claimed/completed state is not rescheduled.
       The default-off backlog still includes queued rows for durable recovery, while both direct
       and queue-enabled downstream paths use separate high-entropy claim tokens so concurrent
-      callbacks cannot duplicate provider authority. All model output remains private and human-
-      gated.
+      callbacks cannot duplicate provider authority. One ten-row owner request starts at most one
+      immediate background scheduler; the remaining exact queued rows stay in the durable backlog,
+      avoiding ten same-invocation pipelines and retaining local D1-budget headroom. All model
+      output remains private and human-gated.
     - [x] Make owner gear mutation receipts database-authoritative. PATCH and DELETE repeat `id`
       plus `user_id`, but mutation metadata and transport success no longer decide the receipt.
       PATCH requires the exact normalized owner row and server timestamp; DELETE requires zero

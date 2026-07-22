@@ -6,6 +6,7 @@ import test from "node:test";
 import { cleanupAuthData, LEGAL_VERSION, evaluateAgeEligibility, handleAccountRequest, processPrivacyDeletionTasks } from "../worker/auth.ts";
 import { createTripStore, handleTripRequest } from "../worker/trips.ts";
 import { reviewTripBacklog, reviewTripWithMimo } from "../worker/trip-review.ts";
+import { scheduleTripReview } from "../worker/trip-review-queue.ts";
 import { consumePrivacyExportQueue, requestPrivacyExport } from "../worker/privacy-export.ts";
 import { buildFeasibilityReconciliationExport } from "../worker/validation-feasibility-export.ts";
 import {
@@ -3033,6 +3034,91 @@ test("manual review retry uses exact stored state across missing, lost, rolled-b
   }
   assert.equal(providerCalls, 1);
   assert.equal(sqlite.prepare("SELECT ai_review_status FROM trips WHERE id = ?").get(unreadableTrip).ai_review_status, "retry");
+});
+
+test("a ten-row manual retry admits every row but starts one bounded immediate dispatch", async () => {
+  const exercise = async (mode) => {
+    const { sqlite, d1 } = await database();
+    const owner = await addUser(sqlite, `review-retry-budget-${mode}`);
+    const tripIds = Array.from({ length: 10 }, () => addTrip(sqlite, owner));
+    sqlite.prepare("UPDATE trips SET ai_review_status = 'retry' WHERE user_id = ?").run(owner.id);
+    const background = [];
+    const dispatched = [];
+    const queueBodies = [];
+    let providerCalls = 0;
+    const env = mode === "queue"
+      ? {
+          DB: d1,
+          MIMO_API_KEY: "test-key",
+          AI_REVIEW_QUEUE_ENABLED: "true",
+          AI_REVIEW_QUEUE: { async send(body) { queueBodies.push(body); } },
+        }
+      : { DB: d1, MIMO_API_KEY: "test-key" };
+    const originalFetch = globalThis.fetch;
+    globalThis.fetch = async () => {
+      providerCalls += 1;
+      return Response.json({
+        choices: [{ message: { content: JSON.stringify({
+          quality_score: 90,
+          flags: [],
+          summary: "Complete synthetic report.",
+          needs_human_review: false,
+          gear_analysis: {
+            rod: { brand: null, series: null, model: null, confidence: "low" },
+            reel: { brand: null, series: null, model: null, confidence: "low" },
+            lure: { brand: null, series: null, model: null, confidence: "low" },
+            setup_tags: [],
+            compatibility_flags: [],
+            technique_match_summary: null,
+          },
+          discussion: { publish: false, summary: "", gear_summary: null, technique_tags: [] },
+        }) } }],
+      });
+    };
+    try {
+      d1.throwOnceAfterBatchMutationSubstring = "UPDATE trips SET ai_review_status = 'queued'";
+      const response = await handleAccountRequest(request("/api/profile/reviews/retry", {
+        method: "POST",
+        cookie: owner.cookie,
+      }), { DB: d1 }, [], {
+        onTripsReviewRequested: (trips) => {
+          dispatched.push(...trips.map(({ id }) => id));
+          background.push(...trips.map(({ id }) => scheduleTripReview(
+            env,
+            id,
+            [{ id: "ocean-beach", type: "Beach" }],
+            { expediteRetry: true },
+          )));
+        },
+      });
+      assert.equal(response?.status, 202);
+      assert.deepEqual(await response?.json(), { queued: 10 });
+      assert.equal(dispatched.length, 1);
+      await Promise.all(background);
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+
+    assert.equal(d1.batchSizes.at(-1), 10);
+    assert.equal(d1.queryExecutions, 27);
+    assert.ok(d1.queryExecutions < 50);
+    assert.equal(sqlite.prepare("SELECT COUNT(*) AS count FROM trips WHERE user_id = ?")
+      .get(owner.id).count, tripIds.length);
+    if (mode === "queue") {
+      assert.equal(queueBodies.length, 1);
+      assert.equal(providerCalls, 0);
+      assert.equal(sqlite.prepare("SELECT COUNT(*) AS count FROM ai_review_jobs").get().count, 1);
+      assert.equal(sqlite.prepare("SELECT COUNT(*) AS count FROM trips WHERE ai_review_status = 'queued'").get().count, 10);
+    } else {
+      assert.equal(queueBodies.length, 0);
+      assert.equal(providerCalls, 1);
+      assert.equal(sqlite.prepare("SELECT COUNT(*) AS count FROM trips WHERE ai_review_status = 'reviewed'").get().count, 1);
+      assert.equal(sqlite.prepare("SELECT COUNT(*) AS count FROM trips WHERE ai_review_status = 'queued'").get().count, 9);
+    }
+  };
+
+  await exercise("queue");
+  await exercise("direct");
 });
 
 test("gear mutations fail closed when ownership or existence changes after the owner pre-read", async () => {

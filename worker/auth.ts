@@ -51,6 +51,7 @@ const PASSWORD_RECOVERY_MINIMUM_RESPONSE_MS = 250;
 const DUMMY_PASSWORD_SALT = "Y2FzdGluZ2NvbXBhc3MtdGltaW5n";
 const PRIVACY_DELETION_TASK_BATCH = 5;
 const ACCOUNT_DELETION_INLINE_TASK_BATCH = 3;
+const MANUAL_REVIEW_IMMEDIATE_DISPATCH_LIMIT = 1;
 
 export interface AuthApiEnv extends TurnstileEnv, PrivacyExportEnv {
   DB?: D1DatabaseLike;
@@ -1315,7 +1316,14 @@ export async function handleAccountRequest(
         const receipts: ManualReviewRetryReceipt[] = [];
         for (const trip of trips) receipts.push(await manualReviewRetryReceipt(db, trip, user.id));
         const queuedTrips = trips.filter((_, index) => receipts[index] === "queued");
-        if (queuedTrips.length) options.onTripsReviewRequested?.(queuedTrips);
+        // The ten-row transaction is durable work admission, not permission to start ten
+        // independent background pipelines inside one Worker invocation. Dispatch one now and
+        // leave every other queued row to the bounded scheduled backlog.
+        if (queuedTrips.length) {
+          options.onTripsReviewRequested?.(
+            queuedTrips.slice(0, MANUAL_REVIEW_IMMEDIATE_DISPATCH_LIMIT),
+          );
+        }
         if (receipts.includes("unconfirmed")) {
           return errorResponse(
             503,

@@ -38,6 +38,9 @@ CastingCompass therefore uses this boundary:
   reloads and the owner retry endpoint cannot reset that ceiling. An owner retry may bring an
   ordinary delayed retry forward without changing its attempt count. A genuine owner edit is
   new input and may reset its job; otherwise only the guarded operator replay can do so.
+  One owner request may durably admit ten exact queued trip versions but starts only one immediate
+  scheduler in that Worker invocation. The other rows remain visible to the bounded backlog; this
+  avoids ten concurrent D1/provider pipelines and does not weaken their individual retry state.
   Infrastructure failures that prevent the application from settling a message require the
   provider DLQ. An abandoned expired fifth processing lease is reconciled directly to
   `needs_attention` instead of being republished forever.
