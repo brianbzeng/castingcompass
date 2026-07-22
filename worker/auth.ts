@@ -1310,15 +1310,34 @@ export async function handleAccountRequest(
         .first();
       if (!existing) return errorResponse(404, "gear_profile_not_found", "That gear preset could not be found.");
       if (request.method === "DELETE") {
-        const result = await db.prepare("DELETE FROM gear_profiles WHERE id = ? AND user_id = ?")
-          .bind(id, user.id)
-          .run();
-        const changes = confirmedMutationChanges(result);
-        if (changes === 0) {
-          return errorResponse(404, "gear_profile_not_found", "That gear preset could not be found.");
+        try {
+          await db.prepare("DELETE FROM gear_profiles WHERE id = ? AND user_id = ?")
+            .bind(id, user.id)
+            .run();
+        } catch {
+          // A committed delete can lose its response. Only exact post-state grants the receipt.
         }
-        if (changes !== 1) {
+        let deletionState: { owner_count: number; any_count: number } | null = null;
+        try {
+          deletionState = await db.prepare(`SELECT
+              (SELECT COUNT(*) FROM gear_profiles WHERE id = ? AND user_id = ?) AS owner_count,
+              (SELECT COUNT(*) FROM gear_profiles WHERE id = ?) AS any_count`)
+            .bind(id, user.id, id)
+            .first<{ owner_count: number; any_count: number }>();
+        } catch {
+          // The write remains ambiguous until an owner-bound read can confirm its result.
+        }
+        const ownerCount = Number(deletionState?.owner_count);
+        const anyCount = Number(deletionState?.any_count);
+        if (!Number.isSafeInteger(ownerCount) || !Number.isSafeInteger(anyCount)
+          || ownerCount < 0 || ownerCount > 1 || anyCount < ownerCount || anyCount > 1) {
           throw new AuthError(503, "gear_profile_write_unconfirmed", "The gear preset removal could not be confirmed.");
+        }
+        if (ownerCount === 1) {
+          throw new AuthError(503, "gear_profile_write_unconfirmed", "The gear preset removal could not be confirmed.");
+        }
+        if (anyCount === 1) {
+          return errorResponse(404, "gear_profile_not_found", "That gear preset could not be found.");
         }
         return jsonResponse({ deleted: true, id });
       }
@@ -1327,15 +1346,36 @@ export async function handleAccountRequest(
         assertOnlyFields(body, ["name", "rod", "reel", "baitLure", "rig"]);
         const gear = parseGearProfile(body);
         const timestamp = new Date().toISOString();
-        const result = await db.prepare(`UPDATE gear_profiles SET name = ?, rod = ?, reel = ?, bait_lure = ?, rig = ?, updated_at = ?
-          WHERE id = ? AND user_id = ?`)
-          .bind(gear.name, gear.rod, gear.reel, gear.baitLure, gear.rig, timestamp, id, user.id)
-          .run();
-        const changes = confirmedMutationChanges(result);
-        if (changes === 0) {
+        try {
+          await db.prepare(`UPDATE gear_profiles SET name = ?, rod = ?, reel = ?, bait_lure = ?, rig = ?, updated_at = ?
+            WHERE id = ? AND user_id = ?`)
+            .bind(gear.name, gear.rod, gear.reel, gear.baitLure, gear.rig, timestamp, id, user.id)
+            .run();
+        } catch {
+          // A committed update can lose its response. Only exact post-state grants the receipt.
+        }
+        let receipt: GearProfileReceiptRow | null = null;
+        let receiptReadSucceeded = false;
+        try {
+          receipt = await db.prepare(`SELECT id, user_id, name, rod, reel, bait_lure, rig, created_at, updated_at
+            FROM gear_profiles WHERE id = ? AND user_id = ? LIMIT 1`)
+            .bind(id, user.id)
+            .first<GearProfileReceiptRow>();
+          receiptReadSucceeded = true;
+        } catch {
+          // The write remains ambiguous until an owner-bound read can confirm its result.
+        }
+        if (!receiptReadSucceeded) {
+          throw new AuthError(503, "gear_profile_write_unconfirmed", "The gear preset update could not be confirmed.");
+        }
+        if (!receipt) {
           return errorResponse(404, "gear_profile_not_found", "That gear preset could not be found.");
         }
-        if (changes !== 1) {
+        if (
+          receipt.id !== id || receipt.user_id !== user.id || receipt.name !== gear.name ||
+          receipt.rod !== gear.rod || receipt.reel !== gear.reel || receipt.bait_lure !== gear.baitLure ||
+          receipt.rig !== gear.rig || receipt.updated_at !== timestamp
+        ) {
           throw new AuthError(503, "gear_profile_write_unconfirmed", "The gear preset update could not be confirmed.");
         }
         return jsonResponse({ updated: true, id });
@@ -1909,6 +1949,18 @@ function parseProfileTripText(value: unknown, label: string, maximum: number, re
     throw new AuthError(422, "invalid_text", `${label} must be ${required ? "provided and " : ""}under ${maximum} characters.`);
   }
   return value.trim() || null;
+}
+
+interface GearProfileReceiptRow {
+  id: string;
+  user_id: string;
+  name: string;
+  rod: string | null;
+  reel: string | null;
+  bait_lure: string | null;
+  rig: string | null;
+  created_at: string;
+  updated_at: string;
 }
 
 function parseGearProfile(body: Record<string, unknown>) {

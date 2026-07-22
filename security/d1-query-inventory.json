@@ -1,12 +1,12 @@
 {
   "schemaVersion": "castingcompass.d1-query-inventory/1.0.0",
   "generatedFrom": "TypeScript AST; no runtime or provider query executed",
-  "policySha256": "68899cbb324d7e80779e30c4bdbdf43c8977bc03176b53a38279e7197914d643",
+  "policySha256": "e7dcafb189cbbce5d56216acc6214e5a983d76d749b9c8e07b676886fd0b6105",
   "sourceFiles": [
     {
       "file": "worker/auth.ts",
-      "sha256": "a0fd80154b451533902d8d23188e0a6d832cdfaab0bd5888761cf2798047c78d",
-      "prepareCallCount": 116
+      "sha256": "2ddbec253063951346bb967b4f0b10ce87db1d3182693a063f6dce55a47cb29c",
+      "prepareCallCount": 118
     },
     {
       "file": "worker/discussions.ts",
@@ -45,8 +45,8 @@
     }
   ],
   "summary": {
-    "prepareCallCount": 237,
-    "literalCallCount": 223,
+    "prepareCallCount": 239,
+    "literalCallCount": 225,
     "nonLiteralCallCount": 14,
     "multiRowLiteralWithoutLimitCount": 9
   },
@@ -1096,7 +1096,7 @@
     {
       "callSiteId": "19cac2bc7c23a906dfeb571a",
       "file": "worker/auth.ts",
-      "line": 1313,
+      "line": 1314,
       "containingFunction": "handleAccountRequest",
       "occurrence": 47,
       "executionMode": "run",
@@ -1116,15 +1116,37 @@
       "hasLimit": false
     },
     {
-      "callSiteId": "1e70e7080c4b4cd46f9644ec",
+      "callSiteId": "474ffb253046df4c0bd603aa",
       "file": "worker/auth.ts",
-      "line": 1330,
+      "line": 1322,
       "containingFunction": "handleAccountRequest",
       "occurrence": 48,
+      "executionMode": "first",
+      "argumentKind": "literal",
+      "expression": "`SELECT\n              (SELECT COUNT(*) FROM gear_profiles WHERE id = ? AND user_id = ?) AS owner_count,\n              (SELECT COUNT(*) FROM gear_profiles WHERE id = ?) AS any_count`",
+      "expressionSha256": "4503ecb99a1c9b198bf5c425c1e58dd7f9dc6166b4b22e4090ced783363e03cf",
+      "declarationReference": null,
+      "statementClass": "SELECT",
+      "sql": "SELECT (SELECT COUNT(*) FROM gear_profiles WHERE id = ? AND user_id = ?) AS owner_count, (SELECT COUNT(*) FROM gear_profiles WHERE id = ?) AS any_count",
+      "sqlSha256": "ee569c8afd80001922a5eed599bb390885f350c3dc961051254ea5f0b2474b27",
+      "tables": [
+        "gear_profiles"
+      ],
+      "placeholderCount": 3,
+      "hasWhere": true,
+      "hasOrderBy": false,
+      "hasLimit": false
+    },
+    {
+      "callSiteId": "9ce9771602f24a2f0a27cd32",
+      "file": "worker/auth.ts",
+      "line": 1350,
+      "containingFunction": "handleAccountRequest",
+      "occurrence": 49,
       "executionMode": "run",
       "argumentKind": "literal",
-      "expression": "`UPDATE gear_profiles SET name = ?, rod = ?, reel = ?, bait_lure = ?, rig = ?, updated_at = ?\n          WHERE id = ? AND user_id = ?`",
-      "expressionSha256": "45b9ee0f8f03d3540fd47f285bdbb934eee1fca926914b5fe7c77f338c200651",
+      "expression": "`UPDATE gear_profiles SET name = ?, rod = ?, reel = ?, bait_lure = ?, rig = ?, updated_at = ?\n            WHERE id = ? AND user_id = ?`",
+      "expressionSha256": "61e796fa70f7749ca28f9bdf3283d6a952b31d4a0fa4408b6e4c1f99dd5bbea6",
       "declarationReference": null,
       "statementClass": "UPDATE",
       "sql": "UPDATE gear_profiles SET name = ?, rod = ?, reel = ?, bait_lure = ?, rig = ?, updated_at = ? WHERE id = ? AND user_id = ?",
@@ -1138,11 +1160,33 @@
       "hasLimit": false
     },
     {
-      "callSiteId": "6489441fc09cd30dadaaf24f",
+      "callSiteId": "45252ff79c586eea5059362f",
       "file": "worker/auth.ts",
-      "line": 1350,
+      "line": 1360,
       "containingFunction": "handleAccountRequest",
-      "occurrence": 49,
+      "occurrence": 50,
+      "executionMode": "first",
+      "argumentKind": "literal",
+      "expression": "`SELECT id, user_id, name, rod, reel, bait_lure, rig, created_at, updated_at\n            FROM gear_profiles WHERE id = ? AND user_id = ? LIMIT 1`",
+      "expressionSha256": "5c04eac44a769cfe4f9ee95ba7160be1bb852a0d5f428ddb5e0691787338b686",
+      "declarationReference": null,
+      "statementClass": "SELECT",
+      "sql": "SELECT id, user_id, name, rod, reel, bait_lure, rig, created_at, updated_at FROM gear_profiles WHERE id = ? AND user_id = ? LIMIT 1",
+      "sqlSha256": "5ee7ec40e65df4deaa4b692d9db6692945cb0362dd31c0b26fb097f7ee210c19",
+      "tables": [
+        "gear_profiles"
+      ],
+      "placeholderCount": 2,
+      "hasWhere": true,
+      "hasOrderBy": false,
+      "hasLimit": true
+    },
+    {
+      "callSiteId": "6f43b144b0870ceef87baebf",
+      "file": "worker/auth.ts",
+      "line": 1390,
+      "containingFunction": "handleAccountRequest",
+      "occurrence": 51,
       "executionMode": "first",
       "argumentKind": "literal",
       "expression": "`SELECT id, user_id, site_id, started_at, ended_at, mode, moderation_status, photo_key,\n          observation_contract_version, taxon_catalog_version,\n          target_taxon_id, contract_status, taxon_observations_json, outcome_class,\n          target_encounter_count, any_fish_encounter_count, target_identification_confidence,\n          score_influenced_choice\n        FROM trips WHERE id = ? AND user_id = ? AND status = 'completed' LIMIT 1`",
@@ -1160,11 +1204,11 @@
       "hasLimit": true
     },
     {
-      "callSiteId": "ae98cb8a9058033781cf040c",
+      "callSiteId": "2d3d9df47c48c759f24409d1",
       "file": "worker/auth.ts",
-      "line": 1380,
+      "line": 1420,
       "containingFunction": "handleAccountRequest",
-      "occurrence": 50,
+      "occurrence": 52,
       "executionMode": "batch",
       "argumentKind": "literal",
       "expression": "`DELETE FROM site_discussion_posts WHERE trip_id = ?\n              AND EXISTS (SELECT 1 FROM trips WHERE id = ? AND user_id = ? AND moderation_status = 'pending')`",
@@ -1183,11 +1227,11 @@
       "hasLimit": false
     },
     {
-      "callSiteId": "2eace82ca40ff3f2cb89011b",
+      "callSiteId": "7e31241038163d0f0f73b2c9",
       "file": "worker/auth.ts",
-      "line": 1383,
+      "line": 1423,
       "containingFunction": "handleAccountRequest",
-      "occurrence": 51,
+      "occurrence": 53,
       "executionMode": "batch",
       "argumentKind": "literal",
       "expression": "\"DELETE FROM trips WHERE id = ? AND user_id = ? AND moderation_status = 'pending'\"",
@@ -1205,11 +1249,11 @@
       "hasLimit": false
     },
     {
-      "callSiteId": "626328899913e7875babcd7e",
+      "callSiteId": "7337fbf4180e19dd49d326c9",
       "file": "worker/auth.ts",
-      "line": 1398,
+      "line": 1438,
       "containingFunction": "handleAccountRequest",
-      "occurrence": 52,
+      "occurrence": 54,
       "executionMode": "first",
       "argumentKind": "literal",
       "expression": "\"SELECT moderation_status FROM trips WHERE id = ? AND user_id = ? LIMIT 1\"",
@@ -1227,11 +1271,11 @@
       "hasLimit": true
     },
     {
-      "callSiteId": "97c4c0de0a48db588445ea04",
+      "callSiteId": "31005b85d0cc3d32d67d097c",
       "file": "worker/auth.ts",
-      "line": 1426,
+      "line": 1466,
       "containingFunction": "handleAccountRequest",
-      "occurrence": 53,
+      "occurrence": 55,
       "executionMode": "first",
       "argumentKind": "literal",
       "expression": "`SELECT activation_id, trip_id, event_sha256, source_record_sha256,\n              participant_group_id, recruitment_frame_id, recruitment_source_id, selection_method,\n              score_influenced_choice, study_consent_version, study_consented_at, target_taxon_id,\n              site_id, geographic_panel, mode, segment_start_at, angler_count,\n              scoring_system_kind, scoring_system_version, scoring_system_sha256,\n              opportunity_score, opportunity_window_id, snapshot_sha256,\n              snapshot_suppression_sha256\n            FROM validation_feasibility_events AS event\n            WHERE event.trip_id = ? AND event.event_type = 'started'\n              AND EXISTS (\n                SELECT 1 FROM trips AS owner_trip\n                WHERE owner_trip.id = event.trip_id AND owner_trip.user_id = ?\n              )\n            LIMIT 1`",
@@ -1250,11 +1294,11 @@
       "hasLimit": true
     },
     {
-      "callSiteId": "fab679b683d4a8d6982ccebe",
+      "callSiteId": "0bb56761f8237d7a5f7cdd3e",
       "file": "worker/auth.ts",
-      "line": 1441,
+      "line": 1481,
       "containingFunction": "handleAccountRequest",
-      "occurrence": 54,
+      "occurrence": 56,
       "executionMode": "first",
       "argumentKind": "literal",
       "expression": "`SELECT activation_id, event_sha256 FROM validation_feasibility_events AS event\n            WHERE event.trip_id = ? AND event.event_type = 'completed'\n              AND EXISTS (\n                SELECT 1 FROM trips AS owner_trip\n                WHERE owner_trip.id = event.trip_id AND owner_trip.user_id = ?\n              )\n            LIMIT 1`",
@@ -1273,11 +1317,11 @@
       "hasLimit": true
     },
     {
-      "callSiteId": "b1ed3164aa233032c3d7984e",
+      "callSiteId": "23eaecd2e39136338a8842d5",
       "file": "worker/auth.ts",
-      "line": 1449,
+      "line": 1489,
       "containingFunction": "handleAccountRequest",
-      "occurrence": 55,
+      "occurrence": 57,
       "executionMode": "first",
       "argumentKind": "literal",
       "expression": "`SELECT root_completion_event_sha256, event_sha256\n            FROM validation_feasibility_corrections AS correction\n            WHERE correction.trip_id = ?\n              AND EXISTS (\n                SELECT 1 FROM trips AS owner_trip\n                WHERE owner_trip.id = correction.trip_id AND owner_trip.user_id = ?\n              )\n            ORDER BY correction.sequence DESC LIMIT 1`",
@@ -1296,11 +1340,11 @@
       "hasLimit": true
     },
     {
-      "callSiteId": "a4a9ca79c6bdc03f0142babf",
+      "callSiteId": "45303f909e18784bd9d498ab",
       "file": "worker/auth.ts",
-      "line": 1522,
+      "line": 1562,
       "containingFunction": "handleAccountRequest",
-      "occurrence": 56,
+      "occurrence": 58,
       "executionMode": "first",
       "argumentKind": "literal",
       "expression": "\"SELECT id FROM gear_profiles WHERE id = ? AND user_id = ? LIMIT 1\"",
@@ -1318,11 +1362,11 @@
       "hasLimit": true
     },
     {
-      "callSiteId": "de4b44ce825575c68f25bf30",
+      "callSiteId": "66fbb54ec1a6d642fb082375",
       "file": "worker/auth.ts",
-      "line": 1599,
+      "line": 1639,
       "containingFunction": "handleAccountRequest",
-      "occurrence": 57,
+      "occurrence": 59,
       "executionMode": "prepared-statement",
       "argumentKind": "reviewed-nonliteral",
       "expression": "`UPDATE trips SET site_id = ?, started_at = ?, ended_at = ?, mode = ?, fishing_method = ?,\n          angler_count = ?, angler_hours = ?, keeper_count = ?, short_released_count = ?,\n          halibut_encounters = ?, no_catch = ?, gear_profile_id = ?, rod = ?, reel = ?, bait_lure = ?, rig = ?,\n          other_catch_count = ?, other_species = ?, observations_json = ?, notes = ?, updated_at = ?, completed_at = ?,\n          ${forecastInvalidation}\n          observation_contract_version = ?, taxon_catalog_version = ?, target_taxon_id = ?, contract_status = ?,\n          taxon_observations_json = ?, outcome_class = ?, target_encounter_count = ?, any_fish_encounter_count = ?,\n          target_identification_confidence = ?,\n          ai_review_status = 'retry', ai_review_json = NULL, ai_review_model = NULL, ai_reviewed_at = NULL\n          WHERE id = ? AND user_id = ? AND moderation_status = 'pending'`",
@@ -1338,11 +1382,11 @@
       "hasLimit": null
     },
     {
-      "callSiteId": "35cf983e9dfa0b95eb74df30",
+      "callSiteId": "1bae462b9f231553bf2238dc",
       "file": "worker/auth.ts",
-      "line": 1647,
+      "line": 1687,
       "containingFunction": "handleAccountRequest",
-      "occurrence": 58,
+      "occurrence": 60,
       "executionMode": "prepared-statement",
       "argumentKind": "literal",
       "expression": "`INSERT INTO trip_validation_provenance (\n              id, trip_id, event_type, collection_contract_version, validation_protocol_id,\n              cohort_id, source_role, recruitment_source_id, incentive_policy_id, selection_method,\n              target_intent, mode_at_enrollment, score_influenced_choice, attestation_status,\n              evidence_status, exclusion_reason, created_at\n            ) SELECT ?, id, 'evidence_exclusion', 'castingcompass.validation-collection/1.0.0', NULL,\n              'predeployment-context', 'context_only', 'profile-edit',\n              'none-outcome-independent/1.0.0', 'legacy_unknown', 'legacy_unknown', ?, ?,\n              'invalidated_after_edit', 'context_only', 'post_completion_profile_edit', ?\n            FROM trips WHERE id = ? AND user_id = ? AND moderation_status = 'pending'`",
@@ -1361,11 +1405,11 @@
       "hasLimit": false
     },
     {
-      "callSiteId": "481d2ecd724c353edf4b965c",
+      "callSiteId": "d6b14dd3bb00bf9e34da95da",
       "file": "worker/auth.ts",
-      "line": 1679,
+      "line": 1719,
       "containingFunction": "handleAccountRequest",
-      "occurrence": 59,
+      "occurrence": 61,
       "executionMode": "first",
       "argumentKind": "literal",
       "expression": "`SELECT trip.*,\n            evidence.id AS edit_receipt_id,\n            correction.correction_id AS correction_receipt_id\n          FROM trips AS trip\n          INNER JOIN trip_validation_provenance AS evidence\n            ON evidence.id = ? AND evidence.trip_id = trip.id\n            AND evidence.event_type = 'evidence_exclusion'\n            AND evidence.attestation_status = 'invalidated_after_edit'\n            AND evidence.evidence_status = 'context_only'\n            AND evidence.exclusion_reason = 'post_completion_profile_edit'\n            AND evidence.created_at = ?\n          LEFT JOIN validation_feasibility_corrections AS correction\n            ON correction.correction_id = ? AND correction.trip_id = trip.id\n            AND correction.corrected_at = ?\n          WHERE trip.id = ? AND trip.user_id = ? LIMIT 1`",
@@ -1385,11 +1429,11 @@
       "hasLimit": true
     },
     {
-      "callSiteId": "57790ed2467509d7c661969e",
+      "callSiteId": "0469711fe157df4353eab26d",
       "file": "worker/auth.ts",
-      "line": 1754,
+      "line": 1794,
       "containingFunction": "handleAccountRequest",
-      "occurrence": 60,
+      "occurrence": 62,
       "executionMode": "first",
       "argumentKind": "literal",
       "expression": "\"SELECT moderation_status FROM trips WHERE id = ? AND user_id = ? LIMIT 1\"",
@@ -1407,11 +1451,11 @@
       "hasLimit": true
     },
     {
-      "callSiteId": "fe7bf6b30ebdd88bb758f7e8",
+      "callSiteId": "2053e45882eed9f6750b3638",
       "file": "worker/auth.ts",
-      "line": 1780,
+      "line": 1820,
       "containingFunction": "handleAccountRequest",
-      "occurrence": 61,
+      "occurrence": 63,
       "executionMode": "all",
       "argumentKind": "literal",
       "expression": "\"SELECT site_id FROM saved_sites WHERE user_id = ? ORDER BY created_at DESC LIMIT 101\"",
@@ -1429,11 +1473,11 @@
       "hasLimit": true
     },
     {
-      "callSiteId": "f3e0829f18292e836ef5baf7",
+      "callSiteId": "c3d83a3439b7cbedb0cb36d3",
       "file": "worker/auth.ts",
-      "line": 1802,
+      "line": 1842,
       "containingFunction": "handleAccountRequest",
-      "occurrence": 62,
+      "occurrence": 64,
       "executionMode": "run",
       "argumentKind": "literal",
       "expression": "`INSERT OR IGNORE INTO saved_sites (user_id, site_id, created_at)\n          SELECT ?, ?, ? WHERE (SELECT COUNT(*) FROM saved_sites WHERE user_id = ?) < 100`",
@@ -1451,11 +1495,11 @@
       "hasLimit": false
     },
     {
-      "callSiteId": "bd6a0e04c19ad3db6f948ca9",
+      "callSiteId": "6e5fef2660f3fa81d4330419",
       "file": "worker/auth.ts",
-      "line": 1809,
+      "line": 1849,
       "containingFunction": "handleAccountRequest",
-      "occurrence": 63,
+      "occurrence": 65,
       "executionMode": "first",
       "argumentKind": "literal",
       "expression": "\"SELECT 1 AS present FROM saved_sites WHERE user_id = ? AND site_id = ? LIMIT 1\"",
@@ -1473,11 +1517,11 @@
       "hasLimit": true
     },
     {
-      "callSiteId": "7fd97a58ce0fb52a19c66629",
+      "callSiteId": "29d7d1ba0fecc3a0cce0c92f",
       "file": "worker/auth.ts",
-      "line": 1813,
+      "line": 1853,
       "containingFunction": "handleAccountRequest",
-      "occurrence": 64,
+      "occurrence": 66,
       "executionMode": "first",
       "argumentKind": "literal",
       "expression": "`SELECT 1 AS at_limit FROM saved_sites\n          WHERE user_id = ? LIMIT 1 OFFSET 99`",
@@ -1495,11 +1539,11 @@
       "hasLimit": true
     },
     {
-      "callSiteId": "3a1c85b7dda597a013bab38f",
+      "callSiteId": "826dbff94465e111b8a7c73a",
       "file": "worker/auth.ts",
-      "line": 1826,
+      "line": 1866,
       "containingFunction": "handleAccountRequest",
-      "occurrence": 65,
+      "occurrence": 67,
       "executionMode": "run",
       "argumentKind": "literal",
       "expression": "\"DELETE FROM saved_sites WHERE user_id = ? AND site_id = ?\"",
@@ -1517,11 +1561,11 @@
       "hasLimit": false
     },
     {
-      "callSiteId": "82368119479e19ad2e2ca1d8",
+      "callSiteId": "2ec7acfa7686794cbae1d082",
       "file": "worker/auth.ts",
-      "line": 1832,
+      "line": 1872,
       "containingFunction": "handleAccountRequest",
-      "occurrence": 66,
+      "occurrence": 68,
       "executionMode": "first",
       "argumentKind": "literal",
       "expression": "\"SELECT 1 AS present FROM saved_sites WHERE user_id = ? AND site_id = ? LIMIT 1\"",
@@ -1539,11 +1583,11 @@
       "hasLimit": true
     },
     {
-      "callSiteId": "72b8995f9ddefc6528a57130",
+      "callSiteId": "66b044ec4b4966faf52ceebc",
       "file": "worker/auth.ts",
-      "line": 1994,
+      "line": 2046,
       "containingFunction": "claimAccountDeletionFence",
-      "occurrence": 67,
+      "occurrence": 69,
       "executionMode": "run",
       "argumentKind": "literal",
       "expression": "`INSERT INTO account_deletion_fences (\n        user_id, owner_subject_hash, lease_token, lease_expires_at, requested_at, updated_at)\n      SELECT ?, ?, ?, ?, ?, ?\n      WHERE EXISTS (SELECT 1 FROM users WHERE id = ?)\n      ON CONFLICT(user_id) DO UPDATE SET\n        lease_token = excluded.lease_token,\n        lease_expires_at = excluded.lease_expires_at,\n        updated_at = excluded.updated_at\n      WHERE account_deletion_fences.owner_subject_hash = excluded.owner_subject_hash\n        AND account_deletion_fences.lease_expires_at <= ?`",
@@ -1563,11 +1607,11 @@
       "hasLimit": false
     },
     {
-      "callSiteId": "9e0667186cd7e72ee03d7f09",
+      "callSiteId": "bdcb718d3cc015de3258a291",
       "file": "worker/auth.ts",
-      "line": 2018,
+      "line": 2070,
       "containingFunction": "claimAccountDeletionFence",
-      "occurrence": 68,
+      "occurrence": 70,
       "executionMode": "first",
       "argumentKind": "literal",
       "expression": "`SELECT requested_at FROM account_deletion_fences\n    WHERE user_id = ? AND owner_subject_hash = ? AND lease_token = ? AND lease_expires_at = ?\n    LIMIT 1`",
@@ -1585,11 +1629,11 @@
       "hasLimit": true
     },
     {
-      "callSiteId": "f37e5a099292060f72525161",
+      "callSiteId": "1836cfab26a25fb2aa087460",
       "file": "worker/auth.ts",
-      "line": 2025,
+      "line": 2077,
       "containingFunction": "claimAccountDeletionFence",
-      "occurrence": 69,
+      "occurrence": 71,
       "executionMode": "first",
       "argumentKind": "literal",
       "expression": "`SELECT lease_expires_at FROM account_deletion_fences\n    WHERE user_id = ? AND owner_subject_hash = ? LIMIT 1`",
@@ -1607,11 +1651,11 @@
       "hasLimit": true
     },
     {
-      "callSiteId": "27d6b918887cfaff4df576c7",
+      "callSiteId": "642fcc4171dd8d4442b765f8",
       "file": "worker/auth.ts",
-      "line": 2036,
+      "line": 2088,
       "containingFunction": "claimAccountDeletionFence",
-      "occurrence": 70,
+      "occurrence": 72,
       "executionMode": "first",
       "argumentKind": "literal",
       "expression": "\"SELECT 1 AS present FROM users WHERE id = ? LIMIT 1\"",
@@ -1629,11 +1673,11 @@
       "hasLimit": true
     },
     {
-      "callSiteId": "e72af837a66eccc798a88ac4",
+      "callSiteId": "c0d3c4a7f130e4ca79e3f83a",
       "file": "worker/auth.ts",
-      "line": 2100,
+      "line": 2152,
       "containingFunction": "jobStatement",
-      "occurrence": 71,
+      "occurrence": 73,
       "executionMode": "returned-statement",
       "argumentKind": "literal",
       "expression": "`INSERT INTO privacy_deletion_jobs\n      (id, receipt_hash, scope, subject_hash, owner_subject_hash, state, objects_total, objects_deleted,\n        last_error_code, requested_at, active_data_removed_at, completed_at, updated_at)\n      VALUES (?, ?, ?, ?, ?, ?, ?, 0, NULL, ?, ?, ?, ?)`",
@@ -1651,11 +1695,11 @@
       "hasLimit": false
     },
     {
-      "callSiteId": "ba512612afbb558a9df75e5a",
+      "callSiteId": "1a3f31f8340aa5ee260eae62",
       "file": "worker/auth.ts",
-      "line": 2121,
+      "line": 2173,
       "containingFunction": "jobStatementForAccountFence",
-      "occurrence": 72,
+      "occurrence": 74,
       "executionMode": "returned-statement",
       "argumentKind": "literal",
       "expression": "`INSERT INTO privacy_deletion_jobs\n      (id, receipt_hash, scope, subject_hash, owner_subject_hash, state, objects_total, objects_deleted,\n        last_error_code, requested_at, active_data_removed_at, completed_at, updated_at)\n      SELECT ?, ?, ?, ?, ?, ?, ?, 0, NULL, ?, ?, ?, ?\n      WHERE EXISTS (SELECT 1 FROM account_deletion_fences\n        WHERE user_id = ? AND owner_subject_hash = ? AND lease_token = ?)\n        AND NOT EXISTS (SELECT 1 FROM trips\n          WHERE user_id = ? AND photo_key IS NOT NULL AND photo_key_hash IS NULL)`",
@@ -1675,11 +1719,11 @@
       "hasLimit": false
     },
     {
-      "callSiteId": "eb68e7692ea57298d2f938f1",
+      "callSiteId": "209efb7077dc712d676f4939",
       "file": "worker/auth.ts",
-      "line": 2146,
+      "line": 2198,
       "containingFunction": "jobStatementForPendingTrip",
-      "occurrence": 73,
+      "occurrence": 75,
       "executionMode": "returned-statement",
       "argumentKind": "literal",
       "expression": "`INSERT INTO privacy_deletion_jobs\n      (id, receipt_hash, scope, subject_hash, owner_subject_hash, state, objects_total, objects_deleted,\n        last_error_code, requested_at, active_data_removed_at, completed_at, updated_at)\n      SELECT ?, ?, ?, ?, ?, ?, ?, 0, NULL, ?, ?, ?, ?\n      WHERE EXISTS (SELECT 1 FROM trips WHERE id = ? AND user_id = ? AND moderation_status = 'pending')`",
@@ -1698,11 +1742,11 @@
       "hasLimit": false
     },
     {
-      "callSiteId": "3bfebb90b00694bbcf019f09",
+      "callSiteId": "cd0ecfbc383bd34512886230",
       "file": "worker/auth.ts",
-      "line": 2166,
+      "line": 2218,
       "containingFunction": "map-callback",
-      "occurrence": 74,
+      "occurrence": 76,
       "executionMode": "returned-statement",
       "argumentKind": "literal",
       "expression": "`INSERT INTO privacy_deletion_tasks\n      (id, job_id, object_key, object_key_hash, object_store, state, attempts, available_at, lease_expires_at,\n        lease_token, last_error_code, created_at, updated_at, completed_at)\n      VALUES (?, ?, ?, ?, ?, 'pending', 0, ?, NULL, NULL, NULL, ?, ?, NULL)`",
@@ -1720,11 +1764,11 @@
       "hasLimit": false
     },
     {
-      "callSiteId": "64f5b4d813fffaa0735d6b0f",
+      "callSiteId": "15485343ba770f8bee0f4325",
       "file": "worker/auth.ts",
-      "line": 2176,
+      "line": 2228,
       "containingFunction": "inventoryStatementsForAccountFence",
-      "occurrence": 75,
+      "occurrence": 77,
       "executionMode": "returned-statement",
       "argumentKind": "literal",
       "expression": "`INSERT INTO privacy_deletion_tasks\n        (id, job_id, object_key, object_key_hash, object_store, state, attempts, available_at,\n          lease_expires_at, lease_token, last_error_code, created_at, updated_at, completed_at)\n        SELECT ? || ':' || task.object_key_hash, ?, task.object_key, task.object_key_hash,\n          task.object_store, 'pending', 0, ?, NULL, NULL, NULL, ?, ?, NULL\n        FROM privacy_deletion_tasks AS task\n        JOIN privacy_deletion_jobs AS source_job ON source_job.id = task.job_id\n        WHERE source_job.owner_subject_hash = ? AND source_job.id != ?\n          AND task.state != 'completed' AND task.object_key IS NOT NULL\n          AND EXISTS (SELECT 1 FROM account_deletion_fences\n            WHERE user_id = ? AND owner_subject_hash = ? AND lease_token = ?)\n          AND EXISTS (SELECT 1 FROM privacy_deletion_jobs\n            WHERE id = ? AND owner_subject_hash = ?)\n        ON CONFLICT(job_id, object_key_hash) DO UPDATE SET\n          available_at = CASE\n            WHEN excluded.available_at > privacy_deletion_tasks.available_at THEN excluded.available_at\n            ELSE privacy_deletion_tasks.available_at\n          END`",
@@ -1745,11 +1789,11 @@
       "hasLimit": false
     },
     {
-      "callSiteId": "62904f7bb97e8c0341fa6888",
+      "callSiteId": "ed895a8f5ea18daedcf15a88",
       "file": "worker/auth.ts",
-      "line": 2208,
+      "line": 2260,
       "containingFunction": "inventoryStatementsForAccountFence",
-      "occurrence": 76,
+      "occurrence": 78,
       "executionMode": "returned-statement",
       "argumentKind": "literal",
       "expression": "`INSERT INTO privacy_deletion_tasks\n        (id, job_id, object_key, object_key_hash, object_store, state, attempts, available_at,\n          lease_expires_at, lease_token, last_error_code, created_at, updated_at, completed_at)\n        SELECT ? || ':' || reservation.object_key_hash, ?, reservation.object_key,\n          reservation.object_key_hash, 'trip_photos', 'pending', 0, reservation.available_at,\n          NULL, NULL, NULL, ?, ?, NULL\n        FROM trip_photo_upload_reservations AS reservation\n        WHERE reservation.owner_subject_hash = ?\n          AND EXISTS (SELECT 1 FROM account_deletion_fences\n            WHERE user_id = ? AND owner_subject_hash = ? AND lease_token = ?)\n          AND EXISTS (SELECT 1 FROM privacy_deletion_jobs\n            WHERE id = ? AND owner_subject_hash = ?)\n        ON CONFLICT(job_id, object_key_hash) DO UPDATE SET\n          available_at = CASE\n            WHEN excluded.available_at > privacy_deletion_tasks.available_at THEN excluded.available_at\n            ELSE privacy_deletion_tasks.available_at\n          END`",
@@ -1771,11 +1815,11 @@
       "hasLimit": false
     },
     {
-      "callSiteId": "be5a475e9ec21c4f620125d0",
+      "callSiteId": "321babbe8ae4b4d5753734f2",
       "file": "worker/auth.ts",
-      "line": 2237,
+      "line": 2289,
       "containingFunction": "inventoryStatementsForAccountFence",
-      "occurrence": 77,
+      "occurrence": 79,
       "executionMode": "returned-statement",
       "argumentKind": "literal",
       "expression": "`INSERT INTO privacy_deletion_tasks\n        (id, job_id, object_key, object_key_hash, object_store, state, attempts, available_at,\n          lease_expires_at, lease_token, last_error_code, created_at, updated_at, completed_at)\n        SELECT ? || ':' || export.object_key_hash, ?, export.object_key, export.object_key_hash,\n          'privacy_exports', 'pending', 0, ?, NULL, NULL, NULL, ?, ?, NULL\n        FROM privacy_export_jobs AS export\n        WHERE export.owner_subject_hash = ? AND export.object_key IS NOT NULL\n          AND export.object_key_hash IS NOT NULL\n          AND export.state IN ('pending', 'queued', 'processing', 'retry', 'completed', 'needs_attention')\n          AND EXISTS (SELECT 1 FROM account_deletion_fences\n            WHERE user_id = ? AND owner_subject_hash = ? AND lease_token = ?)\n          AND EXISTS (SELECT 1 FROM privacy_deletion_jobs\n            WHERE id = ? AND owner_subject_hash = ?)\n        ON CONFLICT(job_id, object_key_hash) DO UPDATE SET\n          available_at = CASE\n            WHEN excluded.available_at > privacy_deletion_tasks.available_at THEN excluded.available_at\n            ELSE privacy_deletion_tasks.available_at\n          END`",
@@ -1797,11 +1841,11 @@
       "hasLimit": false
     },
     {
-      "callSiteId": "2e3cd27f7b26c8218bea7f13",
+      "callSiteId": "2744ed622c03e4c53539f1fa",
       "file": "worker/auth.ts",
-      "line": 2268,
+      "line": 2320,
       "containingFunction": "inventoryStatementsForAccountFence",
-      "occurrence": 78,
+      "occurrence": 80,
       "executionMode": "returned-statement",
       "argumentKind": "literal",
       "expression": "`INSERT INTO privacy_deletion_tasks\n        (id, job_id, object_key, object_key_hash, object_store, state, attempts, available_at,\n          lease_expires_at, lease_token, last_error_code, created_at, updated_at, completed_at)\n        SELECT ? || ':' || trip.photo_key_hash, ?, trip.photo_key, trip.photo_key_hash,\n          'trip_photos', 'pending', 0, ?, NULL, NULL, NULL, ?, ?, NULL\n        FROM trips AS trip\n        WHERE trip.user_id = ? AND trip.photo_key IS NOT NULL AND trip.photo_key_hash IS NOT NULL\n          AND EXISTS (SELECT 1 FROM account_deletion_fences\n            WHERE user_id = ? AND owner_subject_hash = ? AND lease_token = ?)\n          AND EXISTS (SELECT 1 FROM privacy_deletion_jobs\n            WHERE id = ? AND owner_subject_hash = ?)\n        ON CONFLICT(job_id, object_key_hash) DO UPDATE SET\n          available_at = CASE\n            WHEN excluded.available_at > privacy_deletion_tasks.available_at THEN excluded.available_at\n            ELSE privacy_deletion_tasks.available_at\n          END`",
@@ -1823,11 +1867,11 @@
       "hasLimit": false
     },
     {
-      "callSiteId": "0d8af7f5d92bc5c818343683",
+      "callSiteId": "3390284e355d08fc49a13129",
       "file": "worker/auth.ts",
-      "line": 2302,
+      "line": 2354,
       "containingFunction": "finalizeInventoryStatementForAccountFence",
-      "occurrence": 79,
+      "occurrence": 81,
       "executionMode": "returned-statement",
       "argumentKind": "literal",
       "expression": "`UPDATE privacy_deletion_jobs SET\n        objects_total = (SELECT COUNT(*) FROM privacy_deletion_tasks WHERE job_id = ?),\n        state = CASE\n          WHEN EXISTS (SELECT 1 FROM privacy_deletion_tasks WHERE job_id = ?)\n            THEN 'active_data_removed'\n          ELSE 'completed'\n        END,\n        completed_at = CASE\n          WHEN EXISTS (SELECT 1 FROM privacy_deletion_tasks WHERE job_id = ?)\n            THEN NULL\n          ELSE ?\n        END,\n        updated_at = ?\n      WHERE id = ? AND owner_subject_hash = ?\n        AND EXISTS (SELECT 1 FROM account_deletion_fences\n          WHERE user_id = ? AND owner_subject_hash = ? AND lease_token = ?)`",
@@ -1847,11 +1891,11 @@
       "hasLimit": false
     },
     {
-      "callSiteId": "e74edf7a37f19e7ac40664b0",
+      "callSiteId": "483fd50c75b93bd4a42836a9",
       "file": "worker/auth.ts",
-      "line": 2330,
+      "line": 2382,
       "containingFunction": "map-callback",
-      "occurrence": 80,
+      "occurrence": 82,
       "executionMode": "returned-statement",
       "argumentKind": "literal",
       "expression": "`INSERT INTO privacy_deletion_tasks\n      (id, job_id, object_key, object_key_hash, object_store, state, attempts, available_at, lease_expires_at,\n        lease_token, last_error_code, created_at, updated_at, completed_at)\n      SELECT ?, ?, ?, ?, ?, 'pending', 0, ?, NULL, NULL, NULL, ?, ?, NULL\n      WHERE EXISTS (SELECT 1 FROM trips WHERE id = ? AND user_id = ? AND moderation_status = 'pending')`",
@@ -1870,11 +1914,11 @@
       "hasLimit": false
     },
     {
-      "callSiteId": "195c973ac8767e55e7de290b",
+      "callSiteId": "254d792e258dc693b0a54f9f",
       "file": "worker/auth.ts",
-      "line": 2353,
+      "line": 2405,
       "containingFunction": "prepareConditionalFeasibilityCorrectionInsert",
-      "occurrence": 81,
+      "occurrence": 83,
       "executionMode": "returned-statement",
       "argumentKind": "literal",
       "expression": "`INSERT INTO validation_feasibility_corrections (\n      correction_id, activation_id, trip_id, correction_contract_version,\n      root_completion_event_sha256, previous_event_sha256, correction_reason,\n      analytical_status, site_id, geographic_panel, mode, segment_start_at,\n      segment_end_at, angler_count, effort_minutes, target_encountered,\n      target_encounter_count, target_retained_count, target_released_count,\n      identification_confidence, corrected_at, event_sha256\n    ) SELECT ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?\n    WHERE EXISTS (\n      SELECT 1 FROM trips WHERE id = ? AND user_id = ? AND moderation_status = 'pending'\n        AND updated_at = ?\n    )`",
@@ -1893,11 +1937,11 @@
       "hasLimit": false
     },
     {
-      "callSiteId": "179cb11ff6a9e94eeca0ecdf",
+      "callSiteId": "88783f19c26d0bd5cf919117",
       "file": "worker/auth.ts",
-      "line": 2423,
+      "line": 2475,
       "containingFunction": "selectDeletionJobByReceipt",
-      "occurrence": 82,
+      "occurrence": 84,
       "executionMode": "first",
       "argumentKind": "literal",
       "expression": "`SELECT scope, state, objects_total, objects_deleted, requested_at, completed_at\n    FROM privacy_deletion_jobs WHERE receipt_hash = ? LIMIT 1`",
@@ -1915,11 +1959,11 @@
       "hasLimit": true
     },
     {
-      "callSiteId": "42cdf071fe60f8f813947b9e",
+      "callSiteId": "19a483b8ed4ed17cd282df27",
       "file": "worker/auth.ts",
-      "line": 2443,
+      "line": 2495,
       "containingFunction": "exactAccountDeletionCommit",
-      "occurrence": 83,
+      "occurrence": 85,
       "executionMode": "first",
       "argumentKind": "literal",
       "expression": "`SELECT job.id AS job_id, job.scope, job.subject_hash,\n      job.owner_subject_hash, job.state, job.objects_total, job.objects_deleted,\n      job.last_error_code, job.requested_at, job.active_data_removed_at,\n      job.completed_at, job.updated_at,\n      (SELECT COUNT(*) FROM privacy_deletion_tasks WHERE job_id = job.id) AS task_count,\n      (SELECT COUNT(*) FROM privacy_deletion_tasks AS task\n        WHERE task.job_id = job.id AND (\n          task.id != (job.id || ':' || task.object_key_hash)\n          OR task.object_key IS NULL\n          OR length(task.object_key_hash) != 64\n          OR task.object_key_hash GLOB '*[^a-f0-9]*'\n          OR task.object_store NOT IN ('trip_photos', 'privacy_exports')\n          OR task.state != 'pending' OR task.attempts != 0\n          OR task.lease_expires_at IS NOT NULL OR task.lease_token IS NOT NULL\n          OR task.last_error_code IS NOT NULL OR task.completed_at IS NOT NULL\n          OR task.created_at != job.requested_at OR task.updated_at != job.requested_at\n        )) AS invalid_task_count,\n      (SELECT COUNT(*) FROM users WHERE id = ?) AS user_count,\n      (SELECT COUNT(*) FROM trips WHERE user_id = ?) AS trip_count,\n      (SELECT COUNT(*) FROM account_deletion_fences\n        WHERE user_id = ? OR owner_subject_hash = ?) AS fence_count,\n      (SELECT COUNT(*) FROM trip_photo_upload_reservations\n        WHERE owner_subject_hash = ?) AS reservation_count,\n      (SELECT COUNT(*) FROM auth_attempts WHERE email_hash = ?) AS auth_attempt_count,\n      (SELECT COUNT(*) FROM privacy_export_jobs\n        WHERE user_id = ?\n          AND state IN ('pending', 'queued', 'processing', 'retry', 'completed', 'needs_attention'))\n        AS export_user_count,\n      (SELECT COUNT(*) FROM privacy_export_jobs\n        WHERE owner_subject_hash = ?\n          AND state IN ('pending', 'queued', 'processing', 'retry', 'completed', 'needs_attention'))\n        AS active_export_count\n    FROM privacy_deletion_jobs AS job\n    WHERE job.receipt_hash = ? LIMIT 1`",
@@ -1944,11 +1988,11 @@
       "hasLimit": true
     },
     {
-      "callSiteId": "98cd5c69894eae5d82f43ffd",
+      "callSiteId": "569d7d48a7fd16120d40c73c",
       "file": "worker/auth.ts",
-      "line": 2554,
+      "line": 2606,
       "containingFunction": "exactPendingTripDeletionCommit",
-      "occurrence": 84,
+      "occurrence": 86,
       "executionMode": "first",
       "argumentKind": "literal",
       "expression": "`SELECT job.id AS job_id, job.scope, job.subject_hash,\n      job.owner_subject_hash, job.state AS job_state, job.objects_total, job.objects_deleted,\n      job.last_error_code AS job_error, job.requested_at, job.active_data_removed_at,\n      job.completed_at AS job_completed_at, job.updated_at AS job_updated_at,\n      task.id AS task_id, task.object_key, task.object_key_hash, task.object_store,\n      task.state AS task_state, task.attempts AS task_attempts, task.available_at,\n      task.lease_expires_at, task.lease_token, task.last_error_code AS task_error,\n      task.created_at AS task_created_at, task.updated_at AS task_updated_at,\n      task.completed_at AS task_completed_at,\n      (SELECT COUNT(*) FROM privacy_deletion_tasks WHERE job_id = job.id) AS task_count,\n      (SELECT COUNT(*) FROM trips WHERE id = ? AND user_id = ?) AS trip_count,\n      (SELECT COUNT(*) FROM site_discussion_posts WHERE trip_id = ?) AS discussion_count\n    FROM privacy_deletion_jobs AS job\n    LEFT JOIN privacy_deletion_tasks AS task ON task.job_id = job.id\n    WHERE job.receipt_hash = ? LIMIT 1`",
@@ -1969,18 +2013,18 @@
       "hasLimit": true
     },
     {
-      "callSiteId": "e0e36618bd3cef6a86f73ab8",
+      "callSiteId": "fdf9fedc31412de0b7b8593f",
       "file": "worker/auth.ts",
-      "line": 2683,
+      "line": 2735,
       "containingFunction": "processPrivacyDeletionTasks",
-      "occurrence": 85,
+      "occurrence": 87,
       "executionMode": "prepared-statement",
       "argumentKind": "reviewed-nonliteral",
       "expression": "query",
       "expressionSha256": "a8b771920b8319e47251d1360f5e880bc18e8d329b0f0d003ea3c7e615558947",
       "declarationReference": {
         "name": "query",
-        "declarationLine": 2671,
+        "declarationLine": 2723,
         "initializerSha256": "fc86e2cf8e86409a6e41550f70c81a8c657a49da07558f4db56abaa6d44eb576"
       },
       "statementClass": "UNRESOLVED",
@@ -1993,11 +2037,11 @@
       "hasLimit": null
     },
     {
-      "callSiteId": "fcedbe623ae6339537187b6d",
+      "callSiteId": "7a54d43991c0fd37b1708700",
       "file": "worker/auth.ts",
-      "line": 2700,
+      "line": 2752,
       "containingFunction": "processPrivacyDeletionTasks",
-      "occurrence": 86,
+      "occurrence": 88,
       "executionMode": "run",
       "argumentKind": "literal",
       "expression": "`UPDATE privacy_deletion_tasks\n        SET state = 'needs_attention', lease_expires_at = NULL, lease_token = NULL,\n          last_error_code = 'object_delete_lease_expired', updated_at = ?\n        WHERE id = ? AND state = 'leased' AND attempts >= ?\n          AND (lease_expires_at IS NULL OR lease_expires_at <= ?)`",
@@ -2015,11 +2059,11 @@
       "hasLimit": false
     },
     {
-      "callSiteId": "83330be06a5905428da49577",
+      "callSiteId": "01a63ced3e2e0af418d31b34",
       "file": "worker/auth.ts",
-      "line": 2712,
+      "line": 2764,
       "containingFunction": "processPrivacyDeletionTasks",
-      "occurrence": 87,
+      "occurrence": 89,
       "executionMode": "run",
       "argumentKind": "literal",
       "expression": "`UPDATE privacy_deletion_tasks\n      SET state = 'needs_attention', attempts = CASE WHEN attempts < ? THEN ? ELSE attempts END,\n        lease_expires_at = NULL, lease_token = NULL,\n        last_error_code = 'object_locator_missing', updated_at = ?\n      WHERE id = ? AND state != 'completed'`",
@@ -2037,11 +2081,11 @@
       "hasLimit": false
     },
     {
-      "callSiteId": "47cf88920568304573303756",
+      "callSiteId": "62af53bb43b2e7934b04cac2",
       "file": "worker/auth.ts",
-      "line": 2729,
+      "line": 2781,
       "containingFunction": "processPrivacyDeletionTasks",
-      "occurrence": 88,
+      "occurrence": 90,
       "executionMode": "run",
       "argumentKind": "literal",
       "expression": "`UPDATE privacy_deletion_tasks\n        SET state = 'needs_attention', available_at = ?, lease_expires_at = NULL, lease_token = NULL,\n          last_error_code = 'object_storage_unavailable', updated_at = ?\n        WHERE id = ? AND state != 'completed'\n          AND (state != 'leased' OR lease_expires_at IS NULL OR lease_expires_at <= ?)`",
@@ -2059,11 +2103,11 @@
       "hasLimit": false
     },
     {
-      "callSiteId": "f1ab476ac1bb4fdb57726c1a",
+      "callSiteId": "b144690382df7613f1e1912e",
       "file": "worker/auth.ts",
-      "line": 2741,
+      "line": 2793,
       "containingFunction": "processPrivacyDeletionTasks",
-      "occurrence": 89,
+      "occurrence": 91,
       "executionMode": "run",
       "argumentKind": "literal",
       "expression": "`UPDATE privacy_deletion_tasks\n        SET state = 'leased', attempts = attempts + 1, lease_expires_at = ?, lease_token = ?, updated_at = ?\n        WHERE id = ?\n          AND ((state = 'pending' AND available_at <= ?)\n            OR (state = 'leased' AND (lease_expires_at IS NULL OR lease_expires_at <= ?)))`",
@@ -2081,11 +2125,11 @@
       "hasLimit": false
     },
     {
-      "callSiteId": "995cc90ab6522c96ca796ae4",
+      "callSiteId": "5b5fe75ab3cfadb42cf18143",
       "file": "worker/auth.ts",
-      "line": 2751,
+      "line": 2803,
       "containingFunction": "processPrivacyDeletionTasks",
-      "occurrence": 90,
+      "occurrence": 92,
       "executionMode": "first",
       "argumentKind": "literal",
       "expression": "`SELECT id, job_id, object_key, object_key_hash, object_store,\n        state, attempts, available_at, lease_expires_at, lease_token, completed_at\n      FROM privacy_deletion_tasks\n      WHERE id = ? AND job_id = ? AND state = 'leased' AND attempts = ?\n        AND object_key = ? AND object_key_hash = ? AND object_store = ?\n        AND lease_expires_at = ? AND lease_token = ? AND completed_at IS NULL\n      LIMIT 1`",
@@ -2103,11 +2147,11 @@
       "hasLimit": true
     },
     {
-      "callSiteId": "0119f6c1fa09518bc3b5d1e5",
+      "callSiteId": "8736ac994a4fb72688b532cc",
       "file": "worker/auth.ts",
-      "line": 2773,
+      "line": 2825,
       "containingFunction": "processPrivacyDeletionTasks",
-      "occurrence": 91,
+      "occurrence": 93,
       "executionMode": "run",
       "argumentKind": "literal",
       "expression": "`UPDATE privacy_deletion_tasks\n        SET state = 'needs_attention', lease_expires_at = NULL, lease_token = NULL,\n          last_error_code = 'object_locator_hash_mismatch', updated_at = ?\n        WHERE id = ? AND state = 'leased' AND lease_token = ?`",
@@ -2125,11 +2169,11 @@
       "hasLimit": false
     },
     {
-      "callSiteId": "e515bd9d590421b0f998955d",
+      "callSiteId": "d2e6a636c5db1240f14bee09",
       "file": "worker/auth.ts",
-      "line": 2782,
+      "line": 2834,
       "containingFunction": "processPrivacyDeletionTasks",
-      "occurrence": 92,
+      "occurrence": 94,
       "executionMode": "run",
       "argumentKind": "literal",
       "expression": "\"UPDATE privacy_deletion_jobs SET state = 'purging', last_error_code = NULL, updated_at = ? WHERE id = ? AND state != 'completed'\"",
@@ -2147,11 +2191,11 @@
       "hasLimit": false
     },
     {
-      "callSiteId": "e98bcd232c32a502fafac67a",
+      "callSiteId": "2d367564af06b00e1f3f0ec3",
       "file": "worker/auth.ts",
-      "line": 2788,
+      "line": 2840,
       "containingFunction": "processPrivacyDeletionTasks",
-      "occurrence": 93,
+      "occurrence": 95,
       "executionMode": "prepared-statement",
       "argumentKind": "literal",
       "expression": "`UPDATE privacy_export_jobs\n            SET state = 'expired', user_id = NULL, object_key = NULL, object_key_hash = NULL,\n              content_sha256 = NULL, size_bytes = NULL, record_count = NULL,\n              lease_expires_at = NULL, lease_token = NULL, last_error_code = NULL, updated_at = ?\n            WHERE object_key = ? AND object_key_hash = ?\n              AND user_id IS NULL AND state != 'completed'`",
@@ -2169,11 +2213,11 @@
       "hasLimit": false
     },
     {
-      "callSiteId": "f5d67b168cfdb886f6b36ccb",
+      "callSiteId": "3ab18dc8eb816c74cfb28a24",
       "file": "worker/auth.ts",
-      "line": 2796,
+      "line": 2848,
       "containingFunction": "processPrivacyDeletionTasks",
-      "occurrence": 94,
+      "occurrence": 96,
       "executionMode": "prepared-statement",
       "argumentKind": "literal",
       "expression": "`UPDATE privacy_deletion_tasks SET state = 'completed', object_key = NULL,\n          lease_expires_at = NULL, lease_token = NULL, last_error_code = NULL,\n          completed_at = ?, updated_at = ?\n        WHERE id = ? AND state = 'leased' AND lease_token = ?`",
@@ -2191,11 +2235,11 @@
       "hasLimit": false
     },
     {
-      "callSiteId": "c848522fba3c7e73725f58e7",
+      "callSiteId": "953d5b09a312ff5ce8f7a107",
       "file": "worker/auth.ts",
-      "line": 2806,
+      "line": 2858,
       "containingFunction": "processPrivacyDeletionTasks",
-      "occurrence": 95,
+      "occurrence": 97,
       "executionMode": "first",
       "argumentKind": "literal",
       "expression": "`SELECT id, job_id, object_key, object_key_hash, object_store,\n          state, attempts, available_at, lease_expires_at, lease_token, completed_at\n        FROM privacy_deletion_tasks\n        WHERE id = ? AND job_id = ? AND state = 'completed' AND attempts = ?\n          AND object_key IS NULL AND object_key_hash = ? AND object_store = ?\n          AND lease_expires_at IS NULL AND lease_token IS NULL AND completed_at = ?\n        LIMIT 1`",
@@ -2213,11 +2257,11 @@
       "hasLimit": true
     },
     {
-      "callSiteId": "daefea2a0bd5c367cd668d93",
+      "callSiteId": "3a20c7dc5cd171a8dd405641",
       "file": "worker/auth.ts",
-      "line": 2824,
+      "line": 2876,
       "containingFunction": "processPrivacyDeletionTasks",
-      "occurrence": 96,
+      "occurrence": 98,
       "executionMode": "first",
       "argumentKind": "literal",
       "expression": "`SELECT COUNT(*) AS count FROM privacy_export_jobs\n          WHERE user_id IS NULL AND state != 'completed'\n            AND (object_key = ? OR object_key_hash = ?)`",
@@ -2235,11 +2279,11 @@
       "hasLimit": false
     },
     {
-      "callSiteId": "1c900fb62ca387920c8a7e94",
+      "callSiteId": "216795a73381dd8b529c4991",
       "file": "worker/auth.ts",
-      "line": 2838,
+      "line": 2890,
       "containingFunction": "processPrivacyDeletionTasks",
-      "occurrence": 97,
+      "occurrence": 99,
       "executionMode": "run",
       "argumentKind": "literal",
       "expression": "`UPDATE privacy_deletion_tasks\n        SET state = CASE WHEN attempts >= ? THEN 'needs_attention' ELSE 'pending' END,\n        available_at = ?, lease_expires_at = NULL,\n        lease_token = NULL, last_error_code = 'object_delete_failed', updated_at = ?\n        WHERE id = ? AND state = 'leased' AND lease_token = ?`",
@@ -2257,11 +2301,11 @@
       "hasLimit": false
     },
     {
-      "callSiteId": "0eec3f60a7d3954c834ab3a9",
+      "callSiteId": "550eb1a0ee40b8e1ca6b78d6",
       "file": "worker/auth.ts",
-      "line": 2854,
+      "line": 2906,
       "containingFunction": "refreshDeletionJobStatus",
-      "occurrence": 98,
+      "occurrence": 100,
       "executionMode": "run",
       "argumentKind": "literal",
       "expression": "`UPDATE privacy_deletion_jobs SET\n      objects_deleted = (SELECT COUNT(*) FROM privacy_deletion_tasks\n        WHERE job_id = privacy_deletion_jobs.id AND state = 'completed'),\n      state = CASE\n        WHEN (SELECT COUNT(*) FROM privacy_deletion_tasks WHERE job_id = privacy_deletion_jobs.id) = objects_total\n          AND NOT EXISTS (SELECT 1 FROM privacy_deletion_tasks\n            WHERE job_id = privacy_deletion_jobs.id AND state != 'completed')\n          THEN 'completed'\n        WHEN (SELECT COUNT(*) FROM privacy_deletion_tasks WHERE job_id = privacy_deletion_jobs.id) != objects_total\n          THEN 'needs_attention'\n        WHEN EXISTS (SELECT 1 FROM privacy_deletion_tasks\n          WHERE job_id = privacy_deletion_jobs.id AND state = 'needs_attention')\n          THEN 'needs_attention'\n        ELSE 'active_data_removed'\n      END,\n      last_error_code = CASE\n        WHEN (SELECT COUNT(*) FROM privacy_deletion_tasks WHERE job_id = privacy_deletion_jobs.id) = objects_total\n          AND NOT EXISTS (SELECT 1 FROM privacy_deletion_tasks\n            WHERE job_id = privacy_deletion_jobs.id AND state != 'completed')\n          THEN NULL\n        WHEN (SELECT COUNT(*) FROM privacy_deletion_tasks WHERE job_id = privacy_deletion_jobs.id) != objects_total\n          THEN 'task_ledger_incomplete'\n        WHEN EXISTS (SELECT 1 FROM privacy_deletion_tasks\n          WHERE job_id = privacy_deletion_jobs.id AND state = 'needs_attention')\n          THEN 'photo_delete_incomplete'\n        ELSE NULL\n      END,\n      completed_at = CASE\n        WHEN (SELECT COUNT(*) FROM privacy_deletion_tasks WHERE job_id = privacy_deletion_jobs.id) = objects_total\n          AND NOT EXISTS (SELECT 1 FROM privacy_deletion_tasks\n            WHERE job_id = privacy_deletion_jobs.id AND state != 'completed')\n          THEN COALESCE(completed_at, ?)\n        ELSE NULL\n      END,\n      updated_at = ?\n    WHERE id = ?`",
@@ -2280,11 +2324,11 @@
       "hasLimit": false
     },
     {
-      "callSiteId": "fa92b8a7c6d6641c6d10b362",
+      "callSiteId": "e2a3030c1751f0ae87f16355",
       "file": "worker/auth.ts",
-      "line": 2896,
+      "line": 2948,
       "containingFunction": "reconcileDeletionJobs",
-      "occurrence": 99,
+      "occurrence": 101,
       "executionMode": "run",
       "argumentKind": "literal",
       "expression": "`UPDATE privacy_deletion_jobs SET\n      objects_deleted = (SELECT COUNT(*) FROM privacy_deletion_tasks\n        WHERE job_id = privacy_deletion_jobs.id AND state = 'completed'),\n      state = CASE\n        WHEN (SELECT COUNT(*) FROM privacy_deletion_tasks WHERE job_id = privacy_deletion_jobs.id) = objects_total\n          AND NOT EXISTS (SELECT 1 FROM privacy_deletion_tasks\n            WHERE job_id = privacy_deletion_jobs.id AND state != 'completed')\n          THEN 'completed'\n        WHEN (SELECT COUNT(*) FROM privacy_deletion_tasks WHERE job_id = privacy_deletion_jobs.id) != objects_total\n          THEN 'needs_attention'\n        WHEN EXISTS (SELECT 1 FROM privacy_deletion_tasks\n          WHERE job_id = privacy_deletion_jobs.id AND state = 'needs_attention')\n          THEN 'needs_attention'\n        ELSE 'active_data_removed'\n      END,\n      last_error_code = CASE\n        WHEN (SELECT COUNT(*) FROM privacy_deletion_tasks WHERE job_id = privacy_deletion_jobs.id) = objects_total\n          AND NOT EXISTS (SELECT 1 FROM privacy_deletion_tasks\n            WHERE job_id = privacy_deletion_jobs.id AND state != 'completed')\n          THEN NULL\n        WHEN (SELECT COUNT(*) FROM privacy_deletion_tasks WHERE job_id = privacy_deletion_jobs.id) != objects_total\n          THEN 'task_ledger_incomplete'\n        WHEN EXISTS (SELECT 1 FROM privacy_deletion_tasks\n          WHERE job_id = privacy_deletion_jobs.id AND state = 'needs_attention')\n          THEN 'photo_delete_incomplete'\n        ELSE NULL\n      END,\n      completed_at = CASE\n        WHEN (SELECT COUNT(*) FROM privacy_deletion_tasks WHERE job_id = privacy_deletion_jobs.id) = objects_total\n          AND NOT EXISTS (SELECT 1 FROM privacy_deletion_tasks\n            WHERE job_id = privacy_deletion_jobs.id AND state != 'completed')\n          THEN COALESCE(completed_at, ?)\n        ELSE NULL\n      END,\n      updated_at = ?\n    WHERE id IN (\n      SELECT id FROM privacy_deletion_jobs\n      WHERE state != 'completed'\n        OR objects_deleted != objects_total\n        OR (SELECT COUNT(*) FROM privacy_deletion_tasks\n          WHERE job_id = privacy_deletion_jobs.id) != objects_total\n        OR EXISTS (SELECT 1 FROM privacy_deletion_tasks\n          WHERE job_id = privacy_deletion_jobs.id AND state != 'completed')\n      ORDER BY updated_at LIMIT 100\n    )`",
@@ -2303,11 +2347,11 @@
       "hasLimit": true
     },
     {
-      "callSiteId": "81761dcb25a1f5d529326642",
+      "callSiteId": "a3a459fc6563dc41ed861438",
       "file": "worker/auth.ts",
-      "line": 2967,
+      "line": 3019,
       "containingFunction": "cleanupAuthRetentionData",
-      "occurrence": 100,
+      "occurrence": 102,
       "executionMode": "batch",
       "argumentKind": "literal",
       "expression": "`DELETE FROM auth_sessions WHERE token_hash IN (\n      SELECT token_hash FROM auth_sessions WHERE expires_at <= ?\n      ORDER BY expires_at, token_hash LIMIT ?\n    )`",
@@ -2325,11 +2369,11 @@
       "hasLimit": true
     },
     {
-      "callSiteId": "90e7cf080a7c237566acee91",
+      "callSiteId": "18916dd222c393bdc254a2ca",
       "file": "worker/auth.ts",
-      "line": 2971,
+      "line": 3023,
       "containingFunction": "cleanupAuthRetentionData",
-      "occurrence": 101,
+      "occurrence": 103,
       "executionMode": "batch",
       "argumentKind": "literal",
       "expression": "`DELETE FROM email_challenges WHERE id IN (\n      SELECT id FROM email_challenges WHERE expires_at <= ?\n      ORDER BY expires_at, id LIMIT ?\n    )`",
@@ -2347,11 +2391,11 @@
       "hasLimit": true
     },
     {
-      "callSiteId": "89380fb684ca41f6d292e074",
+      "callSiteId": "a97cfe8edd835a8823da9a15",
       "file": "worker/auth.ts",
-      "line": 2975,
+      "line": 3027,
       "containingFunction": "cleanupAuthRetentionData",
-      "occurrence": 102,
+      "occurrence": 104,
       "executionMode": "batch",
       "argumentKind": "literal",
       "expression": "`DELETE FROM auth_attempts WHERE id IN (\n      SELECT id FROM auth_attempts WHERE attempted_at < ?\n      ORDER BY attempted_at, id LIMIT ?\n    )`",
@@ -2369,11 +2413,11 @@
       "hasLimit": true
     },
     {
-      "callSiteId": "20076d2aeed59c1aacf5f68a",
+      "callSiteId": "09bc90a9af45c80d5501942f",
       "file": "worker/auth.ts",
-      "line": 2979,
+      "line": 3031,
       "containingFunction": "cleanupAuthRetentionData",
-      "occurrence": 103,
+      "occurrence": 105,
       "executionMode": "batch",
       "argumentKind": "literal",
       "expression": "`DELETE FROM signup_age_proofs WHERE token_hash IN (\n      SELECT token_hash FROM signup_age_proofs\n      WHERE expires_at < ? OR (consumed_at IS NOT NULL AND consumed_at < ?)\n      LIMIT ?\n    )`",
@@ -2391,11 +2435,11 @@
       "hasLimit": true
     },
     {
-      "callSiteId": "3ba59451e891c3b963047f18",
+      "callSiteId": "32c534a8aa6307d4125170ca",
       "file": "worker/auth.ts",
-      "line": 2984,
+      "line": 3036,
       "containingFunction": "cleanupAuthRetentionData",
-      "occurrence": 104,
+      "occurrence": 106,
       "executionMode": "batch",
       "argumentKind": "literal",
       "expression": "`DELETE FROM privacy_deletion_jobs\n      WHERE id IN (\n        SELECT id FROM privacy_deletion_jobs\n        WHERE state = 'completed' AND completed_at < ?\n          AND objects_deleted = objects_total\n          AND (SELECT COUNT(*) FROM privacy_deletion_tasks\n            WHERE job_id = privacy_deletion_jobs.id) = objects_total\n          AND NOT EXISTS (SELECT 1 FROM privacy_deletion_tasks\n            WHERE job_id = privacy_deletion_jobs.id AND state != 'completed')\n        ORDER BY completed_at, id LIMIT ?\n      )`",
@@ -2414,11 +2458,11 @@
       "hasLimit": true
     },
     {
-      "callSiteId": "462dc553161028666cdfdd80",
+      "callSiteId": "a0bde9ee341076e9346e94f0",
       "file": "worker/auth.ts",
-      "line": 2995,
+      "line": 3047,
       "containingFunction": "cleanupAuthRetentionData",
-      "occurrence": 105,
+      "occurrence": 107,
       "executionMode": "batch",
       "argumentKind": "literal",
       "expression": "`DELETE FROM privacy_export_jobs WHERE id IN (\n      SELECT id FROM privacy_export_jobs\n      WHERE state = 'expired' AND updated_at < ? AND object_key IS NULL\n      ORDER BY updated_at, id LIMIT ?\n    )`",
@@ -2436,11 +2480,11 @@
       "hasLimit": true
     },
     {
-      "callSiteId": "9b08be63d45121b028742de4",
+      "callSiteId": "32c8fbea2243e03ea2705591",
       "file": "worker/auth.ts",
-      "line": 3010,
+      "line": 3062,
       "containingFunction": "selectUserForSession",
-      "occurrence": 106,
+      "occurrence": 108,
       "executionMode": "first",
       "argumentKind": "literal",
       "expression": "`SELECT id, email,\n    CASE WHEN age_eligibility_confirmed_at IS NOT NULL THEN 1 ELSE 0 END AS age_eligible,\n    CASE WHEN age_eligibility_confirmed_at IS NOT NULL AND terms_version = ? AND privacy_version = ?\n      THEN 1 ELSE 0 END AS legal_accepted\n    FROM users WHERE id = ? LIMIT 1`",
@@ -2458,11 +2502,11 @@
       "hasLimit": true
     },
     {
-      "callSiteId": "f36fac2bdc7382c5869704a0",
+      "callSiteId": "37e18834cbb620bcfd5dbdcc",
       "file": "worker/auth.ts",
-      "line": 3031,
+      "line": 3083,
       "containingFunction": "map-callback",
-      "occurrence": 107,
+      "occurrence": 109,
       "executionMode": "all",
       "argumentKind": "literal",
       "expression": "\"DELETE FROM auth_sessions WHERE token_hash = ?\"",
@@ -2480,11 +2524,11 @@
       "hasLimit": false
     },
     {
-      "callSiteId": "2dc8e9565551a1dfee0213e1",
+      "callSiteId": "3ae89189f72c7609471d0da9",
       "file": "worker/auth.ts",
-      "line": 3034,
+      "line": 3086,
       "containingFunction": "createSessionResponse",
-      "occurrence": 108,
+      "occurrence": 110,
       "executionMode": "batch",
       "argumentKind": "literal",
       "expression": "`INSERT INTO auth_sessions (token_hash, user_id, expires_at, created_at)\n      SELECT ?, ?, ?, ?\n      WHERE EXISTS (SELECT 1 FROM users WHERE id = ?)\n        AND NOT EXISTS (SELECT 1 FROM account_deletion_fences WHERE user_id = ?)`",
@@ -2504,11 +2548,11 @@
       "hasLimit": false
     },
     {
-      "callSiteId": "a9f37122115d65fee0dd82e7",
+      "callSiteId": "ad19bfde207fe718b7fc2576",
       "file": "worker/auth.ts",
-      "line": 3049,
+      "line": 3101,
       "containingFunction": "createSessionResponse",
-      "occurrence": 109,
+      "occurrence": 111,
       "executionMode": "run",
       "argumentKind": "literal",
       "expression": "\"DELETE FROM auth_sessions WHERE token_hash = ?\"",
@@ -2526,11 +2570,11 @@
       "hasLimit": false
     },
     {
-      "callSiteId": "b7813c9baa56a882f6c62112",
+      "callSiteId": "08b1938ba28457bfa5d57e59",
       "file": "worker/auth.ts",
-      "line": 3276,
+      "line": 3328,
       "containingFunction": "validateSignupAgeProof",
-      "occurrence": 110,
+      "occurrence": 112,
       "executionMode": "first",
       "argumentKind": "literal",
       "expression": "`SELECT confirmed_at FROM signup_age_proofs\n    WHERE token_hash = ? AND consumed_at IS NULL AND expires_at > ? AND gate_version = ?\n    LIMIT 1`",
@@ -2548,11 +2592,11 @@
       "hasLimit": true
     },
     {
-      "callSiteId": "7f67c8695470510a9ecdbf1e",
+      "callSiteId": "b0e6f7bb89ca2813b07eb150",
       "file": "worker/auth.ts",
-      "line": 3289,
+      "line": 3341,
       "containingFunction": "consumeSignupAgeProof",
-      "occurrence": 111,
+      "occurrence": 113,
       "executionMode": "run",
       "argumentKind": "literal",
       "expression": "`UPDATE signup_age_proofs SET consumed_at = ?\n    WHERE token_hash = ? AND consumed_at IS NULL AND expires_at > ? AND gate_version = ?`",
@@ -2570,11 +2614,11 @@
       "hasLimit": false
     },
     {
-      "callSiteId": "702d27efc75d794881038c23",
+      "callSiteId": "e998554b1e1af09a6a15f927",
       "file": "worker/auth.ts",
-      "line": 3392,
+      "line": 3444,
       "containingFunction": "assertEmailChallengeAllowed",
-      "occurrence": 112,
+      "occurrence": 114,
       "executionMode": "first",
       "argumentKind": "literal",
       "expression": "\"SELECT COUNT(*) AS count FROM email_challenges WHERE email = ? AND created_at >= ?\"",
@@ -2592,11 +2636,11 @@
       "hasLimit": false
     },
     {
-      "callSiteId": "eb1ce6a6558003f1f41c77e1",
+      "callSiteId": "59ecee4685c48910d8b5dcea",
       "file": "worker/auth.ts",
-      "line": 3411,
+      "line": 3463,
       "containingFunction": "verifyEmailChallenge",
-      "occurrence": 113,
+      "occurrence": 115,
       "executionMode": "first",
       "argumentKind": "literal",
       "expression": "\"SELECT * FROM email_challenges WHERE id = ? AND kind = ? LIMIT 1\"",
@@ -2614,11 +2658,11 @@
       "hasLimit": true
     },
     {
-      "callSiteId": "8d6b83d9039aca8a34be0967",
+      "callSiteId": "3bba4cf82efd457381819b03",
       "file": "worker/auth.ts",
-      "line": 3428,
+      "line": 3480,
       "containingFunction": "verifyEmailChallenge",
-      "occurrence": 114,
+      "occurrence": 116,
       "executionMode": "run",
       "argumentKind": "literal",
       "expression": "`UPDATE email_challenges SET attempts = ?\n    WHERE id = ? AND kind = ? AND code_hash = ? AND created_at = ?\n      AND attempts = ? AND resend_count = ? AND expires_at = ? AND expires_at > ?`",
@@ -2636,11 +2680,11 @@
       "hasLimit": false
     },
     {
-      "callSiteId": "effce72446c41fcec225737f",
+      "callSiteId": "2a5f159e7c8b00031f10bb5e",
       "file": "worker/auth.ts",
-      "line": 3636,
+      "line": 3688,
       "containingFunction": "cleanupSignupAgeProofCandidate",
-      "occurrence": 115,
+      "occurrence": 117,
       "executionMode": "run",
       "argumentKind": "literal",
       "expression": "\"DELETE FROM signup_age_proofs WHERE token_hash = ?\"",
@@ -2658,11 +2702,11 @@
       "hasLimit": false
     },
     {
-      "callSiteId": "44b2edf82364e71db7e4becc",
+      "callSiteId": "9edc32320dc1c1d1e14e9a5c",
       "file": "worker/auth.ts",
-      "line": 3649,
+      "line": 3701,
       "containingFunction": "cleanupEmailChallengeCandidate",
-      "occurrence": 116,
+      "occurrence": 118,
       "executionMode": "run",
       "argumentKind": "literal",
       "expression": "\"DELETE FROM email_challenges WHERE id = ? AND code_hash = ? AND created_at = ?\"",

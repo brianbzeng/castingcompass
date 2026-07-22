@@ -13,6 +13,34 @@ Current provider truth overrides historical “paused” language in completed r
 2026-07-19 read-only reconciliation found an active Worker; no production mutation is authorized
 by that discovery.
 
+## Active checkpoint — exact gear-preset mutation receipts
+
+- [x] Continue the database-authority audit through owner PATCH and DELETE of existing gear
+      presets. Both operations still treated D1 mutation metadata as the browser receipt, so a
+      committed write with a lost storage response remained needlessly ambiguous even when the
+      exact owner state was readable.
+- [x] Make D1 post-state authoritative without weakening ownership. PATCH requires the exact
+      preset ID, authenticated owner, every normalized field, and the server-generated update
+      timestamp. DELETE requires both the owner row and the global opaque-ID row to be absent;
+      same-owner concurrent removal is idempotent success, while ownership transfer remains the
+      same enumeration-resistant `404`. Transport success and mutation metadata grant nothing.
+- [x] Force omitted mutation metadata and a lost committed response for update and deletion,
+      same-owner deletion overlap, ownership transfer before each write, and a deliberately
+      mismatched update post-state. Exact states recover without replay, another owner's row is
+      preserved, and corrupt state remains `503`. The source ledger covers 239 prepare sites:
+      225 literal, 14 reviewed nonliteral, and nine reviewed complete-rights multi-row reads;
+      34 critical D1 plans now include both primary-key receipt shapes.
+- [x] Seal the checkpoint with the pinned Cloudflare build, lint, TypeScript, 619/619 Node tests,
+      complete security/source-integrity chain, two zero-vulnerability npm audits, 29/29 API
+      tests, Ruff, 83 pipeline tests with one documented optional-rasterio skip, deterministic
+      smoke, all 20 migrations and 34 critical query plans, and an isolated 200/200
+      Chromium/WebKit phone matrix. No push, PR, merge, deployment, provider query, production
+      database mutation, feature activation, UI change, or model claim belongs to this
+      checkpoint.
+- [ ] Exercise overlap, lost-response, latency, rows-read/written, and legacy 100-preset account
+      behavior with production-shaped synthetic data in isolated staging before treating local
+      receipt proof as deployed evidence.
+
 ## Active checkpoint — exact account-deletion receipts
 
 - [x] Continue the database-authority audit through password-confirmed account deletion. The prior

@@ -158,11 +158,12 @@ after its acceptance checks pass in the intended environment.
       now includes `queued` alongside new and retry rows, so bounded reconciliation recovers a
       committed transition without replaying the owner mutation; queue-enabled reconciliation
       retains the same state coverage and all model output remains private and human-gated.
-    - [x] Make owner gear mutation receipts database-authoritative. PATCH and DELETE already
-      repeated `id` plus `user_id`, but they reported success even when a concurrent ownership or
-      deletion race made the final statement change zero rows. Both routes now require exactly
-      one confirmed D1 change, return the same `404` for zero, and fail `503` when the result is
-      unconfirmable. Race tests preserve the other owner's row and prevent false client success.
+    - [x] Make owner gear mutation receipts database-authoritative. PATCH and DELETE repeat `id`
+      plus `user_id`, but mutation metadata and transport success no longer decide the receipt.
+      PATCH requires the exact normalized owner row and server timestamp; DELETE requires zero
+      global rows for the opaque ID, treats a same-owner concurrent removal as idempotent success,
+      and returns the same `404` if ownership moved. Lost committed responses recover without
+      replay, while a mismatched post-state remains `503`.
     - [x] Make gear-preset creation database-authoritative after storage response loss. The
       server-generated identifier, authenticated owner, every normalized field, and both server
       timestamps must match an exact D1 row before the `201` receipt is returned; absence resolves
@@ -606,7 +607,7 @@ after its acceptance checks pass in the intended environment.
   - [ ] Inventory every production query, capture representative `EXPLAIN QUERY PLAN` evidence,
     add only workload-justified indexes, bound scans/pagination, eliminate N+1 patterns, verify
     cross-account predicates, and regression-test query latency and migration cost.
-    - [x] Add a deterministic AST-backed inventory for all 237 Worker `.prepare()` sites across
+    - [x] Add a deterministic AST-backed inventory for all 239 Worker `.prepare()` sites across
       eight files, including exact review contracts for 14 nonliteral expressions and nine literal
       multi-row reads without `LIMIT`. CI and release provenance fail closed on inventory drift,
       computed/aliased prepare access, unreviewed dynamic SQL, unscoped literal writes, and
@@ -692,7 +693,7 @@ after its acceptance checks pass in the intended environment.
   - [ ] Define performance budgets and run isolated load, soak, spike, and failure-injection
     tests with production-shaped synthetic data. Record saturation points, tail latency, error
     rates, queue depth, database contention, cache effectiveness, cost, and a safe rollback plan.
-  - [x] Locally add workload-backed D1 indexes, machine-check 32 critical `EXPLAIN QUERY PLAN`
+  - [x] Locally add workload-backed D1 indexes, machine-check 34 critical `EXPLAIN QUERY PLAN`
     paths plus every foreign-key child index, remove the public-site N+1 behind a bounded cache,
     publish the cache/async/connection contracts, add a bounded Postgres process pool only for
     the optional API, and provide a read-only load harness that permanently refuses production.

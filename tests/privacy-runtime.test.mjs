@@ -1896,7 +1896,7 @@ test("gear mutations fail closed when ownership or existence changes after the o
 
   d1.beforeOnceQuerySubstring = "DELETE FROM gear_profiles WHERE id = ?";
   d1.beforeOnceQuery = () => {
-    sqlite.prepare("DELETE FROM gear_profiles WHERE id = ?").run(deleteId);
+    sqlite.prepare("UPDATE gear_profiles SET user_id = ? WHERE id = ?").run(other.id, deleteId);
   };
   const racedDelete = await handleAccountRequest(request(`/api/gear-profiles/${deleteId}`, {
     method: "DELETE",
@@ -1904,10 +1904,13 @@ test("gear mutations fail closed when ownership or existence changes after the o
   }), { DB: d1 }, []);
   assert.equal(racedDelete?.status, 404);
   assert.equal((await racedDelete?.json()).error.code, "gear_profile_not_found");
-  assert.equal(sqlite.prepare("SELECT COUNT(*) AS count FROM gear_profiles WHERE id = ?").get(deleteId).count, 0);
+  assert.deepEqual(
+    { ...sqlite.prepare("SELECT user_id, name FROM gear_profiles WHERE id = ?").get(deleteId) },
+    { user_id: other.id, name: "Original delete" },
+  );
 });
 
-test("gear mutations never manufacture success when D1 omits the change receipt", async () => {
+test("gear updates follow exact D1 state when mutation metadata is absent", async () => {
   const { sqlite, d1 } = await database();
   const owner = await addUser(sqlite, "gear-receipt-owner-137");
   const timestamp = "2026-07-21T20:30:00.000Z";
@@ -1930,9 +1933,117 @@ test("gear mutations never manufacture success when D1 omits the change receipt"
     },
   }), { DB: d1 }, []);
 
+  assert.equal(response?.status, 200);
+  assert.deepEqual(await response?.json(), { updated: true, id: gearId });
+  assert.equal(sqlite.prepare("SELECT name FROM gear_profiles WHERE id = ?").get(gearId).name, "Unconfirmed gear");
+});
+
+test("gear update and deletion recover after their committed storage responses are lost", async () => {
+  const { sqlite, d1 } = await database();
+  const owner = await addUser(sqlite, "gear-lost-response-owner-142");
+  const timestamp = "2026-07-21T20:35:00.000Z";
+  const updateId = `gear_${crypto.randomUUID()}`;
+  const deleteId = `gear_${crypto.randomUUID()}`;
+  const insert = sqlite.prepare(`INSERT INTO gear_profiles
+      (id, user_id, name, rod, reel, bait_lure, rig, created_at, updated_at)
+    VALUES (?, ?, ?, 'Original rod', 'Original reel', 'Original lure', 'Original rig', ?, ?)`);
+  insert.run(updateId, owner.id, "Update after loss", timestamp, timestamp);
+  insert.run(deleteId, owner.id, "Delete after loss", timestamp, timestamp);
+
+  d1.throwOnceAfterMutationSubstring = "UPDATE gear_profiles SET name = ?";
+  const updated = await handleAccountRequest(request(`/api/gear-profiles/${updateId}`, {
+    method: "PATCH",
+    cookie: owner.cookie,
+    body: {
+      name: "Recovered exact update",
+      rod: "Recovered rod",
+      reel: "Recovered reel",
+      baitLure: "Recovered lure",
+      rig: "Recovered rig",
+    },
+  }), { DB: d1 }, []);
+  assert.equal(updated?.status, 200);
+  assert.deepEqual(await updated?.json(), { updated: true, id: updateId });
+  assert.deepEqual(
+    { ...sqlite.prepare("SELECT name, rod, reel, bait_lure, rig FROM gear_profiles WHERE id = ?").get(updateId) },
+    {
+      name: "Recovered exact update",
+      rod: "Recovered rod",
+      reel: "Recovered reel",
+      bait_lure: "Recovered lure",
+      rig: "Recovered rig",
+    },
+  );
+
+  d1.throwOnceAfterMutationSubstring = "DELETE FROM gear_profiles WHERE id = ?";
+  const deleted = await handleAccountRequest(request(`/api/gear-profiles/${deleteId}`, {
+    method: "DELETE",
+    cookie: owner.cookie,
+  }), { DB: d1 }, []);
+  assert.equal(deleted?.status, 200);
+  assert.deepEqual(await deleted?.json(), { deleted: true, id: deleteId });
+  assert.equal(sqlite.prepare("SELECT COUNT(*) AS count FROM gear_profiles WHERE id = ?").get(deleteId).count, 0);
+});
+
+test("gear deletion follows exact absence after missing metadata or a same-owner race", async () => {
+  const { sqlite, d1 } = await database();
+  const owner = await addUser(sqlite, "gear-delete-state-owner-143");
+  const timestamp = "2026-07-21T20:40:00.000Z";
+  const metadataId = `gear_${crypto.randomUUID()}`;
+  const racedId = `gear_${crypto.randomUUID()}`;
+  const insert = sqlite.prepare(`INSERT INTO gear_profiles
+      (id, user_id, name, created_at, updated_at) VALUES (?, ?, ?, ?, ?)`);
+  insert.run(metadataId, owner.id, "Missing metadata", timestamp, timestamp);
+  insert.run(racedId, owner.id, "Concurrent removal", timestamp, timestamp);
+
+  d1.omitOnceMutationMetadataSubstring = "DELETE FROM gear_profiles WHERE id = ?";
+  const metadataDeleted = await handleAccountRequest(request(`/api/gear-profiles/${metadataId}`, {
+    method: "DELETE",
+    cookie: owner.cookie,
+  }), { DB: d1 }, []);
+  assert.equal(metadataDeleted?.status, 200);
+  assert.deepEqual(await metadataDeleted?.json(), { deleted: true, id: metadataId });
+
+  d1.beforeOnceQuerySubstring = "DELETE FROM gear_profiles WHERE id = ?";
+  d1.beforeOnceQuery = () => sqlite.prepare("DELETE FROM gear_profiles WHERE id = ? AND user_id = ?")
+    .run(racedId, owner.id);
+  const racedDeleted = await handleAccountRequest(request(`/api/gear-profiles/${racedId}`, {
+    method: "DELETE",
+    cookie: owner.cookie,
+  }), { DB: d1 }, []);
+  assert.equal(racedDeleted?.status, 200);
+  assert.deepEqual(await racedDeleted?.json(), { deleted: true, id: racedId });
+  assert.equal(sqlite.prepare("SELECT COUNT(*) AS count FROM gear_profiles WHERE id IN (?, ?)")
+    .get(metadataId, racedId).count, 0);
+});
+
+test("gear update rejects a mismatched exact post-state", async () => {
+  const { sqlite, d1 } = await database();
+  const owner = await addUser(sqlite, "gear-corrupt-state-owner-144");
+  const timestamp = "2026-07-21T20:45:00.000Z";
+  const gearId = `gear_${crypto.randomUUID()}`;
+  sqlite.prepare(`INSERT INTO gear_profiles
+      (id, user_id, name, created_at, updated_at) VALUES (?, ?, ?, ?, ?)`)
+    .run(gearId, owner.id, "Before update", timestamp, timestamp);
+  d1.beforeOnceQuerySubstring = "SELECT id, user_id, name, rod, reel, bait_lure, rig, created_at, updated_at";
+  d1.beforeOnceQuery = () => sqlite.prepare("UPDATE gear_profiles SET name = 'Conflicting update' WHERE id = ?")
+    .run(gearId);
+
+  const response = await handleAccountRequest(request(`/api/gear-profiles/${gearId}`, {
+    method: "PATCH",
+    cookie: owner.cookie,
+    body: {
+      name: "Expected update",
+      rod: "Expected rod",
+      reel: "Expected reel",
+      baitLure: "Expected lure",
+      rig: "Expected rig",
+    },
+  }), { DB: d1 }, []);
+
   assert.equal(response?.status, 503);
   assert.equal((await response?.json()).error.code, "gear_profile_write_unconfirmed");
-  assert.equal(sqlite.prepare("SELECT name FROM gear_profiles WHERE id = ?").get(gearId).name, "Unconfirmed gear");
+  assert.equal(sqlite.prepare("SELECT name FROM gear_profiles WHERE id = ?").get(gearId).name, "Conflicting update");
 });
 
 test("gear creation follows exact D1 state after the insert response is lost", async () => {

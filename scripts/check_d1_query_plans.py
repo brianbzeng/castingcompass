@@ -132,6 +132,21 @@ CHECKS = (
         ("gear_profiles_user_updated_idx",),
     ),
     PlanCheck(
+        "gear-profile update exact receipt",
+        """SELECT id, user_id, name, rod, reel, bait_lure, rig, created_at, updated_at
+           FROM gear_profiles WHERE id = ? AND user_id = ? LIMIT 1""",
+        ("gear_fixture", "user_fixture"),
+        ("sqlite_autoindex_gear_profiles_1",),
+    ),
+    PlanCheck(
+        "gear-profile deletion exact state",
+        """SELECT
+             (SELECT COUNT(*) FROM gear_profiles WHERE id = ? AND user_id = ?) AS owner_count,
+             (SELECT COUNT(*) FROM gear_profiles WHERE id = ?) AS any_count""",
+        ("gear_fixture", "user_fixture", "gear_fixture"),
+        ("sqlite_autoindex_gear_profiles_1",),
+    ),
+    PlanCheck(
         "profile trip history",
         """SELECT id FROM trips INDEXED BY trips_user_history_idx
            WHERE user_id = ? AND status = 'completed'
