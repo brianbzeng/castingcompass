@@ -297,13 +297,15 @@ export async function handleAccountRequest(
       const proofHash = await sha256(proof);
       const createdAt = new Date();
       const expiresAt = new Date(createdAt.getTime() + AGE_PROOF_SECONDS * 1000);
-      const proofResult = await db.prepare(`INSERT INTO signup_age_proofs
-        (token_hash, confirmed_at, gate_version, expires_at, consumed_at, created_at)
-        VALUES (?, ?, ?, ?, NULL, ?)`)
-        .bind(proofHash, confirmedAt, AGE_GATE_VERSION, expiresAt.toISOString(), createdAt.toISOString())
-        .run();
-      if (confirmedMutationChanges(proofResult) !== 1) {
-        await cleanupSignupAgeProofCandidate(db, proofHash);
+      const proofCandidate: SignupAgeProofCandidate = {
+        tokenHash: proofHash,
+        confirmedAt,
+        gateVersion: AGE_GATE_VERSION,
+        expiresAt: expiresAt.toISOString(),
+        createdAt: createdAt.toISOString(),
+      };
+      if (!await createSignupAgeProof(db, proofCandidate)) {
+        await cleanupSignupAgeProofCandidate(db, proofCandidate);
         return errorResponse(
           503,
           "eligibility_proof_unconfirmed",
@@ -355,32 +357,28 @@ export async function handleAccountRequest(
       const salt = randomSecret(18);
       const timestamp = new Date();
       const challengeCutoff = new Date(timestamp.getTime() - 60 * 60 * 1000).toISOString();
-      const challengeResult = await db.prepare(`INSERT INTO email_challenges
-        (id, kind, email, user_id, code_hash, password_salt, password_hash,
-          age_eligibility_confirmed_at, terms_version, privacy_version, expires_at, attempts, created_at)
-        SELECT ?, 'signup', ?, NULL, ?, ?, ?, ?, ?, ?, ?, 0, ?
-        WHERE (SELECT COUNT(*) FROM email_challenges WHERE email = ? AND created_at >= ?) < 5`)
-        .bind(
-          id,
-          email,
-          codeHash,
-          salt,
-          await hashPassword(password, salt),
-          ageEligibilityConfirmedAt,
-          LEGAL_VERSION,
-          LEGAL_VERSION,
-          new Date(timestamp.getTime() + 15 * 60 * 1000).toISOString(),
-          timestamp.toISOString(),
-          email,
-          challengeCutoff,
-        )
-        .run();
-      const challengeChanges = confirmedMutationChanges(challengeResult);
-      if (challengeChanges === 0) {
+      const challenge: EmailChallengeRow = {
+        id,
+        kind: "signup",
+        email,
+        user_id: null,
+        code_hash: codeHash,
+        password_salt: salt,
+        password_hash: await hashPassword(password, salt),
+        age_eligibility_confirmed_at: ageEligibilityConfirmedAt,
+        terms_version: LEGAL_VERSION,
+        privacy_version: LEGAL_VERSION,
+        expires_at: new Date(timestamp.getTime() + 15 * 60 * 1000).toISOString(),
+        attempts: 0,
+        resend_count: 0,
+        created_at: timestamp.toISOString(),
+      };
+      const challengeClaim = await createEmailChallenge(db, challenge, challengeCutoff);
+      if (challengeClaim === "rate_limited") {
         throw new AuthError(429, "too_many_codes", "Too many email codes were requested. Try again in an hour.");
       }
-      if (challengeChanges !== 1) {
-        await cleanupEmailChallengeCandidate(db, id, codeHash, timestamp.toISOString());
+      if (challengeClaim !== "created") {
+        await cleanupEmailChallengeCandidate(db, challenge);
         throw new AuthError(
           503,
           "challenge_creation_unconfirmed",
@@ -390,7 +388,7 @@ export async function handleAccountRequest(
       try {
         await sendVerificationEmail(env, email, code, "Confirm your CastingCompass account");
       } catch (error) {
-        await cleanupEmailChallengeCandidate(db, id, codeHash, timestamp.toISOString());
+        await cleanupEmailChallengeCandidate(db, challenge);
         throw error;
       }
       return jsonResponse({ challengeId: id, expiresInMinutes: 15 });
@@ -572,33 +570,16 @@ export async function handleAccountRequest(
         const code = randomCode();
         const codeHash = await sha256(`${challenge.id}:${code}`);
         const timestamp = new Date();
-        const updateResult = await db.prepare(`UPDATE email_challenges
-          SET code_hash = ?, expires_at = ?, attempts = 0, resend_count = resend_count + 1, created_at = ?
-          WHERE id = ? AND kind = 'password_reset' AND code_hash = ? AND created_at = ? AND resend_count = ?`)
-          .bind(
-            codeHash,
-            new Date(timestamp.getTime() + 15 * 60 * 1000).toISOString(),
-            timestamp.toISOString(),
-            challenge.id,
-            challenge.code_hash,
-            challenge.created_at,
-            Number(challenge.resend_count ?? 0),
-          )
-          .run();
-        const updateChanges = confirmedMutationChanges(updateResult);
-        if (updateChanges !== 1) {
-          if (updateChanges === null) {
-            await cleanupEmailChallengeCandidate(db, challenge.id, codeHash, timestamp.toISOString());
-          }
+        const nextChallenge = resentEmailChallenge(challenge, codeHash, timestamp);
+        if (await transitionEmailChallengeForResend(db, challenge, nextChallenge) !== "updated") {
+          await cleanupEmailChallengeCandidate(db, nextChallenge);
           await responseNotBefore;
           return passwordRecoveryResendResponse(challengeId);
         }
         const delivery = deferPasswordRecoveryEmail(
           options,
           db,
-          challenge.id,
-          codeHash,
-          timestamp.toISOString(),
+          nextChallenge,
           sendVerificationEmail(
             env,
             challenge.email,
@@ -626,28 +607,12 @@ export async function handleAccountRequest(
       const code = randomCode();
       const codeHash = await sha256(`${challenge.id}:${code}`);
       const timestamp = new Date();
-      const updateResult = await db.prepare(`UPDATE email_challenges
-        SET code_hash = ?, expires_at = ?, attempts = 0, resend_count = resend_count + 1, created_at = ?
-        WHERE id = ? AND kind = 'signup' AND code_hash = ? AND created_at = ? AND resend_count = ?`)
-        .bind(
-          codeHash,
-          new Date(timestamp.getTime() + 15 * 60 * 1000).toISOString(),
-          timestamp.toISOString(),
-          challenge.id,
-          challenge.code_hash,
-          challenge.created_at,
-          Number(challenge.resend_count ?? 0),
-        )
-        .run();
-      const updateChanges = confirmedMutationChanges(updateResult);
-      if (updateChanges !== 1) {
-        if (updateChanges === null) {
-          await cleanupEmailChallengeCandidate(db, challenge.id, codeHash, timestamp.toISOString());
-          throw new AuthError(
-            503,
-            "challenge_update_unconfirmed",
-            "The new verification code could not be confirmed. Restart email verification.",
-          );
+      const nextChallenge = resentEmailChallenge(challenge, codeHash, timestamp);
+      const transition = await transitionEmailChallengeForResend(db, challenge, nextChallenge);
+      if (transition !== "updated") {
+        if (transition === "unconfirmed") {
+          await cleanupEmailChallengeCandidate(db, nextChallenge);
+          throw new AuthError(503, "challenge_update_unconfirmed", "The new verification code could not be confirmed. Restart email verification.");
         }
         throw new AuthError(409, "challenge_changed", "That verification request changed. Use its latest code or start again.");
       }
@@ -660,7 +625,7 @@ export async function handleAccountRequest(
           `${challenge.id}:resend:${Number(challenge.resend_count ?? 0) + 1}`,
         );
       } catch (error) {
-        await cleanupEmailChallengeCandidate(db, challenge.id, codeHash, timestamp.toISOString());
+        await cleanupEmailChallengeCandidate(db, nextChallenge);
         throw error;
       }
       return jsonResponse({ requested: true, challengeId, expiresInMinutes: 15, retryAfterSeconds: 60 });
@@ -698,32 +663,31 @@ export async function handleAccountRequest(
       const codeHash = await sha256(`${id}:${code}`);
       const timestamp = new Date();
       const challengeCutoff = new Date(timestamp.getTime() - 60 * 60 * 1000).toISOString();
-      const challengeResult = await db.prepare(`INSERT INTO email_challenges
-        (id, kind, email, user_id, code_hash, expires_at, attempts, created_at)
-        SELECT ?, 'password_reset', ?, ?, ?, ?, 0, ?
-        WHERE (SELECT COUNT(*) FROM email_challenges WHERE email = ? AND created_at >= ?) < 5`)
-        .bind(
-          id,
-          email,
-          user.id,
-          codeHash,
-          new Date(timestamp.getTime() + 15 * 60 * 1000).toISOString(),
-          timestamp.toISOString(),
-          email,
-          challengeCutoff,
-        )
-        .run();
-      if (confirmedMutationChanges(challengeResult) !== 1) {
-        await cleanupEmailChallengeCandidate(db, id, codeHash, timestamp.toISOString());
+      const challenge: EmailChallengeRow = {
+        id,
+        kind: "password_reset",
+        email,
+        user_id: user.id,
+        code_hash: codeHash,
+        password_salt: null,
+        password_hash: null,
+        age_eligibility_confirmed_at: null,
+        terms_version: null,
+        privacy_version: null,
+        expires_at: new Date(timestamp.getTime() + 15 * 60 * 1000).toISOString(),
+        attempts: 0,
+        resend_count: 0,
+        created_at: timestamp.toISOString(),
+      };
+      if (await createEmailChallenge(db, challenge, challengeCutoff) !== "created") {
+        await cleanupEmailChallengeCandidate(db, challenge);
         await responseNotBefore;
         return passwordRecoveryRequestedResponse();
       }
       const delivery = deferPasswordRecoveryEmail(
         options,
         db,
-        id,
-        codeHash,
-        timestamp.toISOString(),
+        challenge,
         sendVerificationEmail(env, email, code, "Reset your CastingCompass password"),
       );
       if (!options.waitUntil) await delivery;
@@ -2512,6 +2476,14 @@ function confirmedMutationChanges(result: unknown) {
   return Number.isSafeInteger(changes) && changes >= 0 ? changes : null;
 }
 
+function exactReceiptCounts(receipt: unknown, fields: string[]) {
+  if (!receipt || typeof receipt !== "object") return false;
+  return fields.every((field) => {
+    const count = Number((receipt as Record<string, unknown>)[field]);
+    return Number.isSafeInteger(count) && count >= 0 && count <= 1;
+  });
+}
+
 type SignInAttemptClaim = "claimed" | "rate_limited" | "unconfirmed";
 
 interface SignInAttemptClaimReceiptRow {
@@ -3565,10 +3537,55 @@ function assertOnlyFields(body: Record<string, unknown>, allowed: string[]) {
   }
 }
 
-interface ValidSignupAgeProof {
+interface SignupAgeProofCandidate {
   tokenHash: string;
   confirmedAt: string;
+  gateVersion: string;
+  expiresAt: string;
+  createdAt: string;
 }
+
+interface SignupAgeProofCreationReceiptRow {
+  exact_count: number;
+  any_count: number;
+}
+
+async function createSignupAgeProof(db: D1DatabaseLike, proof: SignupAgeProofCandidate) {
+  try {
+    await db.prepare(`INSERT INTO signup_age_proofs
+      (token_hash, confirmed_at, gate_version, expires_at, consumed_at, created_at)
+      VALUES (?, ?, ?, ?, NULL, ?)`)
+      .bind(proof.tokenHash, proof.confirmedAt, proof.gateVersion, proof.expiresAt, proof.createdAt)
+      .run();
+  } catch {
+    // A committed insert can lose its response. Exact stored state below decides
+    // whether the random plaintext proof may leave the Worker.
+  }
+
+  try {
+    const receipt = await db.prepare(`SELECT
+        (SELECT COUNT(*) FROM signup_age_proofs
+          WHERE token_hash = ? AND confirmed_at = ? AND gate_version = ?
+            AND expires_at = ? AND consumed_at IS NULL AND created_at = ?) AS exact_count,
+        (SELECT COUNT(*) FROM signup_age_proofs WHERE token_hash = ?) AS any_count`)
+      .bind(
+        proof.tokenHash,
+        proof.confirmedAt,
+        proof.gateVersion,
+        proof.expiresAt,
+        proof.createdAt,
+        proof.tokenHash,
+      )
+      .first<SignupAgeProofCreationReceiptRow>();
+    return exactReceiptCounts(receipt, ["exact_count", "any_count"])
+      && Number(receipt?.exact_count) === 1
+      && Number(receipt?.any_count) === 1;
+  } catch {
+    return false;
+  }
+}
+
+type ValidSignupAgeProof = SignupAgeProofCandidate;
 
 async function validateSignupAgeProof(db: D1DatabaseLike, value: unknown): Promise<ValidSignupAgeProof> {
   const proof = typeof value === "string" ? value : "";
@@ -3577,35 +3594,100 @@ async function validateSignupAgeProof(db: D1DatabaseLike, value: unknown): Promi
   }
   const tokenHash = await sha256(proof);
   const checkedAt = new Date().toISOString();
-  const row = await db.prepare(`SELECT confirmed_at FROM signup_age_proofs
+  const row = await db.prepare(`SELECT confirmed_at, gate_version, expires_at, created_at FROM signup_age_proofs
     WHERE token_hash = ? AND consumed_at IS NULL AND expires_at > ? AND gate_version = ?
     LIMIT 1`)
     .bind(tokenHash, checkedAt, AGE_GATE_VERSION)
-    .first<{ confirmed_at: string }>();
+    .first<{ confirmed_at: string; gate_version: string; expires_at: string; created_at: string }>();
   if (!row?.confirmed_at) {
     throw new AuthError(410, "eligibility_proof_expired", "Age eligibility expired or was already used. Start the age step again.");
   }
-  return { tokenHash, confirmedAt: row.confirmed_at };
+  return {
+    tokenHash,
+    confirmedAt: row.confirmed_at,
+    gateVersion: row.gate_version,
+    expiresAt: row.expires_at,
+    createdAt: row.created_at,
+  };
+}
+
+interface SignupAgeProofConsumptionReceiptRow {
+  consumed_count: number;
+  prior_count: number;
+  any_count: number;
 }
 
 async function consumeSignupAgeProof(db: D1DatabaseLike, proof: ValidSignupAgeProof) {
   const consumedAt = new Date().toISOString();
-  const result = await db.prepare(`UPDATE signup_age_proofs SET consumed_at = ?
-    WHERE token_hash = ? AND consumed_at IS NULL AND expires_at > ? AND gate_version = ?`)
-    .bind(consumedAt, proof.tokenHash, consumedAt, AGE_GATE_VERSION)
-    .run();
-  const changes = confirmedMutationChanges(result);
-  if (changes === 0) {
-    throw new AuthError(410, "eligibility_proof_expired", "Age eligibility expired or was already used. Start the age step again.");
+  try {
+    await db.prepare(`UPDATE signup_age_proofs SET consumed_at = ?
+      WHERE token_hash = ? AND confirmed_at = ? AND gate_version = ? AND expires_at = ?
+        AND consumed_at IS NULL AND created_at = ? AND expires_at > ?`)
+      .bind(
+        consumedAt,
+        proof.tokenHash,
+        proof.confirmedAt,
+        proof.gateVersion,
+        proof.expiresAt,
+        proof.createdAt,
+        consumedAt,
+      )
+      .run();
+  } catch {
+    // Exact read-back distinguishes a rolled-back use from a committed response loss.
   }
-  if (changes !== 1) {
+
+  let receipt: SignupAgeProofConsumptionReceiptRow | null = null;
+  let receiptReadSucceeded = false;
+  try {
+    receipt = await db.prepare(`SELECT
+        (SELECT COUNT(*) FROM signup_age_proofs
+          WHERE token_hash = ? AND confirmed_at = ? AND gate_version = ? AND expires_at = ?
+            AND consumed_at = ? AND created_at = ?) AS consumed_count,
+        (SELECT COUNT(*) FROM signup_age_proofs
+          WHERE token_hash = ? AND confirmed_at = ? AND gate_version = ? AND expires_at = ?
+            AND consumed_at IS NULL AND created_at = ? AND expires_at > ?) AS prior_count,
+        (SELECT COUNT(*) FROM signup_age_proofs WHERE token_hash = ?) AS any_count`)
+      .bind(
+        proof.tokenHash,
+        proof.confirmedAt,
+        proof.gateVersion,
+        proof.expiresAt,
+        consumedAt,
+        proof.createdAt,
+        proof.tokenHash,
+        proof.confirmedAt,
+        proof.gateVersion,
+        proof.expiresAt,
+        proof.createdAt,
+        consumedAt,
+        proof.tokenHash,
+      )
+      .first<SignupAgeProofConsumptionReceiptRow>();
+    receiptReadSucceeded = true;
+  } catch {
+    // Challenge creation cannot follow an unreadable one-use proof transition.
+  }
+
+  if (!receiptReadSucceeded || !exactReceiptCounts(receipt, ["consumed_count", "prior_count", "any_count"])) {
     throw new AuthError(
       503,
       "eligibility_proof_consumption_unconfirmed",
       "Age eligibility use could not be confirmed. Restart signup from the age step.",
     );
   }
-  return proof.confirmedAt;
+  const consumedCount = Number(receipt?.consumed_count);
+  const priorCount = Number(receipt?.prior_count);
+  const anyCount = Number(receipt?.any_count);
+  if (consumedCount === 1 && priorCount === 0 && anyCount === 1) return proof.confirmedAt;
+  if (priorCount === 0) {
+    throw new AuthError(410, "eligibility_proof_expired", "Age eligibility expired or was already used. Start the age step again.");
+  }
+  throw new AuthError(
+    503,
+    "eligibility_proof_consumption_unconfirmed",
+    "Age eligibility use could not be confirmed. Restart signup from the age step.",
+  );
 }
 
 export function evaluateAgeEligibility(value: unknown, now = new Date()) {
@@ -3689,6 +3771,160 @@ interface EmailChallengeRow {
   attempts: number;
   resend_count: number;
   created_at: string;
+}
+
+type EmailChallengeCreation = "created" | "rate_limited" | "unconfirmed";
+
+interface EmailChallengeCreationReceiptRow {
+  exact_count: number;
+  any_count: number;
+  recent_count: number;
+}
+
+function emailChallengeSnapshotBindings(challenge: EmailChallengeRow) {
+  return [
+    challenge.id,
+    challenge.kind,
+    challenge.email,
+    challenge.user_id,
+    challenge.code_hash,
+    challenge.password_salt,
+    challenge.password_hash,
+    challenge.age_eligibility_confirmed_at,
+    challenge.terms_version,
+    challenge.privacy_version,
+    challenge.expires_at,
+    challenge.attempts,
+    challenge.resend_count,
+    challenge.created_at,
+  ];
+}
+
+async function createEmailChallenge(
+  db: D1DatabaseLike,
+  challenge: EmailChallengeRow,
+  challengeCutoff: string,
+): Promise<EmailChallengeCreation> {
+  try {
+    await db.prepare(`INSERT INTO email_challenges
+      (id, kind, email, user_id, code_hash, password_salt, password_hash,
+        age_eligibility_confirmed_at, terms_version, privacy_version, expires_at,
+        attempts, resend_count, created_at)
+      SELECT ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
+      WHERE (SELECT COUNT(*) FROM email_challenges WHERE email = ? AND created_at >= ?) < 5`)
+      .bind(...emailChallengeSnapshotBindings(challenge), challenge.email, challengeCutoff)
+      .run();
+  } catch {
+    // A committed insert can lose its response. Provider delivery requires the
+    // complete random challenge snapshot below, never mutation metadata.
+  }
+
+  try {
+    const receipt = await db.prepare(`SELECT
+        (SELECT COUNT(*) FROM email_challenges
+          WHERE id = ? AND kind = ? AND email = ? AND user_id IS ? AND code_hash = ?
+            AND password_salt IS ? AND password_hash IS ?
+            AND age_eligibility_confirmed_at IS ? AND terms_version IS ? AND privacy_version IS ?
+            AND expires_at = ? AND attempts = ? AND resend_count = ? AND created_at = ?) AS exact_count,
+        (SELECT COUNT(*) FROM email_challenges WHERE id = ?) AS any_count,
+        (SELECT COUNT(*) FROM email_challenges WHERE email = ? AND created_at >= ?) AS recent_count`)
+      .bind(
+        ...emailChallengeSnapshotBindings(challenge),
+        challenge.id,
+        challenge.email,
+        challengeCutoff,
+      )
+      .first<EmailChallengeCreationReceiptRow>();
+    const exactCount = Number(receipt?.exact_count);
+    const anyCount = Number(receipt?.any_count);
+    const recentCount = Number(receipt?.recent_count);
+    const countsValid = exactReceiptCounts(receipt, ["exact_count", "any_count"])
+      && Number.isSafeInteger(recentCount)
+      && recentCount >= 0
+      && exactCount <= anyCount
+      && exactCount <= recentCount;
+    if (!countsValid) return "unconfirmed";
+    if (exactCount === 1 && anyCount === 1 && recentCount >= 1 && recentCount <= 5) return "created";
+    if (exactCount === 0 && anyCount === 0 && recentCount >= 5) return "rate_limited";
+    return "unconfirmed";
+  } catch {
+    return "unconfirmed";
+  }
+}
+
+function resentEmailChallenge(challenge: EmailChallengeRow, codeHash: string, timestamp: Date): EmailChallengeRow {
+  return {
+    ...challenge,
+    code_hash: codeHash,
+    expires_at: new Date(timestamp.getTime() + 15 * 60 * 1000).toISOString(),
+    attempts: 0,
+    resend_count: Number(challenge.resend_count ?? 0) + 1,
+    created_at: timestamp.toISOString(),
+  };
+}
+
+type EmailChallengeTransition = "updated" | "changed" | "unconfirmed";
+
+interface EmailChallengeTransitionReceiptRow {
+  next_count: number;
+  prior_count: number;
+  any_count: number;
+}
+
+async function transitionEmailChallengeForResend(
+  db: D1DatabaseLike,
+  prior: EmailChallengeRow,
+  next: EmailChallengeRow,
+): Promise<EmailChallengeTransition> {
+  try {
+    await db.prepare(`UPDATE email_challenges
+      SET code_hash = ?, expires_at = ?, attempts = ?, resend_count = ?, created_at = ?
+      WHERE id = ? AND kind = ? AND email = ? AND user_id IS ? AND code_hash = ?
+        AND password_salt IS ? AND password_hash IS ? AND age_eligibility_confirmed_at IS ?
+        AND terms_version IS ? AND privacy_version IS ? AND expires_at = ?
+        AND attempts = ? AND resend_count = ? AND created_at = ?`)
+      .bind(
+        next.code_hash,
+        next.expires_at,
+        next.attempts,
+        next.resend_count,
+        next.created_at,
+        ...emailChallengeSnapshotBindings(prior),
+      )
+      .run();
+  } catch {
+    // Exact next/prior state distinguishes commit-response loss from rollback.
+  }
+
+  try {
+    const receipt = await db.prepare(`SELECT
+        (SELECT COUNT(*) FROM email_challenges
+          WHERE id = ? AND kind = ? AND email = ? AND user_id IS ? AND code_hash = ?
+            AND password_salt IS ? AND password_hash IS ?
+            AND age_eligibility_confirmed_at IS ? AND terms_version IS ? AND privacy_version IS ?
+            AND expires_at = ? AND attempts = ? AND resend_count = ? AND created_at = ?) AS next_count,
+        (SELECT COUNT(*) FROM email_challenges
+          WHERE id = ? AND kind = ? AND email = ? AND user_id IS ? AND code_hash = ?
+            AND password_salt IS ? AND password_hash IS ?
+            AND age_eligibility_confirmed_at IS ? AND terms_version IS ? AND privacy_version IS ?
+            AND expires_at = ? AND attempts = ? AND resend_count = ? AND created_at = ?) AS prior_count,
+        (SELECT COUNT(*) FROM email_challenges WHERE id = ?) AS any_count`)
+      .bind(
+        ...emailChallengeSnapshotBindings(next),
+        ...emailChallengeSnapshotBindings(prior),
+        prior.id,
+      )
+      .first<EmailChallengeTransitionReceiptRow>();
+    if (!exactReceiptCounts(receipt, ["next_count", "prior_count", "any_count"])) return "unconfirmed";
+    const nextCount = Number(receipt?.next_count);
+    const priorCount = Number(receipt?.prior_count);
+    const anyCount = Number(receipt?.any_count);
+    if (nextCount === 1 && priorCount === 0 && anyCount === 1) return "updated";
+    if (nextCount === 0 && priorCount === 0) return "changed";
+    return "unconfirmed";
+  } catch {
+    return "unconfirmed";
+  }
 }
 
 interface PasswordResetReceiptRow {
@@ -4019,22 +4255,24 @@ function passwordRecoveryResendResponse(challengeId: string) {
 function deferPasswordRecoveryEmail(
   options: AccountRequestOptions,
   db: D1DatabaseLike,
-  challengeId: string,
-  codeHash: string,
-  createdAt: string,
+  challenge: EmailChallengeRow,
   delivery: Promise<void>,
 ) {
   const guardedDelivery = delivery.catch(async (error) => {
-    await cleanupEmailChallengeCandidate(db, challengeId, codeHash, createdAt);
+    await cleanupEmailChallengeCandidate(db, challenge);
     logEvent("error", "password_recovery.email_delivery_deferred", safeErrorContext(error));
   });
   options.waitUntil?.(guardedDelivery);
   return guardedDelivery;
 }
 
-async function cleanupSignupAgeProofCandidate(db: D1DatabaseLike, tokenHash: string) {
+async function cleanupSignupAgeProofCandidate(db: D1DatabaseLike, proof: SignupAgeProofCandidate) {
   try {
-    await db.prepare("DELETE FROM signup_age_proofs WHERE token_hash = ?").bind(tokenHash).run();
+    await db.prepare(`DELETE FROM signup_age_proofs
+      WHERE token_hash = ? AND confirmed_at = ? AND gate_version = ?
+        AND expires_at = ? AND consumed_at IS NULL AND created_at = ?`)
+      .bind(proof.tokenHash, proof.confirmedAt, proof.gateVersion, proof.expiresAt, proof.createdAt)
+      .run();
   } catch (error) {
     logEvent("error", "signup.age_proof_cleanup_failed", safeErrorContext(error));
   }
@@ -4042,13 +4280,15 @@ async function cleanupSignupAgeProofCandidate(db: D1DatabaseLike, tokenHash: str
 
 async function cleanupEmailChallengeCandidate(
   db: D1DatabaseLike,
-  challengeId: string,
-  codeHash: string,
-  createdAt: string,
+  challenge: EmailChallengeRow,
 ) {
   try {
-    await db.prepare("DELETE FROM email_challenges WHERE id = ? AND code_hash = ? AND created_at = ?")
-      .bind(challengeId, codeHash, createdAt)
+    await db.prepare(`DELETE FROM email_challenges
+      WHERE id = ? AND kind = ? AND email = ? AND user_id IS ? AND code_hash = ?
+        AND password_salt IS ? AND password_hash IS ? AND age_eligibility_confirmed_at IS ?
+        AND terms_version IS ? AND privacy_version IS ? AND expires_at = ?
+        AND attempts = ? AND resend_count = ? AND created_at = ?`)
+      .bind(...emailChallengeSnapshotBindings(challenge))
       .run();
   } catch (error) {
     logEvent("error", "email.challenge_cleanup_failed", safeErrorContext(error));

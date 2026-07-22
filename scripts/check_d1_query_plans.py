@@ -235,21 +235,120 @@ CHECKS = (
     PlanCheck(
         "atomic email challenge issuance ceiling",
         """INSERT INTO email_challenges
-             (id, kind, email, user_id, code_hash, expires_at, attempts, created_at)
-           SELECT ?, 'password_reset', ?, ?, ?, ?, 0, ?
+             (id, kind, email, user_id, code_hash, password_salt, password_hash,
+              age_eligibility_confirmed_at, terms_version, privacy_version, expires_at,
+              attempts, resend_count, created_at)
+           SELECT ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
            WHERE (SELECT COUNT(*) FROM email_challenges
                   WHERE email = ? AND created_at >= ?) < 5""",
         (
             "challenge_fixture",
+            "password_reset",
             "angler@example.com",
             "user_fixture",
             "code_hash_fixture",
+            None,
+            None,
+            None,
+            None,
+            None,
             "2026-07-17T00:15:00.000Z",
+            0,
+            0,
             "2026-07-17T00:00:00.000Z",
             "angler@example.com",
             "2026-07-16T23:00:00.000Z",
         ),
         ("email_challenges_email_time_idx",),
+    ),
+    PlanCheck(
+        "exact email challenge issuance receipt",
+        """SELECT
+             (SELECT COUNT(*) FROM email_challenges
+               WHERE id = ? AND kind = ? AND email = ? AND user_id IS ? AND code_hash = ?
+                 AND password_salt IS ? AND password_hash IS ?
+                 AND age_eligibility_confirmed_at IS ? AND terms_version IS ? AND privacy_version IS ?
+                 AND expires_at = ? AND attempts = ? AND resend_count = ? AND created_at = ?) AS exact_count,
+             (SELECT COUNT(*) FROM email_challenges WHERE id = ?) AS any_count,
+             (SELECT COUNT(*) FROM email_challenges WHERE email = ? AND created_at >= ?) AS recent_count""",
+        (
+            "challenge_fixture",
+            "password_reset",
+            "angler@example.com",
+            "user_fixture",
+            "code_hash_fixture",
+            None,
+            None,
+            None,
+            None,
+            None,
+            "2026-07-17T00:15:00.000Z",
+            0,
+            0,
+            "2026-07-17T00:00:00.000Z",
+            "challenge_fixture",
+            "angler@example.com",
+            "2026-07-16T23:00:00.000Z",
+        ),
+        ("sqlite_autoindex_email_challenges_1", "email_challenges_email_time_idx"),
+    ),
+    PlanCheck(
+        "atomic email challenge resend transition",
+        """UPDATE email_challenges
+           SET code_hash = ?, expires_at = ?, attempts = ?, resend_count = ?, created_at = ?
+           WHERE id = ? AND kind = ? AND email = ? AND user_id IS ? AND code_hash = ?
+             AND password_salt IS ? AND password_hash IS ? AND age_eligibility_confirmed_at IS ?
+             AND terms_version IS ? AND privacy_version IS ? AND expires_at = ?
+             AND attempts = ? AND resend_count = ? AND created_at = ?""",
+        (
+            "next_code_hash_fixture",
+            "2026-07-17T00:16:00.000Z",
+            0,
+            1,
+            "2026-07-17T00:01:00.000Z",
+            "challenge_fixture",
+            "signup",
+            "angler@example.com",
+            None,
+            "prior_code_hash_fixture",
+            "salt_fixture",
+            "password_hash_fixture",
+            "2026-07-17T00:00:00.000Z",
+            "2026-07-16",
+            "2026-07-16",
+            "2026-07-17T00:15:00.000Z",
+            0,
+            0,
+            "2026-07-17T00:00:00.000Z",
+        ),
+        ("sqlite_autoindex_email_challenges_1",),
+    ),
+    PlanCheck(
+        "exact email challenge resend receipt",
+        """SELECT
+             (SELECT COUNT(*) FROM email_challenges
+               WHERE id = ? AND kind = ? AND email = ? AND user_id IS ? AND code_hash = ?
+                 AND password_salt IS ? AND password_hash IS ?
+                 AND age_eligibility_confirmed_at IS ? AND terms_version IS ? AND privacy_version IS ?
+                 AND expires_at = ? AND attempts = ? AND resend_count = ? AND created_at = ?) AS next_count,
+             (SELECT COUNT(*) FROM email_challenges
+               WHERE id = ? AND kind = ? AND email = ? AND user_id IS ? AND code_hash = ?
+                 AND password_salt IS ? AND password_hash IS ?
+                 AND age_eligibility_confirmed_at IS ? AND terms_version IS ? AND privacy_version IS ?
+                 AND expires_at = ? AND attempts = ? AND resend_count = ? AND created_at = ?) AS prior_count,
+             (SELECT COUNT(*) FROM email_challenges WHERE id = ?) AS any_count""",
+        (
+            "challenge_fixture", "signup", "angler@example.com", None,
+            "next_code_hash_fixture", "salt_fixture", "password_hash_fixture",
+            "2026-07-17T00:00:00.000Z", "2026-07-16", "2026-07-16",
+            "2026-07-17T00:16:00.000Z", 0, 1, "2026-07-17T00:01:00.000Z",
+            "challenge_fixture", "signup", "angler@example.com", None,
+            "prior_code_hash_fixture", "salt_fixture", "password_hash_fixture",
+            "2026-07-17T00:00:00.000Z", "2026-07-16", "2026-07-16",
+            "2026-07-17T00:15:00.000Z", 0, 0, "2026-07-17T00:00:00.000Z",
+            "challenge_fixture",
+        ),
+        ("sqlite_autoindex_email_challenges_1",),
     ),
     PlanCheck(
         "atomic email challenge attempt claim",
@@ -337,6 +436,50 @@ CHECKS = (
            )""",
         ("2026-07-16T00:00:00.000Z", "2026-07-16T00:00:00.000Z", 100),
         ("signup_age_proofs_expiry_idx", "signup_age_proofs_consumed_idx"),
+    ),
+    PlanCheck(
+        "exact age-proof creation receipt",
+        """SELECT
+             (SELECT COUNT(*) FROM signup_age_proofs
+               WHERE token_hash = ? AND confirmed_at = ? AND gate_version = ?
+                 AND expires_at = ? AND consumed_at IS NULL AND created_at = ?) AS exact_count,
+             (SELECT COUNT(*) FROM signup_age_proofs WHERE token_hash = ?) AS any_count""",
+        (
+            "proof_hash_fixture",
+            "2026-07-17T00:00:00.000Z",
+            "california-13-v1",
+            "2026-07-17T00:15:00.000Z",
+            "2026-07-17T00:00:00.000Z",
+            "proof_hash_fixture",
+        ),
+        ("sqlite_autoindex_signup_age_proofs_1",),
+    ),
+    PlanCheck(
+        "exact age-proof consumption receipt",
+        """SELECT
+             (SELECT COUNT(*) FROM signup_age_proofs
+               WHERE token_hash = ? AND confirmed_at = ? AND gate_version = ? AND expires_at = ?
+                 AND consumed_at = ? AND created_at = ?) AS consumed_count,
+             (SELECT COUNT(*) FROM signup_age_proofs
+               WHERE token_hash = ? AND confirmed_at = ? AND gate_version = ? AND expires_at = ?
+                 AND consumed_at IS NULL AND created_at = ? AND expires_at > ?) AS prior_count,
+             (SELECT COUNT(*) FROM signup_age_proofs WHERE token_hash = ?) AS any_count""",
+        (
+            "proof_hash_fixture",
+            "2026-07-17T00:00:00.000Z",
+            "california-13-v1",
+            "2026-07-17T00:15:00.000Z",
+            "2026-07-17T00:01:00.000Z",
+            "2026-07-17T00:00:00.000Z",
+            "proof_hash_fixture",
+            "2026-07-17T00:00:00.000Z",
+            "california-13-v1",
+            "2026-07-17T00:15:00.000Z",
+            "2026-07-17T00:00:00.000Z",
+            "2026-07-17T00:01:00.000Z",
+            "proof_hash_fixture",
+        ),
+        ("sqlite_autoindex_signup_age_proofs_1",),
     ),
     PlanCheck(
         "saved-site ordering",

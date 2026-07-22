@@ -56,13 +56,13 @@ test("the committed inventory covers every Worker prepare site and its reviewed 
   validatePolicy(policy, inventory);
   assert.deepEqual(JSON.parse(committed), inventory);
   assert.deepEqual(inventory.summary, {
-    prepareCallCount: 246,
-    literalCallCount: 232,
+    prepareCallCount: 248,
+    literalCallCount: 234,
     nonLiteralCallCount: 14,
     multiRowLiteralWithoutLimitCount: 9,
   });
   assert.equal(inventory.sourceFiles.length, 8);
-  assert.equal(new Set(inventory.queries.map(({ callSiteId }) => callSiteId)).size, 246);
+  assert.equal(new Set(inventory.queries.map(({ callSiteId }) => callSiteId)).size, 248);
   assert.equal(policy.multiRowReadContracts.filter(({ rowBoundStatus }) => rowBoundStatus === "open-account-cardinality").length, 0);
   assert.equal(policy.multiRowReadContracts.filter(({ rowBoundStatus }) => rowBoundStatus === "complete-rights-export").length, 9);
   assert.equal(policy.multiRowReadContracts.filter(({ rowBoundStatus }) => rowBoundStatus === "owner-lifecycle-cleanup").length, 0);
@@ -174,7 +174,19 @@ test("the committed inventory covers every Worker prepare site and its reviewed 
       && statementClass === "INSERT"
       && sql?.startsWith("INSERT INTO email_challenges")
       && /WHERE \(SELECT COUNT\(\*\) FROM email_challenges WHERE email = \? AND created_at >= \?\) < 5$/u.test(sql));
-  assert.equal(challengeIssuanceClaims.length, 2);
+  assert.equal(challengeIssuanceClaims.length, 1);
+  const ageProofCreationReceipt = inventory.queries.find(({ containingFunction, executionMode }) =>
+    containingFunction === "createSignupAgeProof" && executionMode === "first");
+  assert.match(ageProofCreationReceipt?.sql ?? "", /AS exact_count, .*signup_age_proofs.*AS any_count$/u);
+  const ageProofConsumptionReceipt = inventory.queries.find(({ containingFunction, executionMode }) =>
+    containingFunction === "consumeSignupAgeProof" && executionMode === "first");
+  assert.match(ageProofConsumptionReceipt?.sql ?? "", /AS consumed_count, .*AS prior_count, .*AS any_count$/u);
+  const challengeCreationReceipt = inventory.queries.find(({ containingFunction, executionMode }) =>
+    containingFunction === "createEmailChallenge" && executionMode === "first");
+  assert.match(challengeCreationReceipt?.sql ?? "", /AS exact_count, .*AS any_count, .*AS recent_count$/u);
+  const challengeResendReceipt = inventory.queries.find(({ containingFunction, executionMode }) =>
+    containingFunction === "transitionEmailChallengeForResend" && executionMode === "first");
+  assert.match(challengeResendReceipt?.sql ?? "", /AS next_count, .*AS prior_count, .*AS any_count$/u);
   assert.ok(inventory.queries.some(({ executionMode, statementClass, sql }) =>
     executionMode === "run"
       && statementClass === "UPDATE"

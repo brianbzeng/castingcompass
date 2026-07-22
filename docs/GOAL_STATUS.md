@@ -13,6 +13,43 @@ Current provider truth overrides historical “paused” language in completed r
 2026-07-19 read-only reconciliation found an active Worker; no production mutation is authorized
 by that discovery.
 
+## Active checkpoint — exact secret-bearing credential receipts
+
+- [x] Continue the credential audit upstream of code verification. Age-proof creation and
+      consumption, initial signup/recovery challenges, and both resend paths still treated D1
+      mutation metadata as authority. Missing metadata safely suppressed secrets, but could not
+      recover a committed response loss and did not prove the complete row before plaintext proof
+      disclosure or email-provider delivery.
+- [x] Make the complete random age-proof snapshot authoritative. Creation read-back proves token
+      hash, confirmed time, gate version, expiry, unconsumed state, creation time, and unique hash
+      cardinality before returning plaintext. One-use consumption repeats that version and proves
+      exact consumed versus live prior state. Mutation metadata and transport success grant
+      nothing; committed response loss recovers, while rollback, unreadable, expired, consumed, or
+      changed state starts no challenge.
+- [x] Make the complete email-challenge version authoritative for initial creation and resend.
+      Initial delivery requires exact credential/age/legal/timestamp state, unique random ID, and
+      a valid five-per-hour email count. Resend compare-and-set repeats the complete prior version,
+      then proves complete next/prior snapshots and ID cardinality before delivery. Candidate
+      cleanup repeats every field so it cannot remove a newer or changed version. Password
+      recovery preserves the same generic anti-enumeration response for all unconfirmed states.
+- [x] Force missing metadata and lost committed responses across proof creation, consumption,
+      signup/recovery creation, and resend; force actual rollback, receipt-read failures, changed
+      proof/challenge rows, a concurrent issuance-ceiling crossing, and a concurrent resend
+      rotation. Exact committed state discloses or delivers once; every other state authorizes no
+      plaintext/provider side effect. The source ledger covers 248 prepare sites: 234 literal, 14
+      reviewed nonliteral, and nine reviewed complete-rights multi-row reads. All 20 migrations
+      and 46 critical plans cover the exact proof/challenge receipts and their indexes.
+- [x] Seal the local checkpoint with the pinned Cloudflare build; lint and type checks; all 645/645
+      Node tests; 29/29 API tests; Ruff; 83/83 pipeline tests with one documented optional rasterio
+      skip; the complete offline security, SBOM, source-integrity, and zero-vulnerability audit
+      chain; deterministic smoke output; all 46 critical plans across 20 migrations; the full
+      200/200 Chromium/WebKit phone matrix; a reproducible release bundle; and a clean local
+      commit. No push, PR, merge, deployment, provider query, production database mutation,
+      feature activation, UI change, or model claim belongs to this checkpoint.
+- [ ] Exercise concurrent issuance/resend, response loss, provider latency, and D1 rows-read/written
+      behavior with production-shaped synthetic data in isolated staging before treating local
+      receipt proof as deployed evidence.
+
 ## Active checkpoint — exact sign-out revocation receipts
 
 - [x] Reopen the account-exit boundary after exact session issuance was sealed. Sign-out still
@@ -783,6 +820,9 @@ supersedes this metadata-authoritative behavior and no longer clears cookies on 
       model change, UI change, or production authorization belongs to this work.
 
 ## Active checkpoint — database-confirmed challenge issuance
+
+Historical implementation receipt: the newer exact secret-bearing credential checkpoint at the
+top supersedes this mutation-metadata authority while preserving its fail-closed behavior.
 
 - [x] Continue the credential audit upstream of verification. Age eligibility returned a plaintext
       bearer proof after an unchecked D1 INSERT; signup and password recovery could invoke the

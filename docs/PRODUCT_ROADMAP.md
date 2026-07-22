@@ -207,12 +207,15 @@ after its acceptance checks pass in the intended environment.
       response recover from exact absence. Rollback, unreadable state, or row reappearance returns
       `503` while retaining the cookie so sign-out can be retried or checked without losing the
       only revocation handle.
-    - [x] Bind every secret-bearing age-proof and email-challenge side effect to an authoritative
-      D1 receipt. Plaintext age proofs and verification delivery now follow exactly one confirmed
-      INSERT; missing proof-consumption metadata stops before challenge creation. Resends use a
-      prior-kind/hash/time/count compare-and-set, record the new code before provider delivery,
-      and candidate-only cleanup cannot delete a newer concurrent code. Password recovery retains
-      its generic anti-enumeration response while suppressing unconfirmed provider work.
+    - [x] Bind every secret-bearing age-proof and email-challenge side effect to exact stored-state
+      receipts. Plaintext age proofs require the full random-hash/timestamp/gate snapshot; one-use
+      consumption proves exact consumed versus prior state before challenge creation. Initial
+      signup and recovery challenges prove the complete credential snapshot, unique ID, and
+      rolling email ceiling. Resends compare-and-set the full prior version and read back complete
+      next/prior snapshots before delivery. Missing metadata and committed response loss recover
+      without replay; rollback, unreadable or changed state authorizes no secret/provider side
+      effect. Candidate-only cleanup repeats the complete snapshot, and password recovery retains
+      its generic anti-enumeration response.
     - [x] Bind final signup and password-reset authority to the exact verified challenge snapshot,
       not a pre-transaction read. User/password mutation, session revocation, and one-use challenge
       consumption repeat kind, user where applicable, code hash, creation time, attempt count, and
