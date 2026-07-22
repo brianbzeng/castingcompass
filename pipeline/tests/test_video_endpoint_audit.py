@@ -474,6 +474,7 @@ class VideoEndpointAuditTests(unittest.TestCase):
                 rows = [("1", "1", "1"), ("2", "1", "1"), ("4", "1", "1")]
                 if cruise == "s2210mb":
                     rows.append(("0", "1", "1"))
+                    rows.append(("1", "", ""))
                 specs.append(_archive(archive, cruise, rows))
                 archives[cruise] = archive
             manifest = {
@@ -505,6 +506,12 @@ class VideoEndpointAuditTests(unittest.TestCase):
                 {"s2210mb": ["0"]},
             )
             self.assertFalse(metrics["decision"]["raw_endpoint_support_admissible"])
+            self.assertEqual(
+                metrics["source_schema_gate"][
+                    "nonblank_rows_missing_line_or_tape"
+                ],
+                {"s2210mb": 1},
+            )
             self.assertFalse(
                 metrics["recognized_rows_partition_diagnostic"][
                     "authoritative_for_admission"

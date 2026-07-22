@@ -1041,6 +1041,8 @@ def audit_usgs_residual_statewide_video_support(
     asset_summaries: Dict[str, Any] = {}
     unexpected_class_rows = 0
     unexpected_class_values: Dict[str, list[str]] = {}
+    missing_group_identity_rows = 0
+    missing_group_identity_by_cruise: Dict[str, int] = {}
     for spec in specs:
         if not isinstance(spec, Mapping):
             raise ValueError("video observation specification must be an object")
@@ -1057,13 +1059,14 @@ def audit_usgs_residual_statewide_video_support(
             unexpected_class_values[cruise_id] = unexpected
         raw_class_counts = Counter(value for value in fields["CLASS"] if value)
         collapsed_counts = np.zeros(len(VIDEO_CLASS_NAMES), dtype=np.int64)
+        cruise_missing_group_identity = 0
         for index, raw_class in enumerate(fields["CLASS"]):
             if not raw_class:
                 continue
             if not fields["LINE"][index] or not fields["TAPE"][index]:
-                raise ValueError(
-                    f"labeled video observation lacks LINE or TAPE for {cruise_id}"
-                )
+                cruise_missing_group_identity += 1
+                missing_group_identity_rows += 1
+                continue
             if raw_class not in VIDEO_CLASS_COLLAPSE:
                 unexpected_class_rows += 1
                 continue
@@ -1076,6 +1079,7 @@ def audit_usgs_residual_statewide_video_support(
             "labeled_record_count": int(sum(raw_class_counts.values())),
             "raw_class_counts": dict(sorted(raw_class_counts.items())),
             "unexpected_nonblank_class_values": unexpected,
+            "nonblank_rows_missing_line_or_tape": cruise_missing_group_identity,
             "collapsed_class_counts": {
                 name: int(count)
                 for name, count in zip(VIDEO_CLASS_NAMES, collapsed_counts)
@@ -1083,6 +1087,8 @@ def audit_usgs_residual_statewide_video_support(
             "archive_sha256": spec["archive_sha256"],
             "member_inventory_verified": True,
         }
+        if cruise_missing_group_identity:
+            missing_group_identity_by_cruise[cruise_id] = cruise_missing_group_identity
     if len(labels) < 2:
         raise ValueError("residual video inventory has too few labeled observations")
 
@@ -1095,7 +1101,9 @@ def audit_usgs_residual_statewide_video_support(
         min_rows_per_class=min_group_class_rows,
         group_definition="exact cruise_id; no LINE, TAPE, date, coordinate, or adjacent-row split",
     )
-    source_schema_valid = not unexpected_class_values
+    source_schema_valid = (
+        not unexpected_class_values and not missing_group_identity_by_cruise
+    )
     admissible = (
         source_schema_valid and partition_audit["eligible_partition_count"] > 0
     )
@@ -1136,6 +1144,7 @@ def audit_usgs_residual_statewide_video_support(
             ),
             "recognized_class_rows": len(labels),
             "unexpected_class_rows": unexpected_class_rows,
+            "nonblank_rows_missing_line_or_tape": missing_group_identity_rows,
         },
         "collapsed_class_counts": {
             name: int(count) for name, count in zip(VIDEO_CLASS_NAMES, total_counts)
@@ -1144,7 +1153,9 @@ def audit_usgs_residual_statewide_video_support(
             "valid": source_schema_valid,
             "unexpected_nonblank_class_values": unexpected_class_values,
             "unexpected_class_rows": unexpected_class_rows,
+            "nonblank_rows_missing_line_or_tape": missing_group_identity_by_cruise,
             "unknown_values_reinterpreted_or_dropped_for_admission": False,
+            "missing_group_rows_repaired_or_dropped_for_admission": False,
         },
         "recognized_rows_partition_diagnostic": {
             **partition_audit,
@@ -1164,8 +1175,9 @@ def audit_usgs_residual_statewide_video_support(
             "encoder_promoted": False,
             "serving_or_score_changed": False,
             "reason": (
-                "At least one archive contains a nonblank CLASS value outside the frozen 1-4 "
-                "domain; the source schema fails closed without reinterpretation."
+                "At least one archive violates the frozen CLASS domain or has a nonblank row "
+                "without LINE/TAPE identity; the source schema fails closed without repair or "
+                "reinterpretation."
                 if not source_schema_valid
                 else (
                     "No whole-cruise partition leaves at least "
