@@ -454,6 +454,15 @@ whose training geography contains measured pixels from all four surveys. That
 choice uses source availability only, before optimization, and does not consult
 habitat, catch, or probe labels.
 
+The clean-commit v1 executions and their content-equivalent pre-commit runs
+matched exactly at the training-history, learned-tensor, normalization, and
+corpus-binding levels. The minimized
+[`hybrid-seafloor-v1` receipt](evidence/hybrid-seafloor-v1.receipt.json) records
+the exact source commit, clean model identities, artifact hashes, parameter
+counts, and claim boundary. The differently targeted hybrid losses are not a
+representation leaderboard; use the frozen independent probes before drawing a
+modality conclusion.
+
 Run the strict substrate-component probe with:
 
 ```bash

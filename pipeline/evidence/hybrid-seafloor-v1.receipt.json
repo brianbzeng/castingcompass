@@ -1,0 +1,80 @@
+{
+  "schema_version": "castingcompass.hybrid-seafloor-experiment-receipt/1.0.0",
+  "created_at": "2026-07-22T11:06:10Z",
+  "source_commit": "01ca3fee9b514034068ccbc05858cf1f72c6b913",
+  "source_manifest": {
+    "path": "pipeline/sources/usgs_sf_state_waters.json",
+    "sha256": "4617cb08d56a2e858766f2e3e8d24e7706b6475011820cee0ec17ef2f58c034c"
+  },
+  "corpus": {
+    "dataset_kind": "official_unlabeled_seafloor_remote_sensing",
+    "sha256": "dd88342209522d12726208259640fe7ac9379a61fa79cd9e606475945dd9af4a",
+    "patches": 4096,
+    "train_patches": 3193,
+    "validation_patches": 903,
+    "scales": 3,
+    "channels": 18,
+    "validation_fold": 3,
+    "split_regions": 5,
+    "seed": 42
+  },
+  "frozen_training": {
+    "objective": "spatial-contrastive-plus-masked-reconstruction",
+    "epochs": 20,
+    "batch_size": 64,
+    "learning_rate": 0.0003,
+    "weight_decay": 0.0001,
+    "base_width": 32,
+    "blocks_per_stage": 2,
+    "projection_dim": 128,
+    "temperature": 0.2,
+    "min_negative_distance_m": 512,
+    "reconstruction_weight": 1,
+    "mask_fraction": 0.25,
+    "mask_block_size": 4,
+    "device": "mps"
+  },
+  "modalities": {
+    "bathymetry": {
+      "trainable_parameters": 818050,
+      "best_validation_hybrid_loss": 1.621350852648417,
+      "best_epoch": 15,
+      "experiment_version": "exp-target-agnostic-e2140c9e3e71d39b789c7f1f8003e36ebff2e8548fe22e4a2bcfce333836a880",
+      "model_version": "model-target-agnostic-9762c2b64b678254969a7ca010ec7105775b48a54fae0e342629562d73f82141",
+      "checkpoint_sha256": "3261b5328290d5e9992c6ae19d3670eff5ad4d0b47027442bcd04bfaa36edbce",
+      "metrics_sha256": "7f61e06072211ec689d747b9c13efe5122a2b2efdb7a6f1e73f6d7df73f3fd45",
+      "run_metadata_sha256": "1227155fe84fb9caa0e18db68a08856a49f465c830eb64dfa5e1cd527a50e621"
+    },
+    "backscatter": {
+      "trainable_parameters": 816645,
+      "best_validation_hybrid_loss": 1.5255623817443849,
+      "best_epoch": 14,
+      "experiment_version": "exp-target-agnostic-dd7aadce3ba8407d8fddd0e5da25c3613104f87613d3f94fa2193c2eaef9f84b",
+      "model_version": "model-target-agnostic-3de8485b65b0a523703ba34c4b350df6bed75c7bda2debd4e5d05d1980f4f8ec",
+      "checkpoint_sha256": "edb8e6579bac3f76b74b11b3ba91d7bb363605172fa6d5abc52edf4bc0b8d5e2",
+      "metrics_sha256": "603fa3b29f0a4ca8583e425140697059dd32491a6c1aa3be6c237b0a49f09777",
+      "run_metadata_sha256": "2e89260796d246e7f1f88834e4fc0865867771383292266ac5679a7be5caf2e2"
+    },
+    "fused": {
+      "trainable_parameters": 824710,
+      "best_validation_hybrid_loss": 1.575048836072286,
+      "best_epoch": 14,
+      "experiment_version": "exp-target-agnostic-13ea5ffdd56a734caa17ccabec2de59ef29af943727e1e134db25a5e0008f63b",
+      "model_version": "model-target-agnostic-aeed0e770c9d1437368807ce4337d8e2db94d55d8360676637c4732d95c9e865",
+      "checkpoint_sha256": "7ccff84da4ea0799cc4f87b0d63b39ccb6e943d95ca082da6b38e6aa8a6f7156",
+      "metrics_sha256": "4b16067d66fe40bd311d7fa98d37f9029a4c574f332e6624736e19df9239e246",
+      "run_metadata_sha256": "4728a24214f38a5f7a982b99f98998ebfbccb6d8cffab0b179730f760b6bcc4a"
+    }
+  },
+  "reproduction": {
+    "executions_per_modality": 2,
+    "history_exact": true,
+    "learned_tensors_exact": true,
+    "normalization_exact": true,
+    "corpus_binding_exact": true,
+    "checkpoint_file_hashes_compared_across_source_identities": false,
+    "explanation": "The first execution used the content-addressed dirty source state that became source_commit without code changes. The second used the clean commit. Histories, learned tensors, normalization, and corpus hashes matched exactly; checkpoint envelopes intentionally carry different source-derived model identities."
+  },
+  "claim_boundary": "These losses prove reproducible optimization on unlabeled historical USGS bathymetry/backscatter only. They do not rank representation quality across modalities, validate habitat or fishing skill, calibrate catch probability, change the live Opportunity Score, or authorize model promotion or deployment.",
+  "next_gate": "Run the same frozen independent seafloor/habitat probe for all three encoders plus declared random and classical baselines, then a separately declared rare-structure probe."
+}

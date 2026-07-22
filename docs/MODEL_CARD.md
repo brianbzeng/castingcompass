@@ -1,10 +1,11 @@
 # CastingCompass model card
 
-**Status:** multiscale encoder and exactly reproduced full-survey official-
-bathymetry self-supervised pretraining implemented; catch heads remain
-untrained; no catch performance measured.
+**Status:** multiscale encoder and exactly reproduced official bathymetry,
+backscatter, and fused self-supervised pretraining implemented; independent
+representation probes remain open, catch heads remain untrained, and no catch
+performance has been measured.
 
-**Version:** 0.4.0
+**Version:** 0.5.0
 
 ## Live regional-ranking boundary
 
@@ -156,13 +157,26 @@ three-way modality ablation:
 | `fused` | Ten structure channels plus survey-bound intensities and availability | Depth plus available measured intensities |
 
 All three runs must use the same corpus locations, spatial split, seed,
-architecture capacity, optimizer, mask policy, and epoch budget. Comparing
-losses across different folds or source coverage is prohibited.
+encoder width/depth, optimizer, mask policy, and epoch budget. The required
+input and reconstruction layers produce small parameter-count differences
+(818,050 bathymetry; 816,645 backscatter; 824,710 fused), all within about one
+percent; they are not literally identical-capacity networks. Comparing losses
+across different folds or source coverage is prohibited, and even same-fold
+hybrid loss does not rank representation quality because reconstruction targets
+differ by modality.
 
 The fixed USGS v1 comparison uses validation fold `3`: it is the first seeded
 geographic fold with nonzero training coverage from every one of the four
 survey-bound intensity channels. This availability-only choice is frozen before
 optimization and never consulted a habitat, catch, or probe label.
+
+The three 20-epoch runs and their clean-commit repeats reproduced every loss-
+history value, learned tensor, normalization statistic, and corpus binding.
+The [minimized receipt](../pipeline/evidence/hybrid-seafloor-v1.receipt.json)
+binds the source commit, official corpus, exact model identities, parameters,
+best epochs, and local artifact hashes. Its numeric hybrid losses remain
+optimization diagnostics only; the independent habitat and rare-structure
+probes below are still required.
 
 ## Version and promotion contract
 

@@ -1,11 +1,12 @@
 # CastingCompass dataset card
 
 **Status:** species-aware contract assets, multiscale structure pipeline, and
-reproducible full-survey official-data self-supervised pretraining implemented.
-The production species migration and any supervised catch-training dataset
-remain unapproved. Official rasters and weights are not bundled.
+exactly reproduced official bathymetry/backscatter/fused self-supervised
+pretraining implemented. The production species migration, independent
+representation probes, and any supervised catch-training dataset remain
+unapproved. Official rasters and weights are not bundled.
 
-**Version:** 0.3.1
+**Version:** 0.4.0
 
 ## Intended dataset
 

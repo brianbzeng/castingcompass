@@ -44,11 +44,16 @@ by that discovery.
       `dd88342209522d12726208259640fe7ac9379a61fa79cd9e606475945dd9af4a`.
       Survey overlaps remain separate and the southern 2006 footprint is no longer lost to the
       prior north-first early-stop bias.
-- [ ] Complete and exactly reproduce the three official-data hybrid pretraining runs. All modes
-      use validation fold `3`, the first deterministic availability-only fold whose training
-      geography contains measured pixels from all four surveys, plus the same seed, spatial
-      split, optimizer, mask policy, and epoch budget. Preserve every configuration, checkpoint,
-      metric, source/corpus binding, and negative result.
+- [x] Complete and exactly reproduce the three official-data hybrid pretraining runs at source
+      commit `01ca3fee9b514034068ccbc05858cf1f72c6b913`. All modes used validation fold `3`,
+      the first deterministic availability-only fold whose training geography contains measured
+      pixels from all four surveys, plus the same seed, spatial split, optimizer, mask policy,
+      and 20-epoch budget. The second execution reproduced every training-history value, learned
+      tensor, normalization statistic, and corpus binding for all three modes. The minimized
+      [experiment receipt](../pipeline/evidence/hybrid-seafloor-v1.receipt.json) preserves the
+      exact clean model identities and artifact hashes. Best held-out hybrid losses were 1.621
+      for bathymetry, 1.526 for backscatter, and 1.575 for fused; these differently targeted
+      optimization losses do not rank representation quality or authorize promotion.
 - [ ] Run the same independent seafloor/habitat probe for all three frozen encoders plus the
       declared classical and random baselines, then run a separate rare-structure probe. Do not
       promote or connect any encoder to the live score unless the existing model-governance and
