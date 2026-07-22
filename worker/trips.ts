@@ -284,6 +284,7 @@ export interface TripRow {
   score_influenced_choice: number | null;
   prediction_metadata_json: string | null;
   photo_key: string | null;
+  photo_key_hash: string | null;
   photo_content_type: string | null;
   photo_size_bytes: number | null;
   created_at: string;
@@ -685,6 +686,7 @@ const CREATE_TRIPS_SQL = `CREATE TABLE IF NOT EXISTS trips (
   score_influenced_choice INTEGER,
   prediction_metadata_json TEXT,
   photo_key TEXT,
+  photo_key_hash TEXT,
   photo_content_type TEXT,
   photo_size_bytes INTEGER,
   created_at TEXT NOT NULL,
@@ -1279,14 +1281,14 @@ const INSERT_TRIP_SQL = `INSERT INTO trips (
   idempotency_key_hash,
   opportunity_window_id, opportunity_score, habitat_score, seasonality_score, conditions_score,
   fishability_score, model_version, score_influenced_choice, prediction_metadata_json, photo_key,
-  photo_content_type, photo_size_bytes, created_at, updated_at, completed_at
+  photo_key_hash, photo_content_type, photo_size_bytes, created_at, updated_at, completed_at
 ) SELECT
   ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
   ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
   ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
   ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
   ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
-  ?, ?, ?, ?, ?, ?
+  ?, ?, ?, ?, ?, ?, ?
 WHERE (? IS NULL OR (
   EXISTS (SELECT 1 FROM users WHERE id = ?)
   AND NOT EXISTS (SELECT 1 FROM account_deletion_fences WHERE user_id = ?)
@@ -1667,6 +1669,7 @@ export function createTripStore(db: D1DatabaseLike): TripStore {
           record.scoreInfluencedChoice === null ? null : Number(record.scoreInfluencedChoice),
           record.predictionMetadataJson,
           record.photoKey,
+          record.photoKeyHash,
           record.photoContentType,
           record.photoSizeBytes,
           record.createdAt,
@@ -1683,7 +1686,8 @@ export function createTripStore(db: D1DatabaseLike): TripStore {
       if (record.photoKey && record.photoKeyHash) {
         statements.push(db.prepare(`DELETE FROM trip_photo_upload_reservations
           WHERE trip_id = ? AND object_key = ? AND object_key_hash = ? AND state = 'pending'
-            AND EXISTS (SELECT 1 FROM trips WHERE id = ? AND user_id IS ? AND photo_key = ?)`)
+            AND EXISTS (SELECT 1 FROM trips
+              WHERE id = ? AND user_id IS ? AND photo_key = ? AND photo_key_hash = ?)`)
           .bind(
             record.id,
             record.photoKey,
@@ -1691,6 +1695,7 @@ export function createTripStore(db: D1DatabaseLike): TripStore {
             record.id,
             record.userId,
             record.photoKey,
+            record.photoKeyHash,
           ));
       }
       if (validation?.impression) {
@@ -1914,7 +1919,7 @@ export function createTripStore(db: D1DatabaseLike): TripStore {
           contract_status = ?, taxon_observations_json = ?, outcome_class = ?,
           target_encounter_count = ?, any_fish_encounter_count = ?, target_identification_confidence = ?,
           notes = ?, consent = 1, consent_at = ?,
-          moderation_status = 'pending', photo_key = ?,
+          moderation_status = 'pending', photo_key = ?, photo_key_hash = ?,
           photo_content_type = ?, photo_size_bytes = ?, updated_at = ?, completed_at = ?, token_hash = NULL
         WHERE id = ? AND user_id IS ? AND status = 'active' AND token_hash = ?
           AND (? IS NULL OR (
@@ -1964,6 +1969,7 @@ export function createTripStore(db: D1DatabaseLike): TripStore {
           completion.notes,
           completion.consentAt,
           completion.photoKey,
+          completion.photoKeyHash,
           completion.photoContentType,
           completion.photoSizeBytes,
           completion.updatedAt,
@@ -1986,6 +1992,7 @@ export function createTripStore(db: D1DatabaseLike): TripStore {
           WHERE trip_id = ? AND object_key = ? AND object_key_hash = ? AND state = 'pending'
             AND EXISTS (SELECT 1 FROM trips
               WHERE id = ? AND user_id IS ? AND status = 'completed' AND photo_key = ?
+                AND photo_key_hash = ?
                 AND updated_at = ?)`)
           .bind(
             id,
@@ -1994,6 +2001,7 @@ export function createTripStore(db: D1DatabaseLike): TripStore {
             id,
             accountId,
             completion.photoKey,
+            completion.photoKeyHash,
             completion.updatedAt,
           ));
       }
@@ -2028,7 +2036,7 @@ export function createTripStore(db: D1DatabaseLike): TripStore {
         completed.idempotency_key_hash !== tokenHash || completed.token_hash !== null ||
         completed.ended_at !== completion.endedAt || completed.completed_at !== completion.updatedAt ||
         completed.updated_at !== completion.updatedAt || completed.mode !== completion.mode ||
-        completed.photo_key !== completion.photoKey
+        completed.photo_key !== completion.photoKey || completed.photo_key_hash !== completion.photoKeyHash
       ) return null;
       return completed;
     },
@@ -2213,8 +2221,8 @@ export async function processTripPhotoUploadReservations(env: TripApiEnv, now = 
       }
 
       const attached = await db.prepare(`SELECT 1 AS attached FROM trips
-        WHERE id = ? AND photo_key = ? LIMIT 1`)
-        .bind(claim.trip_id, claim.object_key)
+        WHERE id = ? AND photo_key = ? AND photo_key_hash = ? LIMIT 1`)
+        .bind(claim.trip_id, claim.object_key, claim.object_key_hash)
         .first<{ attached: number }>();
       if (!attached) {
         if (!env.TRIP_PHOTOS) {

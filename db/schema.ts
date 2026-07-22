@@ -371,6 +371,7 @@ export const trips = sqliteTable(
     scoreInfluencedChoice: integer("score_influenced_choice", { mode: "boolean" }),
     predictionMetadataJson: text("prediction_metadata_json"),
     photoKey: text("photo_key"),
+    photoKeyHash: text("photo_key_hash"),
     photoContentType: text("photo_content_type"),
     photoSizeBytes: integer("photo_size_bytes"),
     createdAt: text("created_at").notNull(),

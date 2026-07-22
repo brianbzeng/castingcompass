@@ -49,6 +49,8 @@ const PWNED_PASSWORDS_TIMEOUT_MS = 3_000;
 const PWNED_PASSWORDS_MAX_RESPONSE_BYTES = 64 * 1024;
 const PASSWORD_RECOVERY_MINIMUM_RESPONSE_MS = 250;
 const DUMMY_PASSWORD_SALT = "Y2FzdGluZ2NvbXBhc3MtdGltaW5n";
+const PRIVACY_DELETION_TASK_BATCH = 5;
+const ACCOUNT_DELETION_INLINE_TASK_BATCH = 3;
 
 export interface AuthApiEnv extends TurnstileEnv, PrivacyExportEnv {
   DB?: D1DatabaseLike;
@@ -116,201 +118,29 @@ function safeProviderIdentifier(value: unknown) {
   return typeof value === "string" && /^[A-Za-z0-9_.:-]{1,128}$/.test(value) ? value : undefined;
 }
 
-const CREATE_USERS_SQL = `CREATE TABLE IF NOT EXISTS users (
-  id TEXT PRIMARY KEY NOT NULL,
-  email TEXT NOT NULL UNIQUE,
-  password_salt TEXT NOT NULL,
-  password_hash TEXT NOT NULL,
-  age_eligibility_confirmed_at TEXT,
-  terms_accepted_at TEXT,
-  terms_version TEXT,
-  privacy_accepted_at TEXT,
-  privacy_version TEXT,
-  created_at TEXT NOT NULL,
-  updated_at TEXT NOT NULL
-)`;
-
-const CREATE_SESSIONS_SQL = `CREATE TABLE IF NOT EXISTS auth_sessions (
-  token_hash TEXT PRIMARY KEY NOT NULL,
-  user_id TEXT NOT NULL,
-  expires_at TEXT NOT NULL,
-  created_at TEXT NOT NULL,
-  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
-)`;
-
-const CREATE_SAVED_SITES_SQL = `CREATE TABLE IF NOT EXISTS saved_sites (
-  user_id TEXT NOT NULL,
-  site_id TEXT NOT NULL,
-  created_at TEXT NOT NULL,
-  PRIMARY KEY (user_id, site_id),
-  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
-)`;
-
-const CREATE_AUTH_ATTEMPTS_SQL = `CREATE TABLE IF NOT EXISTS auth_attempts (
-  id TEXT PRIMARY KEY NOT NULL,
-  email_hash TEXT NOT NULL,
-  attempted_at TEXT NOT NULL,
-  successful INTEGER NOT NULL DEFAULT 0
-)`;
-
-const CREATE_EMAIL_CHALLENGES_SQL = `CREATE TABLE IF NOT EXISTS email_challenges (
-  id TEXT PRIMARY KEY NOT NULL,
-  kind TEXT NOT NULL,
-  email TEXT NOT NULL,
-  user_id TEXT,
-  code_hash TEXT NOT NULL,
-  password_salt TEXT,
-  password_hash TEXT,
-  age_eligibility_confirmed_at TEXT,
-  terms_version TEXT,
-  privacy_version TEXT,
-  expires_at TEXT NOT NULL,
-  attempts INTEGER NOT NULL DEFAULT 0,
-  resend_count INTEGER NOT NULL DEFAULT 0,
-  created_at TEXT NOT NULL,
-  CONSTRAINT email_challenges_kind_check CHECK (kind in ('signup', 'password_reset'))
-)`;
-
-const CREATE_GEAR_PROFILES_SQL = `CREATE TABLE IF NOT EXISTS gear_profiles (
-  id TEXT PRIMARY KEY NOT NULL,
-  user_id TEXT NOT NULL,
-  name TEXT NOT NULL,
-  rod TEXT,
-  reel TEXT,
-  bait_lure TEXT,
-  rig TEXT,
-  created_at TEXT NOT NULL,
-  updated_at TEXT NOT NULL,
-  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
-)`;
-
-const CREATE_SIGNUP_AGE_PROOFS_SQL = `CREATE TABLE IF NOT EXISTS signup_age_proofs (
-  token_hash TEXT PRIMARY KEY NOT NULL,
-  confirmed_at TEXT NOT NULL,
-  gate_version TEXT NOT NULL,
-  expires_at TEXT NOT NULL,
-  consumed_at TEXT,
-  created_at TEXT NOT NULL
-)`;
-
-const CREATE_PRIVACY_DELETION_JOBS_SQL = `CREATE TABLE IF NOT EXISTS privacy_deletion_jobs (
-  id TEXT PRIMARY KEY NOT NULL,
-  receipt_hash TEXT NOT NULL UNIQUE,
-  scope TEXT NOT NULL CHECK (scope IN ('account', 'trip')),
-  subject_hash TEXT NOT NULL,
-  owner_subject_hash TEXT NOT NULL,
-  state TEXT NOT NULL CHECK (state IN ('active_data_removed', 'purging', 'completed', 'needs_attention')),
-  objects_total INTEGER NOT NULL DEFAULT 0,
-  objects_deleted INTEGER NOT NULL DEFAULT 0,
-  last_error_code TEXT,
-  requested_at TEXT NOT NULL,
-  active_data_removed_at TEXT,
-  completed_at TEXT,
-  updated_at TEXT NOT NULL
-)`;
-
-const CREATE_PRIVACY_DELETION_TASKS_SQL = `CREATE TABLE IF NOT EXISTS privacy_deletion_tasks (
-  id TEXT PRIMARY KEY NOT NULL,
-  job_id TEXT NOT NULL,
-  object_key TEXT,
-  object_key_hash TEXT NOT NULL,
-  object_store TEXT NOT NULL DEFAULT 'trip_photos' CHECK (object_store IN ('trip_photos', 'privacy_exports')),
-  state TEXT NOT NULL CHECK (state IN ('pending', 'leased', 'completed', 'needs_attention')),
-  attempts INTEGER NOT NULL DEFAULT 0,
-  available_at TEXT NOT NULL,
-  lease_expires_at TEXT,
-  lease_token TEXT,
-  last_error_code TEXT,
-  created_at TEXT NOT NULL,
-  updated_at TEXT NOT NULL,
-  completed_at TEXT,
-  FOREIGN KEY (job_id) REFERENCES privacy_deletion_jobs(id) ON DELETE CASCADE,
-  UNIQUE (job_id, object_key_hash),
-  CHECK ((state = 'completed' AND object_key IS NULL)
-    OR (state != 'completed' AND object_key IS NOT NULL))
-)`;
-
-const CREATE_PRIVACY_EXPORT_JOBS_SQL = `CREATE TABLE IF NOT EXISTS privacy_export_jobs (
-  id TEXT PRIMARY KEY NOT NULL,
-  user_id TEXT,
-  owner_subject_hash TEXT NOT NULL,
-  state TEXT NOT NULL CHECK (state IN ('pending', 'queued', 'processing', 'retry', 'completed', 'canceled', 'expired', 'needs_attention')),
-  attempts INTEGER NOT NULL DEFAULT 0 CHECK (attempts >= 0 AND attempts <= 5),
-  available_at TEXT NOT NULL,
-  lease_expires_at TEXT,
-  lease_token TEXT,
-  object_key TEXT,
-  object_key_hash TEXT,
-  content_sha256 TEXT,
-  size_bytes INTEGER,
-  record_count INTEGER,
-  last_error_code TEXT,
-  requested_at TEXT NOT NULL,
-  updated_at TEXT NOT NULL,
-  completed_at TEXT,
-  expires_at TEXT,
-  CHECK ((object_key IS NULL AND object_key_hash IS NULL)
-    OR (object_key IS NOT NULL AND object_key_hash IS NOT NULL)),
-  CHECK (state != 'completed' OR (user_id IS NOT NULL AND object_key IS NOT NULL
-    AND content_sha256 IS NOT NULL AND size_bytes IS NOT NULL AND record_count IS NOT NULL
-    AND completed_at IS NOT NULL AND expires_at IS NOT NULL)),
-  CHECK (state != 'expired' OR (user_id IS NULL AND object_key IS NULL))
-)`;
-
-const CREATE_ACCOUNT_DELETION_FENCES_SQL = `CREATE TABLE IF NOT EXISTS account_deletion_fences (
-  user_id TEXT PRIMARY KEY NOT NULL,
-  owner_subject_hash TEXT NOT NULL UNIQUE,
-  lease_token TEXT NOT NULL CHECK (length(lease_token) >= 40 AND length(lease_token) <= 160),
-  lease_expires_at TEXT NOT NULL,
-  requested_at TEXT NOT NULL,
-  updated_at TEXT NOT NULL,
-  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
-  CHECK (length(owner_subject_hash) = 64 AND owner_subject_hash NOT GLOB '*[^a-f0-9]*')
-)`;
+const AUTH_SCHEMA_READY_SQL = `SELECT
+  (SELECT COUNT(*) FROM sqlite_master WHERE type = 'table' AND name IN (
+    'users', 'auth_sessions', 'saved_sites', 'auth_attempts', 'email_challenges',
+    'gear_profiles', 'signup_age_proofs', 'privacy_deletion_jobs',
+    'privacy_deletion_tasks', 'privacy_export_jobs', 'account_deletion_fences',
+    'trip_photo_upload_reservations', 'trips'
+  )) AS required_tables,
+  (SELECT COUNT(*) FROM pragma_table_info('trips') WHERE name = 'photo_key_hash') AS photo_hash_columns`;
 
 async function initialize(db: D1DatabaseLike) {
   let pending = initializedDatabases.get(db as object);
   if (!pending) {
     pending = (async () => {
-      await db.batch([
-        db.prepare(CREATE_USERS_SQL),
-        db.prepare(CREATE_SESSIONS_SQL),
-        db.prepare(CREATE_SAVED_SITES_SQL),
-        db.prepare(CREATE_AUTH_ATTEMPTS_SQL),
-        db.prepare(CREATE_EMAIL_CHALLENGES_SQL),
-        db.prepare(CREATE_GEAR_PROFILES_SQL),
-        db.prepare(CREATE_SIGNUP_AGE_PROOFS_SQL),
-        db.prepare(CREATE_PRIVACY_DELETION_JOBS_SQL),
-        db.prepare(CREATE_PRIVACY_DELETION_TASKS_SQL),
-        db.prepare(CREATE_PRIVACY_EXPORT_JOBS_SQL),
-        db.prepare(CREATE_ACCOUNT_DELETION_FENCES_SQL),
-      ]);
-      await db.batch([
-        db.prepare("CREATE INDEX IF NOT EXISTS auth_sessions_user_idx ON auth_sessions (user_id, expires_at)"),
-        db.prepare("CREATE INDEX IF NOT EXISTS auth_sessions_expires_idx ON auth_sessions (expires_at)"),
-        db.prepare("CREATE INDEX IF NOT EXISTS saved_sites_user_created_idx ON saved_sites (user_id, created_at DESC)"),
-        db.prepare("CREATE INDEX IF NOT EXISTS auth_attempts_email_time_idx ON auth_attempts (email_hash, attempted_at)"),
-        db.prepare("CREATE INDEX IF NOT EXISTS auth_attempts_attempted_idx ON auth_attempts (attempted_at)"),
-        db.prepare("CREATE INDEX IF NOT EXISTS email_challenges_email_time_idx ON email_challenges (email, created_at)"),
-        db.prepare("CREATE INDEX IF NOT EXISTS email_challenges_expires_idx ON email_challenges (expires_at)"),
-        db.prepare("CREATE INDEX IF NOT EXISTS email_challenges_user_idx ON email_challenges (user_id) WHERE user_id IS NOT NULL"),
-        db.prepare("CREATE UNIQUE INDEX IF NOT EXISTS gear_profiles_user_name_unique ON gear_profiles (user_id, name)"),
-        db.prepare("CREATE INDEX IF NOT EXISTS gear_profiles_user_updated_idx ON gear_profiles (user_id, updated_at)"),
-        db.prepare("CREATE INDEX IF NOT EXISTS signup_age_proofs_expiry_idx ON signup_age_proofs (expires_at, consumed_at)"),
-        db.prepare("CREATE INDEX IF NOT EXISTS signup_age_proofs_consumed_idx ON signup_age_proofs (consumed_at) WHERE consumed_at IS NOT NULL"),
-        db.prepare("CREATE INDEX IF NOT EXISTS privacy_deletion_jobs_state_updated_idx ON privacy_deletion_jobs (state, updated_at)"),
-        db.prepare("CREATE INDEX IF NOT EXISTS privacy_deletion_jobs_owner_state_idx ON privacy_deletion_jobs (owner_subject_hash, state, updated_at)"),
-        db.prepare("CREATE INDEX IF NOT EXISTS privacy_deletion_jobs_scope_subject_idx ON privacy_deletion_jobs (scope, subject_hash)"),
-        db.prepare("CREATE INDEX IF NOT EXISTS privacy_deletion_jobs_state_completed_idx ON privacy_deletion_jobs (state, completed_at)"),
-        db.prepare("CREATE INDEX IF NOT EXISTS privacy_deletion_tasks_retry_idx ON privacy_deletion_tasks (state, available_at, lease_expires_at)"),
-        db.prepare("CREATE INDEX IF NOT EXISTS privacy_deletion_tasks_store_retry_idx ON privacy_deletion_tasks (object_store, state, available_at, lease_expires_at)"),
-        db.prepare("CREATE UNIQUE INDEX IF NOT EXISTS privacy_export_jobs_active_user_unique ON privacy_export_jobs (user_id) WHERE user_id IS NOT NULL AND state IN ('pending', 'queued', 'processing', 'retry', 'completed', 'needs_attention')"),
-        db.prepare("CREATE UNIQUE INDEX IF NOT EXISTS privacy_export_jobs_object_key_unique ON privacy_export_jobs (object_key) WHERE object_key IS NOT NULL"),
-        db.prepare("CREATE INDEX IF NOT EXISTS privacy_export_jobs_dispatch_idx ON privacy_export_jobs (state, available_at, lease_expires_at)"),
-        db.prepare("CREATE INDEX IF NOT EXISTS privacy_export_jobs_expiry_idx ON privacy_export_jobs (state, expires_at, lease_expires_at)"),
-        db.prepare("CREATE INDEX IF NOT EXISTS privacy_export_jobs_owner_idx ON privacy_export_jobs (owner_subject_hash, updated_at)"),
-        db.prepare("CREATE UNIQUE INDEX IF NOT EXISTS account_deletion_fences_owner_unique ON account_deletion_fences (owner_subject_hash)"),
-      ]);
+      const readiness = await db.prepare(AUTH_SCHEMA_READY_SQL)
+        .first<{ required_tables: number; photo_hash_columns: number }>();
+      if (Number(readiness?.required_tables ?? 0) !== 13
+        || Number(readiness?.photo_hash_columns ?? 0) !== 1) {
+        throw new AuthError(
+          503,
+          "auth_schema_unavailable",
+          "Account services are paused until the reviewed database migration is complete.",
+        );
+      }
     })().catch((error) => {
       initializedDatabases.delete(db as object);
       throw error;
@@ -416,9 +246,8 @@ export async function handleAccountRequest(
       return accountRequestErrorResponse(error);
     }
   }
-  await initialize(db);
-
   try {
+    await initialize(db);
     if (url.pathname === "/api/auth/session") {
       if (request.method !== "GET") return methodNotAllowed("GET");
       const session = await getAuthenticatedSession(request, env);
@@ -1147,53 +976,28 @@ export async function handleAccountRequest(
         ownerSubjectHash,
         options.now?.() ?? new Date(),
       );
-      const photos = await db.prepare("SELECT photo_key FROM trips WHERE user_id = ? AND photo_key IS NOT NULL")
-        .bind(user.id).all<{ photo_key: string }>();
-      const reservedPhotos = await db.prepare(`SELECT object_key, available_at
-        FROM trip_photo_upload_reservations
-        WHERE owner_subject_hash = ?
-        ORDER BY created_at`)
-        .bind(ownerSubjectHash)
-        .all<{ object_key: string; available_at: string }>();
-      const pendingObjects = await db.prepare(`SELECT privacy_deletion_tasks.object_key,
-          privacy_deletion_tasks.object_store
-        FROM privacy_deletion_tasks
-        JOIN privacy_deletion_jobs ON privacy_deletion_jobs.id = privacy_deletion_tasks.job_id
-        WHERE privacy_deletion_jobs.owner_subject_hash = ?
-          AND privacy_deletion_tasks.state != 'completed' AND privacy_deletion_tasks.object_key IS NOT NULL`)
-        .bind(ownerSubjectHash).all<{ object_key: string; object_store: PrivacyObjectStore }>();
-      const exportObjects = await db.prepare(`SELECT object_key FROM privacy_export_jobs
-        WHERE owner_subject_hash = ? AND object_key IS NOT NULL
-          AND state IN ('pending', 'queued', 'processing', 'retry', 'completed', 'needs_attention')`)
-        .bind(ownerSubjectHash).all<{ object_key: string }>();
-      const deletionObjects: PrivacyDeletionObject[] = [
-        ...(photos.results ?? []).map((photo) => ({ objectStore: "trip_photos" as const, objectKey: photo.photo_key })),
-        ...(reservedPhotos.results ?? []).map((photo) => ({
-          objectStore: "trip_photos" as const,
-          objectKey: photo.object_key,
-          availableAt: photo.available_at,
-        })),
-        ...(pendingObjects.results ?? []).map((object) => ({ objectStore: object.object_store, objectKey: object.object_key })),
-        ...(exportObjects.results ?? []).map((object) => ({ objectStore: "privacy_exports" as const, objectKey: object.object_key })),
-      ];
       const deletion = await prepareDeletionJob(
         "account",
         user.id,
         user.id,
-        deletionObjects,
+        [],
         fence.requestedAt,
       );
       let deletionResults: unknown[] = [];
+      let deletionCommitRecovered = false;
       try {
         deletionResults = await db.batch([
         deletion.jobStatementForAccountFence(db, user.id, fence.leaseToken),
-        ...deletion.taskStatementsForAccountFence(db, user.id, fence.leaseToken),
+        ...deletion.inventoryStatementsForAccountFence(db, user.id, fence.leaseToken),
+        deletion.finalizeInventoryStatementForAccountFence(db, user.id, fence.leaseToken),
         db.prepare(`UPDATE privacy_deletion_tasks SET state = 'pending', available_at = ?,
           lease_expires_at = NULL, lease_token = NULL, last_error_code = NULL, updated_at = ?
           WHERE state = 'needs_attention' AND object_key IS NOT NULL
             AND job_id IN (SELECT id FROM privacy_deletion_jobs WHERE owner_subject_hash = ?)
             AND EXISTS (SELECT 1 FROM account_deletion_fences
-              WHERE user_id = ? AND owner_subject_hash = ? AND lease_token = ?)`)
+              WHERE user_id = ? AND owner_subject_hash = ? AND lease_token = ?)
+            AND EXISTS (SELECT 1 FROM privacy_deletion_jobs
+              WHERE id = ? AND owner_subject_hash = ?)`)
           .bind(
             deletion.requestedAt,
             deletion.requestedAt,
@@ -1201,6 +1005,8 @@ export async function handleAccountRequest(
             user.id,
             ownerSubjectHash,
             fence.leaseToken,
+            deletion.id,
+            ownerSubjectHash,
           ),
         db.prepare(`UPDATE privacy_export_jobs
           SET state = 'canceled', user_id = NULL, lease_expires_at = NULL, lease_token = NULL,
@@ -1208,53 +1014,103 @@ export async function handleAccountRequest(
           WHERE owner_subject_hash = ?
             AND state IN ('pending', 'queued', 'processing', 'retry', 'completed', 'needs_attention')
             AND EXISTS (SELECT 1 FROM account_deletion_fences
-              WHERE user_id = ? AND owner_subject_hash = ? AND lease_token = ?)`)
-          .bind(deletion.requestedAt, ownerSubjectHash, user.id, ownerSubjectHash, fence.leaseToken),
+              WHERE user_id = ? AND owner_subject_hash = ? AND lease_token = ?)
+            AND EXISTS (SELECT 1 FROM privacy_deletion_jobs
+              WHERE id = ? AND owner_subject_hash = ?)`)
+          .bind(
+            deletion.requestedAt,
+            ownerSubjectHash,
+            user.id,
+            ownerSubjectHash,
+            fence.leaseToken,
+            deletion.id,
+            ownerSubjectHash,
+          ),
         db.prepare(`DELETE FROM trip_photo_upload_reservations
           WHERE owner_subject_hash = ?
             AND EXISTS (SELECT 1 FROM account_deletion_fences
-              WHERE user_id = ? AND owner_subject_hash = ? AND lease_token = ?)`)
-          .bind(ownerSubjectHash, user.id, ownerSubjectHash, fence.leaseToken),
+              WHERE user_id = ? AND owner_subject_hash = ? AND lease_token = ?)
+            AND EXISTS (SELECT 1 FROM privacy_deletion_jobs
+              WHERE id = ? AND owner_subject_hash = ?)`)
+          .bind(ownerSubjectHash, user.id, ownerSubjectHash, fence.leaseToken, deletion.id, ownerSubjectHash),
         db.prepare(`DELETE FROM site_discussion_posts
           WHERE trip_id IN (SELECT id FROM trips WHERE user_id = ?)
             AND EXISTS (SELECT 1 FROM account_deletion_fences
-              WHERE user_id = ? AND owner_subject_hash = ? AND lease_token = ?)`)
-          .bind(user.id, user.id, ownerSubjectHash, fence.leaseToken),
+              WHERE user_id = ? AND owner_subject_hash = ? AND lease_token = ?)
+            AND EXISTS (SELECT 1 FROM privacy_deletion_jobs
+              WHERE id = ? AND owner_subject_hash = ?)`)
+          .bind(user.id, user.id, ownerSubjectHash, fence.leaseToken, deletion.id, ownerSubjectHash),
         db.prepare(`DELETE FROM trips WHERE user_id = ?
           AND EXISTS (SELECT 1 FROM account_deletion_fences
-            WHERE user_id = ? AND owner_subject_hash = ? AND lease_token = ?)`)
-          .bind(user.id, user.id, ownerSubjectHash, fence.leaseToken),
+            WHERE user_id = ? AND owner_subject_hash = ? AND lease_token = ?)
+          AND EXISTS (SELECT 1 FROM privacy_deletion_jobs
+            WHERE id = ? AND owner_subject_hash = ?)`)
+          .bind(user.id, user.id, ownerSubjectHash, fence.leaseToken, deletion.id, ownerSubjectHash),
         db.prepare(`DELETE FROM saved_sites WHERE user_id = ?
           AND EXISTS (SELECT 1 FROM account_deletion_fences
-            WHERE user_id = ? AND owner_subject_hash = ? AND lease_token = ?)`)
-          .bind(user.id, user.id, ownerSubjectHash, fence.leaseToken),
+            WHERE user_id = ? AND owner_subject_hash = ? AND lease_token = ?)
+          AND EXISTS (SELECT 1 FROM privacy_deletion_jobs
+            WHERE id = ? AND owner_subject_hash = ?)`)
+          .bind(user.id, user.id, ownerSubjectHash, fence.leaseToken, deletion.id, ownerSubjectHash),
         db.prepare(`DELETE FROM gear_profiles WHERE user_id = ?
           AND EXISTS (SELECT 1 FROM account_deletion_fences
-            WHERE user_id = ? AND owner_subject_hash = ? AND lease_token = ?)`)
-          .bind(user.id, user.id, ownerSubjectHash, fence.leaseToken),
+            WHERE user_id = ? AND owner_subject_hash = ? AND lease_token = ?)
+          AND EXISTS (SELECT 1 FROM privacy_deletion_jobs
+            WHERE id = ? AND owner_subject_hash = ?)`)
+          .bind(user.id, user.id, ownerSubjectHash, fence.leaseToken, deletion.id, ownerSubjectHash),
         db.prepare(`DELETE FROM auth_sessions WHERE user_id = ?
           AND EXISTS (SELECT 1 FROM account_deletion_fences
-            WHERE user_id = ? AND owner_subject_hash = ? AND lease_token = ?)`)
-          .bind(user.id, user.id, ownerSubjectHash, fence.leaseToken),
+            WHERE user_id = ? AND owner_subject_hash = ? AND lease_token = ?)
+          AND EXISTS (SELECT 1 FROM privacy_deletion_jobs
+            WHERE id = ? AND owner_subject_hash = ?)`)
+          .bind(user.id, user.id, ownerSubjectHash, fence.leaseToken, deletion.id, ownerSubjectHash),
         db.prepare(`DELETE FROM email_challenges WHERE (email = ? OR user_id = ?)
           AND EXISTS (SELECT 1 FROM account_deletion_fences
-            WHERE user_id = ? AND owner_subject_hash = ? AND lease_token = ?)`)
-          .bind(user.email, user.id, user.id, ownerSubjectHash, fence.leaseToken),
+            WHERE user_id = ? AND owner_subject_hash = ? AND lease_token = ?)
+          AND EXISTS (SELECT 1 FROM privacy_deletion_jobs
+            WHERE id = ? AND owner_subject_hash = ?)`)
+          .bind(user.email, user.id, user.id, ownerSubjectHash, fence.leaseToken, deletion.id, ownerSubjectHash),
         db.prepare(`DELETE FROM auth_attempts WHERE email_hash = ?
           AND EXISTS (SELECT 1 FROM account_deletion_fences
-            WHERE user_id = ? AND owner_subject_hash = ? AND lease_token = ?)`)
-          .bind(await sha256(user.email), user.id, ownerSubjectHash, fence.leaseToken),
+            WHERE user_id = ? AND owner_subject_hash = ? AND lease_token = ?)
+          AND EXISTS (SELECT 1 FROM privacy_deletion_jobs
+            WHERE id = ? AND owner_subject_hash = ?)`)
+          .bind(
+            await sha256(user.email),
+            user.id,
+            ownerSubjectHash,
+            fence.leaseToken,
+            deletion.id,
+            ownerSubjectHash,
+          ),
         db.prepare(`DELETE FROM users WHERE id = ?
           AND EXISTS (SELECT 1 FROM account_deletion_fences
-            WHERE user_id = ? AND owner_subject_hash = ? AND lease_token = ?)`)
-          .bind(user.id, user.id, ownerSubjectHash, fence.leaseToken),
+            WHERE user_id = ? AND owner_subject_hash = ? AND lease_token = ?)
+          AND EXISTS (SELECT 1 FROM privacy_deletion_jobs
+            WHERE id = ? AND owner_subject_hash = ?)`)
+          .bind(user.id, user.id, ownerSubjectHash, fence.leaseToken, deletion.id, ownerSubjectHash),
         ]);
       } catch (error) {
         const committed = await exactAccountDeletionCommit(db, user.id, deletion.receipt);
         if (!committed) throw error;
+        deletionCommitRecovered = true;
       }
       const userDeleteChanges = confirmedMutationChanges(deletionResults.at(-1));
-      if (userDeleteChanges !== 1 && !await exactAccountDeletionCommit(db, user.id, deletion.receipt)) {
+      const deletionCommitConfirmed = userDeleteChanges === 1
+        || deletionCommitRecovered
+        || await exactAccountDeletionCommit(db, user.id, deletion.receipt);
+      if (!deletionCommitConfirmed) {
+        const missingPhotoHashes = await db.prepare(`SELECT COUNT(*) AS count FROM trips
+          WHERE user_id = ? AND photo_key IS NOT NULL AND photo_key_hash IS NULL`)
+          .bind(user.id)
+          .first<{ count: number }>();
+        if (Number(missingPhotoHashes?.count ?? 0) > 0) {
+          throw new AuthError(
+            503,
+            "account_deletion_inventory_incomplete",
+            "Account deletion is paused because a legacy private object needs protected migration. Contact support before retrying.",
+          );
+        }
         throw new AuthError(
           userDeleteChanges === 0 ? 409 : 503,
           userDeleteChanges === 0 ? "account_deletion_lease_changed" : "account_deletion_unconfirmed",
@@ -1263,7 +1119,11 @@ export async function handleAccountRequest(
             : "Account deletion could not be confirmed. Check deletion status before retrying.",
         );
       }
-      const status = await deletionStatusAfterCommit(env, deletion);
+      const status = await deletionStatusAfterCommit(
+        env,
+        deletion,
+        deletionCommitRecovered ? 1 : ACCOUNT_DELETION_INLINE_TASK_BATCH,
+      );
       return jsonResponse(
         { deleted: true, deletion: status },
         status.status === "completed" ? 200 : 202,
@@ -2143,7 +2003,9 @@ async function prepareDeletionJob(
         last_error_code, requested_at, active_data_removed_at, completed_at, updated_at)
       SELECT ?, ?, ?, ?, ?, ?, ?, 0, NULL, ?, ?, ?, ?
       WHERE EXISTS (SELECT 1 FROM account_deletion_fences
-        WHERE user_id = ? AND owner_subject_hash = ? AND lease_token = ?)`)
+        WHERE user_id = ? AND owner_subject_hash = ? AND lease_token = ?)
+        AND NOT EXISTS (SELECT 1 FROM trips
+          WHERE user_id = ? AND photo_key IS NOT NULL AND photo_key_hash IS NULL)`)
       .bind(
         id,
         receiptHash,
@@ -2159,6 +2021,7 @@ async function prepareDeletionJob(
         userId,
         ownerSubjectHash,
         leaseToken,
+        userId,
       ),
     jobStatementForPendingTrip: (db: D1DatabaseLike, tripId: string, userId: string) => db.prepare(`INSERT INTO privacy_deletion_jobs
       (id, receipt_hash, scope, subject_hash, owner_subject_hash, state, objects_total, objects_deleted,
@@ -2185,29 +2048,165 @@ async function prepareDeletionJob(
         lease_token, last_error_code, created_at, updated_at, completed_at)
       VALUES (?, ?, ?, ?, ?, 'pending', 0, ?, NULL, NULL, NULL, ?, ?, NULL)`)
       .bind(task.id, id, task.objectKey, task.objectKeyHash, task.objectStore, task.availableAt, timestamp, timestamp)),
-    taskStatementsForAccountFence: (
+    inventoryStatementsForAccountFence: (
       db: D1DatabaseLike,
       userId: string,
       leaseToken: string,
-    ) => tasks.map((task) => db.prepare(`INSERT INTO privacy_deletion_tasks
-      (id, job_id, object_key, object_key_hash, object_store, state, attempts, available_at, lease_expires_at,
-        lease_token, last_error_code, created_at, updated_at, completed_at)
-      SELECT ?, ?, ?, ?, ?, 'pending', 0, ?, NULL, NULL, NULL, ?, ?, NULL
-      WHERE EXISTS (SELECT 1 FROM account_deletion_fences
-        WHERE user_id = ? AND owner_subject_hash = ? AND lease_token = ?)`)
+    ) => [
+      db.prepare(`INSERT INTO privacy_deletion_tasks
+        (id, job_id, object_key, object_key_hash, object_store, state, attempts, available_at,
+          lease_expires_at, lease_token, last_error_code, created_at, updated_at, completed_at)
+        SELECT ? || ':' || task.object_key_hash, ?, task.object_key, task.object_key_hash,
+          task.object_store, 'pending', 0, ?, NULL, NULL, NULL, ?, ?, NULL
+        FROM privacy_deletion_tasks AS task
+        JOIN privacy_deletion_jobs AS source_job ON source_job.id = task.job_id
+        WHERE source_job.owner_subject_hash = ? AND source_job.id != ?
+          AND task.state != 'completed' AND task.object_key IS NOT NULL
+          AND EXISTS (SELECT 1 FROM account_deletion_fences
+            WHERE user_id = ? AND owner_subject_hash = ? AND lease_token = ?)
+          AND EXISTS (SELECT 1 FROM privacy_deletion_jobs
+            WHERE id = ? AND owner_subject_hash = ?)
+        ON CONFLICT(job_id, object_key_hash) DO UPDATE SET
+          available_at = CASE
+            WHEN excluded.available_at > privacy_deletion_tasks.available_at THEN excluded.available_at
+            ELSE privacy_deletion_tasks.available_at
+          END`)
+        .bind(
+          id,
+          id,
+          timestamp,
+          timestamp,
+          timestamp,
+          ownerSubjectHash,
+          id,
+          userId,
+          ownerSubjectHash,
+          leaseToken,
+          id,
+          ownerSubjectHash,
+        ),
+      db.prepare(`INSERT INTO privacy_deletion_tasks
+        (id, job_id, object_key, object_key_hash, object_store, state, attempts, available_at,
+          lease_expires_at, lease_token, last_error_code, created_at, updated_at, completed_at)
+        SELECT ? || ':' || reservation.object_key_hash, ?, reservation.object_key,
+          reservation.object_key_hash, 'trip_photos', 'pending', 0, reservation.available_at,
+          NULL, NULL, NULL, ?, ?, NULL
+        FROM trip_photo_upload_reservations AS reservation
+        WHERE reservation.owner_subject_hash = ?
+          AND EXISTS (SELECT 1 FROM account_deletion_fences
+            WHERE user_id = ? AND owner_subject_hash = ? AND lease_token = ?)
+          AND EXISTS (SELECT 1 FROM privacy_deletion_jobs
+            WHERE id = ? AND owner_subject_hash = ?)
+        ON CONFLICT(job_id, object_key_hash) DO UPDATE SET
+          available_at = CASE
+            WHEN excluded.available_at > privacy_deletion_tasks.available_at THEN excluded.available_at
+            ELSE privacy_deletion_tasks.available_at
+          END`)
+        .bind(
+          id,
+          id,
+          timestamp,
+          timestamp,
+          ownerSubjectHash,
+          userId,
+          ownerSubjectHash,
+          leaseToken,
+          id,
+          ownerSubjectHash,
+        ),
+      db.prepare(`INSERT INTO privacy_deletion_tasks
+        (id, job_id, object_key, object_key_hash, object_store, state, attempts, available_at,
+          lease_expires_at, lease_token, last_error_code, created_at, updated_at, completed_at)
+        SELECT ? || ':' || export.object_key_hash, ?, export.object_key, export.object_key_hash,
+          'privacy_exports', 'pending', 0, ?, NULL, NULL, NULL, ?, ?, NULL
+        FROM privacy_export_jobs AS export
+        WHERE export.owner_subject_hash = ? AND export.object_key IS NOT NULL
+          AND export.object_key_hash IS NOT NULL
+          AND export.state IN ('pending', 'queued', 'processing', 'retry', 'completed', 'needs_attention')
+          AND EXISTS (SELECT 1 FROM account_deletion_fences
+            WHERE user_id = ? AND owner_subject_hash = ? AND lease_token = ?)
+          AND EXISTS (SELECT 1 FROM privacy_deletion_jobs
+            WHERE id = ? AND owner_subject_hash = ?)
+        ON CONFLICT(job_id, object_key_hash) DO UPDATE SET
+          available_at = CASE
+            WHEN excluded.available_at > privacy_deletion_tasks.available_at THEN excluded.available_at
+            ELSE privacy_deletion_tasks.available_at
+          END`)
+        .bind(
+          id,
+          id,
+          timestamp,
+          timestamp,
+          timestamp,
+          ownerSubjectHash,
+          userId,
+          ownerSubjectHash,
+          leaseToken,
+          id,
+          ownerSubjectHash,
+        ),
+      db.prepare(`INSERT INTO privacy_deletion_tasks
+        (id, job_id, object_key, object_key_hash, object_store, state, attempts, available_at,
+          lease_expires_at, lease_token, last_error_code, created_at, updated_at, completed_at)
+        SELECT ? || ':' || trip.photo_key_hash, ?, trip.photo_key, trip.photo_key_hash,
+          'trip_photos', 'pending', 0, ?, NULL, NULL, NULL, ?, ?, NULL
+        FROM trips AS trip
+        WHERE trip.user_id = ? AND trip.photo_key IS NOT NULL AND trip.photo_key_hash IS NOT NULL
+          AND EXISTS (SELECT 1 FROM account_deletion_fences
+            WHERE user_id = ? AND owner_subject_hash = ? AND lease_token = ?)
+          AND EXISTS (SELECT 1 FROM privacy_deletion_jobs
+            WHERE id = ? AND owner_subject_hash = ?)
+        ON CONFLICT(job_id, object_key_hash) DO UPDATE SET
+          available_at = CASE
+            WHEN excluded.available_at > privacy_deletion_tasks.available_at THEN excluded.available_at
+            ELSE privacy_deletion_tasks.available_at
+          END`)
+        .bind(
+          id,
+          id,
+          timestamp,
+          timestamp,
+          timestamp,
+          userId,
+          userId,
+          ownerSubjectHash,
+          leaseToken,
+          id,
+          ownerSubjectHash,
+        ),
+    ],
+    finalizeInventoryStatementForAccountFence: (
+      db: D1DatabaseLike,
+      userId: string,
+      leaseToken: string,
+    ) => db.prepare(`UPDATE privacy_deletion_jobs SET
+        objects_total = (SELECT COUNT(*) FROM privacy_deletion_tasks WHERE job_id = ?),
+        state = CASE
+          WHEN EXISTS (SELECT 1 FROM privacy_deletion_tasks WHERE job_id = ?)
+            THEN 'active_data_removed'
+          ELSE 'completed'
+        END,
+        completed_at = CASE
+          WHEN EXISTS (SELECT 1 FROM privacy_deletion_tasks WHERE job_id = ?)
+            THEN NULL
+          ELSE ?
+        END,
+        updated_at = ?
+      WHERE id = ? AND owner_subject_hash = ?
+        AND EXISTS (SELECT 1 FROM account_deletion_fences
+          WHERE user_id = ? AND owner_subject_hash = ? AND lease_token = ?)`)
       .bind(
-        task.id,
         id,
-        task.objectKey,
-        task.objectKeyHash,
-        task.objectStore,
-        task.availableAt,
+        id,
+        id,
         timestamp,
         timestamp,
+        id,
+        ownerSubjectHash,
         userId,
         ownerSubjectHash,
         leaseToken,
-      )),
+      ),
     taskStatementsForPendingTrip: (db: D1DatabaseLike, tripId: string, userId: string) => tasks.map((task) => db.prepare(`INSERT INTO privacy_deletion_tasks
       (id, job_id, object_key, object_key_hash, object_store, state, attempts, available_at, lease_expires_at,
         lease_token, last_error_code, created_at, updated_at, completed_at)
@@ -2281,6 +2280,7 @@ async function deletionStatusAfterCommit(
     requestedAt: string;
     objectsTotal: number;
   },
+  maximumTasks = ACCOUNT_DELETION_INLINE_TASK_BATCH,
 ) {
   const fallback = {
     status: deletion.objectsTotal === 0 ? "completed" as const : "processing" as const,
@@ -2291,13 +2291,12 @@ async function deletionStatusAfterCommit(
     objectsDeleted: 0,
   };
   try {
-    await processPrivacyDeletionTasks(env, deletion.id);
-    const job = env.DB ? await selectDeletionJobByReceipt(env.DB, deletion.receipt) : null;
-    return job ? publicDeletionStatus(job) : fallback;
+    await processPrivacyDeletionTasks(env, deletion.id, maximumTasks);
   } catch (error) {
     logEvent("error", "privacy.deletion.cleanup_deferred", safeErrorContext(error));
-    return fallback;
   }
+  const job = env.DB ? await selectDeletionJobByReceipt(env.DB, deletion.receipt) : null;
+  return job ? publicDeletionStatus(job) : fallback;
 }
 
 async function selectDeletionJobByReceipt(db: D1DatabaseLike, receipt: string) {
@@ -2352,7 +2351,11 @@ interface PrivacyDeletionTaskRow {
   completed_at: string | null;
 }
 
-export async function processPrivacyDeletionTasks(env: AuthApiEnv, onlyJobId?: string) {
+export async function processPrivacyDeletionTasks(
+  env: AuthApiEnv,
+  onlyJobId?: string,
+  maximumTasks = PRIVACY_DELETION_TASK_BATCH,
+) {
   if (!env.DB) return 0;
   const db = env.DB;
   await initialize(db);
@@ -2364,16 +2367,19 @@ export async function processPrivacyDeletionTasks(env: AuthApiEnv, onlyJobId?: s
        WHERE job_id = ?
          AND ((state = 'pending' AND available_at <= ?)
            OR (state = 'leased' AND (lease_expires_at IS NULL OR lease_expires_at <= ?)))
-       ORDER BY created_at LIMIT 50`
+       ORDER BY created_at LIMIT ?`
     : `SELECT id, job_id, object_key, object_key_hash, object_store, state, attempts,
          available_at, lease_expires_at, lease_token, completed_at FROM privacy_deletion_tasks
        WHERE (state = 'pending' AND available_at <= ?)
          OR (state = 'leased' AND (lease_expires_at IS NULL OR lease_expires_at <= ?))
-       ORDER BY available_at, created_at LIMIT 50`;
+       ORDER BY available_at, created_at LIMIT ?`;
   const statement = db.prepare(query);
+  const taskLimit = Number.isSafeInteger(maximumTasks)
+    ? Math.max(1, Math.min(PRIVACY_DELETION_TASK_BATCH, maximumTasks))
+    : PRIVACY_DELETION_TASK_BATCH;
   const rows = onlyJobId
-    ? await statement.bind(onlyJobId, nowIso, nowIso).all<PrivacyDeletionTaskRow>()
-    : await statement.bind(nowIso, nowIso).all<PrivacyDeletionTaskRow>();
+    ? await statement.bind(onlyJobId, nowIso, nowIso, taskLimit).all<PrivacyDeletionTaskRow>()
+    : await statement.bind(nowIso, nowIso, taskLimit).all<PrivacyDeletionTaskRow>();
   const tasks = rows.results ?? [];
   if (!tasks.length) {
     await reconcileDeletionJobs(db);
@@ -2578,20 +2584,55 @@ async function refreshDeletionJobStatus(db: D1DatabaseLike, jobId: string) {
     .run();
 }
 
-async function reconcileDeletionJobs(db: D1DatabaseLike, onlyJobId?: string) {
-  const rows = onlyJobId
-    ? await db.prepare("SELECT id FROM privacy_deletion_jobs WHERE id = ? AND state != 'completed' LIMIT 1")
-      .bind(onlyJobId).all<{ id: string }>()
-    : await db.prepare(`SELECT id FROM privacy_deletion_jobs
+async function reconcileDeletionJobs(db: D1DatabaseLike) {
+  const timestamp = new Date().toISOString();
+  await db.prepare(`UPDATE privacy_deletion_jobs SET
+      objects_deleted = (SELECT COUNT(*) FROM privacy_deletion_tasks
+        WHERE job_id = privacy_deletion_jobs.id AND state = 'completed'),
+      state = CASE
+        WHEN (SELECT COUNT(*) FROM privacy_deletion_tasks WHERE job_id = privacy_deletion_jobs.id) = objects_total
+          AND NOT EXISTS (SELECT 1 FROM privacy_deletion_tasks
+            WHERE job_id = privacy_deletion_jobs.id AND state != 'completed')
+          THEN 'completed'
+        WHEN (SELECT COUNT(*) FROM privacy_deletion_tasks WHERE job_id = privacy_deletion_jobs.id) != objects_total
+          THEN 'needs_attention'
+        WHEN EXISTS (SELECT 1 FROM privacy_deletion_tasks
+          WHERE job_id = privacy_deletion_jobs.id AND state = 'needs_attention')
+          THEN 'needs_attention'
+        ELSE 'active_data_removed'
+      END,
+      last_error_code = CASE
+        WHEN (SELECT COUNT(*) FROM privacy_deletion_tasks WHERE job_id = privacy_deletion_jobs.id) = objects_total
+          AND NOT EXISTS (SELECT 1 FROM privacy_deletion_tasks
+            WHERE job_id = privacy_deletion_jobs.id AND state != 'completed')
+          THEN NULL
+        WHEN (SELECT COUNT(*) FROM privacy_deletion_tasks WHERE job_id = privacy_deletion_jobs.id) != objects_total
+          THEN 'task_ledger_incomplete'
+        WHEN EXISTS (SELECT 1 FROM privacy_deletion_tasks
+          WHERE job_id = privacy_deletion_jobs.id AND state = 'needs_attention')
+          THEN 'photo_delete_incomplete'
+        ELSE NULL
+      END,
+      completed_at = CASE
+        WHEN (SELECT COUNT(*) FROM privacy_deletion_tasks WHERE job_id = privacy_deletion_jobs.id) = objects_total
+          AND NOT EXISTS (SELECT 1 FROM privacy_deletion_tasks
+            WHERE job_id = privacy_deletion_jobs.id AND state != 'completed')
+          THEN COALESCE(completed_at, ?)
+        ELSE NULL
+      END,
+      updated_at = ?
+    WHERE id IN (
+      SELECT id FROM privacy_deletion_jobs
       WHERE state != 'completed'
         OR objects_deleted != objects_total
         OR (SELECT COUNT(*) FROM privacy_deletion_tasks
           WHERE job_id = privacy_deletion_jobs.id) != objects_total
         OR EXISTS (SELECT 1 FROM privacy_deletion_tasks
           WHERE job_id = privacy_deletion_jobs.id AND state != 'completed')
-      ORDER BY updated_at LIMIT 100`)
-      .all<{ id: string }>();
-  for (const job of rows.results ?? []) await refreshDeletionJobStatus(db, job.id);
+      ORDER BY updated_at LIMIT 100
+    )`)
+    .bind(timestamp, timestamp)
+    .run();
 }
 
 function photoFileExtension(contentType: string) {

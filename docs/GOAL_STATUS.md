@@ -96,6 +96,37 @@ by that discovery.
       private bucket, monitor fenced/aged/attention states without locators, and obtain the
       independent release review. Uploads remain server-disabled until every activation gate passes.
 
+## Active checkpoint — bounded account deletion inventories
+
+- [x] Replace owner-sized application reads and per-object batch fan-out with four source-bound
+      D1 `INSERT INTO ... SELECT` inventory statements. Prior deletion tasks, photo reservations,
+      privacy exports, and attached trip photos now enter one deletion job inside the same fixed
+      18-statement transaction that removes active rows, independent of object count.
+- [x] Add `trips.photo_key_hash` as the exact identity for attached private objects and bind trip
+      creation, completion, reservation attachment, reconciliation, migration pre/postflight, and
+      deletion inventory to it. A legacy non-null locator without its hash inserts no deletion
+      job, removes no active row, performs no R2 call, and leaves the account fence in place for
+      protected migration rather than guessing identity.
+- [x] Reduce cold auth initialization from 35 request-time DDL statements to one read-only schema-
+      readiness probe that fails closed when the migration-owned schema is incomplete. Bound
+      object cleanup to five tasks per invocation, reconcile up to 100 jobs with one set-based
+      update, and reduce lost-commit account recovery to one inline cleanup task.
+- [x] Prove a cold 75-photo account deletion and a lost-committed-response recovery remain within
+      Cloudflare's 50-query Free ceiling and 100 bound-parameter ceiling; the account transaction
+      never grows beyond 20 batch entries and all 75 tasks remain durable while active rows are
+      removed. The current source inventory covers 240 prepare sites: 221 literal, 19 reviewed
+      nonliteral, and nine reviewed complete-rights multi-row reads, with zero owner-lifecycle
+      unbounded reads. All 29 critical query plans and every foreign-key child index pass.
+- [x] Pass the pinned Cloudflare build, ESLint, TypeScript, all 604/604 repository Node tests,
+      the complete offline security/SBOM/source-integrity chain, both zero-vulnerability npm
+      audits, Ruff, 29/29 API tests, 83 pipeline tests with one documented optional-`rasterio`
+      skip, deterministic synthetic smoke, 20 migrations / 29 critical indexed D1 plans, and the
+      full 200/200 Chromium/WebKit phone matrix. Preserve a clean local commit and deterministic
+      release receipt, while leaving production migration, provider-plan evidence, intended-
+      bucket drills, alerts, and independent review open. No push, PR, merge, deployment,
+      Cloudflare query, D1/R2 production mutation, model/UI change, or upload activation belongs
+      to this checkpoint.
+
 ## Active checkpoint — lease-owned direct advisory review
 
 - [x] Continue the database-authority audit through the default-off direct advisory-review path.

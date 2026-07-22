@@ -106,11 +106,11 @@ function reservation(key, tripId, timestamp = "2026-07-21T18:00:00.000Z") {
 function insertAttachedTrip(sqlite, tripId, key) {
   sqlite.prepare(`INSERT INTO trips (
       id, user_id, status, source, site_id, started_at, mode, angler_count,
-      consent, moderation_status, reporter_key_hash, photo_key, created_at, updated_at)
+      consent, moderation_status, reporter_key_hash, photo_key, photo_key_hash, created_at, updated_at)
     VALUES (?, NULL, 'active', 'live', 'crissy-field', '2026-07-21T17:00:00.000Z',
-      'beach', 1, 0, 'pending', 'reporter-hash', ?,
+      'beach', 1, 0, 'pending', 'reporter-hash', ?, ?,
       '2026-07-21T17:00:00.000Z', '2026-07-21T17:00:00.000Z')`)
-    .run(tripId, key);
+    .run(tripId, key, objectKeyHash(key));
 }
 
 function insertCompletableTrip(sqlite, tripId, tokenHash, userId = null) {

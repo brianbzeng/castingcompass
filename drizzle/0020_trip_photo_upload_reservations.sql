@@ -1,6 +1,11 @@
 -- Establish account deletion as the write linearization point before taking a
 -- private-object inventory. The short lease serializes retrying deletion
 -- requests; the row itself remains a write fence until the user is deleted.
+-- Production preflight proves there are no legacy photo locators before this
+-- migration, so every subsequently attached private object has a verifiable
+-- source-bound identity for set-based deletion inventory.
+ALTER TABLE `trips` ADD `photo_key_hash` text;
+--> statement-breakpoint
 CREATE TABLE `account_deletion_fences` (
   `user_id` text PRIMARY KEY NOT NULL,
   `owner_subject_hash` text NOT NULL,

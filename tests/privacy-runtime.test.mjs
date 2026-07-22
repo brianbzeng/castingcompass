@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { createHash } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import { DatabaseSync } from "node:sqlite";
 import test from "node:test";
@@ -55,6 +56,7 @@ class D1StatementAdapter {
 
   bind(...values) {
     this.values = values;
+    this.owner.maximumBoundParameters = Math.max(this.owner.maximumBoundParameters, values.length);
     return this;
   }
 
@@ -97,6 +99,9 @@ class TransactionalD1Adapter {
     this.omitOnceMutationMetadataSubstring = null;
     this.throwOnceAfterMutationSubstring = null;
     this.throwOnceAfterBatchMutationSubstring = null;
+    this.queryExecutions = 0;
+    this.maximumBoundParameters = 0;
+    this.batchSizes = [];
   }
 
   prepare(query) {
@@ -104,6 +109,7 @@ class TransactionalD1Adapter {
   }
 
   assertQueryAllowed(query) {
+    this.queryExecutions += 1;
     if (this.beforeOnceQuerySubstring && query.includes(this.beforeOnceQuerySubstring)) {
       const callback = this.beforeOnceQuery;
       this.beforeOnceQuerySubstring = null;
@@ -121,6 +127,7 @@ class TransactionalD1Adapter {
   }
 
   async batch(statements) {
+    this.batchSizes.push(statements.length);
     this.sqlite.exec("BEGIN IMMEDIATE");
     let results;
     try {
@@ -1185,17 +1192,18 @@ function addTrip(sqlite, user, {
       no_catch, notes, consent, consent_at, moderation_status, reporter_key_hash, referral_code,
       token_hash, opportunity_window_id, opportunity_score, habitat_score, seasonality_score,
       conditions_score, model_version, score_influenced_choice, prediction_metadata_json,
-      photo_key, photo_content_type, photo_size_bytes, created_at, updated_at, completed_at,
+      photo_key, photo_key_hash, photo_content_type, photo_size_bytes, created_at, updated_at, completed_at,
       gear_profile_id, rod, reel, bait_lure, rig, other_catch_count, other_species,
       observations_json, fishability_score, ai_review_status, ai_review_json, ai_review_model,
       ai_reviewed_at, contract_status
     ) VALUES (?, ?, 'completed', 'past_report', 'ocean-beach', ?, ?, 'shore', 'artificial-lure', 'legacy gear',
       1, 2.5, 1, 2, 3, 0, 'User trip notes', 1, ?, ?, 'reporter-secret', 'friend-code',
       'trip-token-secret', 'window-1', 72, 80, 70, 66, 'model-v1', 1, '{"forecast":"snapshot"}',
-      ?, 'image/jpeg', 4, ?, ?, ?, 'gear_1', 'Rod A', 'Reel B', 'Swimbait', 'Drop shot',
+      ?, ?, 'image/jpeg', 4, ?, ?, ?, 'gear_1', 'Rod A', 'Reel B', 'Swimbait', 'Drop shot',
       1, 'surfperch', '{"waterClarity":"clear"}', 64, 'reviewed', '{"qualityScore":88}',
       'mimo-test', ?, 'legacy_unverified')`)
     .run(id, user.id, timestamp, timestamp, timestamp, moderation, photoKey,
+      photoKey ? createHash("sha256").update(`trip_photos\0${photoKey}`).digest("hex") : null,
       timestamp, timestamp, timestamp, timestamp);
   return id;
 }
@@ -2438,6 +2446,63 @@ test("account deletion transaction removes public/account rows and completes suc
   assert.match(cleared.headers.get("set-cookie") ?? "", /cc_deletion_receipt=;.*Max-Age=0/);
 });
 
+test("large private-object inventories use a fixed D1 batch within the free invocation ceiling", async () => {
+  const { sqlite, d1 } = await database();
+  const user = await addUser(sqlite, "set-based-deletion-inventory");
+  const objectCount = 75;
+  for (let index = 0; index < objectCount; index += 1) {
+    addTrip(sqlite, user, {
+      id: `trip_92000000-0000-4000-8000-${index.toString(16).padStart(12, "0")}`,
+      photoKey: `private/scale/${index.toString().padStart(3, "0")}.jpg`,
+    });
+  }
+  const deleted = [];
+
+  const response = await handleAccountRequest(request("/api/profile", {
+    method: "DELETE",
+    cookie: user.cookie,
+    body: { confirmation: "DELETE", password: user.password },
+  }), {
+    DB: d1,
+    TRIP_PHOTOS: { delete: async (key) => deleted.push(key) },
+  }, []);
+
+  assert.equal(response?.status, 202);
+  const payload = await response.json();
+  assert.equal(payload.deleted, true);
+  assert.equal(payload.deletion.status, "processing");
+  assert.equal(payload.deletion.objectsTotal, objectCount);
+  assert.equal(deleted.length, 3);
+  assert.equal(sqlite.prepare("SELECT COUNT(*) AS count FROM users WHERE id = ?").get(user.id).count, 0);
+  assert.equal(sqlite.prepare("SELECT COUNT(*) AS count FROM trips WHERE user_id = ?").get(user.id).count, 0);
+  assert.equal(sqlite.prepare("SELECT COUNT(*) AS count FROM privacy_deletion_tasks").get().count, objectCount);
+  assert.ok(Math.max(...d1.batchSizes) <= 20, "account deletion must not add one batch statement per object");
+  assert.ok(d1.queryExecutions <= 50, `cold account deletion used ${d1.queryExecutions} D1 queries`);
+  assert.ok(d1.maximumBoundParameters <= 100);
+});
+
+test("a legacy photo without a source-bound hash blocks every account deletion mutation", async () => {
+  const { sqlite, d1 } = await database();
+  const user = await addUser(sqlite, "legacy-photo-hash-guard");
+  const tripId = addTrip(sqlite, user, { photoKey: "private/legacy-without-hash.jpg" });
+  sqlite.prepare("UPDATE trips SET photo_key_hash = NULL WHERE id = ?").run(tripId);
+
+  const response = await handleAccountRequest(request("/api/profile", {
+    method: "DELETE",
+    cookie: user.cookie,
+    body: { confirmation: "DELETE", password: user.password },
+  }), { DB: d1, TRIP_PHOTOS: { delete: async () => assert.fail("R2 must not be touched") } }, []);
+
+  assert.equal(response?.status, 503);
+  assert.equal((await response.json()).error.code, "account_deletion_inventory_incomplete");
+  assert.equal(sqlite.prepare("SELECT COUNT(*) AS count FROM users WHERE id = ?").get(user.id).count, 1);
+  assert.equal(sqlite.prepare("SELECT COUNT(*) AS count FROM trips WHERE id = ?").get(tripId).count, 1);
+  assert.equal(sqlite.prepare("SELECT COUNT(*) AS count FROM privacy_deletion_jobs").get().count, 0);
+  assert.equal(sqlite.prepare("SELECT COUNT(*) AS count FROM privacy_deletion_tasks").get().count, 0);
+  assert.equal(sqlite.prepare("SELECT COUNT(*) AS count FROM account_deletion_fences WHERE user_id = ?")
+    .get(user.id).count, 1);
+});
+
 test("a lost fence response still adopts a pre-fence photo locator without early R2 deletion", async () => {
   const { sqlite, d1 } = await database();
   const user = await addUser(sqlite, "photo-fence-adoption");
@@ -2595,20 +2660,32 @@ test("a stale authenticated photo request cannot cross an active deletion fence 
 test("an exact post-state proves account deletion after its committed batch response is lost", async () => {
   const { sqlite, d1 } = await database();
   const user = await addUser(sqlite, "account-delete-batch-receipt");
-  addTrip(sqlite, user);
+  for (let index = 0; index < 3; index += 1) {
+    addTrip(sqlite, user, {
+      id: `trip_93000000-0000-4000-8000-${index.toString(16).padStart(12, "0")}`,
+      photoKey: `private/recovered/${index}.jpg`,
+    });
+  }
   d1.throwOnceAfterBatchMutationSubstring = "DELETE FROM users WHERE id = ?";
+  const deleted = [];
 
   const response = await handleAccountRequest(request("/api/profile", {
     method: "DELETE",
     cookie: user.cookie,
     body: { confirmation: "DELETE", password: user.password },
-  }), { DB: d1 }, [], { now: () => new Date("2026-07-21T18:00:00.000Z") });
+  }), {
+    DB: d1,
+    TRIP_PHOTOS: { delete: async (key) => deleted.push(key) },
+  }, [], { now: () => new Date("2026-07-21T18:00:00.000Z") });
 
-  assert.equal(response?.status, 200);
+  assert.equal(response?.status, 202);
   assert.equal((await response.json()).deleted, true);
+  assert.equal(deleted.length, 1);
   assert.equal(sqlite.prepare("SELECT COUNT(*) AS count FROM users WHERE id = ?").get(user.id).count, 0);
   assert.equal(sqlite.prepare("SELECT COUNT(*) AS count FROM account_deletion_fences").get().count, 0);
   assert.equal(sqlite.prepare("SELECT COUNT(*) AS count FROM privacy_deletion_jobs").get().count, 1);
+  assert.ok(d1.queryExecutions <= 50, `recovered account deletion used ${d1.queryExecutions} D1 queries`);
+  assert.ok(d1.maximumBoundParameters <= 100);
 });
 
 test("trip writes serialize safely on both sides of account deletion and fallback DDL keeps ownership foreign keys", async () => {

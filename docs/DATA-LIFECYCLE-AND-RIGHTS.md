@@ -40,7 +40,7 @@ here before activation.
 | `email_challenges` | Verification/recovery state, bounded attempt metadata, and optional account reference | Short-lived challenge plus cleanup buffer | Explicitly deleted by email/account in the account batch; account reference also has `ON DELETE CASCADE` |
 | `auth_attempts` | Pseudonymous email hash and failed-login timing | Up to about 30 days | Explicitly deleted using a server-derived email hash in the account batch; otherwise periodic expiry |
 | `signup_age_proofs` | One-use, short-lived eligibility token hash with no birth date, email, account ID, or age | Ten-minute use window plus about a 24-hour cleanup buffer | Not account-linkable; expires independently and is removed by scheduled cleanup |
-| `trips` | Account-owned trip time/site, effort, catch, gear, notes, moderation/AI state, optional private photo locator, and a one-way idempotency-secret hash. While AI review is `processing`, `ai_review_json` temporarily holds only an opaque versioned claim token and lease expiry; owner profile/export reads suppress it and terminal state overwrites or clears it | Until owner deletion, subject to pending-only edit/delete rules; a processing claim expires after 60 seconds | Account deletion explicitly removes `WHERE user_id = authenticated user`; trip deletion binds both trip and owner. The user foreign key is `SET NULL` for database compatibility, so the explicit owner-scoped delete and its regression tests are mandatory. Completion and safe-cancellation receipts require exact owner-bound terminal-state read-back after D1, including the persistent idempotency hash and cleared token; mutation metadata is not authority. The hash can return an existing write receipt but cannot authenticate an account session; a stale AI worker cannot write without the exact current claim |
+| `trips` | Account-owned trip time/site, effort, catch, gear, notes, moderation/AI state, optional private photo locator with its source-bound SHA-256 locator hash, and a one-way idempotency-secret hash. While AI review is `processing`, `ai_review_json` temporarily holds only an opaque versioned claim token and lease expiry; owner profile/export reads suppress it and terminal state overwrites or clears it | Until owner deletion, subject to pending-only edit/delete rules; a processing claim expires after 60 seconds | Account deletion explicitly removes `WHERE user_id = authenticated user`; trip deletion binds both trip and owner. The user foreign key is `SET NULL` for database compatibility, so the explicit owner-scoped delete and its regression tests are mandatory. Completion and safe-cancellation receipts require exact owner-bound terminal-state read-back after D1, including the persistent idempotency hash and cleared token; mutation metadata is not authority. The photo locator and its hash must match before attachment can be adopted into cleanup; a legacy locator without its hash freezes deletion rather than guessing object identity. The idempotency hash can return an existing write receipt but cannot authenticate an account session; a stale AI worker cannot write without the exact current claim |
 | `ai_review_jobs` | Opaque advisory-review job ID, trip foreign key, bounded state/attempt/lease/error code, and timestamps; no trip/account content is copied into the job or Queue message | Until review settles or the source trip is deleted; unresolved `needs_attention` work remains for investigated replay | Unique per trip and `ON DELETE CASCADE` from `trips`. A valid Queue message carries only its opaque job ID; the consumer refetches D1 authority and deletion state. Five attempts end in explicit attention, and only new edited input or a guarded least-privilege operator replay can reset the ceiling |
 | `site_discussion_posts` | Human-approved public summary linked to a trip | While the approved source trip remains eligible | Explicitly removed before account/trip deletion and also `ON DELETE CASCADE` from `trips`; raw notes are never the public projection |
 | `forecast_impressions` and `trip_validation_provenance` | Versioned forecast/validation evidence linked to a trip | While the linked active trip remains, unless a separately approved validation artifact applies | `ON DELETE CASCADE` from `trips`; provenance also cascades with its linked impression |
@@ -50,7 +50,7 @@ here before activation.
 | `validation_feasibility_privacy_removals`, `validation_feasibility_recruitment_removals`, and `validation_feasibility_correction_removals` | Daily aggregate counts of removed pilot records | Validation-governance retention; no account/trip IDs | Created or incremented by deletion triggers; retained only as aggregate deletion evidence |
 | `validation_feasibility_snapshot_suppressions` | Opaque hashes needed to suppress deleted pilot records from longer-lived validation-only snapshots | Must outlive every snapshot it suppresses; current candidate is 730 days and remains unapproved/default-off | Created by deletion triggers, contains no raw account/trip ID, and is immutable. It is a deletion control, not retained active content |
 | `privacy_deletion_jobs` | Pseudonymous account/trip tombstone, receipt hash, aggregate object counts/state, and timestamps | Completed jobs about 90 days; unresolved jobs until resolved | Created in the same batch that removes active data; replayed before any restored database can serve traffic |
-| `privacy_deletion_tasks` | Hashed object identity plus a temporary plaintext private-object locator while cleanup is unresolved | Locator erased on completion; task follows parent tombstone retention | `ON DELETE CASCADE` from its job, but unresolved parents must not be deleted. Leased, bounded retries end in explicit operator attention rather than false completion |
+| `privacy_deletion_tasks` | Hashed object identity plus a temporary plaintext private-object locator while cleanup is unresolved | Locator erased on completion; task follows parent tombstone retention | `ON DELETE CASCADE` from its job, but unresolved parents must not be deleted. Each invocation claims at most five tasks; leased, bounded retries end in explicit operator attention rather than false completion |
 | `privacy_export_jobs` | Opaque job ID, temporary account owner mapping, hashed owner/object identity, bounded state/attempt/lease/error fields, aggregate byte/record counts, content digest, and timestamps | Completed download up to 24 hours; object metadata cleared at expiry; expired tombstone follows the ordinary 90-day ledger cleanup | One active job per account. Queue messages carry only the opaque job ID. Account deletion cancels ownership atomically and adopts any committed object before removing access; write/delete races retain a failed-cleanup locator in attention state |
 | `account_deletion_fences` | Temporary account ID, pseudonymous owner hash, high-entropy lease token, lease expiry, and request/update timestamps | From password-confirmed deletion start until successful user deletion; retained across a failed destructive batch for bounded retry ownership | Created and exactly read back before account object inventory. New sessions, account-bound trip inserts, photo reservations, and attachment fail closed while present. `ON DELETE CASCADE` removes it only with the user after the exact guarded deletion batch commits |
 | Private R2 trip photos | Optional metadata-stripped, re-encoded photo objects; upload remains default-off | While linked trip/account exists | A locator is reserved in D1 before R2 and adopted into the deletion ledger before account active-row removal. Object deletion is retried. Uploads stay disabled until production migration, bucket, alert, budget, and restore/deletion drills pass |
@@ -70,16 +70,21 @@ and password reauthentication. It then performs this sequence:
 1. After password reauthentication, claim and exactly read back a high-entropy leased account
    deletion fence. While it exists, new sessions, account-bound trip inserts, photo reservations,
    and photo attachment fail closed, including requests holding stale authentication context.
-2. Inventory every current trip-photo locator, pre-upload reservation, completed privacy-export
-   locator, and unresolved typed deletion locator owned by the account. Preserve each reservation's
-   later safe-cleanup time.
+2. Materialize every current trip-photo locator, pre-upload reservation, completed privacy-export
+   locator, and unresolved typed deletion locator owned by the account inside D1 with four
+   source-bound `INSERT INTO ... SELECT` statements. Preserve each reservation's later safe-
+   cleanup time. Do not fetch an owner-sized object list into Worker memory.
 3. Derive account/trip tombstone hashes and a high-entropy receipt on the server. Never accept
    any of those values from the browser.
-4. In one D1 batch guarded by the exact fence lease, insert the deletion job/tasks, adopt and
-   remove reservation rows, requeue the account's unresolved photo tasks, delete linked public
-   posts and trips, remove saved sites, gear, sessions, challenges, and email-hash attempt history,
-   then delete the user. Cascades remove the fence and linked validation rows; deletion triggers
-   write only aggregate/opaque suppression evidence.
+4. In one fixed 18-statement D1 transaction guarded by the exact fence lease, insert the deletion
+   job/tasks, adopt and remove reservation rows, requeue the account's unresolved photo tasks,
+   delete linked public posts and trips, remove saved sites, gear, sessions, challenges, and
+   email-hash attempt history, then delete the user. The job can be inserted only when every
+   attached trip-photo locator has its exact source-bound hash; every destructive statement also
+   requires that exact job. A legacy unhashed locator therefore inserts no job, removes no active
+   row, performs no object call, and leaves the fence in place for protected migration. Cascades
+   remove the fence and linked validation rows only after a valid account deletion; deletion
+   triggers write only aggregate/opaque suppression evidence.
 5. Only after that batch commits, attempt private-object cleanup. Return `200` only when all
    known objects are gone; return truthful `202` when cleanup remains pending or needs attention.
 6. Expose only aggregate cleanup state through the path-scoped HttpOnly receipt. A receipt
@@ -88,8 +93,10 @@ and password reauthentication. It then performs this sequence:
 Any exception inside the D1 batch rolls the complete active-data change back but intentionally
 leaves the separately committed fence, freezing account mutations until a bounded lease-owned
 retry. A failure after commit may defer object cleanup, but it must not restore account access or
-report false completion. The runtime concurrency, failure-injection, cross-account, AI/deletion, validation-
-suppression, restore-replay, and object-lease tests are part of this contract.
+report false completion. Normal account responses attempt no more than three object tasks inline;
+a recovered lost-commit response attempts one, and scheduled cleanup claims no more than five.
+The runtime concurrency, failure-injection, cross-account, AI/deletion, validation-suppression,
+restore-replay, large-inventory, and object-lease tests are part of this contract.
 
 ## Privacy-rights request workflow
 

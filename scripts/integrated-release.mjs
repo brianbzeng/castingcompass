@@ -154,7 +154,9 @@ const STAGE_ABSENCE_QUERIES = Object.freeze({
           'trip_photo_upload_reservations_retry_idx',
           'trip_photo_upload_reservations_trip_idx',
           'trip_photo_upload_reservations_owner_idx'
-        )) AS target_artifacts_found`,
+        ))
+      + (SELECT COUNT(*) FROM pragma_table_info('trips')
+        WHERE name = 'photo_key_hash') AS target_artifacts_found`,
 });
 
 function fail(label, expected, actual) {
@@ -292,6 +294,7 @@ export function verifyFinalPostflight(payload) {
     snapshot_suppression_columns: 2,
     data_resilience_indexes: 15,
     exact_trip_idempotency_columns: 1,
+    exact_trip_photo_hash_columns: 1,
     ai_review_queue_tables: 1,
     exact_ai_review_queue_lease_columns: 1,
     ai_review_queue_indexes: 2,
@@ -308,6 +311,7 @@ export function verifyFinalPostflight(payload) {
     trip_photo_reservation_rows: 0,
     non_legacy_trip_rows: 0,
     trip_photo_locators: 0,
+    trip_photo_locators_without_hash: 0,
     discussion_rows_with_approval_metadata: 0,
     validation_activation_rows: 0,
     validation_event_rows: 0,

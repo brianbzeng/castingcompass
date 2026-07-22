@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { readdir, readFile } from "node:fs/promises";
 import { DatabaseSync } from "node:sqlite";
 import test from "node:test";
-import { getAuthenticatedUser } from "../worker/auth.ts";
+import { getAuthenticatedUser, handleAccountRequest } from "../worker/auth.ts";
 import { handleDiscussionRequest } from "../worker/discussions.ts";
 import { createTripStore } from "../worker/trips.ts";
 
@@ -240,6 +240,7 @@ test("the complete migration chain applies atomically and produces the runtime s
   assert.ok(columns(sqlite, "trip_photo_upload_reservations").includes("object_key_hash"));
   assert.ok(columns(sqlite, "trip_photo_upload_reservations").includes("owner_subject_hash"));
   assert.ok(columns(sqlite, "account_deletion_fences").includes("lease_token"));
+  assert.ok(columns(sqlite, "trips").includes("photo_key_hash"));
   assert.ok(columns(sqlite, "trips").includes("observation_contract_version"));
   assert.ok(columns(sqlite, "trips").includes("taxon_observations_json"));
   assert.ok(columns(sqlite, "trips").includes("idempotency_key_hash"));
@@ -342,6 +343,27 @@ test("runtime initializers do not mutate a fully migrated schema", async () => {
   assert.equal(response?.status, 200);
   assert.deepEqual(await response?.json(), { posts: [] });
   assert.equal(schemaVersion(sqlite), before);
+});
+
+test("account routes fail closed without mutating an incomplete migration-owned schema", async () => {
+  const sqlite = new DatabaseSync(":memory:");
+  sqlite.exec("PRAGMA foreign_keys = ON; CREATE TABLE users (id TEXT PRIMARY KEY NOT NULL);");
+  const before = schemaVersion(sqlite);
+
+  const response = await handleAccountRequest(
+    new Request("https://castingcompass.com/api/auth/session"),
+    { DB: new D1Adapter(sqlite) },
+    [],
+  );
+
+  assert.equal(response?.status, 503);
+  assert.equal((await response?.json()).error.code, "auth_schema_unavailable");
+  assert.equal(schemaVersion(sqlite), before);
+  assert.deepEqual(
+    sqlite.prepare("SELECT name FROM sqlite_master WHERE type = 'table' ORDER BY name").all()
+      .map((row) => row.name),
+    ["users"],
+  );
 });
 
 test("fresh runtime schema rejects malformed valid-contract evidence", async () => {

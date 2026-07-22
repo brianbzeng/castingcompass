@@ -8,18 +8,20 @@ accounts, or production data.
 ## D1 query inventory
 
 `scripts/generate-d1-query-inventory.mjs` parses every Worker TypeScript source file and records
-all 274 direct `.prepare()` sites: 245 literal statements and 29 separately reviewed nonliteral
+all 240 direct `.prepare()` sites: 221 literal statements and 19 separately reviewed nonliteral
 expressions across eight source files. The committed policy and generated inventory are
 source-hash and call-site bound. CI rejects source-file/count drift, computed or aliased
 `prepare` access, a nonliteral expression without its exact static-authority review, an unscoped
 literal `UPDATE` or `DELETE`, and a literal multi-row `SELECT` without a reviewed ownership and
 cardinality contract. No database or provider is queried while generating the inventory.
 
-The inventory exposes rather than conceals the remaining scale boundaries. Nine unbounded
-multi-row reads are intentional complete authenticated privacy exports and four are complete
-owner-lifecycle cleanup reads, including the owner-hash-bound pre-upload reservation inventory
-required after the deletion fence is established. Account-facing saved-location and gear-preset reads now fetch at
-most 101 rows, expose at most the exact 100-item account ceiling, and fail closed on a legacy
+The inventory exposes rather than conceals the remaining scale boundaries. All nine unbounded
+multi-row reads are intentional complete authenticated privacy exports; no owner-lifecycle
+cleanup depends on an unbounded application-side read. Account deletion instead materializes
+its complete private-object inventory inside D1 with four source-bound
+`INSERT INTO ... SELECT` statements, then removes active rows in one fixed 18-statement
+transaction. Account-facing saved-location and gear-preset reads fetch at most 101 rows, expose
+at most the exact 100-item account ceiling, and fail closed on a legacy
 overflow instead of silently truncating it. Their creates enforce the same ceiling inside the
 single `INSERT ... SELECT` statement so concurrent requests cannot both pass a separate count
 check. An existing saved location remains idempotently successful at the ceiling. Complete
@@ -29,17 +31,31 @@ measurements and provider activation remain open. An inventory proves source cov
 review identity; it does not prove query latency, production index selection, or safe load
 capacity.
 
-Scheduled authentication retention now selects at most 100 eligible primary keys per table and
+Cold authentication initialization performs one read-only schema-readiness query and fails
+closed if the migration-owned tables or `trips.photo_key_hash` column are absent. It no longer
+runs 35 `CREATE TABLE`/`CREATE INDEX` statements from a request. Scheduled authentication
+retention selects at most 100 eligible primary keys per table and
 invocation before deleting sessions, challenges, attempts, age proofs, and completed deletion
 jobs. Backlogs drain on later scheduled runs, and regression coverage proves the first invocation
 leaves exactly one row from a 101-row eligible fixture while preserving ineligible rows. Privacy
-object work was already bounded to 50 tasks and deletion-job reconciliation to 100 jobs. A
+object cleanup claims at most five tasks per invocation, and deletion-job reconciliation updates
+at most 100 jobs with one set-based statement rather than one statement per job. A
 completed deletion job can still cascade its already-finished child-task rows, so isolated
 production-shaped timing and rows-written evidence remains required before calling the cleanup
 capacity proven.
 
+The current Cloudflare limits are 50 D1 queries per Worker invocation on Free, 1,000 on Paid,
+and 100 bound parameters per query. D1 `batch()` runs its statements sequentially and
+transactionally, but every statement still counts toward the applicable limits. Local direct-D1
+tests therefore hold the stricter Free ceiling: a cold 75-photo account deletion uses one fixed
+batch of no more than 20 statements, executes no more than 50 D1 queries, and never exceeds 100
+parameters. The same ceiling covers the lost-committed-response recovery path by reducing its
+inline cleanup to one object. These are deterministic local bounds, not deployed-plan or
+production-latency evidence. See [D1 limits](https://developers.cloudflare.com/d1/platform/limits/)
+and [D1 batch semantics](https://developers.cloudflare.com/d1/worker-api/d1-database/).
+
 `scripts/check_d1_query_plans.py` separately applies every migration to an in-memory SQLite
-database, runs 26 representative `EXPLAIN QUERY PLAN` checks, and rejects missing leftmost
+database, runs 29 representative `EXPLAIN QUERY PLAN` checks, and rejects missing leftmost
 indexes for every foreign-key child path. The checked plans cover the highest-frequency or
 growth-sensitive access patterns:
 
@@ -54,8 +70,8 @@ growth-sensitive access patterns:
 | Advisory AI backlog | Completed new/queued/retry rows plus well-formed expired processing claims, oldest-first with `LIMIT 10` | Reviewed index hint over the completed-trip effective-time partial index; each provider dispatch requires an exact high-entropy read-back claim and stale terminal writes lose |
 | Advisory AI queue outbox | Due pending/retry/queued jobs and expired leases, bounded oldest-first | `(state, available_at, lease_expires_at)` dispatch index plus a unique trip index; D1 remains authoritative under at-least-once delivery |
 | Public discussions | One curated site, newest first, `LIMIT 12`, then a primary-key trip join | Existing `(site_id, observed_at)` index and trip primary key |
-| Privacy deletion receipts, tombstones, jobs, and tasks | Receipt lookup, subject/owner lookup, 50-task worker claims, 100-job reconciliation, and 100-job top-level retention selection; child cascades still require staging cost evidence | Unique receipt, scope/subject, owner/state, state/completion, task retry, and job/object indexes |
-| Account deletion fence and photo reservations | Exact fence-lease receipt; one pseudonymous owner reservation inventory; bounded due-reservation reconciliation | Unique owner fence identity plus `(owner_subject_hash, created_at)` and retry indexes |
+| Privacy deletion receipts, tombstones, jobs, and tasks | Receipt lookup, subject/owner lookup, five-task worker claims, one set-based 100-job reconciliation, and 100-job top-level retention selection; child cascades still require staging cost evidence | Unique receipt, scope/subject, owner/state, state/completion, task retry, and job/object indexes |
+| Account deletion fence and private-object inventory | Exact fence-lease receipt; four source-bound set inventories for prior deletion tasks, photo reservations, privacy exports, and attached trip photos; bounded due-reservation reconciliation | Unique owner fence identity, object-hash uniqueness, `(owner_subject_hash, created_at)`, export-owner/state, trip-owner, and retry indexes |
 | Validation exports and cascades | Activation, trip, or user predicates with append-only sequence order | Existing activation/trip indexes plus user recruitment, activation correction, and forecast/trip foreign-key indexes |
 
 The inventory policy and generated artifact are inputs to the combined release SBOM and are
@@ -104,10 +120,10 @@ semantics:
 | Complete privacy export packaging | Direct authenticated response while the production flag is off; default-off managed Queue adapter when activated | The local Queue/D1/private-object path is complete and preserves all rows, but `0019`, provider bindings, staging metrics, IAM, DLQ, alerts, and the separate activation release remain open; see `docs/ASYNC-PRIVACY-EXPORTS.md` |
 | Snapshot/model generation, media processing, notification fan-out | Offline pipeline or future managed queue | These must never block authorization or primary writes. Each queue design requires a separate reviewed schema and provider configuration |
 
-The direct fallback currently uses at most six parallel D1 calls in each account-export fan-out, matching
-Cloudflare's documented per-invocation simultaneous-connection ceiling. Do not add another query
-to that `Promise.all` group without restructuring it. Cloudflare's current D1 limits and batching
-guidance are documented in the [D1 FAQ](https://developers.cloudflare.com/d1/reference/faq/).
+The direct fallback currently uses at most six parallel D1 calls in each account-export fan-out,
+matching Cloudflare's documented per-invocation simultaneous-connection ceiling. Do not add
+another query to that `Promise.all` group without restructuring it. The active query, parameter,
+and connection ceilings are recorded in [D1 limits](https://developers.cloudflare.com/d1/platform/limits/).
 
 ## Staging-only load harness
 

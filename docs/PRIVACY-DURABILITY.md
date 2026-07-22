@@ -17,8 +17,10 @@ access/correction/portability/deletion workflow are maintained in
 - After password reauthentication, account deletion first claims an exact, high-entropy leased
   `account_deletion_fences` row. New sessions, account-bound trip inserts, photo reservations,
   and photo attachment repeat the absence of that fence in their authoritative statements.
-  Only then does deletion inventory locators and atomically insert its job/tasks while removing
-  active rows and linked public copies. Production and checked-in upload gates remain `false`.
+  Only then does deletion materialize its complete locator inventory inside D1 with four source-
+  bound `INSERT INTO ... SELECT` statements and atomically insert its job/tasks while removing
+  active rows and linked public copies. The destructive transaction is fixed at 18 statements
+  regardless of object count. Production and checked-in upload gates remain `false`.
 - Before any enabled path writes R2, it must first commit and exactly read back a
   `trip_photo_upload_reservations` row containing the typed locator hash. Exact trip attachment
   removes the reservation; ambiguous D1/R2 responses retain it for leased scheduled
@@ -27,8 +29,15 @@ access/correction/portability/deletion workflow are maintained in
 - Account deletion inventories every reservation by its pseudonymous owner hash and adopts its
   locator into the deletion ledger before deleting the reservation row. The task preserves the
   reservation's later `available_at`, preventing cleanup from racing an in-flight R2 write.
-  Every destructive statement repeats the exact fence lease. A rolled-back batch leaves the
-  fence in place, so account mutations stay frozen until a safe retry takes ownership.
+  Attached trip photos carry `photo_key_hash`; deletion inserts its job only if every non-null
+  locator has that source-bound hash. Every destructive statement repeats both the exact fence
+  lease and deletion job. A missing legacy hash or rolled-back batch removes no active row and
+  leaves the fence in place, so account mutations stay frozen until a safe protected migration
+  or retry takes ownership.
+- Object cleanup claims at most five tasks per invocation and reconciles at most 100 jobs with
+  one set-based update. The normal account response attempts at most three objects inline; a
+  lost-committed-response recovery attempts one. Direct-D1 tests keep cold 75-photo and recovery
+  paths within 50 total queries and 100 bound parameters per query.
 - HTTP `200` means active rows and all known objects are gone. HTTP `202` means active rows are
   gone while object cleanup is processing or needs attention.
 - Completed tasks erase their plaintext object locator. Pseudonymous completed tombstones
@@ -67,7 +76,10 @@ accounts will be paused, but export and deletion remain available without reacce
 A fresh migration must report 6 age-proof columns, 13 deletion-job columns, 13
 deletion-task columns, one owner lookup index, exactly one `trips.user_id` → `users.id`
 foreign key with `ON DELETE SET NULL`, zero new-table rows, zero forbidden age/identity
-columns, and zero foreign key violations. Remote D1 does not authorize
+columns, an exact nullable text `trips.photo_key_hash` column, zero non-null photo locators
+without that hash, and zero foreign key violations. The preflight must prove zero existing trip
+photo locators before `0020`; that is the protected release boundary for adding the hash without
+inventing legacy object identity. Remote D1 does not authorize
 `PRAGMA integrity_check`; the complete migration chain and isolated restore must report
 `integrity_check = ok` in local/restore verification. Stop on any mismatch.
 
@@ -175,13 +187,14 @@ Time Travel window must remain shorter than the 90-day completed-tombstone reten
 the evidence and second-person-review requirements in `docs/PRODUCTION-OPERATIONS.md`.
 
 Photo uploads remain disabled in the reviewed production build, including a server-side gate
-that defaults off. Do not enable them until the `0020` account-fence and reservation tables are
-applied and initially empty, and the private bucket binding, object inventory,
+that defaults off. Do not enable them until the `0020` account-fence and reservation tables plus
+the exact nullable text `trips.photo_key_hash` column are applied, the two new tables and existing
+photo-locator cohort are initially empty, and the private bucket binding, object inventory,
 retry alert, export, deletion, orphan-upload cleanup, and R2 restore/deletion drill have all
 passed. Migration `0020` must be applied, its initial reservation count must be zero, and every
 aged `pending`, expired `leased`, or `needs_attention` row must be monitored without logging a
 locator. The local account-deletion fence and interleaving tests do not prove the production
 migration, intended bucket identity, alerting, provider behavior, or operational drill. Cleanup
-must also be bounded below the
-deployed Cloudflare plan's D1-query and subrequest limits, or the release record must include
-reviewed evidence that its plan safely covers the worst case.
+is locally bounded below Cloudflare's current 50-query Free ceiling, but the guarded release must
+still record the actual deployed plan, production-shaped rows-read/written and timing evidence,
+and subrequest budget before upload activation.

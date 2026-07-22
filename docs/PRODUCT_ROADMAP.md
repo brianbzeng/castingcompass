@@ -236,6 +236,16 @@ after its acceptance checks pass in the intended environment.
       post-state resolves lost committed responses. Failed batches retain the fence and freeze
       account mutations for a safe retry. Production migration, monitoring, bucket drills, plan-
       budget evidence, independent review, and explicit upload activation remain open.
+      - [x] Bound large private-object inventories without truncation. Four source-bound
+        `INSERT INTO ... SELECT` statements materialize prior cleanup tasks, reservations,
+        export objects, and attached trip photos in D1; the destructive account transaction is
+        fixed at 18 statements regardless of object count. `trips.photo_key_hash` makes the
+        attached-object identity exact, and a legacy locator without its hash inserts no job,
+        removes no active row, touches no object, and leaves the account fenced for protected
+        migration. Cold 75-photo and lost-committed-response tests stay within the 50-query Free
+        ceiling and 100-parameter ceiling. Runtime auth initialization now performs one
+        read-only migration-readiness query instead of request-time DDL. Production application,
+        timing/rows-read evidence, private-bucket drills, and independent review remain open.
   - [ ] Verify endpoint-specific rate limits and abuse ceilings for login, recovery, signup,
     uploads, exports, deletion, reports, and AI routes. Adopt length-based password rules that
     allow password managers/passphrases, block breached/common passwords using a privacy-safe
@@ -596,8 +606,8 @@ after its acceptance checks pass in the intended environment.
   - [ ] Inventory every production query, capture representative `EXPLAIN QUERY PLAN` evidence,
     add only workload-justified indexes, bound scans/pagination, eliminate N+1 patterns, verify
     cross-account predicates, and regression-test query latency and migration cost.
-    - [x] Add a deterministic AST-backed inventory for all 274 Worker `.prepare()` sites across
-      eight files, including exact review contracts for 29 nonliteral expressions and 13 literal
+    - [x] Add a deterministic AST-backed inventory for all 240 Worker `.prepare()` sites across
+      eight files, including exact review contracts for 19 nonliteral expressions and nine literal
       multi-row reads without `LIMIT`. CI and release provenance fail closed on inventory drift,
       computed/aliased prepare access, unreviewed dynamic SQL, unscoped literal writes, and
       unreviewed multi-row reads; the policy and generated ledger are SBOM-bound release inputs.
@@ -607,9 +617,9 @@ after its acceptance checks pass in the intended environment.
       Complete privacy exports remain deliberately untruncated.
     - [x] Batch-limit all five scheduled authentication/retention deletes to 100 selected primary
       rows per table and invocation, preserve ineligible rows, drain backlogs on later runs, and
-      run the actual bounded statements through the query-plan contract. Existing privacy object
-      work remains bounded to 50 tasks and 100-job reconciliation; child cascades still require
-      isolated cost evidence.
+      run the actual bounded statements through the query-plan contract. Privacy object work
+      claims at most five tasks and reconciles at most 100 jobs with one set-based statement;
+      child cascades still require isolated cost evidence.
     - [x] Locally move complete export packaging behind a default-off managed Queue adapter with
       an opaque two-field message, owner-bound D1 job/lease ledger, private 24-hour object,
       progress/download UI, bounded retries/expiry, and account-deletion race adoption. Direct
@@ -659,7 +669,7 @@ after its acceptance checks pass in the intended environment.
   - [ ] Define performance budgets and run isolated load, soak, spike, and failure-injection
     tests with production-shaped synthetic data. Record saturation points, tail latency, error
     rates, queue depth, database contention, cache effectiveness, cost, and a safe rollback plan.
-  - [x] Locally add workload-backed D1 indexes, machine-check 26 critical `EXPLAIN QUERY PLAN`
+  - [x] Locally add workload-backed D1 indexes, machine-check 29 critical `EXPLAIN QUERY PLAN`
     paths plus every foreign-key child index, remove the public-site N+1 behind a bounded cache,
     publish the cache/async/connection contracts, add a bounded Postgres process pool only for
     the optional API, and provide a read-only load harness that permanently refuses production.

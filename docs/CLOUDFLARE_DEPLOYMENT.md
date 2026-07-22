@@ -145,14 +145,18 @@ storage bindings exist. Keep that fail-closed gate in place until all of these r
 are complete:
 
 1. Apply `0020_trip_photo_upload_reservations.sql`; verify the empty account-fence and reservation
-   tables plus their six total indexes, and monitor active/expired fences, aged `pending`, expired
-   `leased`, and every `needs_attention` row without logging identities or locators. The checked-in
-   fault-injection tests must stay green.
+   tables plus their six total indexes, exact nullable text `trips.photo_key_hash`, and zero
+   non-null trip photo locators without that hash. The preflight must prove zero existing photo
+   locators before migration. Monitor active/expired fences, aged `pending`, expired `leased`, and
+   every `needs_attention` row without logging identities or locators. The checked-in fault-
+   injection tests must stay green.
 2. Exercise the implemented database deletion fence against the intended production D1/R2
    identities: lost fence and deletion responses, stale authenticated reservation/attachment,
    pre-fence reservation adoption, rollback freeze/retry, and no cleanup before `available_at`.
-3. Bound each cleanup invocation below the deployed Cloudflare plan's D1-query and subrequest
-   budgets, or capture reviewed evidence that the selected plan safely covers the worst case.
+3. Preserve the locally tested bounds of five cleanup tasks, one set-based 100-job reconciliation,
+   no more than 50 D1 queries for cold 75-photo deletion and lost-commit recovery, and no more
+   than 100 parameters per query. Record the actual deployed plan plus production-shaped query,
+   rows-read/written, latency, and subrequest evidence; local limits are not provider proof.
 4. Enable R2 and Cloudflare Images in the Cloudflare dashboard and create a private bucket such
    as `contourcast-trip-photos`.
 5. Add the private bucket to `wrangler.jsonc` with binding `TRIP_PHOTOS`, add the Cloudflare

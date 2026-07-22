@@ -84,6 +84,11 @@ SELECT
       AND lower(type) = 'text' AND "notnull" = 0
       AND dflt_value IS NULL AND pk = 0
   ) AS exact_trip_idempotency_columns,
+  (SELECT COUNT(*) FROM pragma_table_info('trips')
+    WHERE name = 'photo_key_hash'
+      AND lower(type) = 'text' AND "notnull" = 0
+      AND dflt_value IS NULL AND pk = 0
+  ) AS exact_trip_photo_hash_columns,
   (SELECT COUNT(*) FROM sqlite_master
     WHERE type = 'table' AND name = 'ai_review_jobs'
   ) AS ai_review_queue_tables,
@@ -143,6 +148,8 @@ SELECT
   (SELECT COUNT(*) FROM trips WHERE contract_status != 'legacy_unverified' OR contract_status IS NULL)
     AS non_legacy_trip_rows,
   (SELECT COUNT(*) FROM trips WHERE photo_key IS NOT NULL) AS trip_photo_locators,
+  (SELECT COUNT(*) FROM trips WHERE photo_key IS NOT NULL AND photo_key_hash IS NULL)
+    AS trip_photo_locators_without_hash,
   (SELECT COUNT(*) FROM site_discussion_posts) AS discussion_rows,
   (SELECT COUNT(*) FROM site_discussion_posts
     WHERE approved_at IS NOT NULL OR approved_by IS NOT NULL OR source_ai_reviewed_at IS NOT NULL

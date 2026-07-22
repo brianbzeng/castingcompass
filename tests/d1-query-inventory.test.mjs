@@ -56,16 +56,27 @@ test("the committed inventory covers every Worker prepare site and its reviewed 
   validatePolicy(policy, inventory);
   assert.deepEqual(JSON.parse(committed), inventory);
   assert.deepEqual(inventory.summary, {
-    prepareCallCount: 274,
-    literalCallCount: 245,
-    nonLiteralCallCount: 29,
-    multiRowLiteralWithoutLimitCount: 13,
+    prepareCallCount: 240,
+    literalCallCount: 221,
+    nonLiteralCallCount: 19,
+    multiRowLiteralWithoutLimitCount: 9,
   });
   assert.equal(inventory.sourceFiles.length, 8);
-  assert.equal(new Set(inventory.queries.map(({ callSiteId }) => callSiteId)).size, 274);
+  assert.equal(new Set(inventory.queries.map(({ callSiteId }) => callSiteId)).size, 240);
   assert.equal(policy.multiRowReadContracts.filter(({ rowBoundStatus }) => rowBoundStatus === "open-account-cardinality").length, 0);
   assert.equal(policy.multiRowReadContracts.filter(({ rowBoundStatus }) => rowBoundStatus === "complete-rights-export").length, 9);
-  assert.equal(policy.multiRowReadContracts.filter(({ rowBoundStatus }) => rowBoundStatus === "owner-lifecycle-cleanup").length, 4);
+  assert.equal(policy.multiRowReadContracts.filter(({ rowBoundStatus }) => rowBoundStatus === "owner-lifecycle-cleanup").length, 0);
+
+  const setBasedDeletionInventory = inventory.queries.filter(({ file, statementClass, sql }) =>
+    file === "worker/auth.ts"
+      && statementClass === "INSERT"
+      && sql?.startsWith("INSERT INTO privacy_deletion_tasks")
+      && sql.includes("ON CONFLICT(job_id, object_key_hash) DO UPDATE SET"));
+  assert.equal(setBasedDeletionInventory.length, 4);
+  assert.equal(inventory.queries.filter(({ file, statementClass }) =>
+    file === "worker/auth.ts" && statementClass === "CREATE").length, 0);
+  assert.ok(inventory.queries.every(({ placeholderCount }) =>
+    placeholderCount === null || placeholderCount <= 100));
 
   const boundedAccountLists = inventory.queries.filter(({ executionMode, hasLimit, sql }) =>
     executionMode === "all"

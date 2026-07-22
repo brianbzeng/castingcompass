@@ -75,10 +75,11 @@ test("account deletion keeps tombstone creation and every active-row removal in 
   assert.ok(start >= 0 && end > start);
   const block = source.slice(start, end);
   const fenceClaim = block.indexOf("claimAccountDeletionFence");
-  const reservationInventory = block.indexOf("FROM trip_photo_upload_reservations");
+  const reservationInventory = block.indexOf("inventoryStatementsForAccountFence");
   assert.match(block, /await db\.batch\(\[/);
   assert.match(block, /deletion\.jobStatementForAccountFence\(db, user\.id, fence\.leaseToken\)/);
-  assert.match(block, /\.\.\.deletion\.taskStatementsForAccountFence\(db, user\.id, fence\.leaseToken\)/);
+  assert.match(block, /\.\.\.deletion\.inventoryStatementsForAccountFence\(db, user\.id, fence\.leaseToken\)/);
+  assert.match(block, /deletion\.finalizeInventoryStatementForAccountFence\(db, user\.id, fence\.leaseToken\)/);
   assert.ok(fenceClaim >= 0 && reservationInventory > fenceClaim, "the write fence must precede locator inventory");
 
   const orderedDeletes = [

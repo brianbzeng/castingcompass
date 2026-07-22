@@ -45,7 +45,8 @@ WITH expected_legal_columns(table_name, column_name) AS (
     ('target_encounter_count'),
     ('any_fish_encounter_count'),
     ('target_identification_confidence'),
-    ('idempotency_key_hash')
+    ('idempotency_key_hash'),
+    ('photo_key_hash')
 ), later_indexes(name) AS (
   VALUES
     ('auth_sessions_expires_idx'),

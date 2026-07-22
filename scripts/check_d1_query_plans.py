@@ -221,11 +221,37 @@ CHECKS = (
         reject_temporary_sort=False,
     ),
     PlanCheck(
+        "account prior deletion-task inventory",
+        """SELECT task.object_key, task.object_key_hash, task.object_store, task.available_at
+           FROM privacy_deletion_tasks AS task
+           JOIN privacy_deletion_jobs AS source_job ON source_job.id = task.job_id
+           WHERE source_job.owner_subject_hash = ? AND source_job.id != ?
+             AND task.state != 'completed' AND task.object_key IS NOT NULL""",
+        ("a" * 64, "deletion_fixture"),
+        ("privacy_deletion_jobs_owner_state_idx", "privacy_deletion_tasks_job_object_unique"),
+    ),
+    PlanCheck(
         "account photo reservation inventory",
-        """SELECT object_key, available_at FROM trip_photo_upload_reservations
-           WHERE owner_subject_hash = ? ORDER BY created_at""",
+        """SELECT object_key, object_key_hash, available_at
+           FROM trip_photo_upload_reservations WHERE owner_subject_hash = ?""",
         ("a" * 64,),
         ("trip_photo_upload_reservations_owner_idx",),
+    ),
+    PlanCheck(
+        "account privacy-export inventory",
+        """SELECT object_key, object_key_hash FROM privacy_export_jobs
+           WHERE owner_subject_hash = ? AND object_key IS NOT NULL
+             AND object_key_hash IS NOT NULL
+             AND state IN ('pending', 'queued', 'processing', 'retry', 'completed', 'needs_attention')""",
+        ("a" * 64,),
+        ("privacy_export_jobs_owner_idx",),
+    ),
+    PlanCheck(
+        "account attached-photo inventory",
+        """SELECT photo_key, photo_key_hash FROM trips
+           WHERE user_id = ? AND photo_key IS NOT NULL AND photo_key_hash IS NOT NULL""",
+        ("user_fixture",),
+        ("trips_user_created_idx",),
     ),
     PlanCheck(
         "account deletion fence receipt",

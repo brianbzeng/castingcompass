@@ -4,7 +4,7 @@ import test from "node:test";
 
 const root = new URL("../", import.meta.url);
 
-test("D1 migration, runtime bootstrap, schema, and CI share the critical index contract", async () => {
+test("D1 migrations and schema own indexes while runtime bootstrap is read-only", async () => {
   const [migration, auth, trips, schema, ci, checker] = await Promise.all([
     readFile(new URL("drizzle/0016_data_resilience_indexes.sql", root), "utf8"),
     readFile(new URL("worker/auth.ts", root), "utf8"),
@@ -34,7 +34,11 @@ test("D1 migration, runtime bootstrap, schema, and CI share the critical index c
     assert.match(migration, new RegExp(`\\b${name}\\b`));
     assert.match(schema, new RegExp(`\\b${name}\\b`));
   }
-  for (const name of names.slice(0, 8)) assert.match(auth, new RegExp(`\\b${name}\\b`));
+  assert.match(auth, /const AUTH_SCHEMA_READY_SQL = `SELECT/);
+  assert.match(auth, /FROM sqlite_master WHERE type = 'table'/);
+  assert.match(auth, /FROM pragma_table_info\('trips'\) WHERE name = 'photo_key_hash'/);
+  assert.match(auth, /"auth_schema_unavailable"/);
+  assert.doesNotMatch(auth, /CREATE (?:TABLE|INDEX)/);
   for (const name of names.slice(8, 13)) assert.match(trips, new RegExp(`\\b${name}\\b`));
   assert.match(ci, /python scripts\/check_d1_query_plans\.py/);
   assert.match(checker, /EXPLAIN QUERY PLAN/);

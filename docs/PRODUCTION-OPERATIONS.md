@@ -256,10 +256,13 @@ bucket identity is release evidence—not a configuration assumption.
 
 Enabling the browser control or adding an R2 binding is not sufficient authorization. The
 Worker must retain an explicit server-side upload gate that defaults off. Before switching it
-on, implement and test a D1-serialized account-deletion fence: block new trip/photo writes,
-then take the complete photo inventory, durably queue every locator, and only then remove active
-rows. Include an interleaving test where an upload reaches the attach step during deletion and
-prove that the object is either attached to a live trip or durably queued for cleanup.
+on, exercise the locally implemented D1-serialized account-deletion fence against the intended
+production bindings: block new trip/photo writes, materialize the complete source-bound photo
+inventory, durably queue every locator, and only then remove active rows. Include an interleaving
+test where an upload reaches the attach step during deletion and prove that the object is either
+attached to a live trip with its exact locator hash or durably queued for cleanup. Also capture
+the deployed plan and production-shaped query/rows-read budget; local Free-ceiling tests are not
+provider evidence.
 
 ## Production evidence checklist
 
@@ -286,7 +289,9 @@ prove that the object is either attached to a live trip or durably queued for cl
       activation drill passes.
 - [ ] Migration `0020_trip_photo_upload_reservations.sql` completed before trip-photo uploads are
       activated; postflight verified the empty account-deletion-fence and reservation tables plus
-      their six indexes. Alert on active/expired fences, aged reservations, and every
+      their six indexes, exact nullable text `trips.photo_key_hash`, and zero non-null photo
+      locators without that hash. The preflight proved zero existing trip photo locators before
+      the column was added. Alert on active/expired fences, aged reservations, and every
       `needs_attention` row before the upload gate can be enabled, without logging identities or locators.
 - [ ] Privacy pre/postflight counts match; the missing-age and legal-reacceptance cohorts have
       an explicit support decision, while export and account deletion remain available.
