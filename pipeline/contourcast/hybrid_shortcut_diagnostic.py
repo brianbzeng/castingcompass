@@ -258,7 +258,11 @@ def _seam_strata(
     labels: np.ndarray,
     test_indices: np.ndarray,
     predictions: Mapping[str, np.ndarray],
+    *,
+    min_class_rows: int,
 ) -> Mapping[str, Any]:
+    if min_class_rows < 1:
+        raise ValueError("min_class_rows must be positive")
     single_domains = sorted(
         domain
         for domain in set(domains[test_indices].tolist())
@@ -306,7 +310,16 @@ def _seam_strata(
                 reason="stratum does not contain every probe class",
             )
         else:
-            record["status"] = "completed"
+            if any(count < min_class_rows for count in class_counts.values()):
+                record.update(
+                    status="descriptive_low_support",
+                    reason=(
+                        "at least one class is below the predeclared per-class support "
+                        "floor; metrics are descriptive and cannot support a seam comparison"
+                    ),
+                )
+            else:
+                record["status"] = "completed"
             record["models"] = {
                 name: {
                     "accuracy": float(accuracy_score(truth[local], predictions[name][local])),
@@ -336,11 +349,14 @@ def _source_domain_holdouts(
     source_names: Sequence[str],
     *,
     min_domain_rows: int,
+    min_domain_class_rows: int,
     bootstrap_samples: int,
     seed: int,
 ) -> Tuple[Mapping[str, Any], Mapping[str, np.ndarray]]:
     if min_domain_rows < 1:
         raise ValueError("min_domain_rows must be positive")
+    if min_domain_class_rows < 1:
+        raise ValueError("min_domain_class_rows must be positive")
     valid = labels >= 0
     single = np.isin(domains, source_names)
     selected_features = {
@@ -377,14 +393,14 @@ def _source_domain_holdouts(
         if (
             len(train_indices) < min_domain_rows
             or len(test_indices) < min_domain_rows
-            or any(count == 0 for count in train_counts.values())
-            or any(count == 0 for count in test_counts.values())
+            or any(count < min_domain_class_rows for count in train_counts.values())
+            or any(count < min_domain_class_rows for count in test_counts.values())
         ):
             record.update(
                 status="not_evaluable",
                 reason=(
-                    "predeclared row minimum or complete three-class support is absent; "
-                    "the source domain is not pooled or substituted"
+                    "predeclared total-row or per-class support is absent; the source "
+                    "domain is not pooled or substituted"
                 ),
             )
             output[source] = record
@@ -430,6 +446,7 @@ def run_hybrid_shortcut_diagnostic(
     validation_fold: int = 3,
     split_regions: int = 5,
     min_domain_rows: int = 32,
+    min_domain_class_rows: int = 16,
     batch_size: int = 64,
     device: str = "cpu",
     bootstrap_samples: int = 1000,
@@ -537,6 +554,7 @@ def run_hybrid_shortcut_diagnostic(
         domains,
         source_names,
         min_domain_rows=min_domain_rows,
+        min_domain_class_rows=min_domain_class_rows,
         bootstrap_samples=bootstrap_samples,
         seed=seed,
     )
@@ -583,12 +601,15 @@ def run_hybrid_shortcut_diagnostic(
         "validation_fold": validation_fold,
         "split_regions": split_regions,
         "min_domain_rows": min_domain_rows,
+        "min_domain_class_rows": min_domain_class_rows,
         "batch_size": batch_size,
         "device": device,
         "bootstrap_samples": bootstrap_samples,
         "seed": seed,
         "source_domain_rule": "exactly one smallest-scale center availability channel",
-        "domain_eligibility": "minimum rows and all three classes in train and held-out source",
+        "domain_eligibility": (
+            "minimum total rows and minimum per-class rows in train and held-out source"
+        ),
         "declared_fixed_comparisons": [list(pair) for pair in fixed_comparisons],
     }
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -648,12 +669,14 @@ def run_hybrid_shortcut_diagnostic(
                 labels,
                 test_indices,
                 fixed_predictions,
+                min_class_rows=min_domain_class_rows,
             ),
         },
         "leave_one_source_domain_out": {
             "domain_rule": "exactly one smallest-scale center availability channel",
             "overlap_and_no_source_rows_excluded": True,
             "min_domain_rows": min_domain_rows,
+            "min_domain_class_rows": min_domain_class_rows,
             "domains": domain_holdouts,
         },
         "conclusion": conclusion,

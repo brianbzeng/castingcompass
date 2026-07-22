@@ -223,6 +223,7 @@ def build_parser() -> argparse.ArgumentParser:
     shortcut_diagnostic.add_argument("--validation-fold", type=int, default=3)
     shortcut_diagnostic.add_argument("--split-regions", type=int, default=5)
     shortcut_diagnostic.add_argument("--min-domain-rows", type=int, default=32)
+    shortcut_diagnostic.add_argument("--min-domain-class-rows", type=int, default=16)
     shortcut_diagnostic.add_argument("--batch-size", type=int, default=64)
     shortcut_diagnostic.add_argument("--device", default="cpu")
     shortcut_diagnostic.add_argument("--bootstrap-samples", type=int, default=1000)
@@ -623,6 +624,7 @@ def main(argv: Sequence[str] | None = None) -> int:
                 validation_fold=args.validation_fold,
                 split_regions=args.split_regions,
                 min_domain_rows=args.min_domain_rows,
+                min_domain_class_rows=args.min_domain_class_rows,
                 batch_size=args.batch_size,
                 device=args.device,
                 bootstrap_samples=args.bootstrap_samples,

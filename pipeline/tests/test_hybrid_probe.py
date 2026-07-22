@@ -119,6 +119,7 @@ class HybridProbeTests(unittest.TestCase):
             domains,
             source_names,
             min_domain_rows=6,
+            min_domain_class_rows=2,
             bootstrap_samples=10,
             seed=7,
         )
@@ -128,6 +129,7 @@ class HybridProbeTests(unittest.TestCase):
             domains,
             source_names,
             min_domain_rows=6,
+            min_domain_class_rows=2,
             bootstrap_samples=10,
             seed=7,
         )
@@ -142,11 +144,26 @@ class HybridProbeTests(unittest.TestCase):
             domains,
             source_names,
             min_domain_rows=6,
+            min_domain_class_rows=2,
             bootstrap_samples=10,
             seed=7,
         )
         self.assertEqual(failed["survey_c"]["status"], "not_evaluable")
         self.assertIn("not pooled", failed["survey_c"]["reason"])
+
+        low_support, _ = _source_domain_holdouts(
+            feature_sets,
+            labels,
+            domains,
+            source_names,
+            min_domain_rows=6,
+            min_domain_class_rows=3,
+            bootstrap_samples=10,
+            seed=7,
+        )
+        self.assertTrue(
+            all(record["status"] == "not_evaluable" for record in low_support.values())
+        )
 
     def test_hybrid_checkpoint_reconciles_complete_input_contract(self):
         digest, names, metadata, checkpoint = _hybrid_fixture()

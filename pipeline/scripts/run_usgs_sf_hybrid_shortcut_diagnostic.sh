@@ -81,6 +81,7 @@ cd "$ROOT_DIR"
   --validation-fold 3 \
   --split-regions 5 \
   --min-domain-rows 32 \
+  --min-domain-class-rows 16 \
   --batch-size 64 \
   --device "$DEVICE" \
   --bootstrap-samples 1000 \
