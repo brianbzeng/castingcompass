@@ -639,6 +639,10 @@ after its acceptance checks pass in the intended environment.
       plus exact trip/discussion absence rather than final mutation metadata. Missing metadata and
       a lost committed batch response recover without replay; a corrupted task ledger stops before
       private-object purge, and a concurrent moderator still wins without creating deletion work.
+    - [x] Make password-confirmed account deletion follow one exact secret-bound job, canonical
+      set-based task ledger, and zero active owner rows rather than final mutation metadata. The
+      verified task count controls cleanup fallback; rollback and corrupt-ledger ambiguity return a
+      read-only status receipt without private-object deletion or automatic replay.
     - [x] Locally move complete export packaging behind a default-off managed Queue adapter with
       an opaque two-field message, owner-bound D1 job/lease ledger, private 24-hour object,
       progress/download UI, bounded retries/expiry, and account-deletion race adoption. Direct
@@ -688,7 +692,7 @@ after its acceptance checks pass in the intended environment.
   - [ ] Define performance budgets and run isolated load, soak, spike, and failure-injection
     tests with production-shaped synthetic data. Record saturation points, tail latency, error
     rates, queue depth, database contention, cache effectiveness, cost, and a safe rollback plan.
-  - [x] Locally add workload-backed D1 indexes, machine-check 31 critical `EXPLAIN QUERY PLAN`
+  - [x] Locally add workload-backed D1 indexes, machine-check 32 critical `EXPLAIN QUERY PLAN`
     paths plus every foreign-key child index, remove the public-site N+1 behind a bounded cache,
     publish the cache/async/connection contracts, add a bounded Postgres process pool only for
     the optional API, and provide a read-only load harness that permanently refuses production.

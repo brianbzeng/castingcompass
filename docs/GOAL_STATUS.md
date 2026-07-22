@@ -13,6 +13,37 @@ Current provider truth overrides historical “paused” language in completed r
 2026-07-19 read-only reconciliation found an active Worker; no production mutation is authorized
 by that discovery.
 
+## Active checkpoint — exact account-deletion receipts
+
+- [x] Continue the database-authority audit through password-confirmed account deletion. The prior
+      happy path could trust the final user-delete change count without any read-back; the fallback
+      proved only that a deletion job existed and the user/fence were absent, and still treated a
+      set-based private-object inventory as zero objects if cleanup status became unreadable.
+- [x] Make one high-entropy account deletion receipt plus the complete D1 post-state authoritative.
+      Success requires the exact job identity, account/owner hashes, timestamps, initial state,
+      exact task count, canonical pending task IDs/hashes/stores/lease state, and zero remaining
+      user, owner trip, fence, reservation, email-attempt, user-bound export, or active owner-export
+      rows. Mutation metadata and transport success grant no receipt; the proven task count now
+      controls truthful cleanup fallback.
+- [x] Force missing final mutation metadata, a lost post-commit batch response, a rolled-back
+      transaction, post-commit cleanup failure, and a deliberately corrupted set-based task row.
+      Exact committed states succeed without replay, rollback and corrupt-ledger paths return an
+      opaque status receipt without touching R2, and the existing fence, legacy-locator, 75-object,
+      prior-deletion adoption, and privacy-export adoption contracts remain green. The source
+      ledger remains 237 prepare sites: 223 literal, 14 reviewed nonliteral, and nine reviewed
+      complete-rights multi-row reads; 32 critical D1 plans now include every receipt subquery.
+- [x] Seal the checkpoint with the pinned Cloudflare build, lint, TypeScript, 616/616 Node tests,
+      complete security/source-integrity chain, two zero-vulnerability npm audits, 29/29 API tests,
+      Ruff, 83 pipeline tests with one documented optional-rasterio skip, deterministic smoke, all
+      20 migrations and 32 critical query plans, and an isolated 200/200 Chromium/WebKit phone
+      matrix. A first CPU-contended mobile run exposed one slow-notice timing miss at 199/200; the
+      complete release-equivalent isolated rerun passed 200/200 without a code change. No push,
+      PR, merge, deployment, provider query, production database mutation, feature activation, UI
+      change, or model claim belongs to this checkpoint.
+- [ ] Exercise lost-response, same-account overlap, lease takeover, ledger corruption, latency,
+      rows-read/written, and multi-store private-object purge behavior with production-shaped
+      synthetic data in isolated staging before treating local receipt proof as deployed evidence.
+
 ## Active checkpoint — exact pending-trip deletion receipts
 
 - [x] Continue the database-authority audit through owner deletion of pending trips. The prior

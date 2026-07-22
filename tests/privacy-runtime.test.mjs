@@ -121,7 +121,9 @@ class TransactionalD1Adapter {
       this.failOnceQuerySubstring = null;
       throw new Error("injected one-time D1 failure");
     }
-    if (this.postCommitFailureActive && query.includes("FROM privacy_deletion_tasks")) {
+    if (this.postCommitFailureActive
+      && query.includes("FROM privacy_deletion_tasks")
+      && query.includes("ORDER BY created_at LIMIT ?")) {
       throw new Error("injected post-commit D1 failure");
     }
   }
@@ -2688,6 +2690,66 @@ test("an exact post-state proves account deletion after its committed batch resp
   assert.ok(d1.maximumBoundParameters <= 100);
 });
 
+test("exact account-deletion state overrides missing final mutation metadata", async () => {
+  const { sqlite, d1 } = await database();
+  const user = await addUser(sqlite, "account-delete-metadata-receipt");
+  addTrip(sqlite, user, { photoKey: "private/account-metadata.jpg" });
+  const deleted = [];
+  d1.omitOnceMutationMetadataSubstring = "DELETE FROM users WHERE id = ?";
+
+  const response = await handleAccountRequest(request("/api/profile", {
+    method: "DELETE",
+    cookie: user.cookie,
+    body: { confirmation: "DELETE", password: user.password },
+  }), {
+    DB: d1,
+    TRIP_PHOTOS: { delete: async (key) => { deleted.push(key); } },
+  }, [], { now: () => new Date("2026-07-21T18:30:00.000Z") });
+
+  assert.equal(response?.status, 200);
+  const payload = await response.json();
+  assert.equal(payload.deleted, true);
+  assert.equal(payload.deletion.status, "completed");
+  assert.equal(payload.deletion.objectsTotal, 1);
+  assert.deepEqual(deleted, ["private/account-metadata.jpg"]);
+  assert.equal(sqlite.prepare("SELECT COUNT(*) AS count FROM users WHERE id = ?").get(user.id).count, 0);
+  assert.equal(sqlite.prepare("SELECT COUNT(*) AS count FROM privacy_deletion_jobs WHERE scope = 'account'").get().count, 1);
+});
+
+test("account deletion refuses a corrupted set-based task ledger before private-object purge", async () => {
+  const { sqlite, d1 } = await database();
+  const user = await addUser(sqlite, "account-delete-corrupt-receipt");
+  addTrip(sqlite, user, { photoKey: "private/account-corrupt.jpg" });
+  let deleteCalls = 0;
+  d1.beforeOnceQuerySubstring = "SELECT job.id AS job_id, job.scope, job.subject_hash";
+  d1.beforeOnceQuery = () => sqlite.prepare(
+    "UPDATE privacy_deletion_tasks SET attempts = 1 WHERE job_id IN (SELECT id FROM privacy_deletion_jobs WHERE scope = 'account')",
+  ).run();
+
+  const response = await handleAccountRequest(request("/api/profile", {
+    method: "DELETE",
+    cookie: user.cookie,
+    body: { confirmation: "DELETE", password: user.password },
+  }), {
+    DB: d1,
+    TRIP_PHOTOS: { delete: async () => { deleteCalls += 1; } },
+  }, [], { now: () => new Date("2026-07-21T19:00:00.000Z") });
+
+  assert.equal(response?.status, 503);
+  assert.equal((await response.json()).error.code, "account_deletion_unconfirmed");
+  assert.ok(receiptFrom(response));
+  assert.equal(deleteCalls, 0);
+  assert.equal(sqlite.prepare("SELECT COUNT(*) AS count FROM users WHERE id = ?").get(user.id).count, 0);
+  assert.deepEqual({ ...sqlite.prepare(`SELECT state, attempts, object_key
+      FROM privacy_deletion_tasks WHERE job_id IN (
+        SELECT id FROM privacy_deletion_jobs WHERE scope = 'account'
+      )`).get() }, {
+    state: "pending",
+    attempts: 1,
+    object_key: "private/account-corrupt.jpg",
+  });
+});
+
 test("trip writes serialize around account deletion and incomplete migration-owned schemas fail closed", async () => {
   const { sqlite, d1 } = await database();
   const user = await addUser(sqlite, "19");
@@ -3302,7 +3364,9 @@ test("transaction failures roll back deletion, while post-commit cleanup failure
     cookie: user.cookie,
     body: { confirmation: "DELETE", password: user.password },
   }), { DB: first.d1, TRIP_PHOTOS: { delete: async () => undefined } }, []);
-  assert.equal(rolledBack?.status, 500);
+  assert.equal(rolledBack?.status, 503);
+  assert.equal((await rolledBack.json()).error.code, "account_deletion_unconfirmed");
+  assert.ok(receiptFrom(rolledBack));
   assert.equal(first.sqlite.prepare("SELECT COUNT(*) AS count FROM users WHERE id = ?").get(user.id).count, 1);
   assert.equal(first.sqlite.prepare("SELECT COUNT(*) AS count FROM trips WHERE id = ?").get(tripId).count, 1);
   assert.equal(first.sqlite.prepare("SELECT COUNT(*) AS count FROM site_discussion_posts WHERE trip_id = ?").get(tripId).count, 1);

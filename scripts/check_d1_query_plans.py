@@ -191,6 +191,45 @@ CHECKS = (
         ),
     ),
     PlanCheck(
+        "account deletion exact receipt",
+        """SELECT job.id,
+             (SELECT COUNT(*) FROM privacy_deletion_tasks WHERE job_id = job.id),
+             (SELECT COUNT(*) FROM privacy_deletion_tasks AS task WHERE task.job_id = job.id),
+             (SELECT COUNT(*) FROM users WHERE id = ?),
+             (SELECT COUNT(*) FROM trips WHERE user_id = ?),
+             (SELECT COUNT(*) FROM account_deletion_fences WHERE owner_subject_hash = ?),
+             (SELECT COUNT(*) FROM trip_photo_upload_reservations WHERE owner_subject_hash = ?),
+             (SELECT COUNT(*) FROM auth_attempts WHERE email_hash = ?),
+             (SELECT COUNT(*) FROM privacy_export_jobs
+                WHERE user_id = ? AND state IN ('pending', 'queued', 'processing', 'retry', 'completed', 'needs_attention')),
+             (SELECT COUNT(*) FROM privacy_export_jobs
+                WHERE owner_subject_hash = ?
+                  AND state IN ('pending', 'queued', 'processing', 'retry', 'completed', 'needs_attention'))
+           FROM privacy_deletion_jobs AS job
+           WHERE job.receipt_hash = ? LIMIT 1""",
+        (
+            "user_fixture",
+            "user_fixture",
+            "owner_fixture",
+            "owner_fixture",
+            "email_fixture",
+            "user_fixture",
+            "owner_fixture",
+            "receipt_fixture",
+        ),
+        (
+            "privacy_deletion_jobs_receipt_unique",
+            "privacy_deletion_tasks_job_object_unique",
+            "sqlite_autoindex_users_1",
+            "trips_user_created_idx",
+            "account_deletion_fences_owner_unique",
+            "trip_photo_upload_reservations_owner_idx",
+            "auth_attempts_email_time_idx",
+            "privacy_export_jobs_active_user_unique",
+            "privacy_export_jobs_owner_idx",
+        ),
+    ),
+    PlanCheck(
         "account trip export",
         "SELECT id FROM trips WHERE user_id = ? ORDER BY created_at DESC",
         ("user_fixture",),

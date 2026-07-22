@@ -983,10 +983,10 @@ export async function handleAccountRequest(
         [],
         fence.requestedAt,
       );
-      let deletionResults: unknown[] = [];
-      let deletionCommitRecovered = false;
+      const emailHash = await sha256(user.email);
+      let deletionBatchResponseLost = false;
       try {
-        deletionResults = await db.batch([
+        await db.batch([
         deletion.jobStatementForAccountFence(db, user.id, fence.leaseToken),
         ...deletion.inventoryStatementsForAccountFence(db, user.id, fence.leaseToken),
         deletion.finalizeInventoryStatementForAccountFence(db, user.id, fence.leaseToken),
@@ -1076,7 +1076,7 @@ export async function handleAccountRequest(
           AND EXISTS (SELECT 1 FROM privacy_deletion_jobs
             WHERE id = ? AND owner_subject_hash = ?)`)
           .bind(
-            await sha256(user.email),
+            emailHash,
             user.id,
             ownerSubjectHash,
             fence.leaseToken,
@@ -1090,20 +1090,26 @@ export async function handleAccountRequest(
             WHERE id = ? AND owner_subject_hash = ?)`)
           .bind(user.id, user.id, ownerSubjectHash, fence.leaseToken, deletion.id, ownerSubjectHash),
         ]);
-      } catch (error) {
-        const committed = await exactAccountDeletionCommit(db, user.id, deletion.receipt);
-        if (!committed) throw error;
-        deletionCommitRecovered = true;
+      } catch {
+        // A D1 batch can commit and lose its response. Only the exact post-state below grants a receipt.
+        deletionBatchResponseLost = true;
       }
-      const userDeleteChanges = confirmedMutationChanges(deletionResults.at(-1));
-      const deletionCommitConfirmed = userDeleteChanges === 1
-        || deletionCommitRecovered
-        || await exactAccountDeletionCommit(db, user.id, deletion.receipt);
-      if (!deletionCommitConfirmed) {
-        const missingPhotoHashes = await db.prepare(`SELECT COUNT(*) AS count FROM trips
-          WHERE user_id = ? AND photo_key IS NOT NULL AND photo_key_hash IS NULL`)
-          .bind(user.id)
-          .first<{ count: number }>();
+      let deletionCommit: PrivacyDeletionJobRow | null = null;
+      try {
+        deletionCommit = await exactAccountDeletionCommit(db, user.id, emailHash, deletion);
+      } catch {
+        // A failed confirmation read is ambiguous and must preserve the opaque status receipt.
+      }
+      if (!deletionCommit) {
+        let missingPhotoHashes: { count: number } | null = null;
+        try {
+          missingPhotoHashes = await db.prepare(`SELECT COUNT(*) AS count FROM trips
+            WHERE user_id = ? AND photo_key IS NOT NULL AND photo_key_hash IS NULL`)
+            .bind(user.id)
+            .first<{ count: number }>();
+        } catch {
+          // The opaque receipt below preserves read-only recovery when D1 remains unavailable.
+        }
         if (Number(missingPhotoHashes?.count ?? 0) > 0) {
           throw new AuthError(
             503,
@@ -1111,18 +1117,34 @@ export async function handleAccountRequest(
             "Account deletion is paused because a legacy private object needs protected migration. Contact support before retrying.",
           );
         }
-        throw new AuthError(
-          userDeleteChanges === 0 ? 409 : 503,
-          userDeleteChanges === 0 ? "account_deletion_lease_changed" : "account_deletion_unconfirmed",
-          userDeleteChanges === 0
-            ? "Account deletion lost its bounded lease. Retry after the active request finishes."
-            : "Account deletion could not be confirmed. Check deletion status before retrying.",
+        let currentFence: { lease_token: string } | null = null;
+        try {
+          currentFence = await db.prepare(`SELECT lease_token FROM account_deletion_fences
+            WHERE user_id = ? AND owner_subject_hash = ? LIMIT 1`)
+            .bind(user.id, ownerSubjectHash)
+            .first<{ lease_token: string }>();
+        } catch {
+          // The opaque receipt below preserves read-only recovery when D1 remains unavailable.
+        }
+        if (currentFence && currentFence.lease_token !== fence.leaseToken) {
+          throw new AuthError(
+            409,
+            "account_deletion_lease_changed",
+            "Account deletion lost its bounded lease. Retry after the active request finishes.",
+          );
+        }
+        return errorResponse(
+          503,
+          "account_deletion_unconfirmed",
+          "Account deletion could not be confirmed. Check deletion status before retrying.",
+          deletionReceiptCookie(deletion.receipt),
         );
       }
+      deletion.objectsTotal = deletionCommit.objects_total;
       const status = await deletionStatusAfterCommit(
         env,
         deletion,
-        deletionCommitRecovered ? 1 : ACCOUNT_DELETION_INLINE_TASK_BATCH,
+        deletionBatchResponseLost ? 1 : ACCOUNT_DELETION_INLINE_TASK_BATCH,
       );
       return jsonResponse(
         { deleted: true, deletion: status },
@@ -2407,18 +2429,102 @@ async function selectDeletionJobByReceipt(db: D1DatabaseLike, receipt: string) {
 async function exactAccountDeletionCommit(
   db: D1DatabaseLike,
   userId: string,
-  receipt: string,
+  emailHash: string,
+  deletion: {
+    id: string;
+    receipt: string;
+    scope: PrivacyDeletionJobRow["scope"];
+    subjectHash: string;
+    ownerSubjectHash: string;
+    requestedAt: string;
+  },
 ) {
-  const [job, activeUser, activeFence] = await Promise.all([
-    selectDeletionJobByReceipt(db, receipt),
-    db.prepare("SELECT 1 AS present FROM users WHERE id = ? LIMIT 1")
-      .bind(userId)
-      .first<{ present: number }>(),
-    db.prepare("SELECT 1 AS present FROM account_deletion_fences WHERE user_id = ? LIMIT 1")
-      .bind(userId)
-      .first<{ present: number }>(),
-  ]);
-  return Boolean(job) && !activeUser && !activeFence;
+  if (deletion.scope !== "account") return null;
+  const row = await db.prepare(`SELECT job.id AS job_id, job.scope, job.subject_hash,
+      job.owner_subject_hash, job.state, job.objects_total, job.objects_deleted,
+      job.last_error_code, job.requested_at, job.active_data_removed_at,
+      job.completed_at, job.updated_at,
+      (SELECT COUNT(*) FROM privacy_deletion_tasks WHERE job_id = job.id) AS task_count,
+      (SELECT COUNT(*) FROM privacy_deletion_tasks AS task
+        WHERE task.job_id = job.id AND (
+          task.id != (job.id || ':' || task.object_key_hash)
+          OR task.object_key IS NULL
+          OR length(task.object_key_hash) != 64
+          OR task.object_key_hash GLOB '*[^a-f0-9]*'
+          OR task.object_store NOT IN ('trip_photos', 'privacy_exports')
+          OR task.state != 'pending' OR task.attempts != 0
+          OR task.lease_expires_at IS NOT NULL OR task.lease_token IS NOT NULL
+          OR task.last_error_code IS NOT NULL OR task.completed_at IS NOT NULL
+          OR task.created_at != job.requested_at OR task.updated_at != job.requested_at
+        )) AS invalid_task_count,
+      (SELECT COUNT(*) FROM users WHERE id = ?) AS user_count,
+      (SELECT COUNT(*) FROM trips WHERE user_id = ?) AS trip_count,
+      (SELECT COUNT(*) FROM account_deletion_fences
+        WHERE user_id = ? OR owner_subject_hash = ?) AS fence_count,
+      (SELECT COUNT(*) FROM trip_photo_upload_reservations
+        WHERE owner_subject_hash = ?) AS reservation_count,
+      (SELECT COUNT(*) FROM auth_attempts WHERE email_hash = ?) AS auth_attempt_count,
+      (SELECT COUNT(*) FROM privacy_export_jobs
+        WHERE user_id = ?
+          AND state IN ('pending', 'queued', 'processing', 'retry', 'completed', 'needs_attention'))
+        AS export_user_count,
+      (SELECT COUNT(*) FROM privacy_export_jobs
+        WHERE owner_subject_hash = ?
+          AND state IN ('pending', 'queued', 'processing', 'retry', 'completed', 'needs_attention'))
+        AS active_export_count
+    FROM privacy_deletion_jobs AS job
+    WHERE job.receipt_hash = ? LIMIT 1`)
+    .bind(
+      userId,
+      userId,
+      userId,
+      deletion.ownerSubjectHash,
+      deletion.ownerSubjectHash,
+      emailHash,
+      userId,
+      deletion.ownerSubjectHash,
+      await sha256(deletion.receipt),
+    )
+    .first<PrivacyDeletionJobRow & {
+      job_id: string;
+      subject_hash: string;
+      owner_subject_hash: string;
+      last_error_code: string | null;
+      active_data_removed_at: string | null;
+      updated_at: string;
+      task_count: number;
+      invalid_task_count: number;
+      user_count: number;
+      trip_count: number;
+      fence_count: number;
+      reservation_count: number;
+      auth_attempt_count: number;
+      export_user_count: number;
+      active_export_count: number;
+    }>();
+  if (!row) return null;
+  const expectedState = row.task_count === 0 ? "completed" : "active_data_removed";
+  const exact = row.job_id === deletion.id
+    && row.scope === deletion.scope
+    && row.subject_hash === deletion.subjectHash
+    && row.owner_subject_hash === deletion.ownerSubjectHash
+    && row.state === expectedState
+    && row.objects_total === row.task_count
+    && row.objects_deleted === 0
+    && row.last_error_code === null
+    && row.requested_at === deletion.requestedAt
+    && row.active_data_removed_at === deletion.requestedAt
+    && row.completed_at === (row.task_count === 0 ? deletion.requestedAt : null)
+    && row.updated_at === deletion.requestedAt
+    && row.invalid_task_count === 0
+    && row.user_count === 0
+    && row.trip_count === 0
+    && row.fence_count === 0
+    && row.reservation_count === 0
+    && row.auth_attempt_count === 0
+    && row.export_user_count === 0
+    && row.active_export_count === 0;
+  return exact ? row : null;
 }
 
 async function exactPendingTripDeletionCommit(
