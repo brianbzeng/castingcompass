@@ -1255,16 +1255,34 @@ export async function handleAccountRequest(
         const id = `gear_${crypto.randomUUID()}`;
         const timestamp = new Date().toISOString();
         const gear = parseGearProfile(body);
-        const result = await db.prepare(`INSERT INTO gear_profiles
-          (id, user_id, name, rod, reel, bait_lure, rig, created_at, updated_at)
-          SELECT ?, ?, ?, ?, ?, ?, ?, ?, ?
-          WHERE (SELECT COUNT(*) FROM gear_profiles WHERE user_id = ?) < 100`)
-          .bind(id, user.id, gear.name, gear.rod, gear.reel, gear.baitLure, gear.rig, timestamp, timestamp, user.id)
-          .run();
-        if (result.meta?.changes === 0) {
-          throw new AuthError(409, "gear_profile_limit_reached", "Remove a gear preset before adding another.");
+        try {
+          await db.prepare(`INSERT INTO gear_profiles
+            (id, user_id, name, rod, reel, bait_lure, rig, created_at, updated_at)
+            SELECT ?, ?, ?, ?, ?, ?, ?, ?, ?
+            WHERE (SELECT COUNT(*) FROM gear_profiles WHERE user_id = ?) < 100`)
+            .bind(id, user.id, gear.name, gear.rod, gear.reel, gear.baitLure, gear.rig, timestamp, timestamp, user.id)
+            .run();
+        } catch {
+          // A storage response can be lost after commit. Only exact D1 post-state grants the receipt.
         }
-        if (result.meta?.changes !== 1) {
+        const receipt = await db.prepare(`SELECT id, user_id, name, rod, reel, bait_lure, rig, created_at, updated_at
+          FROM gear_profiles WHERE id = ? AND user_id = ? LIMIT 1`)
+          .bind(id, user.id)
+          .first<Record<string, unknown>>();
+        if (
+          !receipt || receipt.id !== id || receipt.user_id !== user.id || receipt.name !== gear.name ||
+          receipt.rod !== gear.rod || receipt.reel !== gear.reel || receipt.bait_lure !== gear.baitLure ||
+          receipt.rig !== gear.rig || receipt.created_at !== timestamp || receipt.updated_at !== timestamp
+        ) {
+          if (!receipt) {
+            const atLimit = await db.prepare(`SELECT 1 AS at_limit FROM gear_profiles
+              WHERE user_id = ? LIMIT 1 OFFSET 99`)
+              .bind(user.id)
+              .first<{ at_limit: number }>();
+            if (Number(atLimit?.at_limit ?? 0) === 1) {
+              throw new AuthError(409, "gear_profile_limit_reached", "Remove a gear preset before adding another.");
+            }
+          }
           throw new AuthError(503, "gear_profile_write_unconfirmed", "The gear preset could not be confirmed.");
         }
         return jsonResponse({ gearProfile: { id, ...gear, created_at: timestamp, updated_at: timestamp } }, 201);

@@ -163,6 +163,10 @@ after its acceptance checks pass in the intended environment.
       deletion race made the final statement change zero rows. Both routes now require exactly
       one confirmed D1 change, return the same `404` for zero, and fail `503` when the result is
       unconfirmable. Race tests preserve the other owner's row and prevent false client success.
+    - [x] Make gear-preset creation database-authoritative after storage response loss. The
+      server-generated identifier, authenticated owner, every normalized field, and both server
+      timestamps must match an exact D1 row before the `201` receipt is returned; absence resolves
+      to the documented 100-row limit only when an owner-bound bounded read confirms that limit.
     - [x] Make saved-location receipts database-authoritative. The browser changes its confirmed
       saved state only after an exact server receipt, so creation and removal now require
       authoritative D1 change metadata before returning that receipt. A confirmed zero removal
@@ -578,7 +582,7 @@ after its acceptance checks pass in the intended environment.
   - [ ] Inventory every production query, capture representative `EXPLAIN QUERY PLAN` evidence,
     add only workload-justified indexes, bound scans/pagination, eliminate N+1 patterns, verify
     cross-account predicates, and regression-test query latency and migration cost.
-    - [x] Add a deterministic AST-backed inventory for all 240 Worker `.prepare()` sites across
+    - [x] Add a deterministic AST-backed inventory for all 242 Worker `.prepare()` sites across
       eight files, including exact review contracts for 26 nonliteral expressions and 12 literal
       multi-row reads without `LIMIT`. CI and release provenance fail closed on inventory drift,
       computed/aliased prepare access, unreviewed dynamic SQL, unscoped literal writes, and

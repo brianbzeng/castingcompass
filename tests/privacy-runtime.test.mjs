@@ -1924,6 +1924,43 @@ test("gear mutations never manufacture success when D1 omits the change receipt"
   assert.equal(sqlite.prepare("SELECT name FROM gear_profiles WHERE id = ?").get(gearId).name, "Unconfirmed gear");
 });
 
+test("gear creation follows exact D1 state after the insert response is lost", async () => {
+  const { sqlite, d1 } = await database();
+  const owner = await addUser(sqlite, "gear-create-receipt-owner-138");
+  d1.throwOnceAfterMutationSubstring = "INSERT INTO gear_profiles";
+
+  const response = await handleAccountRequest(request("/api/gear-profiles", {
+    method: "POST",
+    cookie: owner.cookie,
+    body: {
+      name: "Lost response preset",
+      rod: "10-foot surf rod",
+      reel: "5000 spinner",
+      baitLure: "Swimbait",
+      rig: "Carolina rig",
+    },
+  }), { DB: d1 }, []);
+
+  assert.equal(response?.status, 201, JSON.stringify(await response?.clone().json()));
+  const body = await response?.json();
+  assert.match(body.gearProfile.id, /^gear_[a-f0-9-]{36}$/);
+  assert.deepEqual(
+    { ...sqlite.prepare(`SELECT id, user_id, name, rod, reel, bait_lure, rig, created_at, updated_at
+      FROM gear_profiles WHERE id = ?`).get(body.gearProfile.id) },
+    {
+      id: body.gearProfile.id,
+      user_id: owner.id,
+      name: "Lost response preset",
+      rod: "10-foot surf rod",
+      reel: "5000 spinner",
+      bait_lure: "Swimbait",
+      rig: "Carolina rig",
+      created_at: body.gearProfile.created_at,
+      updated_at: body.gearProfile.updated_at,
+    },
+  );
+});
+
 test("saved-location removal requires authoritative D1 metadata", async () => {
   const { sqlite, d1 } = await database();
   const owner = await addUser(sqlite, "saved-site-receipt-owner-138");

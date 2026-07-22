@@ -91,6 +91,31 @@ by that discovery.
       query, D1 mutation, R2 mutation, model change, UI change, or production authorization
       belongs to this local work.
 
+## Active checkpoint — exact gear-preset creation receipts
+
+- [x] Continue the database-authority audit through the last direct mutation-metadata decision.
+      Gear-preset creation could commit in D1 and then lose its storage response, leaving the
+      browser with an ambiguous failure even though the new preset existed.
+- [x] Make exact D1 post-state authoritative. A `201` now requires the server-generated ID,
+      authenticated owner, every normalized gear field, and both server timestamps to match the
+      owner-bound row. Mutation metadata and transport success cannot manufacture or suppress the
+      receipt.
+- [x] Preserve the 100-preset ceiling without guessing. If no exact new row exists, an
+      owner-bound `LIMIT 1 OFFSET 99` read distinguishes a real full account from an unconfirmed
+      write; only the former returns the existing `409` limit response.
+- [x] Force a committed gear insert to lose its response and prove the exact row still yields one
+      truthful `201`. The focused privacy/owner runtime passes 67/67 cases, and the source-bound
+      D1 inventory covers all 242 prepare sites: 216 literal, 26 reviewed nonliteral, and 12
+      reviewed multi-row reads.
+- [x] Pass the pinned Cloudflare build, ESLint, TypeScript, all 592/592 repository Node tests,
+      the complete offline security/SBOM/source-integrity chain, both zero-vulnerability npm
+      audits, Ruff, 29/29 API tests, 83 pipeline tests with one documented optional-`rasterio`
+      skip, the deterministic pipeline smoke test, 19 migrations / 23 critical D1 query plans,
+      and the full 200/200 Chromium/WebKit phone matrix. Preserve a clean local commit and
+      deterministic release-bundle receipt. No push, pull request, merge, deployment, provider
+      query, D1 mutation, R2 mutation, model change, UI change, or production authorization
+      belongs to this local work.
+
 ## Active checkpoint — exact privacy-object deletion authority
 
 - [x] Continue the database-authority audit through the GDPR/account-deletion object ledger.
