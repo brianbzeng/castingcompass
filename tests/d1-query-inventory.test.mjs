@@ -56,13 +56,13 @@ test("the committed inventory covers every Worker prepare site and its reviewed 
   validatePolicy(policy, inventory);
   assert.deepEqual(JSON.parse(committed), inventory);
   assert.deepEqual(inventory.summary, {
-    prepareCallCount: 219,
-    literalCallCount: 193,
+    prepareCallCount: 224,
+    literalCallCount: 198,
     nonLiteralCallCount: 26,
     multiRowLiteralWithoutLimitCount: 12,
   });
   assert.equal(inventory.sourceFiles.length, 8);
-  assert.equal(new Set(inventory.queries.map(({ callSiteId }) => callSiteId)).size, 219);
+  assert.equal(new Set(inventory.queries.map(({ callSiteId }) => callSiteId)).size, 224);
   assert.equal(policy.multiRowReadContracts.filter(({ rowBoundStatus }) => rowBoundStatus === "open-account-cardinality").length, 0);
   assert.equal(policy.multiRowReadContracts.filter(({ rowBoundStatus }) => rowBoundStatus === "complete-rights-export").length, 9);
   assert.equal(policy.multiRowReadContracts.filter(({ rowBoundStatus }) => rowBoundStatus === "owner-lifecycle-cleanup").length, 3);
@@ -172,6 +172,25 @@ test("the committed inventory covers every Worker prepare site and its reviewed 
       && executionMode === "run"
       && statementClass === "UPDATE"
       && sql === "UPDATE trips SET ai_review_status = 'reviewed', ai_review_json = ?, ai_review_model = ?, ai_reviewed_at = ? WHERE id = ? AND ai_review_status = 'processing' AND ai_review_json = ?"));
+  assert.ok(inventory.queries.some(({ file, executionMode, statementClass, sql }) =>
+    file === "worker/trip-review-queue.ts"
+      && executionMode === "first"
+      && statementClass === "SELECT"
+      && sql === "SELECT id FROM ai_review_jobs WHERE id = ? AND state = 'queued' AND lease_token = ? AND available_at = ? LIMIT 1"));
+  assert.ok(inventory.queries.some(({ file, executionMode, statementClass, sql }) =>
+    file === "worker/trip-review-queue.ts"
+      && executionMode === "first"
+      && statementClass === "SELECT"
+      && sql === "SELECT id, trip_id, state, attempts, available_at, lease_expires_at, lease_token FROM ai_review_jobs WHERE id = ? AND state = 'processing' AND lease_token = ? LIMIT 1"));
+  assert.ok(inventory.queries.some(({ file, statementClass, sql }) =>
+    file === "worker/trip-review-queue.ts"
+      && statementClass === "UPDATE"
+      && sql === "UPDATE ai_review_jobs SET state = 'completed', available_at = ?, lease_expires_at = NULL, lease_token = NULL, last_error_code = NULL, updated_at = ?, completed_at = ? WHERE id = ? AND state = 'processing' AND lease_token = ?"));
+  assert.ok(inventory.queries.some(({ file, statementClass, sql }) =>
+    file === "worker/trip-review-queue.ts"
+      && statementClass === "UPDATE"
+      && /last_error_code = 'review_lease_abandoned'/u.test(sql ?? "")
+      && /attempts >= \?/u.test(sql ?? "")));
 
   const exactOwnerTripRead = inventory.queries.find(({ sql }) =>
     sql === "SELECT * FROM trips WHERE id = ? AND user_id IS ? LIMIT 1");

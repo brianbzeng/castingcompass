@@ -65,6 +65,32 @@ by that discovery.
       provider query, D1 mutation, public AI output, model change, UI change, or production
       authorization belongs to this work.
 
+## Active checkpoint — lease-owned advisory queue jobs
+
+- [x] Continue the database-authority audit through the default-off managed Queue path. Consumer
+      claims and terminal writes depended on mutation metadata and `state = 'processing'` alone,
+      so a late worker could settle a newer lease; a crashed fifth attempt could also redispatch
+      forever.
+- [x] Add a private high-entropy `lease_token` to the still-unapplied additive queue migration.
+      Queue publishing now follows exact dispatch-token read-back, consumer provider work follows
+      exact processing-token read-back, and every success, retry, and attention transition repeats
+      that identity.
+- [x] Preserve active ownership during maintenance, deliberate disablement, duplicate delivery,
+      and scheduled redispatch. Only an unleased or expired job may be deferred or recovered, and
+      a well-formed expired fifth attempt moves both ledgers to explicit `needs_attention`.
+- [x] Force missing dispatch metadata, a lost committed consumer response, a stale worker that
+      returns after a replacement lease completes, maintenance during an active lease, and an
+      abandoned fifth attempt. No stale worker sends without exact authority or overwrites the
+      newer job/trip outcome.
+- [x] Pass the pinned Cloudflare build, ESLint, TypeScript, all 582/582 repository Node tests,
+      the complete offline security/SBOM/source-integrity chain, both zero-vulnerability npm
+      audits, Ruff, 29/29 API tests, 82 pipeline tests with one documented optional-`rasterio`
+      skip and 138 subtests, the deterministic pipeline smoke test, 19 migrations / 23 critical
+      D1 query plans, and the full 200/200 Chromium/WebKit phone matrix. Preserve a clean local
+      commit and deterministic release-bundle receipt. No push, pull request, merge, deployment,
+      provider query, D1 mutation, public AI output, model change, UI change, or production
+      authorization belongs to this work.
+
 ## Active checkpoint — atomic authentication attempt accounting
 
 - [x] Continue the authentication audit through abuse-control accounting. Sign-in and initial

@@ -277,6 +277,7 @@ export function verifyFinalPostflight(payload) {
     data_resilience_indexes: 15,
     exact_trip_idempotency_columns: 1,
     ai_review_queue_tables: 1,
+    exact_ai_review_queue_lease_columns: 1,
     ai_review_queue_indexes: 2,
     ai_review_queue_rows: 0,
     privacy_export_queue_tables: 1,

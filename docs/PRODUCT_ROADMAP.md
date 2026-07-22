@@ -612,6 +612,10 @@ after its acceptance checks pass in the intended environment.
       malformed or active processing state is never reclaimed, expired claims recover through
       the bounded scheduled backlog, and stale workers cannot overwrite a newer result. The
       internal claim envelope is suppressed from profile and portability responses.
+    - [x] Bind Queue publishing and consumer settlement to separate high-entropy D1 tokens:
+      exact read-back resolves missing mutation metadata, active leases survive maintenance and
+      duplicate deliveries, stale workers cannot settle replacement work, and an abandoned
+      fifth attempt reaches explicit attention instead of an infinite redispatch loop.
   - [x] Use Cloudflare's managed D1 binding lifecycle instead of inventing a traditional SQL
     connection pool. The optional FastAPI/Postgres process owns one bounded pool with validated
     minimum, maximum, wait-queue, and checkout-timeout settings plus explicit startup/shutdown;

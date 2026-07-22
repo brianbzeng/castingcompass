@@ -84,6 +84,7 @@ export async function verifyAiReviewQueuePolicy({ projectRoot = root } = {}) {
     "ON DELETE cascade",
     "ai_review_jobs_trip_unique",
     "ai_review_jobs_dispatch_idx",
+    "lease_token",
     "needs_attention",
     "attempts` <= 5",
   ]) {

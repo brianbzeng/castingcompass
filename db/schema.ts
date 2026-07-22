@@ -480,6 +480,7 @@ export const aiReviewJobs = sqliteTable(
     attempts: integer("attempts").notNull().default(0),
     availableAt: text("available_at").notNull(),
     leaseExpiresAt: text("lease_expires_at"),
+    leaseToken: text("lease_token"),
     lastErrorCode: text("last_error_code"),
     createdAt: text("created_at").notNull(),
     updatedAt: text("updated_at").notNull(),

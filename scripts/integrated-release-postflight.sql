@@ -87,6 +87,10 @@ SELECT
   (SELECT COUNT(*) FROM sqlite_master
     WHERE type = 'table' AND name = 'ai_review_jobs'
   ) AS ai_review_queue_tables,
+  (SELECT COUNT(*) FROM pragma_table_info('ai_review_jobs')
+    WHERE name = 'lease_token' AND lower(type) = 'text'
+      AND "notnull" = 0 AND dflt_value IS NULL AND pk = 0
+  ) AS exact_ai_review_queue_lease_columns,
   (SELECT COUNT(*) FROM sqlite_master
     WHERE type = 'index' AND name IN (
       'ai_review_jobs_trip_unique', 'ai_review_jobs_dispatch_idx'

@@ -240,6 +240,7 @@ test("the complete migration chain applies atomically and produces the runtime s
   assert.ok(columns(sqlite, "trips").includes("taxon_observations_json"));
   assert.ok(columns(sqlite, "trips").includes("idempotency_key_hash"));
   assert.ok(columns(sqlite, "ai_review_jobs").includes("lease_expires_at"));
+  assert.ok(columns(sqlite, "ai_review_jobs").includes("lease_token"));
   assert.ok(columns(sqlite, "trips").includes("outcome_class"));
   assert.ok(columns(sqlite, "trip_validation_provenance").includes("activation_manifest_sha256"));
   assert.ok(columns(sqlite, "trip_validation_provenance").includes("complete_attempt_confirmed"));
