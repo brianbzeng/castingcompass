@@ -509,6 +509,23 @@ Overlap, missing-source, and unsupported domains are reported rather than
 silently pooled. This is post-hoc shortcut evidence only: even a clean result
 cannot promote an encoder or validate habitat, fishing, or live-score skill.
 
+Audit the official raw camera observations as a candidate direct endpoint with:
+
+```bash
+PYTHON_BIN=.venv-geo-deep/bin/python \
+  HYBRID_ROOT=work/usgs-sf-hybrid-v1 \
+  pipeline/scripts/run_usgs_sf_video_endpoint_audit.sh
+```
+
+The runner content-addresses both video ZIPs and every archive member, parses
+Point and dBASE bytes strictly, projects only classified observations with a
+valid bathymetry center, and applies the same three-scale hybrid patch contract.
+It enumerates whole cruise/line/tape bipartitions and requires at least 16 rows
+of every collapsed class on both sides. It never permits a random split of
+adjacent one-minute track observations. Passing the support gate would still
+require a separately reviewed training protocol; failing it writes an exact
+no-training receipt. The command has no serving or deployment path.
+
 Run the strict substrate-component probe with:
 
 ```bash

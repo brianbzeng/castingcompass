@@ -189,6 +189,17 @@ explicitly unavailable. The resulting corpus kind is
 `official_unlabeled_seafloor_remote_sensing`; it is target-agnostic and cannot
 be interpreted as catch or habitat labels.
 
+The source manifest also binds the exact `f208nc` and `f307nc` raw video ZIPs
+and every archive member by byte count and SHA-256. Their `CLASS` values are
+direct scientist-recorded camera observations, but their tracks were selected
+to validate sonar interpretations, observations are adjacent one-minute
+samples, and horizontal positional accuracy is highly variable on the order of
+10 m. They are therefore eligible only for the explicit endpoint-admissibility
+audit unless a separately reviewed split passes. Published habitat polygons
+are not treated as independent bathymetry/backscatter targets because official
+metadata names those sonar products and hillshade as primary interpretation
+sources.
+
 ## Physical resolution contract
 
 CastingCompass separates pixel spacing from reliable feature detection:
@@ -339,3 +350,13 @@ the frozen minimum of 32 total rows and 16 rows per class in train and test.
 Fused pretraining is reliably worse than bathymetry pretraining on both
 eligible unseen-survey tests. These results prohibit a cross-survey
 generalization claim and do not authorize model promotion.
+
+The subsequent [direct-video endpoint audit](experiments/2026-07-22-usgs-sf-video-endpoint-admissibility-audit-v1.md)
+finds 3,759 classified official rows, 187 valid reference centers, and 166 rows
+that retain the complete hybrid patch contract. The retained totals are 94
+smooth, 22 mixed/rugose, and 50 mobile-coarse observations across four exact
+cruise/line/tape groups. All coarse rows and 21 of 22 mixed/rugose rows occur
+in one group. None of the seven unique whole-group partitions leaves 16 rows
+of every class on both sides, so a row-level split is prohibited and no model
+is fit. This negative support result is exactly reproduced and changes no
+serving path.

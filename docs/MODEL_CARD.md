@@ -180,6 +180,16 @@ best epochs, and local artifact hashes. Its numeric hybrid losses remain
 optimization diagnostics only; the independent habitat and rare-structure
 probes below are still required.
 
+The official raw video follow-up is a pre-training admissibility audit, not a
+model result. Direct scientist-recorded camera classes are a more independent
+measurement than the interpreted character map, but adjacent one-minute rows
+remain inside one exact cruise/line/tape group. A valid comparison requires at
+least 16 examples of every collapsed class in both train and held-out whole
+groups. The current four retained groups produce zero eligible partitions, so
+the implementation deliberately fits no probe. The target-agnostic
+`official_video_endpoint_admissibility_audit` run kind records this negative
+result without creating validation or promotion authority.
+
 ## Version and promotion contract
 
 `contracts/model-run.schema.json` freezes the structural
@@ -293,6 +303,7 @@ channel order, source version, or coverage contract fails.
 | Hybrid common-substrate probe | [Completed and exactly reproduced on pretraining holdout 3](experiments/2026-07-22-usgs-sf-hybrid-seafloor-probes-v1.md) | Fused deep macro F1 0.7020 reliably exceeds both single-modality encoders but remains reliably below fused classical summaries at 0.7574 |
 | Rare mapped-structure case-control probe | [Completed and exactly reproduced with whole-component holdout](experiments/2026-07-22-usgs-sf-hybrid-seafloor-probes-v1.md) | Fused deep macro F1 0.7259 beats fused random initialization, but does not reliably beat fused classical summaries; balanced sampling cannot estimate prevalence |
 | Hybrid source-shortcut diagnostic | [Completed and exactly reproduced with strict per-class survey support](experiments/2026-07-22-usgs-sf-hybrid-shortcut-diagnostic-v1.md) | Fixed fold contains only the 2004 measured source; fused deep is reliably worse than bathymetry deep on both eligible unseen-survey domains; shortcut risk remains unresolved |
+| Direct-video endpoint admissibility | [Completed and exactly reproduced with whole-track groups](experiments/2026-07-22-usgs-sf-video-endpoint-admissibility-audit-v1.md) | 166 complete hybrid rows across four groups; zero of seven whole-group partitions meet the per-class floor, so no probe is fit and no model is promoted |
 | Two-head fine-tuning | Unrun | No checkpoint |
 | Geographic generalization | Unrun | No result |
 | Calibration / ablations | Unrun on official data | No result |

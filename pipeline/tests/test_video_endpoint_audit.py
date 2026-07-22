@@ -19,6 +19,9 @@ from pipeline.contourcast.video_endpoint_audit import (
 )
 
 
+ROOT = Path(__file__).resolve().parents[2]
+
+
 def _sha(value: bytes) -> str:
     return hashlib.sha256(value).hexdigest()
 
@@ -93,6 +96,26 @@ def _archive(path, cruise, rows, *, extra=None):
 
 
 class VideoEndpointAuditTests(unittest.TestCase):
+    def test_committed_receipt_binds_manifest_and_negative_decision(self):
+        receipt = json.loads(
+            (ROOT / "pipeline/evidence/usgs-sf-video-endpoint-audit-v1.receipt.json").read_text(
+                encoding="utf-8"
+            )
+        )
+        manifest_path = ROOT / receipt["source_manifest"]["path"]
+        self.assertEqual(_sha(manifest_path.read_bytes()), receipt["source_manifest"]["sha256"])
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+        specs = {
+            item["cruise_id"]: item
+            for item in manifest["access"]["video_observation_assets"]
+        }
+        for cruise_id, recorded in receipt["official_inputs"]["video_archives"].items():
+            self.assertEqual(specs[cruise_id]["archive_sha256"], recorded["sha256"])
+            self.assertEqual(specs[cruise_id]["record_count"], recorded["record_count"])
+        self.assertEqual(receipt["audit"]["eligible_whole_group_partitions"], 0)
+        self.assertFalse(receipt["decision"]["video_probe_admissible"])
+        self.assertFalse(receipt["decision"]["model_training_run"])
+
     def test_strict_point_and_dbf_parsers(self):
         points = [(-122.5, 37.7), (-122.4, 37.8)]
         parsed_points = _parse_point_shapefile(_point_shapefile(points))

@@ -1,0 +1,103 @@
+{
+  "schema_version": "castingcompass.usgs-video-endpoint-admissibility-audit-receipt/1.0.0",
+  "created_at": "2026-07-22T12:50:31Z",
+  "source_commit": "1a89ba02f40bdaa7124d637f9bbcfb219e7194b9",
+  "source_manifest": {
+    "path": "pipeline/sources/usgs_sf_state_waters.json",
+    "sha256": "aacfa617ea034f972dbfd2eb2fe2acabab768169f4f23250991e0c0d8fa1653b"
+  },
+  "official_inputs": {
+    "bathymetry_geotiff_sha256": "75629f6a8bc7e3ea78fb6b3b22c737ec75a8cba1621f2c0066a2343ab61a242a",
+    "backscatter_geotiff_sha256": {
+      "8101_2004": "6fd2b9d9b9109d7a2b8f7cf3eaee2dbda9102c09295e8760a663015b92162bf0",
+      "8101_2007": "9910dc1a1b5726f4866eee8d4a07702fa85048a78c993dc522d0213ae141be34",
+      "8101_2008": "8885f1414fd4638981f8a0ede253b825b9d331c73ca3d4c7004665127ed3d8d2",
+      "7125_2006": "f44b5ebbabe5f979fbc49ce65704cf3b4f354a826cf7cab61f22f0dc64bdd972"
+    },
+    "video_archives": {
+      "f208nc": {
+        "url": "https://pubs.usgs.gov/ds/781/video_observations/data/f208nc_video_observations.zip",
+        "bytes": 116825,
+        "sha256": "ed61ba3112690f69af0cdfc27d8b391d44e755931b5b22453c50552c056f4daf",
+        "record_count": 1103,
+        "member_inventory_verified": true
+      },
+      "f307nc": {
+        "url": "https://pubs.usgs.gov/ds/781/video_observations/data/f307nc_video_observations.zip",
+        "bytes": 259539,
+        "sha256": "5a524a75155d953ac7b0808213741c9f0681d63a2c4f682fc39238413dec1d07",
+        "record_count": 2790,
+        "member_inventory_verified": true
+      }
+    }
+  },
+  "audit": {
+    "experiment_version": "exp-target-agnostic-c9f9eae3336ca396f623756679294ce5edc4a95fbd7e57e7149250a973d09e34",
+    "model_version": "model-target-agnostic-15a380f66d22acda05e8cc8ff3cd732a4a18d38334fc83437d0d92faa80b47aa",
+    "design": {
+      "endpoint": "direct scientist-recorded camera-video seafloor class",
+      "class_collapse": {
+        "1": "smooth_fine_medium_sediment",
+        "2": "mixed_or_rugose_rock",
+        "3": "mixed_or_rugose_rock",
+        "4": "mobile_coarse_sediment"
+      },
+      "group_definition": "exact cruise_id + LINE + TAPE",
+      "adjacent_row_split_allowed": false,
+      "minimum_rows_per_class_in_train_and_test": 16,
+      "patch_radii_m": [32.0, 128.0, 512.0],
+      "output_size": 33,
+      "minimum_valid_fraction": 0.8,
+      "minimum_aligned_valid_fraction": 0.5
+    },
+    "row_flow": {
+      "labeled_official_rows": 3759,
+      "labeled_rows_in_bathymetry_bounds": 188,
+      "labeled_rows_at_valid_bathymetry_centers": 187,
+      "retained_full_hybrid_patch_rows": 166
+    },
+    "retained_class_counts": {
+      "smooth_fine_medium_sediment": 94,
+      "mixed_or_rugose_rock": 22,
+      "mobile_coarse_sediment": 50
+    },
+    "retained_group_class_counts": {
+      "f208nc:100:74": [6, 0, 0],
+      "f208nc:101:74": [15, 0, 0],
+      "f307nc:26:29": [60, 1, 0],
+      "f307nc:27:30": [13, 21, 50]
+    },
+    "center_backscatter_availability_patterns": {
+      "0000": 1,
+      "0100": 21,
+      "1000": 144
+    },
+    "candidate_whole_group_partitions": 7,
+    "eligible_whole_group_partitions": 0,
+    "metrics_sha256": "a1afb8321a61dc1f871f2e43521614ec0e805365f8a83f5bd692311a1e831a65"
+  },
+  "reproduction": {
+    "executions": 2,
+    "metrics_bytes_exact": true,
+    "run_metadata_bytes_exact": false,
+    "run_metadata_sha256": [
+      "5c33fb9dd498af2b622002904501dda156bfb494d47d5c1660741d0a556138fa",
+      "3e63c87d860f5f5e755a0ec0ed3080c16b22e08371d00f2e372ce1d3a6a3d4af"
+    ],
+    "run_metadata_difference_expected": "Run ID, creation time, and absolute output paths are execution-specific."
+  },
+  "decision": {
+    "video_probe_admissible": false,
+    "model_training_run": false,
+    "encoder_promoted": false,
+    "serving_or_score_changed": false,
+    "reason": "No whole cruise/LINE/TAPE partition leaves at least 16 rows of every collapsed class in both train and test. All 50 mobile-coarse rows and 21 of 22 mixed/rugose rows occur in one retained track group; a row-level split would leak adjacent one-minute observations."
+  },
+  "lineage_boundary": {
+    "video_measurement_is_direct": true,
+    "video_track_selection_is_independent_of_sonar_interpretation": false,
+    "habitat_polygons_accepted_as_independent_endpoint": false,
+    "reason": "Official metadata says bathymetry, backscatter, and hillshade were the primary habitat-interpretation sources, with video and sediment samples used as support."
+  },
+  "claim_boundary": "This endpoint audit measures support and leakage risk for historical USGS visual seafloor classes only. It does not validate current habitat, fish presence, fishing skill, catch probability, calibration, the live Opportunity Score, model promotion, or deployment."
+}

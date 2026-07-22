@@ -83,6 +83,22 @@ by that discovery.
       [shortcut receipt](../pipeline/evidence/hybrid-seafloor-shortcut-diagnostic-v1.receipt.json)
       preserves the complete boundary. Shortcut risk remains unresolved, and no encoder, score,
       or serving path changes.
+- [x] Audit the official raw USGS camera observations as a more direct endpoint before changing
+      architecture or touching fishing labels. Exact archive/member hashes, strict Point/DBF
+      parsing, the existing hybrid patch contract, and a whole-cruise/line/tape split gate are
+      frozen in code. Of 3,759 classified observations, 187 land on valid reference centers and
+      166 retain every required patch; their class counts are 94 smooth, 22 mixed/rugose, and 50
+      mobile coarse.
+- [x] Record the video endpoint as not admissible rather than leaking adjacent track rows. All 50
+      mobile-coarse rows and 21 of 22 mixed/rugose rows occur in one of four retained track groups;
+      none of the seven unique whole-group partitions leaves at least 16 rows of every class on
+      both sides. Two clean executions reproduced byte-identical metrics. The
+      [video endpoint receipt](../pipeline/evidence/usgs-sf-video-endpoint-audit-v1.receipt.json)
+      records that no model ran and no encoder, score, serving path, or production state changed.
+- [ ] Acquire a genuinely support-complete independent endpoint before the next representation
+      comparison. Additional direct-video tracks must distribute every class across separable
+      groups, or a prospective independent survey must be designed; row-randomized results from
+      the current adjacent one-minute observations remain prohibited.
 
 This checkpoint changes no browser behavior, API, Worker, D1/R2/Queue state, production provider,
 live score, public model claim, or deployment authority.
