@@ -10,6 +10,10 @@ from pipeline.contourcast.hybrid_probe import (
     _load_hybrid_checkpoint,
     _paired_bootstrap_pairs,
 )
+from pipeline.contourcast.hybrid_shortcut_diagnostic import (
+    _availability_diagnostic_features,
+    _source_domain_holdouts,
+)
 from pipeline.contourcast.rare_structure_probe import (
     RARE_CLASS_NAMES,
     RARE_CORPUS_SCHEMA_VERSION,
@@ -68,6 +72,82 @@ def _hybrid_fixture():
 
 
 class HybridProbeTests(unittest.TestCase):
+    def test_availability_diagnostic_freezes_mask_geometry_and_domains(self):
+        names = (
+            "depth_m",
+            "survey_a",
+            "survey_a__available",
+            "survey_b",
+            "survey_b__available",
+        )
+        patches = np.zeros((4, 2, len(names), 5, 5), dtype=np.float32)
+        patches[0, :, 2] = 1
+        patches[1, :, 4] = 1
+        patches[2, :, 2] = 1
+        patches[2, :, 4] = 1
+        patches[3, 0, 2, 2, 2] = 1
+        features, feature_names, domains, patterns, sources = (
+            _availability_diagnostic_features(patches, names)
+        )
+        self.assertEqual(features.shape, (4, 10))
+        self.assertEqual(len(feature_names), features.shape[1])
+        self.assertEqual(sources, ("survey_a", "survey_b"))
+        self.assertEqual(domains.tolist(), ["survey_a", "survey_b", "overlap", "survey_a"])
+        self.assertEqual(patterns.tolist(), ["10", "01", "11", "10"])
+        patches[0, 0, 2, 0, 0] = 0.5
+        with self.assertRaisesRegex(ValueError, "zero-or-one"):
+            _availability_diagnostic_features(patches, names)
+
+    def test_source_domain_holdouts_are_exhaustive_and_do_not_pool_failures(self):
+        source_names = ("survey_a", "survey_b", "survey_c")
+        labels = np.tile(np.repeat(np.arange(3), 2), len(source_names))
+        domains = np.repeat(np.asarray(source_names), 6)
+        base = np.eye(3, dtype=np.float32)[labels]
+        feature_names = (
+            "bathymetry_pretrained_frozen_encoder",
+            "backscatter_pretrained_frozen_encoder",
+            "fused_pretrained_frozen_encoder",
+            "bathymetry_classical_summaries",
+            "fused_classical_summaries",
+            "availability_only_summaries",
+            "bathymetry_plus_availability_summaries",
+        )
+        feature_sets = {name: base.copy() for name in feature_names}
+        first, arrays = _source_domain_holdouts(
+            feature_sets,
+            labels,
+            domains,
+            source_names,
+            min_domain_rows=6,
+            bootstrap_samples=10,
+            seed=7,
+        )
+        second, _ = _source_domain_holdouts(
+            feature_sets,
+            labels,
+            domains,
+            source_names,
+            min_domain_rows=6,
+            bootstrap_samples=10,
+            seed=7,
+        )
+        self.assertEqual(first, second)
+        self.assertTrue(all(record["status"] == "completed" for record in first.values()))
+        self.assertEqual(arrays["domain_0__corpus_indices"].tolist(), list(range(6)))
+        failed_labels = labels.copy()
+        failed_labels[domains == "survey_c"] = 0
+        failed, _ = _source_domain_holdouts(
+            feature_sets,
+            failed_labels,
+            domains,
+            source_names,
+            min_domain_rows=6,
+            bootstrap_samples=10,
+            seed=7,
+        )
+        self.assertEqual(failed["survey_c"]["status"], "not_evaluable")
+        self.assertIn("not pooled", failed["survey_c"]["reason"])
+
     def test_hybrid_checkpoint_reconciles_complete_input_contract(self):
         digest, names, metadata, checkpoint = _hybrid_fixture()
         with (

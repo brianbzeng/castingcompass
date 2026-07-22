@@ -489,6 +489,24 @@ population accuracy. Because the USGS target was interpreted using bathymetry,
 backscatter, and video, neither probe is independent of all source variables or
 evidence of fishing skill. Both are research-only and have no serving path.
 
+Before using another downstream target, run the frozen post-hoc source shortcut
+diagnostic:
+
+```bash
+PYTHON_BIN=.venv-geo-deep/bin/python DEVICE=mps \
+  HYBRID_ROOT=work/usgs-sf-hybrid-v1 \
+  pipeline/scripts/run_usgs_sf_hybrid_shortcut_diagnostic.sh
+```
+
+The diagnostic first audits whether the exact pretraining holdout contains more
+than one survey domain. It then tests availability-only, coordinate-only,
+bathymetry, and fused features on that same held-out geography; stratifies
+interior and source-seam rows; and evaluates every leave-one-survey-domain-out
+split that meets the predeclared row and three-class support requirements.
+Overlap, missing-source, and unsupported domains are reported rather than
+silently pooled. This is post-hoc shortcut evidence only: even a clean result
+cannot promote an encoder or validate habitat, fishing, or live-score skill.
+
 Run the strict substrate-component probe with:
 
 ```bash

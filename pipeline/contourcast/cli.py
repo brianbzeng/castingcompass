@@ -12,6 +12,7 @@ from .first_party_validation import evaluate_site_window
 from .geo import validate_observation_extent, verify_projected_crs
 from .habitat_probe import run_frozen_seafloor_probe
 from .hybrid_probe import run_hybrid_seafloor_probe
+from .hybrid_shortcut_diagnostic import run_hybrid_shortcut_diagnostic
 from .ingest import ingest_bathymetry, ingest_observations, load_grid, load_model_observations
 from .metadata import sha256_file, write_json
 from .rare_structure_probe import build_rare_structure_corpus, run_rare_structure_probe
@@ -208,6 +209,24 @@ def build_parser() -> argparse.ArgumentParser:
     hybrid_probe.add_argument("--device", default="cpu")
     hybrid_probe.add_argument("--bootstrap-samples", type=int, default=1000)
     hybrid_probe.add_argument("--seed", type=int, default=42)
+
+    shortcut_diagnostic = subcommands.add_parser(
+        "diagnose-hybrid-seafloor-shortcuts"
+    )
+    shortcut_diagnostic.add_argument("--corpus", required=True, type=_path)
+    shortcut_diagnostic.add_argument("--bathymetry-checkpoint", required=True, type=_path)
+    shortcut_diagnostic.add_argument("--backscatter-checkpoint", required=True, type=_path)
+    shortcut_diagnostic.add_argument("--fused-checkpoint", required=True, type=_path)
+    shortcut_diagnostic.add_argument("--labels", required=True, type=_path)
+    shortcut_diagnostic.add_argument("--output-dir", required=True, type=_path)
+    shortcut_diagnostic.add_argument("--label-sha256")
+    shortcut_diagnostic.add_argument("--validation-fold", type=int, default=3)
+    shortcut_diagnostic.add_argument("--split-regions", type=int, default=5)
+    shortcut_diagnostic.add_argument("--min-domain-rows", type=int, default=32)
+    shortcut_diagnostic.add_argument("--batch-size", type=int, default=64)
+    shortcut_diagnostic.add_argument("--device", default="cpu")
+    shortcut_diagnostic.add_argument("--bootstrap-samples", type=int, default=1000)
+    shortcut_diagnostic.add_argument("--seed", type=int, default=42)
 
     rare_corpus = subcommands.add_parser("build-rare-structure-corpus")
     rare_corpus.add_argument("--input", required=True, type=_path)
@@ -583,6 +602,27 @@ def main(argv: Sequence[str] | None = None) -> int:
                 label_raster_sha256=args.label_sha256,
                 validation_fold=args.validation_fold,
                 split_regions=args.split_regions,
+                batch_size=args.batch_size,
+                device=args.device,
+                bootstrap_samples=args.bootstrap_samples,
+                seed=args.seed,
+            )
+        )
+    elif args.command == "diagnose-hybrid-seafloor-shortcuts":
+        _print(
+            run_hybrid_shortcut_diagnostic(
+                args.corpus,
+                {
+                    "bathymetry": args.bathymetry_checkpoint,
+                    "backscatter": args.backscatter_checkpoint,
+                    "fused": args.fused_checkpoint,
+                },
+                args.labels,
+                args.output_dir,
+                label_raster_sha256=args.label_sha256,
+                validation_fold=args.validation_fold,
+                split_regions=args.split_regions,
+                min_domain_rows=args.min_domain_rows,
                 batch_size=args.batch_size,
                 device=args.device,
                 bootstrap_samples=args.bootstrap_samples,
