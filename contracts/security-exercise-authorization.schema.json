@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "castingcompass.security-exercise-authorization/1.0.0",
+  "$id": "castingcompass.security-exercise-authorization/1.1.0",
   "title": "CastingCompass isolated security-exercise authorization",
   "type": "object",
   "additionalProperties": false,
@@ -11,6 +11,7 @@
     "mode",
     "environment",
     "target_origin",
+    "expected_api_compatibility_version",
     "expected_worker_version_id",
     "window_start_at",
     "window_end_at",
@@ -18,7 +19,7 @@
     "safety"
   ],
   "properties": {
-    "schema_version": { "const": "castingcompass.security-exercise-authorization/1.0.0" },
+    "schema_version": { "const": "castingcompass.security-exercise-authorization/1.1.0" },
     "exercise_id": { "$ref": "#/$defs/exerciseId" },
     "source_commit": { "type": "string", "pattern": "^[a-f0-9]{40}$" },
     "mode": { "enum": ["passive-baseline", "active-staging"] },
@@ -28,6 +29,10 @@
       "minLength": 10,
       "maxLength": 253,
       "pattern": "^https?://[^/?#]+$"
+    },
+    "expected_api_compatibility_version": {
+      "type": "string",
+      "pattern": "^[1-9][0-9]{0,8}$"
     },
     "expected_worker_version_id": {
       "type": "string",

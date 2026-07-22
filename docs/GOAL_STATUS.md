@@ -13,6 +13,31 @@ Current provider truth overrides historical “paused” language in completed r
 2026-07-19 read-only reconciliation found an active Worker; no production mutation is authorized
 by that discovery.
 
+## Active checkpoint — exact isolated-staging exercise identity
+
+- [x] Reconcile the guarded security runner with the current Worker health contract. API
+      compatibility discovery had added a sixth exact field after the original five-field
+      preflight was sealed, so a real authorized exercise would have refused a healthy current
+      staging release before invoking the scanner.
+- [x] Version the strict policy, authorization, and aggregate-receipt contracts together; require
+      the written authorization's API compatibility version to equal the repository-locked value;
+      and bind preflight to exact API version, Worker version, opaque exercise marker, D1 health,
+      no-store headers, non-maintenance state, and the canonical response field set.
+- [x] Add a cross-contract test that sends the exercise preflight through the actual current
+      Worker health implementation, plus explicit stale API-version refusal. This repository-only
+      compatibility repair contacts no target, invokes no scanner, changes no provider, and is
+      not staging or penetration-test evidence.
+- [x] Seal the compatibility repair under the exact supported Node 22.23.1/npm 10.9.8 toolchain:
+      Cloudflare build and 647/647 Node tests; ESLint and TypeScript; the complete offline security,
+      source-integrity, SBOM, policy, and two zero-vulnerability audit chain; all 50 D1 plans across
+      20 migrations; 29/29 API tests; Ruff; 83/83 pipeline tests with one documented optional-
+      `rasterio` skip; deterministic smoke; and the 200/200 Chromium/WebKit phone matrix. The
+      intentionally unsupported Node 24 shell was separately rejected by the existing restore-
+      evidence runtime gate rather than being misreported as product failure.
+- [ ] Provision the isolated synthetic target and obtain the documented independent written
+      authorization before running any public, authenticated, load, or intrusive exercise. Keep
+      every production hostname and binding permanently outside the harness.
+
 ## Active checkpoint — exact manual advisory-review retry receipts
 
 - [x] Audit the last runtime use of the mutation-metadata helper after the legal boundary was

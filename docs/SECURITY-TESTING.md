@@ -23,9 +23,12 @@ following before it invokes a scanner:
    independent tester, synthetic data only, no production bindings or user data, disabled
    external providers and outbound callbacks, a ready monitoring operator, and a verified
    emergency stop.
-5. `/api/health` must return the exact expected Worker version and the authorization's opaque
+5. `/api/health` must return the exact API compatibility version locked by both repository policy
+   and written authorization, the expected Worker version, and the authorization's opaque
    `securityExerciseId`. Production defaults to `securityExerciseId: null`; only the isolated
-   staging release may receive the matching non-secret marker.
+   staging release may receive the matching non-secret marker. A cross-contract test sends the
+   runner preflight through the current Worker health implementation so either side cannot drift
+   unnoticed.
 6. The generated plan is limited to public unauthenticated pages and `/api/health`. Every other
    API route, `/profile`, and the image optimizer are excluded. ZAP uses one thread per host,
    a 250 ms delay, low attack strength, a two-minute per-rule ceiling, and a 15-minute total
@@ -48,8 +51,8 @@ Do not prepare an active authorization until all of these external gates exist:
   sink, Turnstile configuration, AI-provider stub, and synthetic accounts;
 - no route to production data, bindings, credentials, queues, email recipients, AI provider,
   webhooks, or out-of-band application-security callbacks;
-- a staging release built from the authorization's exact source commit with
-  `SECURITY_EXERCISE_ID` set to its opaque exercise ID;
+- a staging release built from the authorization's exact source commit, exposing the policy's
+  exact API compatibility version and with `SECURITY_EXERCISE_ID` set to its opaque exercise ID;
 - a named monitoring operator with an emergency disable/maintenance action already tested;
 - written scope, time window, cost/rate ceilings, evidence location, independent tester, and
   stop conditions; and
@@ -110,10 +113,10 @@ CASTINGCOMPASS_SECURITY_EXERCISE_AUTHORIZATION=I_HAVE_WRITTEN_AUTHORIZATION_FOR_
   --output /absolute/private/path/evidence-parent/exercise
 ```
 
-The runner performs the staging marker/version preflight before creating evidence or invoking
-Docker. Scanner output is captured privately rather than printed to the terminal. A missing
-image, nonzero scanner result, malformed report, medium/high/critical alert, or any failed guard
-returns a failure.
+The runner performs the staging API/Worker/marker identity preflight before creating evidence or
+invoking Docker. Scanner output is captured privately rather than printed to the terminal. A
+missing image, nonzero scanner result, malformed report, medium/high/critical alert, or any
+failed guard returns a failure.
 
 ## Acceptance boundary
 
