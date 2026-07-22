@@ -265,8 +265,9 @@ def _fit_probe(
     if not class_names or len(set(class_names)) != len(class_names):
         raise ValueError("probe class names must be unique and nonempty")
     expected_classes = np.arange(len(class_names))
-    if not np.all(np.isin(labels, expected_classes)):
-        raise ValueError("probe labels fall outside the declared class contract")
+    admitted_indices = np.concatenate([train_indices, test_indices])
+    if not np.all(np.isin(labels[admitted_indices], expected_classes)):
+        raise ValueError("admitted probe labels fall outside the declared class contract")
     model = make_pipeline(
         StandardScaler(),
         LogisticRegression(
