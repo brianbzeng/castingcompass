@@ -92,6 +92,7 @@
             "enum": [
               "bathymetry-ingest",
               "descriptive-context",
+              "endpoint-support-audit",
               "observation-normalization",
               "terrain-pretraining"
             ]
