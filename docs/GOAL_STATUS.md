@@ -13,6 +13,31 @@ Current provider truth overrides historical “paused” language in completed r
 2026-07-19 read-only reconciliation found an active Worker; no production mutation is authorized
 by that discovery.
 
+## Active checkpoint — consolidate the July 22 launch-readiness stack
+
+- [x] Prove that exact heads from drafts `#147` through `#158` are direct ancestors of updated
+      draft `#146`; fast-forward the existing integration branch without a cherry-pick, squash,
+      rebase, force-push, history rewrite, merge to `main`, deployment, or provider mutation.
+- [x] Add the architecture-neutral model-selection goal at final consolidated head
+      `53a58d5c82080435c105ce642e60347f4fd5f085`: deep learning is one candidate, every
+      preregistered family receives the same locked geographic/time evidence, and the simplest
+      materially superior reproducible result wins. No benchmark, training, or score change ran.
+- [x] Obtain fresh protected-`main` review on the exact consolidated head. CI run `29944933042`
+      passed API, pipeline, dependency review, the complete web/security chain, and the 200-case
+      Chromium/WebKit phone matrix; CodeQL run `29944930241` passed Actions,
+      JavaScript/TypeScript, and Python; optional-stack run `29944932904` passed Linux CPU and
+      macOS ARM64; native-image run `29944933300` passed Linux AMD64 and ARM64; and release run
+      `29944933284` passed the deterministic bundle. Event-inapplicable main-only dependency
+      submission and release attestation skipped as designed. Open dependency, code-scanning,
+      and secret-scanning alerts were each zero.
+- [x] Reduce the review inventory to one preserved draft. GitHub recorded `#147` as merged only
+      into the updated `#146` branch; `#148`–`#158` were closed as superseded after exact-head
+      ancestry and consolidated checks passed, without deleting their branches. Draft `#146`
+      remains the sole open PR and the single review surface.
+- [ ] Obtain independent human review, then follow the separately authorized merge, isolated-
+      staging, provider, migration, deployment, and production-acceptance gates. Consolidation
+      and green repository checks do not satisfy any of those external gates.
+
 ## Active checkpoint — deduplicated hosted validation
 
 - [x] Stop feature-branch pushes from running the complete CI and release-provenance matrices a
@@ -24,6 +49,10 @@ by that discovery.
 - [x] Preserve the release boundary: `main` still receives post-merge CI, dependency submission,
       deterministic release artifacts, and main-only provenance attestations. This repository
       change does not weaken any job, required check, permission, audit, or test command.
+- [x] Observe the first updated consolidated head under the new trigger boundary: it produced one
+      pull-request CI run (`29944933042`) and one pull-request release run (`29944933284`), with
+      no duplicate feature-branch push run. This proves scheduler deduplication for that event;
+      it does not claim a billing amount or long-term queue-time reduction.
 - [ ] Measure the resulting hosted-minute and queue-time reduction after this workflow change is
       eventually reviewed against protected `main`; local source inspection cannot claim provider
       billing or scheduler behavior.
