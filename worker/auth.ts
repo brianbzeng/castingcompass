@@ -1602,6 +1602,7 @@ export async function handleAccountRequest(
             tripId,
             user.id,
           );
+        const editReceiptId = `validation_${crypto.randomUUID()}`;
         const statements = [
           updateStatement,
           db.prepare(`INSERT INTO trip_validation_provenance (
@@ -1615,7 +1616,7 @@ export async function handleAccountRequest(
               'invalidated_after_edit', 'context_only', 'post_completion_profile_edit', ?
             FROM trips WHERE id = ? AND user_id = ? AND moderation_status = 'pending'`)
             .bind(
-              `validation_${crypto.randomUUID()}`,
+              editReceiptId,
               trip.mode,
               trip.score_influenced_choice,
               timestamp,
@@ -1631,18 +1632,95 @@ export async function handleAccountRequest(
             timestamp,
           ));
         }
-        const [updateResult] = await db.batch(statements);
-        const updateChanges = confirmedMutationChanges(updateResult);
-        if (updateChanges === 0) {
-          return errorResponse(409, "trip_reviewed", "Reviewed trip logs can no longer be changed.");
+        try {
+          await db.batch(statements);
+        } catch {
+          // A D1 batch can commit and lose its response. Only the exact post-state below grants a receipt.
         }
-        if (updateChanges !== 1) {
+        const updatedTrip = await db.prepare(`SELECT trip.*,
+            evidence.id AS edit_receipt_id,
+            correction.correction_id AS correction_receipt_id
+          FROM trips AS trip
+          INNER JOIN trip_validation_provenance AS evidence
+            ON evidence.id = ? AND evidence.trip_id = trip.id
+            AND evidence.event_type = 'evidence_exclusion'
+            AND evidence.attestation_status = 'invalidated_after_edit'
+            AND evidence.evidence_status = 'context_only'
+            AND evidence.exclusion_reason = 'post_completion_profile_edit'
+            AND evidence.created_at = ?
+          LEFT JOIN validation_feasibility_corrections AS correction
+            ON correction.correction_id = ? AND correction.trip_id = trip.id
+            AND correction.corrected_at = ?
+          WHERE trip.id = ? AND trip.user_id = ? LIMIT 1`)
+          .bind(
+            editReceiptId,
+            timestamp,
+            feasibilityCorrection?.correctionId ?? null,
+            timestamp,
+            tripId,
+            user.id,
+          )
+          .first<TripRow & { edit_receipt_id: string; correction_receipt_id: string | null }>();
+        const exactReceipt = updatedTrip
+          && updatedTrip.edit_receipt_id === editReceiptId
+          && updatedTrip.correction_receipt_id === (feasibilityCorrection?.correctionId ?? null)
+          && updatedTrip.status === "completed"
+          && updatedTrip.moderation_status === "pending"
+          && updatedTrip.site_id === siteId
+          && updatedTrip.started_at === startedAt
+          && updatedTrip.ended_at === endedAt
+          && updatedTrip.mode === mode
+          && updatedTrip.fishing_method === fishingMethod
+          && updatedTrip.angler_count === anglerCount
+          && updatedTrip.angler_hours === anglerHours
+          && updatedTrip.keeper_count === keeperCount
+          && updatedTrip.short_released_count === shortReleasedCount
+          && updatedTrip.halibut_encounters === keeperCount + shortReleasedCount
+          && updatedTrip.no_catch === Number(noCatch)
+          && updatedTrip.gear_profile_id === gearProfileId
+          && updatedTrip.rod === rod
+          && updatedTrip.reel === reel
+          && updatedTrip.bait_lure === baitLure
+          && updatedTrip.rig === rig
+          && updatedTrip.other_catch_count === otherCatchCount
+          && updatedTrip.other_species === otherSpecies
+          && updatedTrip.observations_json === observations
+          && updatedTrip.notes === notes
+          && updatedTrip.updated_at === timestamp
+          && updatedTrip.completed_at === endedAt
+          && updatedTrip.observation_contract_version === speciesObservation.observationContractVersion
+          && updatedTrip.taxon_catalog_version === speciesObservation.taxonCatalogVersion
+          && updatedTrip.target_taxon_id === speciesObservation.targetTaxonId
+          && updatedTrip.contract_status === speciesObservation.contractStatus
+          && updatedTrip.taxon_observations_json === speciesObservation.taxonObservationsJson
+          && updatedTrip.outcome_class === speciesObservation.outcomeClass
+          && updatedTrip.target_encounter_count === speciesObservation.targetEncounterCount
+          && updatedTrip.any_fish_encounter_count === speciesObservation.anyFishEncounterCount
+          && updatedTrip.target_identification_confidence === speciesObservation.targetIdentificationConfidence
+          && updatedTrip.ai_review_status === "retry"
+          && updatedTrip.ai_review_json === null
+          && updatedTrip.ai_review_model === null
+          && updatedTrip.ai_reviewed_at === null
+          && (!forecastAttributionChanged || (
+            updatedTrip.opportunity_window_id === null
+            && updatedTrip.opportunity_score === null
+            && updatedTrip.habitat_score === null
+            && updatedTrip.seasonality_score === null
+            && updatedTrip.conditions_score === null
+            && updatedTrip.fishability_score === null
+            && updatedTrip.model_version === null
+            && updatedTrip.prediction_metadata_json === null
+          ));
+        if (!updatedTrip || !exactReceipt) {
+          const current = await db.prepare("SELECT moderation_status FROM trips WHERE id = ? AND user_id = ? LIMIT 1")
+            .bind(tripId, user.id)
+            .first<{ moderation_status: string }>();
+          if (current && current.moderation_status !== "pending") {
+            return errorResponse(409, "trip_reviewed", "Reviewed trip logs can no longer be changed.");
+          }
           return errorResponse(503, "trip_update_unconfirmed", "The trip update could not be confirmed.");
         }
-        const updatedTrip = await db.prepare("SELECT * FROM trips WHERE id = ? AND user_id = ? LIMIT 1")
-          .bind(tripId, user.id)
-          .first<TripRow>();
-        if (updatedTrip) options.onTripUpdated?.(updatedTrip);
+        options.onTripUpdated?.(updatedTrip);
         return jsonResponse({
           updated: true,
           tripId,

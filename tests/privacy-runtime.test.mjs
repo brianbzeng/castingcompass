@@ -4524,7 +4524,7 @@ test("pending-only profile mutation loses cleanly to a concurrent moderator deci
   assert.equal(sqlite.prepare("SELECT COUNT(*) AS count FROM privacy_deletion_tasks").get().count, 0);
 });
 
-test("pending-trip mutations stay ambiguous when D1 omits the final change receipt", async () => {
+test("pending-trip edits follow exact post-state when D1 omits the mutation receipt", async () => {
   const { sqlite, d1 } = await database();
   const user = await addUser(sqlite, "trip-receipt-138");
   const sites = [{ id: "ocean-beach", type: "Beach" }];
@@ -4560,9 +4560,14 @@ test("pending-trip mutations stay ambiguous when D1 omits the final change recei
       notes: "Receipt missing",
     },
   }), { DB: d1 }, sites, { onTripUpdated: () => { updateCallbacks += 1; } });
-  assert.equal(patchResponse?.status, 503);
-  assert.equal((await patchResponse.json()).error.code, "trip_update_unconfirmed");
-  assert.equal(updateCallbacks, 0);
+  assert.equal(patchResponse?.status, 200);
+  assert.deepEqual(await patchResponse.json(), {
+    updated: true,
+    tripId: editTripId,
+    forecastAttributionCleared: true,
+    validationEvidenceExcluded: true,
+  });
+  assert.equal(updateCallbacks, 1);
   assert.equal(sqlite.prepare("SELECT notes FROM trips WHERE id = ?").get(editTripId).notes, "Receipt missing");
 
   const deleteTripId = addTrip(sqlite, user, { photoKey: "private/unconfirmed-delete.jpg" });
@@ -4576,6 +4581,52 @@ test("pending-trip mutations stay ambiguous when D1 omits the final change recei
   assert.match(deleteResponse.headers.get("Set-Cookie") ?? "", /^cc_deletion_receipt=/u);
   assert.equal(sqlite.prepare("SELECT COUNT(*) AS count FROM trips WHERE id = ?").get(deleteTripId).count, 0);
   assert.equal(sqlite.prepare("SELECT COUNT(*) AS count FROM privacy_deletion_jobs WHERE scope = 'trip'").get().count, 1);
+});
+
+test("a committed pending-trip edit survives a lost D1 batch response exactly once", async () => {
+  const { sqlite, d1 } = await database();
+  const user = await addUser(sqlite, "trip-lost-batch-receipt-139");
+  const sites = [{ id: "ocean-beach", type: "Beach" }];
+  const tripId = addTrip(sqlite, user);
+  let updateCallbacks = 0;
+  d1.throwOnceAfterBatchMutationSubstring = "UPDATE trips SET site_id";
+
+  const response = await handleAccountRequest(request(`/api/profile/trips/${tripId}`, {
+    method: "PATCH",
+    cookie: user.cookie,
+    body: {
+      siteId: "ocean-beach",
+      mode: "shore",
+      startedAt: "2026-07-01T09:30:00.000Z",
+      endedAt: "2026-07-01T12:00:00.000Z",
+      anglerCount: 1,
+      keeperCount: 1,
+      shortReleasedCount: 2,
+      fishingMethod: "artificial-lure",
+      gearProfileId: "",
+      rod: "Rod A",
+      reel: "Reel B",
+      baitLure: "Swimbait",
+      rig: "Drop shot",
+      otherCatchCount: 1,
+      otherSpecies: "surfperch",
+      shorebreak: "",
+      wadingDepth: "",
+      waterClarity: "clear",
+      crowding: "",
+      fishabilityRating: "",
+      observedWaveHeightFeet: "",
+      fishabilityNotes: "",
+      notes: "Lost committed batch response",
+    },
+  }), { DB: d1 }, sites, { onTripUpdated: () => { updateCallbacks += 1; } });
+
+  assert.equal(response?.status, 200);
+  assert.equal((await response.json()).updated, true);
+  assert.equal(updateCallbacks, 1);
+  assert.equal(sqlite.prepare("SELECT notes FROM trips WHERE id = ?").get(tripId).notes, "Lost committed batch response");
+  assert.equal(sqlite.prepare(`SELECT COUNT(*) AS count FROM trip_validation_provenance
+    WHERE trip_id = ? AND event_type = 'evidence_exclusion'`).get(tripId).count, 1);
 });
 
 test("AI provider payload omits hostile legacy forecast metadata at the egress boundary", async () => {

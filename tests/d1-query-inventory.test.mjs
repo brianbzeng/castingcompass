@@ -56,13 +56,13 @@ test("the committed inventory covers every Worker prepare site and its reviewed 
   validatePolicy(policy, inventory);
   assert.deepEqual(JSON.parse(committed), inventory);
   assert.deepEqual(inventory.summary, {
-    prepareCallCount: 234,
-    literalCallCount: 220,
+    prepareCallCount: 235,
+    literalCallCount: 221,
     nonLiteralCallCount: 14,
     multiRowLiteralWithoutLimitCount: 9,
   });
   assert.equal(inventory.sourceFiles.length, 8);
-  assert.equal(new Set(inventory.queries.map(({ callSiteId }) => callSiteId)).size, 234);
+  assert.equal(new Set(inventory.queries.map(({ callSiteId }) => callSiteId)).size, 235);
   assert.equal(policy.multiRowReadContracts.filter(({ rowBoundStatus }) => rowBoundStatus === "open-account-cardinality").length, 0);
   assert.equal(policy.multiRowReadContracts.filter(({ rowBoundStatus }) => rowBoundStatus === "complete-rights-export").length, 9);
   assert.equal(policy.multiRowReadContracts.filter(({ rowBoundStatus }) => rowBoundStatus === "owner-lifecycle-cleanup").length, 0);

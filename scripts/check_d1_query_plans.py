@@ -140,6 +140,35 @@ CHECKS = (
         ("trips_user_history_idx",),
     ),
     PlanCheck(
+        "profile trip edit exact receipt",
+        """SELECT trip.id, evidence.id, correction.correction_id
+           FROM trips AS trip
+           INNER JOIN trip_validation_provenance AS evidence
+             ON evidence.id = ? AND evidence.trip_id = trip.id
+             AND evidence.event_type = 'evidence_exclusion'
+             AND evidence.attestation_status = 'invalidated_after_edit'
+             AND evidence.evidence_status = 'context_only'
+             AND evidence.exclusion_reason = 'post_completion_profile_edit'
+             AND evidence.created_at = ?
+           LEFT JOIN validation_feasibility_corrections AS correction
+             ON correction.correction_id = ? AND correction.trip_id = trip.id
+             AND correction.corrected_at = ?
+           WHERE trip.id = ? AND trip.user_id = ? LIMIT 1""",
+        (
+            "validation_fixture",
+            "2026-07-21T00:00:00.000Z",
+            "correction_fixture",
+            "2026-07-21T00:00:00.000Z",
+            "trip_fixture",
+            "user_fixture",
+        ),
+        (
+            "sqlite_autoindex_trip_validation_provenance_1",
+            "sqlite_autoindex_trips_1",
+            "validation_feasibility_correction_id_unique",
+        ),
+    ),
+    PlanCheck(
         "account trip export",
         "SELECT id FROM trips WHERE user_id = ? ORDER BY created_at DESC",
         ("user_fixture",),

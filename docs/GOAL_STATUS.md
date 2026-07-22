@@ -13,6 +13,35 @@ Current provider truth overrides historical “paused” language in completed r
 2026-07-19 read-only reconciliation found an active Worker; no production mutation is authorized
 by that discovery.
 
+## Active checkpoint — exact profile-trip edit receipts
+
+- [x] Continue the database-authority audit through owner profile-trip edits. A committed D1
+      batch with missing mutation metadata returned `trip_update_unconfirmed` after changing the
+      trip and appending validation evidence, while a nominal metadata result could grant success
+      without requiring the edited row to exist.
+- [x] Make one server-generated validation-evidence ID plus the complete owner-bound edited trip
+      state authoritative. Success requires the exact evidence-exclusion row, optional immutable
+      feasibility-correction identity, every normalized trip field, recomputed species contract,
+      AI-review reset, and required forecast invalidation. Mutation metadata and transport success
+      grant no receipt, and the review callback runs only after exact confirmation.
+- [x] Force both missing mutation metadata and a lost post-commit batch response. Each returns one
+      correct `200` receipt from D1 post-state, invokes the callback once, and leaves exactly one
+      edit-evidence row; a concurrent moderator still wins with `409` and no callback. The current
+      source ledger covers 235 prepare sites: 221 literal, 14 reviewed nonliteral, and nine
+      reviewed complete-rights multi-row reads. The exact receipt uses primary/unique indexes and
+      expands the machine-checked D1 plan set to 30.
+- [x] Seal the checkpoint locally: the production-style Cloudflare build, ESLint, TypeScript,
+      612/612 Node tests, the complete offline security/source-integrity chain, both zero-
+      vulnerability npm audits, API 29/29, Ruff, 83 pipeline tests with one documented optional-
+      `rasterio` skip, 20 migrations / 30 critical indexed D1 plans, deterministic synthetic
+      smoke, and the full 200/200 Chromium/WebKit phone matrix passed. Preserve one clean local
+      commit and its deterministic release bundle. No push, PR, merge, deployment, provider query,
+      production database mutation, feature activation, UI change, or model claim belongs to this
+      checkpoint.
+- [ ] Exercise lost-response, same-account overlap, moderator-race, latency, rows-read/written,
+      and callback/queue behavior with production-shaped synthetic data in isolated staging
+      before treating local receipt proof as deployed evidence.
+
 ## Active checkpoint — discussion schema authority
 
 - [x] Remove the public-discussion route's cold `CREATE TABLE IF NOT EXISTS` and `CREATE INDEX IF
