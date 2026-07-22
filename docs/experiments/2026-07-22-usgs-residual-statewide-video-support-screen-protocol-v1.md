@@ -41,6 +41,12 @@ the manifest was amended to retain both values and to enforce 5,936 as the exact
 This named source-documentation discrepancy does not change source selection, class collapse,
 grouping, support, or any downstream gate. Any SHP/DBF disagreement still fails closed.
 
+The next pre-result run also produced no metrics or decision and stopped on a case-only schema
+variant: `l908nc` stores `Class`, `Line`, and `Tape`, while the other five residual archives store
+uppercase names. dBASE field identity is therefore canonicalized to ASCII uppercase before exact
+matching. A case-insensitive duplicate remains invalid. This admits no alias and does not change
+the field values or their meaning.
+
 ## Endpoint and classes
 
 The endpoint is the direct scientist-recorded `CLASS` value in each official video-observation
@@ -51,7 +57,8 @@ DBF. The class collapse is unchanged from the two earlier audits:
 - raw `4` -> `mobile_coarse_sediment`.
 
 Blank `CLASS` rows are unlabeled and excluded. Any nonblank value outside `1` through `4`, a
-missing required `CLASS`, `LINE`, or `TAPE` field, an empty `LINE` or `TAPE` on a labeled row, an
+missing required `CLASS`, `LINE`, or `TAPE` field after case-only canonicalization, an empty `LINE`
+or `TAPE` on a labeled row, an
 exact SHP/DBF count mismatch, an unsafe archive member, or a checksum mismatch fails the audit
 closed. The one published-metadata discrepancy above must remain explicit.
 No class may be dropped, merged differently, oversampled, or inferred from another field after

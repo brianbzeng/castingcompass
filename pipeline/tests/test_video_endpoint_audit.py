@@ -193,6 +193,13 @@ class VideoEndpointAuditTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "non-integral"):
             _parse_dbf_required_fields(fractional)
 
+        title_case = _typed_dbf(
+            (("1", "26", "29"),),
+            (("Class", "C", 8, 0), ("Line", "C", 8, 0), ("Tape", "C", 8, 0)),
+        )
+        canonical = _parse_dbf_required_fields(title_case)
+        self.assertEqual(canonical, {"CLASS": ["1"], "LINE": ["26"], "TAPE": ["29"]})
+
     def test_archive_inventory_is_exact_and_content_addressed(self):
         with tempfile.TemporaryDirectory() as temporary:
             archive_path = Path(temporary) / "video.zip"

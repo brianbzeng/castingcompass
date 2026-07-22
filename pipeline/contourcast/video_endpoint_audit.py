@@ -162,6 +162,13 @@ def _parse_dbf_required_fields(
 ) -> Mapping[str, list[str]]:
     """Parse required character or integral numeric fields from strict dBASE III."""
 
+    normalized_required = tuple(name.upper() for name in required_fields)
+    if (
+        any(not name or not name.isascii() for name in normalized_required)
+        or len(set(normalized_required)) != len(normalized_required)
+    ):
+        raise ValueError("required video DBF field names are invalid or duplicated")
+
     if len(data) < 34 or data[0] != 0x03:
         raise ValueError("video DBF must be a dBASE III table")
     record_count = struct.unpack_from("<I", data, 4)[0]
@@ -183,7 +190,7 @@ def _parse_dbf_required_fields(
         descriptor = data[offset : offset + 32]
         raw_name = descriptor[:11].split(b"\0", 1)[0]
         try:
-            name = raw_name.decode("ascii")
+            name = raw_name.decode("ascii").upper()
             field_type = chr(descriptor[11])
         except (UnicodeDecodeError, ValueError) as error:
             raise ValueError("video DBF field descriptor is not ASCII") from error
@@ -195,23 +202,23 @@ def _parse_dbf_required_fields(
         field_offset += length
     if field_offset != record_length:
         raise ValueError("video DBF fields do not fill the declared record length")
-    missing = set(required_fields) - names
+    missing = set(normalized_required) - names
     if missing:
         raise ValueError(f"video DBF lacks required fields: {sorted(missing)}")
     by_name = {name: (field_type, offset, length) for name, field_type, offset, length in fields}
-    for name in required_fields:
+    for name in normalized_required:
         if by_name[name][0] not in {"C", "F", "N"}:
             raise ValueError(
                 f"video DBF field {name!r} must be character or numeric data"
             )
 
-    values = {name: [] for name in required_fields}
+    values = {name: [] for name in normalized_required}
     for index in range(record_count):
         start = header_length + index * record_length
         record = data[start : start + record_length]
         if record[0] != 0x20:
             raise ValueError("video DBF contains a deleted or invalid record")
-        for name in required_fields:
+        for name in normalized_required:
             field_type, field_start, length = by_name[name]
             try:
                 value = record[field_start : field_start + length].decode("cp1252").strip()
