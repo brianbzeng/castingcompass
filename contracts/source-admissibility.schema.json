@@ -93,6 +93,7 @@
               "bathymetry-ingest",
               "descriptive-context",
               "endpoint-support-audit",
+              "endpoint-support-footprint",
               "observation-normalization",
               "terrain-pretraining"
             ]
