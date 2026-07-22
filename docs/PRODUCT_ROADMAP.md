@@ -502,9 +502,11 @@ after its acceptance checks pass in the intended environment.
     stress, and penetration tests; remediate critical/high findings and retest before production
     promotion. Never aim stress or intrusive security testing at production user data.
     Repository preparation is locally complete: the strict private authorization contract,
-    staging-only API/Worker/exercise health identity with a live cross-contract test, permanently
-    blocked production inventory, bounded digest-pinned ZAP runner, adversarial refusal tests,
-    private raw evidence, and aggregate-only receipt are in
+    staging-only API/Worker/exercise health identity with live cross-contract tests, permanently
+    blocked production inventory, bounded digest-pinned ZAP runner, and a read-only load harness
+    that requires a clean reviewed exact-source checkout plus the exact isolated-staging identity
+    before any timed remote request. Adversarial refusal tests, private raw security evidence, and
+    the aggregate-only security receipt are in
     [SECURITY-TESTING.md](SECURITY-TESTING.md). PR `#98` merged as
     `fb4662cf725c3a1f99b4e918a19c6e72971a6b85`; main CI `29669810196`, release provenance
     `29669810179`, CodeQL `29669809994`, and native image security `29669810191` passed that
@@ -721,6 +723,10 @@ after its acceptance checks pass in the intended environment.
     paths plus every foreign-key child index, remove the public-site N+1 behind a bounded cache,
     publish the cache/async/connection contracts, add a bounded Postgres process pool only for
     the optional API, and provide a read-only load harness that permanently refuses production.
+    Remote load execution also rejects cleartext, IP literals, widened routes/budgets, unreviewed
+    or dirty source, redirects, stale API/Worker identity, an absent opaque exercise marker,
+    unhealthy D1, or maintenance mode before its timed workers start; aggregate output omits the
+    target hostname, Worker version, and exercise marker.
     The actual built Worker also passed a 2,835-request, zero-failure smoke against a disposable
     local D1 database after all 18 migrations (18.51 ms p95; 32.79 ms p99). The default-off
     advisory Queue path and D1 ledger are locally implemented. This developer-machine smoke is

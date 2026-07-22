@@ -15,6 +15,28 @@ by that discovery.
 
 ## Active checkpoint — exact isolated-staging exercise identity
 
+- [x] Close the adjacent remote-load identity gap before designing any authenticated mutation
+      drill. The prior read-only harness blocked known production aliases but a typed phrase alone
+      could still authorize an arbitrary remote origin, and it did not prove the tested Worker was
+      the reviewed build or the isolated synthetic target.
+- [x] Require canonical named HTTPS staging, a clean exact commit reachable from the reviewed
+      official `origin/main`, and the exact API compatibility, Worker version, opaque exercise
+      marker, D1 health, no-store, non-redirect, and non-maintenance identity before any timed
+      remote request. Lock the four GET-only routes, profile ceilings, and performance budgets;
+      reject IP literals, cleartext, widened scope, dirty/unreviewed source, stale identity, and
+      oversized health bodies. Aggregate stdout omits the target, Worker version, and marker.
+- [x] Cross-test the load preflight against the actual current Worker health implementation and
+      prove checkout refusal happens before preflight while identity refusal happens before any
+      load worker. This repository-only preparation contacted no remote target and ran no load,
+      stress, failure-injection, or penetration exercise.
+- [x] Seal the remote-load identity checkpoint under Node 22.23.1/npm 10.9.8 with the Cloudflare
+      build, 653/653 Node tests, ESLint, TypeScript, the complete offline security/source-
+      integrity chain, two zero-vulnerability audits, 250-site D1 inventory, all 50 critical plans
+      across 20 migrations, 29/29 API tests, Ruff, 83/83 pipeline tests with one documented
+      optional-`rasterio` skip, deterministic smoke, and the 200/200 Chromium/WebKit phone matrix.
+      A deterministic release bundle and this clean local commit complete only the repository
+      receipt. Actual isolated-staging authorization, deployment, measurements, provider metrics,
+      remediation, and independent acceptance remain open.
 - [x] Reconcile the guarded security runner with the current Worker health contract. API
       compatibility discovery had added a sixth exact field after the original five-field
       preflight was sealed, so a real authorized exercise would have refused a healthy current

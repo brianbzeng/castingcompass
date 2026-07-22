@@ -171,13 +171,45 @@ error rate, p50, p95, and p99. The repository profiles are deliberately capped:
 The initial provisional budgets are p95 ≤ 750 ms, p99 ≤ 1500 ms, and error rate ≤ 1%. They are
 engineering tripwires, not a public SLA, and must be revised from staged measurements. The
 harness has no target default, permanently rejects every production hostname/alias, rejects URL
-credentials and paths, and requires this exact opt-in for a remote staging host:
+credentials and paths, and accepts only a canonical named HTTPS host for remote staging. Before
+the first timed request, remote mode also requires all of the following:
+
+1. the exact source commit is a clean checkout reachable from the locally reviewed official
+   `origin/main`;
+2. the operator supplies the expected immutable Worker version and an opaque
+   `sec_` exercise marker from the written staging authorization/deployment receipt;
+3. a non-redirecting, non-cacheable `/api/health` response matches the exact current six-field
+   Worker contract, API compatibility version, Worker version, exercise marker, healthy D1, and
+   non-maintenance state.
+
+The target hostname, Worker version, and exercise marker are deliberately omitted from stdout.
+Only the public source commit and aggregate measurements are printed. The remote opt-in and
+identity arguments are mandatory:
 
 ```sh
 export CASTINGCOMPASS_LOAD_AUTHORIZATION=I_HAVE_AUTHORIZATION_FOR_THIS_STAGING_TARGET
-npm run load:smoke -- --target https://approved-preview.example.workers.dev/
-npm run load:test -- --profile load --target https://approved-preview.example.workers.dev/
+COMMIT="0123456789abcdef0123456789abcdef01234567"
+WORKER_VERSION="version-from-the-staging-deployment-receipt"
+EXERCISE_ID="sec_0123456789abcdef0123456789abcdef"
+
+npm run load:smoke -- \
+  --target https://approved-preview.example.workers.dev/ \
+  --expected-commit "$COMMIT" \
+  --expected-worker-version "$WORKER_VERSION" \
+  --exercise-id "$EXERCISE_ID"
+npm run load:test -- \
+  --profile load \
+  --target https://approved-preview.example.workers.dev/ \
+  --expected-commit "$COMMIT" \
+  --expected-worker-version "$WORKER_VERSION" \
+  --exercise-id "$EXERCISE_ID"
 ```
+
+Do not copy those example identities into a real run. Generate a new opaque marker for the
+authorized window, bind it only to the isolated synthetic Worker, and remove it after the
+exercise. Remote execution from an unreviewed feature branch, a dirty checkout, a stale API or
+Worker, an absent marker, a redirect, an IP literal, cleartext HTTP, or maintenance state fails
+before load workers start. Loopback mode does not accept or claim remote identity arguments.
 
 Run in this order: local smoke, isolated preview smoke, load, spike with recovery observation,
 then soak. Use synthetic accounts/data only. Record Worker CPU and wall time, D1 query duration
