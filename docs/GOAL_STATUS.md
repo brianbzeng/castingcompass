@@ -13,6 +13,33 @@ Current provider truth overrides historical “paused” language in completed r
 2026-07-19 read-only reconciliation found an active Worker; no production mutation is authorized
 by that discovery.
 
+## Active checkpoint — fail-closed MapLibre raster cancellation boundary
+
+- [x] Reproduce the demo failure against Vinext development mode before changing code. Opening
+      location reports while the interactive map resized caused MapLibre GL `5.24.0` to expose
+      its expected in-flight raster-tile cancellation as an unhandled `AbortError`, which Vinext
+      then presented as a full-screen developer overlay. This was not corrupt forecast data, an
+      API failure, or evidence of a security incident.
+- [x] Keep the reviewed dependency pin instead of taking the same-day MapLibre `6.0.0` major
+      release. Its raster abort path does not establish a fix for this case, while the release
+      also changes module, browser, style, and rendering requirements.
+- [x] Add a map-lifetime capture boundary for only the exact known cancellation signature:
+      `AbortError`, message `signal is aborted without reason`, and `abortTile` plus the dedicated
+      `maplibre-gl*.js` module in the stack.
+      It prevents that expected rejection before Vinext's overlay listener receives it and is
+      removed when the map unmounts. Application request aborts, similarly worded errors without
+      the MapLibre frame, non-abort MapLibre failures, missing stacks, and arbitrary values remain
+      observable.
+- [x] Verify the boundary locally under pinned Node `22.23.1` and npm `10.9.8`: direct Vinext-dev
+      reproduction across five location reports produced zero overlays and zero page errors;
+      focused unit/type/lint/build checks passed; all 672 Node tests, all 208 Chromium/WebKit
+      mobile cases, both zero-vulnerability npm audits, and the complete security/SBOM/query/
+      provenance chain passed. The terminal's unsupported Node `24.18.0` correctly failed four
+      restore-runtime tests before the suite was rerun under the repository/CI runtime.
+- [ ] Obtain exact-head hosted CI and CodeQL evidence and independent human review. This local UI
+      fix does not authorize a merge, dependency upgrade, deployment, provider mutation, DNS
+      change, migration, or production activation; the broader production gate remains closed.
+
 ## Active checkpoint — consolidate the July 22 launch-readiness stack
 
 - [x] Prove that exact heads from drafts `#147` through `#158` are direct ancestors of updated

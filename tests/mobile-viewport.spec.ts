@@ -187,6 +187,20 @@ async function expectSelectorInsideViewport(page: Page, selector: string) {
   }
 }
 
+async function ensureInteractiveMap(page: Page) {
+  const centerButton = page.getByRole("button", { name: /fit sites/i });
+  const loadMap = page.getByRole("button", { name: /open interactive map/i });
+  const map = page.locator(".map-wrap");
+
+  await expect(async () => {
+    await expect(map).toBeVisible({ timeout: 1_000 });
+    await map.scrollIntoViewIfNeeded({ timeout: 1_000 });
+    if (await centerButton.isVisible()) return;
+    if (await loadMap.isVisible()) await loadMap.click({ timeout: 1_000 }).catch(() => undefined);
+    await expect(centerButton).toBeVisible({ timeout: 1_000 });
+  }).toPass({ intervals: [100, 250, 500], timeout: 15_000 });
+}
+
 test.beforeEach(async ({ page }, testInfo) => {
   // These tests exercise responsive UI and recovery contracts, not the static server's stream
   // implementation. Fulfill the committed catalog and forecast from memory so every project sees
@@ -902,6 +916,64 @@ test("map overlays do not collide or clip", async ({ page }) => {
   expect(center).not.toBeNull();
   expect(label!.x + label!.width).toBeLessThanOrEqual(center!.x - 4);
   expect(center!.x + center!.width).toBeLessThanOrEqual(viewportWidth + 1);
+});
+
+test("map tile cleanup suppresses only the known MapLibre abort rejection", async ({ page }) => {
+  await ensureInteractiveMap(page);
+
+  const dispatchResults = await page.evaluate(() => {
+    const dispatchRejection = (reason: unknown) => {
+      const event = new Event("unhandledrejection", { cancelable: true });
+      Object.defineProperty(event, "reason", { value: reason });
+      return window.dispatchEvent(event);
+    };
+    const message = "signal is aborted without reason";
+
+    return {
+      expectedMapLibreAbortPropagated: dispatchRejection({
+        name: "AbortError",
+        message,
+        stack: `AbortError: ${message}\n    at q.abortTile (https://castingcompass.com/assets/maplibre-gl-2DjS9JS6.js:1:2)`,
+      }),
+      applicationAbortPropagated: dispatchRejection({
+        name: "AbortError",
+        message,
+        stack: `AbortError: ${message}\n    at loadForecast (https://castingcompass.com/assets/app.js:2:3)`,
+      }),
+      mapLibreFailurePropagated: dispatchRejection({
+        name: "TypeError",
+        message: "Raster source failed",
+        stack: "TypeError: Raster source failed\n    at q.abortTile (https://castingcompass.com/assets/maplibre-gl-2DjS9JS6.js:1:2)",
+      }),
+    };
+  });
+
+  expect(dispatchResults.expectedMapLibreAbortPropagated).toBe(false);
+  expect(dispatchResults.applicationAbortPropagated).toBe(true);
+  expect(dispatchResults.mapLibreFailurePropagated).toBe(true);
+});
+
+test("opening multiple location reports does not leak map tile aborts", async ({ page }) => {
+  const pageErrors: string[] = [];
+  page.on("pageerror", (error) => pageErrors.push(error.message));
+  await page.route("**/api/discussions/*", (route) => route.fulfill({
+    status: 200,
+    contentType: "application/json",
+    body: JSON.stringify({ posts: [] }),
+  }));
+
+  await ensureInteractiveMap(page);
+
+  const cards = page.locator(".site-card");
+  await expect(cards).not.toHaveCount(0);
+  for (let index = 0; index < Math.min(3, await cards.count()); index += 1) {
+    await cards.nth(index).click();
+    await expect(page.locator(".detail-sheet")).toBeVisible();
+    await page.getByRole("button", { name: "Close details" }).click();
+    await expect(page.locator(".detail-sheet")).toHaveCount(0);
+  }
+
+  expect(pageErrors.filter((message) => /signal is aborted without reason|AbortError/i.test(message))).toEqual([]);
 });
 
 test("the 404 recovery page stays truthful and usable on mobile", async ({ page }) => {

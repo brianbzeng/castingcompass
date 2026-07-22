@@ -897,6 +897,16 @@ after its acceptance checks pass in the intended environment.
     increasing the readiness ceiling, enabling global retries, or weakening the exact overlay
     geometry assertions. The browser test now follows the real explicit-load transition and a
     20-run WebKit plus 15-run Chromium stress check passed before the full 140-case matrix.
+  - [x] Contain MapLibre GL `5.24.0`'s expected raster-tile cancellation at the map boundary.
+    The capture-phase handler matches only the exact `AbortError` message plus `abortTile` and
+    the dedicated `maplibre-gl*.js` module in the stack, is removed on unmount, and deliberately
+    leaves application aborts and genuine MapLibre failures observable. A direct reproduction in
+    Vinext development mode across five location reports produced no overlay or page error;
+    adversarial unit coverage, the full 672-test Node
+    suite, and all 208 Chromium/WebKit mobile cases passed under the pinned runtime. The
+    same-day `6.0.0` major upgrade was not taken without evidence that it fixes this path. This
+    closes the observed local demo defect only; hosted review and every deployment/provider gate
+    remain open.
   - [ ] Complete native-client contract/authentication work, isolated staging and provider setup,
     physical-device acceptance, deployment, and production-scale performance/failure evidence.
 

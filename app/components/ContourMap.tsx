@@ -10,6 +10,7 @@ import type {
   StyleSpecification,
 } from "maplibre-gl";
 import type { FishingSite, OpportunityWindow } from "../types";
+import { suppressExpectedMapLibreRasterTileAbort } from "../lib/maplibre-errors.js";
 import { LocateIcon } from "./icons";
 
 const CALIFORNIA_COVERAGE_BOUNDS: [[number, number], [number, number]] = [
@@ -297,6 +298,14 @@ export function ContourMap({
     if (!containerRef.current || mapRef.current) return;
     let active = true;
     let resizeObserver: ResizeObserver | null = null;
+    const handleUnhandledRejection = (event: PromiseRejectionEvent) => {
+      suppressExpectedMapLibreRasterTileAbort(event);
+    };
+
+    // MapLibre GL 5.24 does not consume one expected raster-tile cancellation path
+    // during viewport cleanup. Suppress only its exact abortTile signature while this
+    // map is mounted; every other rejection remains visible to error reporting.
+    window.addEventListener("unhandledrejection", handleUnhandledRejection, { capture: true });
 
     void import("maplibre-gl").then(({ default: maplibregl }) => {
       if (!active || !containerRef.current) return;
@@ -376,6 +385,7 @@ export function ContourMap({
 
     return () => {
       active = false;
+      window.removeEventListener("unhandledrejection", handleUnhandledRejection, { capture: true });
       resizeObserver?.disconnect();
       mapRef.current?.remove();
       mapRef.current = null;
