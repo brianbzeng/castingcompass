@@ -119,8 +119,17 @@ test("npm installs execute no dependency lifecycle scripts and fail on lock drif
 
 test("CI fixes runner versions and enforces dependency review, audits, and SBOM verification", async () => {
   const ci = await readFile(new URL(".github/workflows/ci.yml", root), "utf8");
+  const release = await readFile(new URL(".github/workflows/release-provenance.yml", root), "utf8");
   const refresh = await readFile(new URL(".github/workflows/refresh-snapshot.yml", root), "utf8");
   const optional = await readFile(new URL(".github/workflows/optional-python.yml", root), "utf8");
+  for (const workflow of [ci, release]) {
+    assert.match(workflow, /on:\n\s+push:\n\s+branches:\n\s+- main\n\s+pull_request:\n/u);
+    assert.match(workflow, /workflow_dispatch:/u);
+    assert.match(
+      workflow,
+      /concurrency:\n\s+group: \$\{\{ github\.workflow \}\}-\$\{\{ github\.event\.pull_request\.number \|\| github\.ref \}\}\n\s+cancel-in-progress: true/u,
+    );
+  }
   assert.doesNotMatch(`${ci}\n${refresh}\n${optional}`, /(?:ubuntu|macos)-latest|node-version:\s*22\s*$|python-version:\s*["']?3\.12["']?\s*$/m);
   assert.equal((`${ci}\n${refresh}`.match(/node-version:\s*22\.23\.1/g) ?? []).length, 3);
   assert.equal((`${ci}\n${refresh}\n${optional}`.match(/python-version:\s*["']3\.12\.13["']/g) ?? []).length, 4);

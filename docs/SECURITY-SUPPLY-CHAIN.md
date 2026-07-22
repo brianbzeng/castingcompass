@@ -248,6 +248,21 @@ candidate version or dismissing an alert. Recreate such candidates in an owner b
 canonical lock first, regenerate every source-bound hash, compare old/new behavior, and run all
 required checks before merge.
 
+## Hosted validation scheduling
+
+Feature branches receive one automatic CI and release-provenance execution through their pull
+request. The workflows do not also run the identical matrices for the branch `push`; automatic
+push execution is restricted to protected `main`, where dependency submission and release
+attestation have their release authority. Manual dispatch remains available for an explicit
+operator rerun.
+
+Each workflow uses a workflow-name plus pull-request-number or ref concurrency key and cancels a
+superseded execution. CI and release provenance therefore cannot cancel each other, different
+pull requests remain independent, and a newer commit stops stale validation for only its own PR
+or ref. This scheduling control changes no job, required audit, test command, permission, release
+identity, or main-only signing condition. Hosted-minute and queue-time savings remain provider
+evidence to measure after the change reaches protected `main`.
+
 ## Exact GitHub Python dependency snapshot
 
 GitHub's configured graph updates completed after the Psycopg and constraint fixes and recorded

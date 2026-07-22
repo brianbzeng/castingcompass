@@ -13,6 +13,21 @@ Current provider truth overrides historical “paused” language in completed r
 2026-07-19 read-only reconciliation found an active Worker; no production mutation is authorized
 by that discovery.
 
+## Active checkpoint — deduplicated hosted validation
+
+- [x] Stop feature-branch pushes from running the complete CI and release-provenance matrices a
+      second time beside their pull-request runs. Both workflows now run automatically for pull
+      requests and protected `main` pushes, with an explicit manual dispatch retained.
+- [x] Cancel superseded work within the same workflow and PR or ref. A newer commit cannot leave
+      an older eight-minute browser matrix consuming hosted minutes or presenting stale evidence,
+      while CI and release-provenance remain separate concurrency groups.
+- [x] Preserve the release boundary: `main` still receives post-merge CI, dependency submission,
+      deterministic release artifacts, and main-only provenance attestations. This repository
+      change does not weaken any job, required check, permission, audit, or test command.
+- [ ] Measure the resulting hosted-minute and queue-time reduction after this workflow change is
+      eventually reviewed against protected `main`; local source inspection cannot claim provider
+      billing or scheduler behavior.
+
 ## Active checkpoint — bounded privacy-tombstone retention
 
 - [x] Remove the remaining hidden child-cascade fan-out from scheduled retention. One oldest
