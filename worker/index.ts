@@ -43,6 +43,7 @@ import {
   isReviewedOptionalSessionApiRequest,
   isReviewedOwnerApiRequest,
   isReviewedPublicApiRequest,
+  isReviewedReceiptApiRequest,
   type ApiRoutePolicy,
 } from "./route-policy";
 import { unsupportedApiVersionResponse } from "./api-version.ts";
@@ -180,7 +181,7 @@ async function handleFetchRequest(request: Request, env: Env, ctx: ExecutionCont
     authenticatedSession = ownerAuthorization.session;
   }
   if (apiPolicy?.authorization === "receipt") {
-    if (apiPolicy.id !== "privacy.deletion_status.read") {
+    if (!isReviewedReceiptApiRequest(request, apiPolicy)) {
       return routePolicyUnavailableResponse();
     }
     const receiptAuthorization = await authorizeDeletionReceiptRequest(request, env);

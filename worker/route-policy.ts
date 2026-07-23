@@ -401,6 +401,17 @@ type ReviewedOwnerApiRouteContract = Readonly<{
   rateLimitTags: readonly Exclude<RequestLimitClass, "read" | "write">[];
 }>;
 
+type ReviewedReceiptApiRouteContract = Readonly<{
+  pathTemplate: string;
+  pathPattern: RegExp;
+  methods: readonly ApiMethod[];
+  handler: ApiHandler;
+  sameOriginRequired: boolean;
+  currentLegalAcceptanceRequired: boolean;
+  deletionFenceAccessAllowed: boolean;
+  rateLimitTags: readonly Exclude<RequestLimitClass, "read" | "write">[];
+}>;
+
 type ReviewedOptionalSessionApiRouteContract = Readonly<{
   pathTemplate: string;
   pathPattern: RegExp;
@@ -764,6 +775,27 @@ const REVIEWED_OWNER_API_ROUTE_CONTRACTS: Readonly<Record<string, ReviewedOwnerA
 };
 
 /**
+ * Independent execution boundary for the resource-token route that exposes
+ * deletion progress after account authority has been removed. The primary
+ * registry may select a candidate, but it cannot silently widen the receipt
+ * class or change the request/control contract before live token preflight.
+ */
+const REVIEWED_RECEIPT_API_ROUTE_CONTRACTS: Readonly<
+  Record<string, ReviewedReceiptApiRouteContract>
+> = {
+  "privacy.deletion_status.read": {
+    pathTemplate: "/api/privacy/deletion-status",
+    pathPattern: /^\/api\/privacy\/deletion-status$/,
+    methods: ["GET"],
+    handler: "account",
+    sameOriginRequired: false,
+    currentLegalAcceptanceRequired: false,
+    deletionFenceAccessAllowed: false,
+    rateLimitTags: [],
+  },
+};
+
+/**
  * Independent execution boundary for the two routes that may discover or
  * revoke a session without requiring one to exist. The primary registry may
  * select a candidate, but it cannot silently widen this authority class or
@@ -819,6 +851,22 @@ export function isReviewedOwnerApiRequest(request: Request, policy: ApiRoutePoli
   const { pathname } = new URL(request.url);
   return Boolean(reviewed) &&
     policy.authorization === "owner" &&
+    policy.pathTemplate === reviewed.pathTemplate &&
+    reviewed.pathPattern.test(pathname) &&
+    sameOrderedValues(policy.methods, reviewed.methods) &&
+    reviewed.methods.includes(request.method as ApiMethod) &&
+    policy.handler === reviewed.handler &&
+    policy.sameOriginRequired === reviewed.sameOriginRequired &&
+    policy.currentLegalAcceptanceRequired === reviewed.currentLegalAcceptanceRequired &&
+    policy.deletionFenceAccessAllowed === reviewed.deletionFenceAccessAllowed &&
+    sameOrderedValues(policy.rateLimitTags, reviewed.rateLimitTags);
+}
+
+export function isReviewedReceiptApiRequest(request: Request, policy: ApiRoutePolicy): boolean {
+  const reviewed = REVIEWED_RECEIPT_API_ROUTE_CONTRACTS[policy.id];
+  const { pathname } = new URL(request.url);
+  return Boolean(reviewed) &&
+    policy.authorization === "receipt" &&
     policy.pathTemplate === reviewed.pathTemplate &&
     reviewed.pathPattern.test(pathname) &&
     sameOrderedValues(policy.methods, reviewed.methods) &&

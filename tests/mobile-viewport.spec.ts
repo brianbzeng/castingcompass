@@ -254,7 +254,7 @@ test.beforeEach(async ({ page }, testInfo) => {
   const savedSiteRecoveryTest = testTitle.includes("saved-location changes pause while offline") ||
     testTitle.includes("slow saved-location removal stays unconfirmed") ||
     testTitle.includes("malformed saved-location receipt stays unresolved");
-  const waterQualityAdvisoryTest = testTitle.includes("official water-quality status suppresses recommendations");
+  const waterQualityAdvisoryTest = testTitle.includes("official water-quality");
   const structureDepthEvidenceTest = testTitle.includes("source-bound Santa Barbara chart context")
     || testTitle.includes("source-bound San Francisco chart context")
     || testTitle.includes("source-bound San Mateo Coast")
@@ -276,6 +276,14 @@ test.beforeEach(async ({ page }, testInfo) => {
     // before the opportunity validity window leaves every site without a selectable "today"
     // window, so a valid shared-site link cannot open its detail sheet.
     await page.clock.setFixedTime(new Date(OPPORTUNITY_FIXTURE_VALID_FROM));
+    // Discussion data is unrelated to this source-bound advisory contract. Keep each deep-link
+    // navigation independent from a local D1 binding so database-less browser acceptance cannot
+    // spend its timeout retrying an optional panel.
+    await page.route("**/api/discussions/*", (route) => route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({ posts: [] }),
+    }));
     const assessment = (overrides: Record<string, unknown>) => ({
       status: "no-active-posting",
       recommendationEffect: "neutral",
@@ -710,7 +718,7 @@ test("the complete forecast reflows without horizontal document scrolling at 320
   expect(geometry.main.right).toBeLessThanOrEqual(geometry.viewportWidth + 1);
 });
 
-test("official water-quality status suppresses recommendations and keeps neutral status explicit", async ({ page }) => {
+test("official water-quality status suppresses recommendations and exposes the Santa Barbara action source", async ({ page }) => {
   await expect(page.locator(".water-quality-suppression-notice")).toContainText(
     "6 sites are excluded from recommendations",
   );
@@ -730,6 +738,9 @@ test("official water-quality status suppresses recommendations and keeps neutral
     "href",
     "https://beachwatch.waterboards.ca.gov/public/advisory.php",
   );
+});
+
+test("official water-quality status exposes the San Mateo sample source", async ({ page }) => {
   await page.goto("/?site=pacifica-state-beach");
   const countyAdvisory = page.locator(".water-quality-advisory");
   await expect(countyAdvisory).toBeVisible();
@@ -740,6 +751,9 @@ test("official water-quality status suppresses recommendations and keeps neutral
     "href",
     "https://www.smchealth.org/node/1201",
   );
+});
+
+test("official water-quality status exposes the Marin action source", async ({ page }) => {
   await page.goto("/?site=bolinas-beach");
   const marinAdvisory = page.locator(".water-quality-advisory");
   await expect(marinAdvisory).toBeVisible();
@@ -750,6 +764,9 @@ test("official water-quality status suppresses recommendations and keeps neutral
     "href",
     "https://beachwatch.waterboards.ca.gov/public/advisory.php",
   );
+});
+
+test("official water-quality status exposes the East Bay Parks action source", async ({ page }) => {
   await page.goto("/?site=keller-beach");
   const eastBayParksAdvisory = page.locator(".water-quality-advisory");
   await expect(eastBayParksAdvisory).toBeVisible();
@@ -759,6 +776,9 @@ test("official water-quality status suppresses recommendations and keeps neutral
   await expect(
     eastBayParksAdvisory.getByRole("link", { name: /official agency status/i }),
   ).toHaveAttribute("href", "https://beachwatch.waterboards.ca.gov/public/advisory.php");
+});
+
+test("official water-quality status keeps neutral status explicit", async ({ page }) => {
   // Open the exact site through the product's stable deep-link contract. Its rank can move as
   // regional sites are added, so the advisory test must not assume it appears in the first cards.
   await page.goto("/?site=crissy-field-east-beach");

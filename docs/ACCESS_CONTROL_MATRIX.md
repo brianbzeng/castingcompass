@@ -1,7 +1,7 @@
 # CastingCompass access-control matrix
 
 Status: reviewed implementation baseline, not production activation evidence  
-Last reviewed source: consolidated draft through the optional-session request boundary
+Last reviewed source: consolidated draft through the deletion-receipt request boundary
 
 CastingCompass uses Cloudflare D1/SQLite, which does not provide PostgreSQL-style
 native row-level security. The required equivalent is a deny-by-default server
@@ -94,10 +94,14 @@ therefore fails with generic non-cacheable `503` before body input. Dynamic owne
 separate anchored identity patterns; active-trip completion and cancellation additionally require
 the same v4 client-trip identity grammar already enforced by their handlers, but now do so before
 the JSON or multipart body is consumed.
-Receipt and optional-session routes do not inherit owner authority. The only current receipt
-policy is the deletion-status read: the central preflight requires a well-formed path-scoped
-cookie and live hash-bound D1 row before the body guard, and its handler repeats that lookup at
-execution. Any future receipt policy fails closed until it receives its own explicit preflight.
+Receipt and optional-session routes do not inherit owner authority. Receipt authority is an
+exhaustive execution contract: a second singleton inventory independently binds the exact ID,
+declared template, actual request pathname and method, account handler, same-origin rule,
+legal/fence flags, and stronger abuse tags for `GET /api/privacy/deletion-status`. A new receipt
+policy, broadened primary matcher, or control drift therefore fails with generic non-cacheable
+`503` before resource-token preflight or body guarding. The reviewed preflight then requires a
+well-formed path-scoped cookie and live hash-bound D1 row, and the account handler repeats that
+lookup at execution.
 The same-origin deletion-receipt clear route is intentionally public because it only removes the
 caller's cookie and must remain available without D1. Optional-session authority is also an
 exhaustive execution contract: a second two-route inventory independently binds the exact ID,
@@ -123,10 +127,10 @@ the same-origin anonymous account-entry actions, and the cookie-only deletion-re
 without allowing a future `public` label alone to widen anonymous execution.
 
 `tests/route-policy-runtime.test.mjs` machine-checks unique route identities, actor,
-CSRF/legal/fence and abuse metadata, every reviewed public, owner, and optional-session execution contract,
-representative dynamic resources, malformed and lookalike paths, every exact route branch in the
-Worker handlers, and the central pre-body public, owner, deletion-receipt, and optional-session
-gates. Object-level ownership and cross-
+CSRF/legal/fence and abuse metadata, every reviewed public, owner, deletion-receipt, and
+optional-session execution contract, representative dynamic resources, malformed and lookalike
+paths, every exact route branch in the Worker handlers, and the central pre-body public, owner,
+deletion-receipt, and optional-session gates. Object-level ownership and cross-
 account behavior remain covered by the runtime privacy and trip suites. The terminal-trip regression supplies the
 exact token from a second authenticated account and also changes ownership between the handler
 pre-read and final update; cancellation and completion both remain `404`, and

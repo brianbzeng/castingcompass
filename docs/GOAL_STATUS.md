@@ -13,6 +13,39 @@ Current provider truth overrides historical “paused” language in completed r
 2026-07-19 read-only reconciliation found an active Worker; no production mutation is authorized
 by that discovery.
 
+## Active checkpoint — registry-enforced deletion-receipt request boundary
+
+- [x] Reconcile the singleton receipt policy against every field that controls post-deletion
+      status reads. The central preflight limited the class by policy ID, but it did not
+      independently freeze the primary registry's declared template, matcher result, method set,
+      handler, same-origin rule, legal/fence flags, or stronger abuse tags.
+- [x] Add an independent exhaustive contract for exact
+      `GET /api/privacy/deletion-status`. A new receipt ID, broadened primary matcher, wrong actual
+      request path or method, or drift in any controlling field now receives generic non-cacheable
+      `503` before resource-token preflight or body guarding.
+- [x] Preserve the existing resource-token semantics after the new boundary. The route still
+      requires a well-formed high-entropy, path-scoped `HttpOnly` cookie and readable live
+      hash-bound D1 row before body guarding; the account handler repeats the exact lookup at
+      execution so removal or expiry wins.
+- [x] Add adversarial coverage for ID/template/method/handler/origin/legal/fence/tag drift, a
+      deliberately universal receipt matcher, unrelated and suffixed paths, traversal-shaped
+      input, wrong methods, public authority, the exact singleton set, and central pre-body source
+      order. The focused executable route suite passes 14/14; ESLint and TypeScript pass.
+- [x] Complete exact-tree local acceptance and generated-evidence review. Under pinned Node
+      22.23.1/npm 10.9.8, the production-off Cloudflare build and all 700/700 Node tests pass;
+      the focused executable route suite passes 14/14; the explicit feature-on photo build and
+      8/8 Chromium/WebKit cases pass; the restored production-off phone matrix passes 244/244
+      across four profiles; and ESLint, TypeScript, the complete security/SBOM/query-policy
+      chain, and both npm audits pass with zero reported vulnerabilities. The five independent
+      water-quality source assertions now run as isolated browser cases, with unrelated
+      discussion data fulfilled from memory, rather than sharing one timeout and a local D1
+      dependency.
+- [ ] Obtain exact-head hosted CI and CodeQL evidence. This automation gate does not replace
+      independent review or authorize a release.
+- [ ] Obtain independent human review. This repository boundary does not authorize merge,
+      deployment, provider mutation, migration, feature activation, staging exercise, or
+      production acceptance.
+
 ## Active checkpoint — registry-enforced optional-session request boundary
 
 - [x] Reconcile both optional-session policies against the fields that control anonymous session
@@ -39,8 +72,11 @@ by that discovery.
       8/8 Chromium/WebKit cases pass; the restored production-off phone matrix passes 228/228
       across four profiles; and ESLint, TypeScript, the complete security/SBOM/query-policy
       chain, and both npm audits pass with zero reported vulnerabilities.
-- [ ] Obtain exact-head hosted CI and CodeQL evidence. This automation gate does not replace
-      independent review or authorize a release.
+- [x] Obtain exact-head hosted evidence through consolidated head
+      `8975f7f6406ed9eeb65a8b299f8ee5f0c99d0f22`: CI run `29974746946`, CodeQL run
+      `29974745498`, optional research-stack run `29974746996`, native API-image run
+      `29974746959`, and release-provenance run `29974746941` all passed in their expected PR
+      states. This is automation evidence, not review.
 - [ ] Obtain independent human review. This repository boundary does not authorize merge,
       deployment, provider mutation, migration, feature activation, staging exercise, or
       production acceptance.

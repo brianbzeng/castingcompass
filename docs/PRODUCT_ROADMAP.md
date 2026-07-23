@@ -187,6 +187,15 @@ after its acceptance checks pass in the intended environment.
       ESLint, TypeScript, the complete security/SBOM/query-policy chain, and both zero-
       vulnerability npm audits. The same reviewed slice also advances Next.js and its matching
       lint config from 16.2.10 to the advisory-fixed 16.2.11 and refreshes deterministic SBOMs.
+    - [x] Make deletion-receipt authority an exhaustive request-and-control contract. The one
+      resource-token policy now independently binds its exact ID, declared template, actual
+      request path and method, account handler, same-origin rule, legal/deletion-fence flags, and
+      stronger abuse tags before live receipt lookup or body guarding. A new receipt policy,
+      broadened primary matcher, unrelated or suffixed request, traversal-shaped input, wrong
+      method, or control drift fails with generic non-cacheable `503`; the exact high-entropy
+      cookie/D1 lookup and execution-time recheck remain unchanged. The focused route suite passes
+      14/14 under pinned Node 22.23.1/npm 10.9.8; exact-tree local and hosted evidence is tracked
+      separately in `docs/GOAL_STATUS.md`.
     - [x] Make the registry's optional-session class executable without turning anonymous access
       into owner authority. Only session discovery and same-origin logout may use the class; any
       future optional-session policy fails with generic `503` until it receives an explicit
