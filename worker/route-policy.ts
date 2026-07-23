@@ -383,6 +383,7 @@ export const API_ROUTE_POLICIES: readonly ApiRoutePolicy[] = [
 
 type ReviewedPublicApiRouteContract = Readonly<{
   pathTemplate: string;
+  pathPattern: RegExp;
   methods: readonly ApiMethod[];
   handler: ApiHandler;
   sameOriginRequired: boolean;
@@ -399,6 +400,7 @@ type ReviewedPublicApiRouteContract = Readonly<{
 const REVIEWED_PUBLIC_API_ROUTE_CONTRACTS: Readonly<Record<string, ReviewedPublicApiRouteContract>> = {
   health: {
     pathTemplate: "/api/health",
+    pathPattern: /^\/api\/health$/,
     methods: ["GET", "HEAD"],
     handler: "health",
     sameOriginRequired: false,
@@ -406,6 +408,7 @@ const REVIEWED_PUBLIC_API_ROUTE_CONTRACTS: Readonly<Record<string, ReviewedPubli
   },
   "auth.turnstile_config": {
     pathTemplate: "/api/auth/turnstile-config",
+    pathPattern: /^\/api\/auth\/turnstile-config$/,
     methods: ["GET", "HEAD"],
     handler: "turnstile",
     sameOriginRequired: false,
@@ -413,6 +416,7 @@ const REVIEWED_PUBLIC_API_ROUTE_CONTRACTS: Readonly<Record<string, ReviewedPubli
   },
   "auth.signup_retired": {
     pathTemplate: "/api/auth/signup",
+    pathPattern: /^\/api\/auth\/signup$/,
     methods: ["*"],
     handler: "account",
     sameOriginRequired: false,
@@ -420,6 +424,7 @@ const REVIEWED_PUBLIC_API_ROUTE_CONTRACTS: Readonly<Record<string, ReviewedPubli
   },
   "auth.signup_eligibility.read": {
     pathTemplate: "/api/auth/signup/eligibility",
+    pathPattern: /^\/api\/auth\/signup\/eligibility$/,
     methods: ["GET"],
     handler: "account",
     sameOriginRequired: false,
@@ -427,6 +432,7 @@ const REVIEWED_PUBLIC_API_ROUTE_CONTRACTS: Readonly<Record<string, ReviewedPubli
   },
   "auth.signup_eligibility.submit": {
     pathTemplate: "/api/auth/signup/eligibility",
+    pathPattern: /^\/api\/auth\/signup\/eligibility$/,
     methods: ["POST"],
     handler: "account",
     sameOriginRequired: true,
@@ -434,6 +440,7 @@ const REVIEWED_PUBLIC_API_ROUTE_CONTRACTS: Readonly<Record<string, ReviewedPubli
   },
   "privacy.deletion_status.clear": {
     pathTemplate: "/api/privacy/deletion-status",
+    pathPattern: /^\/api\/privacy\/deletion-status$/,
     methods: ["DELETE"],
     handler: "account",
     sameOriginRequired: true,
@@ -441,6 +448,7 @@ const REVIEWED_PUBLIC_API_ROUTE_CONTRACTS: Readonly<Record<string, ReviewedPubli
   },
   "auth.signup_request": {
     pathTemplate: "/api/auth/signup/request",
+    pathPattern: /^\/api\/auth\/signup\/request$/,
     methods: ["POST"],
     handler: "account",
     sameOriginRequired: true,
@@ -448,6 +456,7 @@ const REVIEWED_PUBLIC_API_ROUTE_CONTRACTS: Readonly<Record<string, ReviewedPubli
   },
   "auth.signup_verify": {
     pathTemplate: "/api/auth/signup/verify",
+    pathPattern: /^\/api\/auth\/signup\/verify$/,
     methods: ["POST"],
     handler: "account",
     sameOriginRequired: true,
@@ -455,6 +464,7 @@ const REVIEWED_PUBLIC_API_ROUTE_CONTRACTS: Readonly<Record<string, ReviewedPubli
   },
   "auth.challenge_resend": {
     pathTemplate: "/api/auth/challenge/resend",
+    pathPattern: /^\/api\/auth\/challenge\/resend$/,
     methods: ["POST"],
     handler: "account",
     sameOriginRequired: true,
@@ -462,6 +472,7 @@ const REVIEWED_PUBLIC_API_ROUTE_CONTRACTS: Readonly<Record<string, ReviewedPubli
   },
   "auth.password_request": {
     pathTemplate: "/api/auth/password/request",
+    pathPattern: /^\/api\/auth\/password\/request$/,
     methods: ["POST"],
     handler: "account",
     sameOriginRequired: true,
@@ -469,6 +480,7 @@ const REVIEWED_PUBLIC_API_ROUTE_CONTRACTS: Readonly<Record<string, ReviewedPubli
   },
   "auth.password_reset": {
     pathTemplate: "/api/auth/password/reset",
+    pathPattern: /^\/api\/auth\/password\/reset$/,
     methods: ["POST"],
     handler: "account",
     sameOriginRequired: true,
@@ -476,6 +488,7 @@ const REVIEWED_PUBLIC_API_ROUTE_CONTRACTS: Readonly<Record<string, ReviewedPubli
   },
   "auth.login": {
     pathTemplate: "/api/auth/login",
+    pathPattern: /^\/api\/auth\/login$/,
     methods: ["POST"],
     handler: "account",
     sameOriginRequired: true,
@@ -483,6 +496,7 @@ const REVIEWED_PUBLIC_API_ROUTE_CONTRACTS: Readonly<Record<string, ReviewedPubli
   },
   "trips.summary": {
     pathTemplate: "/api/trips/summary",
+    pathPattern: /^\/api\/trips\/summary$/,
     methods: ["GET"],
     handler: "trips",
     sameOriginRequired: false,
@@ -490,6 +504,7 @@ const REVIEWED_PUBLIC_API_ROUTE_CONTRACTS: Readonly<Record<string, ReviewedPubli
   },
   "discussions.site": {
     pathTemplate: "/api/discussions/{siteId}",
+    pathPattern: /^\/api\/discussions\/[a-z0-9-]+$/,
     methods: ["GET"],
     handler: "discussions",
     sameOriginRequired: false,
@@ -501,12 +516,15 @@ function sameOrderedValues<T>(actual: readonly T[], expected: readonly T[]) {
   return actual.length === expected.length && actual.every((value, index) => value === expected[index]);
 }
 
-export function isReviewedPublicApiPolicy(policy: ApiRoutePolicy): boolean {
+export function isReviewedPublicApiRequest(request: Request, policy: ApiRoutePolicy): boolean {
   const reviewed = REVIEWED_PUBLIC_API_ROUTE_CONTRACTS[policy.id];
+  const { pathname } = new URL(request.url);
   return Boolean(reviewed) &&
     policy.authorization === "public" &&
     policy.pathTemplate === reviewed.pathTemplate &&
+    reviewed.pathPattern.test(pathname) &&
     sameOrderedValues(policy.methods, reviewed.methods) &&
+    (reviewed.methods.includes("*") || reviewed.methods.includes(request.method as ApiMethod)) &&
     policy.handler === reviewed.handler &&
     policy.sameOriginRequired === reviewed.sameOriginRequired &&
     policy.currentLegalAcceptanceRequired === false &&

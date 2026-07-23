@@ -209,6 +209,16 @@ after its acceptance checks pass in the intended environment.
       697/697 Node tests pass; the focused route suite passes 11/11; the feature-on photo lane
       passes 8/8; the restored production-off mobile matrix passes 228/228; and lint, typecheck,
       the full security/SBOM/query-policy chain, and both zero-vulnerability audits pass.
+    - [x] Bind the actual public request path and method to separate reviewed matchers. Every exact
+      public route now rechecks the request pathname independently of the primary registry's
+      `matches()` predicate, while the discussion route separately preserves its lowercase
+      letter/digit/hyphen site-ID grammar. A broadened primary matcher, unrelated or suffixed path,
+      malformed dynamic ID, traversal-shaped input, or method mismatch fails closed before body
+      guarding even when the declared path template remains unchanged. Under pinned Node
+      22.23.1/npm 10.9.8, the production-off build and all 697/697 Node tests pass; the focused
+      route suite passes 11/11; the feature-on photo lane passes 8/8; the restored production-off
+      mobile matrix passes 228/228; and lint, typecheck, the full security/SBOM/query-policy chain,
+      and both zero-vulnerability audits pass.
     - [x] Bind active-trip completion and cancellation to the authenticated account in both
       the handler precheck and the final D1 update. The write now requires the same trip ID,
       account ID, active state, and token hash atomically; exact-token cross-account and

@@ -6,7 +6,7 @@ import {
   allowedApiMethodsForPath,
   apiRoutePolicyForRequest,
   apiRouteRejectionForRequest,
-  isReviewedPublicApiPolicy,
+  isReviewedPublicApiRequest,
   isKnownApiPath,
   rateLimitClassesForRequest,
 } from "../worker/route-policy.ts";
@@ -89,13 +89,15 @@ test("every declared API route example resolves to its exact executable policy",
     ],
   );
   for (const policy of API_ROUTE_POLICIES.filter((policy) => policy.authorization === "public")) {
-    assert.equal(isReviewedPublicApiPolicy(policy), true, policy.id);
+    const method = policy.methods[0] === "*" ? "OPTIONS" : policy.methods[0];
+    assert.equal(isReviewedPublicApiRequest(request(policy.examplePath, method), policy), true, policy.id);
   }
 });
 
 test("public execution requires the exact independently reviewed policy contract", () => {
   const login = API_ROUTE_POLICIES.find((policy) => policy.id === "auth.login");
   assert.ok(login);
+  const loginRequest = request("/api/auth/login", "POST");
   for (const drifted of [
     { ...login, id: "auth.login_alias" },
     { ...login, pathTemplate: "/api/auth/login/{accountId}" },
@@ -107,12 +109,29 @@ test("public execution requires the exact independently reviewed policy contract
     { ...login, rateLimitTags: [] },
     { ...login, rateLimitTags: ["email", "auth"] },
   ]) {
-    assert.equal(isReviewedPublicApiPolicy(drifted), false, JSON.stringify(drifted));
+    assert.equal(isReviewedPublicApiRequest(loginRequest, drifted), false, JSON.stringify(drifted));
+  }
+
+  const broadenedLogin = { ...login, matches: () => true };
+  assert.equal(isReviewedPublicApiRequest(request("/api/auth/login/extra", "POST"), broadenedLogin), false);
+  assert.equal(isReviewedPublicApiRequest(request("/api/profile", "POST"), broadenedLogin), false);
+
+  const discussion = API_ROUTE_POLICIES.find((policy) => policy.id === "discussions.site");
+  assert.ok(discussion);
+  assert.equal(isReviewedPublicApiRequest(request("/api/discussions/ocean-beach"), discussion), true);
+  for (const path of [
+    "/api/discussions/",
+    "/api/discussions/Ocean-Beach",
+    "/api/discussions/ocean_beach",
+    "/api/discussions/ocean-beach/extra",
+    "/api/discussions/%2e%2e",
+  ]) {
+    assert.equal(isReviewedPublicApiRequest(request(path), { ...discussion, matches: () => true }), false, path);
   }
 
   const owner = API_ROUTE_POLICIES.find((policy) => policy.id === "trips.start");
   assert.ok(owner);
-  assert.equal(isReviewedPublicApiPolicy(owner), false);
+  assert.equal(isReviewedPublicApiRequest(request("/api/trips/start", "POST"), owner), false);
 });
 
 test("route policy records actor, CSRF, legal, and abuse controls for representative boundaries", () => {
@@ -345,7 +364,7 @@ test("the Worker entry point centrally denies unknown paths and unclassified met
   assert.match(source, /Allow: apiRejection\.allowedMethods\.join\(", "\)/);
   assert.doesNotMatch(source, /!apiPolicy && !isKnownApiPath/);
   assert.match(source, /const protectedTripMutation = apiPolicy\.authorization === "owner"/);
-  assert.match(source, /if \(apiPolicy\?\.authorization === "public" && !isReviewedPublicApiPolicy\(apiPolicy\)\)/);
+  assert.match(source, /if \(apiPolicy\?\.authorization === "public" && !isReviewedPublicApiRequest\(request, apiPolicy\)\)/);
   assert.match(source, /if \(apiPolicy\?\.authorization === "owner"\)/);
   assert.match(source, /authorizeOwnerRequest\(request, env/);
   assert.match(source, /if \(apiPolicy\?\.authorization === "receipt"\)/);
@@ -357,7 +376,7 @@ test("the Worker entry point centrally denies unknown paths and unclassified met
   assert.doesNotMatch(source, /url\.pathname\.startsWith\("\/api\/trips\/"\)/);
 
   const rejection = source.indexOf("apiRouteRejectionForRequest(request)");
-  const publicAuthorization = source.indexOf("isReviewedPublicApiPolicy(apiPolicy)");
+  const publicAuthorization = source.indexOf("isReviewedPublicApiRequest(request, apiPolicy)");
   const ownerAuthorization = source.indexOf("authorizeOwnerRequest(request, env");
   const receiptAuthorization = source.indexOf("authorizeDeletionReceiptRequest(request, env");
   const optionalSessionAuthorization = source.indexOf("authorizeOptionalSessionRequest(request, env");

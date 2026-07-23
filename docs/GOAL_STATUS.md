@@ -13,6 +13,30 @@ Current provider truth overrides historical “paused” language in completed r
 2026-07-19 read-only reconciliation found an active Worker; no production mutation is authorized
 by that discovery.
 
+## Active checkpoint — registry-enforced public request matcher
+
+- [x] Reconcile declared public path templates against their executable `matches()` predicates.
+      The independent contract froze metadata but did not yet verify the actual request pathname;
+      a broadened primary matcher could therefore preserve its declared template while claiming
+      an unintended anonymous URL.
+- [x] Add separate exact pathname patterns for all fourteen reviewed public policies and require
+      the actual request path and method to match before body guarding. The one dynamic discussion
+      route independently preserves its lowercase letter, digit, and hyphen site-ID grammar.
+- [x] Add adversarial coverage for a deliberately universal login matcher, unrelated and suffixed
+      paths, malformed discussion IDs, traversal-shaped input, exact dynamic success, metadata
+      drift, non-public authority, and central pre-body source order.
+- [x] Complete exact-tree local acceptance and generated-evidence review. Under pinned Node
+      22.23.1/npm 10.9.8, the production-off Cloudflare build and all 697/697 Node tests pass;
+      the focused executable route suite passes 11/11; the explicit feature-on photo build and
+      8/8 Chromium/WebKit cases pass; the restored production-off phone matrix passes 228/228
+      across four profiles; and ESLint, TypeScript, the complete security/SBOM/query-policy
+      chain, and both npm audits pass with zero reported vulnerabilities.
+- [ ] Obtain exact-head hosted CI and CodeQL evidence. This automation gate does not replace
+      independent review or authorize a release.
+- [ ] Obtain independent human review. This repository boundary does not authorize merge,
+      deployment, provider mutation, migration, feature activation, staging exercise, or
+      production acceptance.
+
 ## Active checkpoint — registry-enforced public execution boundary
 
 - [x] Reconcile all fourteen public policies against their handlers. The reviewed set consists of

@@ -105,10 +105,12 @@ new deletion fence fails closed.
 Public authority is also an exhaustive execution contract, not a registry default. The fourteen
 reviewed public policies bind their exact path template, method set, handler family, same-origin
 requirement, and stronger abuse tags in a second contract. Any new public ID or drift in one of
-those fields receives generic non-cacheable `503` before body guarding. This preserves the
-intentional public reads and tombstone, the same-origin anonymous account-entry actions, and the
-cookie-only deletion-receipt clear action without allowing a future `public` label alone to widen
-anonymous execution.
+those fields receives generic non-cacheable `503` before body guarding. The same boundary also
+matches the actual request pathname and method against separate reviewed patterns, so changing a
+primary registry `matches()` predicate cannot silently widen anonymous execution while leaving
+its declared path template unchanged. This preserves the intentional public reads and tombstone,
+the same-origin anonymous account-entry actions, and the cookie-only deletion-receipt clear action
+without allowing a future `public` label alone to widen anonymous execution.
 
 `tests/route-policy-runtime.test.mjs` machine-checks unique route identities, actor,
 CSRF/legal/fence and abuse metadata, representative dynamic resources, malformed and

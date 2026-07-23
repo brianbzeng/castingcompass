@@ -40,7 +40,7 @@ import { enforceRequestRateLimit, type RateLimitEnv } from "./rate-limit";
 import {
   apiRoutePolicyForRequest,
   apiRouteRejectionForRequest,
-  isReviewedPublicApiPolicy,
+  isReviewedPublicApiRequest,
   type ApiRoutePolicy,
 } from "./route-policy";
 import { unsupportedApiVersionResponse } from "./api-version.ts";
@@ -163,7 +163,7 @@ async function handleFetchRequest(request: Request, env: Env, ctx: ExecutionCont
 
   const apiPolicy = apiRoutePolicyForRequest(request);
   let authenticatedSession: AuthenticatedSession | null = null;
-  if (apiPolicy?.authorization === "public" && !isReviewedPublicApiPolicy(apiPolicy)) {
+  if (apiPolicy?.authorization === "public" && !isReviewedPublicApiRequest(request, apiPolicy)) {
     return routePolicyUnavailableResponse();
   }
   if (apiPolicy?.authorization === "owner") {
