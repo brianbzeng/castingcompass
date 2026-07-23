@@ -61,8 +61,10 @@ by that discovery.
       WebKit mobile, offline, recovery, 404, safe-area, map-abort, and regional-evidence cases;
       ESLint; TypeScript; the complete security/SBOM/query-policy chain; and both npm audits pass
       with zero reported vulnerabilities. The browser suite now pins its finite committed
-      opportunity fixture to its declared validity boundary while keeping recovery timers live,
-      preventing wall-clock expiry from hiding every location after the fixture horizon.
+      opportunity fixture to its declared validity boundary while keeping recovery timers live
+      and the forecast-independent skip-navigation case on the native browser clock. This
+      prevents wall-clock expiry from hiding every location after the fixture horizon without
+      letting the test clock interfere with the browser's initial keyboard-focus boundary.
 - [ ] Obtain exact-head hosted automation evidence for the San Mateo checkpoint.
 - [ ] Obtain real independent local-angler and chart/GIS responses. This packet does not
       authorize a score or catalog change, model claim, merge, deployment, provider mutation,

@@ -202,10 +202,18 @@ async function ensureInteractiveMap(page: Page) {
 }
 
 test.beforeEach(async ({ page }, testInfo) => {
+  const testTitle = testInfo.titlePath.join(" ");
+  const keyboardSkipNavigationTest = testTitle.includes(
+    "keyboard users can skip repeated navigation",
+  );
   // The committed opportunity snapshot is a finite, reproducible browser fixture. Pin only the
   // browser wall clock to the start of its validity window so this UI suite cannot expire at
   // midnight or after the checked-in forecast horizon; Playwright keeps timers advancing normally.
-  await page.clock.setFixedTime(new Date(OPPORTUNITY_FIXTURE_VALID_FROM));
+  // The skip-navigation case does not consume forecast windows and stays on the native clock so
+  // the clock shim cannot interfere with the browser's initial keyboard-focus boundary.
+  if (!keyboardSkipNavigationTest) {
+    await page.clock.setFixedTime(new Date(OPPORTUNITY_FIXTURE_VALID_FROM));
+  }
   // These tests exercise responsive UI and recovery contracts, not the static server's stream
   // implementation. Fulfill the committed catalog and forecast from memory so every project sees
   // the same source data even when Vinext closes a large static-file stream under CI concurrency.
@@ -224,7 +232,6 @@ test.beforeEach(async ({ page }, testInfo) => {
     contentType: "application/json",
     body: STRUCTURE_DEPTH_FIXTURE,
   }));
-  const testTitle = testInfo.titlePath.join(" ");
   if (testTitle.includes("failed lazy route dependency")) {
     await page.route("**/assets/ContourMap-*.js", (route) => route.abort());
   }
