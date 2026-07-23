@@ -1,7 +1,7 @@
 {
   "bomFormat": "CycloneDX",
   "specVersion": "1.5",
-  "serialNumber": "urn:uuid:b52711c2-28ad-5511-8519-8db08f65ac2e",
+  "serialNumber": "urn:uuid:96b87d2f-b26b-590a-8f64-41073fbcd397",
   "version": 1,
   "metadata": {
     "component": {
@@ -69,6 +69,10 @@
         },
         {
           "name": "castingcompass:input-sha256",
+          "value": "field-review/san-mateo-structure-depth-review-policy.json:09c1269f22d6521b11dfc507e077ca0e9f62973c86471440b275197de62eeb7a"
+        },
+        {
+          "name": "castingcompass:input-sha256",
           "value": "field-review/santa-barbara-access-review-policy.json:123b115fdda8b0adf856e14d2cc7c5674737fca8a9c54fe3b638ce69a11c81e6"
         },
         {
@@ -81,7 +85,7 @@
         },
         {
           "name": "castingcompass:input-sha256",
-          "value": "package.json:7659844419ca573b73e6ff5559b7d4af577581f9d77476f9ee020f40cb474a7c"
+          "value": "package.json:fdc50e1e4284b345925c731b79c11e3ba0a476857138d13768bee8b832e3e3ef"
         },
         {
           "name": "castingcompass:input-sha256",

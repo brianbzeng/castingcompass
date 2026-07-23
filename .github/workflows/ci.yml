@@ -56,6 +56,7 @@ jobs:
       - run: npm run security:santa-barbara-access-review
       - run: npm run security:santa-barbara-structure-depth-review
       - run: npm run security:san-francisco-structure-depth-review
+      - run: npm run security:san-mateo-structure-depth-review
       - run: npm run lint
       - run: npm run typecheck
       - run: npm test

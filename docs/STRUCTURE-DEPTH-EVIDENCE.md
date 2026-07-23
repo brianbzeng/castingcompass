@@ -248,8 +248,11 @@ The blank
 extends the same executable boundary to the next ten coast and waterfront sites
 while preserving Crane Cove Park's partial chart status. The shared evaluator
 keeps each region's schemas, geography, site inventory, policy digest, and
-private response files isolated. Preparing either packet is not the review
-itself and does not close any item above.
+private response files isolated. The blank
+[San Mateo structure/depth review packet](SAN-MATEO-STRUCTURE-DEPTH-REVIEW.md)
+adds the next ten Coast and Half Moon Bay sites while keeping Pacifica Municipal
+Pier's independent closure and recommendation exclusion intact. Preparing any
+packet is not the review itself and does not close any item above.
 
 No production, Cloudflare, database, provider, or deployment change is part of
 this repository slice.

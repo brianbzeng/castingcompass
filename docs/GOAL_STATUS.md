@@ -13,7 +13,7 @@ Current provider truth overrides historical “paused” language in completed r
 2026-07-19 read-only reconciliation found an active Worker; no production mutation is authorized
 by that discovery.
 
-## Active checkpoint — reusable regional structure/depth review handoff
+## Active checkpoint — reusable regional structure/depth review handoffs
 
 - [x] Refactor the existing Santa Barbara review evaluator behind explicit regional profiles
       while preserving its v1 schemas, paths, 14-site geography, source binding, private-evidence
@@ -39,7 +39,31 @@ by that discovery.
       across four profiles; and ESLint, TypeScript, the complete security/SBOM/query-policy
       chain, deterministic release inventory, and both npm audits pass with zero reported
       vulnerabilities.
-- [ ] Obtain exact-head hosted automation evidence.
+- [x] Obtain exact-head hosted automation evidence through consolidated head
+      `e01a6840283cc64ca92a2b7332cbd2448cd41da7`: CI run `29982919906`, CodeQL run
+      `29982918176`, optional research-stack run `29982919934`, native API-image run
+      `29982919893`, and release-provenance run `29982919974` all passed in their expected PR
+      states. This is automation evidence, not independent review.
+- [x] Add the third exact regional profile and blank handoff for all ten San Mateo Coast and Half
+      Moon Bay sites. The packet binds the same private, disjoint, source-current review contract
+      while stating that Pacifica Municipal Pier remains closed and cannot be reopened,
+      recommended, or access-approved by this work.
+- [x] Add fail-closed San Mateo coverage for cross-region reuse, exact site population and closed
+      access state, accepted aggregate receipts, incomplete/overlapping/stale/corrected evidence,
+      digest/identity/unsafe-text/duplicate-ID drift, artifact authority, owner-only writes,
+      overwrite refusal, and provider/process paths. All 21/21 regional tests pass.
+- [x] Bind the San Mateo policy and verifier into the security aggregate, deterministic release
+      inventory, combined release SBOM, CI, and release-provenance workflow. Focused policy,
+      regional, release-inventory, ESLint, TypeScript, and deterministic SBOM checks pass.
+- [x] Complete exact-tree local acceptance and generated-evidence review for the San Mateo
+      checkpoint. The production-off Cloudflare build; 713/713 Node tests; 21/21 regional review
+      tests; 23/23 regional plus release-inventory tests; 8/8 photo UI cases; 244/244 Chromium and
+      WebKit mobile, offline, recovery, 404, safe-area, map-abort, and regional-evidence cases;
+      ESLint; TypeScript; the complete security/SBOM/query-policy chain; and both npm audits pass
+      with zero reported vulnerabilities. The browser suite now pins its finite committed
+      opportunity fixture to its declared validity boundary while keeping recovery timers live,
+      preventing wall-clock expiry from hiding every location after the fixture horizon.
+- [ ] Obtain exact-head hosted automation evidence for the San Mateo checkpoint.
 - [ ] Obtain real independent local-angler and chart/GIS responses. This packet does not
       authorize a score or catalog change, model claim, merge, deployment, provider mutation,
       migration, feature activation, staging exercise, or production acceptance.

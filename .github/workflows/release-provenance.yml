@@ -46,6 +46,7 @@ jobs:
       - run: npm run security:santa-barbara-access-review
       - run: npm run security:santa-barbara-structure-depth-review
       - run: npm run security:san-francisco-structure-depth-review
+      - run: npm run security:san-mateo-structure-depth-review
       - run: npm run build:cloudflare
       - name: Build deterministic release artifacts
         run: |

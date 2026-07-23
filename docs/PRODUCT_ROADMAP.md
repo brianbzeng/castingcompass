@@ -1140,6 +1140,13 @@ after its acceptance checks pass in the intended environment.
       schema, geography, digest, or response-file reuse. No real response, accepted receipt, score
       change, model evidence, or deployment exists yet; the remaining 37 catalog sites still lack
       executable location-review handoffs.
+    - [x] Extend the executable handoff to the ten San Mateo Coast and Half Moon Bay sites. The
+      exact regional profile preserves all ten charted-context records, isolates its schemas and
+      private evidence from the first two regions, and keeps Pacifica Municipal Pier's independent
+      closure and recommendation exclusion intact. A completed packet still grants no access,
+      reopening, score, model, navigation, provider, merge, deployment, or production authority.
+      No real response or accepted receipt exists yet; the remaining 27 catalog sites still lack
+      executable location-review handoffs.
 - [ ] Add striped bass as the first new beta using a distinct estuary/migration model.
 - [ ] Define and evaluate explicit shore-relevant rockfish species/complexes next; then model
   cabezon as its own taxon; then split surfperch into defensible habitat/taxon groups. Each beta

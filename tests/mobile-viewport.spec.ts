@@ -202,6 +202,10 @@ async function ensureInteractiveMap(page: Page) {
 }
 
 test.beforeEach(async ({ page }, testInfo) => {
+  // The committed opportunity snapshot is a finite, reproducible browser fixture. Pin only the
+  // browser wall clock to the start of its validity window so this UI suite cannot expire at
+  // midnight or after the checked-in forecast horizon; Playwright keeps timers advancing normally.
+  await page.clock.setFixedTime(new Date(OPPORTUNITY_FIXTURE_VALID_FROM));
   // These tests exercise responsive UI and recovery contracts, not the static server's stream
   // implementation. Fulfill the committed catalog and forecast from memory so every project sees
   // the same source data even when Vinext closes a large static-file stream under CI concurrency.
@@ -262,9 +266,6 @@ test.beforeEach(async ({ page }, testInfo) => {
     || testTitle.includes("source-bound North and East Bay")
     || testTitle.includes("source-bound Oakland through South Bay");
   if (structureDepthEvidenceTest) {
-    // Keep the committed opportunity fixture selectable so the stable site deep link opens its
-    // detail sheet instead of expiring as wall-clock time advances.
-    await page.clock.setFixedTime(new Date(OPPORTUNITY_FIXTURE_VALID_FROM));
     await page.route("**/api/discussions/*", (route) => route.fulfill({
       status: 200,
       contentType: "application/json",
@@ -272,10 +273,7 @@ test.beforeEach(async ({ page }, testInfo) => {
     }));
   }
   if (waterQualityAdvisoryTest) {
-    // Keep both the advisory and the committed opportunity fixture current. Freezing the clock
-    // before the opportunity validity window leaves every site without a selectable "today"
-    // window, so a valid shared-site link cannot open its detail sheet.
-    await page.clock.setFixedTime(new Date(OPPORTUNITY_FIXTURE_VALID_FROM));
+    // Keep the advisory current relative to the suite-wide opportunity-fixture clock.
     // Discussion data is unrelated to this source-bound advisory contract. Keep each deep-link
     // navigation independent from a local D1 binding so database-less browser acceptance cannot
     // spend its timeout retrying an optional panel.
@@ -432,11 +430,6 @@ test.beforeEach(async ({ page }, testInfo) => {
         },
       }),
     }));
-  }
-  if (savedSiteRecoveryTest) {
-    // Keep the committed forecast fixture inside its availability window so this mutation test
-    // exercises recovery behavior instead of expiring as wall-clock time advances.
-    await page.clock.setFixedTime(new Date(OPPORTUNITY_FIXTURE_VALID_FROM));
   }
   let profileAttempts = 0;
   await page.route("**/api/auth/session", (route) => route.fulfill({
