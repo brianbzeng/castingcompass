@@ -21,6 +21,11 @@ async function preparePastTrip(page: Page) {
   await page.locator(".log-trip-button").click();
   const modal = page.locator(".trip-modal");
   await expect(modal).toBeVisible();
+  const location = modal.getByRole("combobox", { name: "Fishing location" });
+  await expect(location).toBeVisible();
+  await location.fill("Port View Park Fishing Pier");
+  await modal.getByRole("option", { name: /^Port View Park Fishing Pier\b/ }).click();
+  await expect(modal.locator(".site-combobox-status")).toHaveText("Selected: Port View Park Fishing Pier");
   await modal.getByLabel("Fishing mode for the whole trip").selectOption("shore");
   await modal.getByLabel("Did the score influence this trip?").selectOption("no");
   await modal.getByRole("button", { name: "Continue to gear + result" }).click();
