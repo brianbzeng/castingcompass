@@ -6,6 +6,7 @@ import {
   allowedApiMethodsForPath,
   apiRoutePolicyForRequest,
   apiRouteRejectionForRequest,
+  isReviewedOwnerApiRequest,
   isReviewedPublicApiRequest,
   isKnownApiPath,
   rateLimitClassesForRequest,
@@ -92,6 +93,9 @@ test("every declared API route example resolves to its exact executable policy",
     const method = policy.methods[0] === "*" ? "OPTIONS" : policy.methods[0];
     assert.equal(isReviewedPublicApiRequest(request(policy.examplePath, method), policy), true, policy.id);
   }
+  for (const policy of API_ROUTE_POLICIES.filter((policy) => policy.authorization === "owner")) {
+    assert.equal(isReviewedOwnerApiRequest(request(policy.examplePath, policy.methods[0]), policy), true, policy.id);
+  }
 });
 
 test("public execution requires the exact independently reviewed policy contract", () => {
@@ -132,6 +136,94 @@ test("public execution requires the exact independently reviewed policy contract
   const owner = API_ROUTE_POLICIES.find((policy) => policy.id === "trips.start");
   assert.ok(owner);
   assert.equal(isReviewedPublicApiRequest(request("/api/trips/start", "POST"), owner), false);
+});
+
+test("owner execution requires the exact independently reviewed request and control contract", () => {
+  const exportDownload = API_ROUTE_POLICIES.find((policy) => policy.id === "profile.export_download");
+  assert.ok(exportDownload);
+  const exactPath = "/api/profile/exports/pexj_00000000000000000000000000000000/download";
+  const exactRequest = request(exactPath);
+  assert.equal(isReviewedOwnerApiRequest(exactRequest, exportDownload), true);
+
+  for (const drifted of [
+    { ...exportDownload, id: "profile.export_download_alias" },
+    { ...exportDownload, pathTemplate: "/api/profile/exports/{jobId}" },
+    { ...exportDownload, methods: ["GET", "POST"] },
+    { ...exportDownload, handler: "trips" },
+    { ...exportDownload, sameOriginRequired: true },
+    { ...exportDownload, currentLegalAcceptanceRequired: true },
+    { ...exportDownload, deletionFenceAccessAllowed: false },
+    { ...exportDownload, rateLimitTags: [] },
+    { ...exportDownload, rateLimitTags: ["auth", "sensitive"] },
+  ]) {
+    assert.equal(isReviewedOwnerApiRequest(exactRequest, drifted), false, JSON.stringify(drifted));
+  }
+
+  const broadenedExport = { ...exportDownload, matches: () => true };
+  assert.equal(isReviewedOwnerApiRequest(request(`${exactPath}/extra`), broadenedExport), false);
+  assert.equal(isReviewedOwnerApiRequest(request("/api/profile"), broadenedExport), false);
+  assert.equal(isReviewedOwnerApiRequest(request(exactPath, "POST"), broadenedExport), false);
+
+  const dynamicCases = [
+    [
+      "gear_profiles.update",
+      "/api/gear-profiles/gear_00000000-0000-4000-8000-000000000000",
+      "PATCH",
+      [
+        "/api/gear-profiles/gear_G0000000-0000-4000-8000-000000000000",
+        "/api/gear-profiles/not-a-gear",
+        "/api/gear-profiles/gear_00000000-0000-4000-8000-000000000000/extra",
+      ],
+    ],
+    [
+      "profile.trip_update",
+      "/api/profile/trips/trip_00000000-0000-4000-8000-000000000000",
+      "PATCH",
+      [
+        "/api/profile/trips/trip_G0000000-0000-4000-8000-000000000000",
+        "/api/profile/trips/not-a-trip",
+        "/api/profile/trips/trip_00000000-0000-4000-8000-000000000000/extra",
+      ],
+    ],
+    [
+      "saved_sites.create",
+      "/api/saved-sites/ocean-beach",
+      "POST",
+      [
+        "/api/saved-sites/Ocean-Beach",
+        "/api/saved-sites/ocean_beach",
+        "/api/saved-sites/ocean-beach/extra",
+        "/api/saved-sites/%2e%2e",
+      ],
+    ],
+    [
+      "trips.cancel",
+      "/api/trips/trip_00000000-0000-4000-8000-000000000000/cancel",
+      "POST",
+      [
+        "/api/trips/trip_G0000000-0000-4000-8000-000000000000/cancel",
+        "/api/trips/trip_00000000-0000-0000-0000-000000000000/cancel",
+        "/api/trips/trip_00000000-0000-4000-8000-000000000000/cancel/extra",
+        "/api/trips/%2e%2e/cancel",
+      ],
+    ],
+  ];
+  for (const [id, path, method, malformedPaths] of dynamicCases) {
+    const policy = API_ROUTE_POLICIES.find((candidate) => candidate.id === id);
+    assert.ok(policy);
+    assert.equal(isReviewedOwnerApiRequest(request(path, method), policy), true, id);
+    for (const malformed of malformedPaths) {
+      assert.equal(
+        isReviewedOwnerApiRequest(request(malformed, method), { ...policy, matches: () => true }),
+        false,
+        `${id}: ${malformed}`,
+      );
+    }
+  }
+
+  const publicPolicy = API_ROUTE_POLICIES.find((policy) => policy.id === "auth.login");
+  assert.ok(publicPolicy);
+  assert.equal(isReviewedOwnerApiRequest(request("/api/auth/login", "POST"), publicPolicy), false);
 });
 
 test("route policy records actor, CSRF, legal, and abuse controls for representative boundaries", () => {
@@ -366,6 +458,7 @@ test("the Worker entry point centrally denies unknown paths and unclassified met
   assert.match(source, /const protectedTripMutation = apiPolicy\.authorization === "owner"/);
   assert.match(source, /if \(apiPolicy\?\.authorization === "public" && !isReviewedPublicApiRequest\(request, apiPolicy\)\)/);
   assert.match(source, /if \(apiPolicy\?\.authorization === "owner"\)/);
+  assert.match(source, /if \(!isReviewedOwnerApiRequest\(request, apiPolicy\)\)/);
   assert.match(source, /authorizeOwnerRequest\(request, env/);
   assert.match(source, /if \(apiPolicy\?\.authorization === "receipt"\)/);
   assert.match(source, /apiPolicy\.id !== "privacy\.deletion_status\.read"/);
@@ -377,12 +470,15 @@ test("the Worker entry point centrally denies unknown paths and unclassified met
 
   const rejection = source.indexOf("apiRouteRejectionForRequest(request)");
   const publicAuthorization = source.indexOf("isReviewedPublicApiRequest(request, apiPolicy)");
+  const ownerPolicyReview = source.indexOf("isReviewedOwnerApiRequest(request, apiPolicy)");
   const ownerAuthorization = source.indexOf("authorizeOwnerRequest(request, env");
   const receiptAuthorization = source.indexOf("authorizeDeletionReceiptRequest(request, env");
   const optionalSessionAuthorization = source.indexOf("authorizeOptionalSessionRequest(request, env");
   const bodyGuard = source.indexOf("guardRequestBody(request)");
   assert.ok(rejection >= 0);
   assert.ok(publicAuthorization > rejection, "public policy review must follow central route rejection");
+  assert.ok(ownerPolicyReview > rejection, "owner policy review must follow central route rejection");
+  assert.ok(ownerAuthorization > ownerPolicyReview, "owner authorization must follow owner policy review");
   assert.ok(ownerAuthorization > rejection, "owner authorization must follow central route rejection");
   assert.ok(receiptAuthorization > rejection, "receipt authorization must follow central route rejection");
   assert.ok(optionalSessionAuthorization > rejection, "optional-session preflight must follow central route rejection");

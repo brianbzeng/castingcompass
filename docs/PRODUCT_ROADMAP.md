@@ -219,6 +219,20 @@ after its acceptance checks pass in the intended environment.
       route suite passes 11/11; the feature-on photo lane passes 8/8; the restored production-off
       mobile matrix passes 228/228; and lint, typecheck, the full security/SBOM/query-policy chain,
       and both zero-vulnerability audits pass.
+    - [x] Make owner authorization an exhaustive request-and-control contract. All twenty-two
+      protected policies now independently bind their exact ID, declared template, actual
+      pathname, method set, handler, same-origin rule, legal-acceptance requirement, deletion-fence
+      exception, and stronger abuse tags before session resolution or body guarding. A new owner
+      policy, a broadened primary matcher, or drift in any control fails with generic non-cacheable
+      `503`. Independent dynamic patterns preserve export, gear, profile-trip, saved-site, and
+      active-trip identity grammars; completion and cancellation reject malformed client trip IDs
+      before consuming JSON or multipart bodies. Adversarial tests cover every field, a universal
+      export matcher, unrelated/suffixed/traversal-shaped paths, malformed identifiers, and central
+      source order. Under pinned Node 22.23.1/npm 10.9.8, the production-off build and all 698/698
+      Node tests pass; the focused route suite passes 12/12; the feature-on photo lane passes 8/8;
+      the restored production-off mobile matrix passes 228/228; and lint, typecheck, the full
+      security/SBOM/query-policy chain, and both zero-vulnerability audits pass. Hosted evidence
+      is tracked separately in `docs/GOAL_STATUS.md`.
     - [x] Bind active-trip completion and cancellation to the authenticated account in both
       the handler precheck and the final D1 update. The write now requires the same trip ID,
       account ID, active state, and token hash atomically; exact-token cross-account and

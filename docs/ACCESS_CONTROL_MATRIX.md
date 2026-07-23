@@ -87,6 +87,14 @@ is `401`, an account deletion fence is `409`, and stale legal acceptance is `428
 policy requires the current version. The only fence exceptions are the exact six existing
 privacy-rights rows: direct export, export photo/status/download, profile read, and account
 deletion. Current legal acceptance remains independently required where its policy says so.
+Owner authority is an exhaustive execution contract rather than a registry default: a second
+twenty-two-policy inventory must independently match the actual request path and method plus the
+declared template, handler, same-origin, legal, fence, and stronger abuse-tag controls before the
+Worker resolves a session. A new owner policy, a broadened primary matcher, or any control drift
+therefore fails with generic non-cacheable `503` before body input. Dynamic owner paths use
+separate anchored identity patterns; active-trip completion and cancellation additionally require
+the same v4 client-trip identity grammar already enforced by their handlers, but now do so before
+the JSON or multipart body is consumed.
 Receipt and optional-session routes do not inherit owner authority. The only current receipt
 policy is the deletion-status read: the central preflight requires a well-formed path-scoped
 cookie and live hash-bound D1 row before the body guard, and its handler repeats that lookup at
@@ -113,9 +121,10 @@ the same-origin anonymous account-entry actions, and the cookie-only deletion-re
 without allowing a future `public` label alone to widen anonymous execution.
 
 `tests/route-policy-runtime.test.mjs` machine-checks unique route identities, actor,
-CSRF/legal/fence and abuse metadata, representative dynamic resources, malformed and
-lookalike paths, every exact route branch in the Worker handlers, and the central
-pre-body public, owner, deletion-receipt, and optional-session gates. Object-level ownership and cross-
+CSRF/legal/fence and abuse metadata, every reviewed public and owner execution contract,
+representative dynamic resources, malformed and lookalike paths, every exact route branch in the
+Worker handlers, and the central pre-body public, owner, deletion-receipt, and optional-session
+gates. Object-level ownership and cross-
 account behavior remain covered by the runtime privacy and trip suites. The terminal-trip regression supplies the
 exact token from a second authenticated account and also changes ownership between the handler
 pre-read and final update; cancellation and completion both remain `404`, and

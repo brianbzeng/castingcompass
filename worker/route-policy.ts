@@ -390,6 +390,17 @@ type ReviewedPublicApiRouteContract = Readonly<{
   rateLimitTags: readonly Exclude<RequestLimitClass, "read" | "write">[];
 }>;
 
+type ReviewedOwnerApiRouteContract = Readonly<{
+  pathTemplate: string;
+  pathPattern: RegExp;
+  methods: readonly ApiMethod[];
+  handler: ApiHandler;
+  sameOriginRequired: boolean;
+  currentLegalAcceptanceRequired: boolean;
+  deletionFenceAccessAllowed: boolean;
+  rateLimitTags: readonly Exclude<RequestLimitClass, "read" | "write">[];
+}>;
+
 /**
  * Independent execution boundary for routes that intentionally require no
  * account, session, or resource-token authority. A new or changed `public`
@@ -512,6 +523,235 @@ const REVIEWED_PUBLIC_API_ROUTE_CONTRACTS: Readonly<Record<string, ReviewedPubli
   },
 };
 
+/**
+ * Independent execution boundary for routes that act with account authority.
+ * The primary registry selects a candidate, but this exhaustive contract must
+ * separately agree with its actual request, handler, legal/fence controls, and
+ * stronger abuse tags before the Worker resolves a session or reads a body.
+ */
+const REVIEWED_OWNER_API_ROUTE_CONTRACTS: Readonly<Record<string, ReviewedOwnerApiRouteContract>> = {
+  "auth.eligibility": {
+    pathTemplate: "/api/auth/eligibility",
+    pathPattern: /^\/api\/auth\/eligibility$/,
+    methods: ["POST"],
+    handler: "account",
+    sameOriginRequired: true,
+    currentLegalAcceptanceRequired: false,
+    deletionFenceAccessAllowed: false,
+    rateLimitTags: [],
+  },
+  "profile.export_photo": {
+    pathTemplate: "/api/profile/export/photos/{tripId}",
+    pathPattern: /^\/api\/profile\/export\/photos\/trip_[a-f0-9-]{36}$/,
+    methods: ["GET"],
+    handler: "account",
+    sameOriginRequired: false,
+    currentLegalAcceptanceRequired: false,
+    deletionFenceAccessAllowed: true,
+    rateLimitTags: ["sensitive"],
+  },
+  "profile.export_status": {
+    pathTemplate: "/api/profile/exports/{jobId}",
+    pathPattern: /^\/api\/profile\/exports\/pexj_[a-f0-9]{32}$/,
+    methods: ["GET"],
+    handler: "account",
+    sameOriginRequired: false,
+    currentLegalAcceptanceRequired: false,
+    deletionFenceAccessAllowed: true,
+    rateLimitTags: [],
+  },
+  "profile.export_download": {
+    pathTemplate: "/api/profile/exports/{jobId}/download",
+    pathPattern: /^\/api\/profile\/exports\/pexj_[a-f0-9]{32}\/download$/,
+    methods: ["GET"],
+    handler: "account",
+    sameOriginRequired: false,
+    currentLegalAcceptanceRequired: false,
+    deletionFenceAccessAllowed: true,
+    rateLimitTags: ["sensitive"],
+  },
+  "profile.export": {
+    pathTemplate: "/api/profile/export",
+    pathPattern: /^\/api\/profile\/export$/,
+    methods: ["GET"],
+    handler: "account",
+    sameOriginRequired: false,
+    currentLegalAcceptanceRequired: false,
+    deletionFenceAccessAllowed: true,
+    rateLimitTags: ["sensitive"],
+  },
+  "profile.export_request": {
+    pathTemplate: "/api/profile/export",
+    pathPattern: /^\/api\/profile\/export$/,
+    methods: ["POST"],
+    handler: "account",
+    sameOriginRequired: true,
+    currentLegalAcceptanceRequired: false,
+    deletionFenceAccessAllowed: false,
+    rateLimitTags: ["sensitive"],
+  },
+  "profile.read": {
+    pathTemplate: "/api/profile",
+    pathPattern: /^\/api\/profile$/,
+    methods: ["GET"],
+    handler: "account",
+    sameOriginRequired: false,
+    currentLegalAcceptanceRequired: true,
+    deletionFenceAccessAllowed: true,
+    rateLimitTags: [],
+  },
+  "profile.delete": {
+    pathTemplate: "/api/profile",
+    pathPattern: /^\/api\/profile$/,
+    methods: ["DELETE"],
+    handler: "account",
+    sameOriginRequired: true,
+    currentLegalAcceptanceRequired: false,
+    deletionFenceAccessAllowed: true,
+    rateLimitTags: ["sensitive"],
+  },
+  "profile.reviews_retry": {
+    pathTemplate: "/api/profile/reviews/retry",
+    pathPattern: /^\/api\/profile\/reviews\/retry$/,
+    methods: ["POST"],
+    handler: "account",
+    sameOriginRequired: true,
+    currentLegalAcceptanceRequired: true,
+    deletionFenceAccessAllowed: false,
+    rateLimitTags: ["sensitive"],
+  },
+  "gear_profiles.read": {
+    pathTemplate: "/api/gear-profiles",
+    pathPattern: /^\/api\/gear-profiles$/,
+    methods: ["GET"],
+    handler: "account",
+    sameOriginRequired: false,
+    currentLegalAcceptanceRequired: true,
+    deletionFenceAccessAllowed: false,
+    rateLimitTags: [],
+  },
+  "gear_profiles.create": {
+    pathTemplate: "/api/gear-profiles",
+    pathPattern: /^\/api\/gear-profiles$/,
+    methods: ["POST"],
+    handler: "account",
+    sameOriginRequired: true,
+    currentLegalAcceptanceRequired: true,
+    deletionFenceAccessAllowed: false,
+    rateLimitTags: [],
+  },
+  "gear_profiles.update": {
+    pathTemplate: "/api/gear-profiles/{gearId}",
+    pathPattern: /^\/api\/gear-profiles\/gear_[a-f0-9-]{36}$/,
+    methods: ["PATCH"],
+    handler: "account",
+    sameOriginRequired: true,
+    currentLegalAcceptanceRequired: true,
+    deletionFenceAccessAllowed: false,
+    rateLimitTags: [],
+  },
+  "gear_profiles.delete": {
+    pathTemplate: "/api/gear-profiles/{gearId}",
+    pathPattern: /^\/api\/gear-profiles\/gear_[a-f0-9-]{36}$/,
+    methods: ["DELETE"],
+    handler: "account",
+    sameOriginRequired: true,
+    currentLegalAcceptanceRequired: true,
+    deletionFenceAccessAllowed: false,
+    rateLimitTags: [],
+  },
+  "profile.trip_update": {
+    pathTemplate: "/api/profile/trips/{tripId}",
+    pathPattern: /^\/api\/profile\/trips\/trip_[a-f0-9-]{36}$/,
+    methods: ["PATCH"],
+    handler: "account",
+    sameOriginRequired: true,
+    currentLegalAcceptanceRequired: true,
+    deletionFenceAccessAllowed: false,
+    rateLimitTags: [],
+  },
+  "profile.trip_delete": {
+    pathTemplate: "/api/profile/trips/{tripId}",
+    pathPattern: /^\/api\/profile\/trips\/trip_[a-f0-9-]{36}$/,
+    methods: ["DELETE"],
+    handler: "account",
+    sameOriginRequired: true,
+    currentLegalAcceptanceRequired: true,
+    deletionFenceAccessAllowed: false,
+    rateLimitTags: ["sensitive"],
+  },
+  "saved_sites.read": {
+    pathTemplate: "/api/saved-sites",
+    pathPattern: /^\/api\/saved-sites$/,
+    methods: ["GET"],
+    handler: "account",
+    sameOriginRequired: false,
+    currentLegalAcceptanceRequired: true,
+    deletionFenceAccessAllowed: false,
+    rateLimitTags: [],
+  },
+  "saved_sites.create": {
+    pathTemplate: "/api/saved-sites/{siteId}",
+    pathPattern: /^\/api\/saved-sites\/[a-z0-9-]+$/,
+    methods: ["POST"],
+    handler: "account",
+    sameOriginRequired: true,
+    currentLegalAcceptanceRequired: true,
+    deletionFenceAccessAllowed: false,
+    rateLimitTags: [],
+  },
+  "saved_sites.delete": {
+    pathTemplate: "/api/saved-sites/{siteId}",
+    pathPattern: /^\/api\/saved-sites\/[a-z0-9-]+$/,
+    methods: ["DELETE"],
+    handler: "account",
+    sameOriginRequired: true,
+    currentLegalAcceptanceRequired: true,
+    deletionFenceAccessAllowed: false,
+    rateLimitTags: [],
+  },
+  "trips.start": {
+    pathTemplate: "/api/trips/start",
+    pathPattern: /^\/api\/trips\/start$/,
+    methods: ["POST"],
+    handler: "trips",
+    sameOriginRequired: true,
+    currentLegalAcceptanceRequired: true,
+    deletionFenceAccessAllowed: false,
+    rateLimitTags: [],
+  },
+  "trips.cancel": {
+    pathTemplate: "/api/trips/{tripId}/cancel",
+    pathPattern: /^\/api\/trips\/trip_[a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}\/cancel$/,
+    methods: ["POST"],
+    handler: "trips",
+    sameOriginRequired: true,
+    currentLegalAcceptanceRequired: true,
+    deletionFenceAccessAllowed: false,
+    rateLimitTags: [],
+  },
+  "trips.complete": {
+    pathTemplate: "/api/trips/{tripId}/complete",
+    pathPattern: /^\/api\/trips\/trip_[a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}\/complete$/,
+    methods: ["POST"],
+    handler: "trips",
+    sameOriginRequired: true,
+    currentLegalAcceptanceRequired: true,
+    deletionFenceAccessAllowed: false,
+    rateLimitTags: [],
+  },
+  "trips.report": {
+    pathTemplate: "/api/trips/report",
+    pathPattern: /^\/api\/trips\/report$/,
+    methods: ["POST"],
+    handler: "trips",
+    sameOriginRequired: true,
+    currentLegalAcceptanceRequired: true,
+    deletionFenceAccessAllowed: false,
+    rateLimitTags: [],
+  },
+};
+
 function sameOrderedValues<T>(actual: readonly T[], expected: readonly T[]) {
   return actual.length === expected.length && actual.every((value, index) => value === expected[index]);
 }
@@ -529,6 +769,22 @@ export function isReviewedPublicApiRequest(request: Request, policy: ApiRoutePol
     policy.sameOriginRequired === reviewed.sameOriginRequired &&
     policy.currentLegalAcceptanceRequired === false &&
     policy.deletionFenceAccessAllowed === false &&
+    sameOrderedValues(policy.rateLimitTags, reviewed.rateLimitTags);
+}
+
+export function isReviewedOwnerApiRequest(request: Request, policy: ApiRoutePolicy): boolean {
+  const reviewed = REVIEWED_OWNER_API_ROUTE_CONTRACTS[policy.id];
+  const { pathname } = new URL(request.url);
+  return Boolean(reviewed) &&
+    policy.authorization === "owner" &&
+    policy.pathTemplate === reviewed.pathTemplate &&
+    reviewed.pathPattern.test(pathname) &&
+    sameOrderedValues(policy.methods, reviewed.methods) &&
+    reviewed.methods.includes(request.method as ApiMethod) &&
+    policy.handler === reviewed.handler &&
+    policy.sameOriginRequired === reviewed.sameOriginRequired &&
+    policy.currentLegalAcceptanceRequired === reviewed.currentLegalAcceptanceRequired &&
+    policy.deletionFenceAccessAllowed === reviewed.deletionFenceAccessAllowed &&
     sameOrderedValues(policy.rateLimitTags, reviewed.rateLimitTags);
 }
 

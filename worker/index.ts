@@ -40,6 +40,7 @@ import { enforceRequestRateLimit, type RateLimitEnv } from "./rate-limit";
 import {
   apiRoutePolicyForRequest,
   apiRouteRejectionForRequest,
+  isReviewedOwnerApiRequest,
   isReviewedPublicApiRequest,
   type ApiRoutePolicy,
 } from "./route-policy";
@@ -167,6 +168,9 @@ async function handleFetchRequest(request: Request, env: Env, ctx: ExecutionCont
     return routePolicyUnavailableResponse();
   }
   if (apiPolicy?.authorization === "owner") {
+    if (!isReviewedOwnerApiRequest(request, apiPolicy)) {
+      return routePolicyUnavailableResponse();
+    }
     const ownerAuthorization = await authorizeOwnerRequest(request, env, {
       currentLegalAcceptanceRequired: apiPolicy.currentLegalAcceptanceRequired,
       deletionFenceAccessAllowed: apiPolicy.deletionFenceAccessAllowed,

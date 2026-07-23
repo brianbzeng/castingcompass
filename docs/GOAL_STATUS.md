@@ -1,6 +1,6 @@
 # CastingCompass goal status
 
-Last reconciled: **2026-07-22 UTC**
+Last reconciled: **2026-07-23 UTC**
 
 This is the owner-facing dashboard for the complete goal list. The detailed acceptance
 criteria and immutable receipts remain in [PRODUCT_ROADMAP.md](PRODUCT_ROADMAP.md); provider
@@ -12,6 +12,36 @@ also satisfied.
 Current provider truth overrides historical “paused” language in completed receipts below. The
 2026-07-19 read-only reconciliation found an active Worker; no production mutation is authorized
 by that discovery.
+
+## Active checkpoint — registry-enforced owner request boundary
+
+- [x] Reconcile all twenty-two owner policies against the fields that actually control protected
+      execution. The central session preflight consumed the primary registry's matcher, method,
+      handler, legal-acceptance, deletion-fence, and stronger abuse-tag values without a separate
+      exhaustive contract tying them to the actual request.
+- [x] Add an independent owner contract for every exact policy ID, path template, actual pathname,
+      method set, handler family, same-origin rule, current-legal requirement, deletion-fence
+      exception, and stronger abuse tag. A new owner policy or any field drift now receives generic
+      non-cacheable `503` before session resolution or body guarding.
+- [x] Preserve every reviewed dynamic identifier grammar independently of the primary matcher.
+      Gear, profile-trip, export-job, export-photo, and saved-site paths stay anchored; active-trip
+      completion and cancellation now reject a non-v4 client trip ID before reading its JSON or
+      multipart body, matching the handler's existing accepted-ID contract.
+- [x] Add adversarial coverage for the exhaustive owner set, ID/path/method/handler/origin/legal/
+      fence/tag drift, a deliberately universal export matcher, unrelated and suffixed paths,
+      malformed dynamic identifiers, traversal-shaped inputs, public authority, and central source
+      order. The focused executable route suite passes 12/12; ESLint and TypeScript pass.
+- [x] Complete exact-tree local acceptance and generated-evidence review. Under pinned Node
+      22.23.1/npm 10.9.8, the production-off Cloudflare build and all 698/698 Node tests pass;
+      the focused executable route suite passes 12/12; the explicit feature-on photo build and
+      8/8 Chromium/WebKit cases pass; the restored production-off phone matrix passes 228/228
+      across four profiles; and ESLint, TypeScript, the complete security/SBOM/query-policy
+      chain, and both npm audits pass with zero reported vulnerabilities.
+- [ ] Obtain exact-head hosted CI and CodeQL evidence. This automation gate does not replace
+      independent review or authorize a release.
+- [ ] Obtain independent human review. This repository boundary does not authorize merge,
+      deployment, provider mutation, migration, feature activation, staging exercise, or
+      production acceptance.
 
 ## Active checkpoint — registry-enforced public request matcher
 
@@ -31,8 +61,11 @@ by that discovery.
       8/8 Chromium/WebKit cases pass; the restored production-off phone matrix passes 228/228
       across four profiles; and ESLint, TypeScript, the complete security/SBOM/query-policy
       chain, and both npm audits pass with zero reported vulnerabilities.
-- [ ] Obtain exact-head hosted CI and CodeQL evidence. This automation gate does not replace
-      independent review or authorize a release.
+- [x] Obtain exact-head hosted evidence through consolidated head
+      `9c153825d066ae25fe05b4fc2cfe0a64b0618e4f`: CI run `29969745743`, CodeQL run
+      `29969744507`, optional research-stack run `29969745700`, native API-image run
+      `29969745672`, and release-provenance run `29969745695` all passed. This is automation
+      evidence, not review.
 - [ ] Obtain independent human review. This repository boundary does not authorize merge,
       deployment, provider mutation, migration, feature activation, staging exercise, or
       production acceptance.
@@ -56,8 +89,11 @@ by that discovery.
       8/8 Chromium/WebKit cases pass; the restored production-off phone matrix passes 228/228
       across four profiles; and ESLint, TypeScript, the complete security/SBOM/query-policy
       chain, and both npm audits pass with zero reported vulnerabilities.
-- [ ] Obtain exact-head hosted CI and CodeQL evidence. This automation gate does not replace
-      independent review or authorize a release.
+- [x] Obtain exact-head hosted evidence through consolidated head
+      `940f0cd5c4595ed53a9aa6141cda86e509b3b966`: CI run `29968817924`, CodeQL run
+      `29968816359`, optional research-stack run `29968817985`, native API-image run
+      `29968817926`, and release-provenance run `29968817943` all passed. This is automation
+      evidence, not review.
 - [ ] Obtain independent human review. This repository boundary does not authorize merge,
       deployment, provider mutation, migration, feature activation, staging exercise, or
       production acceptance.
