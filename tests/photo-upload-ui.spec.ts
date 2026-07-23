@@ -18,6 +18,10 @@ function pastTripReceipt(route: Route, hasPhoto = true) {
 
 async function preparePastTrip(page: Page) {
   await expect(page.locator(".account-label-compact")).toHaveText("Profile");
+  await expect(page.locator(".data-pill")).toHaveAttribute(
+    "aria-label",
+    /Current status: (?:live|cached)$/,
+  );
   await page.locator(".log-trip-button").click();
   const modal = page.locator(".trip-modal");
   await expect(modal).toBeVisible();
