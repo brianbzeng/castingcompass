@@ -1,7 +1,7 @@
 {
   "bomFormat": "CycloneDX",
   "specVersion": "1.5",
-  "serialNumber": "urn:uuid:9bf89a7e-d40e-5244-b605-918376c8b297",
+  "serialNumber": "urn:uuid:b52711c2-28ad-5511-8519-8db08f65ac2e",
   "version": 1,
   "metadata": {
     "component": {
@@ -65,6 +65,10 @@
         },
         {
           "name": "castingcompass:input-sha256",
+          "value": "field-review/san-francisco-structure-depth-review-policy.json:e51dd09712bb5e6872a0dc402a726dc616fd55cff30892dcb32951d43d305080"
+        },
+        {
+          "name": "castingcompass:input-sha256",
           "value": "field-review/santa-barbara-access-review-policy.json:123b115fdda8b0adf856e14d2cc7c5674737fca8a9c54fe3b638ce69a11c81e6"
         },
         {
@@ -77,7 +81,7 @@
         },
         {
           "name": "castingcompass:input-sha256",
-          "value": "package.json:9c52b06280b47f7c82606635f32edc61fe2da0686728d68e4a4f593dba7cda21"
+          "value": "package.json:7659844419ca573b73e6ff5559b7d4af577581f9d77476f9ee020f40cb474a7c"
         },
         {
           "name": "castingcompass:input-sha256",

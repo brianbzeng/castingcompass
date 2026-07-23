@@ -243,7 +243,13 @@ The blank
 now provides the first executable review path for items 1 and 2 across the 14
 South Coast sites. It requires disjoint local-angler and chart/GIS roles, current
 source-identity evidence, private raw answers, and an aggregate-only receipt.
-Preparing that packet is not the review itself and does not close any item above.
+The blank
+[San Francisco structure/depth review packet](SAN-FRANCISCO-STRUCTURE-DEPTH-REVIEW.md)
+extends the same executable boundary to the next ten coast and waterfront sites
+while preserving Crane Cove Park's partial chart status. The shared evaluator
+keeps each region's schemas, geography, site inventory, policy digest, and
+private response files isolated. Preparing either packet is not the review
+itself and does not close any item above.
 
 No production, Cloudflare, database, provider, or deployment change is part of
 this repository slice.

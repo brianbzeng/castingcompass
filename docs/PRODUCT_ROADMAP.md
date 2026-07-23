@@ -1132,6 +1132,14 @@ after its acceptance checks pass in the intended environment.
       artifact drift, extra or identifying fields, unsafe correction text, stale evidence, role
       overlap, incomplete coverage, invented score/navigation authority, and provider execution.
       No real response, accepted receipt, score change, model evidence, or deployment exists yet.
+    - [x] Extend the executable handoff to the next ten San Francisco coast and waterfront sites
+      through a reusable region-profiled evaluator without weakening Santa Barbara v1. The blank
+      policy binds the exact 10-site geography, source artifact, catalog, distinct reviewer roles,
+      current source recheck, private `0600` evidence, retention boundary, and aggregate-only
+      receipt. It preserves Crane Cove Park's explicit partial status and rejects cross-region
+      schema, geography, digest, or response-file reuse. No real response, accepted receipt, score
+      change, model evidence, or deployment exists yet; the remaining 37 catalog sites still lack
+      executable location-review handoffs.
 - [ ] Add striped bass as the first new beta using a distinct estuary/migration model.
 - [ ] Define and evaluate explicit shore-relevant rockfish species/complexes next; then model
   cabezon as its own taxon; then split surfperch into defensible habitat/taxon groups. Each beta

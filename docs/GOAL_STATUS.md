@@ -13,6 +13,37 @@ Current provider truth overrides historical “paused” language in completed r
 2026-07-19 read-only reconciliation found an active Worker; no production mutation is authorized
 by that discovery.
 
+## Active checkpoint — reusable regional structure/depth review handoff
+
+- [x] Refactor the existing Santa Barbara review evaluator behind explicit regional profiles
+      while preserving its v1 schemas, paths, 14-site geography, source binding, private-evidence
+      rules, receipt boundary, and all 8/8 focused tests.
+- [x] Add the next executable packet for the ten San Francisco coast and waterfront locations.
+      The blank policy and operator guide bind the exact catalog/artifact identities, require
+      disjoint local-angler and chart/GIS roles, retain private raw responses for at most 30 days,
+      and emit only a non-authorizing aggregate receipt.
+- [x] Preserve the source evidence boundary instead of papering over gaps. Crane Cove Park must
+      remain explicitly `partial` with no charted sector band; nearby soundings and selected chart
+      features cannot substitute for the missing area-band evidence.
+- [x] Add fail-closed tests for cross-region reuse, incomplete/overlapping/stale/corrected
+      responses, digest or catalog drift, extra identity, unsafe text, duplicate response IDs,
+      artifact authority changes, guarded `0600` writes, overwrite refusal, and provider/process
+      execution paths. The combined focused suite passes 15/15.
+- [x] Bind the new policy and verifier into the security aggregate, deterministic release
+      inventory, combined release SBOM, CI, and release-provenance workflow. Focused policy,
+      release-inventory, ESLint, TypeScript, and deterministic SBOM checks pass.
+- [x] Complete exact-tree local acceptance and generated-evidence review. Under pinned Node
+      22.23.1/npm 10.9.8, the production-off Cloudflare build and all 707/707 Node tests pass;
+      the combined regional review suite passes 15/15; the explicit feature-on photo build and
+      8/8 Chromium/WebKit cases pass; the restored production-off phone matrix passes 244/244
+      across four profiles; and ESLint, TypeScript, the complete security/SBOM/query-policy
+      chain, deterministic release inventory, and both npm audits pass with zero reported
+      vulnerabilities.
+- [ ] Obtain exact-head hosted automation evidence.
+- [ ] Obtain real independent local-angler and chart/GIS responses. This packet does not
+      authorize a score or catalog change, model claim, merge, deployment, provider mutation,
+      migration, feature activation, staging exercise, or production acceptance.
+
 ## Active checkpoint — registry-enforced deletion-receipt request boundary
 
 - [x] Reconcile the singleton receipt policy against every field that controls post-deletion
@@ -40,8 +71,11 @@ by that discovery.
       water-quality source assertions now run as isolated browser cases, with unrelated
       discussion data fulfilled from memory, rather than sharing one timeout and a local D1
       dependency.
-- [ ] Obtain exact-head hosted CI and CodeQL evidence. This automation gate does not replace
-      independent review or authorize a release.
+- [x] Obtain exact-head hosted evidence through consolidated head
+      `071eada234ae8330581ed476aea94f872201f466`: CI run `29981689434`, CodeQL run
+      `29981687727`, optional research-stack run `29981689455`, native API-image run
+      `29981689395`, and release-provenance run `29981689400` all passed in their expected PR
+      states. This is automation evidence, not review.
 - [ ] Obtain independent human review. This repository boundary does not authorize merge,
       deployment, provider mutation, migration, feature activation, staging exercise, or
       production acceptance.

@@ -10,11 +10,14 @@ import { isDeepStrictEqual } from "node:util";
 import { requirePrivateEvidenceFile } from "./verify-santa-barbara-access-review.mjs";
 
 const DEFAULT_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
-const REGION_NAMES = new Set(["Gaviota Coast", "Goleta", "Santa Barbara", "Summerland", "Carpinteria"]);
 const POLICY_SCHEMA = "castingcompass.santa-barbara-structure-depth-review/1.0.0";
 const EVIDENCE_SCHEMA = "castingcompass.santa-barbara-structure-depth-review-evidence/1.0.0";
 const RECEIPT_SCHEMA = "castingcompass.santa-barbara-structure-depth-review-receipt/1.0.0";
 const WRITE_RECEIPT_SCHEMA = "castingcompass.santa-barbara-structure-depth-review-template-write-receipt/1.0.0";
+const SAN_FRANCISCO_POLICY_SCHEMA = "castingcompass.san-francisco-structure-depth-review/1.0.0";
+const SAN_FRANCISCO_EVIDENCE_SCHEMA = "castingcompass.san-francisco-structure-depth-review-evidence/1.0.0";
+const SAN_FRANCISCO_RECEIPT_SCHEMA = "castingcompass.san-francisco-structure-depth-review-receipt/1.0.0";
+const SAN_FRANCISCO_WRITE_RECEIPT_SCHEMA = "castingcompass.san-francisco-structure-depth-review-template-write-receipt/1.0.0";
 const ARTIFACT_SCHEMA = "castingcompass.structure-depth-evidence/1.5.0";
 const COMMIT_PATTERN = /^[a-f0-9]{40}$/u;
 const SHA256_PATTERN = /^[a-f0-9]{64}$/u;
@@ -160,8 +163,55 @@ const CHART_STATES = ["accepted", "changes_required", "unable_to_assess"];
 const LOCAL_CORRECTION_CATEGORIES = ["sector", "depth", "feature", "clue", "disclosure"];
 const CHART_CORRECTION_CATEGORIES = ["source", "geometry", "datum", "date", "uncertainty", "classification", "disclosure"];
 
+export const STRUCTURE_DEPTH_REVIEW_PROFILES = Object.freeze({
+  "santa-barbara": Object.freeze({
+    id: "santa-barbara",
+    policySchema: POLICY_SCHEMA,
+    evidenceSchema: EVIDENCE_SCHEMA,
+    receiptSchema: RECEIPT_SCHEMA,
+    writeReceiptSchema: WRITE_RECEIPT_SCHEMA,
+    policyPath: "field-review/santa-barbara-structure-depth-review-policy.json",
+    guidePath: "docs/SANTA-BARBARA-STRUCTURE-DEPTH-REVIEW.md",
+    geographyLabel: "Santa Barbara South Coast",
+    geographyScope: "Gaviota through Rincon",
+    regionNames: Object.freeze(["Gaviota Coast", "Goleta", "Santa Barbara", "Summerland", "Carpinteria"]),
+    partialSiteIds: Object.freeze([]),
+    siteCount: 14,
+  }),
+  "san-francisco": Object.freeze({
+    id: "san-francisco",
+    policySchema: SAN_FRANCISCO_POLICY_SCHEMA,
+    evidenceSchema: SAN_FRANCISCO_EVIDENCE_SCHEMA,
+    receiptSchema: SAN_FRANCISCO_RECEIPT_SCHEMA,
+    writeReceiptSchema: SAN_FRANCISCO_WRITE_RECEIPT_SCHEMA,
+    policyPath: "field-review/san-francisco-structure-depth-review-policy.json",
+    guidePath: "docs/SAN-FRANCISCO-STRUCTURE-DEPTH-REVIEW.md",
+    geographyLabel: "San Francisco coast and waterfront",
+    geographyScope: "Ocean Beach through Hunters Point",
+    regionNames: Object.freeze(["San Francisco", "San Francisco Coast", "San Francisco Waterfront"]),
+    partialSiteIds: Object.freeze(["crane-cove-park"]),
+    siteCount: 10,
+  }),
+});
+
 function requireCondition(condition, message) {
   if (!condition) throw new Error(message);
+}
+
+function requireReviewProfile(profileId) {
+  const profile = STRUCTURE_DEPTH_REVIEW_PROFILES[profileId];
+  requireCondition(Boolean(profile), `Unknown structure/depth review profile ${profileId}.`);
+  return profile;
+}
+
+function profileForPolicy(policy, expectedProfileId) {
+  const profile = Object.values(STRUCTURE_DEPTH_REVIEW_PROFILES)
+    .find(({ policySchema }) => policy?.schemaVersion === policySchema);
+  requireCondition(Boolean(profile), "Review policy schema version is not locked.");
+  if (expectedProfileId !== undefined) {
+    requireCondition(profile.id === expectedProfileId, `Expected the ${expectedProfileId} structure/depth review profile.`);
+  }
+  return profile;
 }
 
 function sha256(value) {
@@ -217,7 +267,7 @@ function validateQuestionSet(questions, expectedIds, label) {
   }
 }
 
-function validateArtifactBindings({ policy, catalog, artifact, sourcePolicy, policySource, catalogSource, artifactSource, sourcePolicySource, sourceSnapshotSource, collectorSource }) {
+function validateArtifactBindings({ policy, catalog, artifact, sourcePolicy, policySource, catalogSource, artifactSource, sourcePolicySource, sourceSnapshotSource, collectorSource }, profile) {
   const sourceBoundary = policy.sourceBoundary;
   requireCondition(artifact.schemaVersion === ARTIFACT_SCHEMA, "Structure/depth artifact schema drifted.");
   requireCondition(artifact.schemaVersion === sourceBoundary.artifactSchemaVersion, "Policy artifact schema binding drifted.");
@@ -237,8 +287,12 @@ function validateArtifactBindings({ policy, catalog, artifact, sourcePolicy, pol
 
   const allSites = Array.isArray(catalog.sites) ? catalog.sites : catalog;
   requireCondition(Array.isArray(allSites), "Site catalog must contain an array.");
-  const regionalSites = allSites.filter((site) => REGION_NAMES.has(site.region));
-  requireCondition(regionalSites.length === 14, "Santa Barbara catalog population must remain 14 sites.");
+  const regionNames = new Set(profile.regionNames);
+  const regionalSites = allSites.filter((site) => regionNames.has(site.region));
+  requireCondition(
+    regionalSites.length === profile.siteCount,
+    `${profile.geographyLabel} catalog population must remain ${profile.siteCount} sites.`,
+  );
   const catalogById = new Map(regionalSites.map((site) => [site.id, site]));
   for (const reviewSite of policy.sites) {
     const catalogSite = catalogById.get(reviewSite.siteId);
@@ -247,7 +301,16 @@ function validateArtifactBindings({ policy, catalog, artifact, sourcePolicy, pol
     requireCondition(Boolean(evidence), `Structure/depth evidence is missing ${reviewSite.siteId}.`);
     requireCondition(reviewSite.name === catalogSite.name && evidence.siteName === catalogSite.name, `${reviewSite.siteId} name drifted.`);
     requireCondition(evidence.siteId === reviewSite.siteId, `${reviewSite.siteId} artifact identity drifted.`);
-    requireCondition(evidence.status === "charted-context", `${reviewSite.siteId} is not charted context.`);
+    const expectedStatus = profile.partialSiteIds.includes(reviewSite.siteId) ? "partial" : "charted-context";
+    requireCondition(evidence.status === expectedStatus, `${reviewSite.siteId} evidence status drifted.`);
+    if (expectedStatus === "partial") {
+      requireCondition(
+        evidence.depth?.status === "no-charted-sector-band"
+          && Array.isArray(evidence.depth?.chartedBandsMeters)
+          && evidence.depth.chartedBandsMeters.length === 0,
+        `${reviewSite.siteId} partial evidence boundary drifted.`,
+      );
+    }
     requireCondition(evidence.navigationUseAllowed === false && evidence.scoreDelta === null, `${reviewSite.siteId} crossed an authority boundary.`);
     requireCondition(evidence.depth?.uncertaintyMeters === null, `${reviewSite.siteId} invented numeric uncertainty.`);
     requireCondition(evidence.depth?.uncertaintyStatus === "not-exposed-by-selected-service-layers", `${reviewSite.siteId} uncertainty disclosure drifted.`);
@@ -259,7 +322,7 @@ function validateArtifactBindings({ policy, catalog, artifact, sourcePolicy, pol
   return { regionalSites, catalogById };
 }
 
-export function validateSantaBarbaraStructureDepthReview({
+function validateRegionalStructureDepthReview({
   policy,
   catalog,
   artifact,
@@ -271,16 +334,23 @@ export function validateSantaBarbaraStructureDepthReview({
   sourcePolicySource,
   sourceSnapshotSource,
   collectorSource,
-}) {
+}, expectedProfileId) {
+  const profile = profileForPolicy(policy, expectedProfileId);
   requireExactKeys(policy, TOP_LEVEL_KEYS, "Review policy");
-  requireCondition(policy.schemaVersion === POLICY_SCHEMA, "Review policy schema version is not locked.");
+  requireCondition(policy.schemaVersion === profile.policySchema, "Review policy schema version is not locked.");
   requireCondition(policy.status === "template_only_not_executed", "Committed review policy must remain unexecuted.");
   requireCondition(/^\d{4}-\d{2}-\d{2}$/u.test(policy.reviewedOn), "Policy review date must be YYYY-MM-DD.");
   requireCondition(typeof policy.purpose === "string" && policy.purpose.length >= 100, "Review purpose is incomplete.");
 
   requireExactKeys(policy.geography, ["expectedSiteCount", "label", "scope"], "Review geography");
-  requireCondition(policy.geography.label === "Santa Barbara South Coast" && policy.geography.scope === "Gaviota through Rincon", "Review geography drifted.");
-  requireCondition(policy.geography.expectedSiteCount === 14, "Review geography must contain 14 sites.");
+  requireCondition(
+    policy.geography.label === profile.geographyLabel && policy.geography.scope === profile.geographyScope,
+    "Review geography drifted.",
+  );
+  requireCondition(
+    policy.geography.expectedSiteCount === profile.siteCount,
+    `Review geography must contain ${profile.siteCount} sites.`,
+  );
 
   requireExactKeys(policy.sourceBoundary, SOURCE_BOUNDARY_KEYS, "Source boundary");
   requireCondition(policy.sourceBoundary.artifactPath === "public/data/structure-depth.json", "Artifact path drifted.");
@@ -313,7 +383,7 @@ export function validateSantaBarbaraStructureDepthReview({
   requireCondition(isDeepStrictEqual(policy.prohibitedFields, expectedProhibited), "Prohibited fields changed.");
 
   requireExactKeys(policy.evidence, ["maximumChartReviewAgeDays", "maximumFileBytes", "maximumFutureSkewMinutes", "maximumObservedMonthAgeMonths", "maximumResponsesPerSiteAndRole", "schemaVersion"], "Evidence policy");
-  requireCondition(policy.evidence.schemaVersion === EVIDENCE_SCHEMA, "Private evidence schema version drifted.");
+  requireCondition(policy.evidence.schemaVersion === profile.evidenceSchema, "Private evidence schema version drifted.");
   requireCondition(policy.evidence.maximumFileBytes === 262144 && policy.evidence.maximumResponsesPerSiteAndRole === 10, "Private evidence size/count boundary drifted.");
   requireCondition(policy.evidence.maximumObservedMonthAgeMonths === 6 && policy.evidence.maximumChartReviewAgeDays === 30 && policy.evidence.maximumFutureSkewMinutes === 5, "Review recency boundary drifted.");
 
@@ -324,7 +394,7 @@ export function validateSantaBarbaraStructureDepthReview({
   validateQuestionSet(policy.questions.chart, CHART_QUESTION_IDS, "Chart");
 
   requireExactKeys(policy.publicReceipt, ["allowedFields", "blockerCodes", "schemaVersion"], "Public receipt policy");
-  requireCondition(policy.publicReceipt.schemaVersion === RECEIPT_SCHEMA, "Receipt schema version drifted.");
+  requireCondition(policy.publicReceipt.schemaVersion === profile.receiptSchema, "Receipt schema version drifted.");
   requireCondition(isDeepStrictEqual(policy.publicReceipt.allowedFields, RECEIPT_FIELDS), "Receipt fields changed.");
   requireCondition(isDeepStrictEqual(policy.publicReceipt.blockerCodes, BLOCKER_CODES), "Receipt blocker codes changed.");
 
@@ -334,14 +404,20 @@ export function validateSantaBarbaraStructureDepthReview({
   requireCondition(policy.acceptance.reviewerRolesMustBeDisjoint === true && policy.acceptance.sourceIdentityRecheckWithinDays === 7 && policy.acceptance.maximumUnresolvedCorrections === 0, "Review separation or freshness boundary drifted.");
   requireCondition(policy.acceptance.scoreUseAuthorized === false && policy.acceptance.navigationUseAuthorized === false && policy.acceptance.deploymentAuthorizationGranted === false && policy.acceptance.modelValidationEvidenceGranted === false, "Review acceptance cannot grant authority.");
 
-  requireCondition(Array.isArray(policy.sites) && policy.sites.length === 14, "Review policy must contain 14 sites.");
+  requireCondition(
+    Array.isArray(policy.sites) && policy.sites.length === profile.siteCount,
+    `Review policy must contain ${profile.siteCount} sites.`,
+  );
   requireUniqueStrings(policy.sites.map(({ siteId }) => siteId), "Review site IDs");
   for (const site of policy.sites) {
     requireExactKeys(site, SITE_KEYS, `Review site ${site.siteId}`);
     requireCondition(site.localReviewState === "pending" && site.chartReviewState === "pending", `${site.siteId} cannot be pre-accepted.`);
     requireCondition(guide.includes(`\`${site.siteId}\``) && guide.includes(`**${site.name}**`), `${site.siteId} is missing from the guide.`);
   }
-  const bindings = validateArtifactBindings({ policy, catalog, artifact, sourcePolicy, policySource, catalogSource, artifactSource, sourcePolicySource, sourceSnapshotSource, collectorSource });
+  const bindings = validateArtifactBindings(
+    { policy, catalog, artifact, sourcePolicy, policySource, catalogSource, artifactSource, sourcePolicySource, sourceSnapshotSource, collectorSource },
+    profile,
+  );
   requireCondition(isDeepStrictEqual(policy.sites.map(({ siteId }) => siteId).sort(), bindings.regionalSites.map(({ id }) => id).sort()), "Review site population does not match the regional catalog.");
 
   for (const questionId of LOCAL_QUESTION_IDS) requireCondition(guide.includes(`${questionId}: matches_context | correction_needed | not_observed | uncertain`), `Guide is missing local question ${questionId}.`);
@@ -362,7 +438,15 @@ export function validateSantaBarbaraStructureDepthReview({
   };
 }
 
-export function createSantaBarbaraStructureDepthReviewTemplate({
+export function validateSantaBarbaraStructureDepthReview(sources) {
+  return validateRegionalStructureDepthReview(sources, "santa-barbara");
+}
+
+export function validateSanFranciscoStructureDepthReview(sources) {
+  return validateRegionalStructureDepthReview(sources, "san-francisco");
+}
+
+function createRegionalStructureDepthReviewTemplate({
   policy,
   catalog,
   artifact,
@@ -375,11 +459,15 @@ export function createSantaBarbaraStructureDepthReviewTemplate({
   sourceSnapshotSource,
   collectorSource,
   reviewedCommit,
-}) {
-  validateSantaBarbaraStructureDepthReview({ policy, catalog, artifact, sourcePolicy, guide, policySource, catalogSource, artifactSource, sourcePolicySource, sourceSnapshotSource, collectorSource });
+}, expectedProfileId) {
+  const profile = profileForPolicy(policy, expectedProfileId);
+  validateRegionalStructureDepthReview(
+    { policy, catalog, artifact, sourcePolicy, guide, policySource, catalogSource, artifactSource, sourcePolicySource, sourceSnapshotSource, collectorSource },
+    profile.id,
+  );
   strictCommit(reviewedCommit);
   return {
-    schema_version: EVIDENCE_SCHEMA,
+    schema_version: profile.evidenceSchema,
     reviewed_commit: reviewedCommit,
     catalog_sha256: sha256(catalogSource),
     structure_depth_artifact_sha256: sha256(artifactSource),
@@ -400,6 +488,14 @@ export function createSantaBarbaraStructureDepthReviewTemplate({
     deployment_authorization_granted: false,
     model_validation_evidence_granted: false,
   };
+}
+
+export function createSantaBarbaraStructureDepthReviewTemplate(sources) {
+  return createRegionalStructureDepthReviewTemplate(sources, "santa-barbara");
+}
+
+export function createSanFranciscoStructureDepthReviewTemplate(sources) {
+  return createRegionalStructureDepthReviewTemplate(sources, "san-francisco");
 }
 
 function validateCorrection(response, states, correctionState, categories, label) {
@@ -476,7 +572,7 @@ function validateSourceRecheck(recheck, policy, qualifyingChartReviewers, evalua
   return complete && !stale;
 }
 
-export function evaluateSantaBarbaraStructureDepthReview({
+function evaluateRegionalStructureDepthReview({
   policy,
   catalog,
   artifact,
@@ -492,13 +588,17 @@ export function evaluateSantaBarbaraStructureDepthReview({
   evidenceSource,
   expectedCommit,
   evaluatedAt = new Date(),
-}) {
-  validateSantaBarbaraStructureDepthReview({ policy, catalog, artifact, sourcePolicy, guide, policySource, catalogSource, artifactSource, sourcePolicySource, sourceSnapshotSource, collectorSource });
+}, expectedProfileId) {
+  const profile = profileForPolicy(policy, expectedProfileId);
+  validateRegionalStructureDepthReview(
+    { policy, catalog, artifact, sourcePolicy, guide, policySource, catalogSource, artifactSource, sourcePolicySource, sourceSnapshotSource, collectorSource },
+    profile.id,
+  );
   strictCommit(expectedCommit, "Expected commit");
   const evaluationInstant = evaluatedAt instanceof Date ? evaluatedAt : canonicalInstant(evaluatedAt, "Evaluation time");
   requireCondition(!Number.isNaN(evaluationInstant.getTime()), "Evaluation time is invalid.");
   requireExactKeys(evidence, EVIDENCE_KEYS, "Private review evidence");
-  requireCondition(evidence.schema_version === EVIDENCE_SCHEMA, "Private evidence schema version drifted.");
+  requireCondition(evidence.schema_version === profile.evidenceSchema, "Private evidence schema version drifted.");
   requireCondition(evidence.reviewed_commit === expectedCommit, "Private evidence commit does not match the expected commit.");
   requireCondition(evidence.catalog_sha256 === sha256(catalogSource), "Private evidence catalog digest drifted.");
   requireCondition(evidence.structure_depth_artifact_sha256 === sha256(artifactSource), "Private evidence structure/depth artifact digest drifted.");
@@ -547,7 +647,7 @@ export function evaluateSantaBarbaraStructureDepthReview({
   const orderedBlockers = BLOCKER_CODES.filter((code) => blockers.has(code));
   const accepted = orderedBlockers.length === 0 && passingSites.length === policy.sites.length && sourceIdentityRecheckCurrent;
   const receipt = {
-    schema_version: RECEIPT_SCHEMA,
+    schema_version: profile.receiptSchema,
     evaluated_at: evaluationInstant.toISOString(),
     reviewed_commit: expectedCommit,
     catalog_sha256: evidence.catalog_sha256,
@@ -582,15 +682,24 @@ export function evaluateSantaBarbaraStructureDepthReview({
   return receipt;
 }
 
-async function loadReviewSources(root = DEFAULT_ROOT) {
+export function evaluateSantaBarbaraStructureDepthReview(sources) {
+  return evaluateRegionalStructureDepthReview(sources, "santa-barbara");
+}
+
+export function evaluateSanFranciscoStructureDepthReview(sources) {
+  return evaluateRegionalStructureDepthReview(sources, "san-francisco");
+}
+
+export async function loadStructureDepthReviewSources(profileId, root = DEFAULT_ROOT) {
+  const profile = requireReviewProfile(profileId);
   const [policySource, catalogSource, artifactSource, sourcePolicySource, sourceSnapshotSource, collectorSource, guide] = await Promise.all([
-    readFile(resolve(root, "field-review/santa-barbara-structure-depth-review-policy.json")),
+    readFile(resolve(root, profile.policyPath)),
     readFile(resolve(root, "data/sites.json")),
     readFile(resolve(root, "public/data/structure-depth.json")),
     readFile(resolve(root, "structure-depth/policy.json")),
     readFile(resolve(root, "structure-depth/noaa-enc-approach-snapshot.json")),
     readFile(resolve(root, "scripts/refresh_structure_depth.py")),
-    readFile(resolve(root, "docs/SANTA-BARBARA-STRUCTURE-DEPTH-REVIEW.md"), "utf8"),
+    readFile(resolve(root, profile.guidePath), "utf8"),
   ]);
   return {
     policy: JSON.parse(policySource.toString("utf8")),
@@ -605,6 +714,10 @@ async function loadReviewSources(root = DEFAULT_ROOT) {
     sourceSnapshotSource,
     collectorSource,
   };
+}
+
+async function loadReviewSources(root = DEFAULT_ROOT) {
+  return loadStructureDepthReviewSources("santa-barbara", root);
 }
 
 async function privateTemplateOutputPath(root, outputFile) {
@@ -622,10 +735,17 @@ async function privateTemplateOutputPath(root, outputFile) {
   return resolve(parentReal, basename(normalizedOutput));
 }
 
-export async function writeSantaBarbaraStructureDepthReviewTemplate({ root = DEFAULT_ROOT, reviewedCommit, outputFile, sources }) {
+async function writeRegionalStructureDepthReviewTemplate({
+  profileId,
+  root = DEFAULT_ROOT,
+  reviewedCommit,
+  outputFile,
+  sources,
+}) {
+  const profile = requireReviewProfile(profileId);
   const outputPath = await privateTemplateOutputPath(root, outputFile);
-  const reviewSources = sources ?? await loadReviewSources(root);
-  const payload = createSantaBarbaraStructureDepthReviewTemplate({ ...reviewSources, reviewedCommit });
+  const reviewSources = sources ?? await loadStructureDepthReviewSources(profile.id, root);
+  const payload = createRegionalStructureDepthReviewTemplate({ ...reviewSources, reviewedCommit }, profile.id);
   const body = `${JSON.stringify(payload, null, 2)}\n`;
   const expectedBytes = Buffer.byteLength(body);
   let handle;
@@ -651,7 +771,7 @@ export async function writeSantaBarbaraStructureDepthReviewTemplate({ root = DEF
     }
   }
   return {
-    schema_version: WRITE_RECEIPT_SCHEMA,
+    schema_version: profile.writeReceiptSchema,
     reviewed_commit: payload.reviewed_commit,
     catalog_sha256: payload.catalog_sha256,
     structure_depth_artifact_sha256: payload.structure_depth_artifact_sha256,
@@ -667,9 +787,22 @@ export async function writeSantaBarbaraStructureDepthReviewTemplate({ root = DEF
   };
 }
 
+export async function writeSantaBarbaraStructureDepthReviewTemplate(options) {
+  return writeRegionalStructureDepthReviewTemplate({ ...options, profileId: "santa-barbara" });
+}
+
+export async function writeSanFranciscoStructureDepthReviewTemplate(options) {
+  return writeRegionalStructureDepthReviewTemplate({ ...options, profileId: "san-francisco" });
+}
+
 export async function verifySantaBarbaraStructureDepthReview(root = DEFAULT_ROOT) {
   const sources = await loadReviewSources(root);
   return validateSantaBarbaraStructureDepthReview(sources);
+}
+
+export async function verifySanFranciscoStructureDepthReview(root = DEFAULT_ROOT) {
+  const sources = await loadStructureDepthReviewSources("san-francisco", root);
+  return validateSanFranciscoStructureDepthReview(sources);
 }
 
 function parseFlag(args, name) {
