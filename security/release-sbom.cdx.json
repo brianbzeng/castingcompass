@@ -1,7 +1,7 @@
 {
   "bomFormat": "CycloneDX",
   "specVersion": "1.5",
-  "serialNumber": "urn:uuid:96b87d2f-b26b-590a-8f64-41073fbcd397",
+  "serialNumber": "urn:uuid:12064db5-3fe1-5b06-afc1-c761d27a8c95",
   "version": 1,
   "metadata": {
     "component": {
@@ -65,6 +65,10 @@
         },
         {
           "name": "castingcompass:input-sha256",
+          "value": "field-review/marin-structure-depth-review-policy.json:800e62a12f86abfeac7e6a53cda00ac37fd03777c36ef1f363f9d14dc5eb666b"
+        },
+        {
+          "name": "castingcompass:input-sha256",
           "value": "field-review/san-francisco-structure-depth-review-policy.json:e51dd09712bb5e6872a0dc402a726dc616fd55cff30892dcb32951d43d305080"
         },
         {
@@ -85,7 +89,7 @@
         },
         {
           "name": "castingcompass:input-sha256",
-          "value": "package.json:fdc50e1e4284b345925c731b79c11e3ba0a476857138d13768bee8b832e3e3ef"
+          "value": "package.json:ce75c21d7d7bfbe62d9152ea96ad7df19e35f70d70675a92a35138924335f012"
         },
         {
           "name": "castingcompass:input-sha256",

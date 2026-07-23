@@ -1147,6 +1147,14 @@ after its acceptance checks pass in the intended environment.
       reopening, score, model, navigation, provider, merge, deployment, or production authority.
       No real response or accepted receipt exists yet; the remaining 27 catalog sites still lack
       executable location-review handoffs.
+    - [x] Extend the executable handoff to the seven Point Reyes and Marin Coast sites. The exact
+      regional profile preserves the five charted-context records and fails closed unless Bolinas
+      Beach and Muir Beach remain `partial` with no sector depth-area band. Nearby soundings,
+      seabed records, catalog clues, or review responses cannot fill those gaps. The packet keeps
+      private roles disjoint, binds every digest and status, and grants no score, model,
+      navigation, provider, merge, deployment, or production authority. No real response or
+      accepted receipt exists yet; the remaining 20 catalog sites still lack executable
+      location-review handoffs.
 - [ ] Add striped bass as the first new beta using a distinct estuary/migration model.
 - [ ] Define and evaluate explicit shore-relevant rockfish species/complexes next; then model
   cabezon as its own taxon; then split surfperch into defensible habitat/taxon groups. Each beta

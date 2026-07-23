@@ -65,7 +65,33 @@ by that discovery.
       and the forecast-independent skip-navigation case on the native browser clock. This
       prevents wall-clock expiry from hiding every location after the fixture horizon without
       letting the test clock interfere with the browser's initial keyboard-focus boundary.
-- [ ] Obtain exact-head hosted automation evidence for the San Mateo checkpoint.
+- [x] Obtain exact-head hosted automation evidence for the San Mateo checkpoint. The initial
+      intermediate head `f2420058c5bbeee7838ed030afd2bfcab42b2236` exposed three
+      skip-navigation focus failures in CI run `29984168440` while 241/244 browser cases and every
+      non-browser job passed. The isolated remediation at exact head
+      `1bfa3544c47aa974aca3f919d745efc67fe13e23` then passed CI run `29984982339`, CodeQL run
+      `29984980560`, optional research-stack run `29984982352`, native API-image run
+      `29984982349`, and release-provenance run `29984982322`. This is automation evidence, not
+      independent review.
+- [x] Add the fourth exact regional profile and blank handoff for all seven Point Reyes and Marin
+      Coast sites. The packet preserves five charted-context records and requires Bolinas Beach
+      and Muir Beach to remain `partial`; nearby soundings, seabed records, catalog clues, and
+      human responses cannot invent either missing sector depth-area band.
+- [x] Add fail-closed Marin coverage for cross-region schema/file isolation, exact site
+      population, partial-to-charted or charted-to-partial status drift, accepted aggregate
+      receipts, incomplete/overlapping/stale/corrected evidence, digest/identity/unsafe-text/
+      duplicate-ID drift, owner-only writes, overwrite refusal, and provider/process paths. The
+      combined regional suite passes 27/27.
+- [x] Bind the Marin policy and verifier into the security aggregate, deterministic release
+      inventory, combined release SBOM, CI, and release-provenance workflow.
+- [x] Complete exact-tree local acceptance and generated-evidence review for the Marin
+      checkpoint. Under pinned Node 22.23.1/npm 10.9.8, the production-off Cloudflare build;
+      719/719 Node tests; 27/27 regional review tests; 29/29 regional plus release-inventory
+      tests; 8/8 photo UI cases; 244/244 Chromium and WebKit mobile, offline, recovery, 404,
+      safe-area, map-abort, and regional-evidence cases; ESLint; TypeScript; the complete
+      security/SBOM/query-policy chain; and both npm audits pass with zero reported
+      vulnerabilities.
+- [ ] Obtain exact-head hosted automation evidence for the Marin checkpoint.
 - [ ] Obtain real independent local-angler and chart/GIS responses. This packet does not
       authorize a score or catalog change, model claim, merge, deployment, provider mutation,
       migration, feature activation, staging exercise, or production acceptance.

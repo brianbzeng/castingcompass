@@ -22,6 +22,10 @@ const SAN_MATEO_POLICY_SCHEMA = "castingcompass.san-mateo-structure-depth-review
 const SAN_MATEO_EVIDENCE_SCHEMA = "castingcompass.san-mateo-structure-depth-review-evidence/1.0.0";
 const SAN_MATEO_RECEIPT_SCHEMA = "castingcompass.san-mateo-structure-depth-review-receipt/1.0.0";
 const SAN_MATEO_WRITE_RECEIPT_SCHEMA = "castingcompass.san-mateo-structure-depth-review-template-write-receipt/1.0.0";
+const MARIN_POLICY_SCHEMA = "castingcompass.marin-structure-depth-review/1.0.0";
+const MARIN_EVIDENCE_SCHEMA = "castingcompass.marin-structure-depth-review-evidence/1.0.0";
+const MARIN_RECEIPT_SCHEMA = "castingcompass.marin-structure-depth-review-receipt/1.0.0";
+const MARIN_WRITE_RECEIPT_SCHEMA = "castingcompass.marin-structure-depth-review-template-write-receipt/1.0.0";
 const ARTIFACT_SCHEMA = "castingcompass.structure-depth-evidence/1.5.0";
 const COMMIT_PATTERN = /^[a-f0-9]{40}$/u;
 const SHA256_PATTERN = /^[a-f0-9]{64}$/u;
@@ -209,6 +213,20 @@ export const STRUCTURE_DEPTH_REVIEW_PROFILES = Object.freeze({
     regionNames: Object.freeze(["San Mateo Coast", "Half Moon Bay"]),
     partialSiteIds: Object.freeze([]),
     siteCount: 10,
+  }),
+  marin: Object.freeze({
+    id: "marin",
+    policySchema: MARIN_POLICY_SCHEMA,
+    evidenceSchema: MARIN_EVIDENCE_SCHEMA,
+    receiptSchema: MARIN_RECEIPT_SCHEMA,
+    writeReceiptSchema: MARIN_WRITE_RECEIPT_SCHEMA,
+    policyPath: "field-review/marin-structure-depth-review-policy.json",
+    guidePath: "docs/MARIN-STRUCTURE-DEPTH-REVIEW.md",
+    geographyLabel: "Point Reyes and Marin Coast",
+    geographyScope: "Limantour Beach through Rodeo Beach",
+    regionNames: Object.freeze(["Point Reyes", "Marin Coast"]),
+    partialSiteIds: Object.freeze(["bolinas-beach", "muir-beach"]),
+    siteCount: 7,
   }),
 });
 
@@ -468,6 +486,10 @@ export function validateSanMateoStructureDepthReview(sources) {
   return validateRegionalStructureDepthReview(sources, "san-mateo");
 }
 
+export function validateMarinStructureDepthReview(sources) {
+  return validateRegionalStructureDepthReview(sources, "marin");
+}
+
 function createRegionalStructureDepthReviewTemplate({
   policy,
   catalog,
@@ -522,6 +544,10 @@ export function createSanFranciscoStructureDepthReviewTemplate(sources) {
 
 export function createSanMateoStructureDepthReviewTemplate(sources) {
   return createRegionalStructureDepthReviewTemplate(sources, "san-mateo");
+}
+
+export function createMarinStructureDepthReviewTemplate(sources) {
+  return createRegionalStructureDepthReviewTemplate(sources, "marin");
 }
 
 function validateCorrection(response, states, correctionState, categories, label) {
@@ -720,6 +746,10 @@ export function evaluateSanMateoStructureDepthReview(sources) {
   return evaluateRegionalStructureDepthReview(sources, "san-mateo");
 }
 
+export function evaluateMarinStructureDepthReview(sources) {
+  return evaluateRegionalStructureDepthReview(sources, "marin");
+}
+
 export async function loadStructureDepthReviewSources(profileId, root = DEFAULT_ROOT) {
   const profile = requireReviewProfile(profileId);
   const [policySource, catalogSource, artifactSource, sourcePolicySource, sourceSnapshotSource, collectorSource, guide] = await Promise.all([
@@ -829,6 +859,10 @@ export async function writeSanMateoStructureDepthReviewTemplate(options) {
   return writeRegionalStructureDepthReviewTemplate({ ...options, profileId: "san-mateo" });
 }
 
+export async function writeMarinStructureDepthReviewTemplate(options) {
+  return writeRegionalStructureDepthReviewTemplate({ ...options, profileId: "marin" });
+}
+
 export async function verifySantaBarbaraStructureDepthReview(root = DEFAULT_ROOT) {
   const sources = await loadReviewSources(root);
   return validateSantaBarbaraStructureDepthReview(sources);
@@ -842,6 +876,11 @@ export async function verifySanFranciscoStructureDepthReview(root = DEFAULT_ROOT
 export async function verifySanMateoStructureDepthReview(root = DEFAULT_ROOT) {
   const sources = await loadStructureDepthReviewSources("san-mateo", root);
   return validateSanMateoStructureDepthReview(sources);
+}
+
+export async function verifyMarinStructureDepthReview(root = DEFAULT_ROOT) {
+  const sources = await loadStructureDepthReviewSources("marin", root);
+  return validateMarinStructureDepthReview(sources);
 }
 
 function parseFlag(args, name) {

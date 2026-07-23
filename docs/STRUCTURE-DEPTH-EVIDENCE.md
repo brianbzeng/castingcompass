@@ -251,8 +251,12 @@ keeps each region's schemas, geography, site inventory, policy digest, and
 private response files isolated. The blank
 [San Mateo structure/depth review packet](SAN-MATEO-STRUCTURE-DEPTH-REVIEW.md)
 adds the next ten Coast and Half Moon Bay sites while keeping Pacifica Municipal
-Pier's independent closure and recommendation exclusion intact. Preparing any
-packet is not the review itself and does not close any item above.
+Pier's independent closure and recommendation exclusion intact. The blank
+[Point Reyes and Marin Coast structure/depth review packet](MARIN-STRUCTURE-DEPTH-REVIEW.md)
+adds the next seven sites while preserving Bolinas Beach and Muir Beach as
+`partial`; no response can invent either missing sector band or promote those
+records to charted context. Preparing any packet is not the review itself and
+does not close any item above.
 
 No production, Cloudflare, database, provider, or deployment change is part of
 this repository slice.
