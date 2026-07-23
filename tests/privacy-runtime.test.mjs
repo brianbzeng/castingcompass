@@ -1367,7 +1367,7 @@ test("email challenge issuance ceilings are claimed atomically before provider d
   const originalFetch = globalThis.fetch;
   let providerCalls = 0;
   globalThis.fetch = async (input) => {
-    if (String(input).includes("api.resend.com")) providerCalls += 1;
+    if (String(input) === "https://api.resend.com/emails") providerCalls += 1;
     return new Response(`${"0".repeat(35)}:0`);
   };
   try {
