@@ -22,6 +22,13 @@ export interface FishingSite {
   accessStatusNote?: string;
   accessStatusUpdatedAt?: string;
   tideStation?: string;
+  weatherAnchor?: string;
+  castingZone?: {
+    radiusMeters: number;
+    bearingDegrees: number;
+    targetDepthMeters: number[];
+    exposure: string;
+  };
   distanceMiles?: number;
 }
 
@@ -128,6 +135,146 @@ export interface OpportunitySnapshot {
   methodology?: string;
   sources: SourceFreshness[];
   windows: OpportunityWindow[];
+}
+
+export type WaterQualityAdvisoryStatus =
+  | "closure"
+  | "posted"
+  | "advisory"
+  | "rain-advisory"
+  | "no-active-posting"
+  | "stale"
+  | "unmonitored"
+  | "unknown"
+  | "source-unavailable"
+  | "not-covered";
+
+export interface WaterQualitySiteAssessment {
+  status: WaterQualityAdvisoryStatus;
+  recommendationEffect: "suppress" | "neutral" | "unknown";
+  officialLabel: string;
+  detail: string;
+  sourceId: string | null;
+  stationIds: string[];
+  stationNames: string[];
+  sampleDates: string[];
+  actionStartDates: string[];
+  actionEndDates: string[];
+  checkedAt: string;
+  scoreDelta: null;
+  sourceUrl: string;
+}
+
+export interface WaterQualitySnapshot {
+  schemaVersion: "castingcompass.water-quality-advisory/2.0.0";
+  policyVersion: string;
+  policySha256: string;
+  collectorSha256: string;
+  siteCatalogSha256: string;
+  generatedAt: string;
+  status: "fresh" | "partial" | "unavailable";
+  meaning: string;
+  freshness: {
+    maximumSampleAgeDays: number;
+  };
+  scoreContribution: {
+    mode: "excluded-pending-frozen-baseline-validation";
+    positiveContributionAllowed: false;
+    activeAgencyStatusSuppressesRecommendation: true;
+  };
+  sources: Record<string, {
+    agency: string;
+    programUrl: string;
+    statusUrl: string;
+    machineUrl: string;
+    absenceBehavior: "neutral-only-with-current-complete-samples" | "unknown";
+    errorCategory: string | null;
+  }>;
+  sites: Record<string, WaterQualitySiteAssessment>;
+}
+
+export interface StructureDepthChartedFeature {
+  category:
+    | "charted-obstruction"
+    | "charted-wreck"
+    | "charted-pile"
+    | "charted-seabed-description"
+    | "charted-shoreline-construction"
+    | "charted-dredged-area"
+    | "charted-vegetation";
+  label: string;
+  recordCount: number;
+  sourceDates: string[];
+  partialSourceDates: string[];
+  hasUndatedRecords: boolean;
+  sourceCells: string[];
+}
+
+export interface StructureDepthSiteEvidence {
+  siteId: string;
+  siteName: string;
+  status: "charted-context" | "partial" | "source-unavailable";
+  geometry: {
+    sectorRadiusMeters: number;
+    sectorBearingDegrees: number;
+    sectorHalfWidthDegrees: number;
+    contextRadiusMeters: number;
+  };
+  depth: {
+    status: "charted-sector-bands" | "no-charted-sector-band" | "source-unavailable";
+    chartedBandsMeters: [number, number][];
+    contourDepthsMeters: number[];
+    sectorSoundingDepthsMeters: number[];
+    contextSoundingCount: number;
+    contextSoundingDepthRangeMeters: [number, number] | null;
+    nearestContextSoundingDistanceMeters: number | null;
+    sourceDates: string[];
+    partialSourceDates: string[];
+    hasUndatedRecords: boolean;
+    sourceCells: string[];
+    uncertaintyMeters: null;
+    uncertaintyStatus: "not-exposed-by-selected-service-layers";
+    detail: string;
+  };
+  structure: {
+    status: "charted-features-present" | "no-selected-feature-records" | "source-unavailable";
+    chartedFeatures: StructureDepthChartedFeature[];
+    catalogClues: {
+      tag: string;
+      reviewStatus: "catalog-only-not-validated-by-this-source";
+    }[];
+    detail: string;
+  };
+  scoreDelta: null;
+  navigationUseAllowed: false;
+  sourceUrl: string;
+}
+
+export interface StructureDepthSnapshot {
+  schemaVersion: "castingcompass.structure-depth-evidence/1.5.0";
+  generatedAt: string;
+  status: "complete" | "partial" | "unavailable";
+  meaning: string;
+  scoreContribution: {
+    mode: "excluded-pending-site-review-and-validation";
+    numericContributionAllowed: false;
+    catalogMutationAllowed: false;
+  };
+  source: {
+    agency: string;
+    product: string;
+    programUrl: string;
+    usageBand: "Approach";
+    depthUnits: "meters";
+    verticalDatum: "Mean Lower Low Water (MLLW)";
+    resolutionStatus: "vector-chart-features-no-fixed-grid-resolution";
+    positionalAccuracyStatus: "not-exposed-by-selected-service-layers";
+    uncertaintyStatus: "not-exposed-by-selected-service-layers";
+    notForNavigation: true;
+    capturedAt: string;
+    errorCategory: string | null;
+  };
+  sites: Record<string, StructureDepthSiteEvidence>;
 }
 
 export type TimeFilter = "today" | "tomorrow" | "custom";

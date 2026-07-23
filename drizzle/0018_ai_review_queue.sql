@@ -7,6 +7,7 @@ CREATE TABLE `ai_review_jobs` (
   `attempts` integer NOT NULL DEFAULT 0,
   `available_at` text NOT NULL,
   `lease_expires_at` text,
+  `lease_token` text,
   `last_error_code` text,
   `created_at` text NOT NULL,
   `updated_at` text NOT NULL,

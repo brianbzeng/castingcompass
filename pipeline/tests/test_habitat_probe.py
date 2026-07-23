@@ -116,6 +116,16 @@ class HabitatProbeTests(unittest.TestCase):
         self.assertEqual(metrics["confusion_matrix"], np.diag([10, 10, 10]).tolist())
         self.assertEqual(prediction.shape, (30,))
         self.assertEqual(probability.shape, (30, len(PROBE_CLASS_NAMES)))
+        features_with_excluded = np.vstack([features, np.zeros((1, features.shape[1]))])
+        labels_with_excluded = np.append(labels, -1)
+        excluded_metrics, _, _ = _fit_probe(
+            features_with_excluded.astype(np.float32),
+            labels_with_excluded,
+            train,
+            test,
+            seed=9,
+        )
+        self.assertEqual(excluded_metrics["macro_f1"], metrics["macro_f1"])
 
 
 if __name__ == "__main__":

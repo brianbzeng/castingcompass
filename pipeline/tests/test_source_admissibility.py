@@ -24,13 +24,25 @@ class SourceAdmissibilityPolicyTests(unittest.TestCase):
 
     def test_policy_is_deterministic_and_manifest_inventory_is_exact(self) -> None:
         digest = source_policy_sha256(self.policy)
-        self.assertEqual(digest, "54b245191ad8da6dac820e189a6a21834ccca7699e0ced7bcc29c7bf430cf817")
+        self.assertEqual(digest, "6363f14e5ddf2c92c9e91f8339c2b370e589d7b3882716f2aa839a5b793a3c86")
         self.assertEqual(digest, source_policy_sha256(load_source_admissibility_policy()))
         self.assertEqual(set(load_source_manifests()), set(EXPECTED_MANIFEST_SOURCES))
 
     def test_only_exact_source_operations_are_admitted(self) -> None:
         assert_source_operation("noaa_bluetopo", "bathymetry-ingest")
         assert_source_operation("noaa_bluetopo", "terrain-pretraining")
+        assert_source_operation(
+            "usgs_santa_barbara_south_coast_2m", "terrain-pretraining"
+        )
+        assert_source_operation(
+            "usgs_santa_barbara_south_coast_2m", "endpoint-support-footprint"
+        )
+        assert_source_operation(
+            "usgs_ds781_residual_video_observations", "endpoint-support-audit"
+        )
+        assert_source_operation(
+            "usgs_ds182_pacific_ext_sediment", "endpoint-support-audit"
+        )
         assert_source_operation("synthetic_fixture", "terrain-pretraining")
         assert_source_operation("cdfw_crfs_ds3185", "descriptive-context")
         assert_source_operation("cdfw_crfs", "observation-normalization")

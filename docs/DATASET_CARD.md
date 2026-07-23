@@ -1,11 +1,13 @@
 # CastingCompass dataset card
 
 **Status:** species-aware contract assets, multiscale structure pipeline, and
-reproducible full-survey official-data self-supervised pretraining implemented.
-The production species migration and any supervised catch-training dataset
-remain unapproved. Official rasters and weights are not bundled.
+exactly reproduced official bathymetry/backscatter/fused self-supervised
+pretraining, target-agnostic transfer probes, and source-shortcut diagnostic
+implemented. The production
+species migration and any supervised catch-training dataset remain unapproved.
+Official rasters, probe corpora, and weights are not bundled.
 
-**Version:** 0.3.1
+**Version:** 0.6.0
 
 ## Intended dataset
 
@@ -30,6 +32,7 @@ The machine-readable manifests are in `pipeline/sources/`.
 | CUDEM / Coastal Relief bathymetry | NOAA National Centers for Environmental Information | Elevation/bathymetry raster and published metadata | [NOAA Coastal Elevation Models](https://www.ncei.noaa.gov/products/coastal-elevation-models), [NOAA Bathymetry](https://www.ncei.noaa.gov/products/bathymetry) |
 | BlueTopo | NOAA Office of Coast Survey | Coverage backbone with elevation, uncertainty, and data-quality layers | [NOAA BlueTopo](https://www.nauticalcharts.noaa.gov/data/bluetopo.html) |
 | Offshore San Francisco State Waters | U.S. Geological Survey | 2 m bathymetry/backscatter, seafloor character, habitat, geology, and video ground truth | [USGS DS 781 data catalog](https://pubs.usgs.gov/ds/781/OffshoreSanFrancisco/data_catalog_OffshoreSanFrancisco.html) |
+| DS781 residual statewide video observations | U.S. Geological Survey | Raw endpoint-support auditing only; no training, validation, scoring, or raster-acquisition authority | [USGS DS 781 video-observation catalog](https://pubs.usgs.gov/ds/781/video_observations/data_catalog_video_observations.html) |
 | Central San Francisco Bay multibeam | U.S. Geological Survey | 4 m bathymetry/backscatter and bedform structure | [USGS DS 55](https://pubs.usgs.gov/dds/dds-55/pacmaps/sf_data.htm) |
 | California Recreational Fisheries Survey (CRFS) | California Department of Fish and Wildlife | California marine recreational catch/effort samples or estimates | [CDFW CRFS](https://wildlife.ca.gov/Conservation/Marine/CRFS/Additional-Information) |
 | RecFIN Data Warehouse | Pacific States Marine Fisheries Commission | Official distribution/query system for Pacific Coast recreational-fisheries data, including CRFS | [RecFIN](https://www.recfin.org/) |
@@ -177,6 +180,27 @@ kelp-canopy, or surf-break layers must align exactly to the reference grid.
 Every auxiliary value layer receives a paired availability mask before missing
 values are filled.
 
+The first frozen hybrid experiment uses the four official 2 m USGS Offshore of
+San Francisco backscatter survey rasters (`8101_2004`, `8101_2007`,
+`8101_2008`, and `7125_2006`) listed by the source catalog. They are distinct
+survey footprints, not interchangeable repeated observations. Acquisition must
+retain every source ZIP and metadata file, record byte hashes, mosaic only onto
+the matching 2 m bathymetry reference grid, and leave all uncovered cells
+explicitly unavailable. The resulting corpus kind is
+`official_unlabeled_seafloor_remote_sensing`; it is target-agnostic and cannot
+be interpreted as catch or habitat labels.
+
+The source manifest also binds the exact `f208nc` and `f307nc` raw video ZIPs
+and every archive member by byte count and SHA-256. Their `CLASS` values are
+direct scientist-recorded camera observations, but their tracks were selected
+to validate sonar interpretations, observations are adjacent one-minute
+samples, and horizontal positional accuracy is highly variable on the order of
+10 m. They are therefore eligible only for the explicit endpoint-admissibility
+audit unless a separately reviewed split passes. Published habitat polygons
+are not treated as independent bathymetry/backscatter targets because official
+metadata names those sonar products and hillshade as primary interpretation
+sources.
+
 ## Physical resolution contract
 
 CastingCompass separates pixel spacing from reliable feature detection:
@@ -213,13 +237,20 @@ use, then fixed before inspecting test results.
 
 That scaffold applies to exact-point terrain experiments. First-party
 CastingCompass trips deliberately retain curated `site` support and cannot
-enter the point loader. Historical v1 preserves a fixed site-catalog SHA-256,
-46 sites assigned once to five named panels, and four absolute time blocks, but
+enter the point loader. Historical v1 preserves a fixed site-catalog SHA-256 in
+`validation/catalogs/california-halibut-bay-area-v1.json`, with 46 sites assigned
+once to five named panels and four absolute time blocks, but
 it is not activatable. The v2 successor uses the same curated site support only
 for a collection-feasibility pilot. Neither design invents a site centroid,
 weakens point-model eligibility, or treats a whole trip spanning multiple
 windows as a point label. Pre-freeze, pre-activation, past, and legacy rows
 remain product-observational only regardless of structural validity.
+
+The public site catalog may expand independently of that archive. Its Santa
+Barbara South Coast entries are product-planning locations with curated habitat
+priors and public forecast sources, not labeled training data and not eligible
+pilot geography. Local trip reports remain model-excluded unless a future
+prospective protocol freezes the expanded population before enrollment.
 
 Prospective rows additionally retain the frozen recruitment-frame ID, one of
 three allowed pre-outcome source IDs, recruitment event time/hash, and—only for
@@ -237,6 +268,11 @@ selection-design mix are preserved for required stratified reporting.
 - Popular or accessible areas and commonly retained species can be
   overrepresented.
 - Bathymetry surveys have heterogeneous age, density, and uncertainty.
+- Backscatter availability is strongly source- and geography-dependent. The
+  frozen 903-row hybrid holdout contains only the 2004 survey at measured
+  centers; 2007 has only one labeled example in two substrate classes and 2006
+  has only one class. Those domains cannot support ordinary cross-survey model
+  claims and must not be pooled to manufacture class support.
 - Public survey geography may be much coarser than a DEM pixel.
 - CPUE values can be heavy-tailed and are not automatically comparable across
   modes or survey designs.
@@ -295,3 +331,96 @@ transformation. Composite depth/slope digits are removed from the target. The
 map was itself derived from bathymetry, acoustic backscatter, and
 interpreter/video evidence, so the result measures transferable character
 signal rather than an independent biological endpoint.
+
+The frozen three-encoder follow-up uses the same official seafloor-character
+map and exactly reuses the pretraining holdout. Its common substrate target has
+3,183 training rows and 903 test rows. A separate label-guided rare probe
+retains 64 smooth anthropogenic, 64 rugged anthropogenic, and 64 nearby natural
+control centers. Every rare center must span at least three native cells; whole
+connected components remain in one geographic fold; and a 512 m buffer excludes
+nearby training rows. Two builds reproduced the rare corpus exactly at SHA-256
+`9ea0b540e18760bb3ac9a144dcba4df5d88f05c1491f1bceb341482731072741`.
+The balanced case-control design cannot estimate natural prevalence or
+population accuracy. Exact results and source identities are recorded in the
+[hybrid probe receipt](../pipeline/evidence/hybrid-seafloor-probes-v1.receipt.json).
+
+The follow-up [source-shortcut diagnostic](experiments/2026-07-22-usgs-sf-hybrid-shortcut-diagnostic-v1.md)
+shows that the fixed fold is source-degenerate and that availability features
+add reliable conditional signal within it. Only the 2004 and 2008 domains meet
+the frozen minimum of 32 total rows and 16 rows per class in train and test.
+Fused pretraining is reliably worse than bathymetry pretraining on both
+eligible unseen-survey tests. These results prohibit a cross-survey
+generalization claim and do not authorize model promotion.
+
+The subsequent [direct-video endpoint audit](experiments/2026-07-22-usgs-sf-video-endpoint-admissibility-audit-v1.md)
+finds 3,759 classified official rows, 187 valid reference centers, and 166 rows
+that retain the complete hybrid patch contract. The retained totals are 94
+smooth, 22 mixed/rugose, and 50 mobile-coarse observations across four exact
+cruise/line/tape groups. All coarse rows and 21 of 22 mixed/rugose rows occur
+in one group. None of the seven unique whole-group partitions leaves 16 rows
+of every class on both sides, so a row-level split is prohibited and no model
+is fit. This negative support result is exactly reproduced and changes no
+serving path.
+
+The follow-up
+[Santa Barbara South Coast direct-video audit](experiments/2026-07-22-usgs-south-coast-video-endpoint-admissibility-audit-v1.md)
+locks four contiguous official map blocks from Refugio through Carpinteria, 11 survey-specific
+backscatter layers, and four video archives. Two archives remained label-unread until the class,
+region, patch, whole-cruise, and minimum-support rules were committed. All 4,251 labeled records
+have zero raw class-4 observations; the 1,327 complete hybrid rows therefore contain 1,030 smooth,
+297 mixed/rugose, and zero mobile-coarse observations. Zero of seven whole-cruise partitions pass.
+Two independent-download executions reproduce exact metrics. This narrower evidence footprint
+does not establish Gaviota coverage, and no model or serving path changes.
+
+The subsequent
+[residual statewide direct-video support screen](experiments/2026-07-22-usgs-residual-statewide-video-support-screen-v1.md)
+content-addresses the other six official DS781 video archives. They contain 18,722 records and
+15,335 nonblank class values. `s2210mb` has 444 nonblank class-`0` rows outside the frozen class
+domain and 26 nonblank rows without complete `LINE`/`TAPE` identity, so the source schema fails
+closed. Sixteen of 31 recognized-row whole-cruise partitions pass the numerical support floor,
+but that diagnostic is non-authoritative because it depends on the invalid archive. Among the
+five schema-valid archives, only `c0212sc` contains class 4. The screen therefore authorizes no
+raster acquisition, corpus construction, training, promotion, or serving change.
+
+The next [direct sediment endpoint screen](experiments/2026-07-22-usgs-ds182-sediment-endpoint-support-v1.md)
+preregisters continuous bulk-surficial `Gravel`/`Sand`/`Mud` measurements from USGS Data Series
+182, with whole-source holdout and no derived dbSEABED class. Its exact `PAC_EXT.txt` member fails
+the frozen source schema before any outcome aggregate: 14,950 of 16,485 rows have 31 fields under
+the 32-field header. The audit does not pad the omitted field or switch source representations.
+Two independent downloads reproduce the same failure; no raster pixel, patch corpus, model, or
+serving path is involved.
+
+The separately frozen
+[dBASE representation audit](experiments/2026-07-22-usgs-ds182-sediment-dbf-support-v1.md)
+preserves that failure and remains exploratory rather than confirmatory. Its exact 16,485-record
+fixed-width schema and Point pairing validate, but only 136 distinct-sample records are inside the
+exact San Francisco reference footprint and zero satisfy all frozen surface, type, and composition
+rules. The endpoint therefore has no valid source group or partition, authorizes no source-quality
+or raster-alignment review, and changes no corpus, model, score, or serving path.
+
+The follow-up
+[Santa Barbara South Coast sediment screen](experiments/2026-07-22-usgs-south-coast-sediment-support-v1.md)
+uses the same frozen endpoint and four exact metadata-only bathymetry footprints. Of 95 distinct
+samples inside the footprint, 26 rows/sites across three source groups satisfy every rule, but zero
+are gravel-bearing and only three are sand-dominant. Zero of three whole-source partitions passes.
+No raster pixel is read and the result cannot authorize alignment, training, promotion, or a local
+habitat/fishing claim.
+
+The subsequent
+[independent endpoint inventory](experiments/2026-07-22-independent-endpoint-source-inventory-v1.md)
+reviews seven official candidate families without admitting them as source manifests. NOAA's
+California substrate layer is an unvalidated compiled hard/soft map; its California-halibut HSM is
+derived from bathymetry and substrate; Digital Coast grab data lacks a California collection and
+cannot sample hard bottom; mapped habitat/cover is not a direct independent endpoint; and the
+DS781/DS182 families are the same support-incomplete evidence already audited. The exact machine
+policy gives all seven candidates empty evidence roles and denies raster pairing, supervised
+training, representation comparison, promotion, and production scoring.
+
+The separate
+[prospective direct-video protocol](experiments/2026-07-22-prospective-seafloor-endpoint-collection-protocol-v1.md)
+is frozen locally but inactive. It is not a dataset and creates no current source authority. If it
+is ever activated after external preregistration and required legal/privacy/safety/data-steward
+review, ordinary fishing-trip logs remain in the catch-validation lane and cannot be backfilled as
+seafloor labels. Only prospectively assigned purpose-built camera deployments can enter that
+endpoint, and a support pass would still require a new raster-alignment and representation
+comparison protocol.

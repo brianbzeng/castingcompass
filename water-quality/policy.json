@@ -1,0 +1,243 @@
+{
+  "schema_version": "castingcompass.water-quality-policy/2.0.0",
+  "policy_version": "castingcompass.water-quality-advisory/official-programs-0.5.0",
+  "meaning": "human-health water-contact advisory overlay; never a catch-probability or seafood-safety signal",
+  "score_contribution": "excluded-pending-frozen-baseline-validation",
+  "freshness": {
+    "maximum_sample_age_days": 10
+  },
+  "sources": {
+    "sfpuc": {
+      "source_type": "sfpuc-sample-status-xml",
+      "agency": "San Francisco Public Utilities Commission",
+      "program_url": "https://www.sfpuc.gov/programs/ocean-and-beach-monitoring",
+      "status_url": "https://webapps.sfpuc.org/sapps/beachesandbay.html",
+      "machine_url": "https://infrastructure.sfwater.org/lims.asmx/getBeaches",
+      "absence_behavior": "neutral-only-with-current-complete-samples"
+    },
+    "california-beachwatch-santa-barbara": {
+      "source_type": "california-beachwatch-action-html",
+      "agency": "California State Water Resources Control Board",
+      "program_url": "https://www.waterboards.ca.gov/water_issues/programs/beaches/beach_surveys/index.html",
+      "status_url": "https://beachwatch.waterboards.ca.gov/public/advisory.php",
+      "machine_url": "https://beachwatch.waterboards.ca.gov/public/advisory.php",
+      "county_id": "14",
+      "county_name": "Santa Barbara",
+      "global_station_ids": ["All_Santa_Barbara_County_Beaches"],
+      "absence_behavior": "unknown"
+    },
+    "california-beachwatch-marin": {
+      "source_type": "california-beachwatch-action-html",
+      "agency": "California State Water Resources Control Board",
+      "program_url": "https://www.waterboards.ca.gov/water_issues/programs/beaches/beach_surveys/index.html",
+      "status_url": "https://beachwatch.waterboards.ca.gov/public/advisory.php",
+      "machine_url": "https://beachwatch.waterboards.ca.gov/public/advisory.php",
+      "station_registry_url": "https://beachwatch.waterboards.ca.gov/public/result.php",
+      "station_registry_machine_url": "https://beachwatch.waterboards.ca.gov/public/getstation.php",
+      "county_id": "6",
+      "county_name": "Marin",
+      "global_station_ids": ["All_Marin_County_Beaches"],
+      "absence_behavior": "unknown"
+    },
+    "california-beachwatch-east-bay-parks": {
+      "source_type": "california-beachwatch-action-html",
+      "agency": "California State Water Resources Control Board",
+      "program_url": "https://www.waterboards.ca.gov/water_issues/programs/beaches/beach_surveys/index.html",
+      "status_url": "https://beachwatch.waterboards.ca.gov/public/advisory.php",
+      "machine_url": "https://beachwatch.waterboards.ca.gov/public/advisory.php",
+      "station_registry_url": "https://beachwatch.waterboards.ca.gov/public/result.php",
+      "station_registry_machine_url": "https://beachwatch.waterboards.ca.gov/public/getstation.php",
+      "county_id": "19",
+      "county_name": "East Bay Parks District",
+      "global_station_ids": [],
+      "absence_behavior": "unknown"
+    },
+    "san-mateo-county-health": {
+      "source_type": "san-mateo-current-posting-html",
+      "agency": "San Mateo County Health",
+      "program_url": "https://www.smchealth.org/node/1201",
+      "status_url": "https://www.smchealth.org/node/1201",
+      "machine_url": "https://www.smchealth.org/node/1201",
+      "station_registry_url": "https://data.smcgov.org/Environment/Beach-and-Creek-Monitoring-Results/kpd9-xf4h/about",
+      "station_registry_machine_url": "https://datahub.smcgov.org/api/id/kpd9-xf4h.json",
+      "absence_behavior": "unknown",
+      "station_aliases": {
+        "AB4111": ["Sharp Park Beach #6", "Sharp Park #6"],
+        "AB4112": ["Sharp Park Beach #3", "Sharp Park #3"],
+        "AB4113": ["Rockaway Beach"],
+        "AB4114": ["Calera Creek"],
+        "AB4116": ["Linda Mar #5 (at San Pedro Creek)", "Linda Mar Beach #5"],
+        "AB41141": ["Linda Mar #7 (S. pump station)", "Linda Mar Beach #7"],
+        "AB4117": ["San Pedro Creek"],
+        "AB41110": ["Montara State Beach", "Montara Beach"],
+        "AB41111": ["Martini Creek"],
+        "AB41117": ["Pillar Point #5 (Capistrano Beach)", "Pillar Point #5"],
+        "AB41116": ["Pillar Point #7 (Surf-West Point Ave)", "Pillar Point #7"],
+        "AB41115": ["Pillar Point #8 (Mavericks Parking lot)", "Pillar Point #8"],
+        "AB41140": ["Pillar Point #9 (Outer Harbor)", "Pillar Point #9"],
+        "AB41120": ["Surfers Beach", "Surfer's Beach"],
+        "AB41128": ["Francis State Beach", "Francis Beach"],
+        "AB18762": ["Coyote Point County Park", "Coyote Point"],
+        "AB18761": ["Oyster Point Marina", "Oyster Point"]
+      }
+    }
+  },
+  "site_mappings": {
+    "baker-beach": {
+      "source_id": "sfpuc",
+      "station_ids": ["4608", "4609", "4610"]
+    },
+    "china-beach": {
+      "source_id": "sfpuc",
+      "station_ids": ["4607"]
+    },
+    "crane-cove-park": {
+      "source_id": "sfpuc",
+      "station_ids": ["4620"]
+    },
+    "crissy-field-east-beach": {
+      "source_id": "sfpuc",
+      "station_ids": ["4612"]
+    },
+    "ocean-beach-north": {
+      "source_id": "sfpuc",
+      "station_ids": ["4604", "4605"]
+    },
+    "ocean-beach-south": {
+      "source_id": "sfpuc",
+      "station_ids": ["4602"]
+    },
+    "pacifica-municipal-pier": {
+      "source_id": "san-mateo-county-health",
+      "station_ids": ["AB4111", "AB4112"]
+    },
+    "sharp-park-beach": {
+      "source_id": "san-mateo-county-health",
+      "station_ids": ["AB4111", "AB4112"]
+    },
+    "rockaway-beach": {
+      "source_id": "san-mateo-county-health",
+      "station_ids": ["AB4113", "AB4114"]
+    },
+    "pacifica-state-beach": {
+      "source_id": "san-mateo-county-health",
+      "station_ids": ["AB4116", "AB41141", "AB4117"]
+    },
+    "montara-state-beach": {
+      "source_id": "san-mateo-county-health",
+      "station_ids": ["AB41110", "AB41111"]
+    },
+    "pillar-point-west-jetty": {
+      "source_id": "san-mateo-county-health",
+      "station_ids": ["AB41117", "AB41116", "AB41115"]
+    },
+    "pillar-point-east-jetty": {
+      "source_id": "san-mateo-county-health",
+      "station_ids": ["AB41140"]
+    },
+    "surfers-beach": {
+      "source_id": "san-mateo-county-health",
+      "station_ids": ["AB41120"]
+    },
+    "francis-state-beach": {
+      "source_id": "san-mateo-county-health",
+      "station_ids": ["AB41128"]
+    },
+    "coyote-point-jetty": {
+      "source_id": "san-mateo-county-health",
+      "station_ids": ["AB18762"]
+    },
+    "oyster-point-fishing-pier": {
+      "source_id": "san-mateo-county-health",
+      "station_ids": ["AB18761"]
+    },
+    "drakes-beach": {
+      "source_id": "california-beachwatch-marin",
+      "station_ids": ["DRAKES BEACH"]
+    },
+    "bolinas-beach": {
+      "source_id": "california-beachwatch-marin",
+      "station_ids": ["BOLINAS"]
+    },
+    "stinson-beach": {
+      "source_id": "california-beachwatch-marin",
+      "station_ids": ["STINSON BEACH - CENTRAL", "STINSON BEACH - NORTH", "STINSON BEACH - SOUTH"]
+    },
+    "muir-beach": {
+      "source_id": "california-beachwatch-marin",
+      "station_ids": ["MUIR BEACH - CENTRAL", "MUIR BEACH - NORTH", "MUIR BEACH - SOUTH"]
+    },
+    "rodeo-beach": {
+      "source_id": "california-beachwatch-marin",
+      "station_ids": ["RODEO BEACH - CENTRAL", "RODEO BEACH - NORTH", "RODEO BEACH - SOUTH"]
+    },
+    "mcnears-beach-pier": {
+      "source_id": "california-beachwatch-marin",
+      "station_ids": ["McNEARS BEACH"]
+    },
+    "keller-beach": {
+      "source_id": "california-beachwatch-east-bay-parks",
+      "station_ids": ["Keller North Beach", "Keller South Beach"]
+    },
+    "crown-memorial-state-beach": {
+      "source_id": "california-beachwatch-east-bay-parks",
+      "station_ids": ["Crown 2001 Shoreline Dr.", "Crown Bath House", "Crown Bird Sanctuary", "Crown Crab Cove", "Crown Sunset Rd.", "Crown Windsurfer Corner"]
+    },
+    "gaviota-state-park-beach": {
+      "source_id": "california-beachwatch-santa-barbara",
+      "station_ids": ["WP0000079"]
+    },
+    "refugio-state-beach": {
+      "source_id": "california-beachwatch-santa-barbara",
+      "station_ids": ["WP0000183"]
+    },
+    "el-capitan-state-beach": {
+      "source_id": "california-beachwatch-santa-barbara",
+      "station_ids": ["WP0000013"]
+    },
+    "haskells-beach": {
+      "source_id": "california-beachwatch-santa-barbara",
+      "station_ids": ["WP0000186"]
+    },
+    "goleta-beach": {
+      "source_id": "california-beachwatch-santa-barbara",
+      "station_ids": ["WP0000037"]
+    },
+    "arroyo-burro-beach": {
+      "source_id": "california-beachwatch-santa-barbara",
+      "station_ids": ["WP0000147"]
+    },
+    "mesa-lane-beach": {
+      "source_id": "california-beachwatch-santa-barbara",
+      "station_ids": []
+    },
+    "leadbetter-beach": {
+      "source_id": "california-beachwatch-santa-barbara",
+      "station_ids": ["WP0000007"]
+    },
+    "santa-barbara-harbor-breakwater": {
+      "source_id": "california-beachwatch-santa-barbara",
+      "station_ids": []
+    },
+    "stearns-wharf": {
+      "source_id": "california-beachwatch-santa-barbara",
+      "station_ids": []
+    },
+    "east-beach-santa-barbara": {
+      "source_id": "california-beachwatch-santa-barbara",
+      "station_ids": ["WP0000083", "WP0000085"]
+    },
+    "summerland-beach-lookout-park": {
+      "source_id": "california-beachwatch-santa-barbara",
+      "station_ids": ["WP0000188"]
+    },
+    "carpinteria-state-beach": {
+      "source_id": "california-beachwatch-santa-barbara",
+      "station_ids": ["WP0000180"]
+    },
+    "rincon-beach-park": {
+      "source_id": "california-beachwatch-santa-barbara",
+      "station_ids": ["WP0000123"]
+    }
+  }
+}

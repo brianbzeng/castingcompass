@@ -39,6 +39,9 @@ import { API_ROUTE_PATTERNS } from "./route-policy.ts";
 
 const MAX_PHOTO_BYTES = 5 * 1024 * 1024;
 const MAX_MULTIPART_BYTES = MAX_PHOTO_BYTES + 1024 * 1024;
+const MAX_TRIP_PHOTO_RESERVATION_ATTEMPTS = 8;
+const TRIP_PHOTO_RESERVATION_GRACE_MS = 15 * 60 * 1000;
+const TRIP_PHOTO_RESERVATION_LEASE_MS = 5 * 60 * 1000;
 const REPORTER_COOKIE = "cc_reporter";
 const ALLOWED_IMAGE_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
 const ALLOWED_MODES = new Set(["shore", "beach", "pier", "jetty", "kayak", "boat", "other"]);
@@ -281,6 +284,7 @@ export interface TripRow {
   score_influenced_choice: number | null;
   prediction_metadata_json: string | null;
   photo_key: string | null;
+  photo_key_hash: string | null;
   photo_content_type: string | null;
   photo_size_bytes: number | null;
   created_at: string;
@@ -344,6 +348,7 @@ interface NewTripRecord {
   scoreInfluencedChoice: boolean | null;
   predictionMetadataJson: string | null;
   photoKey: string | null;
+  photoKeyHash: string | null;
   photoContentType: string | null;
   photoSizeBytes: number | null;
   createdAt: string;
@@ -382,6 +387,7 @@ interface CompletionRecord {
   notes: string | null;
   consentAt: string;
   photoKey: string | null;
+  photoKeyHash: string | null;
   photoContentType: string | null;
   photoSizeBytes: number | null;
   updatedAt: string;
@@ -548,6 +554,17 @@ interface ValidationCollectionIdentity {
   effortSegmentId: string;
 }
 
+interface TripPhotoUploadReservation {
+  id: string;
+  tripId: string;
+  accountId: string;
+  ownerSubjectHash: string;
+  objectKey: string;
+  objectKeyHash: string;
+  availableAt: string;
+  createdAt: string;
+}
+
 export interface TripStore {
   initialize(): Promise<void>;
   assertSubmissionAllowed(reporterKeyHash: string, now: Date): Promise<void>;
@@ -557,26 +574,45 @@ export interface TripStore {
     feasibilityStart?: FeasibilityEventRecord | null,
     feasibilityRecruitment?: FeasibilityRecruitmentRecord | null,
   ): Promise<TripRow>;
-  getTrip(id: string): Promise<TripRow | null>;
-  getValidationEnrollment?(tripId: string): Promise<StoredValidationEnrollment | null>;
-  getForecastImpression?(tripId: string): Promise<StoredForecastImpression | null>;
+  getTrip(id: string, accountId: string | null): Promise<TripRow | null>;
+  isTripIdentityReserved(id: string): Promise<boolean>;
+  reservePhotoUpload(reservation: TripPhotoUploadReservation): Promise<boolean>;
+  releasePhotoUploadReservation(
+    tripId: string,
+    objectKey: string,
+    objectKeyHash: string,
+  ): Promise<boolean>;
+  getValidationEnrollment?(
+    tripId: string,
+    accountId: string | null,
+  ): Promise<StoredValidationEnrollment | null>;
+  getForecastImpression?(
+    tripId: string,
+    accountId: string | null,
+  ): Promise<StoredForecastImpression | null>;
   getRecruitmentEvent?(
     participantGroupId: string,
     activation: ValidationActivationRecord,
+    accountId: string | null,
   ): Promise<StoredRecruitmentEvent | null>;
   getFeasibilityActivation?(activationId: string): Promise<StoredFeasibilityActivation | null>;
   getFeasibilityRecruitment?(
     activationId: string,
     participantGroupId: string,
+    accountId: string | null,
   ): Promise<StoredFeasibilityRecruitment | null>;
   getFeasibilityRecruitmentCampaign?(
     activationId: string,
     campaignId: string,
   ): Promise<StoredFeasibilityRecruitmentCampaign | null>;
-  getFeasibilityStart?(tripId: string): Promise<StoredFeasibilityStart | null>;
+  getFeasibilityStart?(
+    tripId: string,
+    accountId: string | null,
+  ): Promise<StoredFeasibilityStart | null>;
   completeTrip(
     id: string,
     tokenHash: string,
+    accountId: string | null,
     completion: CompletionRecord,
     provenance?: ValidationProvenanceRecord,
     feasibilityTerminal?: FeasibilityEventRecord | null,
@@ -584,6 +620,7 @@ export interface TripStore {
   cancelTrip?(
     id: string,
     tokenHash: string,
+    accountId: string | null,
     timestamp: string,
     feasibilityTerminal: FeasibilityEventRecord | null,
   ): Promise<boolean>;
@@ -597,604 +634,6 @@ export interface TripHandlerOptions {
   onTripCompleted?: (trip: TripRow) => void;
 }
 
-const CREATE_TRIPS_SQL = `CREATE TABLE IF NOT EXISTS trips (
-  id TEXT PRIMARY KEY NOT NULL,
-  user_id TEXT,
-  status TEXT NOT NULL,
-  source TEXT NOT NULL,
-  site_id TEXT NOT NULL,
-  started_at TEXT NOT NULL,
-  ended_at TEXT,
-  mode TEXT NOT NULL,
-  fishing_method TEXT,
-  gear TEXT,
-  gear_profile_id TEXT,
-  rod TEXT,
-  reel TEXT,
-  bait_lure TEXT,
-  rig TEXT,
-  angler_count INTEGER NOT NULL,
-  angler_hours REAL,
-  keeper_count INTEGER,
-  short_released_count INTEGER,
-  halibut_encounters INTEGER,
-  no_catch INTEGER,
-  other_catch_count INTEGER,
-  other_species TEXT,
-  observations_json TEXT,
-  observation_contract_version TEXT,
-  taxon_catalog_version TEXT,
-  target_taxon_id TEXT NOT NULL DEFAULT 'california-halibut',
-  contract_status TEXT,
-  taxon_observations_json TEXT,
-  outcome_class TEXT,
-  target_encounter_count INTEGER,
-  any_fish_encounter_count INTEGER,
-  target_identification_confidence TEXT,
-  notes TEXT,
-  consent INTEGER NOT NULL,
-  consent_at TEXT,
-  moderation_status TEXT NOT NULL,
-  reporter_key_hash TEXT NOT NULL,
-  referral_code TEXT,
-  token_hash TEXT,
-  idempotency_key_hash TEXT,
-  opportunity_window_id TEXT,
-  opportunity_score REAL,
-  habitat_score REAL,
-  seasonality_score REAL,
-  conditions_score REAL,
-  fishability_score REAL,
-  model_version TEXT,
-  score_influenced_choice INTEGER,
-  prediction_metadata_json TEXT,
-  photo_key TEXT,
-  photo_content_type TEXT,
-  photo_size_bytes INTEGER,
-  created_at TEXT NOT NULL,
-  updated_at TEXT NOT NULL,
-  completed_at TEXT,
-  ai_review_status TEXT,
-  ai_review_json TEXT,
-  ai_review_model TEXT,
-  ai_reviewed_at TEXT,
-  CONSTRAINT trips_status_check CHECK (status in ('active', 'completed')),
-  CONSTRAINT trips_source_check CHECK (source in ('live', 'past_report')),
-  CONSTRAINT trips_moderation_status_check CHECK (moderation_status in ('pending', 'approved', 'rejected')),
-  CONSTRAINT trips_angler_count_check CHECK (angler_count between 1 and 12),
-  CONSTRAINT trips_contract_status_check CHECK (contract_status IS NULL OR contract_status in ('valid', 'legacy_unverified', 'rejected')),
-  CONSTRAINT trips_outcome_class_check CHECK (outcome_class IS NULL OR outcome_class in ('target_encountered', 'non_target_only', 'no_fish')),
-  CONSTRAINT trips_target_encounter_count_check CHECK (target_encounter_count IS NULL OR target_encounter_count >= 0),
-  CONSTRAINT trips_any_fish_encounter_count_check CHECK (any_fish_encounter_count IS NULL OR any_fish_encounter_count >= 0),
-  CONSTRAINT trips_target_identification_confidence_check CHECK (target_identification_confidence IS NULL OR target_identification_confidence in ('verified', 'self_reported', 'uncertain', 'unresolved', 'not_observed')),
-  CONSTRAINT trips_target_taxon_check CHECK (target_taxon_id = 'california-halibut'),
-  CONSTRAINT trips_species_contract_coherence_check CHECK (
-    (status != 'completed' OR contract_status IS NOT NULL)
-    AND (contract_status IS NOT NULL OR (
-      observation_contract_version IS NULL
-      AND taxon_catalog_version IS NULL
-      AND taxon_observations_json IS NULL
-      AND outcome_class IS NULL
-      AND target_encounter_count IS NULL
-      AND any_fish_encounter_count IS NULL
-      AND target_identification_confidence IS NULL
-    ))
-    AND (contract_status != 'legacy_unverified' OR (
-      observation_contract_version IS NULL
-      AND taxon_catalog_version IS NULL
-      AND taxon_observations_json IS NULL
-      AND outcome_class IS NULL
-      AND target_encounter_count IS NULL
-      AND any_fish_encounter_count IS NULL
-      AND target_identification_confidence IS NULL
-    ))
-    AND (contract_status != 'valid' OR (
-      status = 'completed'
-      AND observation_contract_version = 'castingcompass.observation/2.0.0'
-      AND taxon_catalog_version = 'castingcompass.taxa/1.0.0'
-      AND target_taxon_id = 'california-halibut'
-      AND typeof(angler_count) = 'integer'
-      AND angler_count BETWEEN 1 AND 12
-      AND typeof(angler_hours) IN ('integer', 'real')
-      AND angler_hours > 0
-      AND angler_hours <= 432
-      AND typeof(keeper_count) = 'integer'
-      AND typeof(short_released_count) = 'integer'
-      AND typeof(halibut_encounters) = 'integer'
-      AND typeof(no_catch) = 'integer'
-      AND typeof(other_catch_count) = 'integer'
-      AND typeof(target_encounter_count) = 'integer'
-      AND typeof(any_fish_encounter_count) = 'integer'
-      AND keeper_count BETWEEN 0 AND 25
-      AND short_released_count BETWEEN 0 AND 25
-      AND keeper_count + short_released_count <= 40
-      AND other_catch_count BETWEEN 0 AND 100
-      AND no_catch IN (0, 1)
-      AND typeof(mode) = 'text'
-      AND mode IN ('shore', 'beach', 'pier', 'jetty', 'kayak', 'boat', 'other')
-      AND typeof(started_at) = 'text'
-      AND typeof(ended_at) = 'text'
-      AND length(started_at) = 24
-      AND length(ended_at) = 24
-      AND strftime('%Y-%m-%dT%H:%M:%fZ', started_at) = started_at
-      AND strftime('%Y-%m-%dT%H:%M:%fZ', ended_at) = ended_at
-      AND julianday(ended_at) > julianday(started_at)
-      AND taxon_observations_json IS NOT NULL
-      AND json_valid(taxon_observations_json) = 1
-      AND outcome_class IS NOT NULL
-      AND target_encounter_count IS NOT NULL
-      AND any_fish_encounter_count IS NOT NULL
-      AND target_identification_confidence IS NOT NULL
-      AND target_encounter_count = keeper_count + short_released_count
-      AND halibut_encounters = target_encounter_count
-      AND any_fish_encounter_count = target_encounter_count + other_catch_count
-      AND target_encounter_count <= any_fish_encounter_count
-      AND target_identification_confidence = CASE
-        WHEN target_encounter_count > 0 THEN 'self_reported'
-        ELSE 'not_observed'
-      END
-      AND no_catch = CASE WHEN any_fish_encounter_count = 0 THEN 1 ELSE 0 END
-      AND outcome_class = CASE
-        WHEN target_encounter_count > 0 THEN 'target_encountered'
-        WHEN any_fish_encounter_count > 0 THEN 'non_target_only'
-        ELSE 'no_fish'
-      END
-      AND taxon_observations_json = CASE
-        WHEN other_catch_count > 0 THEN json_array(
-          json_object(
-            'taxon_id', 'california-halibut',
-            'encounter_count', target_encounter_count,
-            'retained_count', keeper_count,
-            'released_count', short_released_count,
-            'disposition_unknown_count', 0,
-            'identification_confidence', target_identification_confidence,
-            'identification_basis', CASE WHEN target_encounter_count > 0 THEN 'angler-report' ELSE 'not-observed' END
-          ),
-          json_object(
-            'taxon_id', 'unresolved-fish',
-            'encounter_count', other_catch_count,
-            'retained_count', 0,
-            'released_count', 0,
-            'disposition_unknown_count', other_catch_count,
-            'identification_confidence', 'unresolved',
-            'identification_basis', 'unresolved'
-          )
-        )
-        ELSE json_array(json_object(
-          'taxon_id', 'california-halibut',
-          'encounter_count', target_encounter_count,
-          'retained_count', keeper_count,
-          'released_count', short_released_count,
-          'disposition_unknown_count', 0,
-          'identification_confidence', target_identification_confidence,
-          'identification_basis', CASE WHEN target_encounter_count > 0 THEN 'angler-report' ELSE 'not-observed' END
-        ))
-      END
-    ))
-  ),
-  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL
-)`;
-
-const CREATE_FORECAST_IMPRESSIONS_SQL = `CREATE TABLE IF NOT EXISTS forecast_impressions (
-  id TEXT PRIMARY KEY NOT NULL,
-  trip_id TEXT NOT NULL UNIQUE,
-  attestation_index_version TEXT NOT NULL,
-  snapshot_sha256 TEXT NOT NULL,
-  site_catalog_sha256 TEXT NOT NULL,
-  target_taxon_id TEXT NOT NULL CHECK (target_taxon_id = 'california-halibut'),
-  taxon_catalog_version TEXT NOT NULL,
-  observation_contract_version TEXT NOT NULL,
-  model_run_contract_version TEXT NOT NULL,
-  opportunity_contract_version TEXT NOT NULL,
-  scoring_system_kind TEXT NOT NULL,
-  scoring_system_version TEXT NOT NULL,
-  scoring_system_sha256 TEXT NOT NULL,
-  window_id TEXT NOT NULL,
-  site_id TEXT NOT NULL,
-  window_start TEXT NOT NULL,
-  window_end TEXT NOT NULL,
-  opportunity_score REAL NOT NULL CHECK (opportunity_score BETWEEN 0 AND 100),
-  habitat_score REAL NOT NULL CHECK (habitat_score BETWEEN 0 AND 100),
-  seasonality_score REAL NOT NULL CHECK (seasonality_score BETWEEN 0 AND 100),
-  conditions_score REAL NOT NULL CHECK (conditions_score BETWEEN 0 AND 100),
-  fishability_score REAL NOT NULL CHECK (fishability_score BETWEEN 0 AND 100),
-  attested_at TEXT NOT NULL,
-  FOREIGN KEY (trip_id) REFERENCES trips(id) ON DELETE CASCADE,
-  UNIQUE (id, trip_id),
-  CHECK (attestation_index_version = 'castingcompass.opportunity-attestation-index/1.0.0'
-    AND target_taxon_id = 'california-halibut'
-    AND taxon_catalog_version = 'castingcompass.taxa/1.0.0'
-    AND observation_contract_version = 'castingcompass.observation/2.0.0'
-    AND model_run_contract_version = 'castingcompass.model-run/2.0.0'
-    AND opportunity_contract_version = 'castingcompass.opportunity/2.0.0'
-    AND scoring_system_kind = 'heuristic-configuration'
-    AND scoring_system_version = 'heuristic-' || target_taxon_id || '-' || scoring_system_sha256),
-  CHECK (length(snapshot_sha256) = 64 AND snapshot_sha256 NOT GLOB '*[^a-f0-9]*'),
-  CHECK (length(site_catalog_sha256) = 64 AND site_catalog_sha256 NOT GLOB '*[^a-f0-9]*'),
-  CHECK (length(scoring_system_sha256) = 64 AND scoring_system_sha256 NOT GLOB '*[^a-f0-9]*'),
-  CHECK (length(window_start) = 24
-    AND strftime('%Y-%m-%dT%H:%M:%fZ', window_start) = window_start
-    AND length(window_end) = 24
-    AND strftime('%Y-%m-%dT%H:%M:%fZ', window_end) = window_end
-    AND length(attested_at) = 24
-    AND strftime('%Y-%m-%dT%H:%M:%fZ', attested_at) = attested_at
-    AND julianday(window_end) > julianday(window_start)
-    AND abs((julianday(window_end) - julianday(window_start)) * 24.0 - 2.0) < 0.000001)
-)`;
-
-const CREATE_TRIP_VALIDATION_PROVENANCE_SQL = `CREATE TABLE IF NOT EXISTS trip_validation_provenance (
-  id TEXT PRIMARY KEY NOT NULL,
-  trip_id TEXT NOT NULL,
-  event_type TEXT NOT NULL CHECK (event_type IN ('enrollment', 'completion', 'retrospective_submission', 'evidence_exclusion', 'legacy_context')),
-  collection_contract_version TEXT NOT NULL,
-  validation_protocol_id TEXT,
-  activation_manifest_sha256 TEXT,
-  activated_at TEXT,
-  activation_scoring_system_sha256 TEXT,
-  cohort_id TEXT NOT NULL,
-  source_role TEXT NOT NULL CHECK (source_role IN ('context_only', 'prospective_secondary')),
-  participant_group_id TEXT,
-  recruitment_frame_id TEXT,
-  recruitment_source_id TEXT NOT NULL,
-  recruitment_event_contract_version TEXT,
-  recruitment_event_at TEXT,
-  recruitment_event_sha256 TEXT,
-  community_approval_sha256 TEXT,
-  assignment_id TEXT,
-  source_record_sha256 TEXT,
-  effort_segment_id TEXT,
-  effort_unit TEXT,
-  attempt_count INTEGER,
-  target_taxon_id TEXT,
-  segment_start_at TEXT,
-  segment_end_at TEXT,
-  mode_at_completion TEXT,
-  angler_count INTEGER,
-  duration_milliseconds INTEGER,
-  person_milliseconds INTEGER,
-  completion_event_contract_version TEXT,
-  completion_event_at TEXT,
-  completion_consent_version TEXT,
-  completion_consented_at TEXT,
-  completion_primary_target_confirmed INTEGER,
-  completion_complete_attempt_confirmed INTEGER,
-  completion_event_sha256 TEXT,
-  incentive_policy_id TEXT NOT NULL,
-  selection_method TEXT NOT NULL CHECK (selection_method IN ('organic_score_visible', 'organic_unverified', 'retrospective_self_report', 'legacy_unknown')),
-  target_intent TEXT NOT NULL CHECK (target_intent IN ('california-halibut-primary-full-trip', 'legacy_unknown')),
-  primary_target_confirmed INTEGER CHECK (primary_target_confirmed IS NULL OR primary_target_confirmed IN (0, 1)),
-  complete_attempt_confirmed INTEGER CHECK (complete_attempt_confirmed IS NULL OR complete_attempt_confirmed IN (0, 1)),
-  mode_at_enrollment TEXT CHECK (mode_at_enrollment IS NULL OR mode_at_enrollment IN ('shore', 'beach', 'pier', 'jetty', 'kayak', 'boat', 'other')),
-  consent_version TEXT,
-  consented_at TEXT,
-  score_influenced_choice INTEGER CHECK (score_influenced_choice IS NULL OR score_influenced_choice IN (0, 1)),
-  attestation_status TEXT NOT NULL CHECK (attestation_status IN ('verified', 'unverified_missing', 'unverified_mismatch', 'unverified_asset', 'not_applicable_retrospective', 'invalidated_after_edit', 'legacy_unverified')),
-  forecast_impression_id TEXT,
-  completion_attested_at TEXT,
-  evidence_status TEXT NOT NULL CHECK (evidence_status IN ('context_only', 'secondary_pending_review')),
-  exclusion_reason TEXT,
-  created_at TEXT NOT NULL,
-  FOREIGN KEY (trip_id) REFERENCES trips(id) ON DELETE CASCADE,
-  FOREIGN KEY (forecast_impression_id, trip_id) REFERENCES forecast_impressions(id, trip_id) ON DELETE CASCADE,
-  CHECK (
-    (validation_protocol_id IS NULL
-      AND activation_manifest_sha256 IS NULL
-      AND activated_at IS NULL
-      AND activation_scoring_system_sha256 IS NULL)
-    OR
-    (validation_protocol_id = 'california-halibut-site-window-v1'
-      AND length(activation_manifest_sha256) = 64
-      AND activation_manifest_sha256 NOT GLOB '*[^a-f0-9]*'
-      AND activated_at IS NOT NULL
-      AND length(activated_at) = 24
-      AND strftime('%Y-%m-%dT%H:%M:%fZ', activated_at) = activated_at
-      AND length(activation_scoring_system_sha256) = 64
-      AND activation_scoring_system_sha256 NOT GLOB '*[^a-f0-9]*'
-      AND activated_at < '2026-08-01T00:00:00.000Z'
-      AND julianday(activated_at) < julianday(created_at))
-  ),
-  CHECK ((attestation_status = 'verified' AND forecast_impression_id IS NOT NULL)
-    OR (attestation_status != 'verified' AND forecast_impression_id IS NULL)),
-  CHECK (collection_contract_version = 'castingcompass.validation-collection/1.0.0'
-    AND length(created_at) = 24
-    AND strftime('%Y-%m-%dT%H:%M:%fZ', created_at) = created_at
-    AND (consented_at IS NULL OR (length(consented_at) = 24
-      AND strftime('%Y-%m-%dT%H:%M:%fZ', consented_at) = consented_at))
-    AND (completion_attested_at IS NULL OR (length(completion_attested_at) = 24
-      AND strftime('%Y-%m-%dT%H:%M:%fZ', completion_attested_at) = completion_attested_at))),
-  CHECK ((participant_group_id IS NULL
-      AND recruitment_frame_id IS NULL
-      AND recruitment_event_contract_version IS NULL
-      AND recruitment_event_at IS NULL
-      AND recruitment_event_sha256 IS NULL
-      AND community_approval_sha256 IS NULL)
-    OR (length(participant_group_id) = 76
-      AND substr(participant_group_id, 1, 12) = 'participant-'
-      AND substr(participant_group_id, 13) NOT GLOB '*[^a-f0-9]*'
-      AND recruitment_frame_id = 'california-halibut-site-window-recruitment-v1'
-      AND recruitment_source_id IN ('castingcompass-organic-product', 'direct-opt-in-research-invite', 'admin-approved-community-prospective')
-      AND recruitment_event_contract_version = 'castingcompass.recruitment-event/1.0.0'
-      AND length(recruitment_event_at) = 24
-      AND strftime('%Y-%m-%dT%H:%M:%fZ', recruitment_event_at) = recruitment_event_at
-      AND julianday(recruitment_event_at) <= julianday(created_at)
-      AND length(recruitment_event_sha256) = 64
-      AND recruitment_event_sha256 NOT GLOB '*[^a-f0-9]*'
-      AND ((recruitment_source_id = 'admin-approved-community-prospective'
-          AND length(community_approval_sha256) = 64
-          AND community_approval_sha256 NOT GLOB '*[^a-f0-9]*')
-        OR (recruitment_source_id != 'admin-approved-community-prospective'
-          AND community_approval_sha256 IS NULL)))),
-  CHECK ((assignment_id IS NULL
-      AND source_record_sha256 IS NULL
-      AND effort_segment_id IS NULL
-      AND effort_unit IS NULL
-      AND attempt_count IS NULL
-      AND target_taxon_id IS NULL
-      AND segment_start_at IS NULL)
-    OR (length(assignment_id) = 75
-      AND substr(assignment_id, 1, 11) = 'assignment-'
-      AND substr(assignment_id, 12) NOT GLOB '*[^a-f0-9]*'
-      AND length(source_record_sha256) = 64
-      AND source_record_sha256 NOT GLOB '*[^a-f0-9]*'
-      AND length(effort_segment_id) = 71
-      AND substr(effort_segment_id, 1, 7) = 'effort-'
-      AND substr(effort_segment_id, 8) NOT GLOB '*[^a-f0-9]*'
-      AND effort_unit = 'whole-trip-group-attempt'
-      AND attempt_count = 1
-      AND target_taxon_id = 'california-halibut'
-      AND length(segment_start_at) = 24
-      AND strftime('%Y-%m-%dT%H:%M:%fZ', segment_start_at) = segment_start_at)),
-  CHECK ((segment_end_at IS NULL
-      AND mode_at_completion IS NULL
-      AND angler_count IS NULL
-      AND duration_milliseconds IS NULL
-      AND person_milliseconds IS NULL
-      AND completion_event_contract_version IS NULL
-      AND completion_event_at IS NULL
-      AND completion_consent_version IS NULL
-      AND completion_consented_at IS NULL
-      AND completion_primary_target_confirmed IS NULL
-      AND completion_complete_attempt_confirmed IS NULL
-      AND completion_event_sha256 IS NULL)
-    OR (assignment_id IS NOT NULL
-      AND length(segment_end_at) = 24
-      AND strftime('%Y-%m-%dT%H:%M:%fZ', segment_end_at) = segment_end_at
-      AND julianday(segment_end_at) > julianday(segment_start_at)
-      AND mode_at_completion IN ('shore', 'beach', 'pier', 'jetty', 'kayak', 'boat', 'other')
-      AND angler_count BETWEEN 1 AND 12
-      AND duration_milliseconds BETWEEN 60000 AND 129600000
-      AND CAST(ROUND((julianday(segment_end_at) - julianday(segment_start_at)) * 86400000.0) AS INTEGER) = duration_milliseconds
-      AND person_milliseconds = duration_milliseconds * angler_count
-      AND completion_event_contract_version = 'castingcompass.validation-completion-event/1.0.0'
-      AND length(completion_event_at) = 24
-      AND strftime('%Y-%m-%dT%H:%M:%fZ', completion_event_at) = completion_event_at
-      AND julianday(completion_event_at) >= julianday(segment_end_at)
-      AND completion_consent_version = 'castingcompass.trip-validation-consent/1.0.0'
-      AND completion_consented_at = completion_event_at
-      AND completion_primary_target_confirmed = 1
-      AND completion_complete_attempt_confirmed = 1
-      AND length(completion_event_sha256) = 64
-      AND completion_event_sha256 NOT GLOB '*[^a-f0-9]*'
-      AND completion_event_at = completion_attested_at
-      AND completion_consent_version = consent_version
-      AND completion_consented_at = consented_at
-      AND completion_primary_target_confirmed = primary_target_confirmed
-      AND completion_complete_attempt_confirmed = complete_attempt_confirmed)),
-  CHECK ((source_role = 'prospective_secondary'
-      AND validation_protocol_id IS NOT NULL
-      AND participant_group_id IS NOT NULL
-      AND recruitment_frame_id = 'california-halibut-site-window-recruitment-v1'
-      AND recruitment_event_contract_version = 'castingcompass.recruitment-event/1.0.0'
-      AND recruitment_event_sha256 IS NOT NULL
-      AND assignment_id IS NOT NULL
-      AND source_record_sha256 IS NOT NULL
-      AND effort_segment_id IS NOT NULL
-      AND effort_unit = 'whole-trip-group-attempt'
-      AND attempt_count = 1
-      AND target_taxon_id = 'california-halibut'
-      AND segment_start_at IS NOT NULL
-      AND cohort_id = 'california-halibut-site-window-observational-secondary-v1'
-      AND incentive_policy_id = 'none-v1'
-      AND selection_method = 'organic_score_visible'
-      AND target_intent = 'california-halibut-primary-full-trip'
-      AND primary_target_confirmed = 1
-      AND score_influenced_choice IS NOT NULL
-      AND mode_at_enrollment IN ('shore', 'beach', 'pier', 'jetty')
-      AND attestation_status = 'verified'
-      AND evidence_status = 'secondary_pending_review')
-    OR (source_role = 'context_only' AND evidence_status = 'context_only')),
-  CHECK (event_type != 'enrollment' OR source_role != 'context_only' OR participant_group_id IS NULL),
-  CHECK (event_type != 'enrollment' OR segment_end_at IS NULL),
-  CHECK (event_type != 'completion' OR assignment_id IS NULL OR completion_event_sha256 IS NOT NULL),
-  CHECK ((event_type = 'enrollment'
-      AND primary_target_confirmed = 1
-      AND complete_attempt_confirmed IS NULL
-      AND consent_version = 'castingcompass.trip-validation-consent/1.0.0'
-      AND consented_at IS NOT NULL
-      AND completion_attested_at IS NULL)
-    OR (event_type = 'completion'
-      AND primary_target_confirmed = 1
-      AND complete_attempt_confirmed = 1
-      AND consent_version = 'castingcompass.trip-validation-consent/1.0.0'
-      AND consented_at = created_at
-      AND completion_attested_at = created_at)
-    OR (event_type = 'retrospective_submission'
-      AND validation_protocol_id IS NULL
-      AND source_role = 'context_only'
-      AND selection_method = 'retrospective_self_report'
-      AND primary_target_confirmed = 1
-      AND complete_attempt_confirmed = 1
-      AND attestation_status = 'not_applicable_retrospective'
-      AND consented_at = created_at
-      AND completion_attested_at = created_at)
-    OR (event_type = 'evidence_exclusion'
-      AND validation_protocol_id IS NULL
-      AND activation_manifest_sha256 IS NULL
-      AND activated_at IS NULL
-      AND activation_scoring_system_sha256 IS NULL
-      AND source_role = 'context_only'
-      AND participant_group_id IS NULL
-      AND recruitment_frame_id IS NULL
-      AND recruitment_event_contract_version IS NULL
-      AND recruitment_event_at IS NULL
-      AND recruitment_event_sha256 IS NULL
-      AND community_approval_sha256 IS NULL
-      AND assignment_id IS NULL
-      AND source_record_sha256 IS NULL
-      AND effort_segment_id IS NULL
-      AND effort_unit IS NULL
-      AND attempt_count IS NULL
-      AND target_taxon_id IS NULL
-      AND segment_start_at IS NULL
-      AND segment_end_at IS NULL
-      AND mode_at_completion IS NULL
-      AND angler_count IS NULL
-      AND duration_milliseconds IS NULL
-      AND person_milliseconds IS NULL
-      AND completion_event_contract_version IS NULL
-      AND completion_event_at IS NULL
-      AND completion_consent_version IS NULL
-      AND completion_consented_at IS NULL
-      AND completion_primary_target_confirmed IS NULL
-      AND completion_complete_attempt_confirmed IS NULL
-      AND completion_event_sha256 IS NULL
-      AND attestation_status = 'invalidated_after_edit'
-      AND forecast_impression_id IS NULL
-      AND completion_attested_at IS NULL
-      AND evidence_status = 'context_only'
-      AND exclusion_reason IN ('post_completion_profile_edit', 'trusted_review_exclusion'))
-    OR (event_type = 'legacy_context'
-      AND source_role = 'context_only'
-      AND evidence_status = 'context_only'))
-)`;
-
-const CREATE_INDEX_STATEMENTS = [
-  "CREATE INDEX IF NOT EXISTS trips_status_started_idx ON trips (status, started_at)",
-  "CREATE INDEX IF NOT EXISTS trips_site_started_idx ON trips (site_id, started_at)",
-  "CREATE INDEX IF NOT EXISTS trips_reporter_created_idx ON trips (reporter_key_hash, created_at)",
-  "CREATE INDEX IF NOT EXISTS trips_referral_created_idx ON trips (referral_code, created_at)",
-  "CREATE INDEX IF NOT EXISTS trips_user_completed_idx ON trips (user_id, completed_at)",
-  `CREATE INDEX IF NOT EXISTS trips_user_history_idx
-    ON trips (user_id, COALESCE(completed_at, ended_at, started_at) DESC)
-    WHERE status = 'completed' AND user_id IS NOT NULL`,
-  "CREATE INDEX IF NOT EXISTS trips_user_created_idx ON trips (user_id, created_at DESC) WHERE user_id IS NOT NULL",
-  `CREATE INDEX IF NOT EXISTS trips_ai_review_backlog_idx
-    ON trips (status, COALESCE(completed_at, ended_at, started_at))
-    WHERE ai_review_status IS NULL OR ai_review_status = 'retry'`,
-  "CREATE INDEX IF NOT EXISTS trips_reporter_active_created_idx ON trips (reporter_key_hash, created_at) WHERE status = 'active'",
-  "CREATE INDEX IF NOT EXISTS trips_contract_target_completed_idx ON trips (contract_status, target_taxon_id, completed_at)",
-  "CREATE INDEX IF NOT EXISTS forecast_impressions_window_idx ON forecast_impressions (window_id, site_id, window_start)",
-  "CREATE INDEX IF NOT EXISTS trip_validation_provenance_trip_created_idx ON trip_validation_provenance (trip_id, created_at)",
-  `CREATE INDEX IF NOT EXISTS trip_validation_provenance_forecast_trip_idx
-    ON trip_validation_provenance (forecast_impression_id, trip_id)
-    WHERE forecast_impression_id IS NOT NULL`,
-  "CREATE INDEX IF NOT EXISTS trip_validation_provenance_cohort_role_idx ON trip_validation_provenance (collection_contract_version, validation_protocol_id, cohort_id, source_role, evidence_status)",
-  "CREATE INDEX IF NOT EXISTS trip_validation_provenance_participant_recruitment_idx ON trip_validation_provenance (participant_group_id, recruitment_event_at)",
-  `CREATE TRIGGER IF NOT EXISTS forecast_impressions_append_only_guard
-    BEFORE UPDATE ON forecast_impressions
-    BEGIN SELECT RAISE(ABORT, 'forecast impressions are append-only'); END`,
-  `CREATE TRIGGER IF NOT EXISTS trip_validation_provenance_append_only_guard
-    BEFORE UPDATE ON trip_validation_provenance
-    BEGIN SELECT RAISE(ABORT, 'trip validation provenance is append-only'); END`,
-  `CREATE TRIGGER IF NOT EXISTS trip_validation_recruitment_event_immutable_guard
-    BEFORE INSERT ON trip_validation_provenance
-    WHEN NEW.participant_group_id IS NOT NULL AND EXISTS (
-      SELECT 1 FROM trip_validation_provenance AS prior
-      WHERE prior.participant_group_id = NEW.participant_group_id
-        AND prior.recruitment_event_sha256 IS NOT NULL
-        AND (prior.recruitment_frame_id IS NOT NEW.recruitment_frame_id
-          OR prior.recruitment_source_id IS NOT NEW.recruitment_source_id
-          OR prior.recruitment_event_contract_version IS NOT NEW.recruitment_event_contract_version
-          OR prior.recruitment_event_at IS NOT NEW.recruitment_event_at
-          OR prior.recruitment_event_sha256 IS NOT NEW.recruitment_event_sha256
-          OR prior.community_approval_sha256 IS NOT NEW.community_approval_sha256)
-    )
-    BEGIN SELECT RAISE(ABORT, 'participant recruitment event is immutable'); END`,
-  `CREATE TRIGGER IF NOT EXISTS forecast_impressions_trip_identity_guard
-    BEFORE INSERT ON forecast_impressions
-    WHEN NOT EXISTS (
-      SELECT 1 FROM trips
-      WHERE id = NEW.trip_id AND site_id = NEW.site_id
-        AND julianday(started_at) >= julianday(NEW.window_start)
-        AND julianday(started_at) < julianday(NEW.window_end)
-    )
-    BEGIN SELECT RAISE(ABORT, 'forecast impression does not match trip site and start window'); END`,
-  `CREATE TRIGGER IF NOT EXISTS trip_validation_activation_identity_guard
-    BEFORE INSERT ON trip_validation_provenance
-    WHEN NEW.validation_protocol_id IS NOT NULL AND NOT EXISTS (
-      SELECT 1 FROM forecast_impressions
-      WHERE id = NEW.forecast_impression_id AND trip_id = NEW.trip_id
-        AND scoring_system_sha256 = NEW.activation_scoring_system_sha256
-    )
-    BEGIN SELECT RAISE(ABORT, 'validation activation does not match forecast impression'); END`,
-  `CREATE TRIGGER IF NOT EXISTS trip_validation_completion_identity_guard
-    BEFORE INSERT ON trip_validation_provenance
-    WHEN NEW.event_type = 'completion' AND NEW.assignment_id IS NOT NULL AND NOT EXISTS (
-      SELECT 1 FROM trip_validation_provenance AS enrollment
-      WHERE enrollment.trip_id = NEW.trip_id AND enrollment.event_type = 'enrollment'
-        AND enrollment.source_role = 'prospective_secondary'
-        AND enrollment.assignment_id = NEW.assignment_id
-        AND enrollment.source_record_sha256 = NEW.source_record_sha256
-        AND enrollment.effort_segment_id = NEW.effort_segment_id
-        AND enrollment.participant_group_id = NEW.participant_group_id
-        AND enrollment.validation_protocol_id = NEW.validation_protocol_id
-        AND enrollment.activation_manifest_sha256 = NEW.activation_manifest_sha256
-        AND enrollment.activated_at = NEW.activated_at
-        AND enrollment.activation_scoring_system_sha256 = NEW.activation_scoring_system_sha256
-        AND enrollment.cohort_id = NEW.cohort_id
-        AND enrollment.incentive_policy_id = NEW.incentive_policy_id
-        AND enrollment.recruitment_frame_id = NEW.recruitment_frame_id
-        AND enrollment.recruitment_source_id = NEW.recruitment_source_id
-        AND enrollment.recruitment_event_contract_version = NEW.recruitment_event_contract_version
-        AND enrollment.recruitment_event_at = NEW.recruitment_event_at
-        AND enrollment.recruitment_event_sha256 = NEW.recruitment_event_sha256
-        AND enrollment.community_approval_sha256 IS NEW.community_approval_sha256
-        AND enrollment.forecast_impression_id = NEW.forecast_impression_id
-        AND enrollment.effort_unit = NEW.effort_unit
-        AND enrollment.attempt_count = NEW.attempt_count
-        AND enrollment.target_taxon_id = NEW.target_taxon_id
-        AND enrollment.segment_start_at = NEW.segment_start_at
-        AND enrollment.selection_method = NEW.selection_method
-        AND enrollment.target_intent = NEW.target_intent
-        AND enrollment.primary_target_confirmed = NEW.primary_target_confirmed
-        AND enrollment.mode_at_enrollment = NEW.mode_at_enrollment
-        AND enrollment.score_influenced_choice = NEW.score_influenced_choice
-    )
-    BEGIN SELECT RAISE(ABORT, 'completion event does not match immutable enrollment identity'); END`,
-  `CREATE TRIGGER IF NOT EXISTS trip_validation_secondary_eligibility_guard
-    BEFORE INSERT ON trip_validation_provenance
-    WHEN NEW.source_role = 'prospective_secondary' AND NOT EXISTS (
-      SELECT 1 FROM trips AS t
-      JOIN forecast_impressions AS f
-        ON f.id = NEW.forecast_impression_id AND f.trip_id = t.id
-      WHERE t.id = NEW.trip_id
-        AND t.started_at >= '2026-08-01T00:00:00.000Z'
-        AND t.started_at < '2027-08-01T00:00:00.000Z'
-        AND julianday(NEW.activated_at) < julianday(t.started_at)
-        AND t.site_id = f.site_id
-        AND t.started_at = NEW.segment_start_at
-        AND julianday(t.started_at) >= julianday(f.window_start)
-        AND julianday(t.started_at) < julianday(f.window_end)
-        AND (NEW.event_type != 'completion' OR (
-          t.status = 'completed' AND t.mode = NEW.mode_at_enrollment
-          AND t.mode = NEW.mode_at_completion
-          AND t.ended_at = NEW.segment_end_at
-          AND t.angler_count = NEW.angler_count
-          AND t.target_taxon_id = NEW.target_taxon_id
-          AND julianday(t.ended_at) <= julianday(f.window_end)
-        ))
-    )
-    BEGIN SELECT RAISE(ABORT, 'secondary evidence row is outside its activated site-window envelope'); END`,
-  `CREATE TRIGGER IF NOT EXISTS trips_completed_contract_insert_guard
-    BEFORE INSERT ON trips
-    WHEN NEW.status = 'completed' AND NEW.contract_status IS NULL
-    BEGIN SELECT RAISE(ABORT, 'completed trips require an explicit contract status'); END`,
-  `CREATE TRIGGER IF NOT EXISTS trips_completed_contract_update_guard
-    BEFORE UPDATE OF status, contract_status ON trips
-    WHEN NEW.status = 'completed' AND NEW.contract_status IS NULL
-    BEGIN SELECT RAISE(ABORT, 'completed trips require an explicit contract status'); END`,
-];
-
 const INSERT_TRIP_SQL = `INSERT INTO trips (
   id, user_id, status, source, site_id, started_at, ended_at, mode, fishing_method, gear,
   gear_profile_id, rod, reel, bait_lure, rig,
@@ -1206,15 +645,22 @@ const INSERT_TRIP_SQL = `INSERT INTO trips (
   idempotency_key_hash,
   opportunity_window_id, opportunity_score, habitat_score, seasonality_score, conditions_score,
   fishability_score, model_version, score_influenced_choice, prediction_metadata_json, photo_key,
-  photo_content_type, photo_size_bytes, created_at, updated_at, completed_at
-) VALUES (
+  photo_key_hash, photo_content_type, photo_size_bytes, created_at, updated_at, completed_at
+) SELECT
   ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
   ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
   ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
   ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
   ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
-  ?, ?, ?, ?, ?, ?
-)`;
+  ?, ?, ?, ?, ?, ?, ?
+WHERE (? IS NULL OR (
+  EXISTS (SELECT 1 FROM users WHERE id = ?)
+  AND NOT EXISTS (SELECT 1 FROM account_deletion_fences WHERE user_id = ?)
+))
+AND (? IS NULL OR EXISTS (
+  SELECT 1 FROM trip_photo_upload_reservations
+  WHERE trip_id = ? AND object_key = ? AND object_key_hash = ? AND state = 'pending'
+))`;
 
 const INSERT_FORECAST_IMPRESSION_SQL = `INSERT INTO forecast_impressions (
   id, trip_id, attestation_index_version, snapshot_sha256, site_catalog_sha256,
@@ -1276,6 +722,34 @@ const INSERT_FEASIBILITY_RECRUITMENT_SQL = `INSERT INTO validation_feasibility_r
 ) VALUES (${FEASIBILITY_RECRUITMENT_COLUMNS.map(() => "?").join(", ")})`;
 
 const initializedDatabases = new WeakMap<object, Promise<void>>();
+
+const TRIP_SCHEMA_READY_SQL = `SELECT
+  (SELECT COUNT(*) FROM sqlite_master WHERE type = 'table' AND name IN (
+    'trips', 'account_deletion_fences', 'trip_photo_upload_reservations',
+    'forecast_impressions', 'trip_validation_provenance'
+  )) AS required_tables,
+  (SELECT COUNT(*) FROM sqlite_master WHERE type = 'index' AND name IN (
+    'trips_status_started_idx', 'trips_site_started_idx', 'trips_reporter_created_idx',
+    'trips_referral_created_idx', 'trips_user_completed_idx', 'trips_user_history_idx',
+    'trips_user_created_idx', 'trips_ai_review_backlog_idx',
+    'trips_reporter_active_created_idx', 'trips_contract_target_completed_idx',
+    'trip_photo_upload_reservations_object_key_unique',
+    'trip_photo_upload_reservations_object_key_hash_unique',
+    'trip_photo_upload_reservations_retry_idx', 'trip_photo_upload_reservations_trip_idx',
+    'trip_photo_upload_reservations_owner_idx', 'account_deletion_fences_owner_unique',
+    'forecast_impressions_window_idx', 'trip_validation_provenance_trip_created_idx',
+    'trip_validation_provenance_forecast_trip_idx',
+    'trip_validation_provenance_cohort_role_idx',
+    'trip_validation_provenance_participant_recruitment_idx'
+  )) AS required_indexes,
+  (SELECT COUNT(*) FROM sqlite_master WHERE type = 'trigger' AND name IN (
+    'forecast_impressions_append_only_guard', 'trip_validation_provenance_append_only_guard',
+    'trip_validation_recruitment_event_immutable_guard',
+    'forecast_impressions_trip_identity_guard', 'trip_validation_activation_identity_guard',
+    'trip_validation_completion_identity_guard', 'trip_validation_secondary_eligibility_guard',
+    'trips_completed_contract_insert_guard', 'trips_completed_contract_update_guard'
+  )) AS required_triggers,
+  (SELECT COUNT(*) FROM pragma_table_info('trips') WHERE name = 'photo_key_hash') AS photo_hash_columns`;
 
 export class RateLimitError extends Error {
   constructor() {
@@ -1483,12 +957,23 @@ export function createTripStore(db: D1DatabaseLike): TripStore {
     let pending = initializedDatabases.get(db as object);
     if (!pending) {
       pending = (async () => {
-        await db.batch([
-          db.prepare(CREATE_TRIPS_SQL),
-          db.prepare(CREATE_FORECAST_IMPRESSIONS_SQL),
-          db.prepare(CREATE_TRIP_VALIDATION_PROVENANCE_SQL),
-        ]);
-        await db.batch(CREATE_INDEX_STATEMENTS.map((statement) => db.prepare(statement)));
+        const readiness = await db.prepare(TRIP_SCHEMA_READY_SQL)
+          .first<{
+            required_tables: number;
+            required_indexes: number;
+            required_triggers: number;
+            photo_hash_columns: number;
+          }>();
+        if (Number(readiness?.required_tables ?? 0) !== 5
+          || Number(readiness?.required_indexes ?? 0) !== 21
+          || Number(readiness?.required_triggers ?? 0) !== 9
+          || Number(readiness?.photo_hash_columns ?? 0) !== 1) {
+          throw new ApiError(
+            503,
+            "trip_schema_unavailable",
+            "Trip services are paused until the reviewed database migration is complete.",
+          );
+        }
       })().catch((error) => {
         initializedDatabases.delete(db as object);
         throw error;
@@ -1498,8 +983,10 @@ export function createTripStore(db: D1DatabaseLike): TripStore {
     await pending;
   };
 
-  const getTrip = async (id: string) =>
-    db.prepare("SELECT * FROM trips WHERE id = ? LIMIT 1").bind(id).first<TripRow>();
+  const getTrip = async (id: string, accountId: string | null) =>
+    db.prepare("SELECT * FROM trips WHERE id = ? AND user_id IS ? LIMIT 1")
+      .bind(id, accountId)
+      .first<TripRow>();
 
   return {
     initialize,
@@ -1583,12 +1070,35 @@ export function createTripStore(db: D1DatabaseLike): TripStore {
           record.scoreInfluencedChoice === null ? null : Number(record.scoreInfluencedChoice),
           record.predictionMetadataJson,
           record.photoKey,
+          record.photoKeyHash,
           record.photoContentType,
           record.photoSizeBytes,
           record.createdAt,
           record.updatedAt,
           record.completedAt,
+          record.userId,
+          record.userId,
+          record.userId,
+          record.photoKey,
+          record.id,
+          record.photoKey,
+          record.photoKeyHash,
         )];
+      if (record.photoKey && record.photoKeyHash) {
+        statements.push(db.prepare(`DELETE FROM trip_photo_upload_reservations
+          WHERE trip_id = ? AND object_key = ? AND object_key_hash = ? AND state = 'pending'
+            AND EXISTS (SELECT 1 FROM trips
+              WHERE id = ? AND user_id IS ? AND photo_key = ? AND photo_key_hash = ?)`)
+          .bind(
+            record.id,
+            record.photoKey,
+            record.photoKeyHash,
+            record.id,
+            record.userId,
+            record.photoKey,
+            record.photoKeyHash,
+          ));
+      }
       if (validation?.impression) {
         statements.push(prepareForecastImpressionInsert(db, validation.impression));
       }
@@ -1599,12 +1109,80 @@ export function createTripStore(db: D1DatabaseLike): TripStore {
       if (feasibilityStart) statements.push(prepareFeasibilityEventInsert(db, feasibilityStart));
       await db.batch(statements);
 
-      const inserted = await getTrip(record.id);
+      const inserted = await getTrip(record.id, record.userId);
       if (!inserted) throw new Error("Trip insert did not return a record");
       return inserted;
     },
 
     getTrip,
+
+    async isTripIdentityReserved(id) {
+      const row = await db.prepare("SELECT 1 AS reserved FROM trips WHERE id = ? LIMIT 1")
+        .bind(id)
+        .first<{ reserved: number }>();
+      return Number(row?.reserved ?? 0) === 1;
+    },
+
+    async reservePhotoUpload(reservation) {
+      try {
+        await db.prepare(`INSERT INTO trip_photo_upload_reservations (
+            id, trip_id, owner_subject_hash, object_key, object_key_hash, state, attempts, available_at,
+            lease_expires_at, lease_token, last_error_code, created_at, updated_at)
+          SELECT ?, ?, ?, ?, ?, 'pending', 0, ?, NULL, NULL, NULL, ?, ?
+          WHERE EXISTS (SELECT 1 FROM users WHERE id = ?)
+            AND NOT EXISTS (SELECT 1 FROM account_deletion_fences WHERE user_id = ?)`)
+          .bind(
+            reservation.id,
+            reservation.tripId,
+            reservation.ownerSubjectHash,
+            reservation.objectKey,
+            reservation.objectKeyHash,
+            reservation.availableAt,
+            reservation.createdAt,
+            reservation.createdAt,
+            reservation.accountId,
+            reservation.accountId,
+          )
+          .run();
+      } catch {
+        // A D1 response can be lost after the reservation commits. Exact read-back is authoritative.
+      }
+      const receipt = await db.prepare(`SELECT id FROM trip_photo_upload_reservations
+        WHERE id = ? AND trip_id = ? AND owner_subject_hash = ?
+          AND object_key = ? AND object_key_hash = ?
+          AND state = 'pending' AND attempts = 0 AND available_at = ?
+          AND lease_expires_at IS NULL AND lease_token IS NULL AND last_error_code IS NULL
+          AND created_at = ? AND updated_at = ?
+        LIMIT 1`)
+        .bind(
+          reservation.id,
+          reservation.tripId,
+          reservation.ownerSubjectHash,
+          reservation.objectKey,
+          reservation.objectKeyHash,
+          reservation.availableAt,
+          reservation.createdAt,
+          reservation.createdAt,
+        )
+        .first<{ id: string }>();
+      return receipt?.id === reservation.id;
+    },
+
+    async releasePhotoUploadReservation(tripId, objectKey, objectKeyHash) {
+      try {
+        await db.prepare(`DELETE FROM trip_photo_upload_reservations
+          WHERE trip_id = ? AND object_key = ? AND object_key_hash = ? AND state = 'pending'`)
+          .bind(tripId, objectKey, objectKeyHash)
+          .run();
+      } catch {
+        // A transport failure can arrive after deletion committed. Absence is the terminal receipt.
+      }
+      const remaining = await db.prepare(`SELECT id FROM trip_photo_upload_reservations
+        WHERE trip_id = ? AND object_key = ? AND object_key_hash = ? LIMIT 1`)
+        .bind(tripId, objectKey, objectKeyHash)
+        .first<{ id: string }>();
+      return remaining === null;
+    },
 
     async getFeasibilityActivation(activationId) {
       return db.prepare(`SELECT id, protocol_id, protocol_version, protocol_sha256,
@@ -1617,14 +1195,14 @@ export function createTripStore(db: D1DatabaseLike): TripStore {
         .first<StoredFeasibilityActivation>();
     },
 
-    async getFeasibilityRecruitment(activationId, participantGroupId) {
+    async getFeasibilityRecruitment(activationId, participantGroupId, accountId) {
       return db.prepare(`SELECT event_id, activation_id, user_id, participant_group_id,
           event_contract_version, recruitment_frame_id, recruitment_source_id,
           selection_method, recruited_at, campaign_id, invite_issued_at, invite_expires_at,
           community_approval_sha256, event_sha256, created_at, snapshot_suppression_sha256
         FROM validation_feasibility_recruitment_events
-        WHERE activation_id = ? AND participant_group_id = ? LIMIT 1`)
-        .bind(activationId, participantGroupId)
+        WHERE activation_id = ? AND participant_group_id = ? AND user_id IS ? LIMIT 1`)
+        .bind(activationId, participantGroupId, accountId)
         .first<StoredFeasibilityRecruitment>();
     },
 
@@ -1638,20 +1216,25 @@ export function createTripStore(db: D1DatabaseLike): TripStore {
         .first<StoredFeasibilityRecruitmentCampaign>();
     },
 
-    async getFeasibilityStart(tripId) {
+    async getFeasibilityStart(tripId, accountId) {
       return db.prepare(`SELECT activation_id, trip_id, event_sha256, source_record_sha256,
           participant_group_id, recruitment_frame_id, recruitment_source_id, selection_method,
           score_influenced_choice, study_consent_version, study_consented_at, target_taxon_id,
           site_id, geographic_panel, mode, segment_start_at, angler_count,
           scoring_system_kind, scoring_system_version, scoring_system_sha256,
           opportunity_score, opportunity_window_id, snapshot_sha256, snapshot_suppression_sha256
-        FROM validation_feasibility_events
-        WHERE trip_id = ? AND event_type = 'started' LIMIT 1`)
-        .bind(tripId)
+        FROM validation_feasibility_events AS event
+        WHERE event.trip_id = ? AND event.event_type = 'started'
+          AND EXISTS (
+            SELECT 1 FROM trips AS owner_trip
+            WHERE owner_trip.id = event.trip_id AND owner_trip.user_id IS ?
+          )
+        LIMIT 1`)
+        .bind(tripId, accountId)
         .first<StoredFeasibilityStart>();
     },
 
-    async getValidationEnrollment(tripId) {
+    async getValidationEnrollment(tripId, accountId) {
       return db.prepare(`SELECT collection_contract_version, source_role, cohort_id,
           validation_protocol_id, activation_manifest_sha256, activated_at,
           activation_scoring_system_sha256, participant_group_id, recruitment_frame_id,
@@ -1663,28 +1246,36 @@ export function createTripStore(db: D1DatabaseLike): TripStore {
           complete_attempt_confirmed, mode_at_enrollment, consent_version,
           consented_at, score_influenced_choice, forecast_impression_id,
           attestation_status
-        FROM trip_validation_provenance
-        WHERE trip_id = ? AND event_type = 'enrollment'
-        ORDER BY created_at ASC LIMIT 1`)
-        .bind(tripId)
+        FROM trip_validation_provenance AS provenance
+        WHERE provenance.trip_id = ? AND provenance.event_type = 'enrollment'
+          AND EXISTS (
+            SELECT 1 FROM trips AS owner_trip
+            WHERE owner_trip.id = provenance.trip_id AND owner_trip.user_id IS ?
+          )
+        ORDER BY provenance.created_at ASC LIMIT 1`)
+        .bind(tripId, accountId)
         .first<StoredValidationEnrollment>();
     },
 
-    async getRecruitmentEvent(participantGroupId, activation) {
+    async getRecruitmentEvent(participantGroupId, activation, accountId) {
       return db.prepare(`SELECT participant_group_id, recruitment_frame_id,
           recruitment_source_id, recruitment_event_contract_version,
           recruitment_event_at, recruitment_event_sha256, community_approval_sha256
-        FROM trip_validation_provenance
-        WHERE participant_group_id = ?
-          AND event_type = 'enrollment'
-          AND source_role = 'prospective_secondary'
-          AND validation_protocol_id = ?
-          AND activation_manifest_sha256 = ?
-          AND activated_at = ?
-          AND activation_scoring_system_sha256 = ?
-          AND recruitment_frame_id = ?
-          AND recruitment_event_sha256 IS NOT NULL
-        ORDER BY recruitment_event_at ASC, created_at ASC LIMIT 1`)
+        FROM trip_validation_provenance AS provenance
+        WHERE provenance.participant_group_id = ?
+          AND provenance.event_type = 'enrollment'
+          AND provenance.source_role = 'prospective_secondary'
+          AND provenance.validation_protocol_id = ?
+          AND provenance.activation_manifest_sha256 = ?
+          AND provenance.activated_at = ?
+          AND provenance.activation_scoring_system_sha256 = ?
+          AND provenance.recruitment_frame_id = ?
+          AND provenance.recruitment_event_sha256 IS NOT NULL
+          AND EXISTS (
+            SELECT 1 FROM trips AS owner_trip
+            WHERE owner_trip.id = provenance.trip_id AND owner_trip.user_id IS ?
+          )
+        ORDER BY provenance.recruitment_event_at ASC, provenance.created_at ASC LIMIT 1`)
         .bind(
           participantGroupId,
           activation.protocolId,
@@ -1692,18 +1283,25 @@ export function createTripStore(db: D1DatabaseLike): TripStore {
           activation.activatedAt,
           activation.scoringSystemSha256,
           RECRUITMENT_FRAME_ID,
+          accountId,
         )
         .first<StoredRecruitmentEvent>();
     },
 
-    async getForecastImpression(tripId) {
+    async getForecastImpression(tripId, accountId) {
       return db.prepare(`SELECT id, window_start, window_end, site_id
-        FROM forecast_impressions WHERE trip_id = ? LIMIT 1`)
-        .bind(tripId)
+        FROM forecast_impressions AS impression
+        WHERE impression.trip_id = ?
+          AND EXISTS (
+            SELECT 1 FROM trips AS owner_trip
+            WHERE owner_trip.id = impression.trip_id AND owner_trip.user_id IS ?
+          )
+        LIMIT 1`)
+        .bind(tripId, accountId)
         .first<StoredForecastImpression>();
     },
 
-    async completeTrip(id, tokenHash, completion, provenance, feasibilityTerminal) {
+    async completeTrip(id, tokenHash, accountId, completion, provenance, feasibilityTerminal) {
       const update = db.prepare(`UPDATE trips SET
           status = 'completed',
           opportunity_window_id = CASE WHEN mode = ? THEN opportunity_window_id ELSE NULL END,
@@ -1722,9 +1320,17 @@ export function createTripStore(db: D1DatabaseLike): TripStore {
           contract_status = ?, taxon_observations_json = ?, outcome_class = ?,
           target_encounter_count = ?, any_fish_encounter_count = ?, target_identification_confidence = ?,
           notes = ?, consent = 1, consent_at = ?,
-          moderation_status = 'pending', photo_key = ?,
+          moderation_status = 'pending', photo_key = ?, photo_key_hash = ?,
           photo_content_type = ?, photo_size_bytes = ?, updated_at = ?, completed_at = ?, token_hash = NULL
-        WHERE id = ? AND status = 'active' AND token_hash = ?`)
+        WHERE id = ? AND user_id IS ? AND status = 'active' AND token_hash = ?
+          AND (? IS NULL OR (
+            EXISTS (SELECT 1 FROM users WHERE id = ?)
+            AND NOT EXISTS (SELECT 1 FROM account_deletion_fences WHERE user_id = ?)
+          ))
+          AND (? IS NULL OR EXISTS (
+            SELECT 1 FROM trip_photo_upload_reservations
+            WHERE trip_id = ? AND object_key = ? AND object_key_hash = ? AND state = 'pending'
+          ))`)
         .bind(
           completion.mode,
           completion.mode,
@@ -1764,15 +1370,42 @@ export function createTripStore(db: D1DatabaseLike): TripStore {
           completion.notes,
           completion.consentAt,
           completion.photoKey,
+          completion.photoKeyHash,
           completion.photoContentType,
           completion.photoSizeBytes,
           completion.updatedAt,
           completion.updatedAt,
           id,
+          accountId,
           tokenHash,
+          accountId,
+          accountId,
+          accountId,
+          completion.photoKey,
+          id,
+          completion.photoKey,
+          completion.photoKeyHash,
         );
 
       const terminalStatements = [update];
+      if (completion.photoKey && completion.photoKeyHash) {
+        terminalStatements.push(db.prepare(`DELETE FROM trip_photo_upload_reservations
+          WHERE trip_id = ? AND object_key = ? AND object_key_hash = ? AND state = 'pending'
+            AND EXISTS (SELECT 1 FROM trips
+              WHERE id = ? AND user_id IS ? AND status = 'completed' AND photo_key = ?
+                AND photo_key_hash = ?
+                AND updated_at = ?)`)
+          .bind(
+            id,
+            completion.photoKey,
+            completion.photoKeyHash,
+            id,
+            accountId,
+            completion.photoKey,
+            completion.photoKeyHash,
+            completion.updatedAt,
+          ));
+      }
       if (provenance) {
         terminalStatements.push(
           prepareConditionalCompletionProvenanceInsert(db, provenance, completion.updatedAt),
@@ -1788,27 +1421,50 @@ export function createTripStore(db: D1DatabaseLike): TripStore {
           ),
         );
       }
-      const results = terminalStatements.length > 1
-        ? await db.batch(terminalStatements)
-        : [await update.run()];
-      const result = results[0] as { meta?: { changes?: number } } | undefined;
-
-      if (Number(result?.meta?.changes ?? 0) !== 1) return null;
-      return getTrip(id);
+      try {
+        if (terminalStatements.length > 1) {
+          await db.batch(terminalStatements);
+        } else {
+          await update.run();
+        }
+      } catch {
+        // A transport failure can arrive after the terminal transaction committed.
+        // The exact owner-bound trip state below is authoritative.
+      }
+      const completed = await getTrip(id, accountId);
+      if (
+        !completed || completed.status !== "completed" || completed.source !== "live" ||
+        completed.idempotency_key_hash !== tokenHash || completed.token_hash !== null ||
+        completed.ended_at !== completion.endedAt || completed.completed_at !== completion.updatedAt ||
+        completed.updated_at !== completion.updatedAt || completed.mode !== completion.mode ||
+        completed.photo_key !== completion.photoKey || completed.photo_key_hash !== completion.photoKeyHash
+      ) return null;
+      return completed;
     },
 
-    async cancelTrip(id, tokenHash, timestamp, feasibilityTerminal) {
+    async cancelTrip(id, tokenHash, accountId, timestamp, feasibilityTerminal) {
       const update = db.prepare(`UPDATE trips SET token_hash = NULL, updated_at = ?
-        WHERE id = ? AND status = 'active' AND token_hash = ?`)
-        .bind(timestamp, id, tokenHash);
-      const results = feasibilityTerminal
-        ? await db.batch([
+        WHERE id = ? AND user_id IS ? AND status = 'active' AND token_hash = ?`)
+        .bind(timestamp, id, accountId, tokenHash);
+      try {
+        if (feasibilityTerminal) {
+          await db.batch([
             update,
             prepareConditionalFeasibilityEventInsert(db, feasibilityTerminal, "safe_canceled", timestamp),
-          ])
-        : [await update.run()];
-      const result = results[0] as { meta?: { changes?: number } } | undefined;
-      return Number(result?.meta?.changes ?? 0) === 1;
+          ]);
+        } else {
+          await update.run();
+        }
+      } catch {
+        // The exact terminal receipt resolves both an ordinary failure and a lost committed response.
+      }
+      const receipt = await db.prepare(`SELECT 1 AS confirmed FROM trips
+        WHERE id = ? AND user_id IS ? AND source = 'live' AND status = 'active'
+          AND idempotency_key_hash = ? AND token_hash IS NULL AND updated_at = ?
+        LIMIT 1`)
+        .bind(id, accountId, tokenHash, timestamp)
+        .first<{ confirmed: number }>();
+      return Number(receipt?.confirmed ?? 0) === 1;
     },
 
     async getSummary(now) {
@@ -1871,6 +1527,165 @@ export function createTripStore(db: D1DatabaseLike): TripStore {
       };
     },
   };
+}
+
+interface TripPhotoUploadReservationRow {
+  id: string;
+  trip_id: string;
+  object_key: string;
+  object_key_hash: string;
+  state: "pending" | "leased" | "needs_attention";
+  attempts: number;
+  available_at: string;
+  lease_expires_at: string | null;
+  lease_token: string | null;
+  created_at: string;
+}
+
+export async function processTripPhotoUploadReservations(
+  env: TripApiEnv,
+  now = new Date(),
+  maximumReservations = 7,
+) {
+  if (!env.DB) return 0;
+  const db = env.DB;
+  await createTripStore(db).initialize();
+  const nowIso = now.toISOString();
+  const selected = await db.prepare(`SELECT id, trip_id, object_key, object_key_hash, state,
+      attempts, available_at, lease_expires_at, lease_token, created_at
+    FROM trip_photo_upload_reservations
+    WHERE (state = 'pending' AND available_at <= ?)
+      OR (state = 'leased' AND (lease_expires_at IS NULL OR lease_expires_at <= ?))
+    ORDER BY available_at, created_at LIMIT ?`)
+    .bind(
+      nowIso,
+      nowIso,
+      Number.isSafeInteger(maximumReservations)
+        ? Math.max(1, Math.min(7, maximumReservations))
+        : 7,
+    )
+    .all<TripPhotoUploadReservationRow>();
+  let reconciled = 0;
+
+  for (const reservation of selected.results ?? []) {
+    if (Number(reservation.attempts) >= MAX_TRIP_PHOTO_RESERVATION_ATTEMPTS) {
+      await db.prepare(`UPDATE trip_photo_upload_reservations
+        SET state = 'needs_attention', lease_expires_at = NULL, lease_token = NULL,
+          last_error_code = 'photo_cleanup_attempts_exhausted', updated_at = ?
+        WHERE id = ? AND state != 'needs_attention' AND attempts >= ?
+          AND (lease_expires_at IS NULL OR lease_expires_at <= ?)`)
+        .bind(nowIso, reservation.id, MAX_TRIP_PHOTO_RESERVATION_ATTEMPTS, nowIso)
+        .run();
+      continue;
+    }
+
+    const leaseExpiresAt = new Date(now.getTime() + TRIP_PHOTO_RESERVATION_LEASE_MS).toISOString();
+    const leaseToken = randomSecret();
+    try {
+      await db.prepare(`UPDATE trip_photo_upload_reservations
+        SET state = 'leased', attempts = attempts + 1, lease_expires_at = ?, lease_token = ?,
+          last_error_code = NULL, updated_at = ?
+        WHERE id = ? AND attempts = ?
+          AND ((state = 'pending' AND available_at <= ?)
+            OR (state = 'leased' AND (lease_expires_at IS NULL OR lease_expires_at <= ?)))`)
+        .bind(
+          leaseExpiresAt,
+          leaseToken,
+          nowIso,
+          reservation.id,
+          Number(reservation.attempts),
+          nowIso,
+          nowIso,
+        )
+        .run();
+    } catch {
+      // A claim response can be lost after commit. The exact lease receipt below decides ownership.
+    }
+    const claim = await db.prepare(`SELECT id, trip_id, object_key, object_key_hash, state,
+        attempts, available_at, lease_expires_at, lease_token, created_at
+      FROM trip_photo_upload_reservations
+      WHERE id = ? AND trip_id = ? AND object_key = ? AND object_key_hash = ?
+        AND state = 'leased' AND attempts = ? AND lease_expires_at = ? AND lease_token = ?
+      LIMIT 1`)
+      .bind(
+        reservation.id,
+        reservation.trip_id,
+        reservation.object_key,
+        reservation.object_key_hash,
+        Number(reservation.attempts) + 1,
+        leaseExpiresAt,
+        leaseToken,
+      )
+      .first<TripPhotoUploadReservationRow>();
+    if (!claim) continue;
+
+    try {
+      const expectedHash = await sha256(`trip_photos\0${claim.object_key}`);
+      if (expectedHash !== claim.object_key_hash) {
+        await db.prepare(`UPDATE trip_photo_upload_reservations
+          SET state = 'needs_attention', lease_expires_at = NULL, lease_token = NULL,
+            last_error_code = 'photo_locator_hash_mismatch', updated_at = ?
+          WHERE id = ? AND state = 'leased' AND lease_token = ?`)
+          .bind(nowIso, claim.id, leaseToken)
+          .run();
+        continue;
+      }
+
+      const attached = await db.prepare(`SELECT 1 AS attached FROM trips
+        WHERE id = ? AND photo_key = ? AND photo_key_hash = ? LIMIT 1`)
+        .bind(claim.trip_id, claim.object_key, claim.object_key_hash)
+        .first<{ attached: number }>();
+      if (!attached) {
+        if (!env.TRIP_PHOTOS) {
+          await db.prepare(`UPDATE trip_photo_upload_reservations
+            SET state = 'needs_attention', lease_expires_at = NULL, lease_token = NULL,
+              last_error_code = 'photo_storage_unavailable', updated_at = ?
+            WHERE id = ? AND state = 'leased' AND lease_token = ?`)
+            .bind(nowIso, claim.id, leaseToken)
+            .run();
+          continue;
+        }
+        await env.TRIP_PHOTOS.delete(claim.object_key);
+      }
+
+      try {
+        await db.prepare(`DELETE FROM trip_photo_upload_reservations
+          WHERE id = ? AND trip_id = ? AND object_key = ? AND object_key_hash = ?
+            AND state = 'leased' AND attempts = ? AND lease_expires_at = ? AND lease_token = ?`)
+          .bind(
+            claim.id,
+            claim.trip_id,
+            claim.object_key,
+            claim.object_key_hash,
+            Number(claim.attempts),
+            leaseExpiresAt,
+            leaseToken,
+          )
+          .run();
+      } catch {
+        // Exact absence resolves a lost terminal D1 response.
+      }
+      const remaining = await db.prepare(`SELECT id FROM trip_photo_upload_reservations
+        WHERE id = ? AND trip_id = ? AND object_key = ? AND object_key_hash = ? LIMIT 1`)
+        .bind(claim.id, claim.trip_id, claim.object_key, claim.object_key_hash)
+        .first<{ id: string }>();
+      if (remaining) throw new Error("trip photo reservation terminal receipt missing");
+      reconciled += 1;
+    } catch {
+      const attempts = Number(claim.attempts);
+      const retryAt = new Date(
+        now.getTime() + Math.min(6 * 60 * 60, 30 * (2 ** Math.min(attempts - 1, 10))) * 1000,
+      ).toISOString();
+      await db.prepare(`UPDATE trip_photo_upload_reservations
+        SET state = CASE WHEN attempts >= ? THEN 'needs_attention' ELSE 'pending' END,
+          available_at = ?, lease_expires_at = NULL, lease_token = NULL,
+          last_error_code = 'photo_cleanup_failed', updated_at = ?
+        WHERE id = ? AND state = 'leased' AND lease_token = ?`)
+        .bind(MAX_TRIP_PHOTO_RESERVATION_ATTEMPTS, retryAt, nowIso, claim.id, leaseToken)
+        .run();
+    }
+  }
+  return reconciled;
 }
 
 function prepareForecastImpressionInsert(db: D1DatabaseLike, record: ForecastImpressionRecord) {
@@ -2146,8 +1961,9 @@ async function prepareOrganicRecruitmentEvent(
   participantGroupId: string,
   timestamp: string,
   activation: ValidationActivationRecord,
+  accountId: string | null,
 ): Promise<RecruitmentEventRecord | null> {
-  const existing = await store.getRecruitmentEvent?.(participantGroupId, activation);
+  const existing = await store.getRecruitmentEvent?.(participantGroupId, activation, accountId);
   if (existing) {
     const event: RecruitmentEventRecord = {
       participantGroupId: existing.participant_group_id,
@@ -2634,7 +2450,7 @@ export async function handleTripRequest(
       const id = parseClientTripId(body.clientTripId);
       const token = parseRequestToken(body.requestToken);
       const idempotencyKeyHash = await sha256(token);
-      const existingRequest = await store.getTrip(id);
+      const existingRequest = await store.getTrip(id, options.accountId ?? null);
       if (existingRequest) {
         if (isMatchingLiveStart(existingRequest, idempotencyKeyHash, reporter.hash, options.accountId)) {
           return jsonResponse({
@@ -2643,6 +2459,9 @@ export async function handleTripRequest(
             receipt: { operation: "start", tripId: id },
           }, 201, reporter.setCookie);
         }
+        throw new ApiError(409, "trip_request_conflict", "This trip request identity cannot be reused.");
+      }
+      if (await store.isTripIdentityReserved(id)) {
         throw new ApiError(409, "trip_request_conflict", "This trip request identity cannot be reused.");
       }
       await store.assertSubmissionAllowed(reporter.hash, now);
@@ -2702,6 +2521,7 @@ export async function handleTripRequest(
         const existingRecruitment = await store.getFeasibilityRecruitment(
           activationId,
           context.participantGroupId,
+          options.accountId,
         );
         const recruitmentToken = optionalText(body.recruitmentToken, "recruitmentToken", 2_048);
         const campaignReference = recruitmentToken && !existingRecruitment
@@ -2766,7 +2586,13 @@ export async function handleTripRequest(
         ? `participant-${await sha256(`${VALIDATION_PARTICIPANT_TOKEN_DOMAIN}\u0000${reporter.hash}`)}`
         : null;
       const recruitmentEvent = activation && participantGroupId
-        ? await prepareOrganicRecruitmentEvent(store, participantGroupId, timestamp, activation)
+        ? await prepareOrganicRecruitmentEvent(
+            store,
+            participantGroupId,
+            timestamp,
+            activation,
+            options.accountId ?? null,
+          )
         : null;
       const collectionIdentity = activation && recruitmentEvent
         ? await validationCollectionIdentity(id, activation.protocolId)
@@ -2822,6 +2648,7 @@ export async function handleTripRequest(
           idempotencyKeyHash,
           ...forecastFieldsFromAttestation(attestation.opportunity, scoreInfluencedChoice),
           photoKey: null,
+          photoKeyHash: null,
           photoContentType: null,
           photoSizeBytes: null,
           createdAt: timestamp,
@@ -2829,8 +2656,11 @@ export async function handleTripRequest(
           completedAt: null,
         }, validation, feasibilityStart, feasibilityRecruitment);
       } catch (error) {
-        const racedTrip = await store.getTrip(id);
+        const racedTrip = await store.getTrip(id, options.accountId ?? null);
         if (!racedTrip || !isMatchingLiveStart(racedTrip, idempotencyKeyHash, reporter.hash, options.accountId)) {
+          if (await store.isTripIdentityReserved(id)) {
+            throw new ApiError(409, "trip_request_conflict", "This trip request identity cannot be reused.");
+          }
           throw error;
         }
         trip = racedTrip;
@@ -2858,19 +2688,28 @@ export async function handleTripRequest(
         throw new ApiError(404, "trip_not_found", "The active trip could not be found.");
       }
       const reason = parseSafeCancellationReason(body.reason);
-      const existing = await store.getTrip(id);
-      if (!existing || existing.status !== "active" || !store.cancelTrip) {
+      const existing = await store.getTrip(id, options.accountId ?? null);
+      if (!existing || existing.status !== "active"
+        || !sameTripAccount(existing, options.accountId) || !store.cancelTrip) {
         throw new ApiError(404, "trip_not_found", "The active trip could not be found.");
       }
       const timestamp = now.toISOString();
-      const feasibilityStart = await (store.getFeasibilityStart?.(id) ?? Promise.resolve(null));
+      const feasibilityStart = await (
+        store.getFeasibilityStart?.(id, options.accountId ?? null) ?? Promise.resolve(null)
+      );
       const feasibilityTerminal = feasibilityStart
         ? await buildFeasibilityCancellationEvent({ start: feasibilityStart, timestamp, reason })
         : null;
       if (feasibilityStart && !feasibilityTerminal) {
         throw new ApiError(409, "validation_pilot_terminal_invalid", "The pilot cancellation could not be reconciled.");
       }
-      const canceled = await store.cancelTrip(id, await sha256(token), timestamp, feasibilityTerminal);
+      const canceled = await store.cancelTrip(
+        id,
+        await sha256(token),
+        options.accountId ?? null,
+        timestamp,
+        feasibilityTerminal,
+      );
       if (!canceled) throw new ApiError(404, "trip_not_found", "The active trip could not be found.");
       return jsonResponse({ canceled: true, id, reason });
     }
@@ -2895,7 +2734,7 @@ export async function handleTripRequest(
         throw new ApiError(404, "trip_not_found", "The active trip could not be found.");
       }
 
-      const existing = await store.getTrip(id);
+      const existing = await store.getTrip(id, options.accountId ?? null);
       const tokenHash = await sha256(token);
       if (
         existing?.status === "completed" && existing.source === "live" &&
@@ -2905,14 +2744,16 @@ export async function handleTripRequest(
         if (!sameTripPrincipal(existing, reporter.hash, options.accountId)) {
           throw new ApiError(404, "trip_not_found", "The active trip could not be found.");
         }
-        const originalForecastImpression = await (store.getForecastImpression?.(id) ?? Promise.resolve(null));
+        const originalForecastImpression = await (
+          store.getForecastImpression?.(id, options.accountId ?? null) ?? Promise.resolve(null)
+        );
         return jsonResponse({
           trip: publicTrip(existing),
           forecastAttributionCleared: Boolean(originalForecastImpression) && existing.opportunity_window_id === null,
           receipt: { operation: "complete", tripId: id },
         }, 200, reporter.setCookie);
       }
-      if (!existing || existing.status !== "active") {
+      if (!existing || existing.status !== "active" || !sameTripAccount(existing, options.accountId)) {
         throw new ApiError(404, "trip_not_found", "The active trip could not be found.");
       }
 
@@ -2950,8 +2791,8 @@ export async function handleTripRequest(
         otherCatchCount: details.otherCatchCount,
       });
       const [validationEnrollment, forecastImpression] = await Promise.all([
-        store.getValidationEnrollment?.(id) ?? Promise.resolve(null),
-        store.getForecastImpression?.(id) ?? Promise.resolve(null),
+        store.getValidationEnrollment?.(id, options.accountId ?? null) ?? Promise.resolve(null),
+        store.getForecastImpression?.(id, options.accountId ?? null) ?? Promise.resolve(null),
       ]);
       const completionProvenance = await buildCompletionProvenance({
         trip: existing,
@@ -2962,7 +2803,9 @@ export async function handleTripRequest(
         enrollment: validationEnrollment,
         impression: forecastImpression,
       });
-      const feasibilityStart = await (store.getFeasibilityStart?.(id) ?? Promise.resolve(null));
+      const feasibilityStart = await (
+        store.getFeasibilityStart?.(id, options.accountId ?? null) ?? Promise.resolve(null)
+      );
       if (feasibilityStart && mode !== feasibilityStart.mode) {
         throw new ApiError(
           422,
@@ -2983,10 +2826,17 @@ export async function handleTripRequest(
       if (feasibilityStart && !feasibilityTerminal) {
         throw new ApiError(409, "validation_pilot_terminal_invalid", "The pilot completion could not be reconciled.");
       }
-      const uploaded = await processPhoto(form.get("photo"), id, env);
+      const uploaded = await processPhoto(
+        form.get("photo"),
+        id,
+        options.accountId ?? null,
+        env,
+        store,
+        now,
+      );
 
       try {
-        const completed = await store.completeTrip(id, tokenHash, {
+        const completed = await store.completeTrip(id, tokenHash, options.accountId ?? null, {
           endedAt,
           mode,
           fishingMethod:
@@ -3003,13 +2853,14 @@ export async function handleTripRequest(
           notes: optionalText(form.get("notes"), "notes", 1000),
           consentAt: completionTimestamp,
           photoKey: uploaded?.key ?? null,
+          photoKeyHash: uploaded?.keyHash ?? null,
           photoContentType: uploaded?.contentType ?? null,
           photoSizeBytes: uploaded?.size ?? null,
           updatedAt: completionTimestamp,
         }, completionProvenance, feasibilityTerminal);
 
         if (!completed) {
-          const racedTrip = await store.getTrip(id);
+          const racedTrip = await store.getTrip(id, options.accountId ?? null);
           const retryReporter = await getOrCreateReporter(request, form.get("reporterKey"));
           if (
             !racedTrip || racedTrip.status !== "completed" || racedTrip.source !== "live" ||
@@ -3019,15 +2870,20 @@ export async function handleTripRequest(
             throw new ApiError(404, "trip_not_found", "The active trip could not be found.");
           }
           if (uploaded && racedTrip.photo_key !== uploaded.key) {
-            await env.TRIP_PHOTOS?.delete(uploaded.key).catch(() => undefined);
+            await deleteReservedPhoto(uploaded, env, store);
+          } else if (uploaded) {
+            await releaseAttachedPhotoReservation(uploaded, store);
           }
-          const originalForecastImpression = await (store.getForecastImpression?.(id) ?? Promise.resolve(null));
+          const originalForecastImpression = await (
+            store.getForecastImpression?.(id, options.accountId ?? null) ?? Promise.resolve(null)
+          );
           return jsonResponse({
             trip: publicTrip(racedTrip),
             forecastAttributionCleared: Boolean(originalForecastImpression) && racedTrip.opportunity_window_id === null,
             receipt: { operation: "complete", tripId: id },
           }, 200, retryReporter.setCookie);
         }
+        if (uploaded) await releaseAttachedPhotoReservation(uploaded, store);
         options.onTripCompleted?.(completed);
         return jsonResponse({
           trip: publicTrip(completed),
@@ -3038,15 +2894,17 @@ export async function handleTripRequest(
         let committedTrip: TripRow | null = null;
         if (uploaded) {
           try {
-            committedTrip = await store.getTrip(id);
+            committedTrip = await store.getTrip(id, options.accountId ?? null);
           } catch {
             // A failed reconciliation read cannot prove that the write rolled back.
-            // Keep the object for the idempotent retry/deletion ledger to reconcile.
+            // The pre-upload reservation keeps the locator durable for scheduled reconciliation.
             throw error;
           }
         }
         if (uploaded && committedTrip?.photo_key !== uploaded.key) {
-          await env.TRIP_PHOTOS?.delete(uploaded.key).catch(() => undefined);
+          await deleteReservedPhoto(uploaded, env, store);
+        } else if (uploaded) {
+          await releaseAttachedPhotoReservation(uploaded, store);
         }
         throw error;
       }
@@ -3067,7 +2925,7 @@ export async function handleTripRequest(
       const id = parseClientTripId(form.get("clientTripId"));
       const requestToken = parseRequestToken(form.get("requestToken"));
       const idempotencyKeyHash = await sha256(requestToken);
-      const existingRequest = await store.getTrip(id);
+      const existingRequest = await store.getTrip(id, options.accountId ?? null);
       if (existingRequest) {
         if (isMatchingPastReport(existingRequest, idempotencyKeyHash, reporter.hash, options.accountId)) {
           return jsonResponse({
@@ -3075,6 +2933,9 @@ export async function handleTripRequest(
             receipt: { operation: "past", tripId: id },
           }, 201, reporter.setCookie);
         }
+        throw new ApiError(409, "trip_request_conflict", "This trip request identity cannot be reused.");
+      }
+      if (await store.isTripIdentityReserved(id)) {
         throw new ApiError(409, "trip_request_conflict", "This trip request identity cannot be reused.");
       }
       await store.assertSubmissionAllowed(reporter.hash, now);
@@ -3119,7 +2980,14 @@ export async function handleTripRequest(
         scoreInfluencedChoice,
         timestamp,
       });
-      const uploaded = await processPhoto(form.get("photo"), id, env);
+      const uploaded = await processPhoto(
+        form.get("photo"),
+        id,
+        options.accountId ?? null,
+        env,
+        store,
+        now,
+      );
 
       try {
         const trip = await store.insertTrip({
@@ -3150,30 +3018,40 @@ export async function handleTripRequest(
           idempotencyKeyHash,
           ...forecastFieldsFromAttestation(null, scoreInfluencedChoice),
           photoKey: uploaded?.key ?? null,
+          photoKeyHash: uploaded?.keyHash ?? null,
           photoContentType: uploaded?.contentType ?? null,
           photoSizeBytes: uploaded?.size ?? null,
           createdAt: timestamp,
           updatedAt: timestamp,
           completedAt: timestamp,
         }, validation);
+        if (uploaded) await releaseAttachedPhotoReservation(uploaded, store);
         options.onTripCompleted?.(trip);
         return jsonResponse({
           trip: publicTrip(trip),
           receipt: { operation: "past", tripId: id },
         }, 201, reporter.setCookie);
       } catch (error) {
-        const racedTrip = await store.getTrip(id);
+        const racedTrip = await store.getTrip(id, options.accountId ?? null);
         if (racedTrip && isMatchingPastReport(racedTrip, idempotencyKeyHash, reporter.hash, options.accountId)) {
           if (uploaded && racedTrip.photo_key !== uploaded.key) {
-            await env.TRIP_PHOTOS?.delete(uploaded.key).catch(() => undefined);
+            await deleteReservedPhoto(uploaded, env, store);
+          } else if (uploaded) {
+            await releaseAttachedPhotoReservation(uploaded, store);
           }
           return jsonResponse({
             trip: publicTrip(racedTrip),
             receipt: { operation: "past", tripId: id },
           }, 201, reporter.setCookie);
         }
+        if (await store.isTripIdentityReserved(id)) {
+          if (uploaded) await deleteReservedPhoto(uploaded, env, store);
+          throw new ApiError(409, "trip_request_conflict", "This trip request identity cannot be reused.");
+        }
         if (uploaded && racedTrip?.photo_key !== uploaded.key) {
-          await env.TRIP_PHOTOS?.delete(uploaded.key).catch(() => undefined);
+          await deleteReservedPhoto(uploaded, env, store);
+        } else if (uploaded) {
+          await releaseAttachedPhotoReservation(uploaded, store);
         }
         throw error;
       }
@@ -3290,7 +3168,22 @@ function safeJsonValue(value: string | null) {
   }
 }
 
-async function processPhoto(entry: FormDataEntryValue | null, tripId: string, env: TripApiEnv) {
+interface ProcessedTripPhoto {
+  tripId: string;
+  key: string;
+  keyHash: string;
+  contentType: "image/webp";
+  size: number;
+}
+
+async function processPhoto(
+  entry: FormDataEntryValue | null,
+  tripId: string,
+  accountId: string | null,
+  env: TripApiEnv,
+  store: TripStore,
+  now: Date,
+): Promise<ProcessedTripPhoto | null> {
   if (entry === null || entry === "") return null;
   if (env.TRIP_PHOTO_UPLOADS_ENABLED?.trim().toLowerCase() !== "true") {
     throw new ApiError(503, "photo_uploads_disabled", "Photo uploads are not enabled.");
@@ -3313,6 +3206,9 @@ async function processPhoto(entry: FormDataEntryValue | null, tripId: string, en
   if (!env.IMAGES || !env.TRIP_PHOTOS) {
     throw new ApiError(503, "photo_storage_unavailable", "Photo uploads are temporarily unavailable.");
   }
+  if (!accountId) {
+    throw new ApiError(401, "authentication_required", "Sign in before uploading a trip photo.");
+  }
 
   let transformed: Response;
   try {
@@ -3334,13 +3230,59 @@ async function processPhoto(entry: FormDataEntryValue | null, tripId: string, en
     throw new ApiError(422, "photo_processing_failed", "The processed photo is invalid or too large.");
   }
 
-  const date = new Date();
+  const date = now;
   const key = `trip-photos/${date.getUTCFullYear()}/${String(date.getUTCMonth() + 1).padStart(2, "0")}/${tripId}/${crypto.randomUUID()}.webp`;
-  await env.TRIP_PHOTOS.put(key, bytes, {
-    httpMetadata: { contentType: "image/webp" },
-    customMetadata: { tripId, privacy: "exif-stripped" },
+  const keyHash = await sha256(`trip_photos\0${key}`);
+  const ownerSubjectHash = await sha256(`account:${accountId}`);
+  const createdAt = now.toISOString();
+  const reserved = await store.reservePhotoUpload({
+    id: `photo_reservation_${crypto.randomUUID()}`,
+    tripId,
+    accountId,
+    ownerSubjectHash,
+    objectKey: key,
+    objectKeyHash: keyHash,
+    availableAt: new Date(now.getTime() + TRIP_PHOTO_RESERVATION_GRACE_MS).toISOString(),
+    createdAt,
   });
-  return { key, contentType: "image/webp", size: bytes.byteLength };
+  if (!reserved) {
+    throw new ApiError(503, "photo_storage_unavailable", "Photo uploads are temporarily unavailable.");
+  }
+  try {
+    await env.TRIP_PHOTOS.put(key, bytes, {
+      httpMetadata: { contentType: "image/webp" },
+      customMetadata: { tripId, privacy: "exif-stripped" },
+    });
+  } catch {
+    // A failed provider response cannot prove the object was not written. The reservation remains
+    // authoritative and scheduled cleanup can idempotently delete the candidate locator.
+    throw new ApiError(503, "photo_storage_unavailable", "Photo uploads are temporarily unavailable.");
+  }
+  return { tripId, key, keyHash, contentType: "image/webp", size: bytes.byteLength };
+}
+
+async function releaseAttachedPhotoReservation(photo: ProcessedTripPhoto, store: TripStore) {
+  try {
+    await store.releasePhotoUploadReservation(photo.tripId, photo.key, photo.keyHash);
+  } catch {
+    // The trip row is now the durable locator. A retained reservation is harmless and its
+    // scheduled reconciliation observes the attachment before removing only the reservation.
+  }
+}
+
+async function deleteReservedPhoto(photo: ProcessedTripPhoto, env: TripApiEnv, store: TripStore) {
+  if (!env.TRIP_PHOTOS) return;
+  try {
+    await env.TRIP_PHOTOS.delete(photo.key);
+  } catch {
+    // Keep the durable locator so the scheduled worker can retry the idempotent R2 deletion.
+    return;
+  }
+  try {
+    await store.releasePhotoUploadReservation(photo.tripId, photo.key, photo.keyHash);
+  } catch {
+    // A retained reservation causes only another idempotent delete after the grace period.
+  }
 }
 
 export function minimizeForecastMetadata(value: unknown) {
@@ -3781,8 +3723,11 @@ function parseRequestToken(value: unknown) {
 }
 
 function sameTripPrincipal(row: TripRow, reporterKeyHash: string, accountId?: string | null) {
-  return row.reporter_key_hash === reporterKeyHash &&
-    (row.user_id ?? null) === (accountId ?? null);
+  return row.reporter_key_hash === reporterKeyHash && sameTripAccount(row, accountId);
+}
+
+function sameTripAccount(row: TripRow, accountId?: string | null) {
+  return (row.user_id ?? null) === (accountId ?? null);
 }
 
 function isMatchingLiveStart(

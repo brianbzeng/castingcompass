@@ -11,7 +11,12 @@ import {
   type TurnstileChallengeState,
 } from "./TurnstileChallenge";
 import type { FishingSite } from "../types";
+import {
+  clearCastingCompassAccountStorage,
+  PROFILE_TRIP_DRAFT_PREFIX,
+} from "../lib/account-browser-storage";
 import { useClientNetworkState } from "../lib/use-client-network-state";
+import { useModalDialog } from "../lib/use-modal-dialog";
 
 // A privileged write may commit before its response is lost. Never abort or replay it
 // client-side; keep the in-flight state explicitly unconfirmed until the server answers.
@@ -396,20 +401,6 @@ interface ProfileTripEditFields {
   notes: string;
 }
 
-const PROFILE_TRIP_DRAFT_PREFIX = "castingcompass.profile-trip-draft.v1.";
-const ACCOUNT_STORAGE_KEYS = new Set([
-  "castingcompass.active-trip.v1",
-  "castingcompass.reporter-key.v1",
-  "contourcast.active-trip.v1",
-  "contourcast.reporter-key.v1",
-]);
-const ACCOUNT_STORAGE_PREFIXES = [
-  "castingcompass.trip-draft.v1.",
-  "castingcompass.profile-trip-draft.v1.",
-  "contourcast.trip-draft.v1.",
-  "contourcast.profile-trip-draft.v1.",
-];
-
 type DeletionStatus = "completed" | "processing" | "needs_attention";
 
 interface DeletionDetails {
@@ -419,25 +410,6 @@ interface DeletionDetails {
   completedAt?: string;
   objectsTotal: number;
   objectsDeleted: number;
-}
-
-function clearCastingCompassAccountStorage() {
-  let cleared = true;
-  for (const storageName of ["localStorage", "sessionStorage"] as const) {
-    try {
-      const storage = window[storageName];
-      const keys = Array.from({ length: storage.length }, (_, index) => storage.key(index)).filter((key): key is string => Boolean(key));
-      for (const key of keys) {
-        if (ACCOUNT_STORAGE_KEYS.has(key) || ACCOUNT_STORAGE_PREFIXES.some((prefix) => key.startsWith(prefix))) {
-          storage.removeItem(key);
-        }
-      }
-    } catch {
-      // A browser can block storage access; server-side deletion must still remain accepted.
-      cleared = false;
-    }
-  }
-  return cleared;
 }
 
 function deletionDetailsFromResponse(body: Record<string, unknown>): DeletionDetails {
@@ -594,11 +566,17 @@ export function useAccount(): AccountController {
   }, []);
 
   const completeLocalSignOut = useCallback(() => {
+    const browserStorageCleared = clearCastingCompassAccountStorage();
     setUser(null);
     setSavedSiteIds(new Set());
     setSavedSiteRequest(null);
     setSignOutRequest(null);
-    closeAccount();
+    if (browserStorageCleared) {
+      closeAccount();
+      return;
+    }
+    setModalMessage("Signed out. This browser blocked removal of locally stored trip recovery data. Clear CastingCompass site data before sharing this device.");
+    setModalOpen(true);
   }, [closeAccount]);
 
   const signOut = useCallback(async () => {
@@ -1021,6 +999,23 @@ export function AccountModal({
     resetResendTurnstile();
     account.closeAccount();
   }, [account, resetResendTurnstile, resetTurnstile]);
+  const closeTripEdit = useCallback(() => {
+    setEditingTrip(null);
+    setEditFields(null);
+    setProfileActionError("");
+    setTripEditRequest((current) => current?.state === "ambiguous" ? current : null);
+  }, []);
+  const closeTripEditFromKeyboard = useCallback(() => {
+    if (!profileActionBusy) closeTripEdit();
+  }, [closeTripEdit, profileActionBusy]);
+  const accountDialogRef = useModalDialog<HTMLElement>({
+    open: account.modalOpen && !standalone,
+    onClose: closeAccount,
+  });
+  const tripEditDialogRef = useModalDialog<HTMLFormElement>({
+    open: Boolean(editingTrip && editFields),
+    onClose: closeTripEditFromKeyboard,
+  });
   const turnstileCanSubmit = turnstileState === "disabled" ||
     (turnstileState === "verified" && Boolean(turnstileToken));
   const resendTurnstileCanSubmit = resendTurnstileState === "disabled" ||
@@ -1375,13 +1370,6 @@ export function AccountModal({
     setEditFields(nextFields);
   };
 
-  const closeTripEdit = () => {
-    setEditingTrip(null);
-    setEditFields(null);
-    setProfileActionError("");
-    setTripEditRequest((current) => current?.state === "ambiguous" ? current : null);
-  };
-
   const saveTripEdit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!editingTrip || !editFields) return;
@@ -1673,7 +1661,14 @@ export function AccountModal({
     <div className={standalone ? "profile-page-shell" : "account-modal-layer"} role="presentation" onClick={(event) => {
       if (!standalone && event.target === event.currentTarget) closeAccount();
     }}>
-      <section className={`account-modal${standalone ? " account-profile-page" : ""}`} role={standalone ? "main" : "dialog"} aria-modal={standalone ? undefined : "true"} aria-labelledby="account-title">
+      <section
+        ref={accountDialogRef}
+        className={`account-modal${standalone ? " account-profile-page" : ""}`}
+        role={standalone ? "main" : "dialog"}
+        aria-modal={standalone ? undefined : "true"}
+        aria-labelledby="account-title"
+        tabIndex={standalone ? undefined : -1}
+      >
         {standalone ? (
           <Link className="sheet-close" href="/" aria-label="Back to forecast"><CloseIcon /></Link>
         ) : (
@@ -1710,8 +1705,8 @@ export function AccountModal({
             ) : null}
             {deletionStatusError ? <p className="account-error" role="alert">{deletionStatusError}</p> : null}
             {deletionDetails.scope === "account" ? <p><small>{browserAccountStorageCleared === false
-              ? "This browser blocked access to local storage, so CastingCompass could not verify removal of its stored trip drafts and anonymous reporting identifier. Clear site data in your browser settings."
-              : "CastingCompass cleared its browser-stored trip drafts and anonymous reporting identifier. A short-lived, secure status receipt lets this page check any remaining cleanup without restoring account access."}</small></p> : null}
+              ? "This browser blocked access to local storage, so CastingCompass could not verify removal of its stored trip drafts, recovery request tokens, pending-operation markers, and anonymous reporting identifier. Clear site data in your browser settings."
+              : "CastingCompass cleared its browser-stored trip drafts, recovery request tokens, pending-operation markers, and anonymous reporting identifier. A short-lived, secure status receipt lets this page check any remaining cleanup without restoring account access."}</small></p> : null}
             <button className="account-primary" type="button" disabled={deletionStatusAction !== null} onClick={() => deletionDetails.scope === "account" ? window.location.assign("/") : void dismissDeletionStatus()}>{deletionDetails.scope === "account" ? "Return to forecast" : deletionStatusAction === "dismissing" ? "Returning…" : "Return to profile"}</button>
             {deletionDetails.scope === "account" ? <button className="account-text-button" type="button" disabled={deletionStatusAction !== null} onClick={() => void dismissDeletionStatus()}>{deletionStatusAction === "dismissing" ? "Dismissing…" : "Dismiss status and continue"}</button> : null}
             <small>Dismissing clears this browser’s status receipt. It does not cancel any remaining cleanup or remove the server-side deletion record.</small>
@@ -1800,7 +1795,7 @@ export function AccountModal({
                           onOpenSite?.(saved.site_id);
                         }}
                       >
-                        <span><strong>{site?.name ?? saved.site_id}</strong><small>{site?.region ?? "Bay Area"}</small></span>
+                        <span><strong>{site?.name ?? saved.site_id}</strong><small>{site?.region ?? "California coast"}</small></span>
                         <b aria-hidden="true">View forecast →</b>
                       </button>
                     );
@@ -1939,11 +1934,13 @@ export function AccountModal({
                 if (event.target === event.currentTarget && !profileActionBusy) closeTripEdit();
               }}>
               <form
+                ref={tripEditDialogRef}
                 className="profile-trip-editor profile-trip-editor-modal"
                 role="dialog"
                 aria-modal="true"
                 aria-labelledby="profile-trip-editor-title"
                 aria-busy={activeTripEditRequest?.state === "submitting"}
+                tabIndex={-1}
                 onSubmit={saveTripEdit}
               >
                 <div className="profile-trip-editor-heading">

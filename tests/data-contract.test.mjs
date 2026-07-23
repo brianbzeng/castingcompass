@@ -13,24 +13,78 @@ function sha256(bytes) {
   return createHash("sha256").update(bytes).digest("hex");
 }
 
-test("curates the required number of reachable Bay Area access sites", async () => {
+test("curates reachable Bay Area and Santa Barbara South Coast access sites", async () => {
   const [sites, publicSites] = await Promise.all([
     readJson("data/sites.json"),
     readJson("public/data/sites.json"),
   ]);
 
-  assert.ok(sites.length >= 30 && sites.length <= 50, `expected 30–50 sites, received ${sites.length}`);
+  assert.ok(sites.length >= 60 && sites.length <= 70, `expected 60–70 sites, received ${sites.length}`);
   assert.equal(new Set(sites.map((site) => site.id)).size, sites.length);
   assert.deepEqual(publicSites, sites);
 
+  const expectedSantaBarbaraSites = new Set([
+    "gaviota-state-park-beach",
+    "refugio-state-beach",
+    "el-capitan-state-beach",
+    "haskells-beach",
+    "goleta-beach",
+    "arroyo-burro-beach",
+    "mesa-lane-beach",
+    "leadbetter-beach",
+    "santa-barbara-harbor-breakwater",
+    "stearns-wharf",
+    "east-beach-santa-barbara",
+    "summerland-beach-lookout-park",
+    "carpinteria-state-beach",
+    "rincon-beach-park",
+  ]);
+  const expectedSantaBarbaraTideStations = new Map([
+    ["gaviota-state-park-beach", "9411399"],
+    ["refugio-state-beach", "9411399"],
+    ["el-capitan-state-beach", "9411399"],
+    ["haskells-beach", "9411340"],
+    ["goleta-beach", "9411340"],
+    ["arroyo-burro-beach", "9411340"],
+    ["mesa-lane-beach", "9411340"],
+    ["leadbetter-beach", "9411340"],
+    ["santa-barbara-harbor-breakwater", "9411340"],
+    ["stearns-wharf", "9411340"],
+    ["east-beach-santa-barbara", "9411340"],
+    ["summerland-beach-lookout-park", "9411340"],
+    ["carpinteria-state-beach", "9411270"],
+    ["rincon-beach-park", "9411270"],
+  ]);
+
+  for (const siteId of expectedSantaBarbaraSites) {
+    const site = sites.find((candidate) => candidate.id === siteId);
+    assert.ok(site, `${siteId} must be in the regional catalog`);
+    assert.equal(
+      site.tideStation,
+      expectedSantaBarbaraTideStations.get(siteId),
+      `${siteId} must use its nearest declared NOAA tide-prediction anchor`,
+    );
+  }
+
   for (const site of sites) {
     assert.match(site.id, /^[a-z0-9]+(?:-[a-z0-9]+)*$/);
-    assert.ok(site.latitude >= 37.35 && site.latitude <= 38.25, `${site.id} latitude outside launch geography`);
-    assert.ok(site.longitude >= -123.1 && site.longitude <= -121.9, `${site.id} longitude outside launch geography`);
+    const inBayArea =
+      site.latitude >= 37.35 && site.latitude <= 38.25 &&
+      site.longitude >= -123.1 && site.longitude <= -121.9;
+    const inSantaBarbaraSouthCoast =
+      site.latitude >= 34.34 && site.latitude <= 34.5 &&
+      site.longitude >= -120.3 && site.longitude <= -119.4;
+    assert.ok(inBayArea || inSantaBarbaraSouthCoast, `${site.id} outside supported regional coverage`);
     assert.ok(["Shore", "Beach", "Jetty", "Pier"].includes(site.type));
     assert.ok(site.regulationUrl.startsWith("https://wildlife.ca.gov/"));
     assert.ok(site.structureTags.length > 0);
     assert.ok(site.castingZone?.radiusMeters > 0);
+    assert.ok(
+      ["bay", "channel", "harbor", "protected-bay", "open-coast", "harbor-mouth", "semi-protected"].includes(
+        site.castingZone?.exposure,
+      ),
+      `${site.id} must declare a recognized casting-zone exposure`,
+    );
     assert.ok(Number.isFinite(site.streetViewLatitude));
     assert.ok(Number.isFinite(site.streetViewLongitude));
     if (site.accessStatus === "closed") {
@@ -152,7 +206,7 @@ test("publishes a compact attestation index bound to the exact public assets", a
   }
 });
 
-test("every supported snapshot refresh chains the byte-binding attestation emitter", async () => {
+test("every supported snapshot refresh chains the advisory overlay and byte-binding attestation emitter", async () => {
   const [packageJson, workflow, snapshotGenerator, attestationEmitter] = await Promise.all([
     readJson("package.json"),
     readFile(new URL(".github/workflows/refresh-snapshot.yml", root), "utf8"),
@@ -160,17 +214,26 @@ test("every supported snapshot refresh chains the byte-binding attestation emitt
     readFile(new URL("scripts/generate_opportunity_attestations.py", root), "utf8"),
   ]);
   const refresh = packageJson.scripts["data:refresh"];
+  assert.match(refresh, /PYTHONPATH=\. python3 scripts\/refresh_water_quality\.py/);
   assert.match(refresh, /PYTHONPATH=\. python3 scripts\/generate_snapshot\.py/);
   assert.match(refresh, /&& PYTHONPATH=\. python3 scripts\/generate_opportunity_attestations\.py/);
+  assert.ok(
+    refresh.indexOf("refresh_water_quality.py") < refresh.indexOf("generate_snapshot.py"),
+  );
   assert.ok(
     refresh.indexOf("generate_snapshot.py") < refresh.indexOf("generate_opportunity_attestations.py"),
   );
   assert.match(workflow, /PYTHONPATH: \./);
   assert.ok(
+    workflow.indexOf("python scripts/refresh_water_quality.py") <
+      workflow.indexOf("python scripts/generate_snapshot.py"),
+  );
+  assert.ok(
     workflow.indexOf("python scripts/generate_snapshot.py") <
       workflow.indexOf("python scripts/generate_opportunity_attestations.py"),
   );
   assert.match(workflow, /python -m json\.tool public\/data\/opportunity-attestations\.json/);
+  assert.match(workflow, /python -m json\.tool public\/data\/water-quality\.json/);
   assert.doesNotMatch(snapshotGenerator, /opportunity-attestations|write_opportunity_attestation/);
   assert.match(attestationEmitter, /snapshot_path\.read_bytes\(\)/);
   assert.match(attestationEmitter, /site_catalog_path\.read_bytes\(\)/);

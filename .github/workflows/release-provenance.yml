@@ -2,8 +2,14 @@ name: Release provenance
 
 on:
   push:
+    branches:
+      - main
   pull_request:
   workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 
 permissions:
   contents: read
@@ -28,10 +34,22 @@ jobs:
       - run: npm run security:release-sbom
       - run: npm run security:api-image-upstream-watch
       - run: npm run security:exercise-policy
+      - run: npm run security:isolated-staging-config-policy
+      - run: npm run security:authenticated-staging-drill-policy
       - run: npm run security:cloudflare-provider-state
       - run: npm run security:observability-activation
       - run: npm run security:production-change-policy
       - run: npm run security:operational-restore-review
+      - run: npm run security:key-custody-review
+      - run: npm run security:pollution-score-independent-review
+      - run: npm run security:water-quality-mapping-independent-review
+      - run: npm run security:santa-barbara-access-review
+      - run: npm run security:santa-barbara-structure-depth-review
+      - run: npm run security:san-francisco-structure-depth-review
+      - run: npm run security:san-mateo-structure-depth-review
+      - run: npm run security:marin-structure-depth-review
+      - run: npm run security:north-east-bay-structure-depth-review
+      - run: npm run security:oakland-south-bay-structure-depth-review
       - run: npm run build:cloudflare
       - name: Build deterministic release artifacts
         run: |

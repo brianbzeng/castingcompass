@@ -11,85 +11,22 @@
     "worker/validation-feasibility-export.ts"
   ],
   "expectedSummary": {
-    "prepareCallCount": 221,
-    "literalCallCount": 195,
-    "nonLiteralCallCount": 26,
-    "multiRowLiteralWithoutLimitCount": 12
+    "prepareCallCount": 254,
+    "literalCallCount": 240,
+    "nonLiteralCallCount": 14,
+    "multiRowLiteralWithoutLimitCount": 9
   },
   "allowedNonLiteralExpressions": [
     {
       "file": "worker/auth.ts",
-      "expressionSha256": "b5a1b65e1ac974f3f245990d63e5c915c5b3916dd3dd131a8a72ee4c328d6382",
-      "staticAuthority": "module-level CREATE_USERS_SQL constant",
-      "executionContract": "schema bootstrap batch",
-      "rationale": "The runtime fallback schema uses one reviewed constant and no request input."
+      "expressionSha256": "575ae5284c09c948f9dcc515668fa02573c69f6f6917e07606bd8c9df7d8011e",
+      "staticAuthority": "module-level AUTH_SCHEMA_READY_SQL constant",
+      "executionContract": "one read-only schema-readiness probe per D1 binding",
+      "rationale": "Production schema is migration-owned; the runtime now fails closed with one static readiness query instead of issuing 35 DDL queries on a cold isolate."
     },
     {
       "file": "worker/auth.ts",
-      "expressionSha256": "81450ebf83d4f122d29398d3a71ac08ce584225fb9b7e73d35682c715fd0d3d7",
-      "staticAuthority": "module-level CREATE_SESSIONS_SQL constant",
-      "executionContract": "schema bootstrap batch",
-      "rationale": "The runtime fallback schema uses one reviewed constant and no request input."
-    },
-    {
-      "file": "worker/auth.ts",
-      "expressionSha256": "4555d2bdd7d83ed4634e04fd7a4816e4f6e7ad90cff22dafcbdc694660b1ceea",
-      "staticAuthority": "module-level CREATE_SAVED_SITES_SQL constant",
-      "executionContract": "schema bootstrap batch",
-      "rationale": "The runtime fallback schema uses one reviewed constant and no request input."
-    },
-    {
-      "file": "worker/auth.ts",
-      "expressionSha256": "b4b0b6ee87040e6509a72f95fa4f706ba01573898985adcd3c132ba013d73929",
-      "staticAuthority": "module-level CREATE_AUTH_ATTEMPTS_SQL constant",
-      "executionContract": "schema bootstrap batch",
-      "rationale": "The runtime fallback schema uses one reviewed constant and no request input."
-    },
-    {
-      "file": "worker/auth.ts",
-      "expressionSha256": "cb57e30102c6a8c9c03527d2cb3f6032a13127265e2396459e9db3512a4d0f1f",
-      "staticAuthority": "module-level CREATE_EMAIL_CHALLENGES_SQL constant",
-      "executionContract": "schema bootstrap batch",
-      "rationale": "The runtime fallback schema uses one reviewed constant and no request input."
-    },
-    {
-      "file": "worker/auth.ts",
-      "expressionSha256": "87a141161a9bc55de2d2cc8c93e010c0dfba7f8b352e056eafd4f78087d133ba",
-      "staticAuthority": "module-level CREATE_GEAR_PROFILES_SQL constant",
-      "executionContract": "schema bootstrap batch",
-      "rationale": "The runtime fallback schema uses one reviewed constant and no request input."
-    },
-    {
-      "file": "worker/auth.ts",
-      "expressionSha256": "0fe2d3e2fc90a83558e82a3b5213cd3739bc224d544bd0fd7de641a98f840caa",
-      "staticAuthority": "module-level CREATE_SIGNUP_AGE_PROOFS_SQL constant",
-      "executionContract": "schema bootstrap batch",
-      "rationale": "The runtime fallback schema uses one reviewed constant and no request input."
-    },
-    {
-      "file": "worker/auth.ts",
-      "expressionSha256": "6dfe400169a665b5a0e8123fa9bd209d4e8518c6e3258325b42d27e3affe67af",
-      "staticAuthority": "module-level CREATE_PRIVACY_DELETION_JOBS_SQL constant",
-      "executionContract": "schema bootstrap batch",
-      "rationale": "The runtime fallback schema uses one reviewed constant and no request input."
-    },
-    {
-      "file": "worker/auth.ts",
-      "expressionSha256": "70bc3806cc9b572058b2ad7ec1513712ffddd43f98ea749881503f5ed557a211",
-      "staticAuthority": "module-level CREATE_PRIVACY_DELETION_TASKS_SQL constant",
-      "executionContract": "schema bootstrap batch",
-      "rationale": "The runtime fallback schema uses one reviewed constant and no request input."
-    },
-    {
-      "file": "worker/auth.ts",
-      "expressionSha256": "5bce5808096baed633bb8bcad25b9a6f3b1efc6235c9b86121475126783538e0",
-      "staticAuthority": "module-level CREATE_PRIVACY_EXPORT_JOBS_SQL constant",
-      "executionContract": "schema bootstrap batch",
-      "rationale": "The default-off runtime fallback uses one reviewed export-ledger constant and no request input."
-    },
-    {
-      "file": "worker/auth.ts",
-      "expressionSha256": "edd9f72bd15120f863d2075a2325a41bee53fb90a568e16cb2d4f7421c2d9e79",
+      "expressionSha256": "44a48319b3007a69ccc82ff6d97c890ddd0d4ce13d1f6e9d5728a3d22af2b905",
       "staticAuthority": "server-owned forecastInvalidation chooses one of two fixed column-reset fragments",
       "executionContract": "single pending-trip update bound by id and authenticated user_id",
       "rationale": "No request value becomes SQL syntax; all user values remain D1 bindings."
@@ -98,43 +35,22 @@
       "file": "worker/auth.ts",
       "expressionSha256": "a8b771920b8319e47251d1360f5e880bc18e8d329b0f0d003ea3c7e615558947",
       "staticAuthority": "two fixed privacy-task SELECT literals chosen only by the optional operator job id",
-      "executionContract": "internal cleanup claim of at most 50 rows",
+      "executionContract": "internal cleanup claim of at most 5 rows",
       "rationale": "The branch changes only the bound predicate and ordering; the job id remains a parameter."
     },
     {
       "file": "worker/discussions.ts",
-      "expressionSha256": "d4365f061b288be8329a532ca6644afaef7c5a57ccfd6dc44cec65f325ff60c1",
-      "staticAuthority": "module-level CREATE_DISCUSSIONS_SQL constant",
-      "executionContract": "schema bootstrap batch",
-      "rationale": "The runtime fallback schema uses one reviewed constant and no request input."
+      "expressionSha256": "082697e4dd97c5c634eff29073f5552bc95d2a24a4ee39db84a4c6eba3f086b8",
+      "staticAuthority": "module-level DISCUSSION_SCHEMA_READY_SQL constant",
+      "executionContract": "one read-only schema-readiness probe per D1 binding when public discussions are enabled",
+      "rationale": "Production discussion schema is migration-owned; the default-off runtime fails closed with one static readiness query instead of issuing table or index DDL on a cold isolate."
     },
     {
       "file": "worker/trips.ts",
-      "expressionSha256": "a30d43434bf332af4ac7a1121a25f2e8a539a880f8dd3e32719465d1da25f46c",
-      "staticAuthority": "module-level CREATE_TRIPS_SQL constant",
-      "executionContract": "schema bootstrap batch",
-      "rationale": "The runtime fallback schema uses one reviewed constant and no request input."
-    },
-    {
-      "file": "worker/trips.ts",
-      "expressionSha256": "b54adea780f2574650cbc99cf741678af37c3417c4734bb0138c3ed1a12c25af",
-      "staticAuthority": "module-level CREATE_FORECAST_IMPRESSIONS_SQL constant",
-      "executionContract": "schema bootstrap batch",
-      "rationale": "The runtime fallback schema uses one reviewed constant and no request input."
-    },
-    {
-      "file": "worker/trips.ts",
-      "expressionSha256": "cfd1855de8f1e1f5c1702d15ab4a99ba89eae74f097d6efb1ed6f079c6ac8dcf",
-      "staticAuthority": "module-level CREATE_TRIP_VALIDATION_PROVENANCE_SQL constant",
-      "executionContract": "schema bootstrap batch",
-      "rationale": "The runtime fallback schema uses one reviewed constant and no request input."
-    },
-    {
-      "file": "worker/trips.ts",
-      "expressionSha256": "b111c6e1d318f203063e5c16bab43c108326af0aa2f7b65760c95547a43dbe52",
-      "staticAuthority": "iteration over the fixed module-level CREATE_INDEX_STATEMENTS array",
-      "executionContract": "schema bootstrap batch",
-      "rationale": "The callback receives only reviewed index DDL constants."
+      "expressionSha256": "d0f0eb7b9a51d189a6cdcaaa7bfc7a4d212296854f13071dcef6d226e0315692",
+      "staticAuthority": "module-level TRIP_SCHEMA_READY_SQL constant",
+      "executionContract": "one read-only schema-readiness probe per D1 binding",
+      "rationale": "Production trip schema is migration-owned; the runtime fails closed with one static readiness query instead of issuing 35 DDL queries on a cold isolate."
     },
     {
       "file": "worker/trips.ts",
@@ -202,7 +118,7 @@
   ],
   "multiRowReadContracts": [
     {
-      "callSiteId": "ede4481969504a5342786bde",
+      "callSiteId": "12e288b54a92ed234f68330f",
       "file": "worker/privacy-export.ts",
       "sqlSha256": "9d7b2607848728b06bea49e6bdb440f2cd69a1005935230de8b7218fcec22d3a",
       "scope": "complete owner export",
@@ -211,7 +127,7 @@
       "rationale": "Saved locations are included completely in the authenticated portability export."
     },
     {
-      "callSiteId": "12cda5350d4f0c599d064559",
+      "callSiteId": "85b8d73c7e60dcc4cd0ba10c",
       "file": "worker/privacy-export.ts",
       "sqlSha256": "2dd4aa49253ba9aa42392146197897fa41e7c01df92d776e7013ffab6a17f01e",
       "scope": "complete owner export",
@@ -220,16 +136,16 @@
       "rationale": "Gear profiles are included completely in the authenticated portability export."
     },
     {
-      "callSiteId": "26ae0e0f2e25a801b3126712",
+      "callSiteId": "4333dee6e402c1ef6c56e197",
       "file": "worker/privacy-export.ts",
-      "sqlSha256": "369ec8856c9ae369d42562864477e222c82acbb16cf1602bf5c7ef324b8add70",
+      "sqlSha256": "edd22b8836ae5190e043f3d44818f5cea0395ff16e9492e5a952fc596aabac29",
       "scope": "complete owner export",
       "boundPredicate": "user_id = ?",
       "rowBoundStatus": "complete-rights-export",
       "rationale": "Trips are intentionally complete for authenticated portability; the default-off asynchronous packager moves this complete read off the request path when activated."
     },
     {
-      "callSiteId": "05f1f6845a6b5fcb728994d3",
+      "callSiteId": "9bf9d6adc110e191fba10ef6",
       "file": "worker/privacy-export.ts",
       "sqlSha256": "11fbf502919e8f90a231c9fc165aadc763fd37634d1a5409303e525a1fa9db35",
       "scope": "complete owner export",
@@ -238,7 +154,7 @@
       "rationale": "Only public-copy rows derived from the authenticated owner's trips enter the portability export."
     },
     {
-      "callSiteId": "c6b2f36428fbc68ccd411a95",
+      "callSiteId": "2454dbee231d6661c9ee1457",
       "file": "worker/privacy-export.ts",
       "sqlSha256": "96f4c5994edaa17f2eeb06fd6bb271aca1e8a75febdf311d97cae4cc82c40924",
       "scope": "complete owner export",
@@ -247,7 +163,7 @@
       "rationale": "Forecast impression records are required for the authenticated owner's complete export."
     },
     {
-      "callSiteId": "623e192f595fda08eec5ee29",
+      "callSiteId": "c71e30fc533941d004a3012f",
       "file": "worker/privacy-export.ts",
       "sqlSha256": "ff670cba408cd096752e58b52a419fe1469ba49a1c74f2f9358ae96b979869f9",
       "scope": "complete owner export",
@@ -256,7 +172,7 @@
       "rationale": "Validation provenance is required for the authenticated owner's complete export."
     },
     {
-      "callSiteId": "6aaa23dc0d3b397f3deb7c9c",
+      "callSiteId": "782cdcc18fa9050a41592350",
       "file": "worker/privacy-export.ts",
       "sqlSha256": "a204c81a56022f6509ba5550c4c519898862d6413f44f5e1955d7dec340aba33",
       "scope": "complete owner export",
@@ -265,7 +181,7 @@
       "rationale": "Pilot events remain owner-bound and complete for authenticated portability."
     },
     {
-      "callSiteId": "fc514ef6283d281838ba5a79",
+      "callSiteId": "fda2eec1e4180b3b7aa43e67",
       "file": "worker/privacy-export.ts",
       "sqlSha256": "b677d5535e6ccdeab73a8511868b7de7e9b55c750efdf28aefe34db68dc0c890",
       "scope": "complete owner export",
@@ -274,37 +190,13 @@
       "rationale": "Recruitment records remain owner-bound and complete for authenticated portability."
     },
     {
-      "callSiteId": "d5a3056ecfcba3f58369d598",
+      "callSiteId": "247fb5e7599e7beb97b0b827",
       "file": "worker/privacy-export.ts",
       "sqlSha256": "cf733f072a900b16b9d702fa4ff27fe43c899d8b488397490bd742267f31f0c9",
       "scope": "complete owner export",
       "boundPredicate": "trips.user_id = ?",
       "rowBoundStatus": "complete-rights-export",
       "rationale": "Corrections remain owner-bound and complete for authenticated portability."
-    },
-    {
-      "callSiteId": "5a8a1422da232a361ef6ab28",
-      "sqlSha256": "94a8641e2f59456aa737aebe11496255b41cbf8e563cc6df4ba3de3014578555",
-      "scope": "owner account deletion",
-      "boundPredicate": "user_id = ?",
-      "rowBoundStatus": "owner-lifecycle-cleanup",
-      "rationale": "Every current photo key must enter the durable object-deletion ledger before active rows are removed."
-    },
-    {
-      "callSiteId": "55a4ebbb7afbfc3a06c03411",
-      "sqlSha256": "54610b0da32d0986051a22f3b2bbf03209aa8e2c3f023fb1558517fd58395006",
-      "scope": "owner account deletion",
-      "boundPredicate": "privacy_deletion_jobs.owner_subject_hash = ?",
-      "rowBoundStatus": "owner-lifecycle-cleanup",
-      "rationale": "Pending typed object keys for the same owner are deduplicated before the active-data deletion batch."
-    },
-    {
-      "callSiteId": "8937c0620c8fd739801163a3",
-      "sqlSha256": "c9349672d601c7c1e393f9bbce92b3cfc1d6e26c4ad10e6dcb19f20c317b8bd8",
-      "scope": "owner account deletion",
-      "boundPredicate": "owner_subject_hash = ?",
-      "rowBoundStatus": "owner-lifecycle-cleanup",
-      "rationale": "Every committed or cleanup-only private export locator for the same owner must enter the durable deletion batch before account access is removed."
     }
   ]
 }

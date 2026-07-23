@@ -224,6 +224,80 @@ export const privacyExportJobs = sqliteTable(
   ],
 );
 
+export const accountDeletionFences = sqliteTable(
+  "account_deletion_fences",
+  {
+    userId: text("user_id").primaryKey().references(() => users.id, { onDelete: "cascade" }),
+    ownerSubjectHash: text("owner_subject_hash").notNull(),
+    leaseToken: text("lease_token").notNull(),
+    leaseExpiresAt: text("lease_expires_at").notNull(),
+    requestedAt: text("requested_at").notNull(),
+    updatedAt: text("updated_at").notNull(),
+  },
+  (table) => [
+    uniqueIndex("account_deletion_fences_owner_unique").on(table.ownerSubjectHash),
+    check(
+      "account_deletion_fences_owner_hash_check",
+      sql`length(${table.ownerSubjectHash}) = 64 and ${table.ownerSubjectHash} not glob '*[^a-f0-9]*'`,
+    ),
+    check(
+      "account_deletion_fences_lease_token_check",
+      sql`length(${table.leaseToken}) >= 40 and length(${table.leaseToken}) <= 160`,
+    ),
+  ],
+);
+
+export const tripPhotoUploadReservations = sqliteTable(
+  "trip_photo_upload_reservations",
+  {
+    id: text("id").primaryKey(),
+    tripId: text("trip_id").notNull(),
+    ownerSubjectHash: text("owner_subject_hash").notNull(),
+    objectKey: text("object_key").notNull(),
+    objectKeyHash: text("object_key_hash").notNull(),
+    state: text("state").notNull(),
+    attempts: integer("attempts").notNull().default(0),
+    availableAt: text("available_at").notNull(),
+    leaseExpiresAt: text("lease_expires_at"),
+    leaseToken: text("lease_token"),
+    lastErrorCode: text("last_error_code"),
+    createdAt: text("created_at").notNull(),
+    updatedAt: text("updated_at").notNull(),
+  },
+  (table) => [
+    uniqueIndex("trip_photo_upload_reservations_object_key_unique").on(table.objectKey),
+    uniqueIndex("trip_photo_upload_reservations_object_key_hash_unique").on(table.objectKeyHash),
+    index("trip_photo_upload_reservations_retry_idx").on(
+      table.state,
+      table.availableAt,
+      table.leaseExpiresAt,
+    ),
+    index("trip_photo_upload_reservations_trip_idx").on(table.tripId, table.createdAt),
+    index("trip_photo_upload_reservations_owner_idx").on(table.ownerSubjectHash, table.createdAt),
+    check(
+      "trip_photo_upload_reservations_state_check",
+      sql`${table.state} in ('pending', 'leased', 'needs_attention')`,
+    ),
+    check(
+      "trip_photo_upload_reservations_attempts_check",
+      sql`${table.attempts} >= 0 and ${table.attempts} <= 8`,
+    ),
+    check(
+      "trip_photo_upload_reservations_hash_check",
+      sql`length(${table.objectKeyHash}) = 64 and ${table.objectKeyHash} not glob '*[^a-f0-9]*'`,
+    ),
+    check(
+      "trip_photo_upload_reservations_owner_hash_check",
+      sql`length(${table.ownerSubjectHash}) = 64 and ${table.ownerSubjectHash} not glob '*[^a-f0-9]*'`,
+    ),
+    check(
+      "trip_photo_upload_reservations_lease_check",
+      sql`(${table.state} = 'leased' and ${table.leaseExpiresAt} is not null and ${table.leaseToken} is not null)
+        or (${table.state} != 'leased' and ${table.leaseExpiresAt} is null and ${table.leaseToken} is null)`,
+    ),
+  ],
+);
+
 export const gearProfiles = sqliteTable(
   "gear_profiles",
   {
@@ -297,6 +371,7 @@ export const trips = sqliteTable(
     scoreInfluencedChoice: integer("score_influenced_choice", { mode: "boolean" }),
     predictionMetadataJson: text("prediction_metadata_json"),
     photoKey: text("photo_key"),
+    photoKeyHash: text("photo_key_hash"),
     photoContentType: text("photo_content_type"),
     photoSizeBytes: integer("photo_size_bytes"),
     createdAt: text("created_at").notNull(),
@@ -458,8 +533,8 @@ export const trips = sqliteTable(
       .on(table.userId, table.createdAt)
       .where(sql`${table.userId} is not null`),
     index("trips_ai_review_backlog_idx")
-      .on(table.status, sql`coalesce(${table.completedAt}, ${table.endedAt}, ${table.startedAt})`)
-      .where(sql`${table.aiReviewStatus} is null or ${table.aiReviewStatus} = 'retry'`),
+      .on(sql`coalesce(${table.completedAt}, ${table.endedAt}, ${table.startedAt})`)
+      .where(sql`${table.status} = 'completed'`),
     index("trips_reporter_active_created_idx")
       .on(table.reporterKeyHash, table.createdAt)
       .where(sql`${table.status} = 'active'`),
@@ -480,6 +555,7 @@ export const aiReviewJobs = sqliteTable(
     attempts: integer("attempts").notNull().default(0),
     availableAt: text("available_at").notNull(),
     leaseExpiresAt: text("lease_expires_at"),
+    leaseToken: text("lease_token"),
     lastErrorCode: text("last_error_code"),
     createdAt: text("created_at").notNull(),
     updatedAt: text("updated_at").notNull(),
@@ -932,7 +1008,7 @@ export const validationFeasibilityActivations = sqliteTable(
       "validation_feasibility_activation_protocol_check",
       sql`${table.protocolId} = 'california-halibut-collection-feasibility-v2'
         and ${table.protocolVersion} = '2.0.0'
-        and ${table.protocolSha256} = '8ff0d7bd009ed8eb10f328347d58d0b63d0b6c822b08351cc5c2760d41de13ed'
+        and ${table.protocolSha256} = '4d034e303c841d05419cd1512abacad8c24080582edcfd4fc194d638ee5a7c3c'
         and ${table.siteCatalogSha256} = 'b0378742f40cca598c57d845fb683ab9b36068cdd69de541aeb3e45d93c31860'`,
     ),
     check(

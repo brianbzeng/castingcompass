@@ -33,9 +33,11 @@ class D1StatementAdapter {
 class D1Adapter {
   constructor(sqlite) {
     this.sqlite = sqlite;
+    this.preparedQueries = [];
   }
 
   prepare(query) {
+    this.preparedQueries.push(query);
     return new D1StatementAdapter(this.sqlite.prepare(query));
   }
 
@@ -83,6 +85,8 @@ function database() {
       subject_hash TEXT NOT NULL,
       owner_subject_hash TEXT NOT NULL
     );
+    CREATE UNIQUE INDEX site_discussion_posts_trip_unique ON site_discussion_posts (trip_id);
+    CREATE INDEX site_discussion_posts_site_time_idx ON site_discussion_posts (site_id, observed_at);
   `);
   return { sqlite, d1: new D1Adapter(sqlite) };
 }
@@ -127,6 +131,57 @@ test("public discussions default off without touching the database", async () =>
   );
   assert.equal(response?.status, 200);
   assert.deepEqual(await response?.json(), { posts: [] });
+  assert.equal(d1.preparedQueries.length, 0);
+});
+
+test("enabled discussions use one cold readiness query and never issue runtime DDL", async () => {
+  const { d1 } = database();
+  const request = new Request("https://castingcompass.com/api/discussions/ocean-beach");
+  const env = { DB: d1, PUBLIC_DISCUSSIONS_ENABLED: "true" };
+  const sites = [{ id: "ocean-beach" }];
+
+  const cold = await handleDiscussionRequest(request, env, sites);
+  assert.equal(cold?.status, 200);
+  assert.deepEqual(await cold?.json(), { posts: [] });
+  assert.equal(d1.preparedQueries.length, 2);
+
+  const warm = await handleDiscussionRequest(request, env, sites);
+  assert.equal(warm?.status, 200);
+  assert.deepEqual(await warm?.json(), { posts: [] });
+  assert.equal(d1.preparedQueries.length, 3);
+  assert.equal(d1.preparedQueries.filter((query) => /^\s*(?:CREATE|ALTER|DROP)\b/iu.test(query)).length, 0);
+});
+
+test("enabled discussions fail closed without mutating an incomplete migration-owned schema", async () => {
+  const sqlite = new DatabaseSync(":memory:");
+  sqlite.exec(`PRAGMA foreign_keys = ON;
+    CREATE TABLE trips (
+      id TEXT PRIMARY KEY NOT NULL,
+      site_id TEXT NOT NULL,
+      status TEXT NOT NULL,
+      consent INTEGER NOT NULL,
+      moderation_status TEXT NOT NULL,
+      ai_review_status TEXT,
+      ai_reviewed_at TEXT
+    );`);
+  const before = sqlite.prepare("PRAGMA schema_version").get().schema_version;
+  const d1 = new D1Adapter(sqlite);
+
+  const response = await handleDiscussionRequest(
+    new Request("https://castingcompass.com/api/discussions/ocean-beach"),
+    { DB: d1, PUBLIC_DISCUSSIONS_ENABLED: "true" },
+    [{ id: "ocean-beach" }],
+  );
+
+  assert.equal(response?.status, 503);
+  assert.equal((await response?.json()).error.code, "discussion_schema_unavailable");
+  assert.equal(sqlite.prepare("PRAGMA schema_version").get().schema_version, before);
+  assert.deepEqual(
+    sqlite.prepare("SELECT name FROM sqlite_master WHERE type = 'table' ORDER BY name").all()
+      .map((row) => row.name),
+    ["trips"],
+  );
+  assert.equal(d1.preparedQueries.length, 1);
 });
 
 test("only a fully human-approved, completed, consented trip is publicly readable", async () => {

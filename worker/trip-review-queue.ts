@@ -2,10 +2,12 @@ import type { CuratedSite, D1DatabaseLike } from "./trips";
 import { logEvent } from "./observability.ts";
 import { releaseMaintenanceEnabled } from "./security.ts";
 import { reviewTripBacklog, reviewTripWithMimo } from "./trip-review.ts";
-import type { RateLimitEnv } from "./rate-limit.ts";
+import type { ReviewEnv } from "./trip-review.ts";
 
 export const AI_REVIEW_QUEUE_MESSAGE_VERSION = "castingcompass.ai-review-queue/1.0.0";
 const JOB_ID_PATTERN = /^airj_[a-f0-9]{32}$/;
+const LEASE_TOKEN_PATTERN = /^airl_[a-f0-9]{32}$/;
+const DISPATCH_TOKEN_PATTERN = /^aird_[a-f0-9]{32}$/;
 const MAX_BATCH_MESSAGES = 5;
 const MAX_ATTEMPTS = 5;
 const LEASE_SECONDS = 60;
@@ -34,10 +36,7 @@ export interface QueueBatchLike {
   readonly messages: readonly QueueMessageLike[];
 }
 
-export interface AiReviewQueueEnv extends RateLimitEnv {
-  DB?: D1DatabaseLike;
-  MIMO_API_KEY?: string;
-  MIMO_MODEL?: string;
+export interface AiReviewQueueEnv extends ReviewEnv {
   AI_REVIEW_QUEUE_ENABLED?: string;
   AI_REVIEW_QUEUE?: QueueBindingLike;
   RELEASE_MAINTENANCE_MODE?: string;
@@ -55,6 +54,7 @@ interface AiReviewJobRow {
   attempts: number;
   available_at: string;
   lease_expires_at: string | null;
+  lease_token: string | null;
 }
 
 interface TripReviewStateRow {
@@ -91,7 +91,7 @@ export async function scheduleTripReview(
     if (options.expediteRetry && job.state === "retry") {
       const now = new Date().toISOString();
       await env.DB.prepare(`UPDATE ai_review_jobs SET state = 'pending', available_at = ?,
-          lease_expires_at = NULL, updated_at = ?
+          lease_expires_at = NULL, lease_token = NULL, updated_at = ?
         WHERE id = ? AND state = 'retry'`)
         .bind(now, now, job.id)
         .run();
@@ -136,7 +136,8 @@ export async function dispatchAiReviewBacklog(
     for (const trip of pendingTrips.results ?? []) await ensureAiReviewJob(env.DB, trip.id, false);
 
     const now = new Date().toISOString();
-    const rows = await env.DB.prepare(`SELECT id, trip_id, state, attempts, available_at, lease_expires_at
+    const rows = await env.DB.prepare(`SELECT id, trip_id, state, attempts, available_at,
+        lease_expires_at, lease_token
       FROM ai_review_jobs
       WHERE ((state = 'pending' OR state = 'retry' OR state = 'queued') AND available_at <= ?)
         OR (state = 'processing' AND (lease_expires_at IS NULL OR lease_expires_at <= ?))
@@ -202,9 +203,9 @@ async function ensureAiReviewJob(db: D1DatabaseLike, tripId: string, resetFailed
   const now = new Date().toISOString();
   const id = `airj_${crypto.randomUUID().replaceAll("-", "")}`;
   await db.prepare(`INSERT INTO ai_review_jobs
-      (id, trip_id, state, attempts, available_at, lease_expires_at, last_error_code,
+      (id, trip_id, state, attempts, available_at, lease_expires_at, lease_token, last_error_code,
         created_at, updated_at, completed_at)
-    SELECT ?, id, 'pending', 0, ?, NULL, NULL, ?, ?, NULL
+    SELECT ?, id, 'pending', 0, ?, NULL, NULL, NULL, ?, ?, NULL
     FROM trips
     WHERE id = ? AND status = 'completed'
       AND (ai_review_status IS NULL OR ai_review_status = 'queued' OR ai_review_status = 'retry')
@@ -217,15 +218,17 @@ async function ensureAiReviewJob(db: D1DatabaseLike, tripId: string, resetFailed
         THEN excluded.available_at ELSE ai_review_jobs.available_at END,
       lease_expires_at = CASE WHEN ? = 1 AND ai_review_jobs.state IN ('retry', 'completed', 'needs_attention')
         THEN NULL ELSE ai_review_jobs.lease_expires_at END,
+      lease_token = CASE WHEN ? = 1 AND ai_review_jobs.state IN ('retry', 'completed', 'needs_attention')
+        THEN NULL ELSE ai_review_jobs.lease_token END,
       last_error_code = CASE WHEN ? = 1 AND ai_review_jobs.state IN ('retry', 'completed', 'needs_attention')
         THEN NULL ELSE ai_review_jobs.last_error_code END,
       completed_at = CASE WHEN ? = 1 AND ai_review_jobs.state IN ('retry', 'completed', 'needs_attention')
         THEN NULL ELSE ai_review_jobs.completed_at END,
       updated_at = CASE WHEN ? = 1 AND ai_review_jobs.state IN ('retry', 'completed', 'needs_attention')
         THEN excluded.updated_at ELSE ai_review_jobs.updated_at END`)
-    .bind(id, now, now, now, tripId, ...Array(7).fill(Number(resetFailed)))
+    .bind(id, now, now, now, tripId, ...Array(8).fill(Number(resetFailed)))
     .run();
-  return db.prepare(`SELECT id, trip_id, state, attempts, available_at, lease_expires_at
+  return db.prepare(`SELECT id, trip_id, state, attempts, available_at, lease_expires_at, lease_token
     FROM ai_review_jobs WHERE trip_id = ? LIMIT 1`)
     .bind(tripId)
     .first<AiReviewJobRow>();
@@ -239,31 +242,43 @@ async function dispatchJob(env: AiReviewQueueEnv, job: AiReviewJobRow) {
   }
   const now = new Date();
   if (job.state === "completed" || job.state === "needs_attention" || job.available_at > now.toISOString()) return;
+  if (job.attempts >= MAX_ATTEMPTS) {
+    await settleAbandonedJob(env.DB, job.id, job.trip_id, now.toISOString());
+    return;
+  }
   if (job.state === "processing") {
     if (job.lease_expires_at && job.lease_expires_at > now.toISOString()) return;
-    await env.DB.prepare(`UPDATE trips SET ai_review_status = 'retry'
-      WHERE id = ? AND ai_review_status = 'processing'`)
-      .bind(job.trip_id)
-      .run();
   }
   const body: QueueMessageBody = { version: AI_REVIEW_QUEUE_MESSAGE_VERSION, jobId: job.id };
+  const dispatchToken = createOpaqueToken("aird");
   const redispatchAt = new Date(now.getTime() + REDISPATCH_SECONDS * 1000).toISOString();
-  const staged = await env.DB.prepare(`UPDATE ai_review_jobs SET state = 'queued',
-      available_at = ?, lease_expires_at = NULL, last_error_code = NULL, updated_at = ?
-    WHERE id = ? AND state IN ('pending', 'retry', 'queued', 'processing')
-      AND (((state = 'pending' OR state = 'retry' OR state = 'queued') AND available_at <= ?)
-        OR (state = 'processing' AND (lease_expires_at IS NULL OR lease_expires_at <= ?)))`)
-    .bind(redispatchAt, now.toISOString(), job.id, now.toISOString(), now.toISOString())
-    .run();
-  if (Number(staged.meta?.changes ?? 0) !== 1) return;
+  try {
+    await env.DB.prepare(`UPDATE ai_review_jobs SET state = 'queued',
+        available_at = ?, lease_expires_at = NULL, lease_token = ?,
+        last_error_code = NULL, updated_at = ?
+      WHERE id = ? AND attempts < ? AND state IN ('pending', 'retry', 'queued', 'processing')
+        AND (((state = 'pending' OR state = 'retry' OR state = 'queued') AND available_at <= ?)
+          OR (state = 'processing' AND (lease_expires_at IS NULL OR lease_expires_at <= ?)))`)
+      .bind(redispatchAt, dispatchToken, now.toISOString(), job.id, MAX_ATTEMPTS,
+        now.toISOString(), now.toISOString())
+      .run();
+  } catch {
+    // A committed D1 mutation may lose its response. The exact private token
+    // read below, not mutation metadata, is dispatch authority.
+  }
+  const staged = await env.DB.prepare(`SELECT id FROM ai_review_jobs
+    WHERE id = ? AND state = 'queued' AND lease_token = ? AND available_at = ? LIMIT 1`)
+    .bind(job.id, dispatchToken, redispatchAt)
+    .first<{ id: string }>();
+  if (!staged) return;
   try {
     await env.AI_REVIEW_QUEUE.send(body);
   } catch {
     const retryAt = new Date(Date.now() + RETRY_DELAYS_SECONDS[0] * 1000).toISOString();
     await env.DB.prepare(`UPDATE ai_review_jobs SET state = 'pending', available_at = ?,
-        last_error_code = 'queue_publish_failed', updated_at = ?
-      WHERE id = ? AND state = 'queued'`)
-      .bind(retryAt, new Date().toISOString(), job.id)
+        lease_token = NULL, last_error_code = 'queue_publish_failed', updated_at = ?
+      WHERE id = ? AND state = 'queued' AND lease_token = ?`)
+      .bind(retryAt, new Date().toISOString(), job.id, dispatchToken)
       .run();
     logEvent("error", "ai_review.queue.publish_failed", {
       error_code: "queue_publish_failed",
@@ -280,42 +295,39 @@ async function consumeMessage(
 ) {
   const now = new Date();
   const nowIso = now.toISOString();
+  const leaseToken = createOpaqueToken("airl");
   const leaseExpiresAt = new Date(now.getTime() + LEASE_SECONDS * 1000).toISOString();
-  const prior = await db.prepare(`SELECT id, trip_id, state, attempts, available_at, lease_expires_at
-    FROM ai_review_jobs WHERE id = ? LIMIT 1`)
-    .bind(body.jobId)
+  try {
+    await db.prepare(`UPDATE ai_review_jobs SET state = 'processing',
+        attempts = attempts + 1, lease_expires_at = ?, lease_token = ?,
+        last_error_code = NULL, updated_at = ?
+      WHERE id = ? AND attempts < ?
+        AND (state = 'queued'
+          OR ((state = 'pending' OR state = 'retry') AND available_at <= ?)
+          OR (state = 'processing' AND (lease_expires_at IS NULL OR lease_expires_at <= ?)))`)
+      .bind(leaseExpiresAt, leaseToken, nowIso, body.jobId, MAX_ATTEMPTS, nowIso, nowIso)
+      .run();
+  } catch {
+    // Exact token read-back below resolves a lost claim response.
+  }
+
+  const job = await db.prepare(`SELECT id, trip_id, state, attempts, available_at,
+      lease_expires_at, lease_token
+    FROM ai_review_jobs
+    WHERE id = ? AND state = 'processing' AND lease_token = ? LIMIT 1`)
+    .bind(body.jobId, leaseToken)
     .first<AiReviewJobRow>();
-  const claimed = await db.prepare(`UPDATE ai_review_jobs SET state = 'processing',
-      attempts = attempts + 1, lease_expires_at = ?, updated_at = ?
-    WHERE id = ? AND attempts < ?
-      AND (state = 'queued'
-        OR ((state = 'pending' OR state = 'retry') AND available_at <= ?)
-        OR (state = 'processing' AND (lease_expires_at IS NULL OR lease_expires_at <= ?)))`)
-    .bind(leaseExpiresAt, nowIso, body.jobId, MAX_ATTEMPTS, nowIso, nowIso)
-    .run();
-  if (Number(claimed.meta?.changes ?? 0) !== 1) {
+  if (!job) {
     await settleUnclaimedMessage(db, message, body.jobId);
     return;
   }
 
-  const job = await db.prepare(`SELECT id, trip_id, state, attempts, available_at, lease_expires_at
-    FROM ai_review_jobs WHERE id = ? LIMIT 1`)
-    .bind(body.jobId)
-    .first<AiReviewJobRow>();
-  if (!job) {
-    message.ack();
-    return;
-  }
-
-  if (prior?.state === "processing" && (!prior.lease_expires_at || prior.lease_expires_at <= nowIso)) {
-    await db.prepare(`UPDATE trips SET ai_review_status = 'retry'
-      WHERE id = ? AND ai_review_status = 'processing'`)
-      .bind(job.trip_id)
-      .run();
-  }
-  await db.prepare(`UPDATE trips SET ai_review_status = 'retry'
-    WHERE id = ? AND ai_review_status = 'needs_attention'`)
-    .bind(job.trip_id)
+  await db.prepare(`UPDATE trips SET ai_review_status = 'retry', ai_review_json = NULL,
+      ai_review_model = NULL, ai_reviewed_at = NULL
+    WHERE id = ? AND ai_review_status = 'needs_attention'
+      AND EXISTS (SELECT 1 FROM ai_review_jobs
+        WHERE id = ? AND state = 'processing' AND lease_token = ?)`)
+    .bind(job.trip_id, job.id, leaseToken)
     .run();
 
   await reviewTripWithMimo(env, job.trip_id, sites);
@@ -324,12 +336,17 @@ async function consumeMessage(
     .first<TripReviewStateRow>();
   if (!trip || trip.ai_review_status === "reviewed") {
     const finishedAt = new Date().toISOString();
-    await db.prepare(`UPDATE ai_review_jobs SET state = 'completed', available_at = ?,
-        lease_expires_at = NULL, last_error_code = NULL, updated_at = ?, completed_at = ?
-      WHERE id = ? AND state = 'processing'`)
-      .bind(finishedAt, finishedAt, finishedAt, job.id)
-      .run();
-    message.ack();
+    try {
+      await db.prepare(`UPDATE ai_review_jobs SET state = 'completed', available_at = ?,
+          lease_expires_at = NULL, lease_token = NULL, last_error_code = NULL,
+          updated_at = ?, completed_at = ?
+        WHERE id = ? AND state = 'processing' AND lease_token = ?`)
+        .bind(finishedAt, finishedAt, finishedAt, job.id, leaseToken)
+        .run();
+    } catch {
+      // Read-back settlement below resolves a lost terminal mutation response.
+    }
+    await settleAfterOwnedMutation(db, message, job.id, leaseToken);
     return;
   }
 
@@ -339,49 +356,71 @@ async function consumeMessage(
   const availableAt = new Date(Date.now() + delaySeconds * 1000).toISOString();
   const updatedAt = new Date().toISOString();
   const jobStatement = db.prepare(`UPDATE ai_review_jobs SET state = ?, available_at = ?,
-      lease_expires_at = NULL, last_error_code = ?, updated_at = ?
-    WHERE id = ? AND state = 'processing'`)
+      lease_expires_at = NULL, lease_token = NULL, last_error_code = ?, updated_at = ?
+    WHERE id = ? AND state = 'processing' AND lease_token = ?`)
     .bind(
       terminal ? "needs_attention" : "retry",
       availableAt,
       safeTripReviewErrorCode(trip.ai_review_status),
       updatedAt,
       job.id,
+      leaseToken,
     );
-  if (terminal) {
-    await db.batch([
-      jobStatement,
-      db.prepare(`UPDATE trips SET ai_review_status = 'needs_attention'
-        WHERE id = ? AND ai_review_status != 'reviewed'`)
-        .bind(job.trip_id),
-    ]);
-  } else {
-    await jobStatement.run();
+  try {
+    if (terminal) {
+      await db.batch([
+        db.prepare(`UPDATE trips SET ai_review_status = 'needs_attention', ai_review_json = NULL,
+            ai_review_model = NULL, ai_reviewed_at = NULL
+          WHERE id = ? AND (ai_review_status IS NULL OR ai_review_status != 'reviewed')
+            AND EXISTS (SELECT 1 FROM ai_review_jobs
+              WHERE id = ? AND state = 'processing' AND lease_token = ?)`)
+          .bind(job.trip_id, job.id, leaseToken),
+        jobStatement,
+      ]);
+    } else {
+      await jobStatement.run();
+    }
+  } catch {
+    // The state read below decides whether this exact lease settled.
   }
-  if (terminal) {
+  const settledState = await settleAfterOwnedMutation(db, message, job.id, leaseToken);
+  if (terminal && settledState === "needs_attention") {
     logEvent("error", "ai_review.queue.exhausted", {
       error_code: "ai_review_attempts_exhausted",
       attempts,
     });
-    message.ack();
-  } else {
-    message.retry({ delaySeconds });
   }
 }
 
 async function settleUnclaimedMessage(db: D1DatabaseLike, message: QueueMessageLike, jobId: string) {
-  const job = await db.prepare("SELECT state, available_at FROM ai_review_jobs WHERE id = ? LIMIT 1")
+  let job = await db.prepare(`SELECT id, trip_id, state, attempts, available_at,
+      lease_expires_at, lease_token
+    FROM ai_review_jobs WHERE id = ? LIMIT 1`)
     .bind(jobId)
-    .first<Pick<AiReviewJobRow, "state" | "available_at">>();
+    .first<AiReviewJobRow>();
   if (!job || job.state === "completed" || job.state === "needs_attention") {
     message.ack();
     return;
   }
-  const delaySeconds = Math.max(1, Math.min(
-    REDISPATCH_SECONDS,
-    Math.ceil((Date.parse(job.available_at) - Date.now()) / 1000),
-  ));
-  message.retry({ delaySeconds });
+  const nowIso = new Date().toISOString();
+  if (job.attempts >= MAX_ATTEMPTS
+      && (job.state !== "processing" || !job.lease_expires_at || job.lease_expires_at <= nowIso)) {
+    await settleAbandonedJob(db, job.id, job.trip_id, nowIso);
+    job = await db.prepare(`SELECT id, trip_id, state, attempts, available_at,
+        lease_expires_at, lease_token
+      FROM ai_review_jobs WHERE id = ? LIMIT 1`)
+      .bind(jobId)
+      .first<AiReviewJobRow>();
+    if (!job || job.state === "completed" || job.state === "needs_attention") {
+      message.ack();
+      return;
+    }
+  }
+  if (job.state === "processing" && job.lease_expires_at && job.lease_expires_at > nowIso) {
+    message.ack();
+    return;
+  }
+  retryMessageAt(message, job.state === "processing" ? job.lease_expires_at : job.available_at);
 }
 
 async function deferMessage(
@@ -399,11 +438,78 @@ async function deferMessage(
   const now = new Date();
   const availableAt = new Date(now.getTime() + delaySeconds * 1000).toISOString();
   await db.prepare(`UPDATE ai_review_jobs SET state = 'pending', available_at = ?,
-      lease_expires_at = NULL, last_error_code = ?, updated_at = ?
-    WHERE id = ? AND state != 'completed' AND state != 'needs_attention'`)
-    .bind(availableAt, errorCode, now.toISOString(), body.jobId)
+      lease_expires_at = NULL, lease_token = NULL, last_error_code = ?, updated_at = ?
+    WHERE id = ? AND ((state = 'pending' OR state = 'queued' OR state = 'retry')
+      OR (state = 'processing' AND (lease_expires_at IS NULL OR lease_expires_at <= ?)))`)
+    .bind(availableAt, errorCode, now.toISOString(), body.jobId, now.toISOString())
     .run();
   message.ack();
+}
+
+async function settleAfterOwnedMutation(
+  db: D1DatabaseLike,
+  message: QueueMessageLike,
+  jobId: string,
+  leaseToken: string,
+) {
+  const job = await db.prepare(`SELECT id, trip_id, state, attempts, available_at,
+      lease_expires_at, lease_token
+    FROM ai_review_jobs WHERE id = ? LIMIT 1`)
+    .bind(jobId)
+    .first<AiReviewJobRow>();
+  if (!job || job.state === "completed" || job.state === "needs_attention") {
+    message.ack();
+    return job?.state ?? null;
+  }
+  if (job.state === "processing" && job.lease_token !== leaseToken) {
+    message.ack();
+    return job.state;
+  }
+  retryMessageAt(message, job.state === "processing" ? job.lease_expires_at : job.available_at);
+  return job.state;
+}
+
+async function settleAbandonedJob(
+  db: D1DatabaseLike,
+  jobId: string,
+  tripId: string,
+  nowIso: string,
+) {
+  try {
+    await db.batch([
+      db.prepare(`UPDATE trips SET ai_review_status = 'needs_attention', ai_review_json = NULL,
+          ai_review_model = NULL, ai_reviewed_at = NULL
+        WHERE id = ? AND (ai_review_status IS NULL OR ai_review_status != 'reviewed')
+          AND EXISTS (SELECT 1 FROM ai_review_jobs WHERE id = ? AND attempts >= ?
+            AND ((state = 'pending' OR state = 'queued' OR state = 'retry')
+              OR (state = 'processing' AND (lease_expires_at IS NULL OR lease_expires_at <= ?))))`)
+        .bind(tripId, jobId, MAX_ATTEMPTS, nowIso),
+      db.prepare(`UPDATE ai_review_jobs SET state = 'needs_attention', available_at = ?,
+          lease_expires_at = NULL, lease_token = NULL,
+          last_error_code = 'review_lease_abandoned', updated_at = ?
+        WHERE id = ? AND attempts >= ?
+          AND ((state = 'pending' OR state = 'queued' OR state = 'retry')
+            OR (state = 'processing' AND (lease_expires_at IS NULL OR lease_expires_at <= ?)))`)
+        .bind(nowIso, nowIso, jobId, MAX_ATTEMPTS, nowIso),
+    ]);
+  } catch {
+    // The scheduled backlog or a later delivery retries this reconciliation.
+  }
+}
+
+function retryMessageAt(message: QueueMessageLike, timestamp: string | null) {
+  const milliseconds = timestamp ? Date.parse(timestamp) - Date.now() : 1_000;
+  const delaySeconds = Number.isFinite(milliseconds)
+    ? Math.max(1, Math.min(REDISPATCH_SECONDS, Math.ceil(milliseconds / 1000)))
+    : RETRY_DELAYS_SECONDS[0];
+  message.retry({ delaySeconds });
+}
+
+function createOpaqueToken(prefix: "aird" | "airl") {
+  const token = `${prefix}_${crypto.randomUUID().replaceAll("-", "")}`;
+  const pattern = prefix === "aird" ? DISPATCH_TOKEN_PATTERN : LEASE_TOKEN_PATTERN;
+  if (!pattern.test(token)) throw new Error("Generated queue token is invalid");
+  return token;
 }
 
 function parseQueueMessage(value: unknown): QueueMessageBody | null {

@@ -84,9 +84,18 @@ SELECT
       AND lower(type) = 'text' AND "notnull" = 0
       AND dflt_value IS NULL AND pk = 0
   ) AS exact_trip_idempotency_columns,
+  (SELECT COUNT(*) FROM pragma_table_info('trips')
+    WHERE name = 'photo_key_hash'
+      AND lower(type) = 'text' AND "notnull" = 0
+      AND dflt_value IS NULL AND pk = 0
+  ) AS exact_trip_photo_hash_columns,
   (SELECT COUNT(*) FROM sqlite_master
     WHERE type = 'table' AND name = 'ai_review_jobs'
   ) AS ai_review_queue_tables,
+  (SELECT COUNT(*) FROM pragma_table_info('ai_review_jobs')
+    WHERE name = 'lease_token' AND lower(type) = 'text'
+      AND "notnull" = 0 AND dflt_value IS NULL AND pk = 0
+  ) AS exact_ai_review_queue_lease_columns,
   (SELECT COUNT(*) FROM sqlite_master
     WHERE type = 'index' AND name IN (
       'ai_review_jobs_trip_unique', 'ai_review_jobs_dispatch_idx'
@@ -106,6 +115,29 @@ SELECT
     )
   ) AS privacy_export_queue_indexes,
   (SELECT COUNT(*) FROM privacy_export_jobs) AS privacy_export_queue_rows,
+  (SELECT COUNT(*) FROM sqlite_master
+    WHERE type = 'table' AND name = 'account_deletion_fences'
+  ) AS account_deletion_fence_tables,
+  (SELECT COUNT(*) FROM sqlite_master
+    WHERE type = 'index' AND name = 'account_deletion_fences_owner_unique'
+  ) AS account_deletion_fence_indexes,
+  (SELECT COUNT(*) FROM account_deletion_fences) AS account_deletion_fence_rows,
+  (SELECT COUNT(*) FROM sqlite_master
+    WHERE type = 'table' AND name = 'trip_photo_upload_reservations'
+  ) AS trip_photo_reservation_tables,
+  (SELECT COUNT(*) FROM sqlite_master
+    WHERE type = 'index' AND name IN (
+      'trip_photo_upload_reservations_object_key_unique',
+      'trip_photo_upload_reservations_object_key_hash_unique',
+      'trip_photo_upload_reservations_retry_idx',
+      'trip_photo_upload_reservations_trip_idx',
+      'trip_photo_upload_reservations_owner_idx'
+    )
+  ) AS trip_photo_reservation_indexes,
+  (SELECT COUNT(*) FROM pragma_table_info('trip_photo_upload_reservations')
+    WHERE name = 'owner_subject_hash' AND lower(type) = 'text' AND "notnull" = 1
+  ) AS trip_photo_reservation_owner_columns,
+  (SELECT COUNT(*) FROM trip_photo_upload_reservations) AS trip_photo_reservation_rows,
   (SELECT COUNT(*) FROM users) AS users,
   (SELECT COUNT(*) FROM users WHERE age_eligibility_confirmed_at IS NULL) AS users_missing_age_eligibility,
   (SELECT COUNT(*) FROM users
@@ -116,6 +148,8 @@ SELECT
   (SELECT COUNT(*) FROM trips WHERE contract_status != 'legacy_unverified' OR contract_status IS NULL)
     AS non_legacy_trip_rows,
   (SELECT COUNT(*) FROM trips WHERE photo_key IS NOT NULL) AS trip_photo_locators,
+  (SELECT COUNT(*) FROM trips WHERE photo_key IS NOT NULL AND photo_key_hash IS NULL)
+    AS trip_photo_locators_without_hash,
   (SELECT COUNT(*) FROM site_discussion_posts) AS discussion_rows,
   (SELECT COUNT(*) FROM site_discussion_posts
     WHERE approved_at IS NOT NULL OR approved_by IS NOT NULL OR source_ai_reviewed_at IS NOT NULL

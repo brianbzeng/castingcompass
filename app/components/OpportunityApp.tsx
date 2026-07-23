@@ -31,14 +31,20 @@ import type {
   OpportunitySnapshot,
   OpportunityWindow,
   SourceFreshness,
+  StructureDepthSiteEvidence,
+  StructureDepthSnapshot,
   TimeFilter,
   TripReportRequest,
+  WaterQualitySnapshot,
+  WaterQualitySiteAssessment,
 } from "../types";
 import {
   applyCurrentFreshness,
   hasLiveForecastInputs,
   sourceStatusTone,
 } from "../lib/forecast-freshness";
+import { applyCurrentWaterQualityFreshness } from "../lib/water-quality-freshness";
+import { useModalDialog } from "../lib/use-modal-dialog";
 import structureImages from "../data/structure-images.json";
 
 const PACIFIC_TIME_ZONE = "America/Los_Angeles";
@@ -257,10 +263,29 @@ async function loadForecastData() {
       return Array.isArray(payload) ? payload : payload.pulses ?? [];
     })
     .catch(() => [] as CommunityPulse[]);
+  const waterQualityPromise = fetch("/data/water-quality.json")
+    .then(async (response) => {
+      if (!response.ok) return null;
+      return applyCurrentWaterQualityFreshness(
+        (await response.json()) as WaterQualitySnapshot,
+      );
+    })
+    .catch(() => null as WaterQualitySnapshot | null);
+  const structureDepthPromise = fetch("/data/structure-depth.json")
+    .then(async (response) => {
+      if (!response.ok) return null;
+      return (await response.json()) as StructureDepthSnapshot;
+    })
+    .catch(() => null as StructureDepthSnapshot | null);
   const apiBase = process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, "");
 
   if (apiBase) {
-    const [staticSites, community] = await Promise.all([staticSitesPromise, communityPromise]);
+    const [staticSites, community, waterQuality, structureDepth] = await Promise.all([
+      staticSitesPromise,
+      communityPromise,
+      waterQualityPromise,
+      structureDepthPromise,
+    ]);
     try {
       const from = new Date().toISOString();
       const response = await fetch(
@@ -273,6 +298,8 @@ async function loadForecastData() {
         sites: staticSites,
         snapshot,
         community,
+        waterQuality,
+        structureDepth,
         state: hasLiveForecastInputs(snapshot)
           ? "live" as const
           : "cached" as const,
@@ -285,6 +312,8 @@ async function loadForecastData() {
         sites: staticSites,
         snapshot,
         community,
+        waterQuality,
+        structureDepth,
         state: hasLiveForecastInputs(snapshot)
           ? "live" as const
           : "cached" as const,
@@ -292,17 +321,52 @@ async function loadForecastData() {
     }
   }
 
-  const [staticSites, staticSnapshot, community] = await Promise.all([
+  const [staticSites, staticSnapshot, community, waterQuality, structureDepth] = await Promise.all([
     staticSitesPromise,
     fetch("/data/opportunities.json").then((response) => {
       if (!response.ok) throw new Error("snapshot unavailable");
       return response.json() as Promise<OpportunitySnapshot>;
     }),
     communityPromise,
+    waterQualityPromise,
+    structureDepthPromise,
   ]);
   const currentSnapshot = applyCurrentFreshness(staticSnapshot);
   const state = hasLiveForecastInputs(currentSnapshot) ? "live" : "cached";
-  return { sites: staticSites, snapshot: currentSnapshot, community, state: state as "live" | "cached" };
+  return {
+    sites: staticSites,
+    snapshot: currentSnapshot,
+    community,
+    waterQuality,
+    structureDepth,
+    state: state as "live" | "cached",
+  };
+}
+
+function waterQualityTone(assessment: WaterQualitySiteAssessment | null) {
+  if (assessment?.recommendationEffect === "suppress") return "active";
+  if (assessment?.status === "no-active-posting") return "neutral";
+  return "unknown";
+}
+
+function depthNumber(value: number) {
+  return Number.isInteger(value) ? value.toFixed(0) : value.toFixed(1);
+}
+
+function chartedWaterBands(evidence: StructureDepthSiteEvidence) {
+  return evidence.depth.chartedBandsMeters
+    .filter(([, upper]) => upper > 0)
+    .map(([lower, upper]) => `${depthNumber(Math.max(0, lower))}–${depthNumber(upper)} m`);
+}
+
+function depthSourceDateLabel(evidence: StructureDepthSiteEvidence) {
+  const dates = [...evidence.depth.sourceDates, ...evidence.depth.partialSourceDates].toSorted();
+  if (!dates.length) return evidence.depth.hasUndatedRecords ? "Some source records have no date" : "Source date unavailable";
+  const range = dates.length === 1 ? dates[0] : `${dates[0]} to ${dates.at(-1)}`;
+  const qualifiers = [];
+  if (evidence.depth.partialSourceDates.length) qualifiers.push("some dates have year/month precision");
+  if (evidence.depth.hasUndatedRecords) qualifiers.push("some records have no source date");
+  return qualifiers.length ? `${range}; ${qualifiers.join("; ")}` : range;
 }
 
 function fallbackSnapshot(): OpportunitySnapshot {
@@ -1012,13 +1076,14 @@ function SourceStatus({ source }: { source: SourceFreshness }) {
 
 export function OpportunityApp() {
   const account = useAccount();
-  const detailDialogRef = useRef<HTMLElement>(null);
   const detailTriggerRef = useRef<HTMLElement | null>(null);
   const detailTriggerSiteIdRef = useRef<string | null>(null);
   const mapWrapRef = useRef<HTMLDivElement>(null);
   const [sites, setSites] = useState<FishingSite[]>(FALLBACK_SITES);
   const [snapshot, setSnapshot] = useState<OpportunitySnapshot>(fallbackSnapshot);
   const [communityPulses, setCommunityPulses] = useState<CommunityPulse[]>([]);
+  const [waterQuality, setWaterQuality] = useState<WaterQualitySnapshot | null>(null);
+  const [structureDepth, setStructureDepth] = useState<StructureDepthSnapshot | null>(null);
   const [discussionFeed, setDiscussionFeed] = useState<{ siteId: string; posts: LocationDiscussionPost[] } | null>(null);
   const [selectedSiteId, setSelectedSiteId] = useState<string | null>(null);
   const [selectedDetailWindowId, setSelectedDetailWindowId] = useState<string | null>(null);
@@ -1047,14 +1112,53 @@ export function OpportunityApp() {
   const initialSiteHandledRef = useRef(false);
   const discussionPosts = discussionFeed?.siteId === selectedSiteId ? discussionFeed.posts : [];
 
+  const closeSiteDetail = useCallback(() => {
+    setSelectedSiteId(null);
+    setSelectedDetailWindowId(null);
+    setDetailExpanded(false);
+  }, []);
+
+  const restoreDetailFocus = useCallback(() => {
+    const trigger = detailTriggerRef.current;
+    if (trigger?.isConnected) return trigger;
+    const triggerSiteId = detailTriggerSiteIdRef.current;
+    return triggerSiteId
+      ? document.querySelector<HTMLElement>(`[data-detail-trigger-for="${triggerSiteId}"]`)
+      : null;
+  }, []);
+
+  const respectDialogRef = useModalDialog<HTMLElement>({
+    open: showRespectNotice,
+    closeOnEscape: false,
+  });
+  const locationDialogRef = useModalDialog<HTMLElement>({
+    open: showLocationDisclosure,
+    onClose: () => setShowLocationDisclosure(false),
+  });
+  const detailDialogRef = useModalDialog<HTMLElement>({
+    open: Boolean(selectedSiteId),
+    onClose: closeSiteDetail,
+    restoreFocus: restoreDetailFocus,
+  });
+  const methodDialogRef = useModalDialog<HTMLElement>({
+    open: showMethod,
+    onClose: () => setShowMethod(false),
+  });
+  const compareDialogRef = useModalDialog<HTMLElement>({
+    open: showCompare,
+    onClose: () => setShowCompare(false),
+  });
+
   useEffect(() => {
     let active = true;
     loadForecastData()
-      .then(({ sites: nextSites, snapshot: nextSnapshot, community, state }) => {
+      .then(({ sites: nextSites, snapshot: nextSnapshot, community, waterQuality: nextWaterQuality, structureDepth: nextStructureDepth, state }) => {
         if (!active) return;
         setSites(nextSites);
         setSnapshot(nextSnapshot);
         setCommunityPulses(community);
+        setWaterQuality(nextWaterQuality);
+        setStructureDepth(nextStructureDepth);
         setDataState(state);
       })
       .catch(() => {
@@ -1098,15 +1202,6 @@ export function OpportunityApp() {
   }, []);
 
   useEffect(() => {
-    if (!showRespectNotice) return;
-    const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    return () => {
-      document.body.style.overflow = previousOverflow;
-    };
-  }, [showRespectNotice]);
-
-  useEffect(() => {
     if (mapEnabled || view !== "map" || !mapWrapRef.current) return;
     if (typeof IntersectionObserver === "undefined") return;
 
@@ -1127,72 +1222,6 @@ export function OpportunityApp() {
     observer.observe(mapWrapRef.current);
     return () => observer.disconnect();
   }, [mapEnabled, view]);
-
-  useEffect(() => {
-    if (!selectedSiteId || !detailDialogRef.current) return;
-
-    const dialog = detailDialogRef.current;
-    const previousBodyOverflow = document.body.style.overflow;
-    const focusFrame = window.requestAnimationFrame(() => dialog.focus({ preventScroll: true }));
-
-    document.body.style.overflow = "hidden";
-
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
-        event.preventDefault();
-        setSelectedSiteId(null);
-        return;
-      }
-
-      if (event.key !== "Tab") return;
-
-      const focusable = Array.from(
-        dialog.querySelectorAll<HTMLElement>(
-          'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])',
-        ),
-      ).filter((element) => element.getAttribute("aria-hidden") !== "true");
-
-      if (focusable.length === 0) {
-        event.preventDefault();
-        dialog.focus({ preventScroll: true });
-        return;
-      }
-
-      const first = focusable[0];
-      const last = focusable[focusable.length - 1];
-      const activeElement = document.activeElement;
-
-      if (event.shiftKey && (activeElement === first || !dialog.contains(activeElement))) {
-        event.preventDefault();
-        last.focus();
-      } else if (!event.shiftKey && (activeElement === last || !dialog.contains(activeElement))) {
-        event.preventDefault();
-        first.focus();
-      }
-    };
-
-    document.addEventListener("keydown", handleKeyDown);
-
-    return () => {
-      window.cancelAnimationFrame(focusFrame);
-      document.removeEventListener("keydown", handleKeyDown);
-      document.body.style.overflow = previousBodyOverflow;
-
-      const trigger = detailTriggerRef.current;
-      const triggerSiteId = detailTriggerSiteIdRef.current;
-      window.requestAnimationFrame(() => {
-        if (trigger?.isConnected) {
-          trigger.focus({ preventScroll: true });
-          return;
-        }
-
-        if (!triggerSiteId) return;
-        document
-          .querySelector<HTMLElement>(`[data-detail-trigger-for="${triggerSiteId}"]`)
-          ?.focus({ preventScroll: true });
-      });
-    };
-  }, [selectedSiteId]);
 
   const windowsBySite = useMemo(
     () => latestPerSite(
@@ -1239,6 +1268,7 @@ export function OpportunityApp() {
   const rankedSites = useMemo(() => {
     return sites
       .filter((site) => site.accessStatus !== "closed")
+      .filter((site) => waterQuality?.sites[site.id]?.recommendationEffect !== "suppress")
       .filter((site) => (
         region === "All water" ||
         (region === "Saved locations" ? account.savedSiteIds.has(site.id) : site.region === region)
@@ -1261,7 +1291,18 @@ export function OpportunityApp() {
         }
         return (windowsBySite.get(b.id)?.score ?? 0) - (windowsBySite.get(a.id)?.score ?? 0);
       });
-  }, [account.savedSiteIds, activeRadiusMiles, sites, region, userPosition, windowsBySite]);
+  }, [account.savedSiteIds, activeRadiusMiles, sites, region, userPosition, waterQuality, windowsBySite]);
+
+  const waterQualitySuppressedSites = useMemo(
+    () => sites.filter((site) => (
+      site.accessStatus !== "closed"
+      && waterQuality?.sites[site.id]?.recommendationEffect === "suppress"
+    )),
+    [sites, waterQuality],
+  );
+  const firstSuppressedWaterQualitySourceUrl = waterQualitySuppressedSites.length
+    ? waterQuality?.sites[waterQualitySuppressedSites[0].id]?.sourceUrl
+    : undefined;
 
   const bestSite = rankedSites[0] ?? null;
   const bestWindow = bestSite ? windowsBySite.get(bestSite.id) ?? null : null;
@@ -1283,6 +1324,12 @@ export function OpportunityApp() {
     : -1;
   const selectedCommunity = selectedSiteId
     ? communityPulses.find((pulse) => pulse.siteId === selectedSiteId) ?? null
+    : null;
+  const selectedWaterQuality = selectedSiteId
+    ? waterQuality?.sites[selectedSiteId] ?? null
+    : null;
+  const selectedStructureDepth = selectedSiteId
+    ? structureDepth?.sites[selectedSiteId] ?? null
     : null;
   const selectedStructureGuides = selectedSite ? structureGuidesForSite(selectedSite) : [];
   const hasHourFilter = Boolean(availableFrom || availableUntil);
@@ -1339,7 +1386,10 @@ export function OpportunityApp() {
   }, [windowsBySite]);
 
   useEffect(() => {
-    if (initialSiteHandledRef.current || !sites.length) return;
+    // Do not validate a shared site link against the three-site emergency fallback. Wait until
+    // the catalog request has either settled successfully or failed closed, otherwise valid
+    // regional links are discarded before their site exists in state.
+    if (initialSiteHandledRef.current || dataState === "loading") return;
     const siteId = new URLSearchParams(window.location.search).get("site");
     if (!siteId || !sites.some((site) => site.id === siteId)) {
       initialSiteHandledRef.current = true;
@@ -1351,13 +1401,7 @@ export function OpportunityApp() {
     window.history.replaceState(null, "", `${nextUrl.pathname}${nextUrl.search}${nextUrl.hash}`);
     const frame = window.requestAnimationFrame(() => openSiteDetail(siteId));
     return () => window.cancelAnimationFrame(frame);
-  }, [openSiteDetail, sites]);
-
-  const closeSiteDetail = useCallback(() => {
-    setSelectedSiteId(null);
-    setSelectedDetailWindowId(null);
-    setDetailExpanded(false);
-  }, []);
+  }, [dataState, openSiteDetail, sites]);
 
   const openTripReport = useCallback((mode: "start" | "past", siteId?: string, window?: OpportunityWindow) => {
     if (!account.user) {
@@ -1392,12 +1436,13 @@ export function OpportunityApp() {
   }, []);
 
   return (
-    <main className="app-shell">
+    <div className="app-shell">
+      <a className="skip-link" href="#main-content">Skip to forecast content</a>
       <header className="topbar">
         <a className="brand" href="#top" aria-label="CastingCompass home">
           <span className="brand-icon" aria-hidden="true" />
           <span>CastingCompass</span>
-          <em>Bay Area beta</em>
+          <em>California coast beta</em>
         </a>
         <nav className="desktop-nav" aria-label="Primary navigation">
           <button type="button" onClick={() => scrollToSection("forecast")}>Forecast</button>
@@ -1428,6 +1473,7 @@ export function OpportunityApp() {
         </div>
       </header>
 
+      <main id="main-content" tabIndex={-1}>
       <section className="forecast-intro" id="top">
         <div className="eyebrow-row">
           <span className="eyebrow"><span /> California halibut</span>
@@ -1465,7 +1511,7 @@ export function OpportunityApp() {
 
       <section className="control-deck" id="forecast">
         <div className="forecast-time-controls">
-          <div className="time-tabs" role="tablist" aria-label="Forecast period">
+          <div className="time-tabs" role="group" aria-label="Forecast period">
             {([
               ["today", "Today"],
               ["tomorrow", "Tomorrow"],
@@ -1473,8 +1519,7 @@ export function OpportunityApp() {
             ] as [TimeFilter, string][]).map(([value, label]) => (
               <button
                 key={value}
-                role="tab"
-                aria-selected={timeFilter === value}
+                aria-pressed={timeFilter === value}
                 className={timeFilter === value ? "active" : ""}
                 type="button"
                 onClick={() => setTimeFilter(value)}
@@ -1597,17 +1642,25 @@ export function OpportunityApp() {
           <button type="button" className="location-button" onClick={requestLocation}>
             <LocateIcon /> Near me
           </button>
-          <div className="view-toggle" aria-label="View">
-            <button type="button" className={view === "map" ? "active" : ""} onClick={() => setView("map")} aria-label="Map view"><MapIcon /></button>
-            <button type="button" className={view === "list" ? "active" : ""} onClick={() => setView("list")} aria-label="List view"><ListIcon /></button>
+          <div className="view-toggle" role="group" aria-label="Forecast presentation">
+            <button type="button" className={view === "map" ? "active" : ""} onClick={() => setView("map")} aria-label="Map and list view" aria-pressed={view === "map"}><MapIcon /></button>
+            <button type="button" className={view === "list" ? "active" : ""} onClick={() => setView("list")} aria-label="List-only view" aria-pressed={view === "list"}><ListIcon /></button>
           </div>
         </div>
-        {locationStatusMessage ? <p className="location-message">{locationStatusMessage}</p> : null}
+        {locationStatusMessage ? <p className="location-message" role="status" aria-live="polite">{locationStatusMessage}</p> : null}
         {closedSites.length > 0 ? (
           <p className="closure-notice">
             {closedSites.length} temporarily closed access point{closedSites.length === 1 ? " is" : "s are"} excluded from ranking.
             {closedSites[0].accessSourceUrl ? (
               <> <a href={closedSites[0].accessSourceUrl} target="_blank" rel="noreferrer">Official status ↗</a></>
+            ) : null}
+          </p>
+        ) : null}
+        {waterQualitySuppressedSites.length > 0 ? (
+          <p className="closure-notice water-quality-suppression-notice" role="status">
+            {waterQualitySuppressedSites.length} site{waterQualitySuppressedSites.length === 1 ? " is" : "s are"} excluded from recommendations because of an active official water-contact status.
+            {firstSuppressedWaterQualitySourceUrl ? (
+              <> <a href={firstSuppressedWaterQualitySourceUrl} target="_blank" rel="noreferrer">Official status ↗</a></>
             ) : null}
           </p>
         ) : null}
@@ -1722,6 +1775,7 @@ export function OpportunityApp() {
           {snapshot.sources.map((source) => <SourceStatus key={source.name} source={source} />)}
         </div>
       </section>
+      </main>
 
       <footer>
         <a className="brand footer-brand" href="#top"><span className="brand-icon" aria-hidden="true" /><span>CastingCompass</span></a>
@@ -1748,7 +1802,7 @@ export function OpportunityApp() {
 
       {showRespectNotice ? (
         <div className="respect-modal-layer" role="presentation">
-          <section className="respect-modal" role="dialog" aria-modal="true" aria-labelledby="respect-title">
+          <section ref={respectDialogRef} className="respect-modal" role="dialog" aria-modal="true" aria-labelledby="respect-title" tabIndex={-1}>
             <span className="eyebrow"><span /> Before you fish</span>
             <h2 id="respect-title">Respect the water.</h2>
             <p>
@@ -1771,7 +1825,7 @@ export function OpportunityApp() {
 
       {showLocationDisclosure ? (
         <div className="respect-modal-layer" role="presentation">
-          <section className="respect-modal location-disclosure-modal" role="dialog" aria-modal="true" aria-labelledby="location-disclosure-title">
+          <section ref={locationDialogRef} className="respect-modal location-disclosure-modal" role="dialog" aria-modal="true" aria-labelledby="location-disclosure-title" tabIndex={-1}>
             <span className="eyebrow"><span /> Optional location</span>
             <h2 id="location-disclosure-title">Find nearby fishing access.</h2>
             <p>CastingCompass uses your current location once to sort nearby public spots and apply your selected distance radius. The location stays in this browser tab, is not saved to your account, and is not added to trip reports.</p>
@@ -1876,6 +1930,100 @@ export function OpportunityApp() {
               <p>Relative rank among current options, with a practical fishability cap when conditions make the water hard to work.</p>
             </div>
 
+            <section
+              className={"water-quality-advisory " + waterQualityTone(selectedWaterQuality)}
+              aria-labelledby="water-quality-advisory-title"
+              role={selectedWaterQuality?.recommendationEffect === "suppress" ? "alert" : "status"}
+            >
+              <div>
+                <span>Official water-contact context</span>
+                <strong id="water-quality-advisory-title">
+                  {selectedWaterQuality?.officialLabel ?? "Official status unavailable"}
+                </strong>
+              </div>
+              <p>
+                {selectedWaterQuality?.detail
+                  ?? "CastingCompass could not verify an exact official station status for this site. No clean-water or safety claim is made."}
+              </p>
+              {selectedWaterQuality?.sampleDates.length ? (
+                <small>Agency sample date{selectedWaterQuality.sampleDates.length === 1 ? "" : "s"}: {selectedWaterQuality.sampleDates.join(", ")}.</small>
+              ) : null}
+              {selectedWaterQuality?.actionStartDates.length ? (
+                <small>
+                  Agency action start date{selectedWaterQuality.actionStartDates.length === 1 ? "" : "s"}: {selectedWaterQuality.actionStartDates.join(", ")}.
+                  {selectedWaterQuality.actionEndDates.length
+                    ? ` Reported end date${selectedWaterQuality.actionEndDates.length === 1 ? "" : "s"}: ${selectedWaterQuality.actionEndDates.join(", ")}.`
+                    : " No end date is reported in the source snapshot."}
+                </small>
+              ) : null}
+              <small>Water quality does not improve this fishing score and does not establish contact or seafood safety.</small>
+              <a
+                href={selectedWaterQuality?.sourceUrl ?? Object.values(waterQuality?.sources ?? {})[0]?.statusUrl ?? "https://www.waterboards.ca.gov/water_issues/programs/beaches/beach_water_quality/"}
+                target="_blank"
+                rel="noreferrer"
+              >
+                Check the official agency status ↗
+              </a>
+            </section>
+
+            {selectedStructureDepth ? (
+              <section className="structure-depth-evidence" aria-labelledby="structure-depth-evidence-title">
+                <div className="structure-depth-evidence-heading">
+                  <span>Source-bound depth &amp; structure</span>
+                  <strong id="structure-depth-evidence-title">NOAA chart context for this location</strong>
+                </div>
+                <dl>
+                  <div>
+                    <dt>Planning-sector depth bands</dt>
+                    <dd>
+                      {selectedStructureDepth.depth.status === "charted-sector-bands"
+                        ? chartedWaterBands(selectedStructureDepth).join(", ") || "No submerged band published"
+                        : selectedStructureDepth.depth.status === "no-charted-sector-band"
+                          ? "No reviewed NOAA depth-area band intersected this configured sector; this is an evidence gap"
+                          : "Required NOAA depth queries were unavailable; no depth inference is published"}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt>Nearby point soundings</dt>
+                    <dd>
+                      {selectedStructureDepth.depth.contextSoundingDepthRangeMeters
+                        ? `${depthNumber(selectedStructureDepth.depth.contextSoundingDepthRangeMeters[0])}–${depthNumber(selectedStructureDepth.depth.contextSoundingDepthRangeMeters[1])} m across ${selectedStructureDepth.depth.contextSoundingCount} deduplicated record${selectedStructureDepth.depth.contextSoundingCount === 1 ? "" : "s"} within ${selectedStructureDepth.geometry.contextRadiusMeters.toLocaleString()} m`
+                        : `No reviewed point sounding within ${selectedStructureDepth.geometry.contextRadiusMeters.toLocaleString()} m`}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt>Selected chart features nearby</dt>
+                    <dd>
+                      {selectedStructureDepth.structure.chartedFeatures.length
+                        ? selectedStructureDepth.structure.chartedFeatures.map((feature) => feature.label).join(", ")
+                        : selectedStructureDepth.structure.status === "source-unavailable"
+                          ? "Selected NOAA feature queries were unavailable; no structure inference is published"
+                          : "No selected NOAA feature-class records; this does not mean structure is absent"}
+                    </dd>
+                  </div>
+                </dl>
+                {selectedStructureDepth.depth.status === "charted-sector-bands" ? (
+                  <p>
+                    The bands intersect a configured {selectedStructureDepth.geometry.sectorRadiusMeters} m offshore planning sector;
+                    they are not an exact depth at the marker or a shore-reachable casting-depth promise.
+                  </p>
+                ) : selectedStructureDepth.depth.status === "no-charted-sector-band" ? (
+                  <p>
+                    The configured {selectedStructureDepth.geometry.sectorRadiusMeters} m offshore sector returned no reviewed depth-area band.
+                    Nearby soundings and chart features remain context only; the gap is not proof of shallow water, safe access, or castability.
+                  </p>
+                ) : (
+                  <p>No depth inference is made while the required NOAA depth evidence is unavailable.</p>
+                )}
+                <small>
+                  Record dates: {depthSourceDateLabel(selectedStructureDepth)} · units: meters · datum: Mean Lower Low Water.
+                  These are vector chart features with no fixed grid resolution; the selected service layers expose no numeric positional accuracy or uncertainty.
+                </small>
+                <small>This evidence does not change the fishing score and is not for navigation, wading, or access decisions.</small>
+                <a href={selectedStructureDepth.sourceUrl} target="_blank" rel="noreferrer">Read the NOAA source notes ↗</a>
+              </section>
+            ) : null}
+
             <div className="component-block">
               <h3>Why this time stands out</h3>
               <MetricBar label="Bottom" value={selectedWindow.habitatScore} note="How fishy the nearby structure looks" />
@@ -1950,7 +2098,9 @@ export function OpportunityApp() {
                 const report = wavePowerReport(
                   selectedWindow.conditions.wavePowerKwM,
                   selectedWindow.conditions.swellPeriodSeconds,
-                  ["Point Reyes", "Marin Coast", "San Francisco Coast", "San Mateo Coast", "Half Moon Bay"].includes(selectedSite.region),
+                  ["open-coast", "harbor-mouth", "semi-protected"].includes(
+                    selectedSite.castingZone?.exposure ?? "",
+                  ),
                 );
                 return (
                   <div className={`wave-power-condition ${report.tone}`}>
@@ -2067,7 +2217,7 @@ export function OpportunityApp() {
         <div className="modal-layer" role="presentation" onClick={(event) => {
           if (event.target === event.currentTarget) setShowMethod(false);
         }}>
-          <section className="method-modal" role="dialog" aria-modal="true" aria-labelledby="method-title">
+          <section ref={methodDialogRef} className="method-modal" role="dialog" aria-modal="true" aria-labelledby="method-title" tabIndex={-1}>
             <button className="sheet-close" type="button" onClick={() => setShowMethod(false)} aria-label="Close methodology"><CloseIcon /></button>
             <span className="eyebrow"><span /> Model note</span>
             <h2 id="method-title">A ranking, not a promise.</h2>
@@ -2098,6 +2248,10 @@ export function OpportunityApp() {
               <details>
                 <summary><span>Expected fishing pressure</span><b>Small access modifier</b></summary>
                 <p>A time-of-day and weekend schedule is combined with a curated estimate of how constrained each spot usually feels. It is not Google Popular Times or live headcount, and it can move the raw score by only a few points.</p>
+              </details>
+              <details>
+                <summary><span>Water-quality advisories</span><b>Separate safety guardrail</b></summary>
+                <p>Exact official station postings can remove a site from recommendations. A no-posting result never raises the fishing score, and missing, stale, unmonitored, or unmapped status stays unknown. The score does not establish water-contact or seafood safety.</p>
               </details>
             </div>
             <div className="method-callout">
@@ -2138,7 +2292,7 @@ export function OpportunityApp() {
         <div className="modal-layer" role="presentation" onClick={(event) => {
           if (event.target === event.currentTarget) setShowCompare(false);
         }}>
-          <section className="compare-modal" role="dialog" aria-modal="true" aria-labelledby="compare-title">
+          <section ref={compareDialogRef} className="compare-modal" role="dialog" aria-modal="true" aria-labelledby="compare-title" tabIndex={-1}>
             <button className="sheet-close" type="button" onClick={() => setShowCompare(false)} aria-label="Close comparison"><CloseIcon /></button>
             <span className="eyebrow"><span /> Side by side</span>
             <h2 id="compare-title">Compare your<br />best options.</h2>
@@ -2169,6 +2323,6 @@ export function OpportunityApp() {
           </section>
         </div>
       ) : null}
-    </main>
+    </div>
   );
 }

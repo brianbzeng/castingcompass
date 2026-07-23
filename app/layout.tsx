@@ -9,7 +9,7 @@ export const metadata: Metadata = {
     template: "%s · CastingCompass",
   },
   description:
-    "An explainable California halibut opportunity planner for public shore, beach, jetty, and pier access around the San Francisco Bay Area.",
+    "An explainable California halibut opportunity planner for public shore, beach, jetty, and pier access across the Bay Area and Santa Barbara South Coast.",
   applicationName: "CastingCompass",
   manifest: "/manifest.webmanifest",
   appleWebApp: {

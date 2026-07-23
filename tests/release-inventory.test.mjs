@@ -8,18 +8,34 @@ const inputPaths = [
   ".node-version",
   ".npmrc",
   ".python-version",
+  "field-review/marin-structure-depth-review-policy.json",
+  "field-review/north-east-bay-structure-depth-review-policy.json",
+  "field-review/oakland-south-bay-structure-depth-review-policy.json",
+  "field-review/san-francisco-structure-depth-review-policy.json",
+  "field-review/san-mateo-structure-depth-review-policy.json",
+  "field-review/santa-barbara-access-review-policy.json",
+  "field-review/santa-barbara-structure-depth-review-policy.json",
   "package-lock.json",
   "package.json",
   "pipeline/.python-version",
   "pipeline/requirements-ci.lock",
   "contracts/ai-review-queue-message.schema.json",
+  "contracts/authenticated-staging-drill-authorization.schema.json",
+  "contracts/isolated-staging-wrangler.schema.json",
+  "contracts/key-custody-evidence-manifest.schema.json",
+  "contracts/key-custody-independent-review.schema.json",
+  "contracts/pollution-score-independent-review.schema.json",
+  "contracts/water-quality-mapping-independent-review.schema.json",
   "contracts/privacy-export-queue-message.schema.json",
   "security/api-image-policy.json",
   "security/ai-review-queue-policy.json",
+  "security/authenticated-staging-drill-policy.json",
+  "security/isolated-staging-config-policy.json",
   "security/privacy-export-queue-policy.json",
   "security/cloudflare-provider-state-policy.json",
   "security/d1-query-inventory-policy.json",
   "security/d1-query-inventory.json",
+  "security/key-custody-review-policy.json",
   "security/observability-activation-policy.json",
   "security/operational-restore-review-policy.json",
   "security/production-change-authorization-policy.json",
@@ -28,6 +44,17 @@ const inputPaths = [
   "services/api/.python-version",
   "services/api/Dockerfile",
   "services/api/requirements-runtime.lock",
+  "staging/ai-review-exercise-stub.wrangler.jsonc",
+  "worker/ai-review-exercise-stub.ts",
+  "data/sites.json",
+  "public/data/water-quality.json",
+  "water-quality/audits/east-bay-parks-beachwatch-station-mappings.json",
+  "water-quality/audits/launch-catalog-coverage.json",
+  "water-quality/audits/marin-beachwatch-station-mappings.json",
+  "water-quality/audits/san-mateo-station-mappings.json",
+  "water-quality/audits/sf-unmapped-station-candidates.json",
+  "water-quality/policy.json",
+  "water-quality/pollution-score-source-policy.json",
   "wrangler.jsonc",
 ];
 
@@ -125,8 +152,25 @@ test("CI verifies the combined inventory and the signer rejects a narrowed hando
   ]);
   assert.match(manifest, /"security:release-sbom": "node scripts\/generate-release-sbom\.mjs --check"/u);
   assert.match(manifest, /"security:d1-query-inventory": "node scripts\/generate-d1-query-inventory\.mjs --check"/u);
+  assert.match(manifest, /"security:isolated-staging-config-policy": "node scripts\/verify-isolated-staging-config\.mjs verify-policy"/u);
+  assert.match(manifest, /"security:authenticated-staging-drill-policy": "node scripts\/authenticated-staging-drill\.mjs verify-policy"/u);
   assert.match(ci, /npm run security:sbom\n\s+- run: npm run security:d1-query-inventory\n\s+- run: npm run security:release-sbom/u);
   assert.match(release, /npm run security:sbom\n\s+- run: npm run security:d1-query-inventory\n\s+- run: npm run security:release-sbom/u);
+  assert.match(ci, /npm run security:exercise-policy\n\s+- run: npm run security:isolated-staging-config-policy\n\s+- run: npm run security:authenticated-staging-drill-policy/u);
+  assert.match(release, /npm run security:exercise-policy\n\s+- run: npm run security:isolated-staging-config-policy\n\s+- run: npm run security:authenticated-staging-drill-policy/u);
+  assert.match(manifest, /"security:operational-restore-review": "node scripts\/verify-operational-restore-review\.mjs verify-policy"/u);
+  assert.match(manifest, /"security:key-custody-review": "node scripts\/verify-key-custody-review\.mjs verify-policy"/u);
+  assert.match(manifest, /"security:pollution-score-independent-review": "node scripts\/verify-pollution-score-independent-review\.mjs verify-policy"/u);
+  assert.match(manifest, /"security:water-quality-mapping-independent-review": "node scripts\/verify-water-quality-mapping-independent-review\.mjs verify-policy"/u);
+  assert.match(manifest, /"security:santa-barbara-access-review": "node scripts\/verify-santa-barbara-access-review\.mjs verify-policy"/u);
+  assert.match(manifest, /"security:santa-barbara-structure-depth-review": "node scripts\/verify-santa-barbara-structure-depth-review\.mjs verify-policy"/u);
+  assert.match(manifest, /"security:san-francisco-structure-depth-review": "node scripts\/verify-san-francisco-structure-depth-review\.mjs verify-policy"/u);
+  assert.match(manifest, /"security:san-mateo-structure-depth-review": "node scripts\/verify-san-mateo-structure-depth-review\.mjs verify-policy"/u);
+  assert.match(manifest, /"security:marin-structure-depth-review": "node scripts\/verify-marin-structure-depth-review\.mjs verify-policy"/u);
+  assert.match(manifest, /"security:north-east-bay-structure-depth-review": "node scripts\/verify-north-east-bay-structure-depth-review\.mjs verify-policy"/u);
+  assert.match(manifest, /"security:oakland-south-bay-structure-depth-review": "node scripts\/verify-oakland-south-bay-structure-depth-review\.mjs verify-policy"/u);
+  assert.match(ci, /npm run security:production-change-policy\n\s+- run: npm run security:operational-restore-review\n\s+- run: npm run security:key-custody-review\n\s+- run: npm run security:pollution-score-independent-review\n\s+- run: npm run security:water-quality-mapping-independent-review\n\s+- run: npm run security:santa-barbara-access-review\n\s+- run: npm run security:santa-barbara-structure-depth-review\n\s+- run: npm run security:san-francisco-structure-depth-review\n\s+- run: npm run security:san-mateo-structure-depth-review\n\s+- run: npm run security:marin-structure-depth-review\n\s+- run: npm run security:north-east-bay-structure-depth-review\n\s+- run: npm run security:oakland-south-bay-structure-depth-review/u);
+  assert.match(release, /npm run security:production-change-policy\n\s+- run: npm run security:operational-restore-review\n\s+- run: npm run security:key-custody-review\n\s+- run: npm run security:pollution-score-independent-review\n\s+- run: npm run security:water-quality-mapping-independent-review\n\s+- run: npm run security:santa-barbara-access-review\n\s+- run: npm run security:santa-barbara-structure-depth-review\n\s+- run: npm run security:san-francisco-structure-depth-review\n\s+- run: npm run security:san-mateo-structure-depth-review\n\s+- run: npm run security:marin-structure-depth-review\n\s+- run: npm run security:north-east-bay-structure-depth-review\n\s+- run: npm run security:oakland-south-bay-structure-depth-review/u);
   const signingJob = release.slice(release.indexOf("  attest-release:"));
   assert.match(signingJob, /castingcompass-release[\s\S]+not Cloudflare deployment provenance/u);
   assert.match(signingJob, /\.type == "container"[\s\S]+\.type == "operating-system"[\s\S]+pkg:pypi\//u);

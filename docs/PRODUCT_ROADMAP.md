@@ -13,6 +13,14 @@ after its acceptance checks pass in the intended environment.
   smoke tests pass.
   - [x] Implement and verify the patched isolated safety-floor commit plus the additive
     approval release.
+  - [x] Make the no-runtime-publisher invariant repository-wide. The release source preflight
+    now recursively scans every Worker TypeScript module and rejects any `INSERT`, `REPLACE`, or
+    `UPDATE` writer for `site_discussion_posts`; private AI-draft storage and bounded cleanup
+    deletes remain allowed. Adversarial mixed-case, conflict-clause, quoted-table, and multiline
+    writer fixtures fail closed, while the runtime route, migration, and source-safety suite
+    passes 24/24. Full local acceptance passes lint, TypeScript, 670 repository tests, the complete
+    security/SBOM/policy chain, and both npm audits with zero vulnerabilities. This repository
+    guard does not replace the production migration, legacy-row audit, or live smoke gate.
   - [x] Audit the live D1 ledger/schema without reading user rows and locally verify the
     integrated release path: exact `0007` drift reconciliation, one-file migration staging,
     a default-off API/scheduled-work maintenance bridge, aggregate pre/postflight checks,
@@ -66,8 +74,21 @@ after its acceptance checks pass in the intended environment.
       - [x] Prepare the fail-closed independent-review handoff: a locked policy and schema,
         immutable three-file packet verification, independently supplied source binding, strict
         audit chronology/hash validation, distinct owner-only review evidence, a minimized
-        non-authorizing receipt, and adversarial path/disclosure tests. The actual second-person
-        review, key-custody approval, and provider/production evidence remain open.
+        non-authorizing receipt, and adversarial path/disclosure tests. A guarded packet-derived
+        writer now creates the unfilled record exclusively with exact packet hashes, while every
+        file requires stable current-user-owned `0600` identity through a bounded no-follow read.
+        The actual second-person review, key-custody approval, and provider/production evidence
+        remain open.
+      - [x] Prepare the separate fail-closed production key-custody evidence handoff. Its locked
+        policy covers all seven runtime-secret roles and four backup-key roles; guarded exclusive
+        writers create a source-bound evidence manifest and an evidence-hash-bound independent
+        review, while stable owner-only readers reject checkout files, broad permissions, links,
+        stale evidence, chronology errors, digest reuse, incomplete accepted reviews, and secret
+        material. Even an accepted review leaves custody, restore, deployment, and production
+        authority false. No provider evidence, secret value, actual custodian, or qualified review
+        was supplied during this repository-only preparation. The Cloudflare build, ESLint,
+        TypeScript, all 545/545 Node tests, the complete offline security/SBOM/source-integrity
+        chain, and both zero-vulnerability npm audits pass under the pinned Node/npm toolchain.
 - [ ] Make account privacy promises durable: deletion queue/tombstones for photos and public
   copies, truthful completion semantics, and an age-only first step before email/password.
   - [x] Implement and locally verify single-use age proofs, consent-safe reacceptance,
@@ -97,6 +118,14 @@ after its acceptance checks pass in the intended environment.
       mutation checks, equal-work invalid login, and generic deferred recovery behavior across
       request, resend, and invalid-code paths. Live cookie, email-delivery, expiry, and revocation
       evidence remains required after the guarded production deployment.
+    - [x] Centralize the complete account-bound browser recovery manifest and clear it from both
+      `localStorage` and `sessionStorage` only after an exact sign-out receipt, a read-only session
+      check that confirms logout, or an accepted account-deletion receipt. Cleanup now covers the
+      active-trip recovery secret, anonymous reporter identifier, trip/profile drafts, stable
+      idempotency request material, pending-operation markers, and actual legacy keys; unrelated
+      site preferences remain untouched. Ambiguous sign-out preserves the data, and blocked local
+      cleanup leaves the server sign-out authoritative while visibly directing the user to clear
+      site data before sharing the browser.
   - [ ] Define and approve a deny-by-default access-control matrix for anonymous users, account
     owners, moderators, support, operators, and administrators. Enforce it server-side on every
     route and object lookup, with privilege-escalation, insecure direct-object reference, and
@@ -107,6 +136,219 @@ after its acceptance checks pass in the intended environment.
       by routing and abuse controls, and locally verify that a second authenticated account
       cannot read an owner's photo/export data or delete the owner's trip/gear. Approval of
       future moderator, support, and operator roles remains open.
+    - [x] Close the registry's method-classification gap. A known path no longer permits an
+      unclassified method to reach handler-local checks: the Worker derives the exact method set
+      from the same executable policy, returns a generic non-cacheable `405` plus its narrow
+      `Allow` header for a method mismatch, preserves generic `404` for unknown paths, and performs
+      this rejection after the generic abuse ceiling but before body reads and every API handler
+      dispatch. Exhaustive policy examples cover ordinary and extension methods, and source-order
+      tests keep the central boundary ahead of request parsing and handlers.
+    - [x] Remove first-match precedence from the executable access-control registry. A request is
+      admitted only when exactly one policy claims its path and method; overlapping policies now
+      return a generic non-cacheable `503` before body parsing and handler dispatch instead of
+      allowing array order to choose an actor, handler, same-origin, legal, or abuse-control
+      contract. Rejected conflicts retain the union of stronger abuse-limit tags, and synthetic
+      owner/public plus wildcard/specific-method collisions prove the boundary fails closed.
+    - [x] Make the registry's same-origin field centrally enforceable rather than descriptive.
+      After the generic abuse ceiling but before body parsing or dispatch, every admitted policy
+      marked `sameOriginRequired` now requires the exact canonical request origin; missing,
+      opaque, malformed, noncanonical, downgraded, lookalike, and cross-site values receive a
+      generic non-cacheable `403`. Conflict, unknown-path, and wrong-method rejection retain
+      precedence, public/read routes stay origin-independent, and handler-local assertions remain
+      as defense in depth.
+    - [x] Make the registry's handler field executable rather than descriptive. Every classified
+      API request now dispatches only to the health, Turnstile, discussion, account, or trip
+      handler named by its singleton policy. A missing policy, unknown handler value, or assigned
+      handler that returns null produces a generic non-cacheable `503` before the request can
+      reach another handler, image optimization, or the static application. The focused registry
+      suite passes 10/10, including representative production-bundle dispatch for all five
+      families, and the production-off build plus all 693/693 Node tests pass under the pinned
+      runtime; non-API routing and protected-trip owner/legal checks remain unchanged.
+    - [x] Make the registry's owner and current-legal fields executable before body parsing.
+      Every singleton `owner` policy now resolves a live server-side session after generic abuse,
+      route/method/conflict, and same-origin rejection but before the body guard. Missing storage,
+      missing authority, deletion fences, and stale legal acceptance fail with distinct truthful
+      responses. Exactly six policy rows preserve the existing export/profile/delete access
+      needed during deletion; receipt and optional-session routes remain separate. Account and
+      trip execution repeat live authorization so revocation/fence races fail closed. The focused
+      registry suite passes 10/10, the production-off build plus all 694/694 Node tests pass, the
+      feature-on photo lane passes 8/8, the restored phone matrix passes 228/228, and the full
+      security/SBOM/query-policy chain plus both zero-vulnerability audits pass under the pinned
+      runtime.
+    - [x] Make the registry's deletion-receipt class executable and correct its clear-route
+      classification. The only receipt-protected policy now validates the path-scoped cookie and
+      live hash-bound D1 row centrally before body guarding, then the account handler repeats the
+      lookup so removal or expiry wins. Any future receipt policy fails closed until it has an
+      explicit preflight. `DELETE /api/privacy/deletion-status` is now truthfully public but
+      same-origin: it only expires this browser's cookie, performs no privileged or provider
+      mutation, grants no authority, and remains available when D1 is unavailable. Optional-
+      session behavior is unchanged. Exact-tree acceptance passes the production-off build and
+      all 695/695 Node tests, the feature-on 8/8 photo lane, the restored 228/228 phone matrix,
+      ESLint, TypeScript, the complete security/SBOM/query-policy chain, and both zero-
+      vulnerability npm audits. The same reviewed slice also advances Next.js and its matching
+      lint config from 16.2.10 to the advisory-fixed 16.2.11 and refreshes deterministic SBOMs.
+    - [x] Make deletion-receipt authority an exhaustive request-and-control contract. The one
+      resource-token policy now independently binds its exact ID, declared template, actual
+      request path and method, account handler, same-origin rule, legal/deletion-fence flags, and
+      stronger abuse tags before live receipt lookup or body guarding. A new receipt policy,
+      broadened primary matcher, unrelated or suffixed request, traversal-shaped input, wrong
+      method, or control drift fails with generic non-cacheable `503`; the exact high-entropy
+      cookie/D1 lookup and execution-time recheck remain unchanged. The focused route suite passes
+      14/14 under pinned Node 22.23.1/npm 10.9.8; exact-tree local and hosted evidence is tracked
+      separately in `docs/GOAL_STATUS.md`.
+    - [x] Make the registry's optional-session class executable without turning anonymous access
+      into owner authority. Only session discovery and same-origin logout may use the class; any
+      future optional-session policy fails with generic `503` until it receives an explicit
+      preflight. Both reviewed routes now require readable D1 account storage and exact schema
+      before body guarding. Session discovery still resolves live identity and returns anonymous
+      state when authority is absent, while expiring any presented invalid, expired, removed, or
+      malformed host/legacy cookie. Logout retains its exact post-revocation absence receipt
+      before clearing browser cookies. Adversarial tests cover route drift, missing storage/schema,
+      malformed-cookie cleanup, and pre-body ordering. Under pinned Node 22.23.1/npm 10.9.8, the
+      production-off build plus all 696/696 Node tests, focused 10/10 route suite, feature-on 8/8
+      photo lane, restored production-off 228/228 mobile matrix, lint, typecheck, full security/
+      SBOM/query-policy chain, and both zero-vulnerability audits pass.
+    - [x] Make optional-session authority an exhaustive request-and-control contract. The exact
+      session-discovery and logout policies now independently bind their IDs, declared templates,
+      actual request paths, methods, account handler, same-origin rule, legal/deletion-fence
+      flags, and stronger abuse tags before D1/schema preflight or body guarding. A new policy,
+      broadened primary matcher, unrelated or suffixed request, traversal-shaped input, wrong
+      method, or control drift fails with generic non-cacheable `503`; existing anonymous session
+      discovery, stale-cookie cleanup, and exact logout revocation receipts remain unchanged.
+      The focused route suite passes 13/13 under pinned Node 22.23.1/npm 10.9.8; exact-tree local
+      and hosted evidence is tracked separately in `docs/GOAL_STATUS.md`.
+    - [x] Make public authorization an exhaustive execution contract. The fourteen reviewed
+      public policies now independently bind their exact ID, path template, method set, handler,
+      same-origin rule, legal/deletion-fence flags, and stronger abuse tags; a new public policy or
+      field drift fails with generic `503` before body guarding. Existing health/configuration,
+      summary/discussion, retired-tombstone, cookie-clear, and anonymous account-entry behavior is
+      unchanged. Adversarial tests cover ID/path/method/handler/origin/legal/fence/tag drift and
+      central source order. Under pinned Node 22.23.1/npm 10.9.8, the production-off build and all
+      697/697 Node tests pass; the focused route suite passes 11/11; the feature-on photo lane
+      passes 8/8; the restored production-off mobile matrix passes 228/228; and lint, typecheck,
+      the full security/SBOM/query-policy chain, and both zero-vulnerability audits pass.
+    - [x] Bind the actual public request path and method to separate reviewed matchers. Every exact
+      public route now rechecks the request pathname independently of the primary registry's
+      `matches()` predicate, while the discussion route separately preserves its lowercase
+      letter/digit/hyphen site-ID grammar. A broadened primary matcher, unrelated or suffixed path,
+      malformed dynamic ID, traversal-shaped input, or method mismatch fails closed before body
+      guarding even when the declared path template remains unchanged. Under pinned Node
+      22.23.1/npm 10.9.8, the production-off build and all 697/697 Node tests pass; the focused
+      route suite passes 11/11; the feature-on photo lane passes 8/8; the restored production-off
+      mobile matrix passes 228/228; and lint, typecheck, the full security/SBOM/query-policy chain,
+      and both zero-vulnerability audits pass.
+    - [x] Make owner authorization an exhaustive request-and-control contract. All twenty-two
+      protected policies now independently bind their exact ID, declared template, actual
+      pathname, method set, handler, same-origin rule, legal-acceptance requirement, deletion-fence
+      exception, and stronger abuse tags before session resolution or body guarding. A new owner
+      policy, a broadened primary matcher, or drift in any control fails with generic non-cacheable
+      `503`. Independent dynamic patterns preserve export, gear, profile-trip, saved-site, and
+      active-trip identity grammars; completion and cancellation reject malformed client trip IDs
+      before consuming JSON or multipart bodies. Adversarial tests cover every field, a universal
+      export matcher, unrelated/suffixed/traversal-shaped paths, malformed identifiers, and central
+      source order. Under pinned Node 22.23.1/npm 10.9.8, the production-off build and all 698/698
+      Node tests pass; the focused route suite passes 12/12; the feature-on photo lane passes 8/8;
+      the restored production-off mobile matrix passes 228/228; and lint, typecheck, the full
+      security/SBOM/query-policy chain, and both zero-vulnerability audits pass. Hosted evidence
+      is tracked separately in `docs/GOAL_STATUS.md`.
+    - [x] Bind active-trip completion and cancellation to the authenticated account in both
+      the handler precheck and the final D1 update. The write now requires the same trip ID,
+      account ID, active state, and token hash atomically; exact-token cross-account and
+      ownership-change race regressions prove mismatched identity remains an indistinguishable
+      `404` without completing or canceling the row.
+    - [x] Resolve lost terminal-write responses from exact D1 post-state instead of mutation
+      metadata. Completion binds owner, live source, persistent idempotency hash, cleared token,
+      server timestamps, mode, and photo locator; cancellation binds owner, live source,
+      persistent hash, cleared token, and request timestamp. Lost committed-response regressions
+      prove truthful success without weakening the final ownership/token predicates.
+    - [x] Remove fetch-then-check reads from owner trip flows. Trip rows and their enrollment,
+      forecast-impression, feasibility-start, feasibility-recruitment, and prior-recruitment
+      context now bind the server-derived account in the query itself. Profile-edit reads for
+      feasibility start, completion, and correction state repeat the parent-trip owner gate.
+      A separately named
+      collision check returns only constant `1` by random client-trip ID so duplicate identities
+      remain a generic `409` without projecting another account's row or sidecars. The complete
+      D1 inventory machine-checks all nine owner reads and this narrow opaque exception.
+    - [x] Bind manual advisory-review retry to the complete authenticated trip version. Every
+      transactional compare-and-set repeats `id`, `user_id`, completed state, the exact prior AI
+      status/payload/model/timestamp fields, and the trip update version. Read-back then proves
+      exact queued/prior/owner/global cardinality by primary key before scheduling or returning the
+      queued count. Ownership or input-version drift queues and dispatches nothing.
+    - [x] Recover manual advisory-review retry after missing metadata or a lost committed batch
+      response without trusting either. Exact queued state enters the internal scheduler; rollback
+      or an unreadable receipt returns `503`; changed/claimed/completed state is not rescheduled.
+      The default-off backlog still includes queued rows for durable recovery, while both direct
+      and queue-enabled downstream paths use separate high-entropy claim tokens so concurrent
+      callbacks cannot duplicate provider authority. One ten-row owner request starts at most one
+      immediate background scheduler; the remaining exact queued rows stay in the durable backlog,
+      avoiding ten same-invocation pipelines and retaining local D1-budget headroom. All model
+      output remains private and human-gated.
+    - [x] Make owner gear mutation receipts database-authoritative. PATCH and DELETE repeat `id`
+      plus `user_id`, but mutation metadata and transport success no longer decide the receipt.
+      PATCH requires the exact normalized owner row and server timestamp; DELETE requires zero
+      global rows for the opaque ID, treats a same-owner concurrent removal as idempotent success,
+      and returns the same `404` if ownership moved. Lost committed responses recover without
+      replay, while a mismatched post-state remains `503`.
+    - [x] Make gear-preset creation database-authoritative after storage response loss. The
+      server-generated identifier, authenticated owner, every normalized field, and both server
+      timestamps must match an exact D1 row before the `201` receipt is returned; absence resolves
+      to the documented 100-row limit only when an owner-bound bounded read confirms that limit.
+    - [x] Make saved-location receipts database-authoritative. The browser changes its confirmed
+      saved state only after an exact server receipt, so creation and removal now read the exact
+      owner/site row after D1. Presence authorizes saved state; absence authorizes idempotent
+      removal, and a bounded owner read distinguishes a real 100-location ceiling from an
+      unconfirmed write. Lost committed responses resolve without replaying the mutation.
+    - [x] Separate pending-trip moderation conflicts from missing mutation receipts. PATCH and
+      DELETE keep the final `id` plus `user_id` plus pending-state predicate; an authoritative zero
+      remains `409`, while malformed D1 metadata is now a replay-blocking `503` rather than a
+      false reviewed-trip claim. Unconfirmed deletion preserves the opaque status receipt cookie.
+    - [x] Make legal reacceptance receipts database-authoritative. The compare-and-set repeats the
+      complete authenticated account/legal version and the exact still-live session. Read-back
+      must prove the request's current Terms/Privacy timestamps and versions, absence of the prior
+      snapshot, unique account identity, and continuing session authority. Missing metadata and a
+      lost committed response recover without replay; rollback, unreadable or changed state
+      returns `503`, while a deleted account or revoked session returns `401` and clears stale
+      cookies. Prior age eligibility remains untouched.
+    - [x] Require an exact credential-lifecycle receipt before completing password reset. Password
+      update, all-session revocation, and one-use challenge consumption remain one atomic batch;
+      success requires the exact new salt/hash/timestamp row, zero prior sessions, zero challenge
+      rows, and no deletion fence. Missing metadata and a lost committed response recover without
+      replay; rollback, unreadable or conflicting state, and fence races return `503` and create no
+      replacement session. A rotated challenge remains the same safe `409`.
+    - [x] Require an exact account-lifecycle receipt before completing verified signup. User
+      creation and one-use challenge deletion remain atomic and repeat the complete challenge
+      snapshot. Welcome delivery and first-session issuance require the exact new credential,
+      age/legal fields and timestamps, unique ID/email cardinality, zero prior sessions, zero
+      challenge rows, and no deletion fence. Missing metadata and a lost committed response recover
+      without replay; rollback, unreadable or conflicting state, and fence races return `503` with
+      no downstream side effect. A rotated challenge remains the same safe `409`.
+    - [x] Require an exact database session receipt before setting any login, signup, password-
+      reset, or legacy-rotation cookie. The candidate token is hashed once and exposed only after
+      read-back proves its random hash, owner, timestamps, live user, and absent deletion fence.
+      Missing metadata and lost committed batch responses resolve from that state without replay;
+      unreadable or mismatched state returns `503`, clears both cookie forms, and deletes the
+      candidate hash so no usable or orphaned session survives an ambiguous receipt.
+    - [x] Require exact stored-state revocation receipts before returning the sign-out response
+      that permits browser recovery-state deletion. Every distinct presented token is hashed and
+      deleted transactionally, then read back by its primary key; only readable zero cardinality
+      for every token permits cookie clearing. Missing mutation metadata and a lost committed
+      response recover from exact absence. Rollback, unreadable state, or row reappearance returns
+      `503` while retaining the cookie so sign-out can be retried or checked without losing the
+      only revocation handle.
+    - [x] Bind every secret-bearing age-proof and email-challenge side effect to exact stored-state
+      receipts. Plaintext age proofs require the full random-hash/timestamp/gate snapshot; one-use
+      consumption proves exact consumed versus prior state before challenge creation. Initial
+      signup and recovery challenges prove the complete credential snapshot, unique ID, and
+      rolling email ceiling. Resends compare-and-set the full prior version and read back complete
+      next/prior snapshots before delivery. Missing metadata and committed response loss recover
+      without replay; rollback, unreadable or changed state authorizes no secret/provider side
+      effect. Candidate-only cleanup repeats the complete snapshot, and password recovery retains
+      its generic anti-enumeration response.
+    - [x] Bind final signup and password-reset authority to the exact verified challenge snapshot,
+      not a pre-transaction read. User/password mutation, session revocation, and one-use challenge
+      consumption repeat kind, user where applicable, code hash, creation time, attempt count, and
+      expiry in the atomic batch. A concurrent resend makes the old code change zero rows and leaves
+      the newer code intact; success requires authoritative receipts for every terminal statement.
   - [ ] Verify strict schema/size/type validation, contextual output encoding, safe database
     binding, upload signature and metadata checks, and AI prompt-injection boundaries. Model
     instructions and user content remain data, never authority; models receive no ambient
@@ -121,6 +363,31 @@ after its acceptance checks pass in the intended environment.
       bounded output schema without type coercion or prose wrapping, redacts failure logs, and
       still cannot create a public post. Production edge evidence and authorized staging
       penetration testing remain open.
+    - [x] Make every future private trip-photo object discoverable before R2. The default-off
+      upload path commits and exactly reads back a typed locator reservation before the object
+      write; exact attachment removes it, while ambiguous provider/database outcomes remain in a
+      leased, bounded scheduled reconciler. Atomic pending-state predicates serialize attachment
+      against cleanup ownership. Reconciliation preserves an attached object, deletes only an
+      unattached object, and makes zero R2 calls on a locator-hash mismatch. Migration
+      `0020` plus production alerts/drills remain required before enabling uploads.
+    - [x] Locally serialize account deletion against private-photo writes. Password-confirmed
+      deletion establishes a leased D1 account fence before inventory; new sessions, trip inserts,
+      photo reservations, and photo attachment repeat that fence predicate in the authoritative
+      statement. Pre-fence reservations are adopted into the deletion ledger with their later
+      safe-cleanup time, every destructive statement repeats the exact fence lease, and exact
+      post-state resolves lost committed responses. Failed batches retain the fence and freeze
+      account mutations for a safe retry. Production migration, monitoring, bucket drills, plan-
+      budget evidence, independent review, and explicit upload activation remain open.
+      - [x] Bound large private-object inventories without truncation. Four source-bound
+        `INSERT INTO ... SELECT` statements materialize prior cleanup tasks, reservations,
+        export objects, and attached trip photos in D1; the destructive account transaction is
+        fixed at 18 statements regardless of object count. `trips.photo_key_hash` makes the
+        attached-object identity exact, and a legacy locator without its hash inserts no job,
+        removes no active row, touches no object, and leaves the account fenced for protected
+        migration. Cold 75-photo and lost-committed-response tests stay within the 50-query Free
+        ceiling and 100-parameter ceiling. Runtime auth initialization now performs one
+        read-only migration-readiness query instead of request-time DDL. Production application,
+        timing/rows-read evidence, private-bucket drills, and independent review remain open.
   - [ ] Verify endpoint-specific rate limits and abuse ceilings for login, recovery, signup,
     uploads, exports, deletion, reports, and AI routes. Adopt length-based password rules that
     allow password managers/passphrases, block breached/common passwords using a privacy-safe
@@ -136,6 +403,18 @@ after its acceptance checks pass in the intended environment.
       configuration is missing or unavailable. Existing D1 login/email/trip ceilings remain the
       durable exact controls. Production secret provisioning, activation, outer WAF rules,
       threshold tuning, monitoring, and live endpoint evidence remain open.
+    - [x] Make the durable D1 login and email-code ceilings atomic under concurrency. Sign-in
+      claims one of ten rolling failure slots, requires exact pending-row and rolling-window
+      read-back before credential work, and issues no session until exact read-back proves that
+      same row successfully classified with its prior pending state absent. Signup and recovery
+      challenge creation recheck the five-per-hour ceiling inside their INSERT, before provider
+      delivery. Every verification or
+      reset code submission compare-and-sets the complete challenge snapshot to its next attempt
+      count, then requires exact read-back of that claimed version with the prior state absent.
+      Missing metadata and lost committed responses recover without replay; rollback, unreadable
+      or changed state authorizes no credential transition, concurrent signup changes remain
+      `409`, and password recovery retains its generic anti-enumeration response. Six claims remain
+      the hard ceiling.
   - [ ] Verify encryption in transit and at rest, key separation/rotation/recovery, least
     privilege, secret scanning, dependency/runtime/action version locks, reproducible builds,
     an SBOM, vulnerability-response ownership, and restore-tested backups. Pinning must include
@@ -147,6 +426,11 @@ after its acceptance checks pass in the intended environment.
       The exact npm CLI and a fail-closed zero-execution install-script policy are now locally
       enforced; hosted Linux and merge evidence remain required. Cloudflare deployed-digest
       evidence, key custody, and restore drills remain open.
+    - [x] Remediate the later `fast-uri` `GHSA-v2hh-gcrm-f6hx` and Sharp/libvips
+      `GHSA-f88m-g3jw-g9cj` disclosures with exact `3.1.4` and `0.35.3` overrides. Both audits
+      return zero vulnerabilities, Sharp no longer declares an install hook, and production-SBOM
+      membership is derived from locked root reachability so cross-platform Sharp artifacts stay
+      covered without admitting development-only Playwright or Ajv paths.
     - [x] Add a fail-closed Cloudflare provider-state policy and redacted read-only analyzer that
       distinguishes disconnected Git builds from a paused Worker, compares the active runtime and
       binding contract, and refuses source/hold/release claims without private exact identity and
@@ -341,14 +625,37 @@ after its acceptance checks pass in the intended environment.
     stress, and penetration tests; remediate critical/high findings and retest before production
     promotion. Never aim stress or intrusive security testing at production user data.
     Repository preparation is locally complete: the strict private authorization contract,
-    staging-only health identity, permanently blocked production inventory, bounded digest-pinned
-    ZAP runner, adversarial refusal tests, private raw evidence, and aggregate-only receipt are in
+    staging-only API/Worker/exercise health identity with live cross-contract tests, permanently
+    blocked production inventory, bounded digest-pinned ZAP runner, and a read-only load harness
+    that requires a clean reviewed exact-source checkout plus the exact isolated-staging identity
+    before any timed remote request. Adversarial refusal tests, private raw security evidence, and
+    the aggregate-only security receipt are in
     [SECURITY-TESTING.md](SECURITY-TESTING.md). PR `#98` merged as
     `fb4662cf725c3a1f99b4e918a19c6e72971a6b85`; main CI `29669810196`, release provenance
     `29669810179`, CodeQL `29669809994`, and native image security `29669810191` passed that
     exact commit without a deployment. This item remains open until isolated provider resources,
     written independent authorization, a real public/authenticated/manual exercise,
     remediation/retest, and independent acceptance exist.
+    - [x] Prepare the narrow authenticated advisory-review drill without creating an execution
+      path: lock a private exact-source authorization/schema and plan-only CLI; require one hashed
+      synthetic account plus disjoint ten-trip direct and Queue sets; distinguish client response
+      loss from D1 mutation-receipt loss; and make unique D1/stub identities authoritative rather
+      than summing HTTP queued fields. Add an exact exercise/service-binding/account/stub-version
+      gate and a deterministic no-route stub that rejects credentials, echoes no trip input, and
+      can never fall back to the real provider. Production config is machine-checked to contain
+      none of these bindings or variables. No staging target, Queue, provider, D1, or production
+      resource was contacted; provisioning, authorization, execution, remediation, and independent
+      acceptance remain open.
+    - [x] Freeze the main isolated-staging Worker configuration before provider provisioning:
+      validate two private resolved Wrangler configurations against an exact schema and locked
+      production exclusion inventory; require one shared non-production host, D1 database, six
+      rate-limit namespaces, exercise service, synthetic account, and stub version; keep all public
+      features and undeclared providers/bindings off; and generate only a minimized hash receipt.
+      Correct the drill to require distinct direct and durable-Queue Worker versions because the
+      Queue feature flag and bindings are deployment configuration. The verifier has no deploy or
+      network command. Provider resources, both deployments, live identity evidence, written
+      authorization, exercise execution, remediation/retest, and independent acceptance remain
+      open. See [ISOLATED-STAGING-CONFIGURATION.md](ISOLATED-STAGING-CONFIGURATION.md).
 - [ ] Complete the privacy lifecycle and deletion policy before broader account recruitment.
   Maintain a data inventory and cascade map covering primary rows, public copies, objects,
   queues, logs, analytics, exports, derived artifacts, and backups; make deletion retries and
@@ -363,6 +670,12 @@ after its acceptance checks pass in the intended environment.
     drill. The aggregate receipt deliberately refuses production readiness while counsel,
     processor-retention review, an approved case provider, a witnessed production-shaped drill,
     and independent acceptance remain absent.
+  - [x] Require exact lease authority and recompute the store-bound locator hash immediately
+    before every private-object deletion. Corrupt bindings fail closed without an R2 call;
+    privacy-export locator clearing and task completion are atomic; and exact terminal read-back
+    resolves lost committed responses without trusting mutation metadata. This is local runtime
+    evidence only—the production binding, migration, alert, restore, and independent-review gates
+    remain open.
   - [ ] Decide with privacy/counsel review whether an ordinary account closure may offer a
     clearly disclosed 30-day recovery window. If adopted, revoke access immediately, isolate
     recovery data from active/public use, automatically hard-delete it at day 30, and let a
@@ -383,6 +696,45 @@ after its acceptance checks pass in the intended environment.
     the public minimized health check and private diagnostics, and record stale-client evidence.
 
 ## P1 — Evidence, data contracts, discoverability, and scalable foundations
+
+- [ ] Expand California-halibut planning coverage to the Santa Barbara South Coast without
+  weakening the existing safety or evidence boundary.
+  - [x] Curate public Gaviota, Goleta, Santa Barbara, Summerland, Carpinteria, and Rincon access locations;
+    bind official access/regulation sources; explicitly exclude no-take or ambiguous water;
+    bind NOAA Gaviota/Santa Barbara/Rincon tide-prediction stations and West/East Santa Barbara
+    Channel buoys to their appropriate subregions; add regional weather/marine mappings; move
+    wave exposure from brittle region names to casting-zone metadata; and adapt the map,
+    metadata, tests, and disclosures for a multi-region heuristic.
+  - [x] Archive the exact original Bay Area site population and bind both frozen validation
+    protocols to that immutable catalog so an evolving public catalog cannot rewrite prior
+    evidence semantics. New-region trip reports remain model-excluded product observations.
+  - [x] Regenerate a fresh 72-hour snapshot from the declared public regional sources, bind its
+    exact catalog and scoring identity into the compact attestation index, and pass local build,
+    contract, pipeline, API, and security gates.
+  - [ ] Review the regional site/access list with local anglers, obtain protected-PR evidence,
+    and deploy only through the still-open guarded production-security release process. Do not
+    claim Santa Barbara training, calibration, validation, catch probability, complete access,
+    or guaranteed safety.
+    - [x] Freeze and machine-check a blank 14-site local access-review packet with one review per
+      open site, two per limited site, at least two regional reviewers, a seven-day official-source
+      recheck, zero unresolved corrections, 30-day raw-response disposal, private evidence only,
+      and explicit denial of deployment, safety/legal, and model-validation authority. Actual
+      local review, its aggregate receipt, final protected checks, and guarded deployment remain
+      open.
+    - [x] Add the offline, fail-closed evidence evaluator missing from that packet. Private files
+      must be regular `0600` non-symlinks outside the repository; checkout and evidence digests,
+      random pseudonymous reviewer keys, per-site thresholds, six-month observation recency,
+      seven-day source freshness, correction resolution, strict field/size bounds, and authority
+      denial are machine-checked. The public receipt contains aggregate counts and a private-file
+      digest only. The policy is CI- and release-inventory-bound and makes no network or provider
+      request. No local responses or accepted receipt exist yet.
+  - [ ] Complete the separately prioritized P2 pollution/water-quality score contract and
+    location-by-location structure/depth inventory before claiming either as regional capability.
+    The exclusion-only Santa Barbara BeachWatch action slice and first display-only 14-site NOAA
+    chart inventory are locally implemented, but neither is a numeric score input or a substitute
+    for independent site review, complete structure coverage, or guarded production evidence.
+    Those goals retain their canonical acceptance boundaries in P2 below and do not block private
+    trip logging or this source-bound geographic checkpoint.
 
 - [ ] Establish privacy-preserving production observability and an operator console before
   scaling traffic. Evaluate Cloudflare-native logs/analytics and focused vendors such as
@@ -424,8 +776,8 @@ after its acceptance checks pass in the intended environment.
   - [ ] Inventory every production query, capture representative `EXPLAIN QUERY PLAN` evidence,
     add only workload-justified indexes, bound scans/pagination, eliminate N+1 patterns, verify
     cross-account predicates, and regression-test query latency and migration cost.
-    - [x] Add a deterministic AST-backed inventory for all 221 Worker `.prepare()` sites across
-      eight files, including exact review contracts for 26 nonliteral expressions and 12 literal
+    - [x] Add a deterministic AST-backed inventory for all 254 Worker `.prepare()` sites across
+      eight files, including exact review contracts for 14 nonliteral expressions and nine literal
       multi-row reads without `LIMIT`. CI and release provenance fail closed on inventory drift,
       computed/aliased prepare access, unreviewed dynamic SQL, unscoped literal writes, and
       unreviewed multi-row reads; the policy and generated ledger are SBOM-bound release inputs.
@@ -433,18 +785,47 @@ after its acceptance checks pass in the intended environment.
       reads with exact 100-item resource ceilings, `LIMIT 101` overflow detection, atomic
       count-guarded creates, idempotent duplicate saves, and fail-closed legacy overflow.
       Complete privacy exports remain deliberately untruncated.
-    - [x] Batch-limit all five scheduled authentication/retention deletes to 100 selected primary
-      rows per table and invocation, preserve ineligible rows, drain backlogs on later runs, and
-      run the actual bounded statements through the query-plan contract. Existing privacy object
-      work remains bounded to 50 tasks and 100-job reconciliation; child cascades still require
-      isolated cost evidence.
+    - [x] Batch-limit scheduled authentication/retention deletes to 100 selected primary rows per
+      table and invocation, preserve ineligible rows, drain backlogs on later runs, and run the
+      actual bounded statements through the query-plan contract. Completed privacy tombstones now
+      prune at most 100 locator-free task rows from one oldest job before deleting up to 100
+      childless parents, so the parent foreign-key cascade has zero child rows rather than hidden
+      unbounded write fan-out. Privacy object work claims at most five tasks and reconciles at most
+      100 jobs with one set-based statement.
+    - [x] Bound the cron as one aggregate Cloudflare invocation. A deterministic four-lane
+      rotation runs exactly one sequential lane per five-minute tick, so every lane is serviced
+      every 20 minutes without four concurrent `waitUntil` pipelines sharing the same quota.
+      Saturation tests hold queue dispatch, trip-photo cleanup, expired-export cleanup, and auth
+      retention/deletion below conservative D1 query budgets of 32, 44, 36, and 44 against the
+      stricter 50-query Free ceiling. Trip schema initialization is now one fail-closed read-only
+      readiness probe instead of 35 runtime DDL statements. Enabled public discussions likewise
+      use one fail-closed read-only readiness probe instead of runtime table/index DDL, while the
+      default-off path makes no D1 call. Deployed-plan, cron, latency, cost, backlog, and alert
+      evidence remain isolated-staging gates.
+    - [x] Make owner profile-trip edits follow exact D1 post-state rather than mutation metadata.
+      A server-generated validation-evidence identity, the optional immutable feasibility
+      correction, and every normalized/recomputed trip field must match before success or review
+      dispatch; missing metadata and a lost committed batch response recover without replay,
+      while a moderator race remains fail-closed.
+    - [x] Make owner deletion of pending trips follow the exact secret-bound D1 deletion ledger
+      plus exact trip/discussion absence rather than final mutation metadata. Missing metadata and
+      a lost committed batch response recover without replay; a corrupted task ledger stops before
+      private-object purge, and a concurrent moderator still wins without creating deletion work.
+    - [x] Make password-confirmed account deletion follow one exact secret-bound job, canonical
+      set-based task ledger, and zero active owner rows rather than final mutation metadata. The
+      verified task count controls cleanup fallback; rollback and corrupt-ledger ambiguity return a
+      read-only status receipt without private-object deletion or automatic replay.
     - [x] Locally move complete export packaging behind a default-off managed Queue adapter with
       an opaque two-field message, owner-bound D1 job/lease ledger, private 24-hour object,
       progress/download UI, bounded retries/expiry, and account-deletion race adoption. Direct
       authenticated export remains the disabled-mode fallback, and rights rows are never
       truncated.
+    - [x] Bind export dispatch, consumer claims, object reservation, completion, and expiry
+      cleanup to exact private-token/state read-backs. Ambiguous D1 responses cannot authorize a
+      Queue send or R2 mutation, a committed completion cannot lose its valid object, cleanup
+      locators remain durable, and an abandoned fifth lease reaches explicit attention.
     - [ ] Apply `0019`, provision the private Queue/DLQ/R2 bindings, capture production-shaped
-      latency, rows-read/written, child-cascade/migration cost and race/failure evidence in
+      latency, rows-read/written, bounded-retention/migration cost and race/failure evidence in
       isolated staging, activate alerts/IAM, then enable only through the separate gate in
       `docs/ASYNC-PRIVACY-EXPORTS.md`.
   - [x] Publish a cache matrix by asset/data class with owner, privacy classification, cache key,
@@ -464,6 +845,15 @@ after its acceptance checks pass in the intended environment.
       deletion and maintenance recovery, provider-DLQ policy, and a non-executing state-guarded
       replay planner. Production migration, Queue/DLQ bindings, IAM/alerts, isolated failure and
       rollback drills, and the separate activation change remain open.
+    - [x] Make the still-default direct fallback claim independently lease-owned: a provider call
+      follows only exact high-entropy claim read-back, terminal writes repeat that identity,
+      malformed or active processing state is never reclaimed, expired claims recover through
+      the bounded scheduled backlog, and stale workers cannot overwrite a newer result. The
+      internal claim envelope is suppressed from profile and portability responses.
+    - [x] Bind Queue publishing and consumer settlement to separate high-entropy D1 tokens:
+      exact read-back resolves missing mutation metadata, active leases survive maintenance and
+      duplicate deliveries, stale workers cannot settle replacement work, and an abandoned
+      fifth attempt reaches explicit attention instead of an infinite redispatch loop.
   - [x] Use Cloudflare's managed D1 binding lifecycle instead of inventing a traditional SQL
     connection pool. The optional FastAPI/Postgres process owns one bounded pool with validated
     minimum, maximum, wait-queue, and checkout-timeout settings plus explicit startup/shutdown;
@@ -474,10 +864,14 @@ after its acceptance checks pass in the intended environment.
   - [ ] Define performance budgets and run isolated load, soak, spike, and failure-injection
     tests with production-shaped synthetic data. Record saturation points, tail latency, error
     rates, queue depth, database contention, cache effectiveness, cost, and a safe rollback plan.
-  - [x] Locally add workload-backed D1 indexes, machine-check 15 critical `EXPLAIN QUERY PLAN`
+  - [x] Locally add workload-backed D1 indexes, machine-check 34 critical `EXPLAIN QUERY PLAN`
     paths plus every foreign-key child index, remove the public-site N+1 behind a bounded cache,
     publish the cache/async/connection contracts, add a bounded Postgres process pool only for
     the optional API, and provide a read-only load harness that permanently refuses production.
+    Remote load execution also rejects cleartext, IP literals, widened routes/budgets, unreviewed
+    or dirty source, redirects, stale API/Worker identity, an absent opaque exercise marker,
+    unhealthy D1, or maintenance mode before its timed workers start; aggregate output omits the
+    target hostname, Worker version, and exercise marker.
     The actual built Worker also passed a 2,835-request, zero-failure smoke against a disposable
     local D1 database after all 18 migrations (18.51 ms p95; 32.79 ms p99). The default-off
     advisory Queue path and D1 ledger are locally implemented. This developer-machine smoke is
@@ -570,6 +964,17 @@ after its acceptance checks pass in the intended environment.
   claims; publish uncertainty, limitations, negative results, and the current all-zero sample
   constraint. Attempt probability calibration only after a trained occurrence model has a
   sufficiently representative held-out set of positive and negative outcomes.
+- [ ] Run a model-agnostic selection benchmark once eligible labeled data exists. Deep learning
+  is one candidate, not the default winner. Before opening the locked test data, preregister a
+  representative comparison set spanning naive and regularized linear/GAM models, tree-based
+  models, an appropriate spatial or hierarchical model, the bathymetric deep encoder, and
+  justified hybrid/ensemble candidates. Give every candidate the same source-separated
+  geographic/time folds, leakage checks, calibration and uncertainty evaluation, and ranking
+  metrics; also compare inference cost, latency, maintainability, explainability, and missing-
+  coverage behavior. Promote the simplest candidate that demonstrates a material, reproducible
+  held-out advantage. If candidates are statistically indistinguishable, prefer the simpler
+  model. Do not begin this benchmark or tune the comparison set against confirmation data before
+  the validation/data-eligibility gates above are satisfied.
 - [ ] Define model promotion, drift, and rollback gates: beat preregistered geographic/time
   holdout baselines before promotion; monitor by site, season, mode, and taxon; version every
   release; and require rollback/revalidation when performance or data support drifts. **Local
@@ -607,6 +1012,17 @@ after its acceptance checks pass in the intended environment.
     increasing the readiness ceiling, enabling global retries, or weakening the exact overlay
     geometry assertions. The browser test now follows the real explicit-load transition and a
     20-run WebKit plus 15-run Chromium stress check passed before the full 140-case matrix.
+  - [x] Contain MapLibre GL `5.24.0`'s expected raster-tile cancellation at the map boundary.
+    The capture-phase handler matches only the exact `AbortError` message plus `abortTile` and
+    the dedicated `maplibre-gl*.js` module in the stack, is removed on unmount, and deliberately
+    leaves application aborts and genuine MapLibre failures observable. A direct reproduction in
+    Vinext development mode across five location reports produced no overlay or page error;
+    adversarial unit coverage, the full 672-test Node
+    suite, and all 208 Chromium/WebKit mobile cases passed under the pinned runtime. The
+    same-day `6.0.0` major upgrade was not taken without evidence that it fixes this path. Exact
+    consolidated head `1198bd90b55b69d9e9a04a1c0daafbc4abd23668` then passed hosted CI run
+    `29956970498` and CodeQL run `29956967448`. This closes the observed defect and its automated
+    review boundary only; independent human review and every deployment/provider gate remain open.
   - [ ] Complete native-client contract/authentication work, isolated staging and provider setup,
     physical-device acceptance, deployment, and production-scale performance/failure evidence.
 
@@ -618,12 +1034,144 @@ after its acceptance checks pass in the intended environment.
   freshness are preserved, missing or stale inputs fail closed, and the contribution is validated
   against frozen baselines. Keep agency advisories visible and authoritative; never imply that a
   fishing score proves water, contact, or seafood-consumption safety.
+  - [x] Freeze and locally implement the first human-health advisory slice without changing the
+    attested fishing score: an exact six-site SFPUC mapping, fixed-source bounded collector,
+    policy/collector/catalog hashes, ten-day weekly-sample freshness, strict multi-station
+    precedence, explicit stale/unmonitored/unavailable/unmapped states, active-posting
+    recommendation suppression, neutral no-posting results, public UI disclosure, deterministic
+    adversarial fixtures, and scheduled-review refresh integration.
+  - [x] Freeze and locally implement the second exclusion-only source slice for the Santa Barbara
+    South Coast: the fixed California State Water Resources Control Board BeachWatch action table,
+    all 14 sites covered by explicit countywide actions, 11 direct station mappings, strict
+    closure/posting/rain precedence, action start/end handling, unknown-by-absence semantics,
+    isolated source failures, bounded historical anomaly handling, public action-date disclosure,
+    and deterministic plus live-source adapter checks. Numeric `scoreDelta` remains null.
+  - [ ] Extend reviewed official/licensed current-status coverage across the Bay Area and
+    remaining launch catalog; independently review the Santa Barbara mappings, source latency,
+    rainfall/geographic support, licensing, and outage behavior; validate any proposed numeric
+    fishing-quality contribution against frozen baselines; obtain independent product/safety
+    review; and collect guarded deployment plus post-deployment freshness evidence.
+    - [x] Preserve the San Mateo negative-evidence boundary for Poplar Beach and Seal Point Park
+      Shoreline. Their nearest reviewed County stations are different named public locations at
+      1,944 m and 2,102 m, so neither site inherits a nearby status; both remain `not-covered`,
+      unknown, and null-score pending exact official coverage and independent review.
+    - [x] Complete a hash-bound negative-evidence inventory for the current 61-site launch catalog.
+      All 22 sites without a provisional source mapping now bind to an explicit review receipt.
+      Dumbarton Fishing Pier remains unmapped because the State directory exposes no Alameda
+      County program and neither relevant option set contains a Dumbarton identity; the audit
+      fails closed if a candidate later appears instead of creating a mapping automatically.
+    - [x] Freeze a machine-checked source and meaning boundary before considering any numeric
+      pollution component. Water-contact actions, bacteria samples, consumption advisories,
+      tissue monitoring, ambient results, and community-burden screening remain separate.
+      Existing exact current actions stay exclusion-only; OEHHA advice stays authoritative;
+      measurement sources stay research-only; CalEnviroScreen is rejected for site scoring; and
+      both positive and negative score contribution remain disabled pending pre-registered
+      held-out validation and independent fisheries plus public-health review.
+    - [x] Prepare a fail-closed two-discipline independent-review handoff for that exact inactive
+      boundary. Private canonical records bind the final PR `#145` policy commit and digest,
+      require distinct fisheries/marine-ecology and public-health/risk-communication reviewers,
+      accept honest changes-required outcomes, and emit only an aggregate receipt. Even two
+      accepted reviews authorize no collection, score, model claim, merge, deployment, or
+      production action. No real independent review has yet been supplied.
 - [ ] Build the map location by location until every available location has a reviewed inventory
   of notable structure and useful depth levels. Bind each feature to a reproducible official or
   licensed bathymetry/chart source, units, vertical datum, resolution, retrieval date, checksum,
   uncertainty, and permitted display/model use; reject false precision and protect sensitive
   habitat or access information. Ship each location only after visual and data acceptance, while
   keeping unmapped locations explicitly incomplete.
+  - [x] Freeze and locally implement the first display-only Santa Barbara South Coast slice for all
+    14 regional catalog sites. A fixed NOAA ENC Direct `Approach` collector verifies 13 reviewed
+    layer identities, bounds responses, rejects redirects/truncation/schema or date drift,
+    deduplicates overlapping-cell soundings, and binds a normalized source snapshot plus strict
+    public artifact to exact policy/collector/catalog hashes. The UI exposes sector bands, nearby
+    chart features, record age, meters, MLLW, and the unavailable resolution/accuracy/uncertainty
+    fields while keeping `scoreDelta` null, catalog priors unchanged, exact structure geometry
+    private, and navigation/access/castability claims prohibited.
+  - [x] Extend the same display-only contract to the ten San Francisco coast and waterfront
+    catalog locations without changing a score or catalog prior. The fixed 2026-07-21 source
+    snapshot provides sector depth bands at nine sites and keeps Crane Cove Park explicitly
+    partial because no reviewed depth-area band intersects its configured sector, even though
+    seven deduplicated point soundings and selected chart features exist within 1 km. Contract
+    version 1.1 preserves exact, month-precision, year-only, and missing source-date states
+    separately instead of rejecting valid partial dates or inventing a day.
+  - [x] Extend the same contract to ten San Mateo Coast and Half Moon Bay locations. The fixed
+    2026-07-21 source snapshot provides depth-area bands and nearby soundings for all ten configured
+    sectors, keeps selected feature records display-only, and leaves every score/catalog value
+    unchanged. Pacifica Municipal Pier remains closed, excluded from ranking, and absent from
+    forecast/detail/trip-start flows instead of allowing chart context to imply access. Contract
+    version 1.2 binds exactly 34 reviewed sites.
+  - [x] Extend the same contract to seven Point Reyes and Marin Coast locations. The fixed
+    2026-07-21 source snapshot provides depth-area bands at five configured sectors and nearby
+    soundings at all seven. Bolinas and Muir remain explicitly partial because no reviewed
+    depth-area band intersects either configured sector; charted seabed records and catalog clues
+    are not substitutes. Contract version 1.3 binds exactly 41 reviewed sites without changing a
+    score, catalog prior, access decision, or navigation boundary.
+  - [x] Extend the same contract to ten North and East Bay locations. The fixed 2026-07-21 source
+    snapshot provides depth-area bands at eight configured sectors and nearby soundings at all ten.
+    McNears Beach Pier and Ferry Point Fishing Pier remain explicitly partial because no reviewed
+    depth-area band intersects either configured sector; charted shoreline records and catalog
+    clues are not substitutes. Contract version 1.4 binds exactly 51 reviewed sites without
+    changing a score, catalog prior, access decision, or navigation boundary.
+  - [x] Extend the same contract to the final ten Oakland-through-South-Bay launch-catalog
+    locations. The fixed 2026-07-21 source snapshot provides depth-area bands and nearby soundings
+    at all ten configured sectors while preserving old, partial, and missing source dates.
+    Contract version 1.5 binds exactly 61 reviewed sites without changing a score, catalog prior,
+    access decision, or navigation boundary.
+  - [ ] Obtain location-by-location local-angler and independent chart review; verify sector
+    orientation and usefulness; source dynamic bars, troughs, reef, vegetation, and other catalog
+    clues separately or leave them explicitly unvalidated; add BlueTopo or another qualified
+    uncertainty-bearing source only where coverage permits; and collect protected, guarded
+    deployment plus post-deployment evidence before calling any of the 61 covered locations fully
+    reviewed or using this evidence in a score.
+    - [x] Prepare the first executable 14-site Santa Barbara review handoff without pretending the
+      review occurred. A source-bound blank policy and guarded private template require one current
+      local-angler review and one independent chart/GIS review per site, two distinct local
+      reviewers region-wide, strict reviewer-role separation, a seven-day NOAA source-identity
+      recheck, zero unresolved corrections, private `0600` evidence outside Git/Codex, 30-day raw
+      response disposal, and an aggregate-only receipt. The verifier rejects digest/catalog/
+      artifact drift, extra or identifying fields, unsafe correction text, stale evidence, role
+      overlap, incomplete coverage, invented score/navigation authority, and provider execution.
+      No real response, accepted receipt, score change, model evidence, or deployment exists yet.
+    - [x] Extend the executable handoff to the next ten San Francisco coast and waterfront sites
+      through a reusable region-profiled evaluator without weakening Santa Barbara v1. The blank
+      policy binds the exact 10-site geography, source artifact, catalog, distinct reviewer roles,
+      current source recheck, private `0600` evidence, retention boundary, and aggregate-only
+      receipt. It preserves Crane Cove Park's explicit partial status and rejects cross-region
+      schema, geography, digest, or response-file reuse. No real response, accepted receipt, score
+      change, model evidence, or deployment exists yet; the remaining 37 catalog sites still lack
+      executable location-review handoffs.
+    - [x] Extend the executable handoff to the ten San Mateo Coast and Half Moon Bay sites. The
+      exact regional profile preserves all ten charted-context records, isolates its schemas and
+      private evidence from the first two regions, and keeps Pacifica Municipal Pier's independent
+      closure and recommendation exclusion intact. A completed packet still grants no access,
+      reopening, score, model, navigation, provider, merge, deployment, or production authority.
+      No real response or accepted receipt exists yet; the remaining 27 catalog sites still lack
+      executable location-review handoffs.
+    - [x] Extend the executable handoff to the seven Point Reyes and Marin Coast sites. The exact
+      regional profile preserves the five charted-context records and fails closed unless Bolinas
+      Beach and Muir Beach remain `partial` with no sector depth-area band. Nearby soundings,
+      seabed records, catalog clues, or review responses cannot fill those gaps. The packet keeps
+      private roles disjoint, binds every digest and status, and grants no score, model,
+      navigation, provider, merge, deployment, or production authority. No real response or
+      accepted receipt exists yet; the remaining 10 catalog sites still lack executable
+      location-review handoffs.
+    - [x] Extend the executable handoff to the ten North and East Bay sites. The exact profile
+      binds McNears Beach Pier through Emeryville Marina Fishing Pier, preserves the eight
+      charted-context records, and fails closed unless McNears Beach Pier and Ferry Point Fishing
+      Pier remain `partial` with no sector depth-area band. Nearby soundings,
+      shoreline-construction records, catalog clues, or responses cannot promote either record.
+      The policy, private evidence, and aggregate receipt remain region-isolated and grant no
+      score, model, navigation, provider, merge, deployment, or production authority. No real
+      response or accepted receipt exists yet; the final ten Oakland-through-South-Bay catalog
+      sites still lack executable location-review handoffs.
+    - [x] Complete executable handoff coverage with the final ten Oakland-through-South-Bay
+      sites. The exact profile binds Port View Park Fishing Pier through Oyster Point Fishing
+      Pier and fails closed unless all ten artifact records remain `charted-context` with
+      non-empty sector depth-area bands. The bands remain display-only and cannot imply
+      shore-reachable depth, castability, access, wading safety, fishing quality, or navigation
+      suitability. The packet preserves the same private, disjoint, source-current review
+      contract and grants no score, model, navigation, provider, merge, deployment, or production
+      authority. No real response or accepted receipt exists yet.
 - [ ] Add striped bass as the first new beta using a distinct estuary/migration model.
 - [ ] Define and evaluate explicit shore-relevant rockfish species/complexes next; then model
   cabezon as its own taxon; then split surfperch into defensible habitat/taxon groups. Each beta
@@ -651,6 +1199,24 @@ after its acceptance checks pass in the intended environment.
 
 - [ ] Improve accessibility and interaction quality after core risks are controlled, including
   keyboard/screen-reader review, zoom/reflow, contrast, reduced motion, and a non-map path.
+  - [x] Establish one clean banner/main/footer landmark structure, add a first-focusable visible
+    skip link, replace incomplete tab semantics with grouped pressed-state controls, and announce
+    location-state changes without interrupting the user.
+  - [x] Share one stack-aware modal focus boundary across forecast details, account, trip report,
+    trip edit, methodology, comparison, location disclosure, and the required water reminder.
+    Only the top dialog traps focus or consumes Escape; nested close restores its opener or the
+    surviving parent, while the required reminder cannot be bypassed with Escape.
+  - [x] Preserve the ranked list as the complete keyboard-accessible alternative to the map,
+    expose an explicit list-only choice, connect the map region to that alternative, and make all
+    MapLibre fit/cluster transitions honor the browser's reduced-motion setting.
+  - [x] Add focused source and Chromium/WebKit phone coverage for skip navigation, selected state,
+    nested focus, reminder behavior, list-only use, and 320 px reflow. The bounded slice passes
+    24/24, the complete repository suite passes 684/684, and the full mobile matrix passes 228/228
+    plus build, lint, TypeScript, security/SBOM, and zero-vulnerability dependency audits under
+    the pinned runtime without adding a new dependency.
+  - [ ] Complete independent manual screen-reader, keyboard-only desktop, text-zoom, contrast,
+    reduced-motion, and physical-device review. Automated coverage does not establish full WCAG
+    conformance or production acceptance.
 - [x] Add a branded, accessible `404` page with a clear return-to-home action, useful navigation,
   correct `404` status, noindex behavior, and service-worker-safe non-caching.
 - [ ] Add honest loading and recovery states after the underlying operations are bounded:
@@ -685,7 +1251,10 @@ after its acceptance checks pass in the intended environment.
     reconciled. Never discard a creation draft without authoritative confirmation.
   - [x] Make sign-out fail safe: do not imply that the secure server session ended while offline
     or after a dropped or unverifiable response, require an exact server receipt, and use an
-    explicit read-only session check before permitting a retry after an ambiguous outcome.
+    explicit read-only session check before permitting a retry after an ambiguous outcome. After
+    authoritative confirmation only, remove the complete account-bound recovery manifest from
+    both browser stores, verify that it is gone, preserve unrelated preferences, and disclose any
+    browser-blocked cleanup instead of silently claiming the shared device is clean.
   - [x] Make saved-location creation and removal fail safe: block writes while offline, retain
     the last confirmed local state, require an exact action/site receipt, keep slow or dropped
     responses visibly unconfirmed, block conflicting location writes, and reconcile an ambiguous
@@ -698,6 +1267,20 @@ after its acceptance checks pass in the intended environment.
   and per-file progress/retry/cancel. Multiple files receive independent state and progress;
   indeterminate progress is used when byte progress is unavailable, and completed uploads remain
   distinguishable from files that are merely selected or locally previewed.
+  - [x] Make the current one-photo trip contract truthful and fail closed. The browser feature is
+    now explicit opt-in; selection and validation remain local; the UI shows name, type, size,
+    preview, copy plus visual emphasis, honest indeterminate sending, authoritative stored-photo
+    confirmation, correctable failure, and ambiguous may-have-committed retry states. Removal is
+    available only before submission or after an authoritative failure; no fake byte percentage
+    or unsafe post-submit cancellation is offered. Dedicated Chromium/WebKit acceptance builds
+    the dormant feature on, tests it, then rebuilds the production bundle with uploads off. The
+    bounded slice passes 4/4 source contracts, 8/8 feature-on Chromium/WebKit cases, 688/688
+    repository tests, and 228/228 production-off phone cases plus build, lint, TypeScript,
+    security/SBOM policy checks, and both zero-vulnerability dependency audits.
+  - [ ] Design and independently review a versioned multi-file API and schema before claiming
+    per-file upload, progress, cancellation, or retry. The current authoritative trip write and
+    D1 schema support one photo only; uploads remain disabled until the existing storage,
+    privacy, migration, provider, drill, review, and explicit activation gates all pass.
 - [ ] Refresh visual design, graphics, species art, empty states, social cards, and brand
   illustration. Artist collaboration is intentionally deferred and can focus on expressive
   assets while product interaction remains usability-led.

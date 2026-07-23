@@ -1,0 +1,157 @@
+{
+  "schemaVersion": "castingcompass.pollution-score-source-policy/1.0.0",
+  "policyVersion": "castingcompass.pollution-score-candidates/0.1.0",
+  "status": "research-boundary-not-activated",
+  "reviewedAt": "2026-07-21",
+  "claimBoundary": {
+    "runtimeCollectionActivated": false,
+    "scoreContributionActivated": false,
+    "positiveContributionAllowed": false,
+    "negativeContributionAllowed": false,
+    "numericScoreDelta": null,
+    "catchProbabilityClaimAllowed": false,
+    "waterContactSafetyClaimAllowed": false,
+    "seafoodSafetyClaimAllowed": false,
+    "agencyAdviceRemainsAuthoritative": true
+  },
+  "currentRuntimeBoundary": {
+    "meaning": "existing action-only advisory guardrail remains separate and unchanged",
+    "waterQualityPolicySha256": "13914b407929b98f804874e04ae4d474a4a6acd0f9d91ce4d25aa44927a65445",
+    "waterQualityOverlaySha256": "0cfa6842b353fbc42753f0cfe3a4923e35ae4484321102e69b7f148b8676e6c1",
+    "waterQualityCollectorSha256": "a8f08d80c09861dd0fa67d094e66da3ac649deb157e3fed4f98754a9c69cd23b",
+    "siteCatalogSha256": "a7145a66368c6dd5dd13b6bec421d430d228a3082d2fa8ad31941fc84e14078d"
+  },
+  "candidateSources": [
+    {
+      "id": "california-beachwatch-actions",
+      "agency": "California State Water Resources Control Board and local health agencies",
+      "authoritativeUrl": "https://www.waterboards.ca.gov/water_issues/programs/beaches/beach_surveys/",
+      "sourceClass": "water-contact-action",
+      "meaning": "Official warnings, closures, and rain advisories caused by bacterial contamination and issued for water-contact health protection.",
+      "spatialSupport": "Only the exact agency-published station, beach, or county action geography may be used.",
+      "temporalSupport": "Only an active action with reviewed start and end semantics is current; absence is unknown.",
+      "qualityBoundary": "The issuing health agency remains authoritative, and an absent action is never proof of clean water.",
+      "decision": "existing-exclusion-only-runtime-guardrail",
+      "allowedUses": [
+        "suppress an exactly mapped recommendation while an official action is current"
+      ],
+      "prohibitedUses": [
+        "numeric fishing-score contribution",
+        "catch-probability or fishing-quality inference",
+        "clean-water or seafood-consumption safety inference"
+      ]
+    },
+    {
+      "id": "california-beachwatch-monitoring-results",
+      "agency": "California State Water Resources Control Board and local monitoring agencies",
+      "authoritativeUrl": "https://beachwatch.waterboards.ca.gov/public/result.php",
+      "sourceClass": "fecal-indicator-bacteria-sample",
+      "meaning": "Station-level fecal indicator bacteria laboratory results collected to evaluate recreational water-contact standards.",
+      "spatialSupport": "A result describes its sampled station and cannot be inherited by a different fishing location without reviewed support.",
+      "temporalSupport": "A result describes its sample time; it is not a continuous present condition and cannot fill unsampled periods.",
+      "qualityBoundary": "Method, qualifier, units, laboratory, project quality plan, completeness, and applicable contact standard require review.",
+      "decision": "research-only-not-admitted",
+      "allowedUses": [
+        "offline source feasibility and measurement-contract research"
+      ],
+      "prohibitedUses": [
+        "numeric fishing-score contribution",
+        "catch-probability or fish-abundance inference",
+        "clean-water or seafood-consumption safety inference"
+      ]
+    },
+    {
+      "id": "oehha-fish-consumption-advisories",
+      "agency": "California Office of Environmental Health Hazard Assessment",
+      "authoritativeUrl": "https://oehha.ca.gov/fish/fish-advisories",
+      "sourceClass": "fish-consumption-advisory",
+      "meaning": "Health-based guidance for how often defined populations may eat specified species from a water body or statewide advisory geography.",
+      "spatialSupport": "Use only the published water-body or statewide advisory extent and its explicit species coverage.",
+      "temporalSupport": "The current published advisory supersedes product interpretation; publication age is not a measured present concentration.",
+      "qualityBoundary": "Population group, species, serving alternatives, contaminant basis, and statewide fallback rules must remain intact.",
+      "decision": "authoritative-safety-display-only",
+      "allowedUses": [
+        "link users to current agency safe-eating guidance without paraphrasing serving arithmetic"
+      ],
+      "prohibitedUses": [
+        "numeric fishing-score contribution",
+        "catch-probability or fish-abundance inference",
+        "water-contact safety or site cleanliness inference"
+      ]
+    },
+    {
+      "id": "swamp-safe-to-eat-bioaccumulation",
+      "agency": "California Surface Water Ambient Monitoring Program Safe to Eat Workgroup",
+      "authoritativeUrl": "https://mywaterquality.ca.gov/safe-to-eat/",
+      "sourceClass": "fish-tissue-monitoring",
+      "meaning": "Fish and shellfish tissue monitoring used to assess contaminant bioaccumulation and support consumption-advisory science.",
+      "spatialSupport": "Each tissue result is bound to its sampled water body, species, tissue preparation, and sampling design.",
+      "temporalSupport": "A tissue observation represents its collection period and cannot be treated as a live site condition.",
+      "qualityBoundary": "Species, size, tissue type, analyte, units, detection limits, composites, QA review, and advisory interpretation all matter.",
+      "decision": "research-only-not-admitted",
+      "allowedUses": [
+        "offline source and species-coverage feasibility research under agency advisory authority"
+      ],
+      "prohibitedUses": [
+        "numeric fishing-score contribution",
+        "direct safe-to-eat recommendation that overrides OEHHA",
+        "current fish-presence or catch-probability inference"
+      ]
+    },
+    {
+      "id": "ceden-ambient-water-quality",
+      "agency": "California Environmental Data Exchange Network",
+      "authoritativeUrl": "https://ceden.waterboards.ca.gov/data-quality.html",
+      "sourceClass": "ambient-water-quality-result",
+      "meaning": "Ambient monitoring results from multiple projects whose analytes, matrices, methods, qualifiers, units, and quality objectives vary.",
+      "spatialSupport": "Each result remains bound to its station, matrix, sample depth, method, and project sampling design.",
+      "temporalSupport": "Each result represents its collection time and does not establish conditions between observations.",
+      "qualityBoundary": "CEDEN accepts varying quality; intended-use fitness requires project QAPP, qualifier, batch, replicate, and detection-limit review.",
+      "decision": "research-only-not-admitted",
+      "allowedUses": [
+        "offline analyte availability and quality-metadata feasibility research"
+      ],
+      "prohibitedUses": [
+        "numeric fishing-score contribution",
+        "cross-project comparison before units methods and QA are harmonized",
+        "clean-water seafood-safety or catch-probability inference"
+      ]
+    },
+    {
+      "id": "calenviroscreen-community-burden",
+      "agency": "California Office of Environmental Health Hazard Assessment",
+      "authoritativeUrl": "https://oehha.ca.gov/calenviroscreen/calenviroscreen-faqs",
+      "sourceClass": "community-pollution-burden-screen",
+      "meaning": "A census-tract screening tool for cumulative community pollution burden and population vulnerability in environmental-justice prioritization.",
+      "spatialSupport": "Its census-tract community geography is not a coastal fishing-site measurement footprint.",
+      "temporalSupport": "Its compiled indicator vintages are not live marine conditions at a trip time.",
+      "qualityBoundary": "The composite ranking includes exposure, environmental, socioeconomic, and health indicators and cannot be relabeled as site pollution.",
+      "decision": "rejected-for-site-score",
+      "allowedUses": [
+        "environmental-justice context research outside the fishing-site score"
+      ],
+      "prohibitedUses": [
+        "numeric fishing-score contribution",
+        "proxy marine contaminant concentration",
+        "water-contact seafood-safety or catch-probability inference"
+      ]
+    }
+  ],
+  "activationGates": [
+    "freeze a fishing-quality prediction target distinct from every human-health advisory meaning",
+    "state a plausible analyte-to-species fishing mechanism before selecting any direction or weight",
+    "review source terms licensing machine interfaces and long-term access before collection",
+    "freeze exact spatial support temporal support freshness units methods qualifiers and missingness",
+    "preserve source-specific quality metadata and reject incomparable or unreviewed project results",
+    "pre-register a baseline and held-out validation protocol before inspecting candidate performance",
+    "demonstrate incremental ranking value with uncertainty and no leakage on representative held-out trips",
+    "test stale missing conflicting extreme and source-outage behavior with no automatic neutral assumption",
+    "obtain fisheries or marine ecology methods review and public-health risk-communication review",
+    "ship behind a separately versioned disabled-by-default component with rollback and drift monitoring",
+    "keep official contact and consumption advice visible authoritative and outside score interpretation"
+  ],
+  "requiredIndependentReview": [
+    "fisheries-or-marine-ecology-methods-review",
+    "public-health-and-risk-communication-review"
+  ]
+}

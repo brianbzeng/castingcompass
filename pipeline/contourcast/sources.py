@@ -81,9 +81,25 @@ EXPECTED_MANIFEST_SOURCES = {
         "official-bathymetry",
         ("bathymetry-ingest", "terrain-pretraining"),
     ),
+    "usgs_ds182_pacific_ext_sediment": (
+        "official-sediment-measurement",
+        ("endpoint-support-audit",),
+    ),
+    "usgs_ds781_residual_video_observations": (
+        "official-video-observation",
+        ("endpoint-support-audit",),
+    ),
     "usgs_sf_state_waters_2m": (
         "official-bathymetry",
         ("bathymetry-ingest", "terrain-pretraining"),
+    ),
+    "usgs_santa_barbara_south_coast_2m": (
+        "official-bathymetry",
+        (
+            "bathymetry-ingest",
+            "terrain-pretraining",
+            "endpoint-support-footprint",
+        ),
     ),
 }
 EXPECTED_SYNTHETIC_SOURCES = {

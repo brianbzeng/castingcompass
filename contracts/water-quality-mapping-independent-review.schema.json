@@ -1,0 +1,156 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://castingcompass.com/contracts/water-quality-mapping-independent-review.schema.json",
+  "title": "CastingCompass private launch-catalog water-quality mapping independent review",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "review_id",
+    "source_commit",
+    "review_target_sha256",
+    "water_quality_policy_version",
+    "reviewed_at",
+    "reviewer_role",
+    "reviewer_independent_of_implementation",
+    "reviewer_competence_evidence_sha256",
+    "review_evidence_sha256",
+    "disposition",
+    "blocking_finding_count",
+    "inventory_checklist",
+    "site_reviews"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "castingcompass.water-quality-mapping-independent-review/1.0.0"
+    },
+    "review_id": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$"
+    },
+    "source_commit": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{40}$"
+    },
+    "review_target_sha256": {
+      "$ref": "#/$defs/sha256"
+    },
+    "water_quality_policy_version": {
+      "const": "castingcompass.water-quality-advisory/official-programs-0.5.0"
+    },
+    "reviewed_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "reviewer_role": {
+      "enum": [
+        "official_source_mapping_reviewer",
+        "public_health_risk_communication_reviewer"
+      ]
+    },
+    "reviewer_independent_of_implementation": {
+      "const": true
+    },
+    "reviewer_competence_evidence_sha256": {
+      "$ref": "#/$defs/sha256"
+    },
+    "review_evidence_sha256": {
+      "$ref": "#/$defs/sha256"
+    },
+    "disposition": {
+      "enum": [
+        "accepted_inventory",
+        "changes_required"
+      ]
+    },
+    "blocking_finding_count": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 1000
+    },
+    "inventory_checklist": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "official_directories_and_station_evidence_reviewed",
+        "all_61_site_outcomes_reviewed",
+        "exact_location_identity_is_required",
+        "proximity_alone_never_creates_a_mapping",
+        "only_exact_current_actions_may_suppress",
+        "absence_stale_unmapped_and_failed_sources_remain_unknown",
+        "numeric_score_contribution_remains_disabled",
+        "no_clean_water_seafood_safety_or_catch_claim_is_created",
+        "source_latency_and_outage_boundaries_fail_closed",
+        "no_merge_deployment_or_activation_authority_is_granted"
+      ],
+      "properties": {
+        "official_directories_and_station_evidence_reviewed": { "type": "boolean" },
+        "all_61_site_outcomes_reviewed": { "type": "boolean" },
+        "exact_location_identity_is_required": { "type": "boolean" },
+        "proximity_alone_never_creates_a_mapping": { "type": "boolean" },
+        "only_exact_current_actions_may_suppress": { "type": "boolean" },
+        "absence_stale_unmapped_and_failed_sources_remain_unknown": { "type": "boolean" },
+        "numeric_score_contribution_remains_disabled": { "type": "boolean" },
+        "no_clean_water_seafood_safety_or_catch_claim_is_created": { "type": "boolean" },
+        "source_latency_and_outage_boundaries_fail_closed": { "type": "boolean" },
+        "no_merge_deployment_or_activation_authority_is_granted": { "type": "boolean" }
+      }
+    },
+    "site_reviews": {
+      "type": "array",
+      "minItems": 61,
+      "maxItems": 61,
+      "uniqueItems": true,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "site_id",
+          "target_outcome",
+          "source_id",
+          "station_ids",
+          "inherited_global_station_ids",
+          "official_identity_and_spatial_support_accepted",
+          "action_only_and_missing_data_semantics_accepted",
+          "no_safety_or_score_authority_accepted"
+        ],
+        "properties": {
+          "site_id": {
+            "type": "string",
+            "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+          },
+          "target_outcome": {
+            "enum": ["mapped", "not_covered"]
+          },
+          "source_id": {
+            "anyOf": [
+              { "type": "string", "minLength": 1, "maxLength": 128 },
+              { "type": "null" }
+            ]
+          },
+          "station_ids": {
+            "type": "array",
+            "maxItems": 32,
+            "uniqueItems": true,
+            "items": { "type": "string", "minLength": 1, "maxLength": 128 }
+          },
+          "inherited_global_station_ids": {
+            "type": "array",
+            "maxItems": 32,
+            "uniqueItems": true,
+            "items": { "type": "string", "minLength": 1, "maxLength": 128 }
+          },
+          "official_identity_and_spatial_support_accepted": { "type": "boolean" },
+          "action_only_and_missing_data_semantics_accepted": { "type": "boolean" },
+          "no_safety_or_score_authority_accepted": { "type": "boolean" }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "sha256": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    }
+  }
+}

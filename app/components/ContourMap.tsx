@@ -10,19 +10,20 @@ import type {
   StyleSpecification,
 } from "maplibre-gl";
 import type { FishingSite, OpportunityWindow } from "../types";
+import { suppressExpectedMapLibreRasterTileAbort } from "../lib/maplibre-errors.js";
 import { LocateIcon } from "./icons";
 
-const BAY_AREA_BOUNDS: [[number, number], [number, number]] = [
-  [-123.06, 37.34],
-  [-121.93, 38.18],
+const CALIFORNIA_COVERAGE_BOUNDS: [[number, number], [number, number]] = [
+  [-123.06, 34.34],
+  [-119.4, 38.18],
 ];
 
-const BAY_AREA_MAX_BOUNDS: [[number, number], [number, number]] = [
-  [-123.25, 37.18],
-  [-121.72, 38.35],
+const CALIFORNIA_COVERAGE_MAX_BOUNDS: [[number, number], [number, number]] = [
+  [-123.25, 34.18],
+  [-119.2, 38.35],
 ];
 
-const BAY_FIT_OPTIONS = {
+const SITE_FIT_OPTIONS = {
   padding: { top: 58, right: 58, bottom: 58, left: 58 },
   maxZoom: 9.35,
   retainPadding: false,
@@ -127,6 +128,36 @@ function userFeatureCollection(userPosition: [number, number] | null): FeatureCo
       },
     ],
   };
+}
+
+function boundsForSites(sites: FishingSite[]): [[number, number], [number, number]] | null {
+  if (sites.length === 0) return null;
+  let west = sites[0].longitude;
+  let east = sites[0].longitude;
+  let south = sites[0].latitude;
+  let north = sites[0].latitude;
+
+  for (const site of sites.slice(1)) {
+    west = Math.min(west, site.longitude);
+    east = Math.max(east, site.longitude);
+    south = Math.min(south, site.latitude);
+    north = Math.max(north, site.latitude);
+  }
+
+  if (sites.length === 1) {
+    const longitudePadding = 0.035;
+    const latitudePadding = 0.025;
+    return [
+      [west - longitudePadding, south - latitudePadding],
+      [east + longitudePadding, north + latitudePadding],
+    ];
+  }
+
+  return [[west, south], [east, north]];
+}
+
+function mapMotionDuration(duration: number) {
+  return window.matchMedia("(prefers-reduced-motion: reduce)").matches ? 0 : duration;
 }
 
 function addFishingSiteLayers(map: MapLibreMap) {
@@ -256,7 +287,12 @@ export function ContourMap({
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<MapLibreMap | null>(null);
   const onSelectSiteRef = useRef(onSelectSite);
+  const fittedGeometryKeyRef = useRef<string | null>(null);
   const [mapReady, setMapReady] = useState(false);
+  const siteGeometryKey = sites
+    .map((site) => `${site.id}:${site.longitude}:${site.latitude}`)
+    .sort()
+    .join("|");
 
   useEffect(() => {
     onSelectSiteRef.current = onSelectSite;
@@ -266,6 +302,14 @@ export function ContourMap({
     if (!containerRef.current || mapRef.current) return;
     let active = true;
     let resizeObserver: ResizeObserver | null = null;
+    const handleUnhandledRejection = (event: PromiseRejectionEvent) => {
+      suppressExpectedMapLibreRasterTileAbort(event);
+    };
+
+    // MapLibre GL 5.24 does not consume one expected raster-tile cancellation path
+    // during viewport cleanup. Suppress only its exact abortTile signature while this
+    // map is mounted; every other rejection remains visible to error reporting.
+    window.addEventListener("unhandledrejection", handleUnhandledRejection, { capture: true });
 
     void import("maplibre-gl").then(({ default: maplibregl }) => {
       if (!active || !containerRef.current) return;
@@ -273,10 +317,10 @@ export function ContourMap({
       const map = new maplibregl.Map({
         container: containerRef.current,
         style: ARCGIS_OCEAN_STYLE,
-        bounds: BAY_AREA_BOUNDS,
-        fitBoundsOptions: { ...BAY_FIT_OPTIONS, duration: 0 },
-        maxBounds: BAY_AREA_MAX_BOUNDS,
-        minZoom: 7.2,
+        bounds: CALIFORNIA_COVERAGE_BOUNDS,
+        fitBoundsOptions: { ...SITE_FIT_OPTIONS, duration: 0 },
+        maxBounds: CALIFORNIA_COVERAGE_MAX_BOUNDS,
+        minZoom: 5,
         maxZoom: 16,
         maxPitch: 0,
         renderWorldCopies: false,
@@ -323,7 +367,7 @@ export function ContourMap({
             map.easeTo({
               center: [longitude, latitude],
               zoom: Math.min(zoom, map.getMaxZoom()),
-              duration: 450,
+              duration: mapMotionDuration(450),
             });
           });
         });
@@ -345,6 +389,7 @@ export function ContourMap({
 
     return () => {
       active = false;
+      window.removeEventListener("unhandledrejection", handleUnhandledRejection, { capture: true });
       resizeObserver?.disconnect();
       mapRef.current?.remove();
       mapRef.current = null;
@@ -358,25 +403,49 @@ export function ContourMap({
   }, [sites, windowsBySite, selectedSiteId, mapReady]);
 
   useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !mapReady) return;
+    if (fittedGeometryKeyRef.current === siteGeometryKey) return;
+    const bounds = boundsForSites(sites);
+    if (!bounds) return;
+    map.stop();
+    map.resize();
+    map.setPadding({ top: 0, right: 0, bottom: 0, left: 0 });
+    map.fitBounds(bounds, { ...SITE_FIT_OPTIONS, duration: mapMotionDuration(450) });
+    fittedGeometryKeyRef.current = siteGeometryKey;
+  }, [mapReady, siteGeometryKey, sites]);
+
+  useEffect(() => {
     if (!mapRef.current || !mapReady) return;
     const source = mapRef.current.getSource(USER_SOURCE_ID) as GeoJSONSource | undefined;
     source?.setData(userFeatureCollection(userPosition));
   }, [userPosition, mapReady]);
 
-  const centerBay = () => {
+  const fitSites = () => {
     const map = mapRef.current;
     if (!map) return;
+    const bounds = boundsForSites(sites);
+    if (!bounds) return;
     map.stop();
     map.resize();
     map.setPadding({ top: 0, right: 0, bottom: 0, left: 0 });
-    map.fitBounds(BAY_AREA_BOUNDS, { ...BAY_FIT_OPTIONS, duration: 650 });
+    map.fitBounds(bounds, { ...SITE_FIT_OPTIONS, duration: mapMotionDuration(650) });
   };
 
   return (
     <div className="contour-map-shell">
-      <div ref={containerRef} className="contour-map" aria-label="Map of fishing access locations" />
-      <button className="map-center-button" type="button" onClick={centerBay}>
-        <LocateIcon /> Center Bay
+      <p id="map-alternative-description" className="sr-only">
+        Every location and forecast shown here is also available in the keyboard-accessible ranked list after the map.
+      </p>
+      <div
+        ref={containerRef}
+        className="contour-map"
+        role="region"
+        aria-label="Interactive map of fishing access locations"
+        aria-describedby="map-alternative-description"
+      />
+      <button className="map-center-button" type="button" onClick={fitSites}>
+        <LocateIcon /> Fit sites
       </button>
     </div>
   );

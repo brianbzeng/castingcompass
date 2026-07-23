@@ -2,8 +2,11 @@
  * Executable API access-control inventory.
  *
  * A Worker API route does not exist until it is classified here. The entry
- * point returns a generic 404 for unclassified API paths, so adding a handler
- * without adding its security policy fails closed.
+ * point returns a generic 404 for unclassified API paths, a registry-derived
+ * 405 for unclassified methods, a generic 503 when more than one policy claims
+ * the same request, and a generic 403 when an admitted same-origin route lacks
+ * an exact Origin. Adding or overlapping a handler branch without one
+ * unambiguous security policy therefore fails closed before body parsing.
  */
 
 export type ApiAuthorization = "public" | "optional_session" | "receipt" | "owner";
@@ -21,8 +24,16 @@ export interface ApiRoutePolicy {
   handler: ApiHandler;
   sameOriginRequired: boolean;
   currentLegalAcceptanceRequired: boolean;
+  deletionFenceAccessAllowed: boolean;
   rateLimitTags: readonly Exclude<RequestLimitClass, "read" | "write">[];
   matches(pathname: string): boolean;
+}
+
+export interface ApiRouteRejection {
+  status: 403 | 404 | 405 | 503;
+  code: "invalid_origin" | "not_found" | "method_not_allowed" | "route_unavailable";
+  message: string;
+  allowedMethods: readonly ApiMethod[];
 }
 
 const exact = (expected: string) => (pathname: string) => pathname === expected;
@@ -49,6 +60,7 @@ const route = (
   options: {
     sameOriginRequired?: boolean;
     currentLegalAcceptanceRequired?: boolean;
+    deletionFenceAccessAllowed?: boolean;
     rateLimitTags?: readonly Exclude<RequestLimitClass, "read" | "write">[];
     matches?: (pathname: string) => boolean;
   } = {},
@@ -61,6 +73,7 @@ const route = (
   handler,
   sameOriginRequired: options.sameOriginRequired ?? false,
   currentLegalAcceptanceRequired: options.currentLegalAcceptanceRequired ?? false,
+  deletionFenceAccessAllowed: options.deletionFenceAccessAllowed ?? false,
   rateLimitTags: options.rateLimitTags ?? [],
   matches: options.matches ?? exact(pathTemplate),
 });
@@ -113,7 +126,7 @@ export const API_ROUTE_POLICIES: readonly ApiRoutePolicy[] = [
     "/api/privacy/deletion-status",
     "/api/privacy/deletion-status",
     ["DELETE"],
-    "receipt",
+    "public",
     "account",
     { sameOriginRequired: true },
   ),
@@ -196,7 +209,11 @@ export const API_ROUTE_POLICIES: readonly ApiRoutePolicy[] = [
     ["GET"],
     "owner",
     "account",
-    { rateLimitTags: ["sensitive"], matches: (path) => API_ROUTE_PATTERNS.profileExportPhoto.test(path) },
+    {
+      deletionFenceAccessAllowed: true,
+      rateLimitTags: ["sensitive"],
+      matches: (path) => API_ROUTE_PATTERNS.profileExportPhoto.test(path),
+    },
   ),
   route(
     "profile.export_status",
@@ -205,7 +222,10 @@ export const API_ROUTE_POLICIES: readonly ApiRoutePolicy[] = [
     ["GET"],
     "owner",
     "account",
-    { matches: (path) => API_ROUTE_PATTERNS.profileExportStatus.test(path) },
+    {
+      deletionFenceAccessAllowed: true,
+      matches: (path) => API_ROUTE_PATTERNS.profileExportStatus.test(path),
+    },
   ),
   route(
     "profile.export_download",
@@ -214,7 +234,11 @@ export const API_ROUTE_POLICIES: readonly ApiRoutePolicy[] = [
     ["GET"],
     "owner",
     "account",
-    { rateLimitTags: ["sensitive"], matches: (path) => API_ROUTE_PATTERNS.profileExportDownload.test(path) },
+    {
+      deletionFenceAccessAllowed: true,
+      rateLimitTags: ["sensitive"],
+      matches: (path) => API_ROUTE_PATTERNS.profileExportDownload.test(path),
+    },
   ),
   route(
     "profile.export",
@@ -223,7 +247,7 @@ export const API_ROUTE_POLICIES: readonly ApiRoutePolicy[] = [
     ["GET"],
     "owner",
     "account",
-    { rateLimitTags: ["sensitive"] },
+    { deletionFenceAccessAllowed: true, rateLimitTags: ["sensitive"] },
   ),
   route(
     "profile.export_request",
@@ -236,9 +260,11 @@ export const API_ROUTE_POLICIES: readonly ApiRoutePolicy[] = [
   ),
   route("profile.read", "/api/profile", "/api/profile", ["GET"], "owner", "account", {
     currentLegalAcceptanceRequired: true,
+    deletionFenceAccessAllowed: true,
   }),
   route("profile.delete", "/api/profile", "/api/profile", ["DELETE"], "owner", "account", {
     sameOriginRequired: true,
+    deletionFenceAccessAllowed: true,
     rateLimitTags: ["sensitive"],
   }),
   route(
@@ -355,25 +381,634 @@ export const API_ROUTE_POLICIES: readonly ApiRoutePolicy[] = [
   ),
 ];
 
-export function apiRoutePolicyForRequest(request: Request): ApiRoutePolicy | null {
+type ReviewedPublicApiRouteContract = Readonly<{
+  pathTemplate: string;
+  pathPattern: RegExp;
+  methods: readonly ApiMethod[];
+  handler: ApiHandler;
+  sameOriginRequired: boolean;
+  rateLimitTags: readonly Exclude<RequestLimitClass, "read" | "write">[];
+}>;
+
+type ReviewedOwnerApiRouteContract = Readonly<{
+  pathTemplate: string;
+  pathPattern: RegExp;
+  methods: readonly ApiMethod[];
+  handler: ApiHandler;
+  sameOriginRequired: boolean;
+  currentLegalAcceptanceRequired: boolean;
+  deletionFenceAccessAllowed: boolean;
+  rateLimitTags: readonly Exclude<RequestLimitClass, "read" | "write">[];
+}>;
+
+type ReviewedReceiptApiRouteContract = Readonly<{
+  pathTemplate: string;
+  pathPattern: RegExp;
+  methods: readonly ApiMethod[];
+  handler: ApiHandler;
+  sameOriginRequired: boolean;
+  currentLegalAcceptanceRequired: boolean;
+  deletionFenceAccessAllowed: boolean;
+  rateLimitTags: readonly Exclude<RequestLimitClass, "read" | "write">[];
+}>;
+
+type ReviewedOptionalSessionApiRouteContract = Readonly<{
+  pathTemplate: string;
+  pathPattern: RegExp;
+  methods: readonly ApiMethod[];
+  handler: ApiHandler;
+  sameOriginRequired: boolean;
+  currentLegalAcceptanceRequired: boolean;
+  deletionFenceAccessAllowed: boolean;
+  rateLimitTags: readonly Exclude<RequestLimitClass, "read" | "write">[];
+}>;
+
+/**
+ * Independent execution boundary for routes that intentionally require no
+ * account, session, or resource-token authority. A new or changed `public`
+ * policy must update this exhaustive contract before the Worker will execute
+ * it; merely changing the primary registry cannot silently widen anonymous
+ * access.
+ */
+const REVIEWED_PUBLIC_API_ROUTE_CONTRACTS: Readonly<Record<string, ReviewedPublicApiRouteContract>> = {
+  health: {
+    pathTemplate: "/api/health",
+    pathPattern: /^\/api\/health$/,
+    methods: ["GET", "HEAD"],
+    handler: "health",
+    sameOriginRequired: false,
+    rateLimitTags: [],
+  },
+  "auth.turnstile_config": {
+    pathTemplate: "/api/auth/turnstile-config",
+    pathPattern: /^\/api\/auth\/turnstile-config$/,
+    methods: ["GET", "HEAD"],
+    handler: "turnstile",
+    sameOriginRequired: false,
+    rateLimitTags: [],
+  },
+  "auth.signup_retired": {
+    pathTemplate: "/api/auth/signup",
+    pathPattern: /^\/api\/auth\/signup$/,
+    methods: ["*"],
+    handler: "account",
+    sameOriginRequired: false,
+    rateLimitTags: [],
+  },
+  "auth.signup_eligibility.read": {
+    pathTemplate: "/api/auth/signup/eligibility",
+    pathPattern: /^\/api\/auth\/signup\/eligibility$/,
+    methods: ["GET"],
+    handler: "account",
+    sameOriginRequired: false,
+    rateLimitTags: [],
+  },
+  "auth.signup_eligibility.submit": {
+    pathTemplate: "/api/auth/signup/eligibility",
+    pathPattern: /^\/api\/auth\/signup\/eligibility$/,
+    methods: ["POST"],
+    handler: "account",
+    sameOriginRequired: true,
+    rateLimitTags: ["auth"],
+  },
+  "privacy.deletion_status.clear": {
+    pathTemplate: "/api/privacy/deletion-status",
+    pathPattern: /^\/api\/privacy\/deletion-status$/,
+    methods: ["DELETE"],
+    handler: "account",
+    sameOriginRequired: true,
+    rateLimitTags: [],
+  },
+  "auth.signup_request": {
+    pathTemplate: "/api/auth/signup/request",
+    pathPattern: /^\/api\/auth\/signup\/request$/,
+    methods: ["POST"],
+    handler: "account",
+    sameOriginRequired: true,
+    rateLimitTags: ["auth", "email"],
+  },
+  "auth.signup_verify": {
+    pathTemplate: "/api/auth/signup/verify",
+    pathPattern: /^\/api\/auth\/signup\/verify$/,
+    methods: ["POST"],
+    handler: "account",
+    sameOriginRequired: true,
+    rateLimitTags: ["auth", "email"],
+  },
+  "auth.challenge_resend": {
+    pathTemplate: "/api/auth/challenge/resend",
+    pathPattern: /^\/api\/auth\/challenge\/resend$/,
+    methods: ["POST"],
+    handler: "account",
+    sameOriginRequired: true,
+    rateLimitTags: ["auth", "email"],
+  },
+  "auth.password_request": {
+    pathTemplate: "/api/auth/password/request",
+    pathPattern: /^\/api\/auth\/password\/request$/,
+    methods: ["POST"],
+    handler: "account",
+    sameOriginRequired: true,
+    rateLimitTags: ["auth", "email"],
+  },
+  "auth.password_reset": {
+    pathTemplate: "/api/auth/password/reset",
+    pathPattern: /^\/api\/auth\/password\/reset$/,
+    methods: ["POST"],
+    handler: "account",
+    sameOriginRequired: true,
+    rateLimitTags: ["auth"],
+  },
+  "auth.login": {
+    pathTemplate: "/api/auth/login",
+    pathPattern: /^\/api\/auth\/login$/,
+    methods: ["POST"],
+    handler: "account",
+    sameOriginRequired: true,
+    rateLimitTags: ["auth"],
+  },
+  "trips.summary": {
+    pathTemplate: "/api/trips/summary",
+    pathPattern: /^\/api\/trips\/summary$/,
+    methods: ["GET"],
+    handler: "trips",
+    sameOriginRequired: false,
+    rateLimitTags: [],
+  },
+  "discussions.site": {
+    pathTemplate: "/api/discussions/{siteId}",
+    pathPattern: /^\/api\/discussions\/[a-z0-9-]+$/,
+    methods: ["GET"],
+    handler: "discussions",
+    sameOriginRequired: false,
+    rateLimitTags: [],
+  },
+};
+
+/**
+ * Independent execution boundary for routes that act with account authority.
+ * The primary registry selects a candidate, but this exhaustive contract must
+ * separately agree with its actual request, handler, legal/fence controls, and
+ * stronger abuse tags before the Worker resolves a session or reads a body.
+ */
+const REVIEWED_OWNER_API_ROUTE_CONTRACTS: Readonly<Record<string, ReviewedOwnerApiRouteContract>> = {
+  "auth.eligibility": {
+    pathTemplate: "/api/auth/eligibility",
+    pathPattern: /^\/api\/auth\/eligibility$/,
+    methods: ["POST"],
+    handler: "account",
+    sameOriginRequired: true,
+    currentLegalAcceptanceRequired: false,
+    deletionFenceAccessAllowed: false,
+    rateLimitTags: [],
+  },
+  "profile.export_photo": {
+    pathTemplate: "/api/profile/export/photos/{tripId}",
+    pathPattern: /^\/api\/profile\/export\/photos\/trip_[a-f0-9-]{36}$/,
+    methods: ["GET"],
+    handler: "account",
+    sameOriginRequired: false,
+    currentLegalAcceptanceRequired: false,
+    deletionFenceAccessAllowed: true,
+    rateLimitTags: ["sensitive"],
+  },
+  "profile.export_status": {
+    pathTemplate: "/api/profile/exports/{jobId}",
+    pathPattern: /^\/api\/profile\/exports\/pexj_[a-f0-9]{32}$/,
+    methods: ["GET"],
+    handler: "account",
+    sameOriginRequired: false,
+    currentLegalAcceptanceRequired: false,
+    deletionFenceAccessAllowed: true,
+    rateLimitTags: [],
+  },
+  "profile.export_download": {
+    pathTemplate: "/api/profile/exports/{jobId}/download",
+    pathPattern: /^\/api\/profile\/exports\/pexj_[a-f0-9]{32}\/download$/,
+    methods: ["GET"],
+    handler: "account",
+    sameOriginRequired: false,
+    currentLegalAcceptanceRequired: false,
+    deletionFenceAccessAllowed: true,
+    rateLimitTags: ["sensitive"],
+  },
+  "profile.export": {
+    pathTemplate: "/api/profile/export",
+    pathPattern: /^\/api\/profile\/export$/,
+    methods: ["GET"],
+    handler: "account",
+    sameOriginRequired: false,
+    currentLegalAcceptanceRequired: false,
+    deletionFenceAccessAllowed: true,
+    rateLimitTags: ["sensitive"],
+  },
+  "profile.export_request": {
+    pathTemplate: "/api/profile/export",
+    pathPattern: /^\/api\/profile\/export$/,
+    methods: ["POST"],
+    handler: "account",
+    sameOriginRequired: true,
+    currentLegalAcceptanceRequired: false,
+    deletionFenceAccessAllowed: false,
+    rateLimitTags: ["sensitive"],
+  },
+  "profile.read": {
+    pathTemplate: "/api/profile",
+    pathPattern: /^\/api\/profile$/,
+    methods: ["GET"],
+    handler: "account",
+    sameOriginRequired: false,
+    currentLegalAcceptanceRequired: true,
+    deletionFenceAccessAllowed: true,
+    rateLimitTags: [],
+  },
+  "profile.delete": {
+    pathTemplate: "/api/profile",
+    pathPattern: /^\/api\/profile$/,
+    methods: ["DELETE"],
+    handler: "account",
+    sameOriginRequired: true,
+    currentLegalAcceptanceRequired: false,
+    deletionFenceAccessAllowed: true,
+    rateLimitTags: ["sensitive"],
+  },
+  "profile.reviews_retry": {
+    pathTemplate: "/api/profile/reviews/retry",
+    pathPattern: /^\/api\/profile\/reviews\/retry$/,
+    methods: ["POST"],
+    handler: "account",
+    sameOriginRequired: true,
+    currentLegalAcceptanceRequired: true,
+    deletionFenceAccessAllowed: false,
+    rateLimitTags: ["sensitive"],
+  },
+  "gear_profiles.read": {
+    pathTemplate: "/api/gear-profiles",
+    pathPattern: /^\/api\/gear-profiles$/,
+    methods: ["GET"],
+    handler: "account",
+    sameOriginRequired: false,
+    currentLegalAcceptanceRequired: true,
+    deletionFenceAccessAllowed: false,
+    rateLimitTags: [],
+  },
+  "gear_profiles.create": {
+    pathTemplate: "/api/gear-profiles",
+    pathPattern: /^\/api\/gear-profiles$/,
+    methods: ["POST"],
+    handler: "account",
+    sameOriginRequired: true,
+    currentLegalAcceptanceRequired: true,
+    deletionFenceAccessAllowed: false,
+    rateLimitTags: [],
+  },
+  "gear_profiles.update": {
+    pathTemplate: "/api/gear-profiles/{gearId}",
+    pathPattern: /^\/api\/gear-profiles\/gear_[a-f0-9-]{36}$/,
+    methods: ["PATCH"],
+    handler: "account",
+    sameOriginRequired: true,
+    currentLegalAcceptanceRequired: true,
+    deletionFenceAccessAllowed: false,
+    rateLimitTags: [],
+  },
+  "gear_profiles.delete": {
+    pathTemplate: "/api/gear-profiles/{gearId}",
+    pathPattern: /^\/api\/gear-profiles\/gear_[a-f0-9-]{36}$/,
+    methods: ["DELETE"],
+    handler: "account",
+    sameOriginRequired: true,
+    currentLegalAcceptanceRequired: true,
+    deletionFenceAccessAllowed: false,
+    rateLimitTags: [],
+  },
+  "profile.trip_update": {
+    pathTemplate: "/api/profile/trips/{tripId}",
+    pathPattern: /^\/api\/profile\/trips\/trip_[a-f0-9-]{36}$/,
+    methods: ["PATCH"],
+    handler: "account",
+    sameOriginRequired: true,
+    currentLegalAcceptanceRequired: true,
+    deletionFenceAccessAllowed: false,
+    rateLimitTags: [],
+  },
+  "profile.trip_delete": {
+    pathTemplate: "/api/profile/trips/{tripId}",
+    pathPattern: /^\/api\/profile\/trips\/trip_[a-f0-9-]{36}$/,
+    methods: ["DELETE"],
+    handler: "account",
+    sameOriginRequired: true,
+    currentLegalAcceptanceRequired: true,
+    deletionFenceAccessAllowed: false,
+    rateLimitTags: ["sensitive"],
+  },
+  "saved_sites.read": {
+    pathTemplate: "/api/saved-sites",
+    pathPattern: /^\/api\/saved-sites$/,
+    methods: ["GET"],
+    handler: "account",
+    sameOriginRequired: false,
+    currentLegalAcceptanceRequired: true,
+    deletionFenceAccessAllowed: false,
+    rateLimitTags: [],
+  },
+  "saved_sites.create": {
+    pathTemplate: "/api/saved-sites/{siteId}",
+    pathPattern: /^\/api\/saved-sites\/[a-z0-9-]+$/,
+    methods: ["POST"],
+    handler: "account",
+    sameOriginRequired: true,
+    currentLegalAcceptanceRequired: true,
+    deletionFenceAccessAllowed: false,
+    rateLimitTags: [],
+  },
+  "saved_sites.delete": {
+    pathTemplate: "/api/saved-sites/{siteId}",
+    pathPattern: /^\/api\/saved-sites\/[a-z0-9-]+$/,
+    methods: ["DELETE"],
+    handler: "account",
+    sameOriginRequired: true,
+    currentLegalAcceptanceRequired: true,
+    deletionFenceAccessAllowed: false,
+    rateLimitTags: [],
+  },
+  "trips.start": {
+    pathTemplate: "/api/trips/start",
+    pathPattern: /^\/api\/trips\/start$/,
+    methods: ["POST"],
+    handler: "trips",
+    sameOriginRequired: true,
+    currentLegalAcceptanceRequired: true,
+    deletionFenceAccessAllowed: false,
+    rateLimitTags: [],
+  },
+  "trips.cancel": {
+    pathTemplate: "/api/trips/{tripId}/cancel",
+    pathPattern: /^\/api\/trips\/trip_[a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}\/cancel$/,
+    methods: ["POST"],
+    handler: "trips",
+    sameOriginRequired: true,
+    currentLegalAcceptanceRequired: true,
+    deletionFenceAccessAllowed: false,
+    rateLimitTags: [],
+  },
+  "trips.complete": {
+    pathTemplate: "/api/trips/{tripId}/complete",
+    pathPattern: /^\/api\/trips\/trip_[a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}\/complete$/,
+    methods: ["POST"],
+    handler: "trips",
+    sameOriginRequired: true,
+    currentLegalAcceptanceRequired: true,
+    deletionFenceAccessAllowed: false,
+    rateLimitTags: [],
+  },
+  "trips.report": {
+    pathTemplate: "/api/trips/report",
+    pathPattern: /^\/api\/trips\/report$/,
+    methods: ["POST"],
+    handler: "trips",
+    sameOriginRequired: true,
+    currentLegalAcceptanceRequired: true,
+    deletionFenceAccessAllowed: false,
+    rateLimitTags: [],
+  },
+};
+
+/**
+ * Independent execution boundary for the resource-token route that exposes
+ * deletion progress after account authority has been removed. The primary
+ * registry may select a candidate, but it cannot silently widen the receipt
+ * class or change the request/control contract before live token preflight.
+ */
+const REVIEWED_RECEIPT_API_ROUTE_CONTRACTS: Readonly<
+  Record<string, ReviewedReceiptApiRouteContract>
+> = {
+  "privacy.deletion_status.read": {
+    pathTemplate: "/api/privacy/deletion-status",
+    pathPattern: /^\/api\/privacy\/deletion-status$/,
+    methods: ["GET"],
+    handler: "account",
+    sameOriginRequired: false,
+    currentLegalAcceptanceRequired: false,
+    deletionFenceAccessAllowed: false,
+    rateLimitTags: [],
+  },
+};
+
+/**
+ * Independent execution boundary for the two routes that may discover or
+ * revoke a session without requiring one to exist. The primary registry may
+ * select a candidate, but it cannot silently widen this authority class or
+ * weaken logout's same-origin control before storage/schema preflight.
+ */
+const REVIEWED_OPTIONAL_SESSION_API_ROUTE_CONTRACTS: Readonly<
+  Record<string, ReviewedOptionalSessionApiRouteContract>
+> = {
+  "auth.session": {
+    pathTemplate: "/api/auth/session",
+    pathPattern: /^\/api\/auth\/session$/,
+    methods: ["GET"],
+    handler: "account",
+    sameOriginRequired: false,
+    currentLegalAcceptanceRequired: false,
+    deletionFenceAccessAllowed: false,
+    rateLimitTags: [],
+  },
+  "auth.logout": {
+    pathTemplate: "/api/auth/logout",
+    pathPattern: /^\/api\/auth\/logout$/,
+    methods: ["POST"],
+    handler: "account",
+    sameOriginRequired: true,
+    currentLegalAcceptanceRequired: false,
+    deletionFenceAccessAllowed: false,
+    rateLimitTags: [],
+  },
+};
+
+function sameOrderedValues<T>(actual: readonly T[], expected: readonly T[]) {
+  return actual.length === expected.length && actual.every((value, index) => value === expected[index]);
+}
+
+export function isReviewedPublicApiRequest(request: Request, policy: ApiRoutePolicy): boolean {
+  const reviewed = REVIEWED_PUBLIC_API_ROUTE_CONTRACTS[policy.id];
   const { pathname } = new URL(request.url);
-  return API_ROUTE_POLICIES.find((policy) =>
+  return Boolean(reviewed) &&
+    policy.authorization === "public" &&
+    policy.pathTemplate === reviewed.pathTemplate &&
+    reviewed.pathPattern.test(pathname) &&
+    sameOrderedValues(policy.methods, reviewed.methods) &&
+    (reviewed.methods.includes("*") || reviewed.methods.includes(request.method as ApiMethod)) &&
+    policy.handler === reviewed.handler &&
+    policy.sameOriginRequired === reviewed.sameOriginRequired &&
+    policy.currentLegalAcceptanceRequired === false &&
+    policy.deletionFenceAccessAllowed === false &&
+    sameOrderedValues(policy.rateLimitTags, reviewed.rateLimitTags);
+}
+
+export function isReviewedOwnerApiRequest(request: Request, policy: ApiRoutePolicy): boolean {
+  const reviewed = REVIEWED_OWNER_API_ROUTE_CONTRACTS[policy.id];
+  const { pathname } = new URL(request.url);
+  return Boolean(reviewed) &&
+    policy.authorization === "owner" &&
+    policy.pathTemplate === reviewed.pathTemplate &&
+    reviewed.pathPattern.test(pathname) &&
+    sameOrderedValues(policy.methods, reviewed.methods) &&
+    reviewed.methods.includes(request.method as ApiMethod) &&
+    policy.handler === reviewed.handler &&
+    policy.sameOriginRequired === reviewed.sameOriginRequired &&
+    policy.currentLegalAcceptanceRequired === reviewed.currentLegalAcceptanceRequired &&
+    policy.deletionFenceAccessAllowed === reviewed.deletionFenceAccessAllowed &&
+    sameOrderedValues(policy.rateLimitTags, reviewed.rateLimitTags);
+}
+
+export function isReviewedReceiptApiRequest(request: Request, policy: ApiRoutePolicy): boolean {
+  const reviewed = REVIEWED_RECEIPT_API_ROUTE_CONTRACTS[policy.id];
+  const { pathname } = new URL(request.url);
+  return Boolean(reviewed) &&
+    policy.authorization === "receipt" &&
+    policy.pathTemplate === reviewed.pathTemplate &&
+    reviewed.pathPattern.test(pathname) &&
+    sameOrderedValues(policy.methods, reviewed.methods) &&
+    reviewed.methods.includes(request.method as ApiMethod) &&
+    policy.handler === reviewed.handler &&
+    policy.sameOriginRequired === reviewed.sameOriginRequired &&
+    policy.currentLegalAcceptanceRequired === reviewed.currentLegalAcceptanceRequired &&
+    policy.deletionFenceAccessAllowed === reviewed.deletionFenceAccessAllowed &&
+    sameOrderedValues(policy.rateLimitTags, reviewed.rateLimitTags);
+}
+
+export function isReviewedOptionalSessionApiRequest(request: Request, policy: ApiRoutePolicy): boolean {
+  const reviewed = REVIEWED_OPTIONAL_SESSION_API_ROUTE_CONTRACTS[policy.id];
+  const { pathname } = new URL(request.url);
+  return Boolean(reviewed) &&
+    policy.authorization === "optional_session" &&
+    policy.pathTemplate === reviewed.pathTemplate &&
+    reviewed.pathPattern.test(pathname) &&
+    sameOrderedValues(policy.methods, reviewed.methods) &&
+    reviewed.methods.includes(request.method as ApiMethod) &&
+    policy.handler === reviewed.handler &&
+    policy.sameOriginRequired === reviewed.sameOriginRequired &&
+    policy.currentLegalAcceptanceRequired === reviewed.currentLegalAcceptanceRequired &&
+    policy.deletionFenceAccessAllowed === reviewed.deletionFenceAccessAllowed &&
+    sameOrderedValues(policy.rateLimitTags, reviewed.rateLimitTags);
+}
+
+function apiRoutePoliciesForRequest(
+  request: Request,
+  policies: readonly ApiRoutePolicy[],
+): readonly ApiRoutePolicy[] {
+  const { pathname } = new URL(request.url);
+  return policies.filter((policy) =>
     policy.matches(pathname) && (policy.methods.includes("*") || policy.methods.includes(request.method as ApiMethod))
-  ) ?? null;
+  );
 }
 
-export function isKnownApiPath(pathname: string) {
-  return API_ROUTE_POLICIES.some((policy) => policy.matches(pathname));
+function requestHasSameOrigin(request: Request): boolean {
+  const origin = request.headers.get("Origin");
+  if (!origin) return false;
+  try {
+    const parsedOrigin = new URL(origin).origin;
+    return origin === parsedOrigin && parsedOrigin === new URL(request.url).origin;
+  } catch {
+    return false;
+  }
 }
 
-export function rateLimitClassesForRequest(request: Request): RequestLimitClass[] {
+/** Admit a request only when exactly one executable policy claims it. */
+export function apiRoutePolicyForRequest(
+  request: Request,
+  policies: readonly ApiRoutePolicy[] = API_ROUTE_POLICIES,
+): ApiRoutePolicy | null {
+  const matches = apiRoutePoliciesForRequest(request, policies);
+  return matches.length === 1 ? matches[0] : null;
+}
+
+export function isKnownApiPath(
+  pathname: string,
+  policies: readonly ApiRoutePolicy[] = API_ROUTE_POLICIES,
+) {
+  return policies.some((policy) => policy.matches(pathname));
+}
+
+const API_METHOD_ORDER: readonly ApiMethod[] = ["GET", "HEAD", "POST", "PUT", "PATCH", "DELETE"];
+
+/**
+ * Return the exact methods admitted by policy for a recognized API path.
+ *
+ * Handlers must not be the authority for discovering a method. Keeping this
+ * list derived from the registry lets the Worker reject an unclassified
+ * method before any handler can accidentally grow a new route outside the
+ * access-control matrix.
+ */
+export function allowedApiMethodsForPath(
+  pathname: string,
+  policies: readonly ApiRoutePolicy[] = API_ROUTE_POLICIES,
+): readonly ApiMethod[] {
+  const pathPolicies = policies.filter((policy) => policy.matches(pathname));
+  if (pathPolicies.some((policy) => policy.methods.includes("*"))) return ["*"];
+  const allowed = new Set(pathPolicies.flatMap((policy) => policy.methods));
+  return API_METHOD_ORDER.filter((method) => allowed.has(method));
+}
+
+/** Reject API requests that have zero, multiple, or origin-invalid policy matches. */
+export function apiRouteRejectionForRequest(
+  request: Request,
+  policies: readonly ApiRoutePolicy[] = API_ROUTE_POLICIES,
+): ApiRouteRejection | null {
   const { pathname } = new URL(request.url);
-  if (!pathname.startsWith("/api/") || pathname === "/api/health") return [];
+  if (!pathname.startsWith("/api/")) return null;
+  const matches = apiRoutePoliciesForRequest(request, policies);
+  if (matches.length > 1) {
+    return {
+      status: 503,
+      code: "route_unavailable",
+      message: "This API route is temporarily unavailable.",
+      allowedMethods: [],
+    };
+  }
+  if (matches.length === 1) {
+    if (matches[0].sameOriginRequired && !requestHasSameOrigin(request)) {
+      return {
+        status: 403,
+        code: "invalid_origin",
+        message: "State-changing requests must come from CastingCompass.",
+        allowedMethods: [],
+      };
+    }
+    return null;
+  }
+  const allowedMethods = allowedApiMethodsForPath(pathname, policies);
+  if (allowedMethods.length > 0) {
+    return {
+      status: 405,
+      code: "method_not_allowed",
+      message: "That method is not available for this API route.",
+      allowedMethods,
+    };
+  }
+  return {
+    status: 404,
+    code: "not_found",
+    message: "API route not found.",
+    allowedMethods: [],
+  };
+}
 
-  const policy = apiRoutePolicyForRequest(request);
+export function rateLimitClassesForRequest(
+  request: Request,
+  policies: readonly ApiRoutePolicy[] = API_ROUTE_POLICIES,
+): RequestLimitClass[] {
+  const { pathname } = new URL(request.url);
+  if (!pathname.startsWith("/api/")) return [];
+
+  const matchingPolicies = apiRoutePoliciesForRequest(request, policies);
+  if (pathname === "/api/health" && matchingPolicies.length <= 1) return [];
   const classes = new Set<RequestLimitClass>();
   if (request.method === "GET" || request.method === "HEAD") classes.add("read");
-  for (const tag of policy?.rateLimitTags ?? []) classes.add(tag);
+  for (const policy of matchingPolicies) {
+    for (const tag of policy.rateLimitTags) classes.add(tag);
+  }
   if (["POST", "PUT", "PATCH", "DELETE"].includes(request.method) && !classes.has("auth")) {
     classes.add("write");
   }

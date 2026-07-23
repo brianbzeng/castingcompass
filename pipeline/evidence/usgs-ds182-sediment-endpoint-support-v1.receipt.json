@@ -1,0 +1,104 @@
+{
+  "schema_version": "castingcompass.usgs-ds182-sediment-endpoint-support-receipt/1.0.0",
+  "created_at": "2026-07-22T14:56:25Z",
+  "source_commit": "f28e25e6265a49933165c0170c0f13fda59cfda2",
+  "result": {
+    "path": "docs/experiments/2026-07-22-usgs-ds182-sediment-endpoint-support-v1.md",
+    "sha256": "5566a0a9efa14ec3e56f0fb8c614d489cb28ccc44eeabf647362643bc8330f5d"
+  },
+  "protocol": {
+    "path": "docs/experiments/2026-07-22-usgs-ds182-sediment-endpoint-support-protocol-v1.md",
+    "sha256": "e6a6b70bdc6a26562f2383872cc64119e0fb1bfe0da503543cd2ee0c08cb80d4",
+    "frozen_before_measurement_table_inspection": true,
+    "field_name_and_count_errata_recorded_before_aggregate_result": true,
+    "sentinel_and_site_identity_clarification_recorded_before_aggregate_result": true
+  },
+  "source_manifest": {
+    "path": "pipeline/sources/usgs_ds182_pacific_ext_sediment.json",
+    "sha256": "dedd43815362728e05be10de3fa2d787b3a964fad2734baf36d00c0722442af3"
+  },
+  "official_inputs": {
+    "independent_download_sets": 2,
+    "all_outcome_and_source_table_bytes_match": true,
+    "outcome_archive": {
+      "bytes": 1087605,
+      "sha256": "0643827168d4a91e8f2ed6df7962dee16ff39bdf203a263a833e7f3d7faa51ff",
+      "members": 14,
+      "member_inventory_verified": true,
+      "published_metadata_record_count": 16486,
+      "exact_text_dbf_and_shapefile_record_count": 16485
+    },
+    "source_table": {
+      "bytes": 19495,
+      "sha256": "89bc35fd455f623cae5c3c7ab3942e9bd933bac7a56f447f7ec236f000af4a1e",
+      "records": 114
+    },
+    "reference_raster": {
+      "source_id": "usgs_sf_state_waters_2m",
+      "geotiff_sha256": "75629f6a8bc7e3ea78fb6b3b22c737ec75a8cba1621f2c0066a2343ab61a242a",
+      "crs": "EPSG:26910",
+      "transform": [2.0, 0.0, 533700.0, 0.0, -2.0, 4190050.0, 0.0, 0.0, 1.0],
+      "width": 8850,
+      "height": 8845,
+      "bounds": [533700.0, 4172360.0, 551400.0, 4190050.0],
+      "pixels_read": false
+    }
+  },
+  "audit": {
+    "experiment_version": "exp-target-agnostic-fb8ebaceb08133bb8df426465d2467053520599d4188131e0bd623829dcaf950",
+    "model_version": "model-target-agnostic-956cb911ddf2c6ec4b8aa03208b8492d3fd3be40b27ea20fda6a3240aa2de64b",
+    "design": {
+      "endpoint": "direct bulk-surficial Gravel, Sand, and Mud percentages",
+      "outcome_member": "PAC_EXT.txt",
+      "required_fields": 32,
+      "derived_dbseabed_classes_allowed": false,
+      "source_representation_switch_after_failure_allowed": false,
+      "group_definition": "whole DataSetKey",
+      "minimum_rows_and_sites_per_side": 64,
+      "minimum_rows_and_sites_per_anchor_per_side": 16,
+      "minimum_train_source_groups": 3
+    },
+    "source_schema": {
+      "valid": false,
+      "header_fields": 32,
+      "row_width_counts": {
+        "31": 14950,
+        "32": 1535
+      },
+      "invalid_row_count": 14950,
+      "outcome_values_aggregated": false,
+      "repair_or_imputation_performed": false
+    },
+    "partition_audit": {
+      "performed": false,
+      "eligible_whole_source_partitions": 0,
+      "reason": "source_schema_invalid"
+    },
+    "metrics_sha256": "b175ea0024c25be0db59e859e3cc7e8c9e14b4b64e944a2e016f7720615cb964"
+  },
+  "reproduction": {
+    "executions": 2,
+    "independent_outcome_and_source_table_download_sets": 2,
+    "metrics_bytes_exact": true,
+    "run_metadata_sha256": [
+      "6f8036864ced0da984e53775a1224ec3dcc1ea31d6f5d9ff64c7008822e543ed",
+      "8b6e037b22c43fd4c8fec449e5b14c36328c4580619e66aeccdc0d4fa4a22916"
+    ],
+    "normalized_run_metadata_bytes_exact": true,
+    "normalized_run_metadata_sha256": "2584e25d56c9e460266bb07628d2e73a55d4386fc9a476ce6799c54a5d9a30cb",
+    "normalization": "Remove created_at and run_id; replace every input path with its basename."
+  },
+  "decision": {
+    "source_schema_valid": false,
+    "raw_endpoint_support_admissible": false,
+    "source_accuracy_review_authorized": false,
+    "raster_alignment_authorized": false,
+    "patch_corpus_built": false,
+    "model_training_run": false,
+    "encoder_promoted": false,
+    "serving_or_score_changed": false,
+    "production_or_provider_state_changed": false,
+    "reason": "The frozen PAC_EXT.txt member has 14,950 rows whose 31 fields disagree with its exact 32-field header. The audit does not pad an assumed trailing blank, shift fields, switch to dBASE, or aggregate composition values after the schema failure."
+  },
+  "claim_boundary": "This result establishes only that the frozen text representation fails its strict source schema. It does not establish sediment support, source accuracy, raster coverage, spatial independence, current habitat, fish presence, catch skill, score calibration, model promotion, product readiness, or deployment authority."
+}

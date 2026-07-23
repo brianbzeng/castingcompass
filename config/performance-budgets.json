@@ -1,5 +1,6 @@
 {
-  "schemaVersion": "castingcompass.performance-budgets/1.0.0",
+  "schemaVersion": "castingcompass.performance-budgets/1.1.0",
+  "apiCompatibilityVersion": "1",
   "profiles": {
     "smoke": { "durationSeconds": 15, "concurrency": 2 },
     "load": { "durationSeconds": 120, "concurrency": 10 },
@@ -8,6 +9,7 @@
   },
   "limits": { "maximumDurationSeconds": 1800, "maximumConcurrency": 50 },
   "requestTimeoutMilliseconds": 5000,
+  "maximumHealthResponseBytes": 8192,
   "budgets": {
     "p95Milliseconds": 750,
     "p99Milliseconds": 1500,

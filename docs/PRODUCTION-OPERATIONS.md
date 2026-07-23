@@ -7,9 +7,9 @@ the production environment.
 
 ## Abuse controls
 
-The Worker enforces request-body limits, per-email authentication ceilings, failed-login
-ceilings, and per-reporter trip ceilings. Those durable D1 controls remain the authoritative
-ceilings for the identities they cover. The repository also declares six Cloudflare Workers
+The Worker enforces request-body limits, atomic per-email challenge issuance/verification
+ceilings, atomic failed-login ceilings, and per-reporter trip ceilings. Those durable D1 controls
+remain the authoritative ceilings for the identities they cover. The repository also declares six Cloudflare Workers
 Rate Limiting bindings, but enforcement remains deliberately off through
 `RATE_LIMITING_ENABLED=false` until the production secret, bindings, outer rules, monitoring,
 and synthetic checks below are ready.
@@ -107,6 +107,9 @@ gate open until those live synthetic checks pass on the exact deployed version.
 Use [Key custody and encryption](KEY-CUSTODY-AND-ENCRYPTION.md) as the source of truth for the
 seven runtime secret names, separation rules, managed D1 encryption boundary, local backup
 encryption, semantic rotation hazards, incident path, and account-level acceptance evidence.
+Use [Key-custody independent review](KEY-CUSTODY-INDEPENDENT-REVIEW.md) for the guarded private
+evidence and qualified-review handoff. Its minimized receipt cannot approve custody or authorize
+restoration, deployment, or production.
 Never include a secret value in this runbook, a release record, monitoring, or the future
 operator dashboard. A local scanner pass does not prove production custody, least-privilege
 roles, MFA, correct environment bindings, revocation, recovery, or rotation.
@@ -253,10 +256,13 @@ bucket identity is release evidence—not a configuration assumption.
 
 Enabling the browser control or adding an R2 binding is not sufficient authorization. The
 Worker must retain an explicit server-side upload gate that defaults off. Before switching it
-on, implement and test a D1-serialized account-deletion fence: block new trip/photo writes,
-then take the complete photo inventory, durably queue every locator, and only then remove active
-rows. Include an interleaving test where an upload reaches the attach step during deletion and
-prove that the object is either attached to a live trip or durably queued for cleanup.
+on, exercise the locally implemented D1-serialized account-deletion fence against the intended
+production bindings: block new trip/photo writes, materialize the complete source-bound photo
+inventory, durably queue every locator, and only then remove active rows. Include an interleaving
+test where an upload reaches the attach step during deletion and prove that the object is either
+attached to a live trip with its exact locator hash or durably queued for cleanup. Also capture
+the deployed plan and production-shaped query/rows-read budget; local Free-ceiling tests are not
+provider evidence.
 
 ## Production evidence checklist
 
@@ -281,6 +287,12 @@ prove that the object is either attached to a live trip or durably queued for cl
       private R2 binding; postflight verified its empty ledger, five indexes, and deletion-task
       storage class. The production flag and bindings remain off until the separate export
       activation drill passes.
+- [ ] Migration `0020_trip_photo_upload_reservations.sql` completed before trip-photo uploads are
+      activated; postflight verified the empty account-deletion-fence and reservation tables plus
+      their six indexes, exact nullable text `trips.photo_key_hash`, and zero non-null photo
+      locators without that hash. The preflight proved zero existing trip photo locators before
+      the column was added. Alert on active/expired fences, aged reservations, and every
+      `needs_attention` row before the upload gate can be enabled, without logging identities or locators.
 - [ ] Privacy pre/postflight counts match; the missing-age and legal-reacceptance cohorts have
       an explicit support decision, while export and account deletion remain available.
 - [ ] Canonical, redirect-alias, and `workers.dev` smoke checks passed.

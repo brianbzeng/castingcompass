@@ -42,6 +42,9 @@ PRIVATE_VALIDATION_ROOT = REPOSITORY_ROOT / ".validation-private"
 DEFAULT_PROTOCOL_PATH = (
     REPOSITORY_ROOT / "validation" / "protocols" / "california-halibut-site-window-v1.json"
 )
+FROZEN_SITE_CATALOG_PATH = (
+    REPOSITORY_ROOT / "validation" / "catalogs" / "california-halibut-bay-area-v1.json"
+)
 PROTOCOL_SCHEMA_VERSION = "castingcompass.validation-preregistration/1.0.0"
 SPLIT_MANIFEST_SCHEMA_VERSION = "castingcompass.validation-split-manifest/1.0.0"
 EVIDENCE_SCHEMA_VERSION = "castingcompass.validation-evidence/1.0.0"
@@ -1569,7 +1572,9 @@ def load_validation_protocol(path: Path = DEFAULT_PROTOCOL_PATH) -> tuple[dict[s
     geography = protocol.get("geography")
     if not isinstance(geography, dict):
         raise ValueError("validation protocol geography is missing")
-    site_path = REPOSITORY_ROOT / str(geography.get("site_catalog_path", ""))
+    if geography.get("site_catalog_path") != "public/data/sites.json":
+        raise ValueError("validation protocol historical site catalog path changed")
+    site_path = FROZEN_SITE_CATALOG_PATH
     site_digest = geography.get("site_catalog_sha256")
     if not isinstance(site_digest, str) or SHA256_PATTERN.fullmatch(site_digest) is None:
         raise ValueError("validation protocol site catalog SHA-256 is invalid")

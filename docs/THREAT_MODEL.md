@@ -173,8 +173,10 @@ that could become a privacy, integrity, or availability incident.
 - **Residual risk:** The project currently has a solo product owner and no mandatory qualified
   second-person review for every security-sensitive change. Automated checks can share the same
   mistaken assumption as generated code.
-- **Next gate:** Assign an independent reviewer for cryptography/key custody and require targeted
-  review for future auth, access-control, privacy, and release-control changes.
+- **Next gate:** Use the locked private key-custody evidence/review handoff, assign the qualified
+  independent reviewer, and require targeted review for future auth, access-control, privacy,
+  and release-control changes. The repository handoff is ready; no reviewer or production
+  approval is implied.
 
 ### L06 — Managed authentication
 
@@ -184,8 +186,10 @@ that could become a privacy, integrity, or availability incident.
 - **State:** partial.
 - **Evidence:** CastingCompass deliberately uses server-side opaque sessions rather than JWTs:
   HTTPS `__Host-` cookies, `HttpOnly`, `Secure`, scoped `SameSite`, hashed 256-bit tokens,
-  rotation, expiry, revocation, fixation resistance, same-origin mutation checks, and generic
-  equal-work login/recovery behavior are covered by auth and password security tests.
+  rotation, expiry, revocation, fixation resistance, same-origin mutation checks, generic
+  equal-work login/recovery behavior, and database-atomic login/challenge attempt claims are
+  covered by auth and password security tests. Credential success also waits for authoritative
+  attempt-classification and exact challenge-version receipts before session issuance.
 - **Alert:** Authentication regression tests and structured auth outcomes locally; production
   anomaly alerts and email-delivery/revocation drills remain absent.
 - **Recovery:** Enter maintenance or disable signup/recovery, revoke affected sessions and
@@ -352,7 +356,7 @@ that could become a privacy, integrity, or availability incident.
 | SQL/XSS/multipart/parser/prompt injection | L01, L04, L08, L10 | Allowlists, bounds, parameter binding, contextual encoding, no-tools exact-schema AI boundary | Deployed-composition DAST and provider-edge evidence |
 | Secret, dependency, build, or release compromise | L02, L03, L04, L05, L09 | Secret scanning, exact locks, dependency/image gates, CodeQL, signed provenance, protected main | Production IAM/key custody, scanner lag, exception expiry |
 | Model output publishing or performing a privileged action | L01, L05, L07, L08 | Private bounded draft only; separate auditable human approval; no model tools or authority | Guarded production migration, legacy audit, live smoke evidence |
-| Privacy deletion, restore, migration, or backup failure | L05, L07, L09, L13 | Atomic deletion, tombstones/tasks, aggregate receipts, restore suppression, synthetic drill | Production migration/provider/custody and independent review |
+| Privacy deletion, wrong-object deletion, restore, migration, or backup failure | L05, L07, L09, L13 | Atomic active-data removal; exact lease/terminal receipts; store-bound locator-hash verification before R2; atomic export-locator/task finalization; tombstones, restore suppression, synthetic drill | Production migration/binding/alert/custody evidence and independent review |
 | Request flood, DDoS, cost exhaustion, or provider saturation | L03, L11, L12, L13 | Local endpoint ceilings, bounded retries/cost contracts, production-refusing harness | Active edge controls, isolated load/attack evidence, live alerts |
 | Monitoring, support, or operator access leaking private data | L07, L09, L13 | Structured redacted events, no raw URLs/content, no application admin route | Provider IAM/retention, named roles, delivered incident drill |
 | Duplicate, poisoned, exhausted, or privacy-stale AI queue work | L01, L05, L07, L11, L13 | Exact opaque message schema, D1 authority and unique trip job, atomic lease, deletion recheck/cascade, five-attempt attention state, batch/cost ceilings, maintenance/disable recovery, state-guarded replay plan | Apply migration; provision and verify Queue/DLQ/IAM/alerts; isolated failure/rollback drill; separate default-off activation review |

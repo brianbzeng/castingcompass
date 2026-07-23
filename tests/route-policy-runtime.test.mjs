@@ -3,13 +3,19 @@ import { readFile } from "node:fs/promises";
 import test from "node:test";
 import {
   API_ROUTE_POLICIES,
+  allowedApiMethodsForPath,
   apiRoutePolicyForRequest,
+  apiRouteRejectionForRequest,
+  isReviewedOptionalSessionApiRequest,
+  isReviewedOwnerApiRequest,
+  isReviewedPublicApiRequest,
+  isReviewedReceiptApiRequest,
   isKnownApiPath,
   rateLimitClassesForRequest,
 } from "../worker/route-policy.ts";
 
 const origin = "https://castingcompass.com";
-const request = (path, method = "GET") => new Request(`${origin}${path}`, { method });
+const request = (path, method = "GET", headers) => new Request(`${origin}${path}`, { method, headers });
 
 test("every declared API route example resolves to its exact executable policy", () => {
   assert.equal(new Set(API_ROUTE_POLICIES.map((policy) => policy.id)).size, API_ROUTE_POLICIES.length);
@@ -23,6 +29,12 @@ test("every declared API route example resolves to its exact executable policy",
     const mutates = policy.methods.some((method) => ["POST", "PUT", "PATCH", "DELETE"].includes(method));
     if (mutates && policy.id !== "auth.signup_retired") {
       assert.equal(policy.sameOriginRequired, true, policy.id);
+    }
+    if (policy.currentLegalAcceptanceRequired) {
+      assert.equal(policy.authorization, "owner", policy.id);
+    }
+    if (policy.deletionFenceAccessAllowed) {
+      assert.equal(policy.authorization, "owner", policy.id);
     }
     if (policy.authorization === "owner" && !policy.currentLegalAcceptanceRequired) {
       assert.equal(
@@ -40,6 +52,284 @@ test("every declared API route example resolves to its exact executable policy",
       );
     }
   }
+
+  assert.deepEqual(
+    API_ROUTE_POLICIES.filter((policy) => policy.deletionFenceAccessAllowed).map((policy) => policy.id),
+    [
+      "profile.export_photo",
+      "profile.export_status",
+      "profile.export_download",
+      "profile.export",
+      "profile.read",
+      "profile.delete",
+    ],
+  );
+  assert.deepEqual(
+    API_ROUTE_POLICIES.filter((policy) => policy.authorization === "receipt").map((policy) => policy.id),
+    ["privacy.deletion_status.read"],
+  );
+  assert.deepEqual(
+    API_ROUTE_POLICIES.filter((policy) => policy.authorization === "optional_session").map((policy) => policy.id),
+    ["auth.session", "auth.logout"],
+  );
+  assert.deepEqual(
+    API_ROUTE_POLICIES.filter((policy) => policy.authorization === "public").map((policy) => policy.id),
+    [
+      "health",
+      "auth.turnstile_config",
+      "auth.signup_retired",
+      "auth.signup_eligibility.read",
+      "auth.signup_eligibility.submit",
+      "privacy.deletion_status.clear",
+      "auth.signup_request",
+      "auth.signup_verify",
+      "auth.challenge_resend",
+      "auth.password_request",
+      "auth.password_reset",
+      "auth.login",
+      "trips.summary",
+      "discussions.site",
+    ],
+  );
+  for (const policy of API_ROUTE_POLICIES.filter((policy) => policy.authorization === "public")) {
+    const method = policy.methods[0] === "*" ? "OPTIONS" : policy.methods[0];
+    assert.equal(isReviewedPublicApiRequest(request(policy.examplePath, method), policy), true, policy.id);
+  }
+  for (const policy of API_ROUTE_POLICIES.filter((policy) => policy.authorization === "owner")) {
+    assert.equal(isReviewedOwnerApiRequest(request(policy.examplePath, policy.methods[0]), policy), true, policy.id);
+  }
+  for (const policy of API_ROUTE_POLICIES.filter((policy) => policy.authorization === "receipt")) {
+    assert.equal(isReviewedReceiptApiRequest(request(policy.examplePath, policy.methods[0]), policy), true, policy.id);
+  }
+  for (const policy of API_ROUTE_POLICIES.filter((policy) => policy.authorization === "optional_session")) {
+    assert.equal(
+      isReviewedOptionalSessionApiRequest(request(policy.examplePath, policy.methods[0]), policy),
+      true,
+      policy.id,
+    );
+  }
+});
+
+test("public execution requires the exact independently reviewed policy contract", () => {
+  const login = API_ROUTE_POLICIES.find((policy) => policy.id === "auth.login");
+  assert.ok(login);
+  const loginRequest = request("/api/auth/login", "POST");
+  for (const drifted of [
+    { ...login, id: "auth.login_alias" },
+    { ...login, pathTemplate: "/api/auth/login/{accountId}" },
+    { ...login, methods: ["POST", "PUT"] },
+    { ...login, handler: "trips" },
+    { ...login, sameOriginRequired: false },
+    { ...login, currentLegalAcceptanceRequired: true },
+    { ...login, deletionFenceAccessAllowed: true },
+    { ...login, rateLimitTags: [] },
+    { ...login, rateLimitTags: ["email", "auth"] },
+  ]) {
+    assert.equal(isReviewedPublicApiRequest(loginRequest, drifted), false, JSON.stringify(drifted));
+  }
+
+  const broadenedLogin = { ...login, matches: () => true };
+  assert.equal(isReviewedPublicApiRequest(request("/api/auth/login/extra", "POST"), broadenedLogin), false);
+  assert.equal(isReviewedPublicApiRequest(request("/api/profile", "POST"), broadenedLogin), false);
+
+  const discussion = API_ROUTE_POLICIES.find((policy) => policy.id === "discussions.site");
+  assert.ok(discussion);
+  assert.equal(isReviewedPublicApiRequest(request("/api/discussions/ocean-beach"), discussion), true);
+  for (const path of [
+    "/api/discussions/",
+    "/api/discussions/Ocean-Beach",
+    "/api/discussions/ocean_beach",
+    "/api/discussions/ocean-beach/extra",
+    "/api/discussions/%2e%2e",
+  ]) {
+    assert.equal(isReviewedPublicApiRequest(request(path), { ...discussion, matches: () => true }), false, path);
+  }
+
+  const owner = API_ROUTE_POLICIES.find((policy) => policy.id === "trips.start");
+  assert.ok(owner);
+  assert.equal(isReviewedPublicApiRequest(request("/api/trips/start", "POST"), owner), false);
+});
+
+test("owner execution requires the exact independently reviewed request and control contract", () => {
+  const exportDownload = API_ROUTE_POLICIES.find((policy) => policy.id === "profile.export_download");
+  assert.ok(exportDownload);
+  const exactPath = "/api/profile/exports/pexj_00000000000000000000000000000000/download";
+  const exactRequest = request(exactPath);
+  assert.equal(isReviewedOwnerApiRequest(exactRequest, exportDownload), true);
+
+  for (const drifted of [
+    { ...exportDownload, id: "profile.export_download_alias" },
+    { ...exportDownload, pathTemplate: "/api/profile/exports/{jobId}" },
+    { ...exportDownload, methods: ["GET", "POST"] },
+    { ...exportDownload, handler: "trips" },
+    { ...exportDownload, sameOriginRequired: true },
+    { ...exportDownload, currentLegalAcceptanceRequired: true },
+    { ...exportDownload, deletionFenceAccessAllowed: false },
+    { ...exportDownload, rateLimitTags: [] },
+    { ...exportDownload, rateLimitTags: ["auth", "sensitive"] },
+  ]) {
+    assert.equal(isReviewedOwnerApiRequest(exactRequest, drifted), false, JSON.stringify(drifted));
+  }
+
+  const broadenedExport = { ...exportDownload, matches: () => true };
+  assert.equal(isReviewedOwnerApiRequest(request(`${exactPath}/extra`), broadenedExport), false);
+  assert.equal(isReviewedOwnerApiRequest(request("/api/profile"), broadenedExport), false);
+  assert.equal(isReviewedOwnerApiRequest(request(exactPath, "POST"), broadenedExport), false);
+
+  const dynamicCases = [
+    [
+      "gear_profiles.update",
+      "/api/gear-profiles/gear_00000000-0000-4000-8000-000000000000",
+      "PATCH",
+      [
+        "/api/gear-profiles/gear_G0000000-0000-4000-8000-000000000000",
+        "/api/gear-profiles/not-a-gear",
+        "/api/gear-profiles/gear_00000000-0000-4000-8000-000000000000/extra",
+      ],
+    ],
+    [
+      "profile.trip_update",
+      "/api/profile/trips/trip_00000000-0000-4000-8000-000000000000",
+      "PATCH",
+      [
+        "/api/profile/trips/trip_G0000000-0000-4000-8000-000000000000",
+        "/api/profile/trips/not-a-trip",
+        "/api/profile/trips/trip_00000000-0000-4000-8000-000000000000/extra",
+      ],
+    ],
+    [
+      "saved_sites.create",
+      "/api/saved-sites/ocean-beach",
+      "POST",
+      [
+        "/api/saved-sites/Ocean-Beach",
+        "/api/saved-sites/ocean_beach",
+        "/api/saved-sites/ocean-beach/extra",
+        "/api/saved-sites/%2e%2e",
+      ],
+    ],
+    [
+      "trips.cancel",
+      "/api/trips/trip_00000000-0000-4000-8000-000000000000/cancel",
+      "POST",
+      [
+        "/api/trips/trip_G0000000-0000-4000-8000-000000000000/cancel",
+        "/api/trips/trip_00000000-0000-0000-0000-000000000000/cancel",
+        "/api/trips/trip_00000000-0000-4000-8000-000000000000/cancel/extra",
+        "/api/trips/%2e%2e/cancel",
+      ],
+    ],
+  ];
+  for (const [id, path, method, malformedPaths] of dynamicCases) {
+    const policy = API_ROUTE_POLICIES.find((candidate) => candidate.id === id);
+    assert.ok(policy);
+    assert.equal(isReviewedOwnerApiRequest(request(path, method), policy), true, id);
+    for (const malformed of malformedPaths) {
+      assert.equal(
+        isReviewedOwnerApiRequest(request(malformed, method), { ...policy, matches: () => true }),
+        false,
+        `${id}: ${malformed}`,
+      );
+    }
+  }
+
+  const publicPolicy = API_ROUTE_POLICIES.find((policy) => policy.id === "auth.login");
+  assert.ok(publicPolicy);
+  assert.equal(isReviewedOwnerApiRequest(request("/api/auth/login", "POST"), publicPolicy), false);
+});
+
+test("receipt execution requires the exact independently reviewed request and control contract", () => {
+  const receipt = API_ROUTE_POLICIES.find((policy) => policy.id === "privacy.deletion_status.read");
+  assert.ok(receipt);
+  const receiptRequest = request("/api/privacy/deletion-status");
+  assert.equal(isReviewedReceiptApiRequest(receiptRequest, receipt), true);
+
+  for (const drifted of [
+    { ...receipt, id: "privacy.deletion_status.read_alias" },
+    { ...receipt, pathTemplate: "/api/privacy/deletion-status/{receiptId}" },
+    { ...receipt, methods: ["GET", "POST"] },
+    { ...receipt, handler: "trips" },
+    { ...receipt, sameOriginRequired: true },
+    { ...receipt, currentLegalAcceptanceRequired: true },
+    { ...receipt, deletionFenceAccessAllowed: true },
+    { ...receipt, rateLimitTags: ["sensitive"] },
+  ]) {
+    assert.equal(isReviewedReceiptApiRequest(receiptRequest, drifted), false, JSON.stringify(drifted));
+  }
+
+  const broadenedReceipt = { ...receipt, matches: () => true };
+  for (const [path, method] of [
+    ["/api/privacy/deletion-status/extra", "GET"],
+    ["/api/privacy/deletion", "GET"],
+    ["/api/privacy/%2e%2e", "GET"],
+    ["/api/privacy/deletion-status", "POST"],
+  ]) {
+    assert.equal(
+      isReviewedReceiptApiRequest(request(path, method), broadenedReceipt),
+      false,
+      `${method} ${path}`,
+    );
+  }
+
+  const publicPolicy = API_ROUTE_POLICIES.find((policy) => policy.id === "privacy.deletion_status.clear");
+  assert.ok(publicPolicy);
+  assert.equal(isReviewedReceiptApiRequest(request("/api/privacy/deletion-status", "DELETE"), publicPolicy), false);
+});
+
+test("optional-session execution requires the exact independently reviewed request and control contract", () => {
+  const logout = API_ROUTE_POLICIES.find((policy) => policy.id === "auth.logout");
+  assert.ok(logout);
+  const logoutRequest = request("/api/auth/logout", "POST");
+  assert.equal(isReviewedOptionalSessionApiRequest(logoutRequest, logout), true);
+
+  for (const drifted of [
+    { ...logout, id: "auth.logout_alias" },
+    { ...logout, pathTemplate: "/api/auth/logout/{sessionId}" },
+    { ...logout, methods: ["POST", "DELETE"] },
+    { ...logout, handler: "trips" },
+    { ...logout, sameOriginRequired: false },
+    { ...logout, currentLegalAcceptanceRequired: true },
+    { ...logout, deletionFenceAccessAllowed: true },
+    { ...logout, rateLimitTags: ["auth"] },
+  ]) {
+    assert.equal(isReviewedOptionalSessionApiRequest(logoutRequest, drifted), false, JSON.stringify(drifted));
+  }
+
+  const broadenedLogout = { ...logout, matches: () => true };
+  assert.equal(
+    isReviewedOptionalSessionApiRequest(request("/api/auth/logout/extra", "POST"), broadenedLogout),
+    false,
+  );
+  assert.equal(
+    isReviewedOptionalSessionApiRequest(request("/api/profile", "POST"), broadenedLogout),
+    false,
+  );
+  assert.equal(
+    isReviewedOptionalSessionApiRequest(request("/api/auth/logout", "GET"), broadenedLogout),
+    false,
+  );
+
+  const session = API_ROUTE_POLICIES.find((policy) => policy.id === "auth.session");
+  assert.ok(session);
+  assert.equal(isReviewedOptionalSessionApiRequest(request("/api/auth/session"), session), true);
+  assert.equal(
+    isReviewedOptionalSessionApiRequest(
+      request("/api/auth/session/extra"),
+      { ...session, matches: () => true },
+    ),
+    false,
+  );
+  assert.equal(
+    isReviewedOptionalSessionApiRequest(
+      request("/api/%2e%2e", "GET"),
+      { ...session, matches: () => true },
+    ),
+    false,
+  );
+
+  const owner = API_ROUTE_POLICIES.find((policy) => policy.id === "profile.read");
+  assert.ok(owner);
+  assert.equal(isReviewedOptionalSessionApiRequest(request("/api/profile"), owner), false);
 });
 
 test("route policy records actor, CSRF, legal, and abuse controls for representative boundaries", () => {
@@ -49,6 +339,7 @@ test("route policy records actor, CSRF, legal, and abuse controls for representa
     ["/api/auth/login", "POST", "auth.login", "public", true, false, ["auth"]],
     ["/api/auth/signup/request", "POST", "auth.signup_request", "public", true, false, ["auth", "email"]],
     ["/api/privacy/deletion-status", "GET", "privacy.deletion_status.read", "receipt", false, false, ["read"]],
+    ["/api/privacy/deletion-status", "DELETE", "privacy.deletion_status.clear", "public", true, false, ["write"]],
     ["/api/profile/export", "GET", "profile.export", "owner", false, false, ["read", "sensitive"]],
     ["/api/profile/export", "POST", "profile.export_request", "owner", true, false, ["sensitive", "write"]],
     [
@@ -113,7 +404,145 @@ test("unclassified and malformed API paths fail route discovery closed", () => {
 
   assert.equal(isKnownApiPath("/api/trips/start"), true);
   assert.equal(apiRoutePolicyForRequest(request("/api/trips/start", "GET")), null);
+  assert.deepEqual(allowedApiMethodsForPath("/api/trips/start"), ["POST"]);
+  assert.deepEqual(allowedApiMethodsForPath("/api/profile/export"), ["GET", "POST"]);
+  assert.deepEqual(allowedApiMethodsForPath("/api/auth/signup"), ["*"]);
+  assert.deepEqual(allowedApiMethodsForPath("/api/unclassified"), []);
   assert.deepEqual(rateLimitClassesForRequest(request("/api/unclassified", "POST")), ["write"]);
+});
+
+test("every unclassified method on a known API path has an exact central Allow contract", () => {
+  const candidateMethods = ["GET", "HEAD", "POST", "PUT", "PATCH", "DELETE", "OPTIONS", "PROPFIND"];
+  const examples = new Set(API_ROUTE_POLICIES.map((policy) => policy.examplePath));
+
+  for (const path of examples) {
+    const declared = allowedApiMethodsForPath(path);
+    assert.ok(declared.length > 0, path);
+    for (const method of candidateMethods) {
+      const policy = apiRoutePolicyForRequest(request(path, method));
+      if (declared.includes("*") || declared.includes(method)) {
+        assert.ok(policy, `${method} ${path} should resolve`);
+        const admitted = request(path, method, policy.sameOriginRequired ? { Origin: origin } : undefined);
+        assert.equal(apiRouteRejectionForRequest(admitted), null, `${method} ${path}`);
+      } else {
+        assert.equal(policy, null, `${method} ${path} must remain unclassified`);
+        assert.deepEqual(apiRouteRejectionForRequest(request(path, method)), {
+          status: 405,
+          code: "method_not_allowed",
+          message: "That method is not available for this API route.",
+          allowedMethods: declared,
+        }, `${method} ${path}`);
+      }
+    }
+  }
+
+  assert.deepEqual(apiRouteRejectionForRequest(request("/api/unclassified", "POST")), {
+    status: 404,
+    code: "not_found",
+    message: "API route not found.",
+    allowedMethods: [],
+  });
+  assert.equal(apiRouteRejectionForRequest(request("/privacy", "POST")), null);
+});
+
+test("every same-origin policy rejects missing, opaque, malformed, noncanonical, and cross-site origins", () => {
+  const rejection = {
+    status: 403,
+    code: "invalid_origin",
+    message: "State-changing requests must come from CastingCompass.",
+    allowedMethods: [],
+  };
+  let protectedPolicies = 0;
+
+  for (const policy of API_ROUTE_POLICIES) {
+    const method = policy.methods[0] === "*" ? "OPTIONS" : policy.methods[0];
+    if (!policy.sameOriginRequired) {
+      assert.equal(apiRouteRejectionForRequest(request(policy.examplePath, method)), null, policy.id);
+      continue;
+    }
+    protectedPolicies += 1;
+    for (const suppliedOrigin of [
+      undefined,
+      "null",
+      "://invalid",
+      `${origin}/path`,
+      "https://attacker.example",
+      "http://castingcompass.com",
+      "https://castingcompass.com.evil.example",
+    ]) {
+      const headers = suppliedOrigin === undefined ? undefined : { Origin: suppliedOrigin };
+      assert.deepEqual(
+        apiRouteRejectionForRequest(request(policy.examplePath, method, headers)),
+        rejection,
+        `${policy.id}: ${suppliedOrigin ?? "missing"}`,
+      );
+    }
+    assert.equal(
+      apiRouteRejectionForRequest(request(policy.examplePath, method, { Origin: origin })),
+      null,
+      policy.id,
+    );
+  }
+
+  assert.ok(protectedPolicies > 0);
+  assert.deepEqual(apiRouteRejectionForRequest(request("/api/unclassified", "POST", {
+    Origin: "https://attacker.example",
+  })), {
+    status: 404,
+    code: "not_found",
+    message: "API route not found.",
+    allowedMethods: [],
+  });
+});
+
+test("overlapping policies fail closed instead of granting first-match precedence", () => {
+  const tripStart = API_ROUTE_POLICIES.find((policy) => policy.id === "trips.start");
+  assert.ok(tripStart);
+  const conflicting = {
+    ...tripStart,
+    id: "synthetic.conflicting_trip_start",
+    authorization: "public",
+    handler: "account",
+    sameOriginRequired: false,
+    currentLegalAcceptanceRequired: false,
+    rateLimitTags: ["sensitive"],
+  };
+  const registry = [...API_ROUTE_POLICIES, conflicting];
+  const post = request("/api/trips/start", "POST");
+
+  assert.equal(apiRoutePolicyForRequest(post, registry), null);
+  assert.deepEqual(apiRouteRejectionForRequest(post, registry), {
+    status: 503,
+    code: "route_unavailable",
+    message: "This API route is temporarily unavailable.",
+    allowedMethods: [],
+  });
+  assert.deepEqual(allowedApiMethodsForPath("/api/trips/start", registry), ["POST"]);
+  assert.deepEqual(rateLimitClassesForRequest(post, registry), ["sensitive", "write"]);
+
+  const retiredSignup = API_ROUTE_POLICIES.find((policy) => policy.id === "auth.signup_retired");
+  assert.ok(retiredSignup);
+  const conflictingSignup = {
+    ...retiredSignup,
+    id: "synthetic.conflicting_signup",
+    methods: ["POST"],
+    authorization: "owner",
+    sameOriginRequired: true,
+    rateLimitTags: ["auth"],
+  };
+  const signupRegistry = [retiredSignup, conflictingSignup];
+
+  assert.deepEqual(apiRouteRejectionForRequest(request("/api/auth/signup", "POST"), signupRegistry), {
+    status: 503,
+    code: "route_unavailable",
+    message: "This API route is temporarily unavailable.",
+    allowedMethods: [],
+  });
+  assert.equal(
+    apiRoutePolicyForRequest(request("/api/auth/signup", "OPTIONS"), signupRegistry)?.id,
+    "auth.signup_retired",
+  );
+  assert.deepEqual(rateLimitClassesForRequest(request("/api/auth/signup", "POST"), signupRegistry), ["auth"]);
 });
 
 test("every literal route branch in Worker handlers is represented in the policy registry", async () => {
@@ -125,9 +554,185 @@ test("every literal route branch in Worker handlers is represented in the policy
   }
 });
 
-test("the Worker entry point denies unknown API paths and derives trip authorization from policy", async () => {
+test("the Worker entry point centrally denies unknown paths and unclassified methods", async () => {
   const source = await readFile(new URL("../worker/index.ts", import.meta.url), "utf8");
-  assert.match(source, /url\.pathname\.startsWith\("\/api\/"\) && !apiPolicy && !isKnownApiPath/);
-  assert.match(source, /apiPolicy\?\.handler === "trips" && apiPolicy\.authorization === "owner"/);
+  assert.match(source, /apiRouteRejectionForRequest\(request\)/);
+  assert.match(source, /if \(apiRejection\)/);
+  assert.match(source, /status: apiRejection\.status/);
+  assert.match(source, /Allow: apiRejection\.allowedMethods\.join\(", "\)/);
+  assert.doesNotMatch(source, /!apiPolicy && !isKnownApiPath/);
+  assert.match(source, /const protectedTripMutation = apiPolicy\.authorization === "owner"/);
+  assert.match(source, /if \(apiPolicy\?\.authorization === "public" && !isReviewedPublicApiRequest\(request, apiPolicy\)\)/);
+  assert.match(source, /if \(apiPolicy\?\.authorization === "owner"\)/);
+  assert.match(source, /if \(!isReviewedOwnerApiRequest\(request, apiPolicy\)\)/);
+  assert.match(source, /authorizeOwnerRequest\(request, env/);
+  assert.match(source, /if \(apiPolicy\?\.authorization === "receipt"\)/);
+  assert.match(source, /if \(!isReviewedReceiptApiRequest\(request, apiPolicy\)\)/);
+  assert.match(source, /authorizeDeletionReceiptRequest\(request, env\)/);
+  assert.match(source, /if \(apiPolicy\?\.authorization === "optional_session"\)/);
+  assert.match(source, /if \(!isReviewedOptionalSessionApiRequest\(request, apiPolicy\)\)/);
+  assert.match(source, /authorizeOptionalSessionRequest\(request, env\)/);
   assert.doesNotMatch(source, /url\.pathname\.startsWith\("\/api\/trips\/"\)/);
+
+  const rejection = source.indexOf("apiRouteRejectionForRequest(request)");
+  const publicAuthorization = source.indexOf("isReviewedPublicApiRequest(request, apiPolicy)");
+  const ownerPolicyReview = source.indexOf("isReviewedOwnerApiRequest(request, apiPolicy)");
+  const ownerAuthorization = source.indexOf("authorizeOwnerRequest(request, env");
+  const receiptPolicyReview = source.indexOf("isReviewedReceiptApiRequest(request, apiPolicy)");
+  const receiptAuthorization = source.indexOf("authorizeDeletionReceiptRequest(request, env");
+  const optionalSessionPolicyReview = source.indexOf("isReviewedOptionalSessionApiRequest(request, apiPolicy)");
+  const optionalSessionAuthorization = source.indexOf("authorizeOptionalSessionRequest(request, env");
+  const bodyGuard = source.indexOf("guardRequestBody(request)");
+  assert.ok(rejection >= 0);
+  assert.ok(publicAuthorization > rejection, "public policy review must follow central route rejection");
+  assert.ok(ownerPolicyReview > rejection, "owner policy review must follow central route rejection");
+  assert.ok(ownerAuthorization > ownerPolicyReview, "owner authorization must follow owner policy review");
+  assert.ok(ownerAuthorization > rejection, "owner authorization must follow central route rejection");
+  assert.ok(receiptPolicyReview > rejection, "receipt policy review must follow central route rejection");
+  assert.ok(
+    receiptAuthorization > receiptPolicyReview,
+    "receipt preflight must follow receipt policy review",
+  );
+  assert.ok(optionalSessionPolicyReview > rejection, "optional-session policy review must follow central route rejection");
+  assert.ok(
+    optionalSessionAuthorization > optionalSessionPolicyReview,
+    "optional-session preflight must follow optional-session policy review",
+  );
+  assert.ok(optionalSessionAuthorization > rejection, "optional-session preflight must follow central route rejection");
+  assert.ok(bodyGuard > ownerAuthorization, "body reads must follow owner authorization");
+  assert.ok(bodyGuard > publicAuthorization, "body reads must follow public policy review");
+  assert.ok(bodyGuard > receiptPolicyReview, "body reads must follow receipt policy review");
+  assert.ok(bodyGuard > receiptAuthorization, "body reads must follow receipt authorization");
+  assert.ok(bodyGuard > optionalSessionPolicyReview, "body reads must follow optional-session policy review");
+  assert.ok(bodyGuard > optionalSessionAuthorization, "body reads must follow optional-session preflight");
+  for (const dispatch of [
+    "handleTurnstileConfigRequest(request, env)",
+    "healthResponse(request, env)",
+    "handleDiscussionRequest(request, env, sites)",
+    "handleAccountRequest(request, env, sites",
+    "handleTripRequest(request, env, sites",
+  ]) {
+    assert.ok(source.indexOf(dispatch) > rejection, `${dispatch} must follow the central rejection`);
+  }
+});
+
+test("the route registry exclusively selects API handlers and handler drift fails closed", async () => {
+  const source = await readFile(new URL("../worker/index.ts", import.meta.url), "utf8");
+  const routeStart = source.indexOf("async function routeRequest(");
+  const apiBoundary = source.indexOf('if (url.pathname.startsWith("/api/"))', routeStart);
+  const dispatchStart = source.indexOf("switch (apiPolicy.handler)", apiBoundary);
+  const driftFallback = source.indexOf("return apiResponse ?? routePolicyUnavailableResponse();", dispatchStart);
+  const imageBoundary = source.indexOf('if (url.pathname === "/_vinext/image")', dispatchStart);
+  const staticFallback = source.indexOf("handler.fetch(request, env, ctx)", imageBoundary);
+
+  assert.ok(routeStart >= 0);
+  assert.ok(apiBoundary > routeStart);
+  assert.ok(dispatchStart > apiBoundary);
+  assert.ok(driftFallback > dispatchStart);
+  assert.ok(imageBoundary > driftFallback, "API dispatch must return before image handling");
+  assert.ok(staticFallback > imageBoundary, "API dispatch must return before the static application");
+  assert.match(source.slice(apiBoundary, dispatchStart), /if \(!apiPolicy\) return routePolicyUnavailableResponse\(\)/);
+  assert.match(source.slice(dispatchStart, driftFallback), /default:\s+return routePolicyUnavailableResponse\(\)/);
+  assert.match(source, /status: 503/);
+  assert.match(source, /code: "route_unavailable"/);
+  assert.match(source, /"Cache-Control": "no-store"/);
+
+  const handlers = [
+    ["turnstile", "handleTurnstileConfigRequest(request, env)"],
+    ["health", "healthResponse(request, env)"],
+    ["discussions", "handleDiscussionRequest(request, env, sites)"],
+    ["account", "handleAccountRequest(request, env, sites"],
+    ["trips", "handleTripRequest(request, env, sites"],
+  ];
+  const dispatchSource = source.slice(dispatchStart, driftFallback);
+  for (const [index, [handler, call]] of handlers.entries()) {
+    const handlerCase = dispatchSource.indexOf(`case "${handler}":`);
+    const handlerCall = dispatchSource.indexOf(call);
+    const nextHandler = handlers[index + 1]?.[0];
+    const nextCase = nextHandler
+      ? dispatchSource.indexOf(`case "${nextHandler}":`)
+      : dispatchSource.indexOf("default:");
+    assert.ok(handlerCase >= 0, `${handler} must have a registry dispatch case`);
+    assert.ok(handlerCall > handlerCase, `${handler} can only run from its registry dispatch case`);
+    assert.ok(handlerCall < nextCase, `${handler} cannot borrow a later handler's dispatch call`);
+    assert.equal(dispatchSource.indexOf(call, handlerCall + call.length), -1, `${handler} must have one dispatch call`);
+  }
+});
+
+test("the production bundle dispatches representative API policies without static fallthrough", async () => {
+  const workerUrl = new URL("../dist/server/index.js", import.meta.url);
+  workerUrl.searchParams.set("route-policy-test", `${process.pid}-${Date.now()}`);
+  const { default: worker } = await import(workerUrl.href);
+  let assetFetches = 0;
+  const baseEnv = {
+    ASSETS: {
+      fetch: async () => {
+        assetFetches += 1;
+        return new Response("static-fallback", { status: 418 });
+      },
+    },
+  };
+  const ctx = { waitUntil() {}, passThroughOnException() {} };
+
+  const turnstile = await worker.fetch(request("/api/auth/turnstile-config"), baseEnv, ctx);
+  assert.equal(turnstile.status, 200);
+  assert.deepEqual(await turnstile.json(), { turnstile: { enabled: false } });
+
+  const health = await worker.fetch(request("/api/health"), {
+    ...baseEnv,
+    DB: {
+      prepare(statement) {
+        assert.equal(statement, "SELECT 1 AS ok");
+        return { first: async () => ({ ok: 1 }) };
+      },
+    },
+  }, ctx);
+  assert.equal(health.status, 200);
+  assert.equal((await health.json()).status, "ok");
+
+  const discussions = await worker.fetch(request("/api/discussions/limantour-beach"), baseEnv, ctx);
+  assert.equal(discussions.status, 200);
+  assert.deepEqual(await discussions.json(), { posts: [] });
+
+  for (const [path, expectedCode] of [
+    ["/api/auth/session", "storage_unavailable"],
+    ["/api/privacy/deletion-status", "storage_unavailable"],
+    ["/api/trips/summary", "storage_unavailable"],
+  ]) {
+    const response = await worker.fetch(request(path), baseEnv, ctx);
+    assert.equal(response.status, 503, path);
+    assert.equal((await response.json()).error.code, expectedCode, path);
+  }
+
+  const clearReceipt = await worker.fetch(request("/api/privacy/deletion-status", "DELETE", {
+    Origin: origin,
+  }), baseEnv, ctx);
+  assert.equal(clearReceipt.status, 200);
+  assert.deepEqual(await clearReceipt.json(), { cleared: true });
+  assert.match(clearReceipt.headers.get("set-cookie") ?? "", /cc_deletion_receipt=;.*Max-Age=0/u);
+
+  const protectedBody = request("/api/trips/start", "POST", {
+    Origin: origin,
+    "Content-Type": "application/json",
+  });
+  const protectedRequest = new Request(protectedBody, { body: JSON.stringify({ siteId: "ocean-beach" }) });
+  const protectedResponse = await worker.fetch(protectedRequest, baseEnv, ctx);
+  assert.equal(protectedResponse.status, 503);
+  assert.equal((await protectedResponse.json()).error.code, "storage_unavailable");
+  assert.equal(protectedRequest.bodyUsed, false, "owner storage/auth rejection must precede body parsing");
+
+  const logoutBody = request("/api/auth/logout", "POST", {
+    Origin: origin,
+    "Content-Type": "application/json",
+  });
+  const logoutRequest = new Request(logoutBody, { body: JSON.stringify({ ignored: true }) });
+  const logoutResponse = await worker.fetch(logoutRequest, baseEnv, ctx);
+  assert.equal(logoutResponse.status, 503);
+  assert.equal((await logoutResponse.json()).error.code, "storage_unavailable");
+  assert.equal(logoutRequest.bodyUsed, false, "optional-session storage rejection must precede body parsing");
+
+  const unknown = await worker.fetch(request("/api/not-registered"), baseEnv, ctx);
+  assert.equal(unknown.status, 404);
+  assert.equal((await unknown.json()).error.code, "not_found");
+  assert.equal(assetFetches, 0, "no API response may fall through to static assets");
 });

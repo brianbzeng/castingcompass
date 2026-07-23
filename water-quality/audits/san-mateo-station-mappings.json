@@ -1,0 +1,378 @@
+{
+  "schemaVersion": "castingcompass.water-quality-mapping-audit/1.0.0",
+  "generatedAt": "2026-07-21T15:46:25Z",
+  "meaning": "historical station identity and coordinate support for local preliminary review; not current water quality, safety, or score evidence",
+  "automaticMappingAllowed": false,
+  "independentReviewRequired": true,
+  "source": {
+    "sourceId": "san-mateo-county-health",
+    "agency": "San Mateo County Health",
+    "currentStatusUrl": "https://www.smchealth.org/node/1201",
+    "registryUrl": "https://data.smcgov.org/Environment/Beach-and-Creek-Monitoring-Results/kpd9-xf4h/about",
+    "registryMachineUrl": "https://datahub.smcgov.org/api/id/kpd9-xf4h.json",
+    "registryResponseSha256": "799f73522d11eb8e72ed07531c3fcfb09a9b3a9e9b072e2a41dd8def80164578",
+    "stationCount": 17,
+    "latestRecordDate": "2023-06-29",
+    "registryUse": "station identity and spatial context only; never current status"
+  },
+  "policySha256": "13914b407929b98f804874e04ae4d474a4a6acd0f9d91ce4d25aa44927a65445",
+  "auditToolSha256": "53b1ef9f32394a3f8450c937c2059079dcaf6fb1259a2cd75ea1d01ec60e593c",
+  "siteCatalogSha256": "a7145a66368c6dd5dd13b6bec421d430d228a3082d2fa8ad31941fc84e14078d",
+  "method": {
+    "distance": "haversine",
+    "earthRadiusMeters": 6371008.8,
+    "decisionRule": "exact name/location plus coordinate distance may support preliminary review; proximity alone never creates a mapping"
+  },
+  "mappedSites": [
+    {
+      "siteId": "pacifica-municipal-pier",
+      "siteName": "Pacifica Municipal Pier",
+      "siteCoordinate": {
+        "latitude": 37.633,
+        "longitude": -122.4938
+      },
+      "policyMapped": true,
+      "reviewStatus": "local-preliminary-independent-review-required",
+      "automaticMappingAllowed": false,
+      "stationSupport": [
+        {
+          "stationId": "AB4111",
+          "stationName": "SHARP PARK 6",
+          "stationType": "BEACH",
+          "recordDate": "2021-12-02",
+          "latitude": 37.63416109039667,
+          "longitude": -122.49442451002967,
+          "distanceMeters": 140
+        },
+        {
+          "stationId": "AB4112",
+          "stationName": "SHARP PARK 3",
+          "stationType": "BEACH",
+          "recordDate": "2023-06-29",
+          "latitude": 37.631508411746786,
+          "longitude": -122.49445219226394,
+          "distanceMeters": 176
+        }
+      ]
+    },
+    {
+      "siteId": "sharp-park-beach",
+      "siteName": "Sharp Park Beach",
+      "siteCoordinate": {
+        "latitude": 37.6275,
+        "longitude": -122.4951
+      },
+      "policyMapped": true,
+      "reviewStatus": "local-preliminary-independent-review-required",
+      "automaticMappingAllowed": false,
+      "stationSupport": [
+        {
+          "stationId": "AB4111",
+          "stationName": "SHARP PARK 6",
+          "stationType": "BEACH",
+          "recordDate": "2021-12-02",
+          "latitude": 37.63416109039667,
+          "longitude": -122.49442451002967,
+          "distanceMeters": 743
+        },
+        {
+          "stationId": "AB4112",
+          "stationName": "SHARP PARK 3",
+          "stationType": "BEACH",
+          "recordDate": "2023-06-29",
+          "latitude": 37.631508411746786,
+          "longitude": -122.49445219226394,
+          "distanceMeters": 449
+        }
+      ]
+    },
+    {
+      "siteId": "rockaway-beach",
+      "siteName": "Rockaway Beach",
+      "siteCoordinate": {
+        "latitude": 37.6092,
+        "longitude": -122.4994
+      },
+      "policyMapped": true,
+      "reviewStatus": "local-preliminary-independent-review-required",
+      "automaticMappingAllowed": false,
+      "stationSupport": [
+        {
+          "stationId": "AB4113",
+          "stationName": "ROCKAWAY BEACH",
+          "stationType": "BEACH",
+          "recordDate": "2023-06-29",
+          "latitude": 37.61102457692167,
+          "longitude": -122.49648687233758,
+          "distanceMeters": 327
+        },
+        {
+          "stationId": "AB4114",
+          "stationName": "CALERA CREEK",
+          "stationType": "CREEK",
+          "recordDate": "2023-06-29",
+          "latitude": 37.611788761155495,
+          "longitude": -122.49634347550025,
+          "distanceMeters": 394
+        }
+      ]
+    },
+    {
+      "siteId": "pacifica-state-beach",
+      "siteName": "Pacifica State Beach (Linda Mar)",
+      "siteCoordinate": {
+        "latitude": 37.5982,
+        "longitude": -122.5012
+      },
+      "policyMapped": true,
+      "reviewStatus": "local-preliminary-independent-review-required",
+      "automaticMappingAllowed": false,
+      "stationSupport": [
+        {
+          "stationId": "AB4116",
+          "stationName": "LINDA MAR 5",
+          "stationType": "BEACH",
+          "recordDate": "2023-06-29",
+          "latitude": 37.596556445423516,
+          "longitude": -122.50487133975032,
+          "distanceMeters": 372
+        },
+        {
+          "stationId": "AB41141",
+          "stationName": "LINDA MAR 7",
+          "stationType": "BEACH",
+          "recordDate": "2023-06-29",
+          "latitude": 37.59688895615643,
+          "longitude": -122.5047778109005,
+          "distanceMeters": 347
+        },
+        {
+          "stationId": "AB4117",
+          "stationName": "SAN PEDRO CREEK",
+          "stationType": "CREEK",
+          "recordDate": "2023-06-29",
+          "latitude": 37.59615968107221,
+          "longitude": -122.50555418949028,
+          "distanceMeters": 446
+        }
+      ]
+    },
+    {
+      "siteId": "montara-state-beach",
+      "siteName": "Montara State Beach",
+      "siteCoordinate": {
+        "latitude": 37.5456,
+        "longitude": -122.5141
+      },
+      "policyMapped": true,
+      "reviewStatus": "local-preliminary-independent-review-required",
+      "automaticMappingAllowed": false,
+      "stationSupport": [
+        {
+          "stationId": "AB41110",
+          "stationName": "MONTARA BEACH",
+          "stationType": "BEACH",
+          "recordDate": "2023-06-29",
+          "latitude": 37.55248949810192,
+          "longitude": -122.51372124182973,
+          "distanceMeters": 767
+        },
+        {
+          "stationId": "AB41111",
+          "stationName": "MARTINI CREEK",
+          "stationType": "CREEK",
+          "recordDate": "2023-06-29",
+          "latitude": 37.552713421617106,
+          "longitude": -122.51321774702338,
+          "distanceMeters": 795
+        }
+      ]
+    },
+    {
+      "siteId": "pillar-point-west-jetty",
+      "siteName": "Pillar Point Harbor West Jetty",
+      "siteCoordinate": {
+        "latitude": 37.5011,
+        "longitude": -122.4847
+      },
+      "policyMapped": true,
+      "reviewStatus": "local-preliminary-independent-review-required",
+      "automaticMappingAllowed": false,
+      "stationSupport": [
+        {
+          "stationId": "AB41117",
+          "stationName": "PILLAR POINT 5",
+          "stationType": "BEACH",
+          "recordDate": "2023-06-29",
+          "latitude": 37.5035336969328,
+          "longitude": -122.48542097579511,
+          "distanceMeters": 278
+        },
+        {
+          "stationId": "AB41116",
+          "stationName": "PILLAR POINT 7",
+          "stationType": "BEACH",
+          "recordDate": "2023-06-29",
+          "latitude": 37.50198998121673,
+          "longitude": -122.4927332469526,
+          "distanceMeters": 716
+        },
+        {
+          "stationId": "AB41115",
+          "stationName": "PILLAR POINT 8",
+          "stationType": "BEACH",
+          "recordDate": "2023-06-29",
+          "latitude": 37.499953644188956,
+          "longitude": -122.49588565229902,
+          "distanceMeters": 995
+        }
+      ]
+    },
+    {
+      "siteId": "pillar-point-east-jetty",
+      "siteName": "Pillar Point Harbor East Jetty",
+      "siteCoordinate": {
+        "latitude": 37.4955,
+        "longitude": -122.4776
+      },
+      "policyMapped": true,
+      "reviewStatus": "local-preliminary-independent-review-required",
+      "automaticMappingAllowed": false,
+      "stationSupport": [
+        {
+          "stationId": "AB41140",
+          "stationName": "PILLAR POINT 9",
+          "stationType": "BEACH",
+          "recordDate": "2023-06-29",
+          "latitude": 37.50200904495986,
+          "longitude": -122.47605653777087,
+          "distanceMeters": 736
+        }
+      ]
+    },
+    {
+      "siteId": "surfers-beach",
+      "siteName": "Surfer's Beach",
+      "siteCoordinate": {
+        "latitude": 37.4933,
+        "longitude": -122.4695
+      },
+      "policyMapped": true,
+      "reviewStatus": "local-preliminary-independent-review-required",
+      "automaticMappingAllowed": false,
+      "stationSupport": [
+        {
+          "stationId": "AB41120",
+          "stationName": "SURFERS BEACH",
+          "stationType": "BEACH",
+          "recordDate": "2023-06-29",
+          "latitude": 37.50095675703965,
+          "longitude": -122.471284157126,
+          "distanceMeters": 866
+        }
+      ]
+    },
+    {
+      "siteId": "francis-state-beach",
+      "siteName": "Francis State Beach",
+      "siteCoordinate": {
+        "latitude": 37.4685,
+        "longitude": -122.4469
+      },
+      "policyMapped": true,
+      "reviewStatus": "local-preliminary-independent-review-required",
+      "automaticMappingAllowed": false,
+      "stationSupport": [
+        {
+          "stationId": "AB41128",
+          "stationName": "FRANCIS BEACH",
+          "stationType": "BEACH",
+          "recordDate": "2023-06-29",
+          "latitude": 37.46721323586502,
+          "longitude": -122.44688517501581,
+          "distanceMeters": 143
+        }
+      ]
+    },
+    {
+      "siteId": "coyote-point-jetty",
+      "siteName": "Coyote Point Jetty",
+      "siteCoordinate": {
+        "latitude": 37.5906,
+        "longitude": -122.3192
+      },
+      "policyMapped": true,
+      "reviewStatus": "local-preliminary-independent-review-required",
+      "automaticMappingAllowed": false,
+      "stationSupport": [
+        {
+          "stationId": "AB18762",
+          "stationName": "COYOTE POINT",
+          "stationType": "BEACH",
+          "recordDate": "2023-06-29",
+          "latitude": 37.59003457074558,
+          "longitude": -122.32530115041247,
+          "distanceMeters": 541
+        }
+      ]
+    },
+    {
+      "siteId": "oyster-point-fishing-pier",
+      "siteName": "Oyster Point Fishing Pier",
+      "siteCoordinate": {
+        "latitude": 37.6652,
+        "longitude": -122.3768
+      },
+      "policyMapped": true,
+      "reviewStatus": "local-preliminary-independent-review-required",
+      "automaticMappingAllowed": false,
+      "stationSupport": [
+        {
+          "stationId": "AB18761",
+          "stationName": "OYSTER POINT",
+          "stationType": "BEACH",
+          "recordDate": "2023-06-29",
+          "latitude": 37.66398817111321,
+          "longitude": -122.38341049018919,
+          "distanceMeters": 597
+        }
+      ]
+    }
+  ],
+  "unmappedSites": [
+    {
+      "siteId": "poplar-beach",
+      "siteName": "Poplar Beach",
+      "policyMapped": false,
+      "reviewStatus": "local-preliminary-do-not-map",
+      "automaticMappingAllowed": false,
+      "nearestReviewedStation": {
+        "stationId": "AB41128",
+        "stationName": "FRANCIS BEACH",
+        "stationType": "BEACH",
+        "recordDate": "2023-06-29",
+        "latitude": 37.46721323586502,
+        "longitude": -122.44688517501581,
+        "distanceMeters": 1944
+      },
+      "reason": "No exact station identity or defensible local spatial support was established."
+    },
+    {
+      "siteId": "seal-point-park",
+      "siteName": "Seal Point Park Shoreline",
+      "policyMapped": false,
+      "reviewStatus": "local-preliminary-do-not-map",
+      "automaticMappingAllowed": false,
+      "nearestReviewedStation": {
+        "stationId": "AB18762",
+        "stationName": "COYOTE POINT",
+        "stationType": "BEACH",
+        "recordDate": "2023-06-29",
+        "latitude": 37.59003457074558,
+        "longitude": -122.32530115041247,
+        "distanceMeters": 2102
+      },
+      "reason": "No exact station identity or defensible local spatial support was established."
+    }
+  ]
+}

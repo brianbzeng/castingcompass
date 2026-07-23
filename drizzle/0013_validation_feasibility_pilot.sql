@@ -20,7 +20,7 @@ CREATE TABLE IF NOT EXISTS `validation_feasibility_activations` (
   CONSTRAINT `validation_feasibility_activation_protocol_check` CHECK (
     `protocol_id` = 'california-halibut-collection-feasibility-v2'
     AND `protocol_version` = '2.0.0'
-    AND `protocol_sha256` = '8ff0d7bd009ed8eb10f328347d58d0b63d0b6c822b08351cc5c2760d41de13ed'
+    AND `protocol_sha256` = '4d034e303c841d05419cd1512abacad8c24080582edcfd4fc194d638ee5a7c3c'
     AND `site_catalog_sha256` = 'b0378742f40cca598c57d845fb683ab9b36068cdd69de541aeb3e45d93c31860'
   ),
   CONSTRAINT `validation_feasibility_activation_hash_check` CHECK (

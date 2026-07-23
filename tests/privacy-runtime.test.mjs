@@ -1,10 +1,22 @@
 import assert from "node:assert/strict";
+import { createHash } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import { DatabaseSync } from "node:sqlite";
 import test from "node:test";
-import { cleanupAuthData, LEGAL_VERSION, evaluateAgeEligibility, handleAccountRequest, processPrivacyDeletionTasks } from "../worker/auth.ts";
+import {
+  authorizeDeletionReceiptRequest,
+  authorizeOptionalSessionRequest,
+  authorizeOwnerRequest,
+  cleanupAuthData,
+  cleanupAuthRetentionData,
+  LEGAL_VERSION,
+  evaluateAgeEligibility,
+  handleAccountRequest,
+  processPrivacyDeletionTasks,
+} from "../worker/auth.ts";
 import { createTripStore, handleTripRequest } from "../worker/trips.ts";
-import { reviewTripWithMimo } from "../worker/trip-review.ts";
+import { reviewTripBacklog, reviewTripWithMimo } from "../worker/trip-review.ts";
+import { scheduleTripReview } from "../worker/trip-review-queue.ts";
 import { consumePrivacyExportQueue, requestPrivacyExport } from "../worker/privacy-export.ts";
 import { buildFeasibilityReconciliationExport } from "../worker/validation-feasibility-export.ts";
 import {
@@ -32,6 +44,7 @@ const MIGRATIONS = [
   "0017_trip_idempotency.sql",
   "0018_ai_review_queue.sql",
   "0019_async_privacy_exports.sql",
+  "0020_trip_photo_upload_reservations.sql",
 ];
 
 let tripRequestSequence = 0;
@@ -54,6 +67,7 @@ class D1StatementAdapter {
 
   bind(...values) {
     this.values = values;
+    this.owner.maximumBoundParameters = Math.max(this.owner.maximumBoundParameters, values.length);
     return this;
   }
 
@@ -70,6 +84,16 @@ class D1StatementAdapter {
   async run() {
     this.owner.assertQueryAllowed(this.query);
     const result = this.statement.run(...this.values);
+    if (this.owner.throwOnceAfterMutationSubstring
+      && this.query.includes(this.owner.throwOnceAfterMutationSubstring)) {
+      this.owner.throwOnceAfterMutationSubstring = null;
+      throw new Error("injected one-time post-mutation response failure");
+    }
+    if (this.owner.omitOnceMutationMetadataSubstring
+      && this.query.includes(this.owner.omitOnceMutationMetadataSubstring)) {
+      this.owner.omitOnceMutationMetadataSubstring = null;
+      return { success: true };
+    }
     return { success: true, meta: { changes: Number(result.changes) } };
   }
 }
@@ -83,6 +107,12 @@ class TransactionalD1Adapter {
     this.postCommitFailureActive = false;
     this.beforeOnceQuerySubstring = null;
     this.beforeOnceQuery = null;
+    this.omitOnceMutationMetadataSubstring = null;
+    this.throwOnceAfterMutationSubstring = null;
+    this.throwOnceAfterBatchMutationSubstring = null;
+    this.queryExecutions = 0;
+    this.maximumBoundParameters = 0;
+    this.batchSizes = [];
   }
 
   prepare(query) {
@@ -90,6 +120,7 @@ class TransactionalD1Adapter {
   }
 
   assertQueryAllowed(query) {
+    this.queryExecutions += 1;
     if (this.beforeOnceQuerySubstring && query.includes(this.beforeOnceQuerySubstring)) {
       const callback = this.beforeOnceQuery;
       this.beforeOnceQuerySubstring = null;
@@ -101,25 +132,34 @@ class TransactionalD1Adapter {
       this.failOnceQuerySubstring = null;
       throw new Error("injected one-time D1 failure");
     }
-    if (this.postCommitFailureActive && query.includes("FROM privacy_deletion_tasks")) {
+    if (this.postCommitFailureActive
+      && query.includes("FROM privacy_deletion_tasks")
+      && query.includes("ORDER BY created_at LIMIT ?")) {
       throw new Error("injected post-commit D1 failure");
     }
   }
 
   async batch(statements) {
+    this.batchSizes.push(statements.length);
     this.sqlite.exec("BEGIN IMMEDIATE");
+    let results;
     try {
-      const results = [];
+      results = [];
       for (const statement of statements) results.push(await statement.run());
       this.sqlite.exec("COMMIT");
-      if (this.failAfterAccountDeletion && statements.some((statement) => statement.query.includes("DELETE FROM users"))) {
-        this.postCommitFailureActive = true;
-      }
-      return results;
     } catch (error) {
       this.sqlite.exec("ROLLBACK");
       throw error;
     }
+    if (this.failAfterAccountDeletion && statements.some((statement) => statement.query.includes("DELETE FROM users"))) {
+      this.postCommitFailureActive = true;
+    }
+    if (this.throwOnceAfterBatchMutationSubstring
+      && statements.some((statement) => statement.query.includes(this.throwOnceAfterBatchMutationSubstring))) {
+      this.throwOnceAfterBatchMutationSubstring = null;
+      throw new Error("injected one-time post-batch response failure");
+    }
+    return results;
   }
 }
 
@@ -226,6 +266,50 @@ async function addUser(sqlite, suffix = "1") {
   return { id, email, password, token, cookie: `cc_session=${token}` };
 }
 
+async function addPasswordResetChallenge(sqlite, user, code, now = new Date()) {
+  const id = `challenge_${crypto.randomUUID()}`;
+  sqlite.prepare(`INSERT INTO email_challenges
+      (id, kind, email, user_id, code_hash, expires_at, attempts, resend_count, created_at)
+    VALUES (?, 'password_reset', ?, ?, ?, ?, 0, 0, ?)`)
+    .run(
+      id,
+      user.email,
+      user.id,
+      await sha256(`${id}:${code}`),
+      new Date(now.getTime() + 15 * 60_000).toISOString(),
+      now.toISOString(),
+    );
+  return id;
+}
+
+async function addSignupChallenge(sqlite, suffix, code, now = new Date()) {
+  const id = `challenge_${crypto.randomUUID()}`;
+  const email = `signup-${suffix}@example.com`;
+  const password = `signup ${suffix} account passphrase`;
+  const saltByte = Number(String(suffix).replace(/\D/g, "")) % 255 || 1;
+  const salt = Buffer.alloc(18, saltByte).toString("base64url");
+  const credentialHash = await passwordHash(password, salt);
+  const createdAt = now.toISOString();
+  const expiresAt = new Date(now.getTime() + 15 * 60_000).toISOString();
+  sqlite.prepare(`INSERT INTO email_challenges
+      (id, kind, email, user_id, code_hash, password_salt, password_hash,
+        age_eligibility_confirmed_at, terms_version, privacy_version, expires_at,
+        attempts, resend_count, created_at)
+    VALUES (?, 'signup', ?, NULL, ?, ?, ?, ?, ?, ?, ?, 0, 0, ?)`).run(
+    id,
+    email,
+    await sha256(`${id}:${code}`),
+    salt,
+    credentialHash,
+    createdAt,
+    LEGAL_VERSION,
+    LEGAL_VERSION,
+    expiresAt,
+    createdAt,
+  );
+  return { id, code, email, password, salt, credentialHash, createdAt, expiresAt };
+}
+
 test("existing ten-character passwords remain valid for sign-in", async () => {
   const { sqlite, d1 } = await database();
   const user = await addUser(sqlite, "10");
@@ -297,6 +381,232 @@ test("authentication rotates presented sessions into secure host cookies and log
   assert.equal(sqlite.prepare("SELECT COUNT(*) AS count FROM auth_sessions WHERE user_id = ?").get(user.id).count, 0);
 });
 
+test("logout follows exact session absence when revocation metadata is omitted", async () => {
+  const { sqlite, d1 } = await database();
+  const user = await addUser(sqlite, "signout-receipt-144");
+  d1.omitOnceMutationMetadataSubstring = "DELETE FROM auth_sessions WHERE token_hash";
+
+  const response = await handleAccountRequest(request("/api/auth/logout", {
+    method: "POST",
+    cookie: user.cookie,
+  }), { DB: d1 }, []);
+
+  assert.equal(response?.status, 200);
+  assert.deepEqual(await response.json(), { signedOut: true, user: null });
+  assert.equal(sessionCookieFrom(response), null);
+  assert.match(response.headers.get("set-cookie") ?? "", /cc_session=;.*Max-Age=0/u);
+  assert.equal(sqlite.prepare("SELECT COUNT(*) AS count FROM auth_sessions WHERE user_id = ?").get(user.id).count, 0);
+});
+
+test("logout proves every distinct host and legacy session token absent", async () => {
+  const { sqlite, d1 } = await database();
+  const user = await addUser(sqlite, "signout-multi-token-145");
+  const hostToken = Buffer.alloc(32, 146).toString("base64url");
+  const timestamp = new Date().toISOString();
+  sqlite.prepare("INSERT INTO auth_sessions (token_hash, user_id, expires_at, created_at) VALUES (?, ?, ?, ?)")
+    .run(await sha256(hostToken), user.id, new Date(Date.now() + 86_400_000).toISOString(), timestamp);
+  d1.omitOnceMutationMetadataSubstring = "DELETE FROM auth_sessions WHERE token_hash";
+
+  const response = await handleAccountRequest(request("/api/auth/logout", {
+    method: "POST",
+    cookie: `__Host-cc_session=${hostToken}; ${user.cookie}`,
+  }), { DB: d1 }, []);
+
+  assert.equal(response?.status, 200);
+  assert.deepEqual(await response.json(), { signedOut: true, user: null });
+  assert.equal(sqlite.prepare("SELECT COUNT(*) AS count FROM auth_sessions WHERE user_id = ?").get(user.id).count, 0);
+});
+
+test("logout recovers an exact receipt after the committed revocation response is lost", async () => {
+  const { sqlite, d1 } = await database();
+  const user = await addUser(sqlite, "signout-response-loss-145");
+  d1.throwOnceAfterBatchMutationSubstring = "DELETE FROM auth_sessions WHERE token_hash";
+
+  const response = await handleAccountRequest(request("/api/auth/logout", {
+    method: "POST",
+    cookie: user.cookie,
+  }), { DB: d1 }, []);
+
+  assert.equal(response?.status, 200);
+  assert.deepEqual(await response.json(), { signedOut: true, user: null });
+  assert.match(response.headers.get("set-cookie") ?? "", /cc_session=;.*Max-Age=0/u);
+  assert.equal(sqlite.prepare("SELECT COUNT(*) AS count FROM auth_sessions WHERE user_id = ?").get(user.id).count, 0);
+});
+
+test("logout preserves the cookie unless exact D1 absence is readable", async () => {
+  {
+    const { sqlite, d1 } = await database();
+    const user = await addUser(sqlite, "signout-rollback-146");
+    d1.failOnceQuerySubstring = "DELETE FROM auth_sessions WHERE token_hash";
+
+    const response = await handleAccountRequest(request("/api/auth/logout", {
+      method: "POST",
+      cookie: user.cookie,
+    }), { DB: d1 }, []);
+
+    assert.equal(response?.status, 503);
+    assert.equal((await response.json()).error.code, "sign_out_unconfirmed");
+    assert.equal(response.headers.get("set-cookie"), null);
+    assert.equal(sqlite.prepare("SELECT COUNT(*) AS count FROM auth_sessions WHERE user_id = ?").get(user.id).count, 1);
+  }
+
+  {
+    const { sqlite, d1 } = await database();
+    const user = await addUser(sqlite, "signout-unreadable-147");
+    d1.failOnceQuerySubstring = "SELECT COUNT(*) AS count FROM auth_sessions WHERE token_hash";
+
+    const response = await handleAccountRequest(request("/api/auth/logout", {
+      method: "POST",
+      cookie: user.cookie,
+    }), { DB: d1 }, []);
+
+    assert.equal(response?.status, 503);
+    assert.equal((await response.json()).error.code, "sign_out_unconfirmed");
+    assert.equal(response.headers.get("set-cookie"), null);
+    assert.equal(sqlite.prepare("SELECT COUNT(*) AS count FROM auth_sessions WHERE user_id = ?").get(user.id).count, 0);
+  }
+});
+
+test("logout rejects a session row that appears before the exact revocation receipt", async () => {
+  const { sqlite, d1 } = await database();
+  const user = await addUser(sqlite, "signout-changed-148");
+  const tokenHash = await sha256(user.token);
+  const timestamp = new Date().toISOString();
+  d1.beforeOnceQuerySubstring = "SELECT COUNT(*) AS count FROM auth_sessions WHERE token_hash";
+  d1.beforeOnceQuery = () => {
+    sqlite.prepare("INSERT INTO auth_sessions (token_hash, user_id, expires_at, created_at) VALUES (?, ?, ?, ?)")
+      .run(tokenHash, user.id, new Date(Date.now() + 86_400_000).toISOString(), timestamp);
+  };
+
+  const response = await handleAccountRequest(request("/api/auth/logout", {
+    method: "POST",
+    cookie: user.cookie,
+  }), { DB: d1 }, []);
+
+  assert.equal(response?.status, 503);
+  assert.equal((await response.json()).error.code, "sign_out_unconfirmed");
+  assert.equal(response.headers.get("set-cookie"), null);
+  assert.equal(sqlite.prepare("SELECT COUNT(*) AS count FROM auth_sessions WHERE token_hash = ?").get(tokenHash).count, 1);
+});
+
+test("logout is idempotently exact when a presented token is already absent", async () => {
+  const { sqlite, d1 } = await database();
+  const user = await addUser(sqlite, "signout-idempotent-149");
+  sqlite.prepare("DELETE FROM auth_sessions WHERE user_id = ?").run(user.id);
+
+  const response = await handleAccountRequest(request("/api/auth/logout", {
+    method: "POST",
+    cookie: user.cookie,
+  }), { DB: d1 }, []);
+
+  assert.equal(response?.status, 200);
+  assert.deepEqual(await response.json(), { signedOut: true, user: null });
+  assert.match(response.headers.get("set-cookie") ?? "", /cc_session=;.*Max-Age=0/u);
+});
+
+test("session rotation follows exact D1 state when insert metadata is absent", async () => {
+  const { sqlite, d1 } = await database();
+  const user = await addUser(sqlite, "session-receipt-143");
+  const oldTokenHash = await sha256(user.token);
+  d1.omitOnceMutationMetadataSubstring = "INSERT INTO auth_sessions";
+
+  const response = await handleAccountRequest(request("/api/auth/session", {
+    cookie: user.cookie,
+  }), { DB: d1 }, []);
+
+  assert.equal(response?.status, 200);
+  assert.deepEqual((await response.json()).user, {
+    id: user.id,
+    email: user.email,
+    ageEligible: true,
+    legalAccepted: true,
+  });
+  const rotatedCookie = sessionCookieFrom(response);
+  assert.match(rotatedCookie ?? "", /^__Host-cc_session=/u);
+  const rotatedToken = rotatedCookie?.split("=")[1] ?? "";
+  assert.equal(sqlite.prepare("SELECT COUNT(*) AS count FROM auth_sessions WHERE token_hash = ?")
+    .get(oldTokenHash).count, 0);
+  assert.equal(sqlite.prepare("SELECT COUNT(*) AS count FROM auth_sessions WHERE token_hash = ?")
+    .get(await sha256(rotatedToken)).count, 1);
+});
+
+test("session rotation recovers an exact receipt after the committed batch response is lost", async () => {
+  const { sqlite, d1 } = await database();
+  const user = await addUser(sqlite, "session-lost-response-145");
+  const oldTokenHash = await sha256(user.token);
+  d1.throwOnceAfterBatchMutationSubstring = "INSERT INTO auth_sessions";
+
+  const response = await handleAccountRequest(request("/api/auth/session", {
+    cookie: user.cookie,
+  }), { DB: d1 }, []);
+
+  assert.equal(response?.status, 200);
+  const rotatedCookie = sessionCookieFrom(response);
+  assert.match(rotatedCookie ?? "", /^__Host-cc_session=/u);
+  const rotatedToken = rotatedCookie?.split("=")[1] ?? "";
+  assert.equal(sqlite.prepare("SELECT COUNT(*) AS count FROM auth_sessions WHERE token_hash = ?")
+    .get(oldTokenHash).count, 0);
+  assert.equal(sqlite.prepare("SELECT COUNT(*) AS count FROM auth_sessions WHERE token_hash = ?")
+    .get(await sha256(rotatedToken)).count, 1);
+});
+
+test("session issuance rejects unreadable or mismatched exact post-state and removes the candidate", async () => {
+  const unreadable = await database();
+  const unreadableUser = await addUser(unreadable.sqlite, "session-unreadable-receipt-146");
+  unreadable.d1.failOnceQuerySubstring = "SELECT token_hash, user_id, expires_at, created_at";
+  const unreadableResponse = await handleAccountRequest(request("/api/auth/session", {
+    cookie: unreadableUser.cookie,
+  }), { DB: unreadable.d1 }, []);
+  assert.equal(unreadableResponse?.status, 503);
+  assert.equal((await unreadableResponse.json()).error.code, "session_creation_unconfirmed");
+  assert.equal(sessionCookieFrom(unreadableResponse), null);
+  assert.equal(unreadable.sqlite.prepare("SELECT COUNT(*) AS count FROM auth_sessions WHERE user_id = ?")
+    .get(unreadableUser.id).count, 0);
+
+  const mismatched = await database();
+  const mismatchedUser = await addUser(mismatched.sqlite, "session-mismatched-receipt-147");
+  mismatched.d1.beforeOnceQuerySubstring = "SELECT token_hash, user_id, expires_at, created_at";
+  mismatched.d1.beforeOnceQuery = () => mismatched.sqlite
+    .prepare("UPDATE auth_sessions SET expires_at = '2000-01-01T00:00:00.000Z' WHERE user_id = ?")
+    .run(mismatchedUser.id);
+  const mismatchedResponse = await handleAccountRequest(request("/api/auth/session", {
+    cookie: mismatchedUser.cookie,
+  }), { DB: mismatched.d1 }, []);
+  assert.equal(mismatchedResponse?.status, 503);
+  assert.equal((await mismatchedResponse.json()).error.code, "session_creation_unconfirmed");
+  assert.equal(sessionCookieFrom(mismatchedResponse), null);
+  assert.equal(mismatched.sqlite.prepare("SELECT COUNT(*) AS count FROM auth_sessions WHERE user_id = ?")
+    .get(mismatchedUser.id).count, 0);
+});
+
+test("session issuance rejects an account-deletion fence that appears before receipt confirmation", async () => {
+  const { sqlite, d1 } = await database();
+  const user = await addUser(sqlite, "session-fence-race-148");
+  const timestamp = "2026-07-22T04:30:00.000Z";
+  d1.beforeOnceQuerySubstring = "SELECT token_hash, user_id, expires_at, created_at";
+  d1.beforeOnceQuery = () => sqlite.prepare(`INSERT INTO account_deletion_fences
+      (user_id, owner_subject_hash, lease_token, lease_expires_at, requested_at, updated_at)
+    VALUES (?, ?, ?, ?, ?, ?)`)
+    .run(
+      user.id,
+      "f".repeat(64),
+      "session-fence-race-lease-token-0000000001",
+      "2026-07-22T04:35:00.000Z",
+      timestamp,
+      timestamp,
+    );
+
+  const response = await handleAccountRequest(request("/api/auth/session", {
+    cookie: user.cookie,
+  }), { DB: d1 }, []);
+
+  assert.equal(response?.status, 503);
+  assert.equal((await response.json()).error.code, "session_creation_unconfirmed");
+  assert.equal(sessionCookieFrom(response), null);
+  assert.equal(sqlite.prepare("SELECT COUNT(*) AS count FROM auth_sessions WHERE user_id = ?")
+    .get(user.id).count, 0);
+});
+
 test("expired and deleted-account sessions fail closed", async () => {
   const { sqlite, d1 } = await database();
   const expired = await addUser(sqlite, "45");
@@ -316,6 +626,14 @@ test("expired and deleted-account sessions fail closed", async () => {
     cookie: deleted.cookie,
   }), { DB: d1 }, []);
   assert.deepEqual(await deletedResponse.json(), { user: null });
+
+  const malformedResponse = await handleAccountRequest(request("/api/auth/session", {
+    cookie: "__Host-cc_session=not-valid; cc_session=",
+  }), { DB: d1 }, []);
+  assert.deepEqual(await malformedResponse.json(), { user: null });
+  const clearedCookies = (malformedResponse.headers.getSetCookie?.() ?? []).join("\n");
+  assert.match(clearedCookies, /__Host-cc_session=;.*Max-Age=0/u);
+  assert.match(clearedCookies, /cc_session=;.*Max-Age=0/u);
 });
 
 test("scheduled authentication retention deletes bounded batches and drains old rows", async () => {
@@ -336,6 +654,10 @@ test("scheduled authentication retention deletes bounded batches and drains old 
       id, receipt_hash, scope, subject_hash, owner_subject_hash, state, objects_total,
       objects_deleted, requested_at, active_data_removed_at, completed_at, updated_at)
     VALUES (?, ?, 'account', ?, ?, 'completed', 0, 0, ?, ?, ?, ?)`);
+  const insertCompletedDeletionTask = sqlite.prepare(`INSERT INTO privacy_deletion_tasks (
+      id, job_id, object_key, object_key_hash, object_store, state, attempts,
+      available_at, created_at, updated_at, completed_at)
+    VALUES (?, ?, NULL, ?, 'trip_photos', 'completed', 1, ?, ?, ?, ?)`);
 
   for (let index = 0; index < 101; index += 1) {
     const suffix = index.toString().padStart(3, "0");
@@ -382,6 +704,31 @@ test("scheduled authentication retention deletes bounded batches and drains old 
     oldTimestamp,
   );
 
+  insertDeletionJob.run(
+    "task-heavy-deletion",
+    "task-heavy-receipt",
+    "task-heavy-subject",
+    "task-heavy-owner",
+    oldTimestamp,
+    oldTimestamp,
+    oldTimestamp,
+    oldTimestamp,
+  );
+  sqlite.prepare(`UPDATE privacy_deletion_jobs
+    SET objects_total = 101, objects_deleted = 101 WHERE id = 'task-heavy-deletion'`).run();
+  for (let index = 0; index < 101; index += 1) {
+    const suffix = index.toString().padStart(3, "0");
+    insertCompletedDeletionTask.run(
+      `task-heavy-child-${suffix}`,
+      "task-heavy-deletion",
+      `task-heavy-object-hash-${suffix}`,
+      oldTimestamp,
+      oldTimestamp,
+      oldTimestamp,
+      oldTimestamp,
+    );
+  }
+
   const oldRowCounts = () => ({
     sessions: sqlite.prepare("SELECT COUNT(*) AS count FROM auth_sessions WHERE token_hash LIKE 'expired-session-%'").get().count,
     challenges: sqlite.prepare("SELECT COUNT(*) AS count FROM email_challenges WHERE id LIKE 'expired-challenge-%'").get().count,
@@ -392,6 +739,8 @@ test("scheduled authentication retention deletes bounded batches and drains old 
 
   await cleanupAuthData({ DB: d1 });
   assert.deepEqual(oldRowCounts(), { sessions: 1, challenges: 1, attempts: 1, proofs: 1, deletions: 1 });
+  assert.equal(sqlite.prepare("SELECT COUNT(*) AS count FROM privacy_deletion_tasks WHERE job_id = 'task-heavy-deletion'").get().count, 1);
+  assert.equal(sqlite.prepare("SELECT COUNT(*) AS count FROM privacy_deletion_jobs WHERE id = 'task-heavy-deletion'").get().count, 1);
   assert.equal(sqlite.prepare("SELECT COUNT(*) AS count FROM auth_sessions WHERE token_hash = 'current-session'").get().count, 1);
   assert.equal(sqlite.prepare("SELECT COUNT(*) AS count FROM email_challenges WHERE id = 'current-challenge'").get().count, 1);
   assert.equal(sqlite.prepare("SELECT COUNT(*) AS count FROM auth_attempts WHERE id = 'current-attempt'").get().count, 1);
@@ -400,6 +749,67 @@ test("scheduled authentication retention deletes bounded batches and drains old 
 
   await cleanupAuthData({ DB: d1 });
   assert.deepEqual(oldRowCounts(), { sessions: 0, challenges: 0, attempts: 0, proofs: 0, deletions: 0 });
+  assert.equal(sqlite.prepare("SELECT COUNT(*) AS count FROM privacy_deletion_tasks WHERE job_id = 'task-heavy-deletion'").get().count, 0);
+  assert.equal(sqlite.prepare("SELECT COUNT(*) AS count FROM privacy_deletion_jobs WHERE id = 'task-heavy-deletion'").get().count, 0);
+});
+
+test("tombstone retention requires its exact atomic parent claim and contains response loss", async () => {
+  const seed = async (suffix) => {
+    const { sqlite, d1 } = await database();
+    const timestamp = "2000-01-01T00:00:00.000Z";
+    const jobId = `retention-claim-${suffix}`;
+    sqlite.prepare(`INSERT INTO privacy_deletion_jobs (
+        id, receipt_hash, scope, subject_hash, owner_subject_hash, state, objects_total,
+        objects_deleted, requested_at, active_data_removed_at, completed_at, updated_at)
+      VALUES (?, ?, 'account', ?, ?, 'completed', 2, 2, ?, ?, ?, ?)`).run(
+      jobId,
+      `retention-receipt-${suffix}`,
+      `retention-subject-${suffix}`,
+      `retention-owner-${suffix}`,
+      timestamp,
+      timestamp,
+      timestamp,
+      timestamp,
+    );
+    const insertTask = sqlite.prepare(`INSERT INTO privacy_deletion_tasks (
+        id, job_id, object_key, object_key_hash, object_store, state, attempts,
+        available_at, created_at, updated_at, completed_at)
+      VALUES (?, ?, NULL, ?, 'trip_photos', 'completed', 1, ?, ?, ?, ?)`);
+    for (let index = 0; index < 2; index += 1) {
+      insertTask.run(
+        `retention-task-${suffix}-${index}`,
+        jobId,
+        `retention-hash-${suffix}-${index}`,
+        timestamp,
+        timestamp,
+        timestamp,
+        timestamp,
+      );
+    }
+    return { sqlite, d1, jobId };
+  };
+
+  const drifted = await seed("drifted");
+  drifted.d1.beforeOnceQuerySubstring = "SET objects_total = ?, objects_deleted = ?, last_error_code = ?";
+  drifted.d1.beforeOnceQuery = () => drifted.sqlite.prepare(`UPDATE privacy_deletion_jobs
+    SET objects_total = 3, objects_deleted = 3 WHERE id = ?`).run(drifted.jobId);
+  await cleanupAuthRetentionData({ DB: drifted.d1 });
+  assert.deepEqual({ ...drifted.sqlite.prepare(`SELECT objects_total, objects_deleted, last_error_code
+      FROM privacy_deletion_jobs WHERE id = ?`).get(drifted.jobId) }, {
+    objects_total: 3,
+    objects_deleted: 3,
+    last_error_code: null,
+  });
+  assert.equal(drifted.sqlite.prepare("SELECT COUNT(*) AS count FROM privacy_deletion_tasks WHERE job_id = ?")
+    .get(drifted.jobId).count, 2);
+
+  const responseLost = await seed("response-lost");
+  responseLost.d1.throwOnceAfterBatchMutationSubstring = "SET objects_total = ?, objects_deleted = ?, last_error_code = ?";
+  await assert.rejects(cleanupAuthRetentionData({ DB: responseLost.d1 }), /post-batch response failure/u);
+  assert.equal(responseLost.sqlite.prepare("SELECT COUNT(*) AS count FROM privacy_deletion_tasks WHERE job_id = ?")
+    .get(responseLost.jobId).count, 0);
+  assert.equal(responseLost.sqlite.prepare("SELECT COUNT(*) AS count FROM privacy_deletion_jobs WHERE id = ?")
+    .get(responseLost.jobId).count, 0);
 });
 
 test("known and unknown invalid logins perform password derivation and return the same response", async () => {
@@ -432,6 +842,583 @@ test("known and unknown invalid logins perform password derivation and return th
     assert.equal(unknownDerivations, 1);
   } finally {
     crypto.subtle.deriveBits = originalDeriveBits;
+  }
+});
+
+test("sign-in failure ceilings are claimed atomically under a concurrent tenth attempt", async () => {
+  const { sqlite, d1 } = await database();
+  const user = await addUser(sqlite, "login-ceiling-148");
+  const emailHash = await sha256(user.email);
+  const attemptedAt = new Date().toISOString();
+  const insertAttempt = sqlite.prepare(`INSERT INTO auth_attempts
+    (id, email_hash, attempted_at, successful) VALUES (?, ?, ?, 0)`);
+  for (let index = 0; index < 9; index += 1) {
+    insertAttempt.run(`seed-attempt-${index}`, emailHash, attemptedAt);
+  }
+  d1.beforeOnceQuerySubstring = "INSERT INTO auth_attempts";
+  d1.beforeOnceQuery = () => insertAttempt.run("concurrent-tenth-attempt", emailHash, attemptedAt);
+  d1.omitOnceMutationMetadataSubstring = "INSERT INTO auth_attempts";
+
+  const response = await handleAccountRequest(request("/api/auth/login", {
+    method: "POST",
+    body: { email: user.email, password: user.password },
+  }), { DB: d1 }, []);
+
+  assert.equal(response?.status, 429);
+  assert.equal((await response.json()).error.code, "too_many_attempts");
+  assert.equal(sqlite.prepare(`SELECT COUNT(*) AS count FROM auth_attempts
+    WHERE email_hash = ? AND successful = 0`).get(emailHash).count, 10);
+});
+
+test("sign-in failure accounting includes the exact one-hour boundary and releases older rows", async () => {
+  const now = new Date("2026-07-22T05:30:00.000Z");
+  const exactBoundary = new Date(now.getTime() - 60 * 60_000).toISOString();
+
+  const blocked = await database();
+  const blockedUser = await addUser(blocked.sqlite, "login-boundary-blocked-149");
+  const blockedEmailHash = await sha256(blockedUser.email);
+  const insertBlocked = blocked.sqlite.prepare(`INSERT INTO auth_attempts
+    (id, email_hash, attempted_at, successful) VALUES (?, ?, ?, 0)`);
+  for (let index = 0; index < 10; index += 1) {
+    insertBlocked.run(`boundary-blocked-${index}`, blockedEmailHash, exactBoundary);
+  }
+  const blockedResponse = await handleAccountRequest(request("/api/auth/login", {
+    method: "POST",
+    body: { email: blockedUser.email, password: blockedUser.password },
+  }), { DB: blocked.d1 }, [], { now: () => now });
+  assert.equal(blockedResponse?.status, 429);
+  assert.equal((await blockedResponse.json()).error.code, "too_many_attempts");
+  assert.equal(blocked.sqlite.prepare("SELECT COUNT(*) AS count FROM auth_attempts WHERE email_hash = ?")
+    .get(blockedEmailHash).count, 10);
+
+  const released = await database();
+  const releasedUser = await addUser(released.sqlite, "login-boundary-released-150");
+  released.sqlite.prepare("DELETE FROM auth_sessions WHERE user_id = ?").run(releasedUser.id);
+  const releasedEmailHash = await sha256(releasedUser.email);
+  const insertReleased = released.sqlite.prepare(`INSERT INTO auth_attempts
+    (id, email_hash, attempted_at, successful) VALUES (?, ?, ?, 0)`);
+  const justOutsideBoundary = new Date(now.getTime() - 60 * 60_000 - 1).toISOString();
+  for (let index = 0; index < 10; index += 1) {
+    insertReleased.run(`boundary-released-${index}`, releasedEmailHash, justOutsideBoundary);
+  }
+  const releasedResponse = await handleAccountRequest(request("/api/auth/login", {
+    method: "POST",
+    body: { email: releasedUser.email, password: releasedUser.password },
+  }), { DB: released.d1 }, [], { now: () => now });
+  assert.equal(releasedResponse?.status, 200);
+  assert.match(sessionCookieFrom(releasedResponse) ?? "", /^__Host-cc_session=/u);
+  assert.equal(released.sqlite.prepare(`SELECT COUNT(*) AS count FROM auth_attempts
+    WHERE email_hash = ? AND successful = 1`).get(releasedEmailHash).count, 1);
+});
+
+test("sign-in follows the exact attempt claim when mutation metadata is absent", async () => {
+  const { sqlite, d1 } = await database();
+  const user = await addUser(sqlite, "login-claim-receipt-149");
+  sqlite.prepare("DELETE FROM auth_sessions WHERE user_id = ?").run(user.id);
+  d1.omitOnceMutationMetadataSubstring = "INSERT INTO auth_attempts";
+
+  const response = await handleAccountRequest(request("/api/auth/login", {
+    method: "POST",
+    body: { email: user.email, password: user.password },
+  }), { DB: d1 }, []);
+
+  assert.equal(response?.status, 200);
+  assert.match(sessionCookieFrom(response) ?? "", /^__Host-cc_session=/u);
+  assert.equal(sqlite.prepare("SELECT COUNT(*) AS count FROM auth_sessions WHERE user_id = ?").get(user.id).count, 1);
+  assert.equal(sqlite.prepare("SELECT COUNT(*) AS count FROM auth_attempts WHERE successful = 1").get().count, 1);
+});
+
+test("sign-in recovers after a committed attempt-claim response is lost", async () => {
+  const { sqlite, d1 } = await database();
+  const user = await addUser(sqlite, "login-claim-lost-response-150");
+  sqlite.prepare("DELETE FROM auth_sessions WHERE user_id = ?").run(user.id);
+  d1.throwOnceAfterMutationSubstring = "INSERT INTO auth_attempts";
+
+  const recovered = await handleAccountRequest(request("/api/auth/login", {
+    method: "POST",
+    body: { email: user.email, password: user.password },
+  }), { DB: d1 }, []);
+
+  assert.equal(recovered?.status, 200);
+  assert.match(sessionCookieFrom(recovered) ?? "", /^__Host-cc_session=/u);
+  assert.equal(sqlite.prepare("SELECT COUNT(*) AS count FROM auth_sessions WHERE user_id = ?").get(user.id).count, 1);
+  assert.equal(sqlite.prepare("SELECT COUNT(*) AS count FROM auth_attempts WHERE successful = 1").get().count, 1);
+});
+
+test("sign-in rejects rolled-back, unreadable, and changed attempt claims before password work", async () => {
+  const originalDeriveBits = crypto.subtle.deriveBits;
+  let deriveCalls = 0;
+  crypto.subtle.deriveBits = function (...args) {
+    deriveCalls += 1;
+    return originalDeriveBits.apply(this, args);
+  };
+
+  try {
+    const rolledBack = await database();
+    const rollbackUser = await addUser(rolledBack.sqlite, "login-claim-rollback-151");
+    rolledBack.sqlite.prepare("DELETE FROM auth_sessions WHERE user_id = ?").run(rollbackUser.id);
+    rolledBack.d1.failOnceQuerySubstring = "INSERT INTO auth_attempts";
+    deriveCalls = 0;
+    const rollbackResponse = await handleAccountRequest(request("/api/auth/login", {
+      method: "POST",
+      body: { email: rollbackUser.email, password: rollbackUser.password },
+    }), { DB: rolledBack.d1 }, []);
+    assert.equal(rollbackResponse?.status, 503);
+    assert.equal((await rollbackResponse.json()).error.code, "sign_in_accounting_unconfirmed");
+    assert.equal(rolledBack.sqlite.prepare("SELECT COUNT(*) AS count FROM auth_attempts").get().count, 0);
+    assert.equal(rolledBack.sqlite.prepare("SELECT COUNT(*) AS count FROM auth_sessions WHERE user_id = ?")
+      .get(rollbackUser.id).count, 0);
+    assert.equal(deriveCalls, 0);
+
+    const unreadable = await database();
+    const unreadableUser = await addUser(unreadable.sqlite, "login-claim-unreadable-152");
+    unreadable.sqlite.prepare("DELETE FROM auth_sessions WHERE user_id = ?").run(unreadableUser.id);
+    unreadable.d1.failOnceQuerySubstring = "AS recent_failed_count";
+    deriveCalls = 0;
+    const unreadableResponse = await handleAccountRequest(request("/api/auth/login", {
+      method: "POST",
+      body: { email: unreadableUser.email, password: unreadableUser.password },
+    }), { DB: unreadable.d1 }, []);
+    assert.equal(unreadableResponse?.status, 503);
+    assert.equal((await unreadableResponse.json()).error.code, "sign_in_accounting_unconfirmed");
+    assert.equal(unreadable.sqlite.prepare("SELECT COUNT(*) AS count FROM auth_attempts WHERE successful = 0")
+      .get().count, 1);
+    assert.equal(unreadable.sqlite.prepare("SELECT COUNT(*) AS count FROM auth_sessions WHERE user_id = ?")
+      .get(unreadableUser.id).count, 0);
+    assert.equal(deriveCalls, 0);
+
+    const changed = await database();
+    const changedUser = await addUser(changed.sqlite, "login-claim-changed-153");
+    changed.sqlite.prepare("DELETE FROM auth_sessions WHERE user_id = ?").run(changedUser.id);
+    changed.d1.beforeOnceQuerySubstring = "AS recent_failed_count";
+    changed.d1.beforeOnceQuery = () => changed.sqlite
+      .prepare("UPDATE auth_attempts SET attempted_at = '2000-01-01T00:00:00.000Z' WHERE successful = 0")
+      .run();
+    deriveCalls = 0;
+    const changedResponse = await handleAccountRequest(request("/api/auth/login", {
+      method: "POST",
+      body: { email: changedUser.email, password: changedUser.password },
+    }), { DB: changed.d1 }, []);
+    assert.equal(changedResponse?.status, 503);
+    assert.equal((await changedResponse.json()).error.code, "sign_in_accounting_unconfirmed");
+    assert.equal(changed.sqlite.prepare("SELECT COUNT(*) AS count FROM auth_sessions WHERE user_id = ?")
+      .get(changedUser.id).count, 0);
+    assert.equal(deriveCalls, 0);
+  } finally {
+    crypto.subtle.deriveBits = originalDeriveBits;
+  }
+});
+
+test("sign-in follows exact success classification when mutation metadata is absent", async () => {
+  const { sqlite, d1 } = await database();
+  const user = await addUser(sqlite, "login-success-receipt-154");
+  sqlite.prepare("DELETE FROM auth_sessions WHERE user_id = ?").run(user.id);
+  d1.omitOnceMutationMetadataSubstring = "UPDATE auth_attempts SET successful = 1";
+
+  const response = await handleAccountRequest(request("/api/auth/login", {
+    method: "POST",
+    body: { email: user.email, password: user.password },
+  }), { DB: d1 }, []);
+
+  assert.equal(response?.status, 200);
+  assert.match(sessionCookieFrom(response) ?? "", /^__Host-cc_session=/u);
+  assert.equal(sqlite.prepare("SELECT COUNT(*) AS count FROM auth_sessions WHERE user_id = ?").get(user.id).count, 1);
+  assert.equal(sqlite.prepare("SELECT COUNT(*) AS count FROM auth_attempts WHERE successful = 1").get().count, 1);
+});
+
+test("sign-in recovers after a committed success-classification response is lost", async () => {
+  const { sqlite, d1 } = await database();
+  const user = await addUser(sqlite, "login-success-lost-response-155");
+  sqlite.prepare("DELETE FROM auth_sessions WHERE user_id = ?").run(user.id);
+  d1.throwOnceAfterMutationSubstring = "UPDATE auth_attempts SET successful = 1";
+
+  const recovered = await handleAccountRequest(request("/api/auth/login", {
+    method: "POST",
+    body: { email: user.email, password: user.password },
+  }), { DB: d1 }, []);
+
+  assert.equal(recovered?.status, 200);
+  assert.match(sessionCookieFrom(recovered) ?? "", /^__Host-cc_session=/u);
+  assert.equal(sqlite.prepare("SELECT COUNT(*) AS count FROM auth_sessions WHERE user_id = ?").get(user.id).count, 1);
+  assert.equal(sqlite.prepare("SELECT COUNT(*) AS count FROM auth_attempts WHERE successful = 1").get().count, 1);
+});
+
+test("sign-in never issues a session from rolled-back, unreadable, or changed success state", async () => {
+  const rolledBack = await database();
+  const rollbackUser = await addUser(rolledBack.sqlite, "login-success-rollback-156");
+  rolledBack.sqlite.prepare("DELETE FROM auth_sessions WHERE user_id = ?").run(rollbackUser.id);
+  rolledBack.d1.failOnceQuerySubstring = "UPDATE auth_attempts SET successful = 1";
+  const rollbackResponse = await handleAccountRequest(request("/api/auth/login", {
+    method: "POST",
+    body: { email: rollbackUser.email, password: rollbackUser.password },
+  }), { DB: rolledBack.d1 }, []);
+  assert.equal(rollbackResponse?.status, 503);
+  assert.equal((await rollbackResponse.json()).error.code, "sign_in_accounting_unconfirmed");
+  assert.equal(sessionCookieFrom(rollbackResponse), null);
+  assert.equal(rolledBack.sqlite.prepare("SELECT COUNT(*) AS count FROM auth_attempts WHERE successful = 0")
+    .get().count, 1);
+  assert.equal(rolledBack.sqlite.prepare("SELECT COUNT(*) AS count FROM auth_sessions WHERE user_id = ?")
+    .get(rollbackUser.id).count, 0);
+
+  const unreadable = await database();
+  const unreadableUser = await addUser(unreadable.sqlite, "login-success-unreadable-157");
+  unreadable.sqlite.prepare("DELETE FROM auth_sessions WHERE user_id = ?").run(unreadableUser.id);
+  unreadable.d1.failOnceQuerySubstring = "AS classified_count";
+  const unreadableResponse = await handleAccountRequest(request("/api/auth/login", {
+    method: "POST",
+    body: { email: unreadableUser.email, password: unreadableUser.password },
+  }), { DB: unreadable.d1 }, []);
+  assert.equal(unreadableResponse?.status, 503);
+  assert.equal((await unreadableResponse.json()).error.code, "sign_in_accounting_unconfirmed");
+  assert.equal(sessionCookieFrom(unreadableResponse), null);
+  assert.equal(unreadable.sqlite.prepare("SELECT COUNT(*) AS count FROM auth_attempts WHERE successful = 1")
+    .get().count, 1);
+  assert.equal(unreadable.sqlite.prepare("SELECT COUNT(*) AS count FROM auth_sessions WHERE user_id = ?")
+    .get(unreadableUser.id).count, 0);
+
+  const changed = await database();
+  const changedUser = await addUser(changed.sqlite, "login-success-changed-158");
+  changed.sqlite.prepare("DELETE FROM auth_sessions WHERE user_id = ?").run(changedUser.id);
+  const changedEmailHash = await sha256(changedUser.email);
+  changed.d1.beforeOnceQuerySubstring = "AS classified_count";
+  changed.d1.beforeOnceQuery = () => changed.sqlite
+    .prepare("UPDATE auth_attempts SET email_hash = ? WHERE email_hash = ? AND successful = 1")
+    .run("f".repeat(64), changedEmailHash);
+  const changedResponse = await handleAccountRequest(request("/api/auth/login", {
+    method: "POST",
+    body: { email: changedUser.email, password: changedUser.password },
+  }), { DB: changed.d1 }, []);
+  assert.equal(changedResponse?.status, 503);
+  assert.equal((await changedResponse.json()).error.code, "sign_in_accounting_unconfirmed");
+  assert.equal(sessionCookieFrom(changedResponse), null);
+  assert.equal(changed.sqlite.prepare("SELECT COUNT(*) AS count FROM auth_sessions WHERE user_id = ?")
+    .get(changedUser.id).count, 0);
+});
+
+test("email-code attempts are snapshot-bound before credential authorization", async () => {
+  const { sqlite, d1 } = await database();
+  const challengeId = `challenge_${crypto.randomUUID()}`;
+  const code = "624817";
+  const email = "challenge-attempt-race@example.com";
+  const password = "challenge attempt race passphrase";
+  const salt = Buffer.alloc(18, 151).toString("base64url");
+  const now = new Date();
+  sqlite.prepare(`INSERT INTO email_challenges
+      (id, kind, email, user_id, code_hash, password_salt, password_hash,
+        age_eligibility_confirmed_at, terms_version, privacy_version, expires_at,
+        attempts, resend_count, created_at)
+    VALUES (?, 'signup', ?, NULL, ?, ?, ?, ?, ?, ?, ?, 0, 0, ?)`).run(
+    challengeId,
+    email,
+    await sha256(`${challengeId}:${code}`),
+    salt,
+    await passwordHash(password, salt),
+    now.toISOString(),
+    LEGAL_VERSION,
+    LEGAL_VERSION,
+    new Date(now.getTime() + 15 * 60_000).toISOString(),
+    now.toISOString(),
+  );
+  const replacementHash = "a".repeat(64);
+  d1.beforeOnceQuerySubstring = "UPDATE email_challenges SET attempts = ?";
+  d1.beforeOnceQuery = () => sqlite.prepare("UPDATE email_challenges SET code_hash = ? WHERE id = ?")
+    .run(replacementHash, challengeId);
+
+  const response = await handleAccountRequest(request("/api/auth/signup/verify", {
+    method: "POST",
+    body: { challengeId, code },
+  }), { DB: d1 }, []);
+
+  assert.equal(response?.status, 409);
+  assert.equal((await response.json()).error.code, "challenge_changed");
+  assert.equal(sqlite.prepare("SELECT COUNT(*) AS count FROM users WHERE email = ?").get(email).count, 0);
+  const preserved = sqlite.prepare("SELECT code_hash, attempts FROM email_challenges WHERE id = ?").get(challengeId);
+  assert.equal(preserved.code_hash, replacementHash);
+  assert.equal(preserved.attempts, 0);
+});
+
+test("email-code success follows exact claimed state when mutation metadata is absent", async () => {
+  const { sqlite, d1 } = await database();
+  const challengeId = `challenge_${crypto.randomUUID()}`;
+  const code = "624818";
+  const email = "challenge-attempt-receipt@example.com";
+  const password = "challenge attempt receipt passphrase";
+  const salt = Buffer.alloc(18, 152).toString("base64url");
+  const now = new Date();
+  sqlite.prepare(`INSERT INTO email_challenges
+      (id, kind, email, user_id, code_hash, password_salt, password_hash,
+        age_eligibility_confirmed_at, terms_version, privacy_version, expires_at,
+        attempts, resend_count, created_at)
+    VALUES (?, 'signup', ?, NULL, ?, ?, ?, ?, ?, ?, ?, 0, 0, ?)`).run(
+    challengeId,
+    email,
+    await sha256(`${challengeId}:${code}`),
+    salt,
+    await passwordHash(password, salt),
+    now.toISOString(),
+    LEGAL_VERSION,
+    LEGAL_VERSION,
+    new Date(now.getTime() + 15 * 60_000).toISOString(),
+    now.toISOString(),
+  );
+  d1.omitOnceMutationMetadataSubstring = "UPDATE email_challenges SET attempts = ?";
+
+  const recovered = await handleAccountRequest(request("/api/auth/signup/verify", {
+    method: "POST",
+    body: { challengeId, code },
+  }), { DB: d1 }, []);
+
+  assert.equal(recovered?.status, 201);
+  assert.match(sessionCookieFrom(recovered) ?? "", /^__Host-cc_session=/u);
+  const created = sqlite.prepare("SELECT id FROM users WHERE email = ?").get(email);
+  assert.equal(typeof created.id, "string");
+  assert.equal(sqlite.prepare("SELECT COUNT(*) AS count FROM auth_sessions WHERE user_id = ?")
+    .get(created.id).count, 1);
+  assert.equal(sqlite.prepare("SELECT COUNT(*) AS count FROM email_challenges WHERE id = ?")
+    .get(challengeId).count, 0);
+});
+
+test("email-code success recovers after the committed attempt response is lost", async () => {
+  const { sqlite, d1 } = await database();
+  const challenge = await addSignupChallenge(sqlite, "attempt-lost-response-159", "624827");
+  d1.throwOnceAfterMutationSubstring = "UPDATE email_challenges SET attempts = ?";
+
+  const recovered = await handleAccountRequest(request("/api/auth/signup/verify", {
+    method: "POST",
+    body: { challengeId: challenge.id, code: challenge.code },
+  }), { DB: d1 }, []);
+
+  assert.equal(recovered?.status, 201);
+  assert.match(sessionCookieFrom(recovered) ?? "", /^__Host-cc_session=/u);
+  const created = sqlite.prepare("SELECT id FROM users WHERE email = ?").get(challenge.email);
+  assert.equal(typeof created.id, "string");
+  assert.equal(sqlite.prepare("SELECT COUNT(*) AS count FROM auth_sessions WHERE user_id = ?")
+    .get(created.id).count, 1);
+  assert.equal(sqlite.prepare("SELECT COUNT(*) AS count FROM email_challenges WHERE id = ?")
+    .get(challenge.id).count, 0);
+});
+
+test("email-code authorization rejects rollback, unreadable receipts, and changed claimed snapshots", async () => {
+  const rolledBack = await database();
+  const rollbackChallenge = await addSignupChallenge(rolledBack.sqlite, "attempt-rollback-160", "624828");
+  rolledBack.d1.failOnceQuerySubstring = "UPDATE email_challenges SET attempts = ?";
+  const rollbackResponse = await handleAccountRequest(request("/api/auth/signup/verify", {
+    method: "POST",
+    body: { challengeId: rollbackChallenge.id, code: rollbackChallenge.code },
+  }), { DB: rolledBack.d1 }, []);
+  assert.equal(rollbackResponse?.status, 503);
+  assert.equal((await rollbackResponse.json()).error.code, "challenge_attempt_unconfirmed");
+  assert.equal(rolledBack.sqlite.prepare("SELECT attempts FROM email_challenges WHERE id = ?")
+    .get(rollbackChallenge.id).attempts, 0);
+  assert.equal(rolledBack.sqlite.prepare("SELECT COUNT(*) AS count FROM users WHERE email = ?")
+    .get(rollbackChallenge.email).count, 0);
+
+  const unreadable = await database();
+  const unreadableChallenge = await addSignupChallenge(unreadable.sqlite, "attempt-unreadable-161", "624829");
+  unreadable.d1.failOnceQuerySubstring = "(SELECT COUNT(*) FROM email_challenges";
+  const unreadableResponse = await handleAccountRequest(request("/api/auth/signup/verify", {
+    method: "POST",
+    body: { challengeId: unreadableChallenge.id, code: unreadableChallenge.code },
+  }), { DB: unreadable.d1 }, []);
+  assert.equal(unreadableResponse?.status, 503);
+  assert.equal((await unreadableResponse.json()).error.code, "challenge_attempt_unconfirmed");
+  assert.equal(unreadable.sqlite.prepare("SELECT attempts FROM email_challenges WHERE id = ?")
+    .get(unreadableChallenge.id).attempts, 1);
+  assert.equal(unreadable.sqlite.prepare("SELECT COUNT(*) AS count FROM users WHERE email = ?")
+    .get(unreadableChallenge.email).count, 0);
+
+  const changed = await database();
+  const changedChallenge = await addSignupChallenge(changed.sqlite, "attempt-changed-162", "624830");
+  changed.d1.beforeOnceQuerySubstring = "(SELECT COUNT(*) FROM email_challenges";
+  changed.d1.beforeOnceQuery = () => changed.sqlite
+    .prepare("UPDATE email_challenges SET password_hash = ? WHERE id = ?")
+    .run("b".repeat(43), changedChallenge.id);
+  const changedResponse = await handleAccountRequest(request("/api/auth/signup/verify", {
+    method: "POST",
+    body: { challengeId: changedChallenge.id, code: changedChallenge.code },
+  }), { DB: changed.d1 }, []);
+  assert.equal(changedResponse?.status, 409);
+  assert.equal((await changedResponse.json()).error.code, "challenge_changed");
+  assert.equal(changed.sqlite.prepare("SELECT COUNT(*) AS count FROM users WHERE email = ?")
+    .get(changedChallenge.email).count, 0);
+});
+
+test("email-code ceilings remain bounded and fail closed after the sixth claim", async () => {
+  const { sqlite, d1 } = await database();
+  const challengeId = `challenge_${crypto.randomUUID()}`;
+  const correctCode = "624819";
+  const wrongCode = "000000";
+  const email = "challenge-attempt-ceiling@example.com";
+  const now = new Date();
+  sqlite.prepare(`INSERT INTO email_challenges
+      (id, kind, email, code_hash, expires_at, attempts, resend_count, created_at)
+    VALUES (?, 'signup', ?, ?, ?, 5, 0, ?)`).run(
+    challengeId,
+    email,
+    await sha256(`${challengeId}:${correctCode}`),
+    new Date(now.getTime() + 15 * 60_000).toISOString(),
+    now.toISOString(),
+  );
+
+  const sixth = await handleAccountRequest(request("/api/auth/signup/verify", {
+    method: "POST",
+    body: { challengeId, code: wrongCode },
+  }), { DB: d1 }, []);
+  assert.equal(sixth?.status, 401);
+  assert.equal(sqlite.prepare("SELECT attempts FROM email_challenges WHERE id = ?").get(challengeId).attempts, 6);
+
+  const blocked = await handleAccountRequest(request("/api/auth/signup/verify", {
+    method: "POST",
+    body: { challengeId, code: correctCode },
+  }), { DB: d1 }, []);
+  assert.equal(blocked?.status, 429);
+  assert.equal((await blocked.json()).error.code, "too_many_code_attempts");
+  assert.equal(sqlite.prepare("SELECT attempts FROM email_challenges WHERE id = ?").get(challengeId).attempts, 6);
+  assert.equal(sqlite.prepare("SELECT COUNT(*) AS count FROM users WHERE email = ?").get(email).count, 0);
+});
+
+test("password reset recovers an exact attempt claim after metadata loss", async () => {
+  const { sqlite, d1 } = await database();
+  const user = await addUser(sqlite, "reset-attempt-receipt-154");
+  const originalPasswordHash = sqlite.prepare("SELECT password_hash FROM users WHERE id = ?").get(user.id).password_hash;
+  const challengeId = `challenge_${crypto.randomUUID()}`;
+  const code = "624820";
+  const now = new Date();
+  sqlite.prepare(`INSERT INTO email_challenges
+      (id, kind, email, user_id, code_hash, expires_at, attempts, resend_count, created_at)
+    VALUES (?, 'password_reset', ?, ?, ?, ?, 0, 0, ?)`).run(
+    challengeId,
+    user.email,
+    user.id,
+    await sha256(`${challengeId}:${code}`),
+    new Date(now.getTime() + 15 * 60_000).toISOString(),
+    now.toISOString(),
+  );
+  d1.omitOnceMutationMetadataSubstring = "UPDATE email_challenges SET attempts = ?";
+
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async () => new Response(`${"0".repeat(35)}:0`);
+  try {
+    const response = await handleAccountRequest(request("/api/auth/password/reset", {
+      method: "POST",
+      cookie: user.cookie,
+      body: { challengeId, code, password: "unconfirmed attempt replacement passphrase" },
+    }), { DB: d1 }, []);
+
+    assert.equal(response?.status, 200);
+    assert.match(sessionCookieFrom(response) ?? "", /^__Host-cc_session=/u);
+    assert.equal(sqlite.prepare("SELECT COUNT(*) AS count FROM email_challenges WHERE id = ?")
+      .get(challengeId).count, 0);
+    assert.notEqual(sqlite.prepare("SELECT password_hash FROM users WHERE id = ?")
+      .get(user.id).password_hash, originalPasswordHash);
+    assert.equal(sqlite.prepare("SELECT COUNT(*) AS count FROM auth_sessions WHERE user_id = ?")
+      .get(user.id).count, 1);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("password reset keeps an unreadable attempt receipt generic and changes no credential", async () => {
+  const { sqlite, d1 } = await database();
+  const user = await addUser(sqlite, "reset-attempt-unreadable-163");
+  const originalPasswordHash = sqlite.prepare("SELECT password_hash FROM users WHERE id = ?")
+    .get(user.id).password_hash;
+  const code = "624831";
+  const challengeId = await addPasswordResetChallenge(sqlite, user, code);
+  d1.failOnceQuerySubstring = "(SELECT COUNT(*) FROM email_challenges";
+
+  const response = await handleAccountRequest(request("/api/auth/password/reset", {
+    method: "POST",
+    cookie: user.cookie,
+    body: { challengeId, code, password: "unreadable attempt replacement passphrase" },
+  }), { DB: d1 }, []);
+
+  assert.equal(response?.status, 401);
+  assert.equal((await response.json()).error.code, "invalid_code");
+  assert.equal(sessionCookieFrom(response), null);
+  assert.equal(sqlite.prepare("SELECT attempts FROM email_challenges WHERE id = ?").get(challengeId).attempts, 1);
+  assert.equal(sqlite.prepare("SELECT password_hash FROM users WHERE id = ?")
+    .get(user.id).password_hash, originalPasswordHash);
+  assert.equal(sqlite.prepare("SELECT COUNT(*) AS count FROM auth_sessions WHERE user_id = ?")
+    .get(user.id).count, 1);
+});
+
+test("email challenge issuance ceilings are claimed atomically before provider delivery", async () => {
+  const { sqlite, d1 } = await database();
+  const user = await addUser(sqlite, "challenge-issuance-ceiling-153");
+  const timestamp = new Date().toISOString();
+  const expiresAt = new Date(Date.now() + 15 * 60_000).toISOString();
+  const insertReset = sqlite.prepare(`INSERT INTO email_challenges
+    (id, kind, email, user_id, code_hash, expires_at, attempts, resend_count, created_at)
+    VALUES (?, 'password_reset', ?, ?, ?, ?, 0, 0, ?)`);
+  for (let index = 0; index < 4; index += 1) {
+    insertReset.run(`challenge_${crypto.randomUUID()}`, user.email, user.id, `${index}`.repeat(64), expiresAt, timestamp);
+  }
+  d1.beforeOnceQuerySubstring = "INSERT INTO email_challenges";
+  d1.beforeOnceQuery = () => insertReset.run(
+    `challenge_${crypto.randomUUID()}`,
+    user.email,
+    user.id,
+    "f".repeat(64),
+    expiresAt,
+    timestamp,
+  );
+
+  const originalFetch = globalThis.fetch;
+  let providerCalls = 0;
+  globalThis.fetch = async (input) => {
+    if (String(input) === "https://api.resend.com/emails") providerCalls += 1;
+    return new Response(`${"0".repeat(35)}:0`);
+  };
+  try {
+    const reset = await handleAccountRequest(request("/api/auth/password/request", {
+      method: "POST",
+      body: { email: user.email },
+    }), { DB: d1, RESEND_API_KEY: "test" }, []);
+    assert.equal(reset?.status, 200);
+    assert.equal((await reset.json()).requested, true);
+    assert.equal(sqlite.prepare("SELECT COUNT(*) AS count FROM email_challenges WHERE email = ?").get(user.email).count, 5);
+    assert.equal(providerCalls, 0);
+
+    const { sqlite: signupSqlite, d1: signupD1 } = await database();
+    const eligible = await handleAccountRequest(request("/api/auth/signup/eligibility", {
+      method: "POST",
+      body: { birthDate: "2000-01-01" },
+    }), { DB: signupD1 }, []);
+    const eligibilityProof = (await eligible.json()).eligibilityProof;
+    const signupEmail = "challenge-issuance-ceiling@example.com";
+    const insertSignup = signupSqlite.prepare(`INSERT INTO email_challenges
+      (id, kind, email, code_hash, expires_at, attempts, resend_count, created_at)
+      VALUES (?, 'signup', ?, ?, ?, 0, 0, ?)`);
+    for (let index = 0; index < 4; index += 1) {
+      insertSignup.run(`challenge_${crypto.randomUUID()}`, signupEmail, `${index + 4}`.repeat(64), expiresAt, timestamp);
+    }
+    signupD1.beforeOnceQuerySubstring = "INSERT INTO email_challenges";
+    signupD1.beforeOnceQuery = () => insertSignup.run(
+      `challenge_${crypto.randomUUID()}`,
+      signupEmail,
+      "e".repeat(64),
+      expiresAt,
+      timestamp,
+    );
+
+    const signup = await handleAccountRequest(request("/api/auth/signup/request", {
+      method: "POST",
+      body: {
+        eligibilityProof,
+        email: signupEmail,
+        password: "a distinct rate ceiling passphrase",
+        termsAccepted: true,
+        privacyAccepted: true,
+      },
+    }), { DB: signupD1, RESEND_API_KEY: "test" }, []);
+    assert.equal(signup?.status, 429);
+    assert.equal((await signup.json()).error.code, "too_many_codes");
+    assert.equal(signupSqlite.prepare("SELECT COUNT(*) AS count FROM email_challenges WHERE email = ?")
+      .get(signupEmail).count, 5);
+    assert.equal(providerCalls, 0);
+  } finally {
+    globalThis.fetch = originalFetch;
   }
 });
 
@@ -582,6 +1569,509 @@ test("password reset revokes every prior session before issuing a fresh one", as
   }
 });
 
+test("password reset follows exact credential state when mutation metadata is absent", async () => {
+  const { sqlite, d1 } = await database();
+  const user = await addUser(sqlite, "password-receipt-141");
+  const originalPasswordHash = sqlite.prepare("SELECT password_hash FROM users WHERE id = ?")
+    .get(user.id).password_hash;
+  const challengeId = `challenge_${crypto.randomUUID()}`;
+  const code = "624811";
+  const now = new Date();
+  sqlite.prepare(`INSERT INTO email_challenges
+      (id, kind, email, user_id, code_hash, expires_at, attempts, resend_count, created_at)
+    VALUES (?, 'password_reset', ?, ?, ?, ?, 0, 0, ?)`)
+    .run(
+      challengeId,
+      user.email,
+      user.id,
+      await sha256(`${challengeId}:${code}`),
+      new Date(now.getTime() + 15 * 60_000).toISOString(),
+      now.toISOString(),
+    );
+
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async () => new Response(`${"0".repeat(35)}:0`);
+  try {
+    d1.omitOnceMutationMetadataSubstring = "UPDATE users SET password_salt";
+    const reset = await handleAccountRequest(request("/api/auth/password/reset", {
+      method: "POST",
+      cookie: user.cookie,
+      body: { challengeId, code, password: "another unique replacement passphrase" },
+    }), { DB: d1 }, []);
+    assert.equal(reset?.status, 200);
+    assert.match(sessionCookieFrom(reset) ?? "", /^__Host-cc_session=/u);
+    assert.equal(sqlite.prepare("SELECT COUNT(*) AS count FROM auth_sessions WHERE user_id = ?").get(user.id).count, 1);
+    assert.equal(sqlite.prepare("SELECT COUNT(*) AS count FROM email_challenges WHERE id = ?").get(challengeId).count, 0);
+    assert.notEqual(sqlite.prepare("SELECT password_hash FROM users WHERE id = ?").get(user.id).password_hash,
+      originalPasswordHash);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("password reset recovers exact state after the committed batch response is lost", async () => {
+  const { sqlite, d1 } = await database();
+  const user = await addUser(sqlite, "password-lost-response-149");
+  const originalPasswordHash = sqlite.prepare("SELECT password_hash FROM users WHERE id = ?").get(user.id).password_hash;
+  const code = "624817";
+  const challengeId = await addPasswordResetChallenge(sqlite, user, code);
+  d1.throwOnceAfterBatchMutationSubstring = "DELETE FROM email_challenges";
+
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async () => new Response(`${"0".repeat(35)}:0`);
+  try {
+    const reset = await handleAccountRequest(request("/api/auth/password/reset", {
+      method: "POST",
+      cookie: user.cookie,
+      body: { challengeId, code, password: "lost response replacement passphrase" },
+    }), { DB: d1 }, []);
+    assert.equal(reset?.status, 200);
+    assert.match(sessionCookieFrom(reset) ?? "", /^__Host-cc_session=/u);
+    assert.equal(sqlite.prepare("SELECT COUNT(*) AS count FROM auth_sessions WHERE user_id = ?")
+      .get(user.id).count, 1);
+    assert.equal(sqlite.prepare("SELECT COUNT(*) AS count FROM email_challenges WHERE id = ?")
+      .get(challengeId).count, 0);
+    assert.notEqual(sqlite.prepare("SELECT password_hash FROM users WHERE id = ?").get(user.id).password_hash,
+      originalPasswordHash);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("password reset rejects rollback and unreadable exact lifecycle state", async () => {
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async () => new Response(`${"0".repeat(35)}:0`);
+  try {
+    const rolledBack = await database();
+    const rolledBackUser = await addUser(rolledBack.sqlite, "password-rollback-150");
+    const rolledBackHash = rolledBack.sqlite.prepare("SELECT password_hash FROM users WHERE id = ?")
+      .get(rolledBackUser.id).password_hash;
+    const rollbackCode = "624818";
+    const rollbackChallenge = await addPasswordResetChallenge(rolledBack.sqlite, rolledBackUser, rollbackCode);
+    rolledBack.d1.failOnceQuerySubstring = "DELETE FROM auth_sessions WHERE user_id = ?";
+    const rollbackResponse = await handleAccountRequest(request("/api/auth/password/reset", {
+      method: "POST",
+      cookie: rolledBackUser.cookie,
+      body: { challengeId: rollbackChallenge, code: rollbackCode, password: "rolled back replacement passphrase" },
+    }), { DB: rolledBack.d1 }, []);
+    assert.equal(rollbackResponse?.status, 503);
+    assert.equal((await rollbackResponse.json()).error.code, "password_reset_unconfirmed");
+    assert.equal(sessionCookieFrom(rollbackResponse), null);
+    assert.equal(rolledBack.sqlite.prepare("SELECT password_hash FROM users WHERE id = ?")
+      .get(rolledBackUser.id).password_hash, rolledBackHash);
+    assert.equal(rolledBack.sqlite.prepare("SELECT COUNT(*) AS count FROM auth_sessions WHERE user_id = ?")
+      .get(rolledBackUser.id).count, 1);
+    assert.equal(rolledBack.sqlite.prepare("SELECT COUNT(*) AS count FROM email_challenges WHERE id = ?")
+      .get(rollbackChallenge).count, 1);
+
+    const unreadable = await database();
+    const unreadableUser = await addUser(unreadable.sqlite, "password-unreadable-151");
+    const unreadableHash = unreadable.sqlite.prepare("SELECT password_hash FROM users WHERE id = ?")
+      .get(unreadableUser.id).password_hash;
+    const unreadableCode = "624819";
+    const unreadableChallenge = await addPasswordResetChallenge(unreadable.sqlite, unreadableUser, unreadableCode);
+    unreadable.d1.failOnceQuerySubstring = "(SELECT COUNT(*) FROM users";
+    const unreadableResponse = await handleAccountRequest(request("/api/auth/password/reset", {
+      method: "POST",
+      cookie: unreadableUser.cookie,
+      body: { challengeId: unreadableChallenge, code: unreadableCode, password: "unreadable receipt passphrase" },
+    }), { DB: unreadable.d1 }, []);
+    assert.equal(unreadableResponse?.status, 503);
+    assert.equal((await unreadableResponse.json()).error.code, "password_reset_unconfirmed");
+    assert.equal(sessionCookieFrom(unreadableResponse), null);
+    assert.equal(unreadable.sqlite.prepare("SELECT COUNT(*) AS count FROM auth_sessions WHERE user_id = ?")
+      .get(unreadableUser.id).count, 0);
+    assert.equal(unreadable.sqlite.prepare("SELECT COUNT(*) AS count FROM email_challenges WHERE id = ?")
+      .get(unreadableChallenge).count, 0);
+    assert.notEqual(unreadable.sqlite.prepare("SELECT password_hash FROM users WHERE id = ?")
+      .get(unreadableUser.id).password_hash, unreadableHash);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("password reset rejects conflicting credential state or a newly active deletion fence", async () => {
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async () => new Response(`${"0".repeat(35)}:0`);
+  try {
+    const conflicting = await database();
+    const conflictingUser = await addUser(conflicting.sqlite, "password-conflict-152");
+    const conflictCode = "624820";
+    const conflictChallenge = await addPasswordResetChallenge(conflicting.sqlite, conflictingUser, conflictCode);
+    conflicting.d1.beforeOnceQuerySubstring = "(SELECT COUNT(*) FROM users";
+    conflicting.d1.beforeOnceQuery = () => conflicting.sqlite
+      .prepare("UPDATE users SET updated_at = '2026-07-22T05:00:00.000Z' WHERE id = ?")
+      .run(conflictingUser.id);
+    const conflictResponse = await handleAccountRequest(request("/api/auth/password/reset", {
+      method: "POST",
+      cookie: conflictingUser.cookie,
+      body: { challengeId: conflictChallenge, code: conflictCode, password: "conflicting reset passphrase" },
+    }), { DB: conflicting.d1 }, []);
+    assert.equal(conflictResponse?.status, 503);
+    assert.equal((await conflictResponse.json()).error.code, "password_reset_unconfirmed");
+    assert.equal(sessionCookieFrom(conflictResponse), null);
+
+    const fenced = await database();
+    const fencedUser = await addUser(fenced.sqlite, "password-fence-race-153");
+    const fenceCode = "624821";
+    const fenceChallenge = await addPasswordResetChallenge(fenced.sqlite, fencedUser, fenceCode);
+    const fenceTimestamp = "2026-07-22T04:45:00.000Z";
+    fenced.d1.beforeOnceQuerySubstring = "(SELECT COUNT(*) FROM users";
+    fenced.d1.beforeOnceQuery = () => fenced.sqlite.prepare(`INSERT INTO account_deletion_fences
+        (user_id, owner_subject_hash, lease_token, lease_expires_at, requested_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?)`)
+      .run(
+        fencedUser.id,
+        "e".repeat(64),
+        "password-reset-fence-race-token-0000000001",
+        "2026-07-22T04:50:00.000Z",
+        fenceTimestamp,
+        fenceTimestamp,
+      );
+    const fenceResponse = await handleAccountRequest(request("/api/auth/password/reset", {
+      method: "POST",
+      cookie: fencedUser.cookie,
+      body: { challengeId: fenceChallenge, code: fenceCode, password: "fenced reset passphrase" },
+    }), { DB: fenced.d1 }, []);
+    assert.equal(fenceResponse?.status, 503);
+    assert.equal((await fenceResponse.json()).error.code, "password_reset_unconfirmed");
+    assert.equal(sessionCookieFrom(fenceResponse), null);
+    assert.equal(fenced.sqlite.prepare("SELECT COUNT(*) AS count FROM auth_sessions WHERE user_id = ?")
+      .get(fencedUser.id).count, 0);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("account verification follows exact account state when mutation metadata is absent", async () => {
+  const { sqlite, d1 } = await database();
+  const challengeId = `challenge_${crypto.randomUUID()}`;
+  const code = "624812";
+  const email = "account-receipt-142@example.com";
+  const password = "account creation receipt passphrase";
+  const salt = Buffer.alloc(18, 142).toString("base64url");
+  const now = new Date();
+  sqlite.prepare(`INSERT INTO email_challenges
+      (id, kind, email, user_id, code_hash, password_salt, password_hash,
+        age_eligibility_confirmed_at, terms_version, privacy_version, expires_at,
+        attempts, resend_count, created_at)
+    VALUES (?, 'signup', ?, NULL, ?, ?, ?, ?, ?, ?, ?, 0, 0, ?)`)
+    .run(
+      challengeId,
+      email,
+      await sha256(`${challengeId}:${code}`),
+      salt,
+      await passwordHash(password, salt),
+      now.toISOString(),
+      LEGAL_VERSION,
+      LEGAL_VERSION,
+      new Date(now.getTime() + 15 * 60_000).toISOString(),
+      now.toISOString(),
+    );
+
+  const originalFetch = globalThis.fetch;
+  let welcomeCalls = 0;
+  globalThis.fetch = async () => {
+    welcomeCalls += 1;
+    return Response.json({ id: "welcome-metadata-recovery" });
+  };
+  try {
+    d1.omitOnceMutationMetadataSubstring = "INSERT INTO users";
+    const verified = await handleAccountRequest(request("/api/auth/signup/verify", {
+      method: "POST",
+      body: { challengeId, code },
+    }), { DB: d1, RESEND_API_KEY: "test" }, []);
+    assert.equal(verified?.status, 201);
+    assert.match(sessionCookieFrom(verified) ?? "", /^__Host-cc_session=/u);
+    const created = sqlite.prepare("SELECT id FROM users WHERE email = ?").get(email);
+    assert.equal(typeof created.id, "string");
+    assert.equal(sqlite.prepare("SELECT COUNT(*) AS count FROM email_challenges WHERE id = ?")
+      .get(challengeId).count, 0);
+    assert.equal(sqlite.prepare("SELECT COUNT(*) AS count FROM auth_sessions WHERE user_id = ?")
+      .get(created.id).count, 1);
+    assert.equal(welcomeCalls, 1);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("account verification recovers exact state after the committed batch response is lost", async () => {
+  const { sqlite, d1 } = await database();
+  const challenge = await addSignupChallenge(sqlite, "lost-response-154", "624822");
+  d1.throwOnceAfterBatchMutationSubstring = "DELETE FROM email_challenges";
+  const originalFetch = globalThis.fetch;
+  let welcomeCalls = 0;
+  globalThis.fetch = async () => {
+    welcomeCalls += 1;
+    return Response.json({ id: "welcome-lost-response" });
+  };
+  try {
+    const verified = await handleAccountRequest(request("/api/auth/signup/verify", {
+      method: "POST",
+      body: { challengeId: challenge.id, code: challenge.code },
+    }), { DB: d1, RESEND_API_KEY: "test" }, []);
+    assert.equal(verified?.status, 201);
+    assert.match(sessionCookieFrom(verified) ?? "", /^__Host-cc_session=/u);
+    const created = sqlite.prepare("SELECT id FROM users WHERE email = ?").get(challenge.email);
+    assert.equal(typeof created.id, "string");
+    assert.equal(sqlite.prepare("SELECT COUNT(*) AS count FROM auth_sessions WHERE user_id = ?")
+      .get(created.id).count, 1);
+    assert.equal(sqlite.prepare("SELECT COUNT(*) AS count FROM email_challenges WHERE id = ?")
+      .get(challenge.id).count, 0);
+    assert.equal(welcomeCalls, 1);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("account verification contains rollback and unreadable exact lifecycle state", async () => {
+  const originalFetch = globalThis.fetch;
+  let welcomeCalls = 0;
+  globalThis.fetch = async () => {
+    welcomeCalls += 1;
+    return Response.json({ id: "must-not-send" });
+  };
+  try {
+    const rolledBack = await database();
+    const rollbackChallenge = await addSignupChallenge(rolledBack.sqlite, "rollback-155", "624823");
+    rolledBack.d1.failOnceQuerySubstring = "DELETE FROM email_challenges";
+    const rollbackResponse = await handleAccountRequest(request("/api/auth/signup/verify", {
+      method: "POST",
+      body: { challengeId: rollbackChallenge.id, code: rollbackChallenge.code },
+    }), { DB: rolledBack.d1, RESEND_API_KEY: "test" }, []);
+    assert.equal(rollbackResponse?.status, 503);
+    assert.equal((await rollbackResponse.json()).error.code, "account_creation_unconfirmed");
+    assert.equal(sessionCookieFrom(rollbackResponse), null);
+    assert.equal(rolledBack.sqlite.prepare("SELECT COUNT(*) AS count FROM users WHERE email = ?")
+      .get(rollbackChallenge.email).count, 0);
+    assert.equal(rolledBack.sqlite.prepare("SELECT COUNT(*) AS count FROM email_challenges WHERE id = ?")
+      .get(rollbackChallenge.id).count, 1);
+
+    const unreadable = await database();
+    const unreadableChallenge = await addSignupChallenge(unreadable.sqlite, "unreadable-156", "624824");
+    unreadable.d1.failOnceQuerySubstring = "(SELECT COUNT(*) FROM users";
+    const unreadableResponse = await handleAccountRequest(request("/api/auth/signup/verify", {
+      method: "POST",
+      body: { challengeId: unreadableChallenge.id, code: unreadableChallenge.code },
+    }), { DB: unreadable.d1, RESEND_API_KEY: "test" }, []);
+    assert.equal(unreadableResponse?.status, 503);
+    assert.equal((await unreadableResponse.json()).error.code, "account_creation_unconfirmed");
+    assert.equal(sessionCookieFrom(unreadableResponse), null);
+    const unreadableUser = unreadable.sqlite.prepare("SELECT id FROM users WHERE email = ?")
+      .get(unreadableChallenge.email);
+    assert.equal(typeof unreadableUser.id, "string");
+    assert.equal(unreadable.sqlite.prepare("SELECT COUNT(*) AS count FROM auth_sessions WHERE user_id = ?")
+      .get(unreadableUser.id).count, 0);
+    assert.equal(unreadable.sqlite.prepare("SELECT COUNT(*) AS count FROM email_challenges WHERE id = ?")
+      .get(unreadableChallenge.id).count, 0);
+    assert.equal(welcomeCalls, 0);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("account verification blocks conflicting account state and a deletion fence before side effects", async () => {
+  const originalFetch = globalThis.fetch;
+  let welcomeCalls = 0;
+  globalThis.fetch = async () => {
+    welcomeCalls += 1;
+    return Response.json({ id: "must-not-send" });
+  };
+  try {
+    const conflicting = await database();
+    const conflictChallenge = await addSignupChallenge(conflicting.sqlite, "conflict-157", "624825");
+    conflicting.d1.beforeOnceQuerySubstring = "(SELECT COUNT(*) FROM users";
+    conflicting.d1.beforeOnceQuery = () => conflicting.sqlite
+      .prepare("UPDATE users SET updated_at = '2026-07-22T06:00:00.000Z' WHERE email = ?")
+      .run(conflictChallenge.email);
+    const conflictResponse = await handleAccountRequest(request("/api/auth/signup/verify", {
+      method: "POST",
+      body: { challengeId: conflictChallenge.id, code: conflictChallenge.code },
+    }), { DB: conflicting.d1, RESEND_API_KEY: "test" }, []);
+    assert.equal(conflictResponse?.status, 503);
+    assert.equal((await conflictResponse.json()).error.code, "account_creation_unconfirmed");
+    assert.equal(sessionCookieFrom(conflictResponse), null);
+    const conflictingUser = conflicting.sqlite.prepare("SELECT id FROM users WHERE email = ?")
+      .get(conflictChallenge.email);
+    assert.equal(conflicting.sqlite.prepare("SELECT COUNT(*) AS count FROM auth_sessions WHERE user_id = ?")
+      .get(conflictingUser.id).count, 0);
+
+    const fenced = await database();
+    const fenceChallenge = await addSignupChallenge(fenced.sqlite, "fence-158", "624826");
+    fenced.d1.beforeOnceQuerySubstring = "(SELECT COUNT(*) FROM users";
+    fenced.d1.beforeOnceQuery = () => {
+      const fencedUser = fenced.sqlite.prepare("SELECT id FROM users WHERE email = ?").get(fenceChallenge.email);
+      const fenceTimestamp = "2026-07-22T05:45:00.000Z";
+      fenced.sqlite.prepare(`INSERT INTO account_deletion_fences
+          (user_id, owner_subject_hash, lease_token, lease_expires_at, requested_at, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?)`).run(
+        fencedUser.id,
+        "f".repeat(64),
+        "signup-fence-race-token-0000000000001",
+        "2026-07-22T05:50:00.000Z",
+        fenceTimestamp,
+        fenceTimestamp,
+      );
+    };
+    const fenceResponse = await handleAccountRequest(request("/api/auth/signup/verify", {
+      method: "POST",
+      body: { challengeId: fenceChallenge.id, code: fenceChallenge.code },
+    }), { DB: fenced.d1, RESEND_API_KEY: "test" }, []);
+    assert.equal(fenceResponse?.status, 503);
+    assert.equal((await fenceResponse.json()).error.code, "account_creation_unconfirmed");
+    assert.equal(sessionCookieFrom(fenceResponse), null);
+    const fencedUser = fenced.sqlite.prepare("SELECT id FROM users WHERE email = ?").get(fenceChallenge.email);
+    assert.equal(fenced.sqlite.prepare("SELECT COUNT(*) AS count FROM auth_sessions WHERE user_id = ?")
+      .get(fencedUser.id).count, 0);
+    assert.equal(welcomeCalls, 0);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("a verified code cannot authorize signup or password reset after its challenge rotates", async () => {
+  const { sqlite, d1 } = await database();
+  const signupChallengeId = `challenge_${crypto.randomUUID()}`;
+  const signupCode = "624813";
+  const signupEmail = "rotated-signup-challenge@example.com";
+  const signupSalt = Buffer.alloc(18, 143).toString("base64url");
+  const now = new Date();
+  sqlite.prepare(`INSERT INTO email_challenges
+      (id, kind, email, user_id, code_hash, password_salt, password_hash,
+        age_eligibility_confirmed_at, terms_version, privacy_version, expires_at,
+        attempts, resend_count, created_at)
+    VALUES (?, 'signup', ?, NULL, ?, ?, ?, ?, ?, ?, ?, 0, 0, ?)`).run(
+    signupChallengeId,
+    signupEmail,
+    await sha256(`${signupChallengeId}:${signupCode}`),
+    signupSalt,
+    await passwordHash("rotated signup challenge passphrase", signupSalt),
+    now.toISOString(),
+    LEGAL_VERSION,
+    LEGAL_VERSION,
+    new Date(now.getTime() + 15 * 60_000).toISOString(),
+    now.toISOString(),
+  );
+  const rotatedSignupHash = "d".repeat(64);
+  d1.beforeOnceQuerySubstring = "INSERT INTO users";
+  d1.beforeOnceQuery = () => sqlite.prepare("UPDATE email_challenges SET code_hash = ? WHERE id = ?")
+    .run(rotatedSignupHash, signupChallengeId);
+  const signup = await handleAccountRequest(request("/api/auth/signup/verify", {
+    method: "POST",
+    body: { challengeId: signupChallengeId, code: signupCode },
+  }), { DB: d1 }, []);
+  assert.equal(signup.status, 409);
+  assert.equal((await signup.json()).error.code, "signup_challenge_changed");
+  assert.equal(sqlite.prepare("SELECT COUNT(*) AS count FROM users WHERE email = ?").get(signupEmail).count, 0);
+  assert.equal(sqlite.prepare("SELECT code_hash FROM email_challenges WHERE id = ?").get(signupChallengeId).code_hash, rotatedSignupHash);
+
+  const { sqlite: resetSqlite, d1: resetD1 } = await database();
+  const user = await addUser(resetSqlite, "rotated-reset-challenge-146");
+  const originalPasswordHash = resetSqlite.prepare("SELECT password_hash FROM users WHERE id = ?").get(user.id).password_hash;
+  const resetChallengeId = `challenge_${crypto.randomUUID()}`;
+  const resetCode = "624814";
+  resetSqlite.prepare(`INSERT INTO email_challenges
+      (id, kind, email, user_id, code_hash, expires_at, attempts, resend_count, created_at)
+    VALUES (?, 'password_reset', ?, ?, ?, ?, 0, 0, ?)`).run(
+    resetChallengeId,
+    user.email,
+    user.id,
+    await sha256(`${resetChallengeId}:${resetCode}`),
+    new Date(now.getTime() + 15 * 60_000).toISOString(),
+    now.toISOString(),
+  );
+  const rotatedResetHash = "e".repeat(64);
+  resetD1.beforeOnceQuerySubstring = "UPDATE users SET password_salt";
+  resetD1.beforeOnceQuery = () => resetSqlite.prepare("UPDATE email_challenges SET code_hash = ? WHERE id = ?")
+    .run(rotatedResetHash, resetChallengeId);
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async () => new Response(`${"0".repeat(35)}:0`);
+  try {
+    const reset = await handleAccountRequest(request("/api/auth/password/reset", {
+      method: "POST",
+      cookie: user.cookie,
+      body: { challengeId: resetChallengeId, code: resetCode, password: "rotated reset replacement passphrase" },
+    }), { DB: resetD1 }, []);
+    assert.equal(reset.status, 409);
+    assert.equal((await reset.json()).error.code, "password_reset_challenge_changed");
+    assert.equal(resetSqlite.prepare("SELECT password_hash FROM users WHERE id = ?").get(user.id).password_hash, originalPasswordHash);
+    assert.equal(resetSqlite.prepare("SELECT COUNT(*) AS count FROM auth_sessions WHERE user_id = ?").get(user.id).count, 1);
+    assert.equal(resetSqlite.prepare("SELECT code_hash FROM email_challenges WHERE id = ?").get(resetChallengeId).code_hash, rotatedResetHash);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("signup and password reset confirm exact challenge absence after metadata loss", async () => {
+  const { sqlite, d1 } = await database();
+  const signupChallengeId = `challenge_${crypto.randomUUID()}`;
+  const signupCode = "624815";
+  const signupEmail = "challenge-consumption-receipt@example.com";
+  const signupPassword = "challenge consumption signup passphrase";
+  const signupSalt = Buffer.alloc(18, 144).toString("base64url");
+  const now = new Date();
+  sqlite.prepare(`INSERT INTO email_challenges
+      (id, kind, email, user_id, code_hash, password_salt, password_hash,
+        age_eligibility_confirmed_at, terms_version, privacy_version, expires_at,
+        attempts, resend_count, created_at)
+    VALUES (?, 'signup', ?, NULL, ?, ?, ?, ?, ?, ?, ?, 0, 0, ?)`).run(
+    signupChallengeId,
+    signupEmail,
+    await sha256(`${signupChallengeId}:${signupCode}`),
+    signupSalt,
+    await passwordHash(signupPassword, signupSalt),
+    now.toISOString(),
+    LEGAL_VERSION,
+    LEGAL_VERSION,
+    new Date(now.getTime() + 15 * 60_000).toISOString(),
+    now.toISOString(),
+  );
+  d1.omitOnceMutationMetadataSubstring = "DELETE FROM email_challenges";
+  const signup = await handleAccountRequest(request("/api/auth/signup/verify", {
+    method: "POST",
+    body: { challengeId: signupChallengeId, code: signupCode },
+  }), { DB: d1 }, []);
+  assert.equal(signup.status, 201);
+  assert.match(sessionCookieFrom(signup) ?? "", /^__Host-cc_session=/u);
+  const created = sqlite.prepare("SELECT id FROM users WHERE email = ?").get(signupEmail);
+  assert.equal(typeof created.id, "string");
+  assert.equal(sqlite.prepare("SELECT COUNT(*) AS count FROM email_challenges WHERE id = ?").get(signupChallengeId).count, 0);
+  assert.equal(sqlite.prepare("SELECT COUNT(*) AS count FROM auth_sessions WHERE user_id = ?").get(created.id).count, 1);
+
+  const { sqlite: resetSqlite, d1: resetD1 } = await database();
+  const user = await addUser(resetSqlite, "challenge-consumption-receipt-147");
+  const originalPasswordHash = resetSqlite.prepare("SELECT password_hash FROM users WHERE id = ?").get(user.id).password_hash;
+  const resetChallengeId = `challenge_${crypto.randomUUID()}`;
+  const resetCode = "624816";
+  resetSqlite.prepare(`INSERT INTO email_challenges
+      (id, kind, email, user_id, code_hash, expires_at, attempts, resend_count, created_at)
+    VALUES (?, 'password_reset', ?, ?, ?, ?, 0, 0, ?)`).run(
+    resetChallengeId,
+    user.email,
+    user.id,
+    await sha256(`${resetChallengeId}:${resetCode}`),
+    new Date(now.getTime() + 15 * 60_000).toISOString(),
+    now.toISOString(),
+  );
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async () => new Response(`${"0".repeat(35)}:0`);
+  try {
+    resetD1.omitOnceMutationMetadataSubstring = "DELETE FROM email_challenges";
+    const reset = await handleAccountRequest(request("/api/auth/password/reset", {
+      method: "POST",
+      cookie: user.cookie,
+      body: { challengeId: resetChallengeId, code: resetCode, password: "challenge receipt replacement passphrase" },
+    }), { DB: resetD1 }, []);
+    assert.equal(reset.status, 200);
+    assert.match(sessionCookieFrom(reset) ?? "", /^__Host-cc_session=/u);
+    assert.equal(resetSqlite.prepare("SELECT COUNT(*) AS count FROM auth_sessions WHERE user_id = ?").get(user.id).count, 1);
+    assert.equal(resetSqlite.prepare("SELECT COUNT(*) AS count FROM email_challenges WHERE id = ?").get(resetChallengeId).count, 0);
+    assert.notEqual(resetSqlite.prepare("SELECT password_hash FROM users WHERE id = ?").get(user.id).password_hash, originalPasswordHash);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
 function addTrip(sqlite, user, {
   id = `trip_${crypto.randomUUID()}`,
   photoKey = null,
@@ -594,17 +2084,18 @@ function addTrip(sqlite, user, {
       no_catch, notes, consent, consent_at, moderation_status, reporter_key_hash, referral_code,
       token_hash, opportunity_window_id, opportunity_score, habitat_score, seasonality_score,
       conditions_score, model_version, score_influenced_choice, prediction_metadata_json,
-      photo_key, photo_content_type, photo_size_bytes, created_at, updated_at, completed_at,
+      photo_key, photo_key_hash, photo_content_type, photo_size_bytes, created_at, updated_at, completed_at,
       gear_profile_id, rod, reel, bait_lure, rig, other_catch_count, other_species,
       observations_json, fishability_score, ai_review_status, ai_review_json, ai_review_model,
       ai_reviewed_at, contract_status
     ) VALUES (?, ?, 'completed', 'past_report', 'ocean-beach', ?, ?, 'shore', 'artificial-lure', 'legacy gear',
       1, 2.5, 1, 2, 3, 0, 'User trip notes', 1, ?, ?, 'reporter-secret', 'friend-code',
       'trip-token-secret', 'window-1', 72, 80, 70, 66, 'model-v1', 1, '{"forecast":"snapshot"}',
-      ?, 'image/jpeg', 4, ?, ?, ?, 'gear_1', 'Rod A', 'Reel B', 'Swimbait', 'Drop shot',
+      ?, ?, 'image/jpeg', 4, ?, ?, ?, 'gear_1', 'Rod A', 'Reel B', 'Swimbait', 'Drop shot',
       1, 'surfperch', '{"waterClarity":"clear"}', 64, 'reviewed', '{"qualityScore":88}',
       'mimo-test', ?, 'legacy_unverified')`)
     .run(id, user.id, timestamp, timestamp, timestamp, moderation, photoKey,
+      photoKey ? createHash("sha256").update(`trip_photos\0${photoKey}`).digest("hex") : null,
       timestamp, timestamp, timestamp, timestamp);
   return id;
 }
@@ -668,6 +2159,472 @@ function losAngelesDateParts(date = new Date()) {
 function isoDate({ year, month, day }) {
   return `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
 }
+
+test("signup secrets follow exact age-proof and challenge receipts when metadata is absent", async () => {
+  const { sqlite, d1 } = await database();
+  d1.omitOnceMutationMetadataSubstring = "INSERT INTO signup_age_proofs";
+  const exactProof = await handleAccountRequest(request("/api/auth/signup/eligibility", {
+    method: "POST",
+    body: { birthDate: "2000-01-01" },
+  }), { DB: d1 }, []);
+  const exactProofBody = await exactProof.json();
+  assert.equal(exactProof.status, 200);
+  assert.equal(typeof exactProofBody.eligibilityProof, "string");
+  assert.equal(sqlite.prepare("SELECT COUNT(*) AS count FROM signup_age_proofs").get().count, 1);
+
+  const originalFetch = globalThis.fetch;
+  let providerCalls = 0;
+  globalThis.fetch = async (input) => {
+    if (String(input).startsWith("https://api.pwnedpasswords.com/range/")) {
+      return new Response(`${"0".repeat(35)}:0`);
+    }
+    providerCalls += 1;
+    return Response.json({ id: "exact-receipt" });
+  };
+  try {
+    const consumedProofResponse = await handleAccountRequest(request("/api/auth/signup/eligibility", {
+      method: "POST",
+      body: { birthDate: "2000-01-01" },
+    }), { DB: d1 }, []);
+    const consumedProof = (await consumedProofResponse.json()).eligibilityProof;
+    d1.omitOnceMutationMetadataSubstring = "UPDATE signup_age_proofs SET consumed_at";
+    const exactConsumption = await handleAccountRequest(request("/api/auth/signup/request", {
+      method: "POST",
+      body: {
+        eligibilityProof: consumedProof,
+        email: "unconfirmed-consumption@example.com",
+        password: "receipt-bound signup passphrase",
+        termsAccepted: true,
+        privacyAccepted: true,
+      },
+    }), { DB: d1, RESEND_API_KEY: "test" }, []);
+    assert.equal(exactConsumption.status, 200);
+    assert.notEqual(
+      sqlite.prepare("SELECT consumed_at FROM signup_age_proofs WHERE token_hash = ?").get(await sha256(consumedProof)).consumed_at,
+      null,
+    );
+    assert.equal(sqlite.prepare("SELECT COUNT(*) AS count FROM email_challenges").get().count, 1);
+    assert.equal(providerCalls, 1);
+
+    const challengeProofResponse = await handleAccountRequest(request("/api/auth/signup/eligibility", {
+      method: "POST",
+      body: { birthDate: "2000-01-01" },
+    }), { DB: d1 }, []);
+    const challengeProof = (await challengeProofResponse.json()).eligibilityProof;
+    d1.omitOnceMutationMetadataSubstring = "INSERT INTO email_challenges";
+    const exactChallenge = await handleAccountRequest(request("/api/auth/signup/request", {
+      method: "POST",
+      body: {
+        eligibilityProof: challengeProof,
+        email: "unconfirmed-challenge@example.com",
+        password: "another receipt-bound passphrase",
+        termsAccepted: true,
+        privacyAccepted: true,
+      },
+    }), { DB: d1, RESEND_API_KEY: "test" }, []);
+    assert.equal(exactChallenge.status, 200);
+    assert.equal(sqlite.prepare("SELECT COUNT(*) AS count FROM email_challenges").get().count, 2);
+    assert.equal(providerCalls, 2);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("signup resend follows its exact conditional transition before provider delivery", async () => {
+  const { sqlite, d1 } = await database();
+  const originalFetch = globalThis.fetch;
+  let providerCalls = 0;
+  globalThis.fetch = async () => {
+    providerCalls += 1;
+    return Response.json({ id: "exact-resend" });
+  };
+  try {
+    const timestamp = new Date(Date.now() - 61_000).toISOString();
+    const challengeId = `challenge_${crypto.randomUUID()}`;
+    sqlite.prepare(`INSERT INTO email_challenges
+        (id, kind, email, code_hash, expires_at, attempts, resend_count, created_at)
+      VALUES (?, 'signup', ?, ?, ?, 0, 0, ?)`).run(
+      challengeId,
+      "signup-resend-receipt@example.com",
+      await sha256(`${challengeId}:123456`),
+      new Date(Date.now() + 15 * 60_000).toISOString(),
+      timestamp,
+    );
+    d1.omitOnceMutationMetadataSubstring = "UPDATE email_challenges";
+    const exact = await handleAccountRequest(request("/api/auth/challenge/resend", {
+      method: "POST",
+      body: { challengeId },
+    }), { DB: d1, RESEND_API_KEY: "test" }, []);
+    assert.equal(exact.status, 200);
+    assert.equal(sqlite.prepare("SELECT COUNT(*) AS count FROM email_challenges WHERE id = ?").get(challengeId).count, 1);
+    assert.equal(providerCalls, 1);
+
+    const racedId = `challenge_${crypto.randomUUID()}`;
+    const racedHash = await sha256(`${racedId}:123456`);
+    sqlite.prepare(`INSERT INTO email_challenges
+        (id, kind, email, code_hash, expires_at, attempts, resend_count, created_at)
+      VALUES (?, 'signup', ?, ?, ?, 0, 0, ?)`).run(
+      racedId,
+      "signup-resend-race@example.com",
+      racedHash,
+      new Date(Date.now() + 15 * 60_000).toISOString(),
+      timestamp,
+    );
+    const replacementHash = "f".repeat(64);
+    d1.beforeOnceQuerySubstring = "UPDATE email_challenges";
+    d1.beforeOnceQuery = () => sqlite.prepare("UPDATE email_challenges SET code_hash = ? WHERE id = ?")
+      .run(replacementHash, racedId);
+    const raced = await handleAccountRequest(request("/api/auth/challenge/resend", {
+      method: "POST",
+      body: { challengeId: racedId },
+    }), { DB: d1, RESEND_API_KEY: "test" }, []);
+    assert.equal(raced.status, 409);
+    assert.equal((await raced.json()).error.code, "challenge_changed");
+    assert.equal(sqlite.prepare("SELECT code_hash FROM email_challenges WHERE id = ?").get(racedId).code_hash, replacementHash);
+    assert.equal(providerCalls, 1);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("password recovery keeps generic responses while following exact metadata-free receipts", async () => {
+  const { sqlite, d1 } = await database();
+  const user = await addUser(sqlite, "challenge-receipt-145");
+  const originalFetch = globalThis.fetch;
+  let providerCalls = 0;
+  globalThis.fetch = async () => {
+    providerCalls += 1;
+    return Response.json({ id: "exact-recovery" });
+  };
+  try {
+    d1.omitOnceMutationMetadataSubstring = "INSERT INTO email_challenges";
+    const requested = await handleAccountRequest(request("/api/auth/password/request", {
+      method: "POST",
+      body: { email: user.email },
+    }), { DB: d1, RESEND_API_KEY: "test" }, []);
+    assert.equal(requested.status, 200);
+    assert.equal((await requested.json()).requested, true);
+    assert.equal(sqlite.prepare("SELECT COUNT(*) AS count FROM email_challenges WHERE email = ?").get(user.email).count, 1);
+    assert.equal(providerCalls, 1);
+
+    const challengeId = `challenge_${crypto.randomUUID()}`;
+    const timestamp = new Date(Date.now() - 61_000).toISOString();
+    sqlite.prepare(`INSERT INTO email_challenges
+        (id, kind, email, user_id, code_hash, expires_at, attempts, resend_count, created_at)
+      VALUES (?, 'password_reset', ?, ?, ?, ?, 0, 0, ?)`).run(
+      challengeId,
+      user.email,
+      user.id,
+      await sha256(`${challengeId}:123456`),
+      new Date(Date.now() + 15 * 60_000).toISOString(),
+      timestamp,
+    );
+    d1.omitOnceMutationMetadataSubstring = "UPDATE email_challenges";
+    const resent = await handleAccountRequest(request("/api/auth/challenge/resend", {
+      method: "POST",
+      body: { challengeId },
+    }), { DB: d1, RESEND_API_KEY: "test" }, []);
+    assert.equal(resent.status, 200);
+    assert.equal((await resent.json()).requested, true);
+    assert.equal(sqlite.prepare("SELECT COUNT(*) AS count FROM email_challenges WHERE id = ?").get(challengeId).count, 1);
+    assert.equal(providerCalls, 2);
+
+    const responseLossUser = await addUser(sqlite, "challenge-response-loss-146");
+    d1.throwOnceAfterMutationSubstring = "INSERT INTO email_challenges";
+    const responseLoss = await handleAccountRequest(request("/api/auth/password/request", {
+      method: "POST",
+      body: { email: responseLossUser.email },
+    }), { DB: d1, RESEND_API_KEY: "test" }, []);
+    assert.equal(responseLoss.status, 200);
+    assert.equal(providerCalls, 3);
+    assert.equal(sqlite.prepare("SELECT COUNT(*) AS count FROM email_challenges WHERE email = ?").get(responseLossUser.email).count, 1);
+
+    const rolledBackUser = await addUser(sqlite, "challenge-rollback-147");
+    d1.failOnceQuerySubstring = "INSERT INTO email_challenges";
+    const rolledBack = await handleAccountRequest(request("/api/auth/password/request", {
+      method: "POST",
+      body: { email: rolledBackUser.email },
+    }), { DB: d1, RESEND_API_KEY: "test" }, []);
+    assert.equal(rolledBack.status, 200);
+    assert.equal(providerCalls, 3);
+    assert.equal(sqlite.prepare("SELECT COUNT(*) AS count FROM email_challenges WHERE email = ?").get(rolledBackUser.email).count, 0);
+
+    const unreadableUser = await addUser(sqlite, "challenge-unreadable-148");
+    d1.failOnceQuerySubstring = "AS exact_count,\n        (SELECT COUNT(*) FROM email_challenges";
+    const unreadable = await handleAccountRequest(request("/api/auth/password/request", {
+      method: "POST",
+      body: { email: unreadableUser.email },
+    }), { DB: d1, RESEND_API_KEY: "test" }, []);
+    assert.equal(unreadable.status, 200);
+    assert.equal(providerCalls, 3);
+    assert.equal(sqlite.prepare("SELECT COUNT(*) AS count FROM email_challenges WHERE email = ?").get(unreadableUser.email).count, 0);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("age-proof disclosure recovers committed response loss and rejects rollback or unreadable state", async () => {
+  {
+    const { sqlite, d1 } = await database();
+    d1.throwOnceAfterMutationSubstring = "INSERT INTO signup_age_proofs";
+    const response = await handleAccountRequest(request("/api/auth/signup/eligibility", {
+      method: "POST",
+      body: { birthDate: "2000-01-01" },
+    }), { DB: d1 }, []);
+    assert.equal(response.status, 200);
+    assert.equal(typeof (await response.json()).eligibilityProof, "string");
+    assert.equal(sqlite.prepare("SELECT COUNT(*) AS count FROM signup_age_proofs").get().count, 1);
+  }
+
+  {
+    const { sqlite, d1 } = await database();
+    d1.failOnceQuerySubstring = "INSERT INTO signup_age_proofs";
+    const response = await handleAccountRequest(request("/api/auth/signup/eligibility", {
+      method: "POST",
+      body: { birthDate: "2000-01-01" },
+    }), { DB: d1 }, []);
+    const body = await response.json();
+    assert.equal(response.status, 503);
+    assert.equal(body.error.code, "eligibility_proof_unconfirmed");
+    assert.equal(body.eligibilityProof, undefined);
+    assert.equal(sqlite.prepare("SELECT COUNT(*) AS count FROM signup_age_proofs").get().count, 0);
+  }
+
+  {
+    const { sqlite, d1 } = await database();
+    d1.failOnceQuerySubstring = "AS exact_count,\n        (SELECT COUNT(*) FROM signup_age_proofs";
+    const response = await handleAccountRequest(request("/api/auth/signup/eligibility", {
+      method: "POST",
+      body: { birthDate: "2000-01-01" },
+    }), { DB: d1 }, []);
+    assert.equal(response.status, 503);
+    assert.equal((await response.json()).error.code, "eligibility_proof_unconfirmed");
+    assert.equal(sqlite.prepare("SELECT COUNT(*) AS count FROM signup_age_proofs").get().count, 0);
+  }
+
+  {
+    const { sqlite, d1 } = await database();
+    d1.beforeOnceQuerySubstring = "AS exact_count,\n        (SELECT COUNT(*) FROM signup_age_proofs";
+    d1.beforeOnceQuery = () => sqlite.prepare("UPDATE signup_age_proofs SET gate_version = 'changed' ").run();
+    const response = await handleAccountRequest(request("/api/auth/signup/eligibility", {
+      method: "POST",
+      body: { birthDate: "2000-01-01" },
+    }), { DB: d1 }, []);
+    const body = await response.json();
+    assert.equal(response.status, 503);
+    assert.equal(body.eligibilityProof, undefined);
+    assert.equal(sqlite.prepare("SELECT gate_version FROM signup_age_proofs").get().gate_version, "changed");
+  }
+});
+
+test("age-proof consumption follows exact one-use state before challenge creation", async () => {
+  const originalFetch = globalThis.fetch;
+  let providerCalls = 0;
+  globalThis.fetch = async (input) => {
+    if (String(input).startsWith("https://api.pwnedpasswords.com/range/")) {
+      return new Response(`${"0".repeat(35)}:0`);
+    }
+    providerCalls += 1;
+    return Response.json({ id: "exact-consumption" });
+  };
+  const createProof = async (d1) => {
+    const response = await handleAccountRequest(request("/api/auth/signup/eligibility", {
+      method: "POST",
+      body: { birthDate: "2000-01-01" },
+    }), { DB: d1 }, []);
+    return (await response.json()).eligibilityProof;
+  };
+  const submit = (d1, proof, email) => handleAccountRequest(request("/api/auth/signup/request", {
+    method: "POST",
+    body: {
+      eligibilityProof: proof,
+      email,
+      password: "exact proof consumption passphrase",
+      termsAccepted: true,
+      privacyAccepted: true,
+    },
+  }), { DB: d1, RESEND_API_KEY: "test" }, []);
+  try {
+    {
+      const { sqlite, d1 } = await database();
+      const proof = await createProof(d1);
+      d1.throwOnceAfterMutationSubstring = "UPDATE signup_age_proofs SET consumed_at";
+      const response = await submit(d1, proof, "proof-response-loss@example.com");
+      assert.equal(response.status, 200);
+      assert.equal(providerCalls, 1);
+      assert.notEqual(sqlite.prepare("SELECT consumed_at FROM signup_age_proofs").get().consumed_at, null);
+    }
+
+    {
+      const { sqlite, d1 } = await database();
+      const proof = await createProof(d1);
+      d1.failOnceQuerySubstring = "UPDATE signup_age_proofs SET consumed_at";
+      const response = await submit(d1, proof, "proof-rollback@example.com");
+      assert.equal(response.status, 503);
+      assert.equal((await response.json()).error.code, "eligibility_proof_consumption_unconfirmed");
+      assert.equal(providerCalls, 1);
+      assert.equal(sqlite.prepare("SELECT consumed_at FROM signup_age_proofs").get().consumed_at, null);
+      assert.equal(sqlite.prepare("SELECT COUNT(*) AS count FROM email_challenges").get().count, 0);
+    }
+
+    {
+      const { sqlite, d1 } = await database();
+      const proof = await createProof(d1);
+      d1.failOnceQuerySubstring = "AS consumed_count";
+      const response = await submit(d1, proof, "proof-unreadable@example.com");
+      assert.equal(response.status, 503);
+      assert.equal((await response.json()).error.code, "eligibility_proof_consumption_unconfirmed");
+      assert.equal(providerCalls, 1);
+      assert.notEqual(sqlite.prepare("SELECT consumed_at FROM signup_age_proofs").get().consumed_at, null);
+      assert.equal(sqlite.prepare("SELECT COUNT(*) AS count FROM email_challenges").get().count, 0);
+    }
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("challenge creation recovers committed response loss and suppresses provider work on ambiguity", async () => {
+  const originalFetch = globalThis.fetch;
+  let providerCalls = 0;
+  globalThis.fetch = async (input) => {
+    if (String(input).startsWith("https://api.pwnedpasswords.com/range/")) {
+      return new Response(`${"0".repeat(35)}:0`);
+    }
+    providerCalls += 1;
+    return Response.json({ id: "exact-challenge" });
+  };
+  const submit = async (sqlite, d1, email, configure) => {
+    const proofResponse = await handleAccountRequest(request("/api/auth/signup/eligibility", {
+      method: "POST",
+      body: { birthDate: "2000-01-01" },
+    }), { DB: d1 }, []);
+    const proof = (await proofResponse.json()).eligibilityProof;
+    configure(sqlite, d1);
+    return handleAccountRequest(request("/api/auth/signup/request", {
+      method: "POST",
+      body: {
+        eligibilityProof: proof,
+        email,
+        password: "exact challenge creation passphrase",
+        termsAccepted: true,
+        privacyAccepted: true,
+      },
+    }), { DB: d1, RESEND_API_KEY: "test" }, []);
+  };
+  try {
+    {
+      const { sqlite, d1 } = await database();
+      const response = await submit(sqlite, d1, "challenge-response-loss@example.com", (_sqlite, adapter) => {
+        adapter.throwOnceAfterMutationSubstring = "INSERT INTO email_challenges";
+      });
+      assert.equal(response.status, 200);
+      assert.equal(providerCalls, 1);
+      assert.equal(sqlite.prepare("SELECT COUNT(*) AS count FROM email_challenges").get().count, 1);
+    }
+
+    {
+      const { sqlite, d1 } = await database();
+      const response = await submit(sqlite, d1, "challenge-rollback@example.com", (_sqlite, adapter) => {
+        adapter.failOnceQuerySubstring = "INSERT INTO email_challenges";
+      });
+      assert.equal(response.status, 503);
+      assert.equal((await response.json()).error.code, "challenge_creation_unconfirmed");
+      assert.equal(providerCalls, 1);
+      assert.equal(sqlite.prepare("SELECT COUNT(*) AS count FROM email_challenges").get().count, 0);
+    }
+
+    {
+      const { sqlite, d1 } = await database();
+      const response = await submit(sqlite, d1, "challenge-unreadable@example.com", (_sqlite, adapter) => {
+        adapter.failOnceQuerySubstring = "AS exact_count,\n        (SELECT COUNT(*) FROM email_challenges";
+      });
+      assert.equal(response.status, 503);
+      assert.equal(providerCalls, 1);
+      assert.equal(sqlite.prepare("SELECT COUNT(*) AS count FROM email_challenges").get().count, 0);
+    }
+
+    {
+      const { sqlite, d1 } = await database();
+      const email = "challenge-changed@example.com";
+      const response = await submit(sqlite, d1, email, (databaseHandle, adapter) => {
+        adapter.beforeOnceQuerySubstring = "AS exact_count,\n        (SELECT COUNT(*) FROM email_challenges";
+        adapter.beforeOnceQuery = () => databaseHandle.prepare("UPDATE email_challenges SET attempts = 1 WHERE email = ?")
+          .run(email);
+      });
+      assert.equal(response.status, 503);
+      assert.equal(providerCalls, 1);
+      assert.equal(sqlite.prepare("SELECT attempts FROM email_challenges WHERE email = ?").get(email).attempts, 1);
+    }
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("challenge resend follows exact next or prior state after transport failures", async () => {
+  const originalFetch = globalThis.fetch;
+  let providerCalls = 0;
+  globalThis.fetch = async () => {
+    providerCalls += 1;
+    return Response.json({ id: "exact-resend-transition" });
+  };
+  const seed = async (sqlite, suffix) => {
+    const id = `challenge_${crypto.randomUUID()}`;
+    const createdAt = new Date(Date.now() - 61_000).toISOString();
+    sqlite.prepare(`INSERT INTO email_challenges
+        (id, kind, email, code_hash, expires_at, attempts, resend_count, created_at)
+      VALUES (?, 'signup', ?, ?, ?, 0, 0, ?)`).run(
+      id,
+      `resend-${suffix}@example.com`,
+      await sha256(`${id}:123456`),
+      new Date(Date.now() + 15 * 60_000).toISOString(),
+      createdAt,
+    );
+    return id;
+  };
+  try {
+    {
+      const { sqlite, d1 } = await database();
+      const id = await seed(sqlite, "response-loss");
+      d1.throwOnceAfterMutationSubstring = "UPDATE email_challenges";
+      const response = await handleAccountRequest(request("/api/auth/challenge/resend", {
+        method: "POST",
+        body: { challengeId: id },
+      }), { DB: d1, RESEND_API_KEY: "test" }, []);
+      assert.equal(response.status, 200);
+      assert.equal(providerCalls, 1);
+      assert.equal(sqlite.prepare("SELECT resend_count FROM email_challenges WHERE id = ?").get(id).resend_count, 1);
+    }
+
+    {
+      const { sqlite, d1 } = await database();
+      const id = await seed(sqlite, "rollback");
+      d1.failOnceQuerySubstring = "UPDATE email_challenges";
+      const response = await handleAccountRequest(request("/api/auth/challenge/resend", {
+        method: "POST",
+        body: { challengeId: id },
+      }), { DB: d1, RESEND_API_KEY: "test" }, []);
+      assert.equal(response.status, 503);
+      assert.equal((await response.json()).error.code, "challenge_update_unconfirmed");
+      assert.equal(providerCalls, 1);
+      assert.equal(sqlite.prepare("SELECT resend_count FROM email_challenges WHERE id = ?").get(id).resend_count, 0);
+    }
+
+    {
+      const { sqlite, d1 } = await database();
+      const id = await seed(sqlite, "unreadable");
+      d1.failOnceQuerySubstring = "AS next_count";
+      const response = await handleAccountRequest(request("/api/auth/challenge/resend", {
+        method: "POST",
+        body: { challengeId: id },
+      }), { DB: d1, RESEND_API_KEY: "test" }, []);
+      assert.equal(response.status, 503);
+      assert.equal(providerCalls, 1);
+      assert.equal(sqlite.prepare("SELECT COUNT(*) AS count FROM email_challenges WHERE id = ?").get(id).count, 0);
+    }
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
 
 test("age eligibility is isolated, one-use, non-retaining, and fail-closed", async () => {
   const { sqlite, d1 } = await database();
@@ -923,6 +2880,307 @@ test("legal reacceptance preserves prior age eligibility and legacy accounts fai
   assert.equal(legacyExport?.status, 200);
 });
 
+test("owner preflight binds the live session and preserves legal and deletion-fence rights", async () => {
+  const protectedOptions = {
+    currentLegalAcceptanceRequired: true,
+    deletionFenceAccessAllowed: false,
+  };
+  const unavailableRequest = request("/api/trips/start", {
+    method: "POST",
+    body: { siteId: "ocean-beach" },
+  });
+  const unavailable = await authorizeOwnerRequest(unavailableRequest, {}, protectedOptions);
+  assert.equal(unavailable.session, null);
+  assert.equal(unavailable.response?.status, 503);
+  assert.equal((await unavailable.response.json()).error.code, "storage_unavailable");
+  assert.equal(unavailableRequest.bodyUsed, false);
+
+  const { sqlite, d1 } = await database();
+  const anonymousRequest = request("/api/trips/start", {
+    method: "POST",
+    body: { siteId: "ocean-beach" },
+  });
+  const anonymous = await authorizeOwnerRequest(anonymousRequest, { DB: d1 }, protectedOptions);
+  assert.equal(anonymous.session, null);
+  assert.equal(anonymous.response?.status, 401);
+  assert.equal((await anonymous.response.json()).error.code, "authentication_required");
+  assert.equal(anonymousRequest.bodyUsed, false);
+
+  const owner = await addUser(sqlite, "owner-preflight-166");
+  const other = await addUser(sqlite, "other-preflight-167");
+  const ownerResult = await authorizeOwnerRequest(
+    request("/api/trips/start", { method: "POST", cookie: owner.cookie, body: {} }),
+    { DB: d1 },
+    protectedOptions,
+  );
+  const otherResult = await authorizeOwnerRequest(
+    request("/api/trips/start", { method: "POST", cookie: other.cookie, body: {} }),
+    { DB: d1 },
+    protectedOptions,
+  );
+  assert.equal(ownerResult.response, null);
+  assert.equal(ownerResult.session?.user.id, owner.id);
+  assert.equal(otherResult.response, null);
+  assert.equal(otherResult.session?.user.id, other.id);
+  assert.notEqual(ownerResult.session?.user.id, otherResult.session?.user.id);
+
+  sqlite.prepare("UPDATE users SET terms_version = 'old', privacy_version = 'old' WHERE id = ?").run(owner.id);
+  const staleLegal = await authorizeOwnerRequest(
+    request("/api/trips/start", { method: "POST", cookie: owner.cookie, body: {} }),
+    { DB: d1 },
+    protectedOptions,
+  );
+  assert.equal(staleLegal.session, null);
+  assert.equal(staleLegal.response?.status, 428);
+  assert.equal((await staleLegal.response.json()).error.code, "legal_acceptance_required");
+
+  const legalException = await authorizeOwnerRequest(
+    request("/api/profile/export", { cookie: owner.cookie }),
+    { DB: d1 },
+    { currentLegalAcceptanceRequired: false, deletionFenceAccessAllowed: true },
+  );
+  assert.equal(legalException.response, null);
+  assert.equal(legalException.session?.user.id, owner.id);
+
+  const timestamp = new Date().toISOString();
+  sqlite.prepare(`INSERT INTO account_deletion_fences
+      (user_id, owner_subject_hash, lease_token, lease_expires_at, requested_at, updated_at)
+    VALUES (?, ?, ?, ?, ?, ?)`).run(
+    owner.id,
+    await sha256(`account:${owner.id}`),
+    `lease_${"a".repeat(40)}`,
+    new Date(Date.now() + 60_000).toISOString(),
+    timestamp,
+    timestamp,
+  );
+
+  const fencedMutation = await authorizeOwnerRequest(
+    request("/api/trips/start", { method: "POST", cookie: owner.cookie, body: {} }),
+    { DB: d1 },
+    protectedOptions,
+  );
+  assert.equal(fencedMutation.session, null);
+  assert.equal(fencedMutation.response?.status, 409);
+  assert.equal((await fencedMutation.response.json()).error.code, "account_deletion_in_progress");
+
+  const fencedExport = await authorizeOwnerRequest(
+    request("/api/profile/export", { cookie: owner.cookie }),
+    { DB: d1 },
+    { currentLegalAcceptanceRequired: false, deletionFenceAccessAllowed: true },
+  );
+  assert.equal(fencedExport.response, null);
+  assert.equal(fencedExport.session?.user.id, owner.id);
+
+  const fencedProfile = await authorizeOwnerRequest(
+    request("/api/profile", { cookie: owner.cookie }),
+    { DB: d1 },
+    { currentLegalAcceptanceRequired: true, deletionFenceAccessAllowed: true },
+  );
+  assert.equal(fencedProfile.session, null);
+  assert.equal(fencedProfile.response?.status, 428);
+  assert.equal((await fencedProfile.response.json()).error.code, "legal_acceptance_required");
+});
+
+test("deletion-receipt preflight fails closed and the handler repeats live token authority", async () => {
+  const unavailable = await authorizeDeletionReceiptRequest(
+    request("/api/privacy/deletion-status"),
+    {},
+  );
+  assert.equal(unavailable.response?.status, 503);
+  assert.equal((await unavailable.response.json()).error.code, "storage_unavailable");
+
+  const wrongRoute = await authorizeDeletionReceiptRequest(
+    request("/api/auth/session"),
+    {},
+  );
+  assert.equal(wrongRoute.response?.status, 503);
+  assert.equal((await wrongRoute.response.json()).error.code, "route_unavailable");
+
+  const missingSchemaSqlite = new DatabaseSync(":memory:");
+  const missingSchema = await authorizeDeletionReceiptRequest(
+    request("/api/privacy/deletion-status"),
+    { DB: new TransactionalD1Adapter(missingSchemaSqlite) },
+  );
+  assert.equal(missingSchema.response?.status, 503);
+  assert.equal((await missingSchema.response.json()).error.code, "auth_schema_unavailable");
+
+  const { sqlite, d1 } = await database();
+  const missing = await authorizeDeletionReceiptRequest(
+    request("/api/privacy/deletion-status"),
+    { DB: d1 },
+  );
+  assert.equal(missing.response?.status, 404);
+  assert.equal((await missing.response.json()).error.code, "deletion_receipt_not_found");
+
+  const unknownReceipt = "z".repeat(48);
+  const unknown = await authorizeDeletionReceiptRequest(
+    request("/api/privacy/deletion-status", { cookie: `cc_deletion_receipt=${unknownReceipt}` }),
+    { DB: d1 },
+  );
+  assert.equal(unknown.response?.status, 404);
+  assert.equal((await unknown.response.json()).error.code, "deletion_receipt_not_found");
+
+  const receipt = "r".repeat(48);
+  const timestamp = "2026-07-22T23:30:00.000Z";
+  sqlite.prepare(`INSERT INTO privacy_deletion_jobs (
+      id, receipt_hash, scope, subject_hash, owner_subject_hash, state, objects_total,
+      objects_deleted, requested_at, active_data_removed_at, completed_at, updated_at)
+    VALUES (?, ?, 'trip', ?, ?, 'completed', 0, 0, ?, ?, ?, ?)`).run(
+    "deletion_receipt_preflight",
+    await sha256(receipt),
+    await sha256("trip:receipt-preflight"),
+    await sha256("account:receipt-preflight"),
+    timestamp,
+    timestamp,
+    timestamp,
+    timestamp,
+  );
+  const authorized = await authorizeDeletionReceiptRequest(
+    request("/api/privacy/deletion-status", { cookie: `cc_deletion_receipt=${receipt}` }),
+    { DB: d1 },
+  );
+  assert.equal(authorized.response, null);
+
+  sqlite.prepare("DELETE FROM privacy_deletion_jobs WHERE id = ?").run("deletion_receipt_preflight");
+  const removedBeforeExecution = await handleAccountRequest(
+    request("/api/privacy/deletion-status", { cookie: `cc_deletion_receipt=${receipt}` }),
+    { DB: d1 },
+    [],
+  );
+  assert.equal(removedBeforeExecution?.status, 404);
+  assert.equal((await removedBeforeExecution.json()).error.code, "deletion_receipt_not_found");
+
+  missingSchemaSqlite.close();
+});
+
+test("optional-session preflight binds only the reviewed routes and requires readable account storage", async () => {
+  const unavailable = await authorizeOptionalSessionRequest(
+    request("/api/auth/session"),
+    {},
+  );
+  assert.equal(unavailable.response?.status, 503);
+  assert.equal((await unavailable.response.json()).error.code, "storage_unavailable");
+
+  const wrongRoute = await authorizeOptionalSessionRequest(
+    request("/api/auth/login", { method: "POST", body: {} }),
+    {},
+  );
+  assert.equal(wrongRoute.response?.status, 503);
+  assert.equal((await wrongRoute.response.json()).error.code, "route_unavailable");
+
+  const missingSchemaSqlite = new DatabaseSync(":memory:");
+  const missingSchema = await authorizeOptionalSessionRequest(
+    request("/api/auth/session"),
+    { DB: new TransactionalD1Adapter(missingSchemaSqlite) },
+  );
+  assert.equal(missingSchema.response?.status, 503);
+  assert.equal((await missingSchema.response.json()).error.code, "auth_schema_unavailable");
+
+  const { sqlite, d1 } = await database();
+  const session = await authorizeOptionalSessionRequest(request("/api/auth/session"), { DB: d1 });
+  const logout = await authorizeOptionalSessionRequest(
+    request("/api/auth/logout", { method: "POST" }),
+    { DB: d1 },
+  );
+  assert.equal(session.response, null);
+  assert.equal(logout.response, null);
+
+  sqlite.close();
+  missingSchemaSqlite.close();
+});
+
+test("legal acceptance requires an exact live account and session receipt", async () => {
+  const { sqlite, d1 } = await database();
+  const accept = (user, options = {}) => handleAccountRequest(request("/api/auth/eligibility", {
+    method: "POST",
+    cookie: user.cookie,
+    body: { termsAccepted: true, privacyAccepted: true },
+  }), { DB: d1 }, [], {
+    now: () => new Date("2026-07-22T06:00:00.000Z"),
+    ...options,
+  });
+  const makeStale = async (suffix) => {
+    const user = await addUser(sqlite, suffix);
+    sqlite.prepare(`UPDATE users SET terms_accepted_at = '2025-01-01T00:00:00.000Z',
+      terms_version = 'old', privacy_accepted_at = '2025-01-01T00:00:00.000Z',
+      privacy_version = 'old' WHERE id = ?`).run(user.id);
+    return user;
+  };
+
+  const deleted = await makeStale("legal-race-139");
+  d1.beforeOnceQuerySubstring = "UPDATE users SET terms_accepted_at";
+  d1.beforeOnceQuery = () => sqlite.prepare("DELETE FROM users WHERE id = ?").run(deleted.id);
+  const deletedResponse = await accept(deleted);
+  assert.equal(deletedResponse?.status, 401);
+  assert.equal((await deletedResponse.json()).error.code, "authentication_required");
+  assert.match(deletedResponse.headers.get("Set-Cookie") ?? "", /cc_session=;.*Max-Age=0/u);
+  assert.equal(sqlite.prepare("SELECT COUNT(*) AS count FROM users WHERE id = ?").get(deleted.id).count, 0);
+
+  const missingMetadata = await makeStale("legal-receipt-140");
+  d1.omitOnceMutationMetadataSubstring = "UPDATE users SET terms_accepted_at";
+  const missingMetadataResponse = await accept(missingMetadata);
+  assert.equal(missingMetadataResponse?.status, 200);
+  assert.equal((await missingMetadataResponse.json()).user.legalAccepted, true);
+
+  const lostResponse = await makeStale("legal-response-loss-141");
+  d1.throwOnceAfterMutationSubstring = "UPDATE users SET terms_accepted_at";
+  const lostResponseReceipt = await accept(lostResponse);
+  assert.equal(lostResponseReceipt?.status, 200);
+  assert.equal((await lostResponseReceipt.json()).user.legalAccepted, true);
+
+  const rolledBack = await makeStale("legal-rollback-142");
+  d1.failOnceQuerySubstring = "UPDATE users SET terms_accepted_at";
+  const rolledBackResponse = await accept(rolledBack);
+  assert.equal(rolledBackResponse?.status, 503);
+  assert.equal((await rolledBackResponse.json()).error.code, "legal_acceptance_unconfirmed");
+  assert.deepEqual(
+    { ...sqlite.prepare("SELECT terms_version, privacy_version FROM users WHERE id = ?").get(rolledBack.id) },
+    { terms_version: "old", privacy_version: "old" },
+  );
+
+  const unreadable = await makeStale("legal-unreadable-receipt-143");
+  d1.failOnceQuerySubstring = "AS accepted_count";
+  const unreadableResponse = await accept(unreadable);
+  assert.equal(unreadableResponse?.status, 503);
+  assert.equal((await unreadableResponse.json()).error.code, "legal_acceptance_unconfirmed");
+  assert.deepEqual(
+    { ...sqlite.prepare("SELECT terms_version, privacy_version FROM users WHERE id = ?").get(unreadable.id) },
+    { terms_version: LEGAL_VERSION, privacy_version: LEGAL_VERSION },
+  );
+
+  const changed = await makeStale("legal-changed-snapshot-144");
+  d1.beforeOnceQuerySubstring = "UPDATE users SET terms_accepted_at";
+  d1.beforeOnceQuery = () => sqlite.prepare("UPDATE users SET updated_at = '2026-07-22T05:59:59.000Z' WHERE id = ?")
+    .run(changed.id);
+  const changedResponse = await accept(changed);
+  assert.equal(changedResponse?.status, 503);
+  assert.equal((await changedResponse.json()).error.code, "legal_acceptance_unconfirmed");
+  assert.deepEqual(
+    { ...sqlite.prepare("SELECT terms_version, privacy_version FROM users WHERE id = ?").get(changed.id) },
+    { terms_version: "old", privacy_version: "old" },
+  );
+
+  const revoked = await makeStale("legal-revoked-session-145");
+  d1.beforeOnceQuerySubstring = "UPDATE users SET terms_accepted_at";
+  d1.beforeOnceQuery = () => sqlite.prepare("DELETE FROM auth_sessions WHERE user_id = ?").run(revoked.id);
+  const revokedResponse = await accept(revoked);
+  assert.equal(revokedResponse?.status, 401);
+  assert.equal((await revokedResponse.json()).error.code, "authentication_required");
+  assert.match(revokedResponse.headers.get("Set-Cookie") ?? "", /cc_session=;.*Max-Age=0/u);
+
+  const removedAfterCommit = await makeStale("legal-post-commit-delete-146");
+  d1.beforeOnceQuerySubstring = "AS accepted_count";
+  d1.beforeOnceQuery = () => sqlite.prepare("DELETE FROM users WHERE id = ?").run(removedAfterCommit.id);
+  const removedAfterCommitResponse = await accept(removedAfterCommit);
+  assert.equal(removedAfterCommitResponse?.status, 401);
+  assert.equal((await removedAfterCommitResponse.json()).error.code, "authentication_required");
+
+  assert.deepEqual(
+    { ...sqlite.prepare("SELECT terms_version, privacy_version FROM users WHERE id = ?").get(missingMetadata.id) },
+    { terms_version: LEGAL_VERSION, privacy_version: LEGAL_VERSION },
+  );
+});
+
 test("per-record authorization denies cross-account reads and mutations", async () => {
   const { sqlite, d1 } = await database();
   const owner = await addUser(sqlite, "31");
@@ -969,6 +3227,708 @@ test("per-record authorization denies cross-account reads and mutations", async 
     .get(tripId, owner.id).count, 1);
   assert.equal(sqlite.prepare("SELECT COUNT(*) AS count FROM gear_profiles WHERE id = ? AND user_id = ?")
     .get(gearId, owner.id).count, 1);
+});
+
+test("manual review retry repeats owner identity in the final write and dispatches only confirmed rows", async () => {
+  const { sqlite, d1 } = await database();
+  const owner = await addUser(sqlite, "review-retry-owner-133");
+  const other = await addUser(sqlite, "review-retry-other-134");
+  const tripId = addTrip(sqlite, owner);
+  sqlite.prepare("UPDATE trips SET ai_review_status = 'retry' WHERE id = ?").run(tripId);
+
+  const dispatched = [];
+  d1.beforeOnceQuerySubstring = "UPDATE trips SET ai_review_status = 'queued'";
+  d1.beforeOnceQuery = () => {
+    sqlite.prepare("UPDATE trips SET user_id = ? WHERE id = ?").run(other.id, tripId);
+  };
+  const raced = await handleAccountRequest(request("/api/profile/reviews/retry", {
+    method: "POST",
+    cookie: owner.cookie,
+  }), { DB: d1 }, [], {
+    onTripReviewRequested: (trip) => dispatched.push(trip.id),
+  });
+
+  assert.equal(raced?.status, 202);
+  assert.deepEqual(await raced?.json(), { queued: 0 });
+  assert.deepEqual(dispatched, []);
+  assert.deepEqual(
+    { ...sqlite.prepare("SELECT user_id, ai_review_status FROM trips WHERE id = ?").get(tripId) },
+    { user_id: other.id, ai_review_status: "retry" },
+  );
+
+  const confirmed = await handleAccountRequest(request("/api/profile/reviews/retry", {
+    method: "POST",
+    cookie: other.cookie,
+  }), { DB: d1 }, [], {
+    onTripReviewRequested: (trip) => dispatched.push(trip.id),
+  });
+  assert.equal(confirmed?.status, 202);
+  assert.deepEqual(await confirmed?.json(), { queued: 1 });
+  assert.deepEqual(dispatched, [tripId]);
+  assert.equal(sqlite.prepare("SELECT ai_review_status FROM trips WHERE id = ?").get(tripId).ai_review_status, "queued");
+
+  const changedTripId = addTrip(sqlite, other);
+  sqlite.prepare("UPDATE trips SET ai_review_status = 'retry' WHERE id = ?").run(changedTripId);
+  d1.beforeOnceQuerySubstring = "UPDATE trips SET ai_review_status = 'queued'";
+  d1.beforeOnceQuery = () => sqlite.prepare(
+    "UPDATE trips SET updated_at = '2026-07-22T06:30:00.000Z' WHERE id = ?",
+  ).run(changedTripId);
+  const changed = await handleAccountRequest(request("/api/profile/reviews/retry", {
+    method: "POST",
+    cookie: other.cookie,
+  }), { DB: d1 }, [], {
+    onTripReviewRequested: (trip) => dispatched.push(trip.id),
+  });
+  assert.equal(changed?.status, 202);
+  assert.deepEqual(await changed?.json(), { queued: 0 });
+  assert.deepEqual(dispatched, [tripId]);
+  assert.equal(sqlite.prepare("SELECT ai_review_status FROM trips WHERE id = ?").get(changedTripId).ai_review_status, "retry");
+});
+
+test("manual review retry uses exact stored state across missing, lost, rolled-back, and unreadable receipts", async () => {
+  const { sqlite, d1 } = await database();
+  const owner = await addUser(sqlite, "review-retry-receipt-owner-140");
+  const dispatched = [];
+  const retryTrip = () => {
+    const tripId = addTrip(sqlite, owner);
+    sqlite.prepare("UPDATE trips SET ai_review_status = 'retry' WHERE id = ?").run(tripId);
+    return tripId;
+  };
+  const retry = () => handleAccountRequest(request("/api/profile/reviews/retry", {
+    method: "POST",
+    cookie: owner.cookie,
+  }), { DB: d1 }, [], {
+    onTripReviewRequested: (trip) => dispatched.push(trip.id),
+  });
+
+  const missingMetadataTrip = retryTrip();
+  d1.omitOnceMutationMetadataSubstring = "UPDATE trips SET ai_review_status = 'queued'";
+  const missingMetadata = await retry();
+  assert.equal(missingMetadata?.status, 202);
+  assert.deepEqual(await missingMetadata?.json(), { queued: 1 });
+  assert.deepEqual(dispatched, [missingMetadataTrip]);
+
+  const lostResponseTrip = retryTrip();
+  d1.throwOnceAfterBatchMutationSubstring = "UPDATE trips SET ai_review_status = 'queued'";
+  const lostResponse = await retry();
+  assert.equal(lostResponse?.status, 202);
+  assert.deepEqual(await lostResponse?.json(), { queued: 1 });
+  assert.deepEqual(dispatched, [missingMetadataTrip, lostResponseTrip]);
+
+  const rolledBackTrip = retryTrip();
+  d1.failOnceQuerySubstring = "UPDATE trips SET ai_review_status = 'queued'";
+  const rolledBack = await retry();
+  assert.equal(rolledBack?.status, 503);
+  assert.equal((await rolledBack?.json()).error.code, "review_retry_unconfirmed");
+  assert.deepEqual(dispatched, [missingMetadataTrip, lostResponseTrip]);
+  assert.equal(sqlite.prepare("SELECT ai_review_status FROM trips WHERE id = ?").get(rolledBackTrip).ai_review_status, "retry");
+
+  sqlite.prepare("UPDATE trips SET ai_review_status = 'completed' WHERE id IN (?, ?)")
+    .run(missingMetadataTrip, lostResponseTrip);
+  sqlite.prepare("UPDATE trips SET ai_review_status = 'completed' WHERE id = ?").run(rolledBackTrip);
+
+  const unreadableTrip = retryTrip();
+  d1.failOnceQuerySubstring = "AS queued_count";
+  const unreadable = await retry();
+  assert.equal(unreadable?.status, 503);
+  assert.equal((await unreadable?.json()).error.code, "review_retry_unconfirmed");
+  assert.deepEqual(dispatched, [missingMetadataTrip, lostResponseTrip]);
+  assert.equal(sqlite.prepare("SELECT ai_review_status FROM trips WHERE id = ?").get(unreadableTrip).ai_review_status, "queued");
+
+  let providerCalls = 0;
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async () => {
+    providerCalls += 1;
+    return Response.json({ choices: [] });
+  };
+  try {
+    const recovered = await reviewTripBacklog(
+      { DB: d1, MIMO_API_KEY: "test" },
+      [{ id: "ocean-beach", type: "Beach" }],
+      10,
+    );
+    assert.equal(recovered, 1);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+  assert.equal(providerCalls, 1);
+  assert.equal(sqlite.prepare("SELECT ai_review_status FROM trips WHERE id = ?").get(unreadableTrip).ai_review_status, "retry");
+});
+
+test("a ten-row manual retry admits every row but starts one bounded immediate dispatch", async () => {
+  const exercise = async (mode) => {
+    const { sqlite, d1 } = await database();
+    const owner = await addUser(sqlite, `review-retry-budget-${mode}`);
+    const tripIds = Array.from({ length: 10 }, () => addTrip(sqlite, owner));
+    sqlite.prepare("UPDATE trips SET ai_review_status = 'retry' WHERE user_id = ?").run(owner.id);
+    const background = [];
+    const dispatched = [];
+    const queueBodies = [];
+    let providerCalls = 0;
+    const env = mode === "queue"
+      ? {
+          DB: d1,
+          MIMO_API_KEY: "test-key",
+          AI_REVIEW_QUEUE_ENABLED: "true",
+          AI_REVIEW_QUEUE: { async send(body) { queueBodies.push(body); } },
+        }
+      : { DB: d1, MIMO_API_KEY: "test-key" };
+    const originalFetch = globalThis.fetch;
+    globalThis.fetch = async () => {
+      providerCalls += 1;
+      return Response.json({
+        choices: [{ message: { content: JSON.stringify({
+          quality_score: 90,
+          flags: [],
+          summary: "Complete synthetic report.",
+          needs_human_review: false,
+          gear_analysis: {
+            rod: { brand: null, series: null, model: null, confidence: "low" },
+            reel: { brand: null, series: null, model: null, confidence: "low" },
+            lure: { brand: null, series: null, model: null, confidence: "low" },
+            setup_tags: [],
+            compatibility_flags: [],
+            technique_match_summary: null,
+          },
+          discussion: { publish: false, summary: "", gear_summary: null, technique_tags: [] },
+        }) } }],
+      });
+    };
+    try {
+      d1.throwOnceAfterBatchMutationSubstring = "UPDATE trips SET ai_review_status = 'queued'";
+      const response = await handleAccountRequest(request("/api/profile/reviews/retry", {
+        method: "POST",
+        cookie: owner.cookie,
+      }), { DB: d1 }, [], {
+        onTripReviewRequested: (trip) => {
+          dispatched.push(trip.id);
+          background.push(scheduleTripReview(
+            env,
+            trip.id,
+            [{ id: "ocean-beach", type: "Beach" }],
+            { expediteRetry: true },
+          ));
+        },
+      });
+      assert.equal(response?.status, 202);
+      assert.deepEqual(await response?.json(), { queued: 10 });
+      assert.equal(dispatched.length, 1);
+      await Promise.all(background);
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+
+    assert.equal(d1.batchSizes.at(-1), 10);
+    assert.equal(d1.queryExecutions, 27);
+    assert.ok(d1.queryExecutions < 50);
+    assert.equal(sqlite.prepare("SELECT COUNT(*) AS count FROM trips WHERE user_id = ?")
+      .get(owner.id).count, tripIds.length);
+    if (mode === "queue") {
+      assert.equal(queueBodies.length, 1);
+      assert.equal(providerCalls, 0);
+      assert.equal(sqlite.prepare("SELECT COUNT(*) AS count FROM ai_review_jobs").get().count, 1);
+      assert.equal(sqlite.prepare("SELECT COUNT(*) AS count FROM trips WHERE ai_review_status = 'queued'").get().count, 10);
+    } else {
+      assert.equal(queueBodies.length, 0);
+      assert.equal(providerCalls, 1);
+      assert.equal(sqlite.prepare("SELECT COUNT(*) AS count FROM trips WHERE ai_review_status = 'reviewed'").get().count, 1);
+      assert.equal(sqlite.prepare("SELECT COUNT(*) AS count FROM trips WHERE ai_review_status = 'queued'").get().count, 9);
+    }
+  };
+
+  await exercise("queue");
+  await exercise("direct");
+});
+
+test("gear mutations fail closed when ownership or existence changes after the owner pre-read", async () => {
+  const { sqlite, d1 } = await database();
+  const owner = await addUser(sqlite, "gear-race-owner-135");
+  const other = await addUser(sqlite, "gear-race-other-136");
+  const timestamp = "2026-07-21T20:00:00.000Z";
+  const updateId = `gear_${crypto.randomUUID()}`;
+  const deleteId = `gear_${crypto.randomUUID()}`;
+  const insert = sqlite.prepare(`INSERT INTO gear_profiles
+      (id, user_id, name, rod, reel, bait_lure, rig, created_at, updated_at)
+    VALUES (?, ?, ?, 'Original rod', 'Original reel', 'Original lure', 'Original rig', ?, ?)`);
+  insert.run(updateId, owner.id, "Original update", timestamp, timestamp);
+  insert.run(deleteId, owner.id, "Original delete", timestamp, timestamp);
+
+  d1.beforeOnceQuerySubstring = "UPDATE gear_profiles SET name = ?";
+  d1.beforeOnceQuery = () => {
+    sqlite.prepare("UPDATE gear_profiles SET user_id = ? WHERE id = ?").run(other.id, updateId);
+  };
+  const racedUpdate = await handleAccountRequest(request(`/api/gear-profiles/${updateId}`, {
+    method: "PATCH",
+    cookie: owner.cookie,
+    body: {
+      name: "Raced update",
+      rod: "New rod",
+      reel: "New reel",
+      baitLure: "New lure",
+      rig: "New rig",
+    },
+  }), { DB: d1 }, []);
+  assert.equal(racedUpdate?.status, 404);
+  assert.equal((await racedUpdate?.json()).error.code, "gear_profile_not_found");
+  assert.deepEqual(
+    { ...sqlite.prepare("SELECT user_id, name, rod FROM gear_profiles WHERE id = ?").get(updateId) },
+    { user_id: other.id, name: "Original update", rod: "Original rod" },
+  );
+
+  d1.beforeOnceQuerySubstring = "DELETE FROM gear_profiles WHERE id = ?";
+  d1.beforeOnceQuery = () => {
+    sqlite.prepare("UPDATE gear_profiles SET user_id = ? WHERE id = ?").run(other.id, deleteId);
+  };
+  const racedDelete = await handleAccountRequest(request(`/api/gear-profiles/${deleteId}`, {
+    method: "DELETE",
+    cookie: owner.cookie,
+  }), { DB: d1 }, []);
+  assert.equal(racedDelete?.status, 404);
+  assert.equal((await racedDelete?.json()).error.code, "gear_profile_not_found");
+  assert.deepEqual(
+    { ...sqlite.prepare("SELECT user_id, name FROM gear_profiles WHERE id = ?").get(deleteId) },
+    { user_id: other.id, name: "Original delete" },
+  );
+});
+
+test("gear updates follow exact D1 state when mutation metadata is absent", async () => {
+  const { sqlite, d1 } = await database();
+  const owner = await addUser(sqlite, "gear-receipt-owner-137");
+  const timestamp = "2026-07-21T20:30:00.000Z";
+  const gearId = `gear_${crypto.randomUUID()}`;
+  sqlite.prepare(`INSERT INTO gear_profiles
+      (id, user_id, name, rod, reel, bait_lure, rig, created_at, updated_at)
+    VALUES (?, ?, 'Original gear', 'Original rod', 'Original reel', 'Original lure', 'Original rig', ?, ?)`)
+    .run(gearId, owner.id, timestamp, timestamp);
+
+  d1.omitOnceMutationMetadataSubstring = "UPDATE gear_profiles SET name = ?";
+  const response = await handleAccountRequest(request(`/api/gear-profiles/${gearId}`, {
+    method: "PATCH",
+    cookie: owner.cookie,
+    body: {
+      name: "Unconfirmed gear",
+      rod: "New rod",
+      reel: "New reel",
+      baitLure: "New lure",
+      rig: "New rig",
+    },
+  }), { DB: d1 }, []);
+
+  assert.equal(response?.status, 200);
+  assert.deepEqual(await response?.json(), { updated: true, id: gearId });
+  assert.equal(sqlite.prepare("SELECT name FROM gear_profiles WHERE id = ?").get(gearId).name, "Unconfirmed gear");
+});
+
+test("gear update and deletion recover after their committed storage responses are lost", async () => {
+  const { sqlite, d1 } = await database();
+  const owner = await addUser(sqlite, "gear-lost-response-owner-142");
+  const timestamp = "2026-07-21T20:35:00.000Z";
+  const updateId = `gear_${crypto.randomUUID()}`;
+  const deleteId = `gear_${crypto.randomUUID()}`;
+  const insert = sqlite.prepare(`INSERT INTO gear_profiles
+      (id, user_id, name, rod, reel, bait_lure, rig, created_at, updated_at)
+    VALUES (?, ?, ?, 'Original rod', 'Original reel', 'Original lure', 'Original rig', ?, ?)`);
+  insert.run(updateId, owner.id, "Update after loss", timestamp, timestamp);
+  insert.run(deleteId, owner.id, "Delete after loss", timestamp, timestamp);
+
+  d1.throwOnceAfterMutationSubstring = "UPDATE gear_profiles SET name = ?";
+  const updated = await handleAccountRequest(request(`/api/gear-profiles/${updateId}`, {
+    method: "PATCH",
+    cookie: owner.cookie,
+    body: {
+      name: "Recovered exact update",
+      rod: "Recovered rod",
+      reel: "Recovered reel",
+      baitLure: "Recovered lure",
+      rig: "Recovered rig",
+    },
+  }), { DB: d1 }, []);
+  assert.equal(updated?.status, 200);
+  assert.deepEqual(await updated?.json(), { updated: true, id: updateId });
+  assert.deepEqual(
+    { ...sqlite.prepare("SELECT name, rod, reel, bait_lure, rig FROM gear_profiles WHERE id = ?").get(updateId) },
+    {
+      name: "Recovered exact update",
+      rod: "Recovered rod",
+      reel: "Recovered reel",
+      bait_lure: "Recovered lure",
+      rig: "Recovered rig",
+    },
+  );
+
+  d1.throwOnceAfterMutationSubstring = "DELETE FROM gear_profiles WHERE id = ?";
+  const deleted = await handleAccountRequest(request(`/api/gear-profiles/${deleteId}`, {
+    method: "DELETE",
+    cookie: owner.cookie,
+  }), { DB: d1 }, []);
+  assert.equal(deleted?.status, 200);
+  assert.deepEqual(await deleted?.json(), { deleted: true, id: deleteId });
+  assert.equal(sqlite.prepare("SELECT COUNT(*) AS count FROM gear_profiles WHERE id = ?").get(deleteId).count, 0);
+});
+
+test("gear deletion follows exact absence after missing metadata or a same-owner race", async () => {
+  const { sqlite, d1 } = await database();
+  const owner = await addUser(sqlite, "gear-delete-state-owner-143");
+  const timestamp = "2026-07-21T20:40:00.000Z";
+  const metadataId = `gear_${crypto.randomUUID()}`;
+  const racedId = `gear_${crypto.randomUUID()}`;
+  const insert = sqlite.prepare(`INSERT INTO gear_profiles
+      (id, user_id, name, created_at, updated_at) VALUES (?, ?, ?, ?, ?)`);
+  insert.run(metadataId, owner.id, "Missing metadata", timestamp, timestamp);
+  insert.run(racedId, owner.id, "Concurrent removal", timestamp, timestamp);
+
+  d1.omitOnceMutationMetadataSubstring = "DELETE FROM gear_profiles WHERE id = ?";
+  const metadataDeleted = await handleAccountRequest(request(`/api/gear-profiles/${metadataId}`, {
+    method: "DELETE",
+    cookie: owner.cookie,
+  }), { DB: d1 }, []);
+  assert.equal(metadataDeleted?.status, 200);
+  assert.deepEqual(await metadataDeleted?.json(), { deleted: true, id: metadataId });
+
+  d1.beforeOnceQuerySubstring = "DELETE FROM gear_profiles WHERE id = ?";
+  d1.beforeOnceQuery = () => sqlite.prepare("DELETE FROM gear_profiles WHERE id = ? AND user_id = ?")
+    .run(racedId, owner.id);
+  const racedDeleted = await handleAccountRequest(request(`/api/gear-profiles/${racedId}`, {
+    method: "DELETE",
+    cookie: owner.cookie,
+  }), { DB: d1 }, []);
+  assert.equal(racedDeleted?.status, 200);
+  assert.deepEqual(await racedDeleted?.json(), { deleted: true, id: racedId });
+  assert.equal(sqlite.prepare("SELECT COUNT(*) AS count FROM gear_profiles WHERE id IN (?, ?)")
+    .get(metadataId, racedId).count, 0);
+});
+
+test("gear update rejects a mismatched exact post-state", async () => {
+  const { sqlite, d1 } = await database();
+  const owner = await addUser(sqlite, "gear-corrupt-state-owner-144");
+  const timestamp = "2026-07-21T20:45:00.000Z";
+  const gearId = `gear_${crypto.randomUUID()}`;
+  sqlite.prepare(`INSERT INTO gear_profiles
+      (id, user_id, name, created_at, updated_at) VALUES (?, ?, ?, ?, ?)`)
+    .run(gearId, owner.id, "Before update", timestamp, timestamp);
+  d1.beforeOnceQuerySubstring = "SELECT id, user_id, name, rod, reel, bait_lure, rig, created_at, updated_at";
+  d1.beforeOnceQuery = () => sqlite.prepare("UPDATE gear_profiles SET name = 'Conflicting update' WHERE id = ?")
+    .run(gearId);
+
+  const response = await handleAccountRequest(request(`/api/gear-profiles/${gearId}`, {
+    method: "PATCH",
+    cookie: owner.cookie,
+    body: {
+      name: "Expected update",
+      rod: "Expected rod",
+      reel: "Expected reel",
+      baitLure: "Expected lure",
+      rig: "Expected rig",
+    },
+  }), { DB: d1 }, []);
+
+  assert.equal(response?.status, 503);
+  assert.equal((await response?.json()).error.code, "gear_profile_write_unconfirmed");
+  assert.equal(sqlite.prepare("SELECT name FROM gear_profiles WHERE id = ?").get(gearId).name, "Conflicting update");
+});
+
+test("gear creation follows exact D1 state after the insert response is lost", async () => {
+  const { sqlite, d1 } = await database();
+  const owner = await addUser(sqlite, "gear-create-receipt-owner-138");
+  d1.throwOnceAfterMutationSubstring = "INSERT INTO gear_profiles";
+
+  const response = await handleAccountRequest(request("/api/gear-profiles", {
+    method: "POST",
+    cookie: owner.cookie,
+    body: {
+      name: "Lost response preset",
+      rod: "10-foot surf rod",
+      reel: "5000 spinner",
+      baitLure: "Swimbait",
+      rig: "Carolina rig",
+    },
+  }), { DB: d1 }, []);
+
+  assert.equal(response?.status, 201, JSON.stringify(await response?.clone().json()));
+  const body = await response?.json();
+  assert.match(body.gearProfile.id, /^gear_[a-f0-9-]{36}$/);
+  assert.deepEqual(
+    { ...sqlite.prepare(`SELECT id, user_id, name, rod, reel, bait_lure, rig, created_at, updated_at
+      FROM gear_profiles WHERE id = ?`).get(body.gearProfile.id) },
+    {
+      id: body.gearProfile.id,
+      user_id: owner.id,
+      name: "Lost response preset",
+      rod: "10-foot surf rod",
+      reel: "5000 spinner",
+      bait_lure: "Swimbait",
+      rig: "Carolina rig",
+      created_at: body.gearProfile.created_at,
+      updated_at: body.gearProfile.updated_at,
+    },
+  );
+});
+
+test("saved-location removal follows exact D1 state after the delete response is lost", async () => {
+  const { sqlite, d1 } = await database();
+  const owner = await addUser(sqlite, "saved-site-receipt-owner-138");
+  const sites = [
+    { id: "saved-site-receipt", type: "Beach" },
+    { id: "already-absent-site", type: "Beach" },
+  ];
+  sqlite.prepare("INSERT INTO saved_sites (user_id, site_id, created_at) VALUES (?, ?, ?)")
+    .run(owner.id, sites[0].id, "2026-07-21T20:45:00.000Z");
+
+  d1.throwOnceAfterMutationSubstring = "DELETE FROM saved_sites WHERE user_id = ? AND site_id = ?";
+  const removed = await handleAccountRequest(request(`/api/saved-sites/${sites[0].id}`, {
+    method: "DELETE",
+    cookie: owner.cookie,
+  }), { DB: d1 }, sites);
+  assert.equal(removed?.status, 200);
+  assert.deepEqual(await removed?.json(), { saved: false, siteId: sites[0].id });
+  assert.equal(sqlite.prepare("SELECT COUNT(*) AS count FROM saved_sites WHERE user_id = ? AND site_id = ?")
+    .get(owner.id, sites[0].id).count, 0);
+
+  const idempotent = await handleAccountRequest(request(`/api/saved-sites/${sites[1].id}`, {
+    method: "DELETE",
+    cookie: owner.cookie,
+  }), { DB: d1 }, sites);
+  assert.equal(idempotent?.status, 200);
+  assert.deepEqual(await idempotent?.json(), { saved: false, siteId: sites[1].id });
+});
+
+test("saved-location creation follows exact D1 state after the insert response is lost", async () => {
+  const { sqlite, d1 } = await database();
+  const owner = await addUser(sqlite, "saved-site-insert-receipt-owner-139");
+  const sites = [{ id: "saved-site-insert-receipt", type: "Beach" }];
+
+  d1.throwOnceAfterMutationSubstring = "INSERT OR IGNORE INTO saved_sites";
+  const saved = await handleAccountRequest(request(`/api/saved-sites/${sites[0].id}`, {
+    method: "POST",
+    cookie: owner.cookie,
+  }), { DB: d1 }, sites);
+  assert.equal(saved?.status, 200);
+  assert.deepEqual(await saved?.json(), { saved: true, siteId: sites[0].id });
+  assert.equal(sqlite.prepare("SELECT COUNT(*) AS count FROM saved_sites WHERE user_id = ? AND site_id = ?")
+    .get(owner.id, sites[0].id).count, 1);
+});
+
+test("active trip completion and cancellation bind the authenticated account even with the exact token", async () => {
+  const { sqlite, d1 } = await database();
+  const owner = await addUser(sqlite, "trip-terminal-owner-131");
+  const other = await addUser(sqlite, "trip-terminal-other-132");
+  const sites = [{ id: "ocean-beach", type: "Beach" }];
+  const startedAt = "2026-07-21T18:00:00.000Z";
+  const reporterKey = "owner-bound-terminal-reporter-key-123456789";
+  const material = tripRequestMaterial();
+  const startedResponse = await handleTripRequest(new Request(
+    "https://castingcompass.com/api/trips/start",
+    {
+      method: "POST",
+      headers: { Origin: "https://castingcompass.com", "Content-Type": "application/json" },
+      body: JSON.stringify({
+        ...material,
+        siteId: "ocean-beach",
+        startedAt,
+        mode: "beach",
+        anglerCount: 1,
+        consent: true,
+        primaryTargetConfirmed: true,
+        scoreInfluencedChoice: false,
+        reporterKey,
+        website: "",
+      }),
+    },
+  ), { DB: d1 }, sites, { accountId: owner.id, now: () => new Date(startedAt) });
+  assert.equal(startedResponse.status, 201, JSON.stringify(await startedResponse.clone().json()));
+  const started = await startedResponse.json();
+
+  const deniedCancel = await handleTripRequest(new Request(
+    `https://castingcompass.com/api/trips/${started.trip.id}/cancel`,
+    {
+      method: "POST",
+      headers: { Origin: "https://castingcompass.com", "Content-Type": "application/json" },
+      body: JSON.stringify({ token: started.token, reason: "other" }),
+    },
+  ), { DB: d1 }, sites, {
+    accountId: other.id,
+    now: () => new Date("2026-07-21T18:15:00.000Z"),
+  });
+  assert.equal(deniedCancel.status, 404);
+  assert.equal((await deniedCancel.json()).error.code, "trip_not_found");
+  const store = createTripStore(d1);
+  await store.initialize();
+  assert.equal(await store.isTripIdentityReserved(started.trip.id), true);
+  assert.equal(await store.getTrip(started.trip.id, other.id), null);
+  assert.equal((await store.getTrip(started.trip.id, owner.id))?.id, started.trip.id);
+  assert.equal(await store.cancelTrip?.(
+    started.trip.id,
+    await sha256(started.token),
+    other.id,
+    "2026-07-21T18:20:00.000Z",
+    null,
+  ), false);
+
+  const completionForm = () => {
+    const form = new FormData();
+    form.set("token", started.token);
+    form.set("reporterKey", reporterKey);
+    form.set("mode", "beach");
+    form.set("anglerCount", "1");
+    form.set("keeperCount", "0");
+    form.set("shortReleasedCount", "0");
+    form.set("otherCatchCount", "0");
+    form.set("consent", "true");
+    form.set("primaryTargetConfirmed", "true");
+    form.set("completeAttempt", "true");
+    form.set("website", "");
+    return form;
+  };
+  const deniedCompletion = await handleTripRequest(new Request(
+    `https://castingcompass.com/api/trips/${started.trip.id}/complete`,
+    {
+      method: "POST",
+      headers: { Origin: "https://castingcompass.com" },
+      body: completionForm(),
+    },
+  ), { DB: d1 }, sites, {
+    accountId: other.id,
+    now: () => new Date("2026-07-21T18:30:00.000Z"),
+  });
+  assert.equal(deniedCompletion.status, 404);
+  assert.equal((await deniedCompletion.json()).error.code, "trip_not_found");
+  assert.deepEqual(
+    { ...sqlite.prepare("SELECT user_id, status, token_hash FROM trips WHERE id = ?").get(started.trip.id) },
+    {
+      user_id: owner.id,
+      status: "active",
+      token_hash: await sha256(started.token),
+    },
+  );
+
+  const ownershipRaceStore = {
+    ...store,
+    async completeTrip(...arguments_) {
+      sqlite.prepare("UPDATE trips SET user_id = ? WHERE id = ?").run(other.id, started.trip.id);
+      return store.completeTrip(...arguments_);
+    },
+  };
+  const deniedOwnershipRace = await handleTripRequest(new Request(
+    `https://castingcompass.com/api/trips/${started.trip.id}/complete`,
+    {
+      method: "POST",
+      headers: { Origin: "https://castingcompass.com" },
+      body: completionForm(),
+    },
+  ), { DB: d1 }, sites, {
+    accountId: owner.id,
+    now: () => new Date("2026-07-21T18:40:00.000Z"),
+    store: ownershipRaceStore,
+  });
+  assert.equal(deniedOwnershipRace.status, 404);
+  assert.deepEqual(
+    { ...sqlite.prepare("SELECT user_id, status, token_hash FROM trips WHERE id = ?").get(started.trip.id) },
+    {
+      user_id: other.id,
+      status: "active",
+      token_hash: await sha256(started.token),
+    },
+  );
+  sqlite.prepare("UPDATE trips SET user_id = ? WHERE id = ?").run(owner.id, started.trip.id);
+
+  const completed = await handleTripRequest(new Request(
+    `https://castingcompass.com/api/trips/${started.trip.id}/complete`,
+    {
+      method: "POST",
+      headers: { Origin: "https://castingcompass.com" },
+      body: completionForm(),
+    },
+  ), { DB: d1 }, sites, {
+    accountId: owner.id,
+    now: () => new Date("2026-07-21T18:45:00.000Z"),
+  });
+  assert.equal(completed.status, 200, JSON.stringify(await completed.clone().json()));
+  assert.deepEqual(
+    { ...sqlite.prepare("SELECT user_id, status, token_hash FROM trips WHERE id = ?").get(started.trip.id) },
+    { user_id: owner.id, status: "completed", token_hash: null },
+  );
+});
+
+test("live-trip terminal responses follow exact D1 state after mutation responses are lost", async () => {
+  const { sqlite, d1 } = await database();
+  const owner = await addUser(sqlite, "trip-terminal-receipt-owner");
+  const sites = [{ id: "ocean-beach", type: "Beach" }];
+  const reporterKey = "terminal-receipt-reporter-key-123456789";
+  const startTrip = async (startedAt) => {
+    const response = await handleTripRequest(new Request(
+      "https://castingcompass.com/api/trips/start",
+      {
+        method: "POST",
+        headers: { Origin: "https://castingcompass.com", "Content-Type": "application/json" },
+        body: JSON.stringify({
+          ...tripRequestMaterial(),
+          siteId: "ocean-beach",
+          startedAt,
+          mode: "beach",
+          anglerCount: 1,
+          consent: true,
+          primaryTargetConfirmed: true,
+          scoreInfluencedChoice: false,
+          reporterKey,
+          website: "",
+        }),
+      },
+    ), { DB: d1 }, sites, { accountId: owner.id, now: () => new Date(startedAt) });
+    assert.equal(response.status, 201, JSON.stringify(await response.clone().json()));
+    return response.json();
+  };
+
+  const completing = await startTrip("2026-07-21T19:00:00.000Z");
+  const completion = new FormData();
+  completion.set("token", completing.token);
+  completion.set("reporterKey", reporterKey);
+  completion.set("mode", "beach");
+  completion.set("anglerCount", "1");
+  completion.set("keeperCount", "0");
+  completion.set("shortReleasedCount", "0");
+  completion.set("otherCatchCount", "0");
+  completion.set("consent", "true");
+  completion.set("primaryTargetConfirmed", "true");
+  completion.set("completeAttempt", "true");
+  completion.set("website", "");
+  d1.throwOnceAfterBatchMutationSubstring = "UPDATE trips SET\n          status = 'completed'";
+  let completionCallbacks = 0;
+
+  const completed = await handleTripRequest(new Request(
+    `https://castingcompass.com/api/trips/${completing.trip.id}/complete`,
+    { method: "POST", headers: { Origin: "https://castingcompass.com" }, body: completion },
+  ), { DB: d1 }, sites, {
+    accountId: owner.id,
+    now: () => new Date("2026-07-21T20:00:00.000Z"),
+    onTripCompleted: () => { completionCallbacks += 1; },
+  });
+  assert.equal(completed.status, 200, JSON.stringify(await completed.clone().json()));
+  assert.deepEqual((await completed.json()).receipt, { operation: "complete", tripId: completing.trip.id });
+  assert.equal(completionCallbacks, 1);
+  assert.deepEqual(
+    { ...sqlite.prepare("SELECT status, token_hash, completed_at FROM trips WHERE id = ?").get(completing.trip.id) },
+    { status: "completed", token_hash: null, completed_at: "2026-07-21T20:00:00.000Z" },
+  );
+
+  const canceling = await startTrip("2026-07-21T21:00:00.000Z");
+  d1.throwOnceAfterMutationSubstring = "UPDATE trips SET token_hash = NULL";
+  const canceled = await handleTripRequest(new Request(
+    `https://castingcompass.com/api/trips/${canceling.trip.id}/cancel`,
+    {
+      method: "POST",
+      headers: { Origin: "https://castingcompass.com", "Content-Type": "application/json" },
+      body: JSON.stringify({ token: canceling.token, reason: "weather" }),
+    },
+  ), { DB: d1 }, sites, {
+    accountId: owner.id,
+    now: () => new Date("2026-07-21T21:30:00.000Z"),
+  });
+  assert.equal(canceled.status, 200, JSON.stringify(await canceled.clone().json()));
+  assert.deepEqual(await canceled.json(), { canceled: true, id: canceling.trip.id, reason: "weather" });
+  assert.deepEqual(
+    { ...sqlite.prepare("SELECT status, token_hash, updated_at FROM trips WHERE id = ?").get(canceling.trip.id) },
+    { status: "active", token_hash: null, updated_at: "2026-07-21T21:30:00.000Z" },
+  );
 });
 
 test("saved-location and gear-preset reads and writes enforce exact account ceilings", async () => {
@@ -1180,7 +4140,309 @@ test("account deletion transaction removes public/account rows and completes suc
   assert.match(cleared.headers.get("set-cookie") ?? "", /cc_deletion_receipt=;.*Max-Age=0/);
 });
 
-test("trip writes serialize safely on both sides of account deletion and fallback DDL keeps ownership foreign keys", async () => {
+test("large private-object inventories use a fixed D1 batch within the free invocation ceiling", async () => {
+  const { sqlite, d1 } = await database();
+  const user = await addUser(sqlite, "set-based-deletion-inventory");
+  const objectCount = 75;
+  for (let index = 0; index < objectCount; index += 1) {
+    addTrip(sqlite, user, {
+      id: `trip_92000000-0000-4000-8000-${index.toString(16).padStart(12, "0")}`,
+      photoKey: `private/scale/${index.toString().padStart(3, "0")}.jpg`,
+    });
+  }
+  const deleted = [];
+
+  const response = await handleAccountRequest(request("/api/profile", {
+    method: "DELETE",
+    cookie: user.cookie,
+    body: { confirmation: "DELETE", password: user.password },
+  }), {
+    DB: d1,
+    TRIP_PHOTOS: { delete: async (key) => deleted.push(key) },
+  }, []);
+
+  assert.equal(response?.status, 202);
+  const payload = await response.json();
+  assert.equal(payload.deleted, true);
+  assert.equal(payload.deletion.status, "processing");
+  assert.equal(payload.deletion.objectsTotal, objectCount);
+  assert.equal(deleted.length, 3);
+  assert.equal(sqlite.prepare("SELECT COUNT(*) AS count FROM users WHERE id = ?").get(user.id).count, 0);
+  assert.equal(sqlite.prepare("SELECT COUNT(*) AS count FROM trips WHERE user_id = ?").get(user.id).count, 0);
+  assert.equal(sqlite.prepare("SELECT COUNT(*) AS count FROM privacy_deletion_tasks").get().count, objectCount);
+  assert.ok(Math.max(...d1.batchSizes) <= 20, "account deletion must not add one batch statement per object");
+  assert.ok(d1.queryExecutions <= 50, `cold account deletion used ${d1.queryExecutions} D1 queries`);
+  assert.ok(d1.maximumBoundParameters <= 100);
+});
+
+test("a legacy photo without a source-bound hash blocks every account deletion mutation", async () => {
+  const { sqlite, d1 } = await database();
+  const user = await addUser(sqlite, "legacy-photo-hash-guard");
+  const tripId = addTrip(sqlite, user, { photoKey: "private/legacy-without-hash.jpg" });
+  sqlite.prepare("UPDATE trips SET photo_key_hash = NULL WHERE id = ?").run(tripId);
+
+  const response = await handleAccountRequest(request("/api/profile", {
+    method: "DELETE",
+    cookie: user.cookie,
+    body: { confirmation: "DELETE", password: user.password },
+  }), { DB: d1, TRIP_PHOTOS: { delete: async () => assert.fail("R2 must not be touched") } }, []);
+
+  assert.equal(response?.status, 503);
+  assert.equal((await response.json()).error.code, "account_deletion_inventory_incomplete");
+  assert.equal(sqlite.prepare("SELECT COUNT(*) AS count FROM users WHERE id = ?").get(user.id).count, 1);
+  assert.equal(sqlite.prepare("SELECT COUNT(*) AS count FROM trips WHERE id = ?").get(tripId).count, 1);
+  assert.equal(sqlite.prepare("SELECT COUNT(*) AS count FROM privacy_deletion_jobs").get().count, 0);
+  assert.equal(sqlite.prepare("SELECT COUNT(*) AS count FROM privacy_deletion_tasks").get().count, 0);
+  assert.equal(sqlite.prepare("SELECT COUNT(*) AS count FROM account_deletion_fences WHERE user_id = ?")
+    .get(user.id).count, 1);
+});
+
+test("a lost fence response still adopts a pre-fence photo locator without early R2 deletion", async () => {
+  const { sqlite, d1 } = await database();
+  const user = await addUser(sqlite, "photo-fence-adoption");
+  const store = createTripStore(d1);
+  const tripId = "trip_91000000-0000-4000-8000-000000000091";
+  const objectKey = `trip-photos/2099/01/${tripId}/pre-fence.webp`;
+  const ownerSubjectHash = await sha256(`account:${user.id}`);
+  const objectKeyHash = await sha256(`trip_photos\u0000${objectKey}`);
+  const availableAt = "2099-01-01T00:00:00.000Z";
+  assert.equal(await store.reservePhotoUpload({
+    id: "photo_reservation_91000000000000000000000000000091",
+    tripId,
+    accountId: user.id,
+    ownerSubjectHash,
+    objectKey,
+    objectKeyHash,
+    availableAt,
+    createdAt: "2026-07-21T18:00:00.000Z",
+  }), true);
+  d1.throwOnceAfterMutationSubstring = "INSERT INTO account_deletion_fences";
+  const deletedKeys = [];
+
+  const response = await handleAccountRequest(request("/api/profile", {
+    method: "DELETE",
+    cookie: user.cookie,
+    body: { confirmation: "DELETE", password: user.password },
+  }), {
+    DB: d1,
+    TRIP_PHOTOS: { delete: async (key) => deletedKeys.push(key) },
+  }, [], { now: () => new Date("2026-07-21T18:01:00.000Z") });
+
+  assert.equal(response?.status, 202);
+  assert.equal((await response.json()).deletion.status, "processing");
+  assert.deepEqual(deletedKeys, []);
+  assert.equal(sqlite.prepare("SELECT COUNT(*) AS count FROM users WHERE id = ?").get(user.id).count, 0);
+  assert.equal(sqlite.prepare("SELECT COUNT(*) AS count FROM account_deletion_fences").get().count, 0);
+  assert.equal(sqlite.prepare("SELECT COUNT(*) AS count FROM trip_photo_upload_reservations").get().count, 0);
+  assert.deepEqual(
+    { ...sqlite.prepare(`SELECT object_key, object_key_hash, object_store, state, available_at
+      FROM privacy_deletion_tasks`).get() },
+    {
+      object_key: objectKey,
+      object_key_hash: objectKeyHash,
+      object_store: "trip_photos",
+      state: "pending",
+      available_at: availableAt,
+    },
+  );
+});
+
+test("a stale authenticated photo request cannot cross an active deletion fence or write R2", async () => {
+  const { sqlite, d1 } = await database();
+  const user = await addUser(sqlite, "photo-fence-r2");
+  const ownerSubjectHash = await sha256(`account:${user.id}`);
+  sqlite.prepare(`INSERT INTO account_deletion_fences (
+      user_id, owner_subject_hash, lease_token, lease_expires_at, requested_at, updated_at)
+    VALUES (?, ?, ?, ?, ?, ?)`)
+    .run(
+      user.id,
+      ownerSubjectHash,
+      "account-deletion-fence-token-0000000000000002",
+      "2026-07-21T19:00:00.000Z",
+      "2026-07-21T18:00:00.000Z",
+      "2026-07-21T18:00:00.000Z",
+    );
+  const login = await handleAccountRequest(request("/api/auth/login", {
+    method: "POST",
+    body: { email: user.email, password: user.password },
+  }), { DB: d1 }, []);
+  assert.equal(login?.status, 503);
+  assert.equal((await login.json()).error.code, "session_creation_unconfirmed");
+  assert.equal(sqlite.prepare("SELECT COUNT(*) AS count FROM auth_sessions WHERE user_id = ?")
+    .get(user.id).count, 1);
+
+  const staleStart = tripRequestMaterial();
+  const startResponse = await handleTripRequest(new Request("https://castingcompass.com/api/trips/start", {
+    method: "POST",
+    headers: { Origin: "https://castingcompass.com", "Content-Type": "application/json" },
+    body: JSON.stringify({
+      ...staleStart,
+      siteId: "ocean-beach",
+      startedAt: "2026-07-21T18:00:00.000Z",
+      mode: "beach",
+      anglerCount: 1,
+      consent: true,
+      primaryTargetConfirmed: true,
+      scoreInfluencedChoice: false,
+      reporterKey: "fenced-start-request-device-key-123456789",
+      website: "",
+    }),
+  }), { DB: d1 }, [{ id: "ocean-beach", type: "Beach" }], {
+    accountId: user.id,
+    now: () => new Date("2026-07-21T18:00:00.000Z"),
+  });
+  assert.equal(startResponse.status, 500);
+  assert.equal(sqlite.prepare("SELECT COUNT(*) AS count FROM trips WHERE user_id = ?").get(user.id).count, 0);
+
+  const requestMaterial = tripRequestMaterial();
+  const form = new FormData();
+  form.set("clientTripId", requestMaterial.clientTripId);
+  form.set("requestToken", requestMaterial.requestToken);
+  form.set("siteId", "ocean-beach");
+  form.set("startedAt", "2026-07-21T15:00:00.000Z");
+  form.set("endedAt", "2026-07-21T17:00:00.000Z");
+  form.set("mode", "beach");
+  form.set("keeperCount", "0");
+  form.set("shortReleasedCount", "0");
+  form.set("otherCatchCount", "0");
+  form.set("scoreInfluencedChoice", "false");
+  form.set("consent", "true");
+  form.set("primaryTargetConfirmed", "true");
+  form.set("completeAttempt", "true");
+  form.set("reporterKey", "fenced-photo-request-device-key-123456789");
+  form.set("website", "");
+  form.set("photo", new File([
+    new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
+  ], "fenced.png", { type: "image/png" }));
+  let r2Puts = 0;
+  const response = await handleTripRequest(new Request("https://castingcompass.com/api/trips/report", {
+    method: "POST",
+    headers: { Origin: "https://castingcompass.com" },
+    body: form,
+  }), {
+    DB: d1,
+    TRIP_PHOTO_UPLOADS_ENABLED: "true",
+    IMAGES: {
+      input() {
+        return {
+          transform() {
+            return {
+              async output() {
+                return { response: () => new Response(new Uint8Array([1, 2, 3])) };
+              },
+            };
+          },
+        };
+      },
+    },
+    TRIP_PHOTOS: {
+      async put() { r2Puts += 1; },
+      async delete() {},
+    },
+  }, [{ id: "ocean-beach", type: "Beach" }], {
+    accountId: user.id,
+    now: () => new Date("2026-07-21T18:00:00.000Z"),
+  });
+
+  assert.equal(response.status, 503);
+  assert.equal((await response.json()).error.code, "photo_storage_unavailable");
+  assert.equal(r2Puts, 0);
+  assert.equal(sqlite.prepare("SELECT COUNT(*) AS count FROM trip_photo_upload_reservations").get().count, 0);
+  assert.equal(sqlite.prepare("SELECT COUNT(*) AS count FROM trips WHERE user_id = ?").get(user.id).count, 0);
+});
+
+test("an exact post-state proves account deletion after its committed batch response is lost", async () => {
+  const { sqlite, d1 } = await database();
+  const user = await addUser(sqlite, "account-delete-batch-receipt");
+  for (let index = 0; index < 3; index += 1) {
+    addTrip(sqlite, user, {
+      id: `trip_93000000-0000-4000-8000-${index.toString(16).padStart(12, "0")}`,
+      photoKey: `private/recovered/${index}.jpg`,
+    });
+  }
+  d1.throwOnceAfterBatchMutationSubstring = "DELETE FROM users WHERE id = ?";
+  const deleted = [];
+
+  const response = await handleAccountRequest(request("/api/profile", {
+    method: "DELETE",
+    cookie: user.cookie,
+    body: { confirmation: "DELETE", password: user.password },
+  }), {
+    DB: d1,
+    TRIP_PHOTOS: { delete: async (key) => deleted.push(key) },
+  }, [], { now: () => new Date("2026-07-21T18:00:00.000Z") });
+
+  assert.equal(response?.status, 202);
+  assert.equal((await response.json()).deleted, true);
+  assert.equal(deleted.length, 1);
+  assert.equal(sqlite.prepare("SELECT COUNT(*) AS count FROM users WHERE id = ?").get(user.id).count, 0);
+  assert.equal(sqlite.prepare("SELECT COUNT(*) AS count FROM account_deletion_fences").get().count, 0);
+  assert.equal(sqlite.prepare("SELECT COUNT(*) AS count FROM privacy_deletion_jobs").get().count, 1);
+  assert.ok(d1.queryExecutions <= 50, `recovered account deletion used ${d1.queryExecutions} D1 queries`);
+  assert.ok(d1.maximumBoundParameters <= 100);
+});
+
+test("exact account-deletion state overrides missing final mutation metadata", async () => {
+  const { sqlite, d1 } = await database();
+  const user = await addUser(sqlite, "account-delete-metadata-receipt");
+  addTrip(sqlite, user, { photoKey: "private/account-metadata.jpg" });
+  const deleted = [];
+  d1.omitOnceMutationMetadataSubstring = "DELETE FROM users WHERE id = ?";
+
+  const response = await handleAccountRequest(request("/api/profile", {
+    method: "DELETE",
+    cookie: user.cookie,
+    body: { confirmation: "DELETE", password: user.password },
+  }), {
+    DB: d1,
+    TRIP_PHOTOS: { delete: async (key) => { deleted.push(key); } },
+  }, [], { now: () => new Date("2026-07-21T18:30:00.000Z") });
+
+  assert.equal(response?.status, 200);
+  const payload = await response.json();
+  assert.equal(payload.deleted, true);
+  assert.equal(payload.deletion.status, "completed");
+  assert.equal(payload.deletion.objectsTotal, 1);
+  assert.deepEqual(deleted, ["private/account-metadata.jpg"]);
+  assert.equal(sqlite.prepare("SELECT COUNT(*) AS count FROM users WHERE id = ?").get(user.id).count, 0);
+  assert.equal(sqlite.prepare("SELECT COUNT(*) AS count FROM privacy_deletion_jobs WHERE scope = 'account'").get().count, 1);
+});
+
+test("account deletion refuses a corrupted set-based task ledger before private-object purge", async () => {
+  const { sqlite, d1 } = await database();
+  const user = await addUser(sqlite, "account-delete-corrupt-receipt");
+  addTrip(sqlite, user, { photoKey: "private/account-corrupt.jpg" });
+  let deleteCalls = 0;
+  d1.beforeOnceQuerySubstring = "SELECT job.id AS job_id, job.scope, job.subject_hash";
+  d1.beforeOnceQuery = () => sqlite.prepare(
+    "UPDATE privacy_deletion_tasks SET attempts = 1 WHERE job_id IN (SELECT id FROM privacy_deletion_jobs WHERE scope = 'account')",
+  ).run();
+
+  const response = await handleAccountRequest(request("/api/profile", {
+    method: "DELETE",
+    cookie: user.cookie,
+    body: { confirmation: "DELETE", password: user.password },
+  }), {
+    DB: d1,
+    TRIP_PHOTOS: { delete: async () => { deleteCalls += 1; } },
+  }, [], { now: () => new Date("2026-07-21T19:00:00.000Z") });
+
+  assert.equal(response?.status, 503);
+  assert.equal((await response.json()).error.code, "account_deletion_unconfirmed");
+  assert.ok(receiptFrom(response));
+  assert.equal(deleteCalls, 0);
+  assert.equal(sqlite.prepare("SELECT COUNT(*) AS count FROM users WHERE id = ?").get(user.id).count, 0);
+  assert.deepEqual({ ...sqlite.prepare(`SELECT state, attempts, object_key
+      FROM privacy_deletion_tasks WHERE job_id IN (
+        SELECT id FROM privacy_deletion_jobs WHERE scope = 'account'
+      )`).get() }, {
+    state: "pending",
+    attempts: 1,
+    object_key: "private/account-corrupt.jpg",
+  });
+});
+
+test("trip writes serialize around account deletion and incomplete migration-owned schemas fail closed", async () => {
   const { sqlite, d1 } = await database();
   const user = await addUser(sqlite, "19");
   const writeBeforeDeletion = addTrip(sqlite, user);
@@ -1196,12 +4458,20 @@ test("trip writes serialize safely on both sides of account deletion and fallbac
   assert.throws(() => addTrip(sqlite, user), /FOREIGN KEY constraint failed/);
   assert.equal(sqlite.prepare("SELECT COUNT(*) AS count FROM trips WHERE user_id = ?").get(user.id).count, 0);
 
-  const fallbackSqlite = new DatabaseSync(":memory:");
-  fallbackSqlite.exec("PRAGMA foreign_keys = ON; CREATE TABLE users (id TEXT PRIMARY KEY NOT NULL)");
-  const fallbackD1 = new TransactionalD1Adapter(fallbackSqlite);
-  await createTripStore(fallbackD1).initialize();
-  const foreignKeys = fallbackSqlite.prepare("PRAGMA foreign_key_list(trips)").all();
+  const foreignKeys = sqlite.prepare("PRAGMA foreign_key_list(trips)").all();
   assert.ok(foreignKeys.some((key) => key.table === "users" && key.from === "user_id" && key.on_delete === "SET NULL"));
+
+  const incompleteSqlite = new DatabaseSync(":memory:");
+  incompleteSqlite.exec("PRAGMA foreign_keys = ON; CREATE TABLE users (id TEXT PRIMARY KEY NOT NULL)");
+  await assert.rejects(
+    createTripStore(new TransactionalD1Adapter(incompleteSqlite)).initialize(),
+    (error) => error?.code === "trip_schema_unavailable",
+  );
+  assert.deepEqual(
+    incompleteSqlite.prepare("SELECT name FROM sqlite_master WHERE type = 'table' ORDER BY name").all()
+      .map((row) => row.name),
+    ["users"],
+  );
 });
 
 test("missing storage and retry failures stay truthful until an idempotent purge succeeds", async () => {
@@ -1401,6 +4671,112 @@ test("account deletion atomically adopts a completed privacy export and purges b
     { ...sqlite.prepare("SELECT state, user_id, object_key FROM privacy_export_jobs WHERE id = ?").get(cleanupOnlyId) },
     { state: "expired", user_id: null, object_key: null },
   );
+});
+
+test("an exact lease receipt authorizes deletion after the claim response is lost", async () => {
+  const { sqlite, d1 } = await database();
+  const user = await addUser(sqlite, "deletion-claim-receipt");
+  addTrip(sqlite, user, { photoKey: "private/claim-receipt.jpg" });
+  await handleAccountRequest(request("/api/profile", {
+    method: "DELETE",
+    cookie: user.cookie,
+    body: { confirmation: "DELETE", password: user.password },
+  }), { DB: d1 }, []);
+  sqlite.prepare(`UPDATE privacy_deletion_tasks SET state = 'pending', available_at = '2000-01-01',
+    lease_expires_at = NULL, lease_token = NULL, last_error_code = NULL`).run();
+  d1.throwOnceAfterMutationSubstring = "SET state = 'leased', attempts = attempts + 1";
+  const deleted = [];
+
+  const completed = await processPrivacyDeletionTasks({
+    DB: d1,
+    TRIP_PHOTOS: { delete: async (key) => deleted.push(key) },
+  });
+
+  assert.equal(completed, 1);
+  assert.deepEqual(deleted, ["private/claim-receipt.jpg"]);
+  assert.deepEqual(
+    { ...sqlite.prepare("SELECT state, attempts, object_key, lease_token FROM privacy_deletion_tasks").get() },
+    { state: "completed", attempts: 1, object_key: null, lease_token: null },
+  );
+  assert.equal(sqlite.prepare("SELECT state FROM privacy_deletion_jobs").get().state, "completed");
+});
+
+test("an exact atomic receipt resolves a lost privacy-export finalization response", async () => {
+  const { sqlite, d1 } = await database();
+  const timestamp = "2026-07-20T12:00:00.000Z";
+  const objectKey = "privacy-exports/deletion-receipt/export.json";
+  const objectKeyHash = await sha256(`privacy_exports\u0000${objectKey}`);
+  sqlite.prepare(`INSERT INTO privacy_export_jobs (
+      id, user_id, owner_subject_hash, state, attempts, available_at,
+      lease_expires_at, lease_token, object_key, object_key_hash, content_sha256,
+      size_bytes, record_count, last_error_code, requested_at, updated_at,
+      completed_at, expires_at)
+    VALUES ('pexj_deletion_receipt', NULL, 'owner-deletion-receipt', 'needs_attention', 5, ?,
+      NULL, NULL, ?, ?, ?, 12, 1, 'uncommitted_object_delete_failed', ?, ?, NULL, NULL)`)
+    .run(timestamp, objectKey, objectKeyHash, await sha256("export bytes"), timestamp, timestamp);
+  sqlite.prepare(`INSERT INTO privacy_deletion_jobs (
+      id, receipt_hash, scope, subject_hash, owner_subject_hash, state, objects_total,
+      objects_deleted, last_error_code, requested_at, active_data_removed_at, completed_at, updated_at)
+    VALUES ('deletion_export_receipt', 'receipt-export-receipt', 'account', 'subject-export-receipt',
+      'owner-deletion-receipt', 'active_data_removed', 1, 0, NULL, ?, ?, NULL, ?)`)
+    .run(timestamp, timestamp, timestamp);
+  sqlite.prepare(`INSERT INTO privacy_deletion_tasks (
+      id, job_id, object_key, object_key_hash, object_store, state, attempts, available_at,
+      lease_expires_at, lease_token, last_error_code, created_at, updated_at, completed_at)
+    VALUES ('deletion_task_export_receipt', 'deletion_export_receipt', ?, ?, 'privacy_exports',
+      'pending', 0, '2000-01-01T00:00:00.000Z', NULL, NULL, NULL, ?, ?, NULL)`)
+    .run(objectKey, objectKeyHash, timestamp, timestamp);
+  d1.throwOnceAfterBatchMutationSubstring = "UPDATE privacy_deletion_tasks SET state = 'completed'";
+  const deleted = [];
+
+  const completed = await processPrivacyDeletionTasks({
+    DB: d1,
+    PRIVACY_EXPORTS: { delete: async (key) => deleted.push(key) },
+  });
+
+  assert.equal(completed, 1);
+  assert.deepEqual(deleted, [objectKey]);
+  assert.deepEqual(
+    { ...sqlite.prepare("SELECT state, object_key, lease_token FROM privacy_deletion_tasks").get() },
+    { state: "completed", object_key: null, lease_token: null },
+  );
+  assert.deepEqual(
+    { ...sqlite.prepare("SELECT state, user_id, object_key, object_key_hash FROM privacy_export_jobs").get() },
+    { state: "expired", user_id: null, object_key: null, object_key_hash: null },
+  );
+  assert.equal(sqlite.prepare("SELECT state FROM privacy_deletion_jobs").get().state, "completed");
+});
+
+test("a corrupted object-locator binding fails closed before an object-store call", async () => {
+  const { sqlite, d1 } = await database();
+  const user = await addUser(sqlite, "deletion-locator-binding");
+  addTrip(sqlite, user, { photoKey: "private/locator-binding.jpg" });
+  await handleAccountRequest(request("/api/profile", {
+    method: "DELETE",
+    cookie: user.cookie,
+    body: { confirmation: "DELETE", password: user.password },
+  }), { DB: d1 }, []);
+  sqlite.prepare(`UPDATE privacy_deletion_tasks SET state = 'pending', available_at = '2000-01-01',
+    object_key_hash = ?, lease_expires_at = NULL, lease_token = NULL, last_error_code = NULL`).run("0".repeat(64));
+  let calls = 0;
+
+  const completed = await processPrivacyDeletionTasks({
+    DB: d1,
+    TRIP_PHOTOS: { delete: async () => { calls += 1; } },
+  });
+
+  assert.equal(completed, 0);
+  assert.equal(calls, 0);
+  assert.deepEqual(
+    { ...sqlite.prepare("SELECT state, attempts, object_key, last_error_code FROM privacy_deletion_tasks").get() },
+    {
+      state: "needs_attention",
+      attempts: 1,
+      object_key: "private/locator-binding.jpg",
+      last_error_code: "object_locator_hash_mismatch",
+    },
+  );
+  assert.equal(sqlite.prepare("SELECT state FROM privacy_deletion_jobs").get().state, "needs_attention");
 });
 
 test("object deletion retries are bounded and retain the locator for operator attention", async () => {
@@ -1680,11 +5056,22 @@ test("transaction failures roll back deletion, while post-commit cleanup failure
     cookie: user.cookie,
     body: { confirmation: "DELETE", password: user.password },
   }), { DB: first.d1, TRIP_PHOTOS: { delete: async () => undefined } }, []);
-  assert.equal(rolledBack?.status, 500);
+  assert.equal(rolledBack?.status, 503);
+  assert.equal((await rolledBack.json()).error.code, "account_deletion_unconfirmed");
+  assert.ok(receiptFrom(rolledBack));
   assert.equal(first.sqlite.prepare("SELECT COUNT(*) AS count FROM users WHERE id = ?").get(user.id).count, 1);
   assert.equal(first.sqlite.prepare("SELECT COUNT(*) AS count FROM trips WHERE id = ?").get(tripId).count, 1);
   assert.equal(first.sqlite.prepare("SELECT COUNT(*) AS count FROM site_discussion_posts WHERE trip_id = ?").get(tripId).count, 1);
   assert.equal(first.sqlite.prepare("SELECT COUNT(*) AS count FROM privacy_deletion_jobs").get().count, 0);
+  assert.equal(first.sqlite.prepare("SELECT COUNT(*) AS count FROM account_deletion_fences WHERE user_id = ?")
+    .get(user.id).count, 1);
+  const fencedWrite = await handleAccountRequest(request("/api/saved-sites", {
+    method: "POST",
+    cookie: user.cookie,
+    body: { siteId: "ocean-beach" },
+  }), { DB: first.d1 }, [{ id: "ocean-beach" }]);
+  assert.equal(fencedWrite?.status, 409);
+  assert.equal((await fencedWrite.json()).error.code, "account_deletion_in_progress");
 
   const second = await database();
   const user2 = await addUser(second.sqlite, "5");
@@ -1706,6 +5093,15 @@ test("export includes user data and downloadable photos without internal locator
   const { sqlite, d1 } = await database();
   const user = await addUser(sqlite, "6");
   const tripId = addTrip(sqlite, user, { photoKey: "private/export.jpg" });
+  const processingTripId = addTrip(sqlite, user);
+  const internalClaim = JSON.stringify({
+    version: "castingcompass.ai-review-claim/1.0.0",
+    token: `airc_${"b".repeat(32)}`,
+    leaseExpiresAt: "2026-07-21T23:59:59.000Z",
+  });
+  sqlite.prepare(`UPDATE trips SET ai_review_status = 'processing', ai_review_json = ?,
+      ai_review_model = NULL, ai_reviewed_at = NULL WHERE id = ?`)
+    .run(internalClaim, processingTripId);
   addDiscussion(sqlite, tripId);
   sqlite.prepare("INSERT INTO saved_sites (user_id, site_id, created_at) VALUES (?, 'ocean-beach', '2026-07-01')").run(user.id);
   sqlite.prepare(`INSERT INTO gear_profiles (id, user_id, name, rod, created_at, updated_at)
@@ -1725,18 +5121,28 @@ test("export includes user data and downloadable photos without internal locator
   }, []);
   assert.equal(exported?.status, 200);
   const payload = await exported.json();
+  const exportedTrip = payload.tripReports.find(({ id }) => id === tripId);
+  const processingExport = payload.tripReports.find(({ id }) => id === processingTripId);
   assert.equal(payload.account.terms_version, LEGAL_VERSION);
-  assert.equal(payload.tripReports[0].consent, 1);
-  assert.equal(payload.tripReports[0].observations_json, '{"waterClarity":"clear"}');
-  assert.equal(payload.tripReports[0].ai_review_model, "mimo-test");
-  assert.equal(payload.tripReports[0].target_taxon_id, "california-halibut");
-  assert.equal(payload.tripReports[0].contract_status, "legacy_unverified");
-  assert.equal(payload.tripReports[0].taxon_observations_json, null);
+  assert.equal(exportedTrip.consent, 1);
+  assert.equal(exportedTrip.observations_json, '{"waterClarity":"clear"}');
+  assert.equal(exportedTrip.ai_review_model, "mimo-test");
+  assert.equal(exportedTrip.target_taxon_id, "california-halibut");
+  assert.equal(exportedTrip.contract_status, "legacy_unverified");
+  assert.equal(exportedTrip.taxon_observations_json, null);
+  assert.equal(processingExport.ai_review_status, "processing");
+  assert.equal(processingExport.ai_review_json, null);
   assert.equal(payload.discussionPosts[0].summary, "Public-safe summary");
   assert.equal(payload.photos[0].availability, "downloadable");
   assert.equal(payload.photos[0].downloadPath, `/api/profile/export/photos/${tripId}`);
   const serialized = JSON.stringify(payload);
-  assert.doesNotMatch(serialized, /private\/export\.jpg|reporter-secret|trip-token-secret|operator-private-identity|approved_by|photo_key|reporter_key_hash|token_hash|idempotency_key_hash/);
+  assert.doesNotMatch(serialized, /private\/export\.jpg|reporter-secret|trip-token-secret|operator-private-identity|approved_by|photo_key|reporter_key_hash|token_hash|idempotency_key_hash|airc_b{32}/);
+
+  const profile = await handleAccountRequest(request("/api/profile", { cookie: user.cookie }), { DB: d1 }, []);
+  const profilePayload = await profile.json();
+  const processingProfile = profilePayload.trips.find(({ id }) => id === processingTripId);
+  assert.equal(processingProfile.ai_review_status, "processing");
+  assert.equal(processingProfile.ai_review_json, null);
 
   const download = await handleAccountRequest(request(`/api/profile/export/photos/${tripId}`, { cookie: user.cookie }), {
     DB: d1,
@@ -2113,7 +5519,7 @@ test("feasibility pilot start, completion, safe cancellation, export, and privac
       'sealed-before-enrollment', ?)`)
     .run(
       activationId,
-      "8ff0d7bd009ed8eb10f328347d58d0b63d0b6c822b08351cc5c2760d41de13ed",
+      "4d034e303c841d05419cd1512abacad8c24080582edcfd4fc194d638ee5a7c3c",
       "e".repeat(64),
       "d".repeat(64),
       "b0378742f40cca598c57d845fb683ab9b36068cdd69de541aeb3e45d93c31860",
@@ -2872,6 +6278,187 @@ test("pending-only profile mutation loses cleanly to a concurrent moderator deci
   assert.equal(sqlite.prepare("SELECT moderation_status FROM trips WHERE id = ?").get(deleteTripId).moderation_status, "approved");
   assert.equal(sqlite.prepare("SELECT COUNT(*) AS count FROM privacy_deletion_jobs WHERE scope = 'trip'").get().count, 0);
   assert.equal(sqlite.prepare("SELECT COUNT(*) AS count FROM privacy_deletion_tasks").get().count, 0);
+});
+
+test("pending-trip edits follow exact post-state when D1 omits the mutation receipt", async () => {
+  const { sqlite, d1 } = await database();
+  const user = await addUser(sqlite, "trip-receipt-138");
+  const sites = [{ id: "ocean-beach", type: "Beach" }];
+  const editTripId = addTrip(sqlite, user);
+  let updateCallbacks = 0;
+  d1.omitOnceMutationMetadataSubstring = "UPDATE trips SET site_id";
+  const patchResponse = await handleAccountRequest(request(`/api/profile/trips/${editTripId}`, {
+    method: "PATCH",
+    cookie: user.cookie,
+    body: {
+      siteId: "ocean-beach",
+      mode: "shore",
+      startedAt: "2026-07-01T09:30:00.000Z",
+      endedAt: "2026-07-01T12:00:00.000Z",
+      anglerCount: 1,
+      keeperCount: 1,
+      shortReleasedCount: 2,
+      fishingMethod: "artificial-lure",
+      gearProfileId: "",
+      rod: "Rod A",
+      reel: "Reel B",
+      baitLure: "Swimbait",
+      rig: "Drop shot",
+      otherCatchCount: 1,
+      otherSpecies: "surfperch",
+      shorebreak: "",
+      wadingDepth: "",
+      waterClarity: "clear",
+      crowding: "",
+      fishabilityRating: "",
+      observedWaveHeightFeet: "",
+      fishabilityNotes: "",
+      notes: "Receipt missing",
+    },
+  }), { DB: d1 }, sites, { onTripUpdated: () => { updateCallbacks += 1; } });
+  assert.equal(patchResponse?.status, 200);
+  assert.deepEqual(await patchResponse.json(), {
+    updated: true,
+    tripId: editTripId,
+    forecastAttributionCleared: true,
+    validationEvidenceExcluded: true,
+  });
+  assert.equal(updateCallbacks, 1);
+  assert.equal(sqlite.prepare("SELECT notes FROM trips WHERE id = ?").get(editTripId).notes, "Receipt missing");
+
+  const deleteTripId = addTrip(sqlite, user, { photoKey: "private/unconfirmed-delete.jpg" });
+  let deletedPhotos = 0;
+  d1.omitOnceMutationMetadataSubstring = "DELETE FROM trips WHERE id = ? AND user_id = ?";
+  const deleteResponse = await handleAccountRequest(request(`/api/profile/trips/${deleteTripId}`, {
+    method: "DELETE",
+    cookie: user.cookie,
+  }), { DB: d1, TRIP_PHOTOS: { delete: async () => { deletedPhotos += 1; } } }, sites);
+  assert.equal(deleteResponse?.status, 200);
+  const deletePayload = await deleteResponse.json();
+  assert.equal(deletePayload.deleted, true);
+  assert.deepEqual({ ...deletePayload.deletion, requestedAt: null, completedAt: null }, {
+    status: "completed",
+    scope: "trip",
+    requestedAt: null,
+    completedAt: null,
+    objectsTotal: 1,
+    objectsDeleted: 1,
+  });
+  assert.match(deletePayload.deletion.requestedAt, /^\d{4}-\d{2}-\d{2}T/u);
+  assert.match(deletePayload.deletion.completedAt, /^\d{4}-\d{2}-\d{2}T/u);
+  assert.ok(deletePayload.deletion.completedAt >= deletePayload.deletion.requestedAt);
+  assert.match(deleteResponse.headers.get("Set-Cookie") ?? "", /^cc_deletion_receipt=/u);
+  assert.equal(deletedPhotos, 1);
+  assert.equal(sqlite.prepare("SELECT COUNT(*) AS count FROM trips WHERE id = ?").get(deleteTripId).count, 0);
+  assert.equal(sqlite.prepare("SELECT COUNT(*) AS count FROM privacy_deletion_jobs WHERE scope = 'trip'").get().count, 1);
+  assert.deepEqual({ ...sqlite.prepare(`SELECT state, objects_total, objects_deleted
+      FROM privacy_deletion_jobs WHERE scope = 'trip'`).get() }, {
+    state: "completed",
+    objects_total: 1,
+    objects_deleted: 1,
+  });
+});
+
+test("a committed pending-trip edit survives a lost D1 batch response exactly once", async () => {
+  const { sqlite, d1 } = await database();
+  const user = await addUser(sqlite, "trip-lost-batch-receipt-139");
+  const sites = [{ id: "ocean-beach", type: "Beach" }];
+  const tripId = addTrip(sqlite, user);
+  let updateCallbacks = 0;
+  d1.throwOnceAfterBatchMutationSubstring = "UPDATE trips SET site_id";
+
+  const response = await handleAccountRequest(request(`/api/profile/trips/${tripId}`, {
+    method: "PATCH",
+    cookie: user.cookie,
+    body: {
+      siteId: "ocean-beach",
+      mode: "shore",
+      startedAt: "2026-07-01T09:30:00.000Z",
+      endedAt: "2026-07-01T12:00:00.000Z",
+      anglerCount: 1,
+      keeperCount: 1,
+      shortReleasedCount: 2,
+      fishingMethod: "artificial-lure",
+      gearProfileId: "",
+      rod: "Rod A",
+      reel: "Reel B",
+      baitLure: "Swimbait",
+      rig: "Drop shot",
+      otherCatchCount: 1,
+      otherSpecies: "surfperch",
+      shorebreak: "",
+      wadingDepth: "",
+      waterClarity: "clear",
+      crowding: "",
+      fishabilityRating: "",
+      observedWaveHeightFeet: "",
+      fishabilityNotes: "",
+      notes: "Lost committed batch response",
+    },
+  }), { DB: d1 }, sites, { onTripUpdated: () => { updateCallbacks += 1; } });
+
+  assert.equal(response?.status, 200);
+  assert.equal((await response.json()).updated, true);
+  assert.equal(updateCallbacks, 1);
+  assert.equal(sqlite.prepare("SELECT notes FROM trips WHERE id = ?").get(tripId).notes, "Lost committed batch response");
+  assert.equal(sqlite.prepare(`SELECT COUNT(*) AS count FROM trip_validation_provenance
+    WHERE trip_id = ? AND event_type = 'evidence_exclusion'`).get(tripId).count, 1);
+});
+
+test("a committed pending-trip deletion survives a lost D1 batch response exactly once", async () => {
+  const { sqlite, d1 } = await database();
+  const user = await addUser(sqlite, "trip-lost-delete-receipt-140");
+  const tripId = addTrip(sqlite, user, { photoKey: "private/lost-delete.jpg" });
+  addDiscussion(sqlite, tripId);
+  const deletedKeys = [];
+  d1.throwOnceAfterBatchMutationSubstring = "DELETE FROM trips WHERE id = ? AND user_id = ?";
+
+  const response = await handleAccountRequest(request(`/api/profile/trips/${tripId}`, {
+    method: "DELETE",
+    cookie: user.cookie,
+  }), {
+    DB: d1,
+    TRIP_PHOTOS: { delete: async (key) => { deletedKeys.push(key); } },
+  }, []);
+
+  assert.equal(response?.status, 200);
+  assert.equal((await response.json()).deleted, true);
+  assert.match(response.headers.get("Set-Cookie") ?? "", /^cc_deletion_receipt=/u);
+  assert.deepEqual(deletedKeys, ["private/lost-delete.jpg"]);
+  assert.equal(sqlite.prepare("SELECT COUNT(*) AS count FROM trips WHERE id = ?").get(tripId).count, 0);
+  assert.equal(sqlite.prepare("SELECT COUNT(*) AS count FROM site_discussion_posts WHERE trip_id = ?").get(tripId).count, 0);
+  assert.equal(sqlite.prepare("SELECT COUNT(*) AS count FROM privacy_deletion_jobs WHERE scope = 'trip'").get().count, 1);
+  assert.deepEqual({ ...sqlite.prepare(`SELECT state, object_key FROM privacy_deletion_tasks
+      WHERE job_id IN (SELECT id FROM privacy_deletion_jobs WHERE scope = 'trip')`).get() }, {
+    state: "completed",
+    object_key: null,
+  });
+});
+
+test("pending-trip deletion refuses a corrupted private-object ledger receipt", async () => {
+  const { sqlite, d1 } = await database();
+  const user = await addUser(sqlite, "trip-corrupt-delete-receipt-141");
+  const tripId = addTrip(sqlite, user, { photoKey: "private/corrupt-delete.jpg" });
+  let deleteCalls = 0;
+  d1.beforeOnceQuerySubstring = "SELECT job.id AS job_id";
+  d1.beforeOnceQuery = () => sqlite.prepare(
+    "UPDATE privacy_deletion_tasks SET object_store = 'privacy_exports' WHERE job_id IN (SELECT id FROM privacy_deletion_jobs WHERE scope = 'trip')",
+  ).run();
+
+  const response = await handleAccountRequest(request(`/api/profile/trips/${tripId}`, {
+    method: "DELETE",
+    cookie: user.cookie,
+  }), {
+    DB: d1,
+    TRIP_PHOTOS: { delete: async () => { deleteCalls += 1; } },
+  }, []);
+
+  assert.equal(response?.status, 503);
+  assert.equal((await response.json()).error.code, "trip_delete_unconfirmed");
+  assert.match(response.headers.get("Set-Cookie") ?? "", /^cc_deletion_receipt=/u);
+  assert.equal(deleteCalls, 0);
+  assert.equal(sqlite.prepare("SELECT COUNT(*) AS count FROM trips WHERE id = ?").get(tripId).count, 0);
+  assert.equal(sqlite.prepare("SELECT object_store FROM privacy_deletion_tasks").get().object_store, "privacy_exports");
 });
 
 test("AI provider payload omits hostile legacy forecast metadata at the egress boundary", async () => {

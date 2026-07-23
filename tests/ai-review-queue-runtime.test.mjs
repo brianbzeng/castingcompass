@@ -11,7 +11,9 @@ import {
 } from "../worker/trip-review-queue.ts";
 
 class D1StatementAdapter {
-  constructor(statement) {
+  constructor(owner, query, statement) {
+    this.owner = owner;
+    this.query = query;
     this.statement = statement;
     this.values = [];
   }
@@ -31,6 +33,16 @@ class D1StatementAdapter {
 
   async run() {
     const result = this.statement.run(...this.values);
+    if (this.owner.throwOnceAfterMutationSubstring
+      && this.query.includes(this.owner.throwOnceAfterMutationSubstring)) {
+      this.owner.throwOnceAfterMutationSubstring = null;
+      throw new Error("injected lost mutation response");
+    }
+    if (this.owner.omitOnceMutationMetadataSubstring
+      && this.query.includes(this.owner.omitOnceMutationMetadataSubstring)) {
+      this.owner.omitOnceMutationMetadataSubstring = null;
+      return { success: true };
+    }
     return { success: true, meta: { changes: Number(result.changes) } };
   }
 }
@@ -38,10 +50,12 @@ class D1StatementAdapter {
 class D1Adapter {
   constructor(sqlite) {
     this.sqlite = sqlite;
+    this.omitOnceMutationMetadataSubstring = null;
+    this.throwOnceAfterMutationSubstring = null;
   }
 
   prepare(query) {
-    return new D1StatementAdapter(this.sqlite.prepare(query));
+    return new D1StatementAdapter(this, query, this.sqlite.prepare(query));
   }
 
   async batch(statements) {
@@ -119,7 +133,7 @@ async function database() {
   return { sqlite, d1: new D1Adapter(sqlite) };
 }
 
-function strictProviderResponse() {
+function strictProviderResponse(overrides = {}) {
   return Response.json({
     choices: [{
       message: {
@@ -137,6 +151,7 @@ function strictProviderResponse() {
             technique_match_summary: null,
           },
           discussion: { publish: false, summary: "", gear_summary: null, technique_tags: [] },
+          ...overrides,
         }),
       },
     }],
@@ -190,6 +205,7 @@ test("enabled scheduling persists an outbox row and sends only an opaque contrac
   const { sqlite, d1 } = await database();
   const { queue, job } = await scheduledJob(sqlite, d1);
   assert.match(job.id, /^airj_[a-f0-9]{32}$/);
+  assert.match(job.lease_token, /^aird_[a-f0-9]{32}$/);
   assert.equal(job.state, "queued");
   assert.equal(job.attempts, 0);
   assert.equal(queue.sent.length, 1);
@@ -239,6 +255,47 @@ test("dispatch records queued state before send and preserves a retryable outbox
   assert.doesNotMatch(JSON.stringify(logs), /private-publish-failure|trip_queue|private_user|private-note/);
 });
 
+test("a committed dispatch with missing mutation metadata is proven before one queue send", async () => {
+  const { sqlite, d1 } = await database();
+  d1.omitOnceMutationMetadataSubstring = "UPDATE ai_review_jobs SET state = 'queued'";
+  const queue = queueBinding();
+  await scheduleTripReview({
+    DB: d1,
+    MIMO_API_KEY: "test-key",
+    AI_REVIEW_QUEUE_ENABLED: "true",
+    AI_REVIEW_QUEUE: queue,
+  }, "trip_queue", []);
+  assert.equal(queue.sent.length, 1);
+  const job = sqlite.prepare("SELECT state, lease_token FROM ai_review_jobs").get();
+  assert.equal(job.state, "queued");
+  assert.match(job.lease_token, /^aird_[a-f0-9]{32}$/);
+});
+
+test("a committed consumer claim whose response is lost is proven before provider dispatch", async () => {
+  const { sqlite, d1 } = await database();
+  const { env, queue } = await scheduledJob(sqlite, d1);
+  d1.throwOnceAfterMutationSubstring = "UPDATE ai_review_jobs SET state = 'processing'";
+  let providerCalls = 0;
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async () => {
+    providerCalls += 1;
+    return strictProviderResponse();
+  };
+  try {
+    const message = queueMessage(queue.sent[0].body);
+    await consumeAiReviewQueue({ queue: "ai-review", messages: [message] }, env, [{ id: "ocean-beach" }]);
+    assert.equal(message.acknowledgements, 1);
+    assert.deepEqual(message.retries, []);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+  assert.equal(providerCalls, 1);
+  assert.deepEqual(
+    { ...sqlite.prepare("SELECT state, attempts, lease_token FROM ai_review_jobs").get() },
+    { state: "completed", attempts: 1, lease_token: null },
+  );
+});
+
 test("missing producer configuration preserves pending D1 work without provider dispatch", async () => {
   const { sqlite, d1 } = await database();
   const original = console.error;
@@ -281,6 +338,62 @@ test("consumer claims once, stores a review, and acknowledges duplicate delivery
     assert.equal(duplicate.acknowledgements, 1);
     assert.deepEqual(duplicate.retries, []);
     assert.equal(providerCalls, 1);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("an expired queue lease rejects the prior worker's late settlement", async () => {
+  const { sqlite, d1 } = await database();
+  const { env, queue, job } = await scheduledJob(sqlite, d1);
+  let releaseFirst;
+  let announceFirst;
+  const firstStarted = new Promise((resolve) => { announceFirst = resolve; });
+  let providerCalls = 0;
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async () => {
+    providerCalls += 1;
+    if (providerCalls === 1) {
+      announceFirst();
+      return new Promise((resolve) => { releaseFirst = resolve; });
+    }
+    return strictProviderResponse({ summary: "New queue lease result." });
+  };
+  try {
+    const staleMessage = queueMessage(queue.sent[0].body);
+    const staleWorker = consumeAiReviewQueue(
+      { queue: "ai-review", messages: [staleMessage] },
+      env,
+      [{ id: "ocean-beach" }],
+    );
+    await firstStarted;
+
+    sqlite.prepare("UPDATE ai_review_jobs SET lease_expires_at = '2000-01-01T00:00:00.000Z' WHERE id = ?")
+      .run(job.id);
+    const tripClaim = JSON.parse(sqlite.prepare("SELECT ai_review_json FROM trips WHERE id = 'trip_queue'").get().ai_review_json);
+    tripClaim.leaseExpiresAt = "2000-01-01T00:00:00.000Z";
+    sqlite.prepare("UPDATE trips SET ai_review_json = ? WHERE id = 'trip_queue'")
+      .run(JSON.stringify(tripClaim));
+
+    const currentMessage = queueMessage(queue.sent[0].body);
+    await consumeAiReviewQueue(
+      { queue: "ai-review", messages: [currentMessage] },
+      env,
+      [{ id: "ocean-beach" }],
+    );
+    releaseFirst(strictProviderResponse({ summary: "Late stale queue result." }));
+    await staleWorker;
+
+    assert.equal(providerCalls, 2);
+    assert.equal(staleMessage.acknowledgements, 1);
+    assert.equal(currentMessage.acknowledgements, 1);
+    assert.deepEqual(
+      { ...sqlite.prepare("SELECT state, attempts, lease_token FROM ai_review_jobs WHERE id = ?").get(job.id) },
+      { state: "completed", attempts: 2, lease_token: null },
+    );
+    const stored = sqlite.prepare("SELECT ai_review_status, ai_review_json FROM trips WHERE id = 'trip_queue'").get();
+    assert.equal(stored.ai_review_status, "reviewed");
+    assert.equal(JSON.parse(stored.ai_review_json).summary, "New queue lease result.");
   } finally {
     globalThis.fetch = originalFetch;
   }
@@ -386,6 +499,24 @@ test("maintenance and a deliberate queue disable acknowledge messages without mo
   }
 });
 
+test("maintenance does not revoke another worker's active queue lease", async () => {
+  const { sqlite, d1 } = await database();
+  const { env, queue, job } = await scheduledJob(sqlite, d1);
+  const leaseToken = `airl_${"b".repeat(32)}`;
+  const leaseExpiresAt = new Date(Date.now() + 60_000).toISOString();
+  sqlite.prepare(`UPDATE ai_review_jobs SET state = 'processing', attempts = 1,
+    lease_expires_at = ?, lease_token = ? WHERE id = ?`)
+    .run(leaseExpiresAt, leaseToken, job.id);
+  env.RELEASE_MAINTENANCE_MODE = "true";
+  const duplicate = queueMessage(queue.sent[0].body);
+  await consumeAiReviewQueue({ queue: "ai-review", messages: [duplicate] }, env, []);
+  assert.equal(duplicate.acknowledgements, 1);
+  assert.deepEqual(
+    { ...sqlite.prepare("SELECT state, attempts, lease_expires_at, lease_token FROM ai_review_jobs WHERE id = ?").get(job.id) },
+    { state: "processing", attempts: 1, lease_expires_at: leaseExpiresAt, lease_token: leaseToken },
+  );
+});
+
 test("trip deletion cascades through the queue ledger and makes stale delivery harmless", async () => {
   const { sqlite, d1 } = await database();
   const { env, queue } = await scheduledJob(sqlite, d1);
@@ -402,10 +533,44 @@ test("scheduled reconciliation recovers an expired application lease before redi
   const { env, queue, job } = await scheduledJob(sqlite, d1);
   sqlite.prepare(`UPDATE ai_review_jobs SET state = 'processing', available_at = ?, lease_expires_at = ?
     WHERE id = ?`).run("2026-01-01T00:00:00.000Z", "2026-01-01T00:01:00.000Z", job.id);
-  sqlite.prepare("UPDATE trips SET ai_review_status = 'processing' WHERE id = 'trip_queue'").run();
+  const expiredTripClaim = JSON.stringify({
+    version: "castingcompass.ai-review-claim/1.0.0",
+    token: `airc_${"a".repeat(32)}`,
+    leaseExpiresAt: "2026-01-01T00:01:00.000Z",
+  });
+  sqlite.prepare("UPDATE trips SET ai_review_status = 'processing', ai_review_json = ? WHERE id = 'trip_queue'")
+    .run(expiredTripClaim);
   const dispatched = await dispatchAiReviewBacklog(env, [{ id: "ocean-beach" }]);
   assert.equal(dispatched, 1);
   assert.equal(queue.sent.length, 2);
   assert.equal(sqlite.prepare("SELECT state FROM ai_review_jobs WHERE id = ?").get(job.id).state, "queued");
-  assert.equal(sqlite.prepare("SELECT ai_review_status FROM trips WHERE id = 'trip_queue'").get().ai_review_status, "retry");
+  assert.deepEqual(
+    { ...sqlite.prepare("SELECT ai_review_status, ai_review_json FROM trips WHERE id = 'trip_queue'").get() },
+    { ai_review_status: "processing", ai_review_json: expiredTripClaim },
+    "queue redispatch must not clobber the independently leased trip claim",
+  );
+});
+
+test("an abandoned fifth queue lease settles to attention instead of redispatching forever", async () => {
+  const { sqlite, d1 } = await database();
+  const { env, queue, job } = await scheduledJob(sqlite, d1);
+  sqlite.prepare(`UPDATE ai_review_jobs SET state = 'processing', attempts = 5,
+      available_at = ?, lease_expires_at = ?, lease_token = ? WHERE id = ?`)
+    .run(
+      "2000-01-01T00:00:00.000Z",
+      "2000-01-01T00:01:00.000Z",
+      `airl_${"c".repeat(32)}`,
+      job.id,
+    );
+  sqlite.prepare("UPDATE trips SET ai_review_status = NULL WHERE id = 'trip_queue'").run();
+  assert.equal(await dispatchAiReviewBacklog(env, []), 1);
+  assert.equal(queue.sent.length, 1);
+  assert.deepEqual(
+    { ...sqlite.prepare("SELECT state, attempts, lease_token, last_error_code FROM ai_review_jobs WHERE id = ?").get(job.id) },
+    { state: "needs_attention", attempts: 5, lease_token: null, last_error_code: "review_lease_abandoned" },
+  );
+  assert.equal(
+    sqlite.prepare("SELECT ai_review_status FROM trips WHERE id = 'trip_queue'").get().ai_review_status,
+    "needs_attention",
+  );
 });

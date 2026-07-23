@@ -1,0 +1,19 @@
+[
+  {"site_id":"AB18761","site_name":"OYSTER POINT","site_type":"BEACH","process_da":"2023-06-29T00:00:00.000","location":{"type":"Point","coordinates":[-122.38341049018919,37.66398817111321]}},
+  {"site_id":"AB18762","site_name":"COYOTE POINT","site_type":"BEACH","process_da":"2023-06-29T00:00:00.000","location":{"type":"Point","coordinates":[-122.32530115041247,37.59003457074558]}},
+  {"site_id":"AB4111","site_name":"SHARP PARK 6","site_type":"BEACH","process_da":"2021-12-02T00:00:00.000","location":{"type":"Point","coordinates":[-122.49442451002967,37.63416109039667]}},
+  {"site_id":"AB41110","site_name":"MONTARA BEACH","site_type":"BEACH","process_da":"2023-06-29T00:00:00.000","location":{"type":"Point","coordinates":[-122.51372124182973,37.55248949810192]}},
+  {"site_id":"AB41111","site_name":"MARTINI CREEK","site_type":"CREEK","process_da":"2023-06-29T00:00:00.000","location":{"type":"Point","coordinates":[-122.51321774702338,37.552713421617106]}},
+  {"site_id":"AB41115","site_name":"PILLAR POINT 8","site_type":"BEACH","process_da":"2023-06-29T00:00:00.000","location":{"type":"Point","coordinates":[-122.49588565229902,37.499953644188956]}},
+  {"site_id":"AB41116","site_name":"PILLAR POINT 7","site_type":"BEACH","process_da":"2023-06-29T00:00:00.000","location":{"type":"Point","coordinates":[-122.4927332469526,37.50198998121673]}},
+  {"site_id":"AB41117","site_name":"PILLAR POINT 5","site_type":"BEACH","process_da":"2023-06-29T00:00:00.000","location":{"type":"Point","coordinates":[-122.48542097579511,37.5035336969328]}},
+  {"site_id":"AB4112","site_name":"SHARP PARK 3","site_type":"BEACH","process_da":"2023-06-29T00:00:00.000","location":{"type":"Point","coordinates":[-122.49445219226394,37.631508411746786]}},
+  {"site_id":"AB41120","site_name":"SURFERS BEACH","site_type":"BEACH","process_da":"2023-06-29T00:00:00.000","location":{"type":"Point","coordinates":[-122.471284157126,37.50095675703965]}},
+  {"site_id":"AB41128","site_name":"FRANCIS BEACH","site_type":"BEACH","process_da":"2023-06-29T00:00:00.000","location":{"type":"Point","coordinates":[-122.44688517501581,37.46721323586502]}},
+  {"site_id":"AB4113","site_name":"ROCKAWAY BEACH","site_type":"BEACH","process_da":"2023-06-29T00:00:00.000","location":{"type":"Point","coordinates":[-122.49648687233758,37.61102457692167]}},
+  {"site_id":"AB4114","site_name":"CALERA CREEK","site_type":"CREEK","process_da":"2023-06-29T00:00:00.000","location":{"type":"Point","coordinates":[-122.49634347550025,37.611788761155495]}},
+  {"site_id":"AB41140","site_name":"PILLAR POINT 9","site_type":"BEACH","process_da":"2023-06-29T00:00:00.000","location":{"type":"Point","coordinates":[-122.47605653777087,37.50200904495986]}},
+  {"site_id":"AB41141","site_name":"LINDA MAR 7","site_type":"BEACH","process_da":"2023-06-29T00:00:00.000","location":{"type":"Point","coordinates":[-122.5047778109005,37.59688895615643]}},
+  {"site_id":"AB4116","site_name":"LINDA MAR 5","site_type":"BEACH","process_da":"2023-06-29T00:00:00.000","location":{"type":"Point","coordinates":[-122.50487133975032,37.596556445423516]}},
+  {"site_id":"AB4117","site_name":"SAN PEDRO CREEK","site_type":"CREEK","process_da":"2023-06-29T00:00:00.000","location":{"type":"Point","coordinates":[-122.50555418949028,37.59615968107221]}}
+]

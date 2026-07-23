@@ -1,0 +1,386 @@
+import assert from "node:assert/strict";
+import { createHash } from "node:crypto";
+import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { spawnSync } from "node:child_process";
+import test from "node:test";
+import Ajv2020 from "ajv/dist/2020.js";
+import addFormats from "ajv-formats";
+
+const root = new URL("../", import.meta.url);
+const snapshotPath = "structure-depth/noaa-enc-approach-snapshot.json";
+const artifactPath = "public/data/structure-depth.json";
+const fixedAsOf = "2026-07-21T12:10:36Z";
+
+async function readJson(path) {
+  return JSON.parse(await readFile(new URL(path, root), "utf8"));
+}
+
+function sha256(bytes) {
+  return createHash("sha256").update(bytes).digest("hex");
+}
+
+function containsObjectKey(value, key) {
+  if (Array.isArray(value)) return value.some((item) => containsObjectKey(item, key));
+  if (!value || typeof value !== "object") return false;
+  return Object.prototype.hasOwnProperty.call(value, key)
+    || Object.values(value).some((item) => containsObjectKey(item, key));
+}
+
+function runCollector(output, sourceSnapshot = snapshotPath) {
+  return spawnSync(
+    "python3",
+    [
+      "scripts/refresh_structure_depth.py",
+      "--as-of", fixedAsOf,
+      "--source-snapshot-file", sourceSnapshot,
+      "--output", output,
+    ],
+    { cwd: new URL("..", import.meta.url), encoding: "utf8" },
+  );
+}
+
+test("published 61-site chart context is contract-bound, display-only, and non-navigational", async () => {
+  const [schema, policy, sites, artifact, policyBytes, collectorBytes, siteBytes, snapshotBytes, interfaceSource, disclosure] = await Promise.all([
+    readJson("contracts/structure-depth-evidence.schema.json"),
+    readJson("structure-depth/policy.json"),
+    readJson("data/sites.json"),
+    readJson(artifactPath),
+    readFile(new URL("structure-depth/policy.json", root)),
+    readFile(new URL("scripts/refresh_structure_depth.py", root)),
+    readFile(new URL("data/sites.json", root)),
+    readFile(new URL(snapshotPath, root)),
+    readFile(new URL("app/components/OpportunityApp.tsx", root), "utf8"),
+    readFile(new URL("docs/STRUCTURE-DEPTH-EVIDENCE.md", root), "utf8"),
+  ]);
+  const ajv = new Ajv2020({ allErrors: true, strict: true });
+  addFormats(ajv);
+  assert.equal(ajv.validate(schema, artifact), true, JSON.stringify(ajv.errors));
+  assert.equal(artifact.status, "partial");
+  assert.equal(artifact.policyVersion, policy.policy_version);
+  assert.equal(artifact.policySha256, sha256(policyBytes));
+  assert.equal(artifact.collectorSha256, sha256(collectorBytes));
+  assert.equal(artifact.siteCatalogSha256, sha256(siteBytes));
+  assert.equal(artifact.sourceSnapshotSha256, sha256(snapshotBytes));
+  assert.deepEqual(Object.keys(artifact.sites).sort(), policy.covered_site_ids.toSorted());
+  assert.equal(artifact.scoreContribution.numericContributionAllowed, false);
+  assert.equal(artifact.scoreContribution.catalogMutationAllowed, false);
+  assert.equal(artifact.source.notForNavigation, true);
+  assert.equal(artifact.source.resolutionStatus, "vector-chart-features-no-fixed-grid-resolution");
+  assert.equal(artifact.source.positionalAccuracyStatus, "not-exposed-by-selected-service-layers");
+  assert.equal(artifact.source.uncertaintyStatus, "not-exposed-by-selected-service-layers");
+
+  const sitesById = new Map(sites.map((site) => [site.id, site]));
+  const partialDepthSiteIds = new Set([
+    "crane-cove-park",
+    "bolinas-beach",
+    "muir-beach",
+    "mcnears-beach-pier",
+    "ferry-point-pier",
+  ]);
+  for (const siteId of policy.covered_site_ids) {
+    const evidence = artifact.sites[siteId];
+    const site = sitesById.get(siteId);
+    assert.notEqual(evidence.status, "source-unavailable");
+    if (partialDepthSiteIds.has(siteId)) {
+      assert.equal(evidence.status, "partial");
+      assert.equal(evidence.depth.status, "no-charted-sector-band");
+      assert.deepEqual(evidence.depth.chartedBandsMeters, []);
+      assert.ok(evidence.depth.contextSoundingCount > 0);
+    } else {
+      assert.equal(evidence.status, "charted-context");
+      assert.equal(evidence.depth.status, "charted-sector-bands");
+      assert.ok(evidence.depth.chartedBandsMeters.length > 0);
+    }
+    assert.equal(evidence.depth.uncertaintyMeters, null);
+    assert.ok(evidence.depth.sourceDates.length + evidence.depth.partialSourceDates.length > 0);
+    assert.equal(evidence.scoreDelta, null);
+    assert.equal(evidence.navigationUseAllowed, false);
+    assert.deepEqual(
+      evidence.structure.catalogClues,
+      site.structureTags.map((tag) => ({
+        tag,
+        reviewStatus: "catalog-only-not-validated-by-this-source",
+      })),
+    );
+  }
+  assert.equal(containsObjectKey(artifact, "geometrySha256"), false);
+  assert.equal(containsObjectKey(artifact, "point"), false);
+  assert.match(interfaceSource, /not an exact depth at the marker or a shore-reachable casting-depth promise/);
+  assert.match(interfaceSource, /does not change the fishing score and is not for navigation/);
+  assert.match(disclosure, /not a measured cast envelope/i);
+  assert.match(disclosure, /scoreDelta: null/);
+});
+
+test("checked-in normalized NOAA snapshot regenerates the public artifact byte for byte", async (t) => {
+  const directory = await mkdtemp(join(tmpdir(), "castingcompass-structure-depth-"));
+  t.after(() => rm(directory, { recursive: true, force: true }));
+  const output = join(directory, "structure-depth.json");
+  const result = runCollector(output);
+  assert.equal(result.status, 0, result.stderr || result.stdout);
+  assert.deepEqual(await readFile(output), await readFile(new URL(artifactPath, root)));
+});
+
+test("overlapping ENC cells are deduplicated and partial source dates remain explicit", async () => {
+  const [snapshot, artifact] = await Promise.all([readJson(snapshotPath), readJson(artifactPath)]);
+  assert.equal(snapshot.sites["goleta-beach"].queries["soundings:context"].features.length, 6);
+  assert.equal(artifact.sites["goleta-beach"].depth.contextSoundingCount, 3);
+
+  const wreck = artifact.sites["stearns-wharf"].structure.chartedFeatures
+    .find((feature) => feature.category === "charted-wreck");
+  assert.ok(wreck);
+  assert.equal(wreck.recordCount, 1);
+  assert.equal(wreck.hasUndatedRecords, false);
+  assert.deepEqual(wreck.sourceDates, []);
+  assert.deepEqual(wreck.partialSourceDates, ["2005"]);
+});
+
+test("San Mateo coast chart context covers the selected cohort without score or access authority", async () => {
+  const [artifact, sites] = await Promise.all([readJson(artifactPath), readJson("data/sites.json")]);
+  const siteIds = [
+    "pacifica-municipal-pier",
+    "sharp-park-beach",
+    "rockaway-beach",
+    "pacifica-state-beach",
+    "montara-state-beach",
+    "pillar-point-west-jetty",
+    "pillar-point-east-jetty",
+    "surfers-beach",
+    "francis-state-beach",
+    "poplar-beach",
+  ];
+  assert.ok(siteIds.every((siteId) => artifact.sites[siteId].status === "charted-context"));
+  assert.ok(siteIds.every((siteId) => artifact.sites[siteId].depth.status === "charted-sector-bands"));
+  assert.ok(siteIds.every((siteId) => artifact.sites[siteId].scoreDelta === null));
+  assert.ok(siteIds.every((siteId) => artifact.sites[siteId].navigationUseAllowed === false));
+
+  const pacifica = artifact.sites["pacifica-municipal-pier"];
+  assert.deepEqual(pacifica.depth.chartedBandsMeters, [[-1.8, 0], [0, 3.6]]);
+  assert.deepEqual(pacifica.depth.contextSoundingDepthRangeMeters, [1.8, 2.7]);
+  assert.equal(pacifica.depth.contextSoundingCount, 2);
+  assert.equal(sites.find((site) => site.id === pacifica.siteId).accessStatus, "closed");
+
+  const francis = artifact.sites["francis-state-beach"];
+  assert.deepEqual(francis.depth.partialSourceDates, ["2003-11"]);
+  assert.equal(francis.depth.hasUndatedRecords, true);
+});
+
+test("Marin coast chart context keeps two missing sector bands explicit and remains display-only", async () => {
+  const artifact = await readJson(artifactPath);
+  const siteIds = [
+    "limantour-beach",
+    "drakes-beach",
+    "point-reyes-south-beach",
+    "bolinas-beach",
+    "stinson-beach",
+    "muir-beach",
+    "rodeo-beach",
+  ];
+  const chartedIds = siteIds.filter((siteId) => !["bolinas-beach", "muir-beach"].includes(siteId));
+  assert.ok(chartedIds.every((siteId) => artifact.sites[siteId].status === "charted-context"));
+  assert.ok(chartedIds.every((siteId) => artifact.sites[siteId].depth.status === "charted-sector-bands"));
+  assert.ok(siteIds.every((siteId) => artifact.sites[siteId].scoreDelta === null));
+  assert.ok(siteIds.every((siteId) => artifact.sites[siteId].navigationUseAllowed === false));
+
+  const bolinas = artifact.sites["bolinas-beach"];
+  assert.equal(bolinas.status, "partial");
+  assert.equal(bolinas.depth.status, "no-charted-sector-band");
+  assert.deepEqual(bolinas.depth.chartedBandsMeters, []);
+  assert.deepEqual(bolinas.depth.contextSoundingDepthRangeMeters, [0.3, 4.2]);
+  assert.equal(bolinas.depth.contextSoundingCount, 6);
+  assert.deepEqual(bolinas.depth.partialSourceDates, ["2005-02", "2013-05"]);
+
+  const muir = artifact.sites["muir-beach"];
+  assert.equal(muir.status, "partial");
+  assert.equal(muir.depth.status, "no-charted-sector-band");
+  assert.deepEqual(muir.depth.contextSoundingDepthRangeMeters, [0.9, 10.3]);
+  assert.equal(muir.depth.contextSoundingCount, 9);
+
+  const drakes = artifact.sites["drakes-beach"];
+  assert.deepEqual(drakes.depth.partialSourceDates, ["2002-09", "2008-09", "2009-03"]);
+  assert.equal(drakes.depth.hasUndatedRecords, true);
+});
+
+test("North and East Bay chart context keeps two missing sector bands explicit and remains display-only", async () => {
+  const artifact = await readJson(artifactPath);
+  const siteIds = [
+    "mcnears-beach-pier",
+    "paradise-beach-pier",
+    "fort-baker-pier",
+    "ferry-point-pier",
+    "keller-beach",
+    "point-isabel-shoreline",
+    "albany-bulb",
+    "berkeley-marina-north-basin",
+    "cesar-chavez-park",
+    "emeryville-marina-pier",
+  ];
+  const partialIds = new Set(["mcnears-beach-pier", "ferry-point-pier"]);
+  const chartedIds = siteIds.filter((siteId) => !partialIds.has(siteId));
+  assert.ok(chartedIds.every((siteId) => artifact.sites[siteId].status === "charted-context"));
+  assert.ok(chartedIds.every((siteId) => artifact.sites[siteId].depth.status === "charted-sector-bands"));
+  assert.ok(siteIds.every((siteId) => artifact.sites[siteId].scoreDelta === null));
+  assert.ok(siteIds.every((siteId) => artifact.sites[siteId].navigationUseAllowed === false));
+
+  const mcnears = artifact.sites["mcnears-beach-pier"];
+  assert.equal(mcnears.status, "partial");
+  assert.equal(mcnears.depth.status, "no-charted-sector-band");
+  assert.deepEqual(mcnears.depth.chartedBandsMeters, []);
+  assert.deepEqual(mcnears.depth.contextSoundingDepthRangeMeters, [0.6, 2.4]);
+  assert.equal(mcnears.depth.contextSoundingCount, 6);
+
+  const ferryPoint = artifact.sites["ferry-point-pier"];
+  assert.equal(ferryPoint.status, "partial");
+  assert.equal(ferryPoint.depth.status, "no-charted-sector-band");
+  assert.deepEqual(ferryPoint.depth.contextSoundingDepthRangeMeters, [0.6, 8.5]);
+  assert.equal(ferryPoint.depth.contextSoundingCount, 6);
+
+  const berkeley = artifact.sites["berkeley-marina-north-basin"];
+  assert.deepEqual(berkeley.depth.chartedBandsMeters, [[0, 1.8]]);
+  assert.deepEqual(berkeley.depth.partialSourceDates, ["2012-10"]);
+  assert.equal(berkeley.depth.hasUndatedRecords, true);
+});
+
+test("Oakland through South Bay chart context covers the final cohort without score or navigation authority", async () => {
+  const artifact = await readJson(artifactPath);
+  const siteIds = [
+    "port-view-park-pier",
+    "middle-harbor-shoreline",
+    "alameda-south-shore-rockwall",
+    "crown-memorial-state-beach",
+    "oyster-bay-shoreline",
+    "san-leandro-marina-shore",
+    "dumbarton-pier",
+    "coyote-point-jetty",
+    "seal-point-park",
+    "oyster-point-fishing-pier",
+  ];
+  assert.ok(siteIds.every((siteId) => artifact.sites[siteId].status === "charted-context"));
+  assert.ok(siteIds.every((siteId) => artifact.sites[siteId].depth.status === "charted-sector-bands"));
+  assert.ok(siteIds.every((siteId) => artifact.sites[siteId].scoreDelta === null));
+  assert.ok(siteIds.every((siteId) => artifact.sites[siteId].navigationUseAllowed === false));
+
+  const portView = artifact.sites["port-view-park-pier"];
+  assert.deepEqual(portView.depth.chartedBandsMeters, [[1.8, 3.6], [3.6, 5.4], [5.4, 9.1]]);
+  assert.deepEqual(portView.depth.contextSoundingDepthRangeMeters, [2.1, 13.1]);
+  assert.equal(portView.depth.contextSoundingCount, 12);
+  assert.deepEqual(portView.depth.partialSourceDates, ["2013-12"]);
+  assert.equal(portView.depth.hasUndatedRecords, true);
+
+  const dumbarton = artifact.sites["dumbarton-pier"];
+  assert.deepEqual(dumbarton.depth.chartedBandsMeters, [[9.1, 18.2]]);
+  assert.deepEqual(dumbarton.depth.contextSoundingDepthRangeMeters, [0.3, 15.2]);
+  assert.equal(dumbarton.depth.contextSoundingCount, 13);
+  assert.deepEqual(dumbarton.depth.partialSourceDates, ["2003-02"]);
+  assert.equal(dumbarton.depth.hasUndatedRecords, true);
+
+  const coyotePoint = artifact.sites["coyote-point-jetty"];
+  assert.deepEqual(coyotePoint.depth.partialSourceDates, ["2013-12"]);
+  assert.equal(coyotePoint.depth.hasUndatedRecords, true);
+});
+
+test("one required site query fails only that evidence slice closed", async (t) => {
+  const directory = await mkdtemp(join(tmpdir(), "castingcompass-structure-depth-partial-"));
+  t.after(() => rm(directory, { recursive: true, force: true }));
+  const snapshot = await readJson(snapshotPath);
+  snapshot.sites["goleta-beach"].queries["depthAreas:sector"] = {
+    ...snapshot.sites["goleta-beach"].queries["depthAreas:sector"],
+    errorCategory: "source-request-failed",
+    features: [],
+  };
+  const source = join(directory, "source.json");
+  const output = join(directory, "artifact.json");
+  await writeFile(source, `${JSON.stringify(snapshot, null, 2)}\n`);
+  const result = runCollector(output, source);
+  assert.equal(result.status, 0, result.stderr || result.stdout);
+  const artifact = JSON.parse(await readFile(output, "utf8"));
+  assert.equal(artifact.status, "partial");
+  assert.equal(artifact.sites["goleta-beach"].status, "partial");
+  assert.equal(artifact.sites["goleta-beach"].depth.status, "source-unavailable");
+  assert.equal(artifact.sites["goleta-beach"].structure.status, "charted-features-present");
+  assert.equal(artifact.sites["gaviota-state-park-beach"].status, "charted-context");
+  assert.equal(JSON.stringify(artifact).includes(directory), false);
+});
+
+test("service metadata drift makes every site unavailable without retaining stale claims", async (t) => {
+  const directory = await mkdtemp(join(tmpdir(), "castingcompass-structure-depth-drift-"));
+  t.after(() => rm(directory, { recursive: true, force: true }));
+  const snapshot = await readJson(snapshotPath);
+  snapshot.serviceErrorCategory = "source-layer-drift";
+  snapshot.serviceMetadata = {};
+  for (const site of Object.values(snapshot.sites)) site.queries = {};
+  const source = join(directory, "source.json");
+  const output = join(directory, "artifact.json");
+  await writeFile(source, `${JSON.stringify(snapshot, null, 2)}\n`);
+  const result = runCollector(output, source);
+  assert.equal(result.status, 0, result.stderr || result.stdout);
+  const artifact = JSON.parse(await readFile(output, "utf8"));
+  assert.equal(artifact.status, "unavailable");
+  assert.equal(artifact.source.errorCategory, "source-layer-drift");
+  assert.ok(Object.values(artifact.sites).every((site) => site.status === "source-unavailable"));
+  assert.ok(Object.values(artifact.sites).every((site) => site.depth.chartedBandsMeters.length === 0));
+  assert.ok(Object.values(artifact.sites).every((site) => site.structure.chartedFeatures.length === 0));
+});
+
+test("an unexpected normalized source field is rejected before publication", async (t) => {
+  const directory = await mkdtemp(join(tmpdir(), "castingcompass-structure-depth-field-"));
+  t.after(() => rm(directory, { recursive: true, force: true }));
+  const snapshot = await readJson(snapshotPath);
+  snapshot.sites["goleta-beach"].queries["soundings:context"].features[0].attributes.UNEXPECTED = "value";
+  const source = join(directory, "source.json");
+  const output = join(directory, "artifact.json");
+  await writeFile(source, `${JSON.stringify(snapshot, null, 2)}\n`);
+  const result = runCollector(output, source);
+  assert.equal(result.status, 1);
+  assert.deepEqual(JSON.parse(result.stdout), {
+    status: "error",
+    errorCategory: "invalid-source-feature",
+  });
+});
+
+test("source-selection receipt preserves incomplete alternatives instead of overstating coverage", async () => {
+  const policy = await readJson("structure-depth/policy.json");
+  const receipt = policy.source_selection_receipt;
+  assert.deepEqual(receipt.blue_topo.published_site_ids, [
+    "gaviota-state-park-beach",
+    "refugio-state-beach",
+    "el-capitan-state-beach",
+  ]);
+  assert.equal(receipt.blue_topo.unpublished_site_count, 11);
+  assert.equal(receipt.usgs_santa_barbara_channel_10m.configured_sector_coverage_site_count, 6);
+  assert.equal(receipt.noaa_enc_direct.configured_sector_depth_area_site_count, 56);
+  assert.equal(receipt.san_francisco_extension.site_ids.length, 10);
+  assert.equal(receipt.san_francisco_extension.selection_result, "accepted-with-one-explicit-partial-depth-sector");
+  assert.equal(receipt.san_mateo_coast_extension.site_ids.length, 10);
+  assert.equal(receipt.san_mateo_coast_extension.selection_result, "accepted-with-all-ten-configured-sectors");
+  assert.equal(receipt.marin_coast_extension.site_ids.length, 7);
+  assert.equal(receipt.marin_coast_extension.selection_result, "accepted-with-two-explicit-partial-depth-sectors");
+  assert.equal(receipt.north_east_bay_extension.site_ids.length, 10);
+  assert.equal(receipt.north_east_bay_extension.selection_result, "accepted-with-two-explicit-partial-depth-sectors");
+  assert.equal(receipt.oakland_south_bay_extension.site_ids.length, 10);
+  assert.equal(receipt.oakland_south_bay_extension.selection_result, "accepted-with-all-ten-configured-sectors");
+  assert.match(receipt.blue_topo.tile_scheme_sha256, /^[a-f0-9]{64}$/);
+  assert.match(receipt.usgs_santa_barbara_channel_10m.archive_sha256, /^[a-f0-9]{64}$/);
+});
+
+test("partial ENC source dates retain their published precision and invalid months fail closed", async (t) => {
+  const artifact = await readJson(artifactPath);
+  assert.ok(artifact.sites["torpedo-wharf"].depth.partialSourceDates.includes("2013-06"));
+  assert.ok(artifact.sites["stearns-wharf"].structure.chartedFeatures
+    .some((feature) => feature.partialSourceDates.includes("2005")));
+
+  const directory = await mkdtemp(join(tmpdir(), "castingcompass-structure-depth-date-"));
+  t.after(() => rm(directory, { recursive: true, force: true }));
+  const snapshot = await readJson(snapshotPath);
+  snapshot.sites["torpedo-wharf"].queries["soundings:context"].features[0].attributes.SORDAT = "201313";
+  const source = join(directory, "source.json");
+  const output = join(directory, "artifact.json");
+  await writeFile(source, `${JSON.stringify(snapshot, null, 2)}\n`);
+  const result = runCollector(output, source);
+  assert.equal(result.status, 0, result.stderr || result.stdout);
+  const rejected = JSON.parse(await readFile(output, "utf8"));
+  assert.equal(rejected.status, "partial");
+  assert.equal(rejected.sites["torpedo-wharf"].depth.status, "source-unavailable");
+  assert.equal(rejected.sites["torpedo-wharf"].structure.status, "charted-features-present");
+});
