@@ -260,8 +260,13 @@ records to charted context. The blank
 adds the next ten sites while preserving McNears Beach Pier and Ferry Point
 Fishing Pier as `partial`; nearby soundings, shoreline-construction records,
 catalog clues, or human responses cannot substitute for either missing
-depth-area band. Preparing any packet is not the review itself and does not
-close any item above.
+depth-area band. The blank
+[Oakland through South Bay structure/depth review packet](OAKLAND-SOUTH-BAY-STRUCTURE-DEPTH-REVIEW.md)
+completes executable handoff coverage for all 61 launch-catalog sites. Its final
+ten records must remain `charted-context` with non-empty sector bands, but that
+status still cannot imply shore reachability, castability, access, safety, or
+navigation suitability. Preparing any packet is not the review itself and does
+not close any item above.
 
 No production, Cloudflare, database, provider, or deployment change is part of
 this repository slice.

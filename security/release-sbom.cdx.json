@@ -1,7 +1,7 @@
 {
   "bomFormat": "CycloneDX",
   "specVersion": "1.5",
-  "serialNumber": "urn:uuid:32ebf586-d169-5ffe-80c4-15f8a9831055",
+  "serialNumber": "urn:uuid:9ed14456-e1ac-59ef-bf58-92a8062f23cc",
   "version": 1,
   "metadata": {
     "component": {
@@ -73,6 +73,10 @@
         },
         {
           "name": "castingcompass:input-sha256",
+          "value": "field-review/oakland-south-bay-structure-depth-review-policy.json:069d3255865151efacff45e15cd2c411f9e69fd66783383b2ac5601314b08069"
+        },
+        {
+          "name": "castingcompass:input-sha256",
           "value": "field-review/san-francisco-structure-depth-review-policy.json:e51dd09712bb5e6872a0dc402a726dc616fd55cff30892dcb32951d43d305080"
         },
         {
@@ -93,7 +97,7 @@
         },
         {
           "name": "castingcompass:input-sha256",
-          "value": "package.json:d2520b39a5789e21dd61dd9782b89fde8f3f072d77bf627070ac6da34085d217"
+          "value": "package.json:ab557f5ae9f8dec9c4f9f0fcd9fac7f99efdd660000e66d782c961dc74305359"
         },
         {
           "name": "castingcompass:input-sha256",

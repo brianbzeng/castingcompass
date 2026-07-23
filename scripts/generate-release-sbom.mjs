@@ -19,6 +19,7 @@ const inputPaths = [
   ".python-version",
   "field-review/marin-structure-depth-review-policy.json",
   "field-review/north-east-bay-structure-depth-review-policy.json",
+  "field-review/oakland-south-bay-structure-depth-review-policy.json",
   "field-review/san-francisco-structure-depth-review-policy.json",
   "field-review/san-mateo-structure-depth-review-policy.json",
   "field-review/santa-barbara-access-review-policy.json",

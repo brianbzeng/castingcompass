@@ -30,6 +30,10 @@ const NORTH_EAST_BAY_POLICY_SCHEMA = "castingcompass.north-east-bay-structure-de
 const NORTH_EAST_BAY_EVIDENCE_SCHEMA = "castingcompass.north-east-bay-structure-depth-review-evidence/1.0.0";
 const NORTH_EAST_BAY_RECEIPT_SCHEMA = "castingcompass.north-east-bay-structure-depth-review-receipt/1.0.0";
 const NORTH_EAST_BAY_WRITE_RECEIPT_SCHEMA = "castingcompass.north-east-bay-structure-depth-review-template-write-receipt/1.0.0";
+const OAKLAND_SOUTH_BAY_POLICY_SCHEMA = "castingcompass.oakland-south-bay-structure-depth-review/1.0.0";
+const OAKLAND_SOUTH_BAY_EVIDENCE_SCHEMA = "castingcompass.oakland-south-bay-structure-depth-review-evidence/1.0.0";
+const OAKLAND_SOUTH_BAY_RECEIPT_SCHEMA = "castingcompass.oakland-south-bay-structure-depth-review-receipt/1.0.0";
+const OAKLAND_SOUTH_BAY_WRITE_RECEIPT_SCHEMA = "castingcompass.oakland-south-bay-structure-depth-review-template-write-receipt/1.0.0";
 const ARTIFACT_SCHEMA = "castingcompass.structure-depth-evidence/1.5.0";
 const COMMIT_PATTERN = /^[a-f0-9]{40}$/u;
 const SHA256_PATTERN = /^[a-f0-9]{64}$/u;
@@ -244,6 +248,20 @@ export const STRUCTURE_DEPTH_REVIEW_PROFILES = Object.freeze({
     geographyScope: "McNears Beach Pier through Emeryville Marina Fishing Pier",
     regionNames: Object.freeze(["San Pablo Bay", "North Bay", "Golden Gate", "Richmond", "East Bay"]),
     partialSiteIds: Object.freeze(["mcnears-beach-pier", "ferry-point-pier"]),
+    siteCount: 10,
+  }),
+  "oakland-south-bay": Object.freeze({
+    id: "oakland-south-bay",
+    policySchema: OAKLAND_SOUTH_BAY_POLICY_SCHEMA,
+    evidenceSchema: OAKLAND_SOUTH_BAY_EVIDENCE_SCHEMA,
+    receiptSchema: OAKLAND_SOUTH_BAY_RECEIPT_SCHEMA,
+    writeReceiptSchema: OAKLAND_SOUTH_BAY_WRITE_RECEIPT_SCHEMA,
+    policyPath: "field-review/oakland-south-bay-structure-depth-review-policy.json",
+    guidePath: "docs/OAKLAND-SOUTH-BAY-STRUCTURE-DEPTH-REVIEW.md",
+    geographyLabel: "Oakland through South Bay",
+    geographyScope: "Port View Park Fishing Pier through Oyster Point Fishing Pier",
+    regionNames: Object.freeze(["Oakland", "Alameda", "San Leandro", "South Bay", "Peninsula Bay"]),
+    partialSiteIds: Object.freeze([]),
     siteCount: 10,
   }),
 });
@@ -512,6 +530,10 @@ export function validateNorthEastBayStructureDepthReview(sources) {
   return validateRegionalStructureDepthReview(sources, "north-east-bay");
 }
 
+export function validateOaklandSouthBayStructureDepthReview(sources) {
+  return validateRegionalStructureDepthReview(sources, "oakland-south-bay");
+}
+
 function createRegionalStructureDepthReviewTemplate({
   policy,
   catalog,
@@ -574,6 +596,10 @@ export function createMarinStructureDepthReviewTemplate(sources) {
 
 export function createNorthEastBayStructureDepthReviewTemplate(sources) {
   return createRegionalStructureDepthReviewTemplate(sources, "north-east-bay");
+}
+
+export function createOaklandSouthBayStructureDepthReviewTemplate(sources) {
+  return createRegionalStructureDepthReviewTemplate(sources, "oakland-south-bay");
 }
 
 function validateCorrection(response, states, correctionState, categories, label) {
@@ -780,6 +806,10 @@ export function evaluateNorthEastBayStructureDepthReview(sources) {
   return evaluateRegionalStructureDepthReview(sources, "north-east-bay");
 }
 
+export function evaluateOaklandSouthBayStructureDepthReview(sources) {
+  return evaluateRegionalStructureDepthReview(sources, "oakland-south-bay");
+}
+
 export async function loadStructureDepthReviewSources(profileId, root = DEFAULT_ROOT) {
   const profile = requireReviewProfile(profileId);
   const [policySource, catalogSource, artifactSource, sourcePolicySource, sourceSnapshotSource, collectorSource, guide] = await Promise.all([
@@ -897,6 +927,10 @@ export async function writeNorthEastBayStructureDepthReviewTemplate(options) {
   return writeRegionalStructureDepthReviewTemplate({ ...options, profileId: "north-east-bay" });
 }
 
+export async function writeOaklandSouthBayStructureDepthReviewTemplate(options) {
+  return writeRegionalStructureDepthReviewTemplate({ ...options, profileId: "oakland-south-bay" });
+}
+
 export async function verifySantaBarbaraStructureDepthReview(root = DEFAULT_ROOT) {
   const sources = await loadReviewSources(root);
   return validateSantaBarbaraStructureDepthReview(sources);
@@ -920,6 +954,11 @@ export async function verifyMarinStructureDepthReview(root = DEFAULT_ROOT) {
 export async function verifyNorthEastBayStructureDepthReview(root = DEFAULT_ROOT) {
   const sources = await loadStructureDepthReviewSources("north-east-bay", root);
   return validateNorthEastBayStructureDepthReview(sources);
+}
+
+export async function verifyOaklandSouthBayStructureDepthReview(root = DEFAULT_ROOT) {
+  const sources = await loadStructureDepthReviewSources("oakland-south-bay", root);
+  return validateOaklandSouthBayStructureDepthReview(sources);
 }
 
 function parseFlag(args, name) {

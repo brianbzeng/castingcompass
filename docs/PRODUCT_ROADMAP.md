@@ -1164,6 +1164,14 @@ after its acceptance checks pass in the intended environment.
       score, model, navigation, provider, merge, deployment, or production authority. No real
       response or accepted receipt exists yet; the final ten Oakland-through-South-Bay catalog
       sites still lack executable location-review handoffs.
+    - [x] Complete executable handoff coverage with the final ten Oakland-through-South-Bay
+      sites. The exact profile binds Port View Park Fishing Pier through Oyster Point Fishing
+      Pier and fails closed unless all ten artifact records remain `charted-context` with
+      non-empty sector depth-area bands. The bands remain display-only and cannot imply
+      shore-reachable depth, castability, access, wading safety, fishing quality, or navigation
+      suitability. The packet preserves the same private, disjoint, source-current review
+      contract and grants no score, model, navigation, provider, merge, deployment, or production
+      authority. No real response or accepted receipt exists yet.
 - [ ] Add striped bass as the first new beta using a distinct estuary/migration model.
 - [ ] Define and evaluate explicit shore-relevant rockfish species/complexes next; then model
   cabezon as its own taxon; then split surfperch into defensible habitat/taxon groups. Each beta

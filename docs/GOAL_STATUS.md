@@ -119,7 +119,33 @@ by that discovery.
       safe-area, map-abort, and regional-evidence cases; ESLint; TypeScript; the complete
       security/SBOM/query-policy chain; and both npm audits pass with zero reported
       vulnerabilities.
-- [ ] Obtain exact-head hosted automation evidence for the North and East Bay checkpoint.
+- [x] Obtain exact-head hosted automation evidence for the North and East Bay checkpoint. Exact
+      head `675bda16a152c01ebf5caab0f41ab72c0b8ffc39` passed CI run `29987765259`,
+      CodeQL run `29987760344`, optional research-stack run `29987765185`, native API-image
+      run `29987765146`, and release-provenance run `29987765151`. This is automation evidence,
+      not independent review.
+- [x] Add the sixth and final exact regional profile and blank handoff for all ten
+      Oakland-through-South-Bay locations. The packet completes executable handoff coverage for
+      all 61 launch-catalog sites while requiring every final-cohort record to remain
+      `charted-context` with a non-empty sector depth-area band.
+- [x] Add fail-closed final-region coverage for reuse of any earlier regional schema or file,
+      exact site population, charted-to-partial status drift at every site, accepted aggregate
+      receipts, incomplete/overlapping/stale/corrected evidence, digest/identity/unsafe-text/
+      duplicate-ID drift, owner-only writes, overwrite refusal, and provider/process paths. The
+      six new focused tests pass, and all six regional suites pass 39/39 together.
+- [x] Bind the Oakland-through-South-Bay policy and verifier into the security aggregate,
+      deterministic release inventory, combined release SBOM, CI, and release-provenance
+      workflow. The regional and release-inventory suites pass 41/41 against regenerated
+      deterministic evidence.
+- [x] Complete exact-tree local acceptance and generated-evidence review for the
+      Oakland-through-South-Bay checkpoint. Under pinned Node 22.23.1/npm 10.9.8, the
+      production-off Cloudflare build; 731/731 Node tests; 39/39 regional review tests; 41/41
+      regional plus release-inventory tests; 8/8 photo UI cases; ESLint; TypeScript; the complete
+      security/SBOM/query-policy chain; and both npm audits pass with zero reported
+      vulnerabilities. A resource-saturated four-worker mobile run passed 242/244 before two
+      unrelated readiness timeouts; both exact cases passed 2/2 alone, and a bounded two-worker
+      rerun passed the complete 244/244 Chromium and WebKit matrix.
+- [ ] Obtain exact-head hosted automation evidence for the Oakland-through-South-Bay checkpoint.
 - [ ] Obtain real independent local-angler and chart/GIS responses. This packet does not
       authorize a score or catalog change, model claim, merge, deployment, provider mutation,
       migration, feature activation, staging exercise, or production acceptance.
