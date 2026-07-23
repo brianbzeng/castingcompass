@@ -199,6 +199,15 @@ after its acceptance checks pass in the intended environment.
       production-off build plus all 696/696 Node tests, focused 10/10 route suite, feature-on 8/8
       photo lane, restored production-off 228/228 mobile matrix, lint, typecheck, full security/
       SBOM/query-policy chain, and both zero-vulnerability audits pass.
+    - [x] Make optional-session authority an exhaustive request-and-control contract. The exact
+      session-discovery and logout policies now independently bind their IDs, declared templates,
+      actual request paths, methods, account handler, same-origin rule, legal/deletion-fence
+      flags, and stronger abuse tags before D1/schema preflight or body guarding. A new policy,
+      broadened primary matcher, unrelated or suffixed request, traversal-shaped input, wrong
+      method, or control drift fails with generic non-cacheable `503`; existing anonymous session
+      discovery, stale-cookie cleanup, and exact logout revocation receipts remain unchanged.
+      The focused route suite passes 13/13 under pinned Node 22.23.1/npm 10.9.8; exact-tree local
+      and hosted evidence is tracked separately in `docs/GOAL_STATUS.md`.
     - [x] Make public authorization an exhaustive execution contract. The fourteen reviewed
       public policies now independently bind their exact ID, path template, method set, handler,
       same-origin rule, legal/deletion-fence flags, and stronger abuse tags; a new public policy or

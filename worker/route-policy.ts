@@ -401,6 +401,17 @@ type ReviewedOwnerApiRouteContract = Readonly<{
   rateLimitTags: readonly Exclude<RequestLimitClass, "read" | "write">[];
 }>;
 
+type ReviewedOptionalSessionApiRouteContract = Readonly<{
+  pathTemplate: string;
+  pathPattern: RegExp;
+  methods: readonly ApiMethod[];
+  handler: ApiHandler;
+  sameOriginRequired: boolean;
+  currentLegalAcceptanceRequired: boolean;
+  deletionFenceAccessAllowed: boolean;
+  rateLimitTags: readonly Exclude<RequestLimitClass, "read" | "write">[];
+}>;
+
 /**
  * Independent execution boundary for routes that intentionally require no
  * account, session, or resource-token authority. A new or changed `public`
@@ -752,6 +763,37 @@ const REVIEWED_OWNER_API_ROUTE_CONTRACTS: Readonly<Record<string, ReviewedOwnerA
   },
 };
 
+/**
+ * Independent execution boundary for the two routes that may discover or
+ * revoke a session without requiring one to exist. The primary registry may
+ * select a candidate, but it cannot silently widen this authority class or
+ * weaken logout's same-origin control before storage/schema preflight.
+ */
+const REVIEWED_OPTIONAL_SESSION_API_ROUTE_CONTRACTS: Readonly<
+  Record<string, ReviewedOptionalSessionApiRouteContract>
+> = {
+  "auth.session": {
+    pathTemplate: "/api/auth/session",
+    pathPattern: /^\/api\/auth\/session$/,
+    methods: ["GET"],
+    handler: "account",
+    sameOriginRequired: false,
+    currentLegalAcceptanceRequired: false,
+    deletionFenceAccessAllowed: false,
+    rateLimitTags: [],
+  },
+  "auth.logout": {
+    pathTemplate: "/api/auth/logout",
+    pathPattern: /^\/api\/auth\/logout$/,
+    methods: ["POST"],
+    handler: "account",
+    sameOriginRequired: true,
+    currentLegalAcceptanceRequired: false,
+    deletionFenceAccessAllowed: false,
+    rateLimitTags: [],
+  },
+};
+
 function sameOrderedValues<T>(actual: readonly T[], expected: readonly T[]) {
   return actual.length === expected.length && actual.every((value, index) => value === expected[index]);
 }
@@ -777,6 +819,22 @@ export function isReviewedOwnerApiRequest(request: Request, policy: ApiRoutePoli
   const { pathname } = new URL(request.url);
   return Boolean(reviewed) &&
     policy.authorization === "owner" &&
+    policy.pathTemplate === reviewed.pathTemplate &&
+    reviewed.pathPattern.test(pathname) &&
+    sameOrderedValues(policy.methods, reviewed.methods) &&
+    reviewed.methods.includes(request.method as ApiMethod) &&
+    policy.handler === reviewed.handler &&
+    policy.sameOriginRequired === reviewed.sameOriginRequired &&
+    policy.currentLegalAcceptanceRequired === reviewed.currentLegalAcceptanceRequired &&
+    policy.deletionFenceAccessAllowed === reviewed.deletionFenceAccessAllowed &&
+    sameOrderedValues(policy.rateLimitTags, reviewed.rateLimitTags);
+}
+
+export function isReviewedOptionalSessionApiRequest(request: Request, policy: ApiRoutePolicy): boolean {
+  const reviewed = REVIEWED_OPTIONAL_SESSION_API_ROUTE_CONTRACTS[policy.id];
+  const { pathname } = new URL(request.url);
+  return Boolean(reviewed) &&
+    policy.authorization === "optional_session" &&
     policy.pathTemplate === reviewed.pathTemplate &&
     reviewed.pathPattern.test(pathname) &&
     sameOrderedValues(policy.methods, reviewed.methods) &&

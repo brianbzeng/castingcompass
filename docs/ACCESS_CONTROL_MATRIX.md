@@ -1,8 +1,7 @@
 # CastingCompass access-control matrix
 
 Status: reviewed implementation baseline, not production activation evidence  
-Last reviewed source: `c3c1fca1dd81a1ab5d5b09d3739fea126829b1e3` plus the
-owner-preflight boundary introduced with this revision
+Last reviewed source: consolidated draft through the optional-session request boundary
 
 CastingCompass uses Cloudflare D1/SQLite, which does not provide PostgreSQL-style
 native row-level security. The required equivalent is a deny-by-default server
@@ -100,15 +99,18 @@ policy is the deletion-status read: the central preflight requires a well-formed
 cookie and live hash-bound D1 row before the body guard, and its handler repeats that lookup at
 execution. Any future receipt policy fails closed until it receives its own explicit preflight.
 The same-origin deletion-receipt clear route is intentionally public because it only removes the
-caller's cookie and must remain available without D1. The optional-session class is limited to
-`GET /api/auth/session` and same-origin `POST /api/auth/logout`; its central preflight requires
-readable account storage and schema before the body guard, while deliberately admitting both
+caller's cookie and must remain available without D1. Optional-session authority is also an
+exhaustive execution contract: a second two-route inventory independently binds the exact ID,
+declared template, actual request pathname and method, account handler, same-origin rule,
+legal/fence flags, and stronger abuse tags for `GET /api/auth/session` and same-origin
+`POST /api/auth/logout`. A new optional-session policy, broadened primary matcher, or control
+drift therefore fails with generic non-cacheable `503` before storage/schema preflight or body
+guarding. Both reviewed routes still require readable account storage and schema while admitting
 authenticated and anonymous callers. The session handler then resolves live identity and expires
 any presented invalid, expired, removed, or malformed host/legacy session cookie; logout clears
 the browser cookies only after exact D1 absence is readable for every well-formed presented token.
-Any future optional-session policy fails closed until it receives an explicit preflight. Account
-and trip execution repeat live authorization after body guarding so a concurrent revocation or
-new deletion fence fails closed.
+Account and trip execution repeat live authorization after body guarding so a concurrent
+revocation or new deletion fence fails closed.
 
 Public authority is also an exhaustive execution contract, not a registry default. The fourteen
 reviewed public policies bind their exact path template, method set, handler family, same-origin
@@ -121,7 +123,7 @@ the same-origin anonymous account-entry actions, and the cookie-only deletion-re
 without allowing a future `public` label alone to widen anonymous execution.
 
 `tests/route-policy-runtime.test.mjs` machine-checks unique route identities, actor,
-CSRF/legal/fence and abuse metadata, every reviewed public and owner execution contract,
+CSRF/legal/fence and abuse metadata, every reviewed public, owner, and optional-session execution contract,
 representative dynamic resources, malformed and lookalike paths, every exact route branch in the
 Worker handlers, and the central pre-body public, owner, deletion-receipt, and optional-session
 gates. Object-level ownership and cross-

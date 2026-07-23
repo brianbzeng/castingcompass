@@ -13,6 +13,38 @@ Current provider truth overrides historical “paused” language in completed r
 2026-07-19 read-only reconciliation found an active Worker; no production mutation is authorized
 by that discovery.
 
+## Active checkpoint — registry-enforced optional-session request boundary
+
+- [x] Reconcile both optional-session policies against the fields that control anonymous session
+      discovery and revocation. The central preflight limited the class by policy ID and repeated
+      exact paths internally, but it did not independently freeze the primary registry's declared
+      template, matcher result, method set, handler, same-origin rule, legal/fence flags, or
+      stronger abuse tags.
+- [x] Add an independent exhaustive contract for exact `GET /api/auth/session` and same-origin
+      `POST /api/auth/logout`. A new optional-session ID, broadened primary matcher, wrong actual
+      request path or method, or drift in any controlling field now receives generic non-cacheable
+      `503` before D1/schema preflight or body guarding.
+- [x] Preserve the existing live semantics after the new boundary. Both routes still require
+      readable account storage and exact schema; session discovery admits authenticated or
+      anonymous callers and clears stale cookies, while logout clears cookies only after exact
+      stored absence is readable for every presented well-formed token.
+- [x] Add adversarial coverage for ID/template/method/handler/origin/legal/fence/tag drift,
+      deliberately universal session/logout matchers, unrelated and suffixed paths,
+      traversal-shaped input, wrong methods, owner authority, the exact two-policy set, and central
+      pre-body source order. The focused executable route suite passes 13/13; ESLint and
+      TypeScript pass.
+- [x] Complete exact-tree local acceptance and generated-evidence review. Under pinned Node
+      22.23.1/npm 10.9.8, the production-off Cloudflare build and all 699/699 Node tests pass;
+      the focused executable route suite passes 13/13; the explicit feature-on photo build and
+      8/8 Chromium/WebKit cases pass; the restored production-off phone matrix passes 228/228
+      across four profiles; and ESLint, TypeScript, the complete security/SBOM/query-policy
+      chain, and both npm audits pass with zero reported vulnerabilities.
+- [ ] Obtain exact-head hosted CI and CodeQL evidence. This automation gate does not replace
+      independent review or authorize a release.
+- [ ] Obtain independent human review. This repository boundary does not authorize merge,
+      deployment, provider mutation, migration, feature activation, staging exercise, or
+      production acceptance.
+
 ## Active checkpoint — registry-enforced owner request boundary
 
 - [x] Reconcile all twenty-two owner policies against the fields that actually control protected
@@ -37,8 +69,11 @@ by that discovery.
       8/8 Chromium/WebKit cases pass; the restored production-off phone matrix passes 228/228
       across four profiles; and ESLint, TypeScript, the complete security/SBOM/query-policy
       chain, and both npm audits pass with zero reported vulnerabilities.
-- [ ] Obtain exact-head hosted CI and CodeQL evidence. This automation gate does not replace
-      independent review or authorize a release.
+- [x] Obtain exact-head hosted evidence through consolidated head
+      `5609fdbc56b8b113c6e5169e0b55bddb20a7d69a`: CI run `29970956821`, CodeQL run
+      `29970955790`, optional research-stack run `29970956780`, native API-image run
+      `29970956806`, and release-provenance run `29970956782` all passed. This is automation
+      evidence, not review.
 - [ ] Obtain independent human review. This repository boundary does not authorize merge,
       deployment, provider mutation, migration, feature activation, staging exercise, or
       production acceptance.

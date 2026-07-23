@@ -40,6 +40,7 @@ import { enforceRequestRateLimit, type RateLimitEnv } from "./rate-limit";
 import {
   apiRoutePolicyForRequest,
   apiRouteRejectionForRequest,
+  isReviewedOptionalSessionApiRequest,
   isReviewedOwnerApiRequest,
   isReviewedPublicApiRequest,
   type ApiRoutePolicy,
@@ -186,7 +187,7 @@ async function handleFetchRequest(request: Request, env: Env, ctx: ExecutionCont
     if (receiptAuthorization.response) return receiptAuthorization.response;
   }
   if (apiPolicy?.authorization === "optional_session") {
-    if (apiPolicy.id !== "auth.session" && apiPolicy.id !== "auth.logout") {
+    if (!isReviewedOptionalSessionApiRequest(request, apiPolicy)) {
       return routePolicyUnavailableResponse();
     }
     const optionalSessionAuthorization = await authorizeOptionalSessionRequest(request, env);

@@ -6,6 +6,7 @@ import {
   allowedApiMethodsForPath,
   apiRoutePolicyForRequest,
   apiRouteRejectionForRequest,
+  isReviewedOptionalSessionApiRequest,
   isReviewedOwnerApiRequest,
   isReviewedPublicApiRequest,
   isKnownApiPath,
@@ -95,6 +96,13 @@ test("every declared API route example resolves to its exact executable policy",
   }
   for (const policy of API_ROUTE_POLICIES.filter((policy) => policy.authorization === "owner")) {
     assert.equal(isReviewedOwnerApiRequest(request(policy.examplePath, policy.methods[0]), policy), true, policy.id);
+  }
+  for (const policy of API_ROUTE_POLICIES.filter((policy) => policy.authorization === "optional_session")) {
+    assert.equal(
+      isReviewedOptionalSessionApiRequest(request(policy.examplePath, policy.methods[0]), policy),
+      true,
+      policy.id,
+    );
   }
 });
 
@@ -224,6 +232,62 @@ test("owner execution requires the exact independently reviewed request and cont
   const publicPolicy = API_ROUTE_POLICIES.find((policy) => policy.id === "auth.login");
   assert.ok(publicPolicy);
   assert.equal(isReviewedOwnerApiRequest(request("/api/auth/login", "POST"), publicPolicy), false);
+});
+
+test("optional-session execution requires the exact independently reviewed request and control contract", () => {
+  const logout = API_ROUTE_POLICIES.find((policy) => policy.id === "auth.logout");
+  assert.ok(logout);
+  const logoutRequest = request("/api/auth/logout", "POST");
+  assert.equal(isReviewedOptionalSessionApiRequest(logoutRequest, logout), true);
+
+  for (const drifted of [
+    { ...logout, id: "auth.logout_alias" },
+    { ...logout, pathTemplate: "/api/auth/logout/{sessionId}" },
+    { ...logout, methods: ["POST", "DELETE"] },
+    { ...logout, handler: "trips" },
+    { ...logout, sameOriginRequired: false },
+    { ...logout, currentLegalAcceptanceRequired: true },
+    { ...logout, deletionFenceAccessAllowed: true },
+    { ...logout, rateLimitTags: ["auth"] },
+  ]) {
+    assert.equal(isReviewedOptionalSessionApiRequest(logoutRequest, drifted), false, JSON.stringify(drifted));
+  }
+
+  const broadenedLogout = { ...logout, matches: () => true };
+  assert.equal(
+    isReviewedOptionalSessionApiRequest(request("/api/auth/logout/extra", "POST"), broadenedLogout),
+    false,
+  );
+  assert.equal(
+    isReviewedOptionalSessionApiRequest(request("/api/profile", "POST"), broadenedLogout),
+    false,
+  );
+  assert.equal(
+    isReviewedOptionalSessionApiRequest(request("/api/auth/logout", "GET"), broadenedLogout),
+    false,
+  );
+
+  const session = API_ROUTE_POLICIES.find((policy) => policy.id === "auth.session");
+  assert.ok(session);
+  assert.equal(isReviewedOptionalSessionApiRequest(request("/api/auth/session"), session), true);
+  assert.equal(
+    isReviewedOptionalSessionApiRequest(
+      request("/api/auth/session/extra"),
+      { ...session, matches: () => true },
+    ),
+    false,
+  );
+  assert.equal(
+    isReviewedOptionalSessionApiRequest(
+      request("/api/%2e%2e", "GET"),
+      { ...session, matches: () => true },
+    ),
+    false,
+  );
+
+  const owner = API_ROUTE_POLICIES.find((policy) => policy.id === "profile.read");
+  assert.ok(owner);
+  assert.equal(isReviewedOptionalSessionApiRequest(request("/api/profile"), owner), false);
 });
 
 test("route policy records actor, CSRF, legal, and abuse controls for representative boundaries", () => {
@@ -464,7 +528,7 @@ test("the Worker entry point centrally denies unknown paths and unclassified met
   assert.match(source, /apiPolicy\.id !== "privacy\.deletion_status\.read"/);
   assert.match(source, /authorizeDeletionReceiptRequest\(request, env\)/);
   assert.match(source, /if \(apiPolicy\?\.authorization === "optional_session"\)/);
-  assert.match(source, /apiPolicy\.id !== "auth\.session" && apiPolicy\.id !== "auth\.logout"/);
+  assert.match(source, /if \(!isReviewedOptionalSessionApiRequest\(request, apiPolicy\)\)/);
   assert.match(source, /authorizeOptionalSessionRequest\(request, env\)/);
   assert.doesNotMatch(source, /url\.pathname\.startsWith\("\/api\/trips\/"\)/);
 
@@ -473,6 +537,7 @@ test("the Worker entry point centrally denies unknown paths and unclassified met
   const ownerPolicyReview = source.indexOf("isReviewedOwnerApiRequest(request, apiPolicy)");
   const ownerAuthorization = source.indexOf("authorizeOwnerRequest(request, env");
   const receiptAuthorization = source.indexOf("authorizeDeletionReceiptRequest(request, env");
+  const optionalSessionPolicyReview = source.indexOf("isReviewedOptionalSessionApiRequest(request, apiPolicy)");
   const optionalSessionAuthorization = source.indexOf("authorizeOptionalSessionRequest(request, env");
   const bodyGuard = source.indexOf("guardRequestBody(request)");
   assert.ok(rejection >= 0);
@@ -481,10 +546,16 @@ test("the Worker entry point centrally denies unknown paths and unclassified met
   assert.ok(ownerAuthorization > ownerPolicyReview, "owner authorization must follow owner policy review");
   assert.ok(ownerAuthorization > rejection, "owner authorization must follow central route rejection");
   assert.ok(receiptAuthorization > rejection, "receipt authorization must follow central route rejection");
+  assert.ok(optionalSessionPolicyReview > rejection, "optional-session policy review must follow central route rejection");
+  assert.ok(
+    optionalSessionAuthorization > optionalSessionPolicyReview,
+    "optional-session preflight must follow optional-session policy review",
+  );
   assert.ok(optionalSessionAuthorization > rejection, "optional-session preflight must follow central route rejection");
   assert.ok(bodyGuard > ownerAuthorization, "body reads must follow owner authorization");
   assert.ok(bodyGuard > publicAuthorization, "body reads must follow public policy review");
   assert.ok(bodyGuard > receiptAuthorization, "body reads must follow receipt authorization");
+  assert.ok(bodyGuard > optionalSessionPolicyReview, "body reads must follow optional-session policy review");
   assert.ok(bodyGuard > optionalSessionAuthorization, "body reads must follow optional-session preflight");
   for (const dispatch of [
     "handleTurnstileConfigRequest(request, env)",
