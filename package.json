@@ -85,7 +85,7 @@
     "@types/react": "19.2.14",
     "@types/react-dom": "19.2.3",
     "@vitejs/plugin-react": "6.0.3",
-    "@vitejs/plugin-rsc": "0.5.26",
+    "@vitejs/plugin-rsc": "0.5.30",
     "ajv": "8.20.0",
     "ajv-formats": "3.0.1",
     "drizzle-kit": "0.31.10",
