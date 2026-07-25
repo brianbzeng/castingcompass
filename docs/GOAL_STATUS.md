@@ -13,6 +13,31 @@ Current provider truth overrides historical “paused” language in completed r
 2026-07-19 read-only reconciliation found an active Worker; no production mutation is authorized
 by that discovery.
 
+## Active checkpoint — consolidated reviewed dependency and RecFIN follow-up
+
+- [x] Triage the open automated dependency queue against the accepted launch stack instead of
+      merging version numbers mechanically. The React framework and `fast-uri` proposals are
+      already superseded by the accepted stack; Python runtime, scientific, lint, RSC, Wrangler,
+      and MapLibre changes remain deferred to separate compatibility review.
+- [x] Advance only the two narrow compatible patches: pin every `actions/checkout` use and its
+      policy assertions to exact `v7.0.1` commit
+      `3d3c42e5aac5ba805825da76410c181273ba90b1`, and lock
+      `@vitejs/plugin-react` at `6.0.4`. The lockfile and deterministic CycloneDX SBOMs are
+      refreshed without changing runtime application behavior or production configuration.
+- [x] Verify the dependency slice under pinned Node `22.23.1` and npm `10.9.8`: the complete
+      security/SBOM/query-policy chain, production-off and feature-on builds, ESLint, TypeScript,
+      all 740/740 Node tests, 8/8 Chromium/WebKit photo cases, and 244/244 mobile/offline/
+      recovery/map cases pass.
+- [x] Consolidate the fail-closed RecFIN SD002 public-discovery boundary onto the same local
+      follow-up rather than creating another review fragment. On the combined exact tree, a
+      fresh Python `3.12.13` hash-only environment passes Ruff, all 129/129 pipeline tests with
+      eight declared optional-dependency skips, and deterministic smoke; the complete Node
+      security chain and 28 documentation/governance tests also pass.
+- [ ] Obtain exact-head hosted CI, CodeQL, and independent human review after this local
+      follow-up has an authorized review destination. No branch push, pull request, merge,
+      deployment, migration, provider mutation, DNS change, data request, raw-data acquisition,
+      model role, or production acceptance is authorized by this checkpoint.
+
 ## Active checkpoint — 2026-07-25 npm advisory response
 
 - [x] Close the time-trigger gap without changing the accepted PR `#146` head. A separate,
