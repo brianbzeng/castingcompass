@@ -1,7 +1,7 @@
 {
   "bomFormat": "CycloneDX",
   "specVersion": "1.5",
-  "serialNumber": "urn:uuid:f59dc305-b592-55ce-9755-fa80afa734c1",
+  "serialNumber": "urn:uuid:26567c3a-8a4c-56db-9896-1528a7cbeb23",
   "version": 1,
   "metadata": {
     "component": {
@@ -17,7 +17,7 @@
         },
         {
           "name": "castingcompass:input-sha256",
-          "value": ".github/workflows/npm-advisory-watch.yml:6cc3fd55b67b78ef9c8a5ea0eebfdf3d1e3fdcbfa2ef272257d37bb72b96e7ec"
+          "value": ".github/workflows/npm-advisory-watch.yml:1e9a08bf6c21e8a49391cfaa57d8ef0f2108f1306d5727a0ff97b4301698c04a"
         },
         {
           "name": "castingcompass:input-sha256",
@@ -97,11 +97,11 @@
         },
         {
           "name": "castingcompass:input-sha256",
-          "value": "package-lock.json:c648e2433adbba011d5ebe3da4105d230be4a0e9e79b527d5fad56632d140954"
+          "value": "package-lock.json:1930b9fc2e5a359833e3f484c23d74547f32eb79f34ac8fdce3c8f04f54d49e8"
         },
         {
           "name": "castingcompass:input-sha256",
-          "value": "package.json:b17ad9661c492d0e9b3d1da8b01850903d758ae0095d2dadb96d41e559bec670"
+          "value": "package.json:9ffc4a097e7517c1792784be76c5f667264e05e10f2c7630e0ed65dbe385952d"
         },
         {
           "name": "castingcompass:input-sha256",
@@ -117,7 +117,7 @@
         },
         {
           "name": "castingcompass:input-sha256",
-          "value": "scripts/verify-npm-audit-policy.mjs:dc8bc1f9c87c3eac8a71c894bb44d32fe60bc39075e2f905aa6f8d1382b89661"
+          "value": "scripts/verify-npm-audit-policy.mjs:bdc9cb0fe739be7877a02675afd0bb9af5f949459828e820629880d598cce7e3"
         },
         {
           "name": "castingcompass:input-sha256",
@@ -177,7 +177,7 @@
         },
         {
           "name": "castingcompass:input-sha256",
-          "value": "security/sbom.cdx.json:8955c2f484fdebe8d9c7f712d8c73fd8ad0c54cfd63034c57d2096cf126299df"
+          "value": "security/sbom.cdx.json:5fa4a77748e826fbc1823f8d0506091370adf7b60867746e6246cbfdef8a4c32"
         },
         {
           "name": "castingcompass:input-sha256",

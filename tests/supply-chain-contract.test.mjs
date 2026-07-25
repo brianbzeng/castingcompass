@@ -36,7 +36,7 @@ test("direct npm packages and build runtimes are exact reviewed versions", async
   }
   const buildToolchain = {
     "@cloudflare/vite-plugin": "1.45.1",
-    "@vitejs/plugin-react": "6.0.3",
+    "@vitejs/plugin-react": "6.0.4",
     wrangler: "4.112.0",
   };
   for (const [name, version] of Object.entries(buildToolchain)) {
@@ -251,7 +251,7 @@ test("the deterministic production SBOM is bound to the lock and direct runtime 
   assert.equal(sbom.bomFormat, "CycloneDX");
   assert.equal(sbom.specVersion, "1.5");
   assert.match(sbom.serialNumber, /^urn:uuid:[0-9a-f]{8}-[0-9a-f]{4}-5[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/u);
-  assert.equal(sbom.serialNumber, "urn:uuid:b20b6268-15ac-5014-a342-dead84a7b464");
+  assert.equal(sbom.serialNumber, "urn:uuid:65995d42-2252-5902-8182-ce1630eca498");
   assert.equal("timestamp" in sbom.metadata, false);
   assert.equal(sbom.metadata.component.name, manifest.name);
   assert.deepEqual(sbom.metadata.properties, [{

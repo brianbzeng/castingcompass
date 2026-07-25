@@ -228,7 +228,7 @@ test("patched build-tool versions are exact and remain above the reviewed adviso
   const lock = JSON.parse(readFileSync("package-lock.json", "utf8"));
 
   assert.equal(packageJson.devDependencies["@cloudflare/vite-plugin"], "1.45.1");
-  assert.equal(packageJson.devDependencies["@vitejs/plugin-react"], "6.0.3");
+  assert.equal(packageJson.devDependencies["@vitejs/plugin-react"], "6.0.4");
   assert.equal(packageJson.devDependencies.vite, "8.1.5");
   assert.equal(packageJson.devDependencies.wrangler, "4.112.0");
   assert.equal(lock.packages["node_modules/miniflare"].version, "4.20260714.0");

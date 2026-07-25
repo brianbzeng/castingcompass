@@ -10,7 +10,7 @@ const POLICY_SCHEMA = "castingcompass.npm-audit-policy/1.0.0";
 const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/u;
 const VERSION_PATTERN = /^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?$/u;
 const WATCH_WORKFLOW_PATH = ".github/workflows/npm-advisory-watch.yml";
-const WATCH_CHECKOUT_ACTION = "actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0";
+const WATCH_CHECKOUT_ACTION = "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1";
 const WATCH_SETUP_NODE_ACTION = "actions/setup-node@820762786026740c76f36085b0efc47a31fe5020";
 
 function invariant(condition, message) {
