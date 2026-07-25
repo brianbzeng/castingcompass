@@ -4093,6 +4093,13 @@ supersedes this mutation-metadata authority while preserving its fail-closed beh
       not ingest private/social data. The register and exact ds3185/ds3186 receipts are in
       `docs/OFFICIAL-FISHERIES-DATA.md` and `pipeline/sources/receipts/`; neither aggregate is
       approved for training, validation, scoring, or point labels.
+      **Public complete-effort discovery locally complete:** official RecFIN SD002 exposes
+      Santa Barbara California-halibut-target sample rows, including blank-catch rows, and its
+      exact 71-field comprehensive-sample dictionary is hash-bound. Raw QueryBuilder/LDE access
+      is account-bound; blank-row zero-catch semantics, stable export identities, a California
+      effort unit, sampling fields, a saved query/export checksum, and written intended-use
+      permission remain open. A draft request is ready but was not sent, no raw corpus was
+      acquired, and normalization/training/validation/scoring remain denied.
 - [x] Draft five short user-interview scripts focused on whether people understand the
       heuristic ranking, freshness labels, limitations, and trip-report privacy. The fictional,
       machine-checked scripts in `docs/USER-INTERVIEWS.md` require no account or real trip,

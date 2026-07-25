@@ -944,9 +944,16 @@ after its acceptance checks pass in the intended environment.
     missing-value sentinel, and explicitly restrict both block/time-bin aggregates to
     descriptive context. The stale ds3185 convenience export was rejected rather than silently
     accepted as current data.
+  - [x] Verify the official public RecFIN SD002 technical boundary without acquiring a corpus:
+    bind the exact 71-field comprehensive-sample dictionary, confirm Santa Barbara
+    California-halibut-target rows and blank-catch rows are publicly represented, document that
+    raw QueryBuilder/LDE paths require an authorized account, and keep blank-row semantics,
+    California effort units, permissions, and every model role fail closed.
   - [ ] Obtain a permitted, reproducible complete-effort CRFS/RecFIN sample export and begin the
     prospective first-party cohort. The aggregate layers cannot substitute for complete
     attempts, species-specific target effort, exact support, or source-separated validation.
+    Send the drafted official request, retain stable record identities and confirmed zero-catch
+    semantics, and obtain written intended-use terms before normalization.
 - [ ] Treat Fishbrain as an optional written-license partnership and Facebook groups as
   admin-approved prospective recruitment—not scraped retrospective evidence. Licensed social
   data without complete attempts, no-catch, effort, coverage, and sampling propensity is for

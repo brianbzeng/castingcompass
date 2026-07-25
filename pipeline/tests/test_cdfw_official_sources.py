@@ -161,8 +161,72 @@ class CdfwOfficialSourceTests(unittest.TestCase):
             normalized_register,
         )
         self.assertIn("- [x] Acquire and twice reproduce exact current ds3186 and ds3185", roadmap)
+        self.assertIn("- [x] Verify the official public RecFIN SD002 technical boundary", roadmap)
         self.assertIn("- [ ] Obtain a permitted, reproducible complete-effort CRFS/RecFIN", roadmap)
         self.assertIn("a complete-effort RecFIN export and the prospective cohort remain open", dashboard)
+
+    def test_public_sd002_discovery_is_byte_bound_but_not_admitted(self):
+        manifests = load_source_manifests()
+        receipt = json.loads(
+            (
+                ROOT
+                / "pipeline"
+                / "sources"
+                / "receipts"
+                / "recfin-sd002-public-discovery-20260725.receipt.json"
+            ).read_text(encoding="utf-8")
+        )
+        expected_dictionary_sha = "b17ebe6ec617014a0a4c0e0b70f502f50554e41e85f234f6126f8d7c524e2139"
+
+        self.assertEqual(receipt["public_report"]["report_id"], "SD002")
+        self.assertEqual(receipt["public_report"]["app_user_observed"], "nobody")
+        self.assertTrue(receipt["public_report"]["santa_barbara_california_halibut_target_rows_observed"])
+        self.assertTrue(receipt["public_report"]["blank_species_and_catch_rows_observed"])
+        self.assertFalse(receipt["public_report"]["blank_rows_confirmed_as_complete_zero_catch_attempts"])
+        self.assertEqual(receipt["dictionary"]["field_count"], len(receipt["dictionary"]["fields"]))
+        self.assertEqual(receipt["dictionary"]["sha256"], expected_dictionary_sha)
+        for field in (
+            "SAMPLE_ID",
+            "ANGLER_ID",
+            "CATCH_ID",
+            "LOCATION_ID",
+            "PRIMARY_TARGET_SPECIES_ID",
+            "NUMBER_OF_ANGLERS",
+            "NUMBER_HOURS_FISHED",
+            "TOTAL_CATCH",
+        ):
+            self.assertIn(field, receipt["dictionary"]["fields"])
+        for permission in (
+            "automated_bulk_acquisition_confirmed",
+            "commercial_ml_use_confirmed",
+            "derived_product_use_confirmed",
+            "raw_redistribution_confirmed",
+        ):
+            self.assertFalse(receipt["permission_boundary"][permission])
+        for authorization in (
+            "observation_normalization_authorized",
+            "model_training_authorized",
+            "model_validation_authorized",
+            "production_scoring_authorized",
+            "raw_data_acquired",
+        ):
+            self.assertFalse(receipt["admissibility"][authorization])
+
+        for source_id in ("cdfw_crfs", "psmfc_recfin"):
+            manifest = manifests[source_id]
+            access = manifest["access"]
+            self.assertEqual(
+                access["mode"],
+                "public_sd002_discovery_then_authorized_or_official_export",
+            )
+            self.assertEqual(access["public_discovery"]["dictionary_sha256"], expected_dictionary_sha)
+            self.assertEqual(access["public_discovery"]["status"], "technical-candidate-not-admitted")
+            command = access["ingestion_command"]
+            self.assertIn("CANONICAL_", command)
+            self.assertIn("--primary-target-taxon-id california-halibut", command)
+            self.assertIn("--expected-sha256 SHA256", command)
+            self.assertNotIn("--column-map", command)
+            self.assertNotIn("_EXPORT.csv", command)
 
 
 if __name__ == "__main__":
