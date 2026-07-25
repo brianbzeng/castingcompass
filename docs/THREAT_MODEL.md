@@ -68,7 +68,7 @@ that could become a privacy, integrity, or availability incident.
 | --- | --- | --- | --- |
 | L01 | Security-first prompts | partial | Prompts are advisory; high-risk changes still need accountable review and tests |
 | L02 | IDE and repository scanning | provider-evidenced | Unknown secret formats and material outside Git remain residual risks |
-| L03 | Dependency integrity | provider-evidenced | Scanner lag, zero-days, and time-bounded image exceptions remain |
+| L03 | Dependency integrity | provider-evidenced | Scanner lag, zero-days, and time-bounded npm/image exceptions remain |
 | L04 | Static application security testing | provider-evidenced | Business-logic and runtime-only flaws require other controls |
 | L05 | AI post-generation review | partial | No mandatory second-person reviewer exists for every change |
 | L06 | Managed authentication | partial | CastingCompass uses reviewed custom opaque sessions; live evidence remains open |
@@ -133,11 +133,12 @@ that could become a privacy, integrity, or availability incident.
 - **Recovery:** Block promotion, remove or upgrade the dependency, regenerate exact locks and
   SBOMs, rebuild from the reviewed commit, and verify provenance before restoring the feature.
 - **Residual risk:** Advisory and scanner databases lag new issues; a correctly named package
-  can still be compromised; the owner-bound CPython image exceptions require re-review when
-  Python 3.13.15 is scheduled on 2026-08-04 and expire 2026-08-08.
-- **Next gate:** Adopt and natively verify the first fixed stable official image, removing every
-  stale exception; if publication is delayed beyond the bounded grace, fail closed rather than
-  silently extending the date or freezing a vulnerable runtime.
+  can still be compromised. The exact dev-only brace-expansion/ESLint exception expires
+  2026-08-01. The owner-bound CPython image exceptions require re-review when Python 3.13.15 is
+  scheduled on 2026-08-04 and expire 2026-08-08.
+- **Next gate:** Replace the minimatch 3 development edge as soon as maintained ESLint plugins
+  publish a compatible release, and adopt/natively verify the first fixed stable official Python
+  image. Fail closed at either deadline rather than silently extending an exception.
 
 ### L04 — Static application security testing
 

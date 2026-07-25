@@ -1,6 +1,6 @@
 # CastingCompass goal status
 
-Last reconciled: **2026-07-23 UTC**
+Last reconciled: **2026-07-25 UTC**
 
 This is the owner-facing dashboard for the complete goal list. The detailed acceptance
 criteria and immutable receipts remain in [PRODUCT_ROADMAP.md](PRODUCT_ROADMAP.md); provider
@@ -12,6 +12,35 @@ also satisfied.
 Current provider truth overrides historical “paused” language in completed receipts below. The
 2026-07-19 read-only reconciliation found an active Worker; no production mutation is authorized
 by that discovery.
+
+## Active checkpoint — 2026-07-25 npm advisory response
+
+- [x] Patch every compatible edge surfaced by the fresh advisory database: PostCSS is locked at
+      `8.5.18`; React, React DOM, and the development RSC package are locked at `19.2.8`; and the
+      minimatch `10.2.5` development edge receives brace-expansion `5.0.8`. The production npm
+      graph now audits with zero vulnerabilities.
+- [x] Preserve compatibility instead of forcing brace-expansion 5 into minimatch 3. Maintained
+      ESLint plugins still call the CommonJS brace-expansion 1 API, so the sole remaining root
+      advisory is restricted to the exact dev-only minimatch `3.1.5` graph.
+- [x] Add a fail-closed policy/verifier and seven adversarial tests. The gate allows only
+      `GHSA-mh99-v99m-4gvg`, its exact nine npm-audit wrapper entries, and its exact dev-only lock
+      paths through 2026-08-01; it rejects any production finding, critical or additional root
+      advisory, wrapper/lock drift, non-development reachability, or expired exception.
+- [x] Bind the policy and verifier into the deterministic release inventory and regenerate both
+      CycloneDX SBOMs. The focused policy/release suite passes 9/9 and both SBOM checks are
+      deterministic.
+- [x] Complete the full local acceptance available on macOS. Under pinned Node `22.23.1` and npm
+      `10.9.8`, both production-off builds, the feature-on build, all 738/738 Node tests, 8/8
+      photo browser cases, 244/244 mobile/offline/recovery/map cases, ESLint, TypeScript, the
+      complete security/SBOM/query-policy chain, and the direct production audit pass. A fresh
+      exact Python `3.12.13` environment passes Ruff, 128/128 pipeline tests with eight declared
+      optional-dependency skips, dependency checks, and deterministic smoke; the available API
+      compatibility environment passes 29/29 tests and all 54 D1 query plans. UV publishes no
+      CPython `3.13.14` macOS ARM64 download, so the exact required API runtime remains a hosted
+      CI acceptance boundary rather than a local claim.
+- [ ] Obtain exact-head hosted CI/CodeQL/API-image/optional-Python/release evidence before
+      returning PR `#146` to independent review. This work authorizes no merge, deployment,
+      provider mutation, DNS change, migration, or production acceptance.
 
 ## Active checkpoint — reusable regional structure/depth review handoffs
 

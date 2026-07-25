@@ -20,7 +20,7 @@ path so security fixes are not frozen out.
 | Worker runtime contract | `wrangler.jsonc` fixes `compatibility_date` and the reviewed compatibility flags | Cloudflare implements the runtime; a date pin needs deliberate compatibility review and periodic advancement |
 | Direct npm packages | Every direct production and development dependency uses an exact version in `package.json` | A package version can still be malicious or vulnerable; review source/provenance, advisories, licenses, and install scripts |
 | Transitive npm tree | `package-lock.json` records exact versions, registry locations, and integrity hashes; npm `10.9.8` is selected with an exact engine gate, `.npmrc` disables lifecycle scripts, CI/release also pass `--ignore-scripts`, and the exact seven script-bearing lock paths are reviewed in a fail-closed policy | Registry availability, npm implementation integrity, and preinstalled optional native binaries remain external; the hosted runner itself is not bit-for-bit pinned |
-| Known npm advisories | Compatible Babel and YAML fixes are forced; the deprecated Drizzle loader's vulnerable esbuild is overridden to tested `0.25.12`; the resulting complete npm tree currently audits clean | Replace the deprecated `@esbuild-kit` loader path when Drizzle removes it; do not leave the override indefinitely without tests |
+| Known npm advisories | Compatible Babel and YAML fixes are forced; the deprecated Drizzle loader's vulnerable esbuild is overridden to tested `0.25.12`; PostCSS is fixed at `8.5.18`; React, React DOM, and the development RSC package are fixed at `19.2.8`; the production npm graph audits with zero vulnerabilities | Maintained ESLint plugins still require minimatch 3 and its incompatible brace-expansion 1 API. The exact dev-only `GHSA-mh99-v99m-4gvg` graph is fail-closed and expires 2026-08-01; replace it as soon as upstream publishes a compatible release |
 | GitHub Actions | Every `uses:` reference is a full immutable commit SHA; runner labels are fixed to `ubuntu-24.04` and `macos-15` rather than mutable `-latest` aliases | GitHub updates the images behind those labels; a release still records the workflow run and source commit |
 | Default-branch integrity | Live `main` protection requires pull requests, strict successful `api`, `pipeline`, `web`, and `dependency-review` checks from the GitHub Actions app plus the `CodeQL` result from the GitHub Advanced Security app, resolved review conversations, and applies to the owner; force-pushes and branch deletion are disabled | This is provider-side configuration rather than source code; verify it again for the exact release and preserve a separate emergency-access procedure |
 | Pull-request dependency changes | The SHA-pinned GitHub dependency-review action rejects newly introduced high/critical runtime or development advisories on release PRs targeting the default branch, and the live `main` protection requires that check | GitHub builds the graph from the default branch, so stacked PRs cannot supply this evidence; the complete-tree audit and SBOM remain mandatory |
@@ -34,6 +34,37 @@ The exact Node release is the current patched release selected for the maintaine
 not a claim that Node 22 should remain forever. The API has moved to maintained Python 3.13.14;
 Python 3.12.13 remains only for the scientific pipeline while its broader binary/platform
 compatibility is reviewed. Do not let that bounded split turn into an indefinite support gap.
+
+### Temporary npm development-graph exception
+
+The 2026-07-25 advisory refresh found three newly published high-severity npm advisories. The
+reviewed lock update installs PostCSS `8.5.18`, React/React DOM/react-server-dom-webpack
+`19.2.8`, and brace-expansion `5.0.8` under the compatible minimatch `10.2.5` edge. A direct
+`npm audit --omit=dev` reports zero vulnerabilities.
+
+The only remaining root advisory is
+[`GHSA-mh99-v99m-4gvg`](https://github.com/advisories/GHSA-mh99-v99m-4gvg) against
+`brace-expansion@1.1.16`. It is reachable only through the locked minimatch `3.1.5` development
+graph used by maintained ESLint plugins. Forcing brace-expansion 5 into that graph is not a safe
+patch: minimatch 3 calls the CommonJS brace-expansion 1 function API, while brace-expansion 5
+exports a different named API. The latest reviewed ESLint plugin releases still retain
+minimatch 3.
+
+`security/npm-audit-policy.json` therefore permits exactly that root advisory, its nine known
+development-only npm-audit wrapper entries, and its exact lock paths through **2026-08-01**.
+`scripts/verify-npm-audit-policy.mjs` independently executes complete and production audits and
+fails if:
+
+- the production graph contains any vulnerability;
+- a critical or second root advisory appears;
+- any affected node is not marked development-only;
+- the nine-entry wrapper inventory, advisory identity, lock versions, or patched sibling paths
+  drift; or
+- the exception expires.
+
+The policy, verifier, lockfile, and regenerated SBOMs are release-inventory inputs. The deadline
+must not be moved merely to make CI pass. Recheck upstream first and remove the exception as soon
+as a compatible ESLint/minimatch release exists.
 
 ## CI security gates
 
@@ -327,7 +358,8 @@ Dependabot proposes npm, Python, and GitHub Action updates weekly. For every upd
    updating the digest. Build and smoke the image; a tag alone is not immutable.
 5. For GitHub Actions, resolve the reviewed release tag to its commit, use the full commit SHA,
    and preserve the human-readable version comment.
-6. Run secret scanning, Python lock verification, both npm audits, SBOM verification, lint,
+6. Run secret scanning, Python lock verification, the fail-closed complete/production npm audit
+   policy, SBOM verification, lint,
    typecheck, all tests, build, mobile tests, Python tests, release verifiers, and the Wrangler
    dry-run as applicable.
 7. Release from the immutable reviewed commit through the guarded workflow. Keep migrations,

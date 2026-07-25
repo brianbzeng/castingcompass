@@ -2,7 +2,7 @@
   "$schema": "http://cyclonedx.org/schema/bom-1.5.schema.json",
   "bomFormat": "CycloneDX",
   "specVersion": "1.5",
-  "serialNumber": "urn:uuid:19db3823-935e-5505-b310-d14b2fd83df0",
+  "serialNumber": "urn:uuid:b20b6268-15ac-5014-a342-dead84a7b464",
   "version": 1,
   "metadata": {
     "lifecycles": [
@@ -32,7 +32,7 @@
     "properties": [
       {
         "name": "castingcompass:package-lock-sha256",
-        "value": "c33cb92e32765f6467a07dfbb8695b091bc19728ca54f81f472d513ef64ad686"
+        "value": "c648e2433adbba011d5ebe3da4105d230be4a0e9e79b527d5fad56632d140954"
       }
     ]
   },
@@ -2239,12 +2239,12 @@
       ]
     },
     {
-      "bom-ref": "postcss@8.5.14",
+      "bom-ref": "postcss@8.5.18",
       "type": "library",
       "name": "postcss",
-      "version": "8.5.14",
+      "version": "8.5.18",
       "scope": "required",
-      "purl": "pkg:npm/postcss@8.5.14",
+      "purl": "pkg:npm/postcss@8.5.18",
       "properties": [
         {
           "name": "cdx:npm:package:path",
@@ -2254,13 +2254,13 @@
       "externalReferences": [
         {
           "type": "distribution",
-          "url": "https://registry.npmjs.org/postcss/-/postcss-8.5.14.tgz"
+          "url": "https://registry.npmjs.org/postcss/-/postcss-8.5.18.tgz"
         }
       ],
       "hashes": [
         {
           "alg": "SHA-512",
-          "content": "4a848be3e39212d47df4b1c56508892e44f9f42e41d5a9863b53734f08fb4d3d6a0948143ba8713afce4398c43faf32b5c13375c920ace892811176a42afd99a"
+          "content": "c5d075a122c76f3d6f4568020da96b0aa1054d6cc5961a850b9b481cb30e494223866dd75d0d6aac5cbc4bf112af52584515ea33773540588c65425d513ab231"
         }
       ],
       "licenses": [
@@ -2371,12 +2371,12 @@
       ]
     },
     {
-      "bom-ref": "react-dom@19.2.7",
+      "bom-ref": "react-dom@19.2.8",
       "type": "library",
       "name": "react-dom",
-      "version": "19.2.7",
+      "version": "19.2.8",
       "scope": "required",
-      "purl": "pkg:npm/react-dom@19.2.7",
+      "purl": "pkg:npm/react-dom@19.2.8",
       "properties": [
         {
           "name": "cdx:npm:package:path",
@@ -2386,13 +2386,13 @@
       "externalReferences": [
         {
           "type": "distribution",
-          "url": "https://registry.npmjs.org/react-dom/-/react-dom-19.2.7.tgz"
+          "url": "https://registry.npmjs.org/react-dom/-/react-dom-19.2.8.tgz"
         }
       ],
       "hashes": [
         {
           "alg": "SHA-512",
-          "content": "b74051557bdb884fe8db41dfc3aebdacb6cc0835ad6192ef9898a0cb67f4331b1717eef5a71851df13a4b299ac3bc877665373ca26c09ad09ade5e2560a93a81"
+          "content": "ad5a6b8a67c6046dc347e4ead08406d834f93f12ad8755881839a3e723e6973af86017bbbb213e0eee2856a4c35d948718619746d4c910649278fc9008c06095"
         }
       ],
       "licenses": [
@@ -2404,12 +2404,12 @@
       ]
     },
     {
-      "bom-ref": "react@19.2.7",
+      "bom-ref": "react@19.2.8",
       "type": "library",
       "name": "react",
-      "version": "19.2.7",
+      "version": "19.2.8",
       "scope": "required",
-      "purl": "pkg:npm/react@19.2.7",
+      "purl": "pkg:npm/react@19.2.8",
       "properties": [
         {
           "name": "cdx:npm:package:path",
@@ -2419,13 +2419,13 @@
       "externalReferences": [
         {
           "type": "distribution",
-          "url": "https://registry.npmjs.org/react/-/react-19.2.7.tgz"
+          "url": "https://registry.npmjs.org/react/-/react-19.2.8.tgz"
         }
       ],
       "hashes": [
         {
           "alg": "SHA-512",
-          "content": "1cd7bd5ac9536d79852bca3c726c2001e245481bedd5b3dd1c254ab5a695f96940377ea6a53e21711a706dfddf639e9aaf6a085f3b01a4e0222111c0758d0e95"
+          "content": "3d66980352ffabdbb6bbbc58422f98dcbdd87e789eed7c8b79a248095d4c183e8ba6bb01c5c02a1a3632af4798de9f9076c03ec7f22b92de1089ff03eb7f926f"
         }
       ],
       "licenses": [
@@ -2965,8 +2965,8 @@
         "drizzle-orm@0.45.2",
         "maplibre-gl@5.24.0",
         "next@16.2.11",
-        "react-dom@19.2.7",
-        "react@19.2.7"
+        "react-dom@19.2.8",
+        "react@19.2.8"
       ]
     },
     {
@@ -3048,9 +3048,9 @@
         "@swc/helpers@0.5.15",
         "baseline-browser-mapping@2.10.30",
         "caniuse-lite@1.0.30001793",
-        "postcss@8.5.14",
-        "react-dom@19.2.7",
-        "react@19.2.7",
+        "postcss@8.5.18",
+        "react-dom@19.2.8",
+        "react@19.2.8",
         "sharp@0.35.3",
         "styled-jsx@5.1.6"
       ]
@@ -3072,7 +3072,7 @@
       "dependsOn": []
     },
     {
-      "ref": "postcss@8.5.14",
+      "ref": "postcss@8.5.18",
       "dependsOn": [
         "nanoid@3.3.12",
         "picocolors@1.1.1",
@@ -3092,14 +3092,14 @@
       "dependsOn": []
     },
     {
-      "ref": "react-dom@19.2.7",
+      "ref": "react-dom@19.2.8",
       "dependsOn": [
-        "react@19.2.7",
+        "react@19.2.8",
         "scheduler@0.27.0"
       ]
     },
     {
-      "ref": "react@19.2.7",
+      "ref": "react@19.2.8",
       "dependsOn": []
     },
     {
@@ -3157,7 +3157,7 @@
       "ref": "styled-jsx@5.1.6",
       "dependsOn": [
         "client-only@0.0.1",
-        "react@19.2.7"
+        "react@19.2.8"
       ]
     },
     {

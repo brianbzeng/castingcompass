@@ -25,10 +25,10 @@ test("direct npm packages and build runtimes are exact reviewed versions", async
 
   const reactFramework = {
     next: "16.2.11",
-    react: "19.2.7",
-    "react-dom": "19.2.7",
+    react: "19.2.8",
+    "react-dom": "19.2.8",
     "eslint-config-next": "16.2.11",
-    "react-server-dom-webpack": "19.2.7",
+    "react-server-dom-webpack": "19.2.8",
   };
   for (const [name, version] of Object.entries(reactFramework)) {
     assert.equal(manifest.dependencies[name] ?? manifest.devDependencies[name], version);
@@ -251,7 +251,7 @@ test("the deterministic production SBOM is bound to the lock and direct runtime 
   assert.equal(sbom.bomFormat, "CycloneDX");
   assert.equal(sbom.specVersion, "1.5");
   assert.match(sbom.serialNumber, /^urn:uuid:[0-9a-f]{8}-[0-9a-f]{4}-5[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/u);
-  assert.equal(sbom.serialNumber, "urn:uuid:19db3823-935e-5505-b310-d14b2fd83df0");
+  assert.equal(sbom.serialNumber, "urn:uuid:b20b6268-15ac-5014-a342-dead84a7b464");
   assert.equal("timestamp" in sbom.metadata, false);
   assert.equal(sbom.metadata.component.name, manifest.name);
   assert.deepEqual(sbom.metadata.properties, [{
