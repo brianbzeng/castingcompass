@@ -1,7 +1,16 @@
 import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
 import test from "node:test";
 
-import { verifyNpmAuditPolicy } from "../scripts/verify-npm-audit-policy.mjs";
+import {
+  verifyNpmAuditPolicy,
+  verifyNpmAuditWatchWorkflow,
+} from "../scripts/verify-npm-audit-policy.mjs";
+
+const watchWorkflow = await readFile(
+  new URL("../.github/workflows/npm-advisory-watch.yml", import.meta.url),
+  "utf8",
+);
 
 const highNames = [
   "@eslint/config-array",
@@ -153,4 +162,45 @@ test("rejects exact lock-version or dev-classification drift", () => {
   const classificationInput = fixture();
   classificationInput.lockfile.packages["node_modules/react-server-dom-webpack"].dev = false;
   assert.throws(() => verifyNpmAuditPolicy(classificationInput), /dev classification drifted/u);
+});
+
+test("binds a daily read-only no-install advisory watch to the exact verifier", () => {
+  assert.deepEqual(verifyNpmAuditWatchWorkflow(watchWorkflow), {
+    schemaVersion: "castingcompass.npm-advisory-watch/1.0.0",
+    workflow: ".github/workflows/npm-advisory-watch.yml",
+    cron: "47 8 * * *",
+    maximumScheduleIntervalHours: 24,
+    permissions: "contents:read",
+    installsDependencies: false,
+    productionAuthority: false,
+  });
+});
+
+test("rejects schedule, permission, action, command, and dependency-authority drift", () => {
+  assert.throws(
+    () => verifyNpmAuditWatchWorkflow(watchWorkflow.replace("47 8 * * *", "47 8 * * 1")),
+    /run daily/u,
+  );
+  assert.throws(
+    () => verifyNpmAuditWatchWorkflow(watchWorkflow.replace("contents: read", "contents: write")),
+    /read-only contents permission/u,
+  );
+  assert.throws(
+    () => verifyNpmAuditWatchWorkflow(watchWorkflow.replace(
+      "actions/setup-node@820762786026740c76f36085b0efc47a31fe5020",
+      "actions/setup-node@v7",
+    )),
+    /exact and immutable/u,
+  );
+  assert.throws(
+    () => verifyNpmAuditWatchWorkflow(watchWorkflow.replace(
+      "npm run security:dependencies",
+      "npm audit",
+    )),
+    /audit-policy verifier only/u,
+  );
+  assert.throws(
+    () => verifyNpmAuditWatchWorkflow(`${watchWorkflow}\n      - run: npm install\n`),
+    /audit-policy verifier only|install/u,
+  );
 });

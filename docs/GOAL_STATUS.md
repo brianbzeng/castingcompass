@@ -15,6 +15,22 @@ by that discovery.
 
 ## Active checkpoint — 2026-07-25 npm advisory response
 
+- [x] Close the time-trigger gap without changing the accepted PR `#146` head. A separate,
+      read-only daily workflow is configured to run the exact complete/production npm policy
+      verifier without installing dependencies, receiving secrets, holding write permission, or
+      gaining production authority. The verifier binds the immutable actions, exact Node version,
+      schedule, permissions, command, and disabled checkout credentials; the workflow is also
+      bound into the deterministic release inventory. This local source control does not claim
+      scheduled delivery before the reviewed workflow reaches the default branch.
+- [x] Verify the isolated source change under pinned Node `22.23.1` and npm `10.9.8`: a fresh
+      zero-script install, the complete security/SBOM/query-policy chain, production-off
+      Cloudflare build, ESLint, TypeScript, all 740/740 Node tests, and the focused advisory plus
+      release-inventory suite 11/11 pass. Production still audits with zero vulnerabilities; the
+      sole temporary root advisory remains confined to the exact development-only graph.
+- [ ] Obtain exact-head hosted CI and CodeQL evidence for the isolated follow-up. Pull-request
+      automation can verify the source boundary, but actual scheduled delivery cannot be claimed
+      until the independently reviewed workflow reaches protected `main` and a scheduled run is
+      observed.
 - [x] Patch every compatible edge surfaced by the fresh advisory database: PostCSS is locked at
       `8.5.18`; React, React DOM, and the development RSC package are locked at `19.2.8`; and the
       minimatch `10.2.5` development edge receives brace-expansion `5.0.8`. The production npm

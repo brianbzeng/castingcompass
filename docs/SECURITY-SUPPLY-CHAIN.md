@@ -52,6 +52,12 @@ minimatch 3.
 
 `security/npm-audit-policy.json` therefore permits exactly that root advisory, its nine known
 development-only npm-audit wrapper entries, and its exact lock paths through **2026-08-01**.
+The read-only `.github/workflows/npm-advisory-watch.yml` workflow is configured to run the same
+fail-closed complete/production verifier every day without installing dependencies, receiving
+secrets, or holding write permission. Its source contract is checked by the verifier itself, and
+the workflow is part of the deterministic release inventory. Scheduled execution begins only
+after the reviewed workflow reaches the default branch; pull-request CI proves the source
+contract but is not evidence that GitHub delivered a scheduled run.
 `scripts/verify-npm-audit-policy.mjs` independently executes complete and production audits and
 fails if:
 

@@ -1,7 +1,7 @@
 {
   "bomFormat": "CycloneDX",
   "specVersion": "1.5",
-  "serialNumber": "urn:uuid:95f361e6-6069-59d2-b11a-bd1b2c98b261",
+  "serialNumber": "urn:uuid:f59dc305-b592-55ce-9755-fa80afa734c1",
   "version": 1,
   "metadata": {
     "component": {
@@ -14,6 +14,10 @@
         {
           "name": "castingcompass:claim-scope",
           "value": "source-bound release inventory; not Cloudflare deployment provenance"
+        },
+        {
+          "name": "castingcompass:input-sha256",
+          "value": ".github/workflows/npm-advisory-watch.yml:6cc3fd55b67b78ef9c8a5ea0eebfdf3d1e3fdcbfa2ef272257d37bb72b96e7ec"
         },
         {
           "name": "castingcompass:input-sha256",
@@ -113,7 +117,7 @@
         },
         {
           "name": "castingcompass:input-sha256",
-          "value": "scripts/verify-npm-audit-policy.mjs:17e5447ed12fa2f2e4110ae01126042be076d613839b6a0e3d035574fcd9fb58"
+          "value": "scripts/verify-npm-audit-policy.mjs:dc8bc1f9c87c3eac8a71c894bb44d32fe60bc39075e2f905aa6f8d1382b89661"
         },
         {
           "name": "castingcompass:input-sha256",

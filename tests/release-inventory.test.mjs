@@ -5,6 +5,7 @@ import test from "node:test";
 
 const root = new URL("../", import.meta.url);
 const inputPaths = [
+  ".github/workflows/npm-advisory-watch.yml",
   ".node-version",
   ".npmrc",
   ".python-version",

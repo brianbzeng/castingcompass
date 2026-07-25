@@ -9,6 +9,9 @@ const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const POLICY_SCHEMA = "castingcompass.npm-audit-policy/1.0.0";
 const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/u;
 const VERSION_PATTERN = /^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?$/u;
+const WATCH_WORKFLOW_PATH = ".github/workflows/npm-advisory-watch.yml";
+const WATCH_CHECKOUT_ACTION = "actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0";
+const WATCH_SETUP_NODE_ACTION = "actions/setup-node@820762786026740c76f36085b0efc47a31fe5020";
 
 function invariant(condition, message) {
   if (!condition) throw new Error(message);
@@ -44,6 +47,64 @@ function utcDate(value, label) {
   invariant(Number.isFinite(parsed.valueOf()) && parsed.toISOString().slice(0, 10) === value,
     `${label} is invalid`);
   return parsed;
+}
+
+function exactMatches(source, pattern) {
+  return [...source.matchAll(pattern)].map((match) => match[1]);
+}
+
+export function verifyNpmAuditWatchWorkflow(source) {
+  invariant(typeof source === "string" && source.length > 0,
+    "npm advisory watch workflow is missing");
+  invariant(source.startsWith("name: NPM advisory watch\n\n"),
+    "npm advisory watch name drifted");
+  invariant(source.includes([
+    "on:",
+    "  schedule:",
+    "    - cron: \"47 8 * * *\"",
+    "  workflow_dispatch:",
+    "",
+  ].join("\n")), "npm advisory watch must run daily and on manual dispatch");
+  invariant(exactMatches(source, /^\s+- cron:\s+"([^"]+)"$/gmu).length === 1,
+    "npm advisory watch must define exactly one schedule");
+  invariant(source.includes("permissions:\n  contents: read\n"),
+    "npm advisory watch must have read-only contents permission");
+  invariant(!/^\s+[A-Za-z-]+:\s*write\s*$/gmu.test(source),
+    "npm advisory watch must not have write permission");
+  invariant(source.includes([
+    "concurrency:",
+    "  group: npm-advisory-watch",
+    "  cancel-in-progress: true",
+    "",
+  ].join("\n")), "npm advisory watch concurrency is invalid");
+  invariant(source.includes("    runs-on: ubuntu-24.04\n    timeout-minutes: 10\n"),
+    "npm advisory watch runner or timeout drifted");
+
+  const actions = exactMatches(source, /^\s+- uses:\s+([^\s#]+)(?:\s+#.*)?$/gmu);
+  invariant(JSON.stringify(actions) === JSON.stringify([
+    WATCH_CHECKOUT_ACTION,
+    WATCH_SETUP_NODE_ACTION,
+  ]), "npm advisory watch actions must remain exact and immutable");
+  invariant(source.includes("          persist-credentials: false\n"),
+    "npm advisory watch checkout credentials must remain disabled");
+  invariant(source.includes("          node-version: 22.23.1\n"),
+    "npm advisory watch Node version drifted");
+
+  const commands = exactMatches(source, /^\s+run:\s+(.+)$/gmu);
+  invariant(JSON.stringify(commands) === JSON.stringify(["npm run security:dependencies"]),
+    "npm advisory watch command must remain the audit-policy verifier only");
+  invariant(!/\$\{\{\s*secrets\.|^\s+env:|curl\s|wget\s|npm\s+(?:ci|install)|upload-artifact|download-artifact/imu
+    .test(source), "npm advisory watch gained secret, install, download, or artifact authority");
+
+  return {
+    schemaVersion: "castingcompass.npm-advisory-watch/1.0.0",
+    workflow: WATCH_WORKFLOW_PATH,
+    cron: "47 8 * * *",
+    maximumScheduleIntervalHours: 24,
+    permissions: "contents:read",
+    installsDependencies: false,
+    productionAuthority: false,
+  };
 }
 
 function vulnerabilityCounts(report, label) {
@@ -287,9 +348,11 @@ function cliReports(argumentsList) {
 async function main() {
   const policy = JSON.parse(readFileSync(resolve(ROOT, "security/npm-audit-policy.json"), "utf8"));
   const lockfile = JSON.parse(readFileSync(resolve(ROOT, "package-lock.json"), "utf8"));
+  const watchWorkflow = readFileSync(resolve(ROOT, WATCH_WORKFLOW_PATH), "utf8");
+  const scheduledWatch = verifyNpmAuditWatchWorkflow(watchWorkflow);
   const reports = cliReports(process.argv.slice(2));
   const result = verifyNpmAuditPolicy({ policy, lockfile, ...reports });
-  process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);
+  process.stdout.write(`${JSON.stringify({ ...result, scheduledWatch }, null, 2)}\n`);
 }
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
