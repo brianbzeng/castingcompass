@@ -145,7 +145,20 @@ by that discovery.
       vulnerabilities. A resource-saturated four-worker mobile run passed 242/244 before two
       unrelated readiness timeouts; both exact cases passed 2/2 alone, and a bounded two-worker
       rerun passed the complete 244/244 Chromium and WebKit matrix.
-- [ ] Obtain exact-head hosted automation evidence for the Oakland-through-South-Bay checkpoint.
+- [x] Obtain exact-head hosted automation evidence for the Oakland-through-South-Bay checkpoint.
+      Transparent no-content head `c64c16a2a447c734dc927a93ee73bc30388edcac` has the exact tree
+      accepted at implementation commit `ca8be43a1e7c6aca2623b1ecd4388ed96ae81807`. CI run
+      `29990211111` passed dependency review, API, pipeline, and web, including all six regional
+      verifiers, 731/731 Node tests, 8/8 photo UI cases, both builds, and the 244/244 mobile
+      matrix. CodeQL `29990209875`, optional research `29990211100`, native API images
+      `29990211112`, and release provenance `29990211127` passed; two event-inapplicable jobs
+      skipped as designed. The initial queue delay was GitHub's acknowledged Actions/Webhooks
+      incident, not a product failure; no rerun or gate bypass occurred.
+- [x] Reconfirm the production hold before opening independent review. On 2026-07-25, protected
+      `main` remained `086b2055f44ba5e2595d6bd249866ffb20c3c461`; the PR had no human
+      review or unresolved review thread; and public DNS exposed the authoritative Cloudflare
+      nameservers but no apex A or AAAA answer. This read-only evidence authorizes no merge,
+      DNS change, Cloudflare/D1 mutation, deployment, or production acceptance.
 - [ ] Obtain real independent local-angler and chart/GIS responses. This packet does not
       authorize a score or catalog change, model claim, merge, deployment, provider mutation,
       migration, feature activation, staging exercise, or production acceptance.
