@@ -38,9 +38,14 @@ by that discovery.
       compatibility environment passes 29/29 tests and all 54 D1 query plans. UV publishes no
       CPython `3.13.14` macOS ARM64 download, so the exact required API runtime remains a hosted
       CI acceptance boundary rather than a local claim.
-- [ ] Obtain exact-head hosted CI/CodeQL/API-image/optional-Python/release evidence before
-      returning PR `#146` to independent review. This work authorizes no merge, deployment,
-      provider mutation, DNS change, migration, or production acceptance.
+- [x] Obtain exact-head hosted automation evidence for the remediation. At implementation head
+      `1a18bd38d65b7638e995a197e445702388f2276b`, CI run `30150951479` passed dependency
+      review, exact Python `3.13.14` API, pipeline, the complete web/security chain, 738/738 Node
+      tests, 8/8 photo cases, both builds, and 244/244 mobile cases. CodeQL `30150950364`,
+      optional Python `30150951476`, native API images `30150951477`, and release provenance
+      `30150951480` passed; main-only dependency submission and release attestation skipped as
+      designed. This automation evidence returns PR `#146` to independent review but authorizes
+      no merge, deployment, provider mutation, DNS change, migration, or production acceptance.
 
 ## Active checkpoint — reusable regional structure/depth review handoffs
 
