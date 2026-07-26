@@ -51,7 +51,7 @@ extend the exception or carry a private fork. Instead it removed that bundle and
 same lint boundaries directly from exact maintained packages:
 
 - `@next/eslint-plugin-next` retains the framework and Core Web Vitals rules at the exact
-  `16.2.11` runtime release;
+  `16.2.12` runtime release;
 - `typescript-eslint` and the official React Hooks plugin retain TypeScript and compiler-hook
   checks;
 - `eslint-plugin-import-x` and `eslint-plugin-jsx-a11y-x` replace their minimatch-3 predecessors

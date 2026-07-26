@@ -2,7 +2,7 @@
   "$schema": "http://cyclonedx.org/schema/bom-1.5.schema.json",
   "bomFormat": "CycloneDX",
   "specVersion": "1.5",
-  "serialNumber": "urn:uuid:c2d3dd17-e58b-52de-bdf9-3394abcb7c57",
+  "serialNumber": "urn:uuid:0f1830cd-642e-59c6-877f-5a4bb1862503",
   "version": 1,
   "metadata": {
     "lifecycles": [
@@ -32,7 +32,7 @@
     "properties": [
       {
         "name": "castingcompass:package-lock-sha256",
-        "value": "d79592ca1d49be550878e0b175a41dbe6c4c87adf956ea5d3acf20f1d9d98370"
+        "value": "1c0ba994fa0e2a647d591aeb8d9c20c1870271521010f318346bfe201cdb0a08"
       }
     ]
   },
@@ -1315,12 +1315,12 @@
       ]
     },
     {
-      "bom-ref": "@next/env@16.2.11",
+      "bom-ref": "@next/env@16.2.12",
       "type": "library",
       "name": "@next/env",
-      "version": "16.2.11",
+      "version": "16.2.12",
       "scope": "required",
-      "purl": "pkg:npm/%40next/env@16.2.11",
+      "purl": "pkg:npm/%40next/env@16.2.12",
       "properties": [
         {
           "name": "cdx:npm:package:path",
@@ -1330,13 +1330,13 @@
       "externalReferences": [
         {
           "type": "distribution",
-          "url": "https://registry.npmjs.org/@next/env/-/env-16.2.11.tgz"
+          "url": "https://registry.npmjs.org/@next/env/-/env-16.2.12.tgz"
         }
       ],
       "hashes": [
         {
           "alg": "SHA-512",
-          "content": "d1da39037049da0c56af464231c0fa0615be7b9f798f2c5d4e5deb5d34ba94eb43f1e92d3225ba08ef843f0b7511c6b50c19e6f74affec676229604ac47fbe0c"
+          "content": "77467905cd7715ae2747ca4500ac768dacb6ca124cd7abe57c76d3cd89d4400c6535be81ea59a7e218edebd95836de2446dc983fa804338f653d11cd6c8ca77a"
         }
       ],
       "licenses": [
@@ -1348,12 +1348,12 @@
       ]
     },
     {
-      "bom-ref": "@next/swc-darwin-arm64@16.2.11",
+      "bom-ref": "@next/swc-darwin-arm64@16.2.12",
       "type": "library",
       "name": "@next/swc-darwin-arm64",
-      "version": "16.2.11",
+      "version": "16.2.12",
       "scope": "optional",
-      "purl": "pkg:npm/%40next/swc-darwin-arm64@16.2.11",
+      "purl": "pkg:npm/%40next/swc-darwin-arm64@16.2.12",
       "properties": [
         {
           "name": "cdx:npm:package:path",
@@ -1363,13 +1363,13 @@
       "externalReferences": [
         {
           "type": "distribution",
-          "url": "https://registry.npmjs.org/@next/swc-darwin-arm64/-/swc-darwin-arm64-16.2.11.tgz"
+          "url": "https://registry.npmjs.org/@next/swc-darwin-arm64/-/swc-darwin-arm64-16.2.12.tgz"
         }
       ],
       "hashes": [
         {
           "alg": "SHA-512",
-          "content": "c2bc8be298ca983c06bf6a31ebe1990c5c6f9ad4912ea029051f242f58f8faf841ed9e6f242ff30275e9891f5791fce5d004bc58b327b2e195fd4288ebbfebaf"
+          "content": "d16d51d2d787589aea297d051f6d08cf321600eb86b41c4f1ae39baf1cb5944f2142f0858f8f4a13c6b75948340fbb2aeab9face433873b60652786e7414baa0"
         }
       ],
       "licenses": [
@@ -1381,12 +1381,12 @@
       ]
     },
     {
-      "bom-ref": "@next/swc-darwin-x64@16.2.11",
+      "bom-ref": "@next/swc-darwin-x64@16.2.12",
       "type": "library",
       "name": "@next/swc-darwin-x64",
-      "version": "16.2.11",
+      "version": "16.2.12",
       "scope": "optional",
-      "purl": "pkg:npm/%40next/swc-darwin-x64@16.2.11",
+      "purl": "pkg:npm/%40next/swc-darwin-x64@16.2.12",
       "properties": [
         {
           "name": "cdx:npm:package:path",
@@ -1396,13 +1396,13 @@
       "externalReferences": [
         {
           "type": "distribution",
-          "url": "https://registry.npmjs.org/@next/swc-darwin-x64/-/swc-darwin-x64-16.2.11.tgz"
+          "url": "https://registry.npmjs.org/@next/swc-darwin-x64/-/swc-darwin-x64-16.2.12.tgz"
         }
       ],
       "hashes": [
         {
           "alg": "SHA-512",
-          "content": "6999768f87ff7cbca342f3a1bf439ef5468c0101e8958a4a85cb6ca18ce9952ba628928f52682371feb9e39681b72b0b4dcbbdf784d111dd3ea5280d138a219a"
+          "content": "1f2e4bb34f7df9a15498e2e62203df2ea362ea20b084bdee402b2ccf9ad693ee4d91ce9350a084f370d8e416cdca57e6dfe99fc1c4859cb45fad90c9855c5db7"
         }
       ],
       "licenses": [
@@ -1414,12 +1414,12 @@
       ]
     },
     {
-      "bom-ref": "@next/swc-linux-arm64-gnu@16.2.11",
+      "bom-ref": "@next/swc-linux-arm64-gnu@16.2.12",
       "type": "library",
       "name": "@next/swc-linux-arm64-gnu",
-      "version": "16.2.11",
+      "version": "16.2.12",
       "scope": "optional",
-      "purl": "pkg:npm/%40next/swc-linux-arm64-gnu@16.2.11",
+      "purl": "pkg:npm/%40next/swc-linux-arm64-gnu@16.2.12",
       "properties": [
         {
           "name": "cdx:npm:package:path",
@@ -1429,13 +1429,13 @@
       "externalReferences": [
         {
           "type": "distribution",
-          "url": "https://registry.npmjs.org/@next/swc-linux-arm64-gnu/-/swc-linux-arm64-gnu-16.2.11.tgz"
+          "url": "https://registry.npmjs.org/@next/swc-linux-arm64-gnu/-/swc-linux-arm64-gnu-16.2.12.tgz"
         }
       ],
       "hashes": [
         {
           "alg": "SHA-512",
-          "content": "e6312b8b21271ff2d6172dbb2f6646d1768b97210922386c22612c892f4fe7adcf284569d8156ea6cff17ceb9c22bb2f567b69d75a0d719c231ef6833d8541e6"
+          "content": "f98a94da1d5c4241ec19fbe302cad29acb7c50814189b0469b9c775e07a5f0d2cc88342d34e338b0cd8638432f1b962238135e37f62493c7100b64b45ebaa58e"
         }
       ],
       "licenses": [
@@ -1447,12 +1447,12 @@
       ]
     },
     {
-      "bom-ref": "@next/swc-linux-arm64-musl@16.2.11",
+      "bom-ref": "@next/swc-linux-arm64-musl@16.2.12",
       "type": "library",
       "name": "@next/swc-linux-arm64-musl",
-      "version": "16.2.11",
+      "version": "16.2.12",
       "scope": "optional",
-      "purl": "pkg:npm/%40next/swc-linux-arm64-musl@16.2.11",
+      "purl": "pkg:npm/%40next/swc-linux-arm64-musl@16.2.12",
       "properties": [
         {
           "name": "cdx:npm:package:path",
@@ -1462,13 +1462,13 @@
       "externalReferences": [
         {
           "type": "distribution",
-          "url": "https://registry.npmjs.org/@next/swc-linux-arm64-musl/-/swc-linux-arm64-musl-16.2.11.tgz"
+          "url": "https://registry.npmjs.org/@next/swc-linux-arm64-musl/-/swc-linux-arm64-musl-16.2.12.tgz"
         }
       ],
       "hashes": [
         {
           "alg": "SHA-512",
-          "content": "7888dca71d9f9e71524a46436d3c72ef82a7a245170e37e82c296959e95f8072dfeb6d5a4eab308705d0ec6903e4ae6ba65ad2e8b67f063fa656ebf396e04e12"
+          "content": "d2a8e189805a280a85eb72c0d59580027293cc5520b806998916b97ad30b1863e3fc1eae1158ed21995d233144a77c07941d24a0ae9a4f3a8fb527699530a3a0"
         }
       ],
       "licenses": [
@@ -1480,12 +1480,12 @@
       ]
     },
     {
-      "bom-ref": "@next/swc-linux-x64-gnu@16.2.11",
+      "bom-ref": "@next/swc-linux-x64-gnu@16.2.12",
       "type": "library",
       "name": "@next/swc-linux-x64-gnu",
-      "version": "16.2.11",
+      "version": "16.2.12",
       "scope": "optional",
-      "purl": "pkg:npm/%40next/swc-linux-x64-gnu@16.2.11",
+      "purl": "pkg:npm/%40next/swc-linux-x64-gnu@16.2.12",
       "properties": [
         {
           "name": "cdx:npm:package:path",
@@ -1495,13 +1495,13 @@
       "externalReferences": [
         {
           "type": "distribution",
-          "url": "https://registry.npmjs.org/@next/swc-linux-x64-gnu/-/swc-linux-x64-gnu-16.2.11.tgz"
+          "url": "https://registry.npmjs.org/@next/swc-linux-x64-gnu/-/swc-linux-x64-gnu-16.2.12.tgz"
         }
       ],
       "hashes": [
         {
           "alg": "SHA-512",
-          "content": "f16833a5a58cb38eaa253f64895e3b7237bce8bd31fccbbdb7cfc6c23fa99db816deb11355f0a769270f8e5614c0d49ca4ea3375c20c1d6980bee6495289d1db"
+          "content": "ec0deadba5be87b827035e6ea814e836e0ea04415965caa1d265b69a7e00261fc6e69760d91544de7e2c9732c49620126451b7366b1b1339e0ff1d92874f6606"
         }
       ],
       "licenses": [
@@ -1513,12 +1513,12 @@
       ]
     },
     {
-      "bom-ref": "@next/swc-linux-x64-musl@16.2.11",
+      "bom-ref": "@next/swc-linux-x64-musl@16.2.12",
       "type": "library",
       "name": "@next/swc-linux-x64-musl",
-      "version": "16.2.11",
+      "version": "16.2.12",
       "scope": "optional",
-      "purl": "pkg:npm/%40next/swc-linux-x64-musl@16.2.11",
+      "purl": "pkg:npm/%40next/swc-linux-x64-musl@16.2.12",
       "properties": [
         {
           "name": "cdx:npm:package:path",
@@ -1528,13 +1528,13 @@
       "externalReferences": [
         {
           "type": "distribution",
-          "url": "https://registry.npmjs.org/@next/swc-linux-x64-musl/-/swc-linux-x64-musl-16.2.11.tgz"
+          "url": "https://registry.npmjs.org/@next/swc-linux-x64-musl/-/swc-linux-x64-musl-16.2.12.tgz"
         }
       ],
       "hashes": [
         {
           "alg": "SHA-512",
-          "content": "2375203ddb3b1b86589d36ff1fee46046b944f60e1024ea3d262fa038b3add18c5b3be3007684e58fd2f6b1b0afb7349ada131b7779810f43f52d4f4c7feb837"
+          "content": "a928cbfeea699be71b876d6cef64acf209223a1438744c561cd18e5b2e9e655ed24e3e56b0a7a18314fad5b792b0e8fe61842e4e994bdfbea538274c414e53f3"
         }
       ],
       "licenses": [
@@ -1546,12 +1546,12 @@
       ]
     },
     {
-      "bom-ref": "@next/swc-win32-arm64-msvc@16.2.11",
+      "bom-ref": "@next/swc-win32-arm64-msvc@16.2.12",
       "type": "library",
       "name": "@next/swc-win32-arm64-msvc",
-      "version": "16.2.11",
+      "version": "16.2.12",
       "scope": "optional",
-      "purl": "pkg:npm/%40next/swc-win32-arm64-msvc@16.2.11",
+      "purl": "pkg:npm/%40next/swc-win32-arm64-msvc@16.2.12",
       "properties": [
         {
           "name": "cdx:npm:package:path",
@@ -1561,13 +1561,13 @@
       "externalReferences": [
         {
           "type": "distribution",
-          "url": "https://registry.npmjs.org/@next/swc-win32-arm64-msvc/-/swc-win32-arm64-msvc-16.2.11.tgz"
+          "url": "https://registry.npmjs.org/@next/swc-win32-arm64-msvc/-/swc-win32-arm64-msvc-16.2.12.tgz"
         }
       ],
       "hashes": [
         {
           "alg": "SHA-512",
-          "content": "9fcf428ed7138678ebc2024c022239c5bab02d8e75cefc02f6d4a502b9959dd0092d8565f53f5401d9645d3999bc4fbe89da177bc29d82542584d45d529d5cea"
+          "content": "5fa873b0e50969cfdeec05926e7f6043d9f31e5775c563f98b28c7a585afb9df29b9f07aefd3b5c60e090f22abf1777af49bddfa43360deafab9fb626429a360"
         }
       ],
       "licenses": [
@@ -1579,12 +1579,12 @@
       ]
     },
     {
-      "bom-ref": "@next/swc-win32-x64-msvc@16.2.11",
+      "bom-ref": "@next/swc-win32-x64-msvc@16.2.12",
       "type": "library",
       "name": "@next/swc-win32-x64-msvc",
-      "version": "16.2.11",
+      "version": "16.2.12",
       "scope": "optional",
-      "purl": "pkg:npm/%40next/swc-win32-x64-msvc@16.2.11",
+      "purl": "pkg:npm/%40next/swc-win32-x64-msvc@16.2.12",
       "properties": [
         {
           "name": "cdx:npm:package:path",
@@ -1594,13 +1594,13 @@
       "externalReferences": [
         {
           "type": "distribution",
-          "url": "https://registry.npmjs.org/@next/swc-win32-x64-msvc/-/swc-win32-x64-msvc-16.2.11.tgz"
+          "url": "https://registry.npmjs.org/@next/swc-win32-x64-msvc/-/swc-win32-x64-msvc-16.2.12.tgz"
         }
       ],
       "hashes": [
         {
           "alg": "SHA-512",
-          "content": "99df022cd8204b50f1f69520029ce9b39b807fe37c18df71cb0ce6371f6f1c05a8f781ed070082aa44a7848add7d07bcdc3873f0b7e8ff6d0d6f56716a5d3ddb"
+          "content": "17a7da91e1ee1532ce3edd1bb2540975ffb1b53f9620ff43567fe6e32d70d6646754fca1dc3fdc36fce5464c4ce38e317e6f88bef60d48eaca880d820c9d14c7"
         }
       ],
       "licenses": [
@@ -2107,12 +2107,12 @@
       ]
     },
     {
-      "bom-ref": "next@16.2.11",
+      "bom-ref": "next@16.2.12",
       "type": "library",
       "name": "next",
-      "version": "16.2.11",
+      "version": "16.2.12",
       "scope": "required",
-      "purl": "pkg:npm/next@16.2.11",
+      "purl": "pkg:npm/next@16.2.12",
       "properties": [
         {
           "name": "cdx:npm:package:path",
@@ -2122,13 +2122,13 @@
       "externalReferences": [
         {
           "type": "distribution",
-          "url": "https://registry.npmjs.org/next/-/next-16.2.11.tgz"
+          "url": "https://registry.npmjs.org/next/-/next-16.2.12.tgz"
         }
       ],
       "hashes": [
         {
           "alg": "SHA-512",
-          "content": "077dfdcdaa9bc8af1c9b186802f2eb730a1a6f008fd70cf6d734b37eac6a5c07a64eed815e71fbb509df72094abf5be731420305cf87b61ed738342b89366245"
+          "content": "883e7d79841699b15c11b5fbbff69c1b90d1ca6f62c350dd68fa03d164c0f76d27696b04db9c12873256e3e52f02cf0c2bd102da405f207eafb6da351f53c71b"
         }
       ],
       "licenses": [
@@ -2906,39 +2906,39 @@
       ]
     },
     {
-      "ref": "@next/env@16.2.11",
+      "ref": "@next/env@16.2.12",
       "dependsOn": []
     },
     {
-      "ref": "@next/swc-darwin-arm64@16.2.11",
+      "ref": "@next/swc-darwin-arm64@16.2.12",
       "dependsOn": []
     },
     {
-      "ref": "@next/swc-darwin-x64@16.2.11",
+      "ref": "@next/swc-darwin-x64@16.2.12",
       "dependsOn": []
     },
     {
-      "ref": "@next/swc-linux-arm64-gnu@16.2.11",
+      "ref": "@next/swc-linux-arm64-gnu@16.2.12",
       "dependsOn": []
     },
     {
-      "ref": "@next/swc-linux-arm64-musl@16.2.11",
+      "ref": "@next/swc-linux-arm64-musl@16.2.12",
       "dependsOn": []
     },
     {
-      "ref": "@next/swc-linux-x64-gnu@16.2.11",
+      "ref": "@next/swc-linux-x64-gnu@16.2.12",
       "dependsOn": []
     },
     {
-      "ref": "@next/swc-linux-x64-musl@16.2.11",
+      "ref": "@next/swc-linux-x64-musl@16.2.12",
       "dependsOn": []
     },
     {
-      "ref": "@next/swc-win32-arm64-msvc@16.2.11",
+      "ref": "@next/swc-win32-arm64-msvc@16.2.12",
       "dependsOn": []
     },
     {
-      "ref": "@next/swc-win32-x64-msvc@16.2.11",
+      "ref": "@next/swc-win32-x64-msvc@16.2.12",
       "dependsOn": []
     },
     {
@@ -2964,7 +2964,7 @@
       "dependsOn": [
         "drizzle-orm@0.45.2",
         "maplibre-gl@5.24.0",
-        "next@16.2.11",
+        "next@16.2.12",
         "react-dom@19.2.8",
         "react@19.2.8"
       ]
@@ -3034,17 +3034,17 @@
       "dependsOn": []
     },
     {
-      "ref": "next@16.2.11",
+      "ref": "next@16.2.12",
       "dependsOn": [
-        "@next/env@16.2.11",
-        "@next/swc-darwin-arm64@16.2.11",
-        "@next/swc-darwin-x64@16.2.11",
-        "@next/swc-linux-arm64-gnu@16.2.11",
-        "@next/swc-linux-arm64-musl@16.2.11",
-        "@next/swc-linux-x64-gnu@16.2.11",
-        "@next/swc-linux-x64-musl@16.2.11",
-        "@next/swc-win32-arm64-msvc@16.2.11",
-        "@next/swc-win32-x64-msvc@16.2.11",
+        "@next/env@16.2.12",
+        "@next/swc-darwin-arm64@16.2.12",
+        "@next/swc-darwin-x64@16.2.12",
+        "@next/swc-linux-arm64-gnu@16.2.12",
+        "@next/swc-linux-arm64-musl@16.2.12",
+        "@next/swc-linux-x64-gnu@16.2.12",
+        "@next/swc-linux-x64-musl@16.2.12",
+        "@next/swc-win32-arm64-msvc@16.2.12",
+        "@next/swc-win32-x64-msvc@16.2.12",
         "@swc/helpers@0.5.15",
         "baseline-browser-mapping@2.10.30",
         "caniuse-lite@1.0.30001793",

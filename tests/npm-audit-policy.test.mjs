@@ -14,7 +14,7 @@ const watchWorkflow = await readFile(
 
 const requiredLockPackages = {
   "node_modules/@eslint-react/eslint-plugin": { version: "5.18.0", dev: true },
-  "node_modules/@next/eslint-plugin-next": { version: "16.2.11", dev: true },
+  "node_modules/@next/eslint-plugin-next": { version: "16.2.12", dev: true },
   "node_modules/brace-expansion": { version: "5.0.8", dev: true },
   "node_modules/eslint": { version: "10.8.0", dev: true },
   "node_modules/eslint-plugin-import-x": { version: "4.17.1", dev: true },
