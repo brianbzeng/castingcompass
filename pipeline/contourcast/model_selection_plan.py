@@ -26,7 +26,9 @@ from shared.species_contract import (
 
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[2]
-DEFAULT_PLAN_PATH = REPOSITORY_ROOT / "model" / "selection" / "california-halibut-v1.json"
+DEFAULT_PLAN_PATH = (
+    REPOSITORY_ROOT / "model" / "selection" / "california-halibut-v1.json"
+)
 SCHEMA_VERSION = "castingcompass.model-selection-plan/1.0.0"
 RECEIPT_SCHEMA_VERSION = "castingcompass.model-selection-plan-audit/1.0.0"
 PLAN_ID = "california-halibut-model-selection-v1"
@@ -92,7 +94,9 @@ CANDIDATE_FAMILIES = [
         "complexity_rank": 0,
         "required_in_future_comparison": True,
         "implementation_status": "implemented",
-        "current_implementation": "pipeline.contourcast.baselines:naive",
+        "current_implementation": (
+            "pipeline.contourcast.candidate_models:fit_predict_classical_candidate"
+        ),
         "occurrence_head": "training-fold target prevalence",
         "cpue_head": "training-fold positive-catch arithmetic mean",
         "explanation_boundary": "fold-local aggregate rates only",
@@ -103,7 +107,9 @@ CANDIDATE_FAMILIES = [
         "complexity_rank": 1,
         "required_in_future_comparison": True,
         "implementation_status": "implemented",
-        "current_implementation": "pipeline.contourcast.baselines:linear",
+        "current_implementation": (
+            "pipeline.contourcast.candidate_models:fit_predict_classical_candidate"
+        ),
         "occurrence_head": "standardized class-weighted logistic regression",
         "cpue_head": "standardized ridge regression on positive log1p cpue",
         "explanation_boundary": "coefficients and fold-local transforms",
@@ -113,8 +119,10 @@ CANDIDATE_FAMILIES = [
         "family": "generalized-additive",
         "complexity_rank": 2,
         "required_in_future_comparison": True,
-        "implementation_status": "planned",
-        "current_implementation": None,
+        "implementation_status": "implemented",
+        "current_implementation": (
+            "pipeline.contourcast.candidate_models:fit_predict_classical_candidate"
+        ),
         "occurrence_head": "regularized logistic additive spline terms",
         "cpue_head": "regularized additive spline regression on positive log1p cpue",
         "explanation_boundary": "frozen univariate smooth effects with uncertainty",
@@ -124,8 +132,10 @@ CANDIDATE_FAMILIES = [
         "family": "bagged-tree",
         "complexity_rank": 3,
         "required_in_future_comparison": True,
-        "implementation_status": "planned",
-        "current_implementation": None,
+        "implementation_status": "implemented",
+        "current_implementation": (
+            "pipeline.contourcast.candidate_models:fit_predict_classical_candidate"
+        ),
         "occurrence_head": "class-balanced random forest probability",
         "cpue_head": "random forest regression on positive log1p cpue",
         "explanation_boundary": "permutation importance and support-aware partial effects",
@@ -136,7 +146,9 @@ CANDIDATE_FAMILIES = [
         "complexity_rank": 4,
         "required_in_future_comparison": True,
         "implementation_status": "implemented",
-        "current_implementation": "pipeline.contourcast.baselines:boosted",
+        "current_implementation": (
+            "pipeline.contourcast.candidate_models:fit_predict_classical_candidate"
+        ),
         "occurrence_head": "regularized histogram gradient boosting classifier",
         "cpue_head": "regularized histogram gradient boosting on positive log1p cpue",
         "explanation_boundary": (
@@ -148,8 +160,10 @@ CANDIDATE_FAMILIES = [
         "family": "spatial-hierarchical",
         "complexity_rank": 5,
         "required_in_future_comparison": True,
-        "implementation_status": "planned",
-        "current_implementation": None,
+        "implementation_status": "implemented",
+        "current_implementation": (
+            "pipeline.contourcast.candidate_models:fit_predict_classical_candidate"
+        ),
         "occurrence_head": "preregistered partial-pooling spatial occurrence model",
         "cpue_head": "preregistered partial-pooling positive log1p cpue model",
         "explanation_boundary": (
@@ -164,7 +178,7 @@ CANDIDATE_FAMILIES = [
         "implementation_status": (
             "encoder-and-heads-implemented-site-window-adapter-open"
         ),
-        "current_implementation": "pipeline.contourcast.deep_model:MultiTaskHalibutNet",
+        "current_implementation": "pipeline.contourcast.deep_model:CatchMultiTaskModel",
         "occurrence_head": (
             "terrain-encoder occurrence logit with frozen site-window aggregation"
         ),
@@ -246,7 +260,9 @@ def _ordered_unique_slugs(value: Any, expected: list[str], context: str) -> None
 
     if not isinstance(value, list) or value != expected:
         raise ValueError(f"{context} changed")
-    if len(set(value)) != len(value) or any(SLUG_PATTERN.fullmatch(item) is None for item in value):
+    if len(set(value)) != len(value) or any(
+        SLUG_PATTERN.fullmatch(item) is None for item in value
+    ):
         raise ValueError(f"{context} must contain ordered unique slugs")
 
 
@@ -269,7 +285,9 @@ def load_model_selection_plan(path: Path = DEFAULT_PLAN_PATH) -> Mapping[str, An
     try:
         plan = json.loads(path.read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError) as exc:
-        raise RuntimeError(f"Model-selection plan is unavailable or invalid: {path}") from exc
+        raise RuntimeError(
+            f"Model-selection plan is unavailable or invalid: {path}"
+        ) from exc
     validate_model_selection_plan(plan)
     return plan
 
@@ -346,7 +364,10 @@ def validate_model_selection_plan(plan: Mapping[str, Any]) -> None:
         },
         "plan.common_evaluation",
     )
-    if evaluation["unit"] != "one-complete-california-halibut-targeted-site-window-attempt":
+    if (
+        evaluation["unit"]
+        != "one-complete-california-halibut-targeted-site-window-attempt"
+    ):
         raise ValueError("evaluation unit changed")
     _ordered_unique_slugs(
         evaluation["required_outputs"],
@@ -367,8 +388,11 @@ def validate_model_selection_plan(plan: Mapping[str, Any]) -> None:
     for field in required_true:
         if evaluation.get(field) is not True:
             raise ValueError(f"evaluation safeguard {field} must remain true")
-    for field in {"candidate_input_contract_frozen", "final_primary_metric_set_frozen",
-                  "materiality_thresholds_frozen"}:
+    for field in {
+        "candidate_input_contract_frozen",
+        "final_primary_metric_set_frozen",
+        "materiality_thresholds_frozen",
+    }:
         if evaluation.get(field) is not False:
             raise ValueError(f"open planning gate {field} must remain false")
     _ordered_unique_slugs(
@@ -455,14 +479,19 @@ def main(argv: list[str] | None = None) -> int:
 
     parser = argparse.ArgumentParser(description=__doc__)
     subparsers = parser.add_subparsers(dest="command", required=True)
-    audit = subparsers.add_parser("audit", help="validate the plan and emit a minimized receipt")
+    audit = subparsers.add_parser(
+        "audit", help="validate the plan and emit a minimized receipt"
+    )
     audit.add_argument("--plan", type=Path, default=DEFAULT_PLAN_PATH)
     audit.add_argument("--output", type=Path)
     args = parser.parse_args(argv)
 
     try:
         if args.command == "audit":
-            _write_json(audit_model_selection_plan(load_model_selection_plan(args.plan)), args.output)
+            _write_json(
+                audit_model_selection_plan(load_model_selection_plan(args.plan)),
+                args.output,
+            )
             return 0
     except (OSError, RuntimeError, ValueError) as exc:
         parser.error(str(exc))

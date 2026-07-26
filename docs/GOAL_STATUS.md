@@ -844,11 +844,18 @@ by that discovery.
       geographic/time holdouts, participant groups, fold-local preprocessing, development-only
       selection, single-use locked test, pilot-row and legacy-row exclusion, and shared
       discrimination/calibration/CPUE/ranking/coverage/uncertainty metrics.
-- [x] Keep current implementation truth explicit. Naive, regularized-linear, and
-      histogram-gradient-boosted two-head baselines exist; the terrain encoder and deep heads
-      exist but lack the frozen site-window adapter and any eligible target-specific run; GAM,
-      random-forest, and spatial/hierarchical candidates remain planned; a hybrid remains
-      conditional on a predeclared complementary-error rationale.
+- [x] Keep current implementation truth explicit. All six classical families now share a
+      deterministic synthetic-only two-head capability adapter: naive, regularized-linear,
+      spline/GAM, random-forest, histogram-gradient-boosted, and spatial partial pooling with
+      unseen-region fallback. It rejects real targets and datasets plus all benchmark,
+      locked-test, winner, score, and serving authority. The terrain encoder and deep heads
+      exist but still lack the frozen site-window adapter and any eligible target-specific run;
+      a hybrid remains conditional on a predeclared complementary-error rationale.
+- [x] Prove the new classical adapter boundary with adversarial and deterministic tests. Every
+      family produces finite, bounded two-head outputs twice identically over fictional rows;
+      malformed labels/features/groups, real-data scopes, deep/hybrid execution, and every
+      authority expansion fail closed. The metric-free receipt contains no comparison, score,
+      winner, promotion, provider, or deployment result.
 - [x] Add a fail-closed evaluator, minimized audit receipt, adversarial tests, and deterministic
       release-inventory bindings. It rejects candidate omission/reordering, asymmetric evidence,
       deep preference, locked-test tuning, prematurely frozen metrics, or any expansion of

@@ -40,17 +40,25 @@ coverage instead of presenting predictions as live biological truth.
 
 ## Implemented comparison models
 
-Three classical baselines use fold-local patch summaries (center, mean,
-standard deviation, minimum, and maximum for each selected channel):
+Six classical families now expose the same two-head callable interface:
 
 - **Naive:** training-fold prevalence and mean positive-catch CPUE;
 - **Linear:** standardized class-weighted logistic regression plus Ridge
   regression on `log1p(CPUE)` for positive training catches;
-- **Boosted:** histogram gradient-boosted classifier and regressor.
+- **Spline/GAM:** regularized additive spline logistic and Ridge heads;
+- **Random forest:** class-balanced bagged-tree classifier and positive-catch
+  log-CPUE regressor;
+- **Boosted:** histogram gradient-boosted classifier and regressor; and
+- **Spatial/hierarchical:** linear heads with deterministic region-level
+  partial pooling and global fallback for unseen groups.
 
-These baselines must be reported alongside any neural model. A deep model is
-not considered useful merely because it has more capacity; it must improve the
-predeclared metrics under the same geographic folds.
+The shared adapter currently accepts only a fictional synthetic target and
+grants no benchmark, locked-test, selection, score, or serving authority. This
+is interface plumbing, not California-halibut training or performance
+evidence. These families must eventually be reported alongside any neural
+model on the same eligible rows and geographic folds. A deep model is not
+considered useful merely because it has more capacity; it must improve the
+predeclared metrics under that shared protocol.
 
 ## Deep-learning architecture
 
