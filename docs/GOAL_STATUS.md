@@ -15,6 +15,13 @@ by that discovery.
 
 ## Current protected-main reconciliation — 2026-07-26
 
+- [x] Reconcile the truthful account-entry checkpoint after protected merge `#182`. Exact PR head
+      `0718b98ea0d9a33398d0999bf7263f59738ddb2b` passed CI `30221433143`, CodeQL
+      `30221431773`, release provenance `30221433159`, native API-image security
+      `30221433123`, and CodeRabbit with no unresolved review thread. Protected `main` commit
+      `d749807637d01ddc9a86960430b68bf8ea121bc5` then passed CI `30221830041`, CodeQL
+      `30221829870`, release provenance `30221830040`, and native API-image security
+      `30221830043`. This receipt changes no provider, deployment, data, score, or model state.
 - [x] Reconcile the complete protected branch after the reviewed merge sequence. Exact `main`
       commit `0c1656bbc2a3af42dc92b122933da33d1316d59d` passed CI `30218402135` (web, API,
       pipeline, dependency submission, the complete security chain, both production-shaped
@@ -33,6 +40,41 @@ by that discovery.
       device/accessibility, legal/business, and guarded deployment gates listed below. These
       remain production-release boundaries; they do not require local model or frontend work to
       stay frozen.
+
+## Active checkpoint — model data and TestFlight collection foundations
+
+- [x] Make model choice evidence-driven rather than architecture-driven. The frozen local
+      comparison includes naive, regularized-linear, spline/GAM, random-forest,
+      histogram-gradient-boosted, spatial/hierarchical, bathymetric-deep, and conditional hybrid
+      families behind identical source, fold, feature, leakage, metric, uncertainty, and
+      operational-cost boundaries. The simpler model wins a statistical tie.
+- [x] Implement synthetic-only capability adapters for all six classical families and the
+      bathymetric-deep candidate. These prove deterministic interface compatibility only; they
+      cannot consume California-halibut labels, select a winner, change the score, serve a model,
+      or authorize deployment.
+- [ ] Obtain eligible complete-attempt evidence. Recruit consented participants who report every
+      targeted attempt, including non-encounters, and send the drafted RecFIN/CRFS request for a
+      permitted reproducible complete-effort export with confirmed zero-catch semantics and
+      intended-use terms. Do not scrape Fishbrain, Facebook, or other restricted sources.
+- [ ] Keep ordinary friend reports truthful. Until the separately reviewed feasibility protocol
+      is activated, new reports are privacy-minimized product observations only and cannot be
+      retroactively relabeled as pilot or confirmatory rows.
+- [ ] Build the narrow native collection path before TestFlight: a reviewed versioned client
+      contract, system-browser authorization code with PKCE, short-lived access tokens,
+      OS-protected token storage, rotated refresh tokens with server revocation, and no embedded
+      secret or browser-cookie reinterpretation.
+- [ ] Complete the owner/device gates for TestFlight: active Apple Developer membership and App
+      Store Connect access, full Xcode installation, final bundle/app identity, signing and
+      provisioning, accurate privacy/export-compliance metadata, physical-device acceptance, and
+      first external-build TestFlight review where applicable. Repository safeguards and browser
+      emulation do not satisfy these gates.
+- [ ] Run the collection-feasibility pilot only after its encrypted custody, restore/deletion
+      replay, legal/privacy/data-steward, preregistration, immutable-release, and synthetic runtime
+      gates pass. If feasibility succeeds, freeze a separate confirmatory design before comparing
+      real model performance or opening a locked test set.
+- [ ] Keep cosmetic frontend work behind collection correctness, model evidence, and native
+      safety unless a user-blocking or safety-relevant defect is found. TestFlight is a data
+      collection channel, not permission to claim that the current heuristic is validated.
 
 ## Active checkpoint — truthful forecast loading and recovery
 
@@ -97,9 +139,13 @@ by that discovery.
         inventory plus release SBOM. The complete 755-test Node suite, security chain, both
         zero-vulnerability audits, build, lint, TypeScript, and the four-profile lost-response
         browser case pass after these changes.
-- [ ] Obtain hosted CI, CodeQL, release-provenance, and automated-review acceptance on the exact
-      implementation head; merge only accepted evidence to protected `main`; and reconcile the
-      exact merge commit. This account-entry checkpoint changes no API, database, provider,
+- [x] Obtain hosted acceptance and reconcile the protected merge. Exact implementation head
+      `0718b98ea0d9a33398d0999bf7263f59738ddb2b` passed CI `30221433143`, CodeQL
+      `30221431773`, release provenance `30221433159`, native API-image security
+      `30221433123`, and CodeRabbit before protected merge `#182`. Post-merge `main` at
+      `d749807637d01ddc9a86960430b68bf8ea121bc5` passed CI `30221830041`, CodeQL
+      `30221829870`, release provenance `30221830040`, and native API-image security
+      `30221830043`. This account-entry checkpoint changes no API, database, provider,
       deployment, model, score, or production state.
 
 ## Active checkpoint — zero-exception npm and lint graph
