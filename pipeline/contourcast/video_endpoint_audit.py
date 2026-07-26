@@ -53,6 +53,7 @@ RESIDUAL_STATEWIDE_VIDEO_CRUISES: Tuple[str, ...] = (
     "l908nc",
     "s2210mb",
 )
+MAX_EXHAUSTIVE_SOURCE_GROUPS = 14
 
 
 def _sha256_bytes(value: bytes) -> str:
@@ -246,6 +247,7 @@ def _whole_group_partition_audit(
     *,
     min_rows_per_class: int,
     group_definition: str = "exact cruise_id + LINE + TAPE",
+    max_exhaustive_groups: int = MAX_EXHAUSTIVE_SOURCE_GROUPS,
 ) -> Mapping[str, Any]:
     """Enumerate every unique whole-group bipartition, once."""
 
@@ -254,6 +256,10 @@ def _whole_group_partition_audit(
     unique_groups = tuple(sorted({str(group) for group in groups}))
     if len(unique_groups) < 2 or min_rows_per_class < 1:
         raise ValueError("partition audit needs multiple groups and a positive support gate")
+    if len(unique_groups) > max_exhaustive_groups:
+        raise ValueError(
+            "exhaustive whole-group partition enumeration exceeds the declared group cap"
+        )
     partitions = []
     eligible = 0
     # Fix the first group in train, then enumerate every nonempty test subset.
@@ -288,6 +294,7 @@ def _whole_group_partition_audit(
         "group_definition": group_definition,
         "adjacent_row_split_allowed": False,
         "minimum_rows_per_class_in_train_and_test": min_rows_per_class,
+        "maximum_exhaustive_source_groups": max_exhaustive_groups,
         "unique_groups": list(unique_groups),
         "candidate_partition_count": len(partitions),
         "eligible_partition_count": eligible,

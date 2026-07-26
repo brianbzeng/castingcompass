@@ -93,7 +93,7 @@ async function fixture() {
 test("the key-custody policy, evidence contract, review contract, and workflow gates are exact", async () => {
   const policy = await loadKeyCustodyReviewPolicy();
   await loadKeyCustodyEvidenceContract();
-  await loadKeyCustodyReviewContract();
+  const validateReviewContract = await loadKeyCustodyReviewContract();
   assert.deepEqual(policy.runtime_secret_names, RUNTIME_SECRET_NAMES);
   assert.deepEqual(policy.backup_key_roles, BACKUP_KEY_ROLES);
   assert.deepEqual(policy.required_review_checks, REVIEW_CHECKS);
@@ -101,6 +101,16 @@ test("the key-custody policy, evidence contract, review contract, and workflow g
   const weakened = structuredClone(policy);
   weakened.authority.production_key_custody_approved = true;
   assert.throws(() => validateKeyCustodyReviewPolicy(weakened), /must not grant production authority/u);
+  const value = await fixture();
+  try {
+    assert.equal(validateReviewContract(value.review), true);
+    assert.equal(validateReviewContract({
+      ...value.review,
+      reviewer_independent_of_operator: false,
+    }), false);
+  } finally {
+    rmSync(value.parent, { recursive: true, force: true });
+  }
 
   const manifest = readFileSync(new URL("../package.json", import.meta.url), "utf8");
   const ci = readFileSync(new URL("../.github/workflows/ci.yml", import.meta.url), "utf8");

@@ -43,6 +43,7 @@
     },
     "sites": {
       "type": "object",
+      "minProperties": 1,
       "propertyNames": { "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$" },
       "additionalProperties": { "$ref": "#/$defs/siteAssessment" }
     }
@@ -124,6 +125,53 @@
         "scoreDelta": { "type": "null" },
         "sourceUrl": { "type": "string", "format": "uri", "pattern": "^https://" }
       },
+      "allOf": [
+        {
+          "if": {
+            "required": ["status"],
+            "properties": {
+              "status": {
+                "enum": ["closure", "posted", "advisory", "rain-advisory"]
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "recommendationEffect": { "const": "suppress" }
+            }
+          }
+        },
+        {
+          "if": {
+            "required": ["status"],
+            "properties": {
+              "status": { "const": "no-active-posting" }
+            }
+          },
+          "then": {
+            "properties": {
+              "recommendationEffect": { "const": "neutral" }
+            }
+          }
+        },
+        {
+          "if": {
+            "required": ["status"],
+            "properties": {
+              "status": {
+                "enum": [
+                  "stale", "unmonitored", "unknown", "source-unavailable", "not-covered"
+                ]
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "recommendationEffect": { "const": "unknown" }
+            }
+          }
+        }
+      ],
       "additionalProperties": false
     }
   }

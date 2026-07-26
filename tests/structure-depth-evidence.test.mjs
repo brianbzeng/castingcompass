@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
-import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdtemp, readFile, rm, stat, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { spawnSync } from "node:child_process";
@@ -29,7 +29,7 @@ function containsObjectKey(value, key) {
 }
 
 function runCollector(output, sourceSnapshot = snapshotPath) {
-  return spawnSync(
+  const result = spawnSync(
     "python3",
     [
       "scripts/refresh_structure_depth.py",
@@ -39,6 +39,8 @@ function runCollector(output, sourceSnapshot = snapshotPath) {
     ],
     { cwd: new URL("..", import.meta.url), encoding: "utf8" },
   );
+  if (result.error) throw result.error;
+  return result;
 }
 
 test("published 61-site chart context is contract-bound, display-only, and non-navigational", async () => {
@@ -120,6 +122,7 @@ test("checked-in normalized NOAA snapshot regenerates the public artifact byte f
   const result = runCollector(output);
   assert.equal(result.status, 0, result.stderr || result.stdout);
   assert.deepEqual(await readFile(output), await readFile(new URL(artifactPath, root)));
+  assert.equal((await stat(output)).mode & 0o777, 0o644);
 });
 
 test("overlapping ENC cells are deduplicated and partial source dates remain explicit", async () => {
@@ -301,6 +304,34 @@ test("one required site query fails only that evidence slice closed", async (t) 
   assert.equal(artifact.sites["goleta-beach"].structure.status, "charted-features-present");
   assert.equal(artifact.sites["gaviota-state-park-beach"].status, "charted-context");
   assert.equal(JSON.stringify(artifact).includes(directory), false);
+});
+
+test("derived depth aggregates that exceed the public contract fail that site closed", async (t) => {
+  const directory = await mkdtemp(join(tmpdir(), "castingcompass-structure-depth-bounds-"));
+  t.after(() => rm(directory, { recursive: true, force: true }));
+  const snapshot = await readJson(snapshotPath);
+  const siteId = "gaviota-state-park-beach";
+  const query = snapshot.sites[siteId].queries["soundings:sector"];
+  const base = query.features[0];
+  query.features = Array.from({ length: 201 }, (_, index) => ({
+    ...base,
+    attributes: {
+      ...base.attributes,
+      Z: index,
+    },
+    point: [
+      base.point[0] + index * 0.0000001,
+      base.point[1],
+    ],
+  }));
+  const source = join(directory, "source.json");
+  const output = join(directory, "artifact.json");
+  await writeFile(source, `${JSON.stringify(snapshot, null, 2)}\n`);
+  const result = runCollector(output, source);
+  assert.equal(result.status, 0, result.stderr || result.stdout);
+  const artifact = JSON.parse(await readFile(output, "utf8"));
+  assert.equal(artifact.sites[siteId].depth.status, "source-unavailable");
+  assert.equal(artifact.sites[siteId].structure.status, "charted-features-present");
 });
 
 test("service metadata drift makes every site unavailable without retaining stale claims", async (t) => {

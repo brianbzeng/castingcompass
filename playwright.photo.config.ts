@@ -18,7 +18,7 @@ export default defineConfig({
     { name: "photo-webkit", use: { browserName: "webkit", viewport: { width: 390, height: 844 } } },
   ],
   webServer: {
-    command: "npm run start -- --host 127.0.0.1 --port 4174",
+    command: "npm run start -- --hostname 127.0.0.1 --port 4174",
     url: "http://127.0.0.1:4174",
     reuseExistingServer: false,
     timeout: 120_000,

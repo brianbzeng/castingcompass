@@ -1,7 +1,11 @@
 import type { CuratedSite, D1DatabaseLike } from "./trips";
 import { logEvent } from "./observability.ts";
 import { releaseMaintenanceEnabled } from "./security.ts";
-import { reviewTripBacklog, reviewTripWithMimo } from "./trip-review.ts";
+import {
+  REVIEW_CLAIM_VERSION,
+  reviewTripBacklog,
+  reviewTripWithMimo,
+} from "./trip-review.ts";
 import type { ReviewEnv } from "./trip-review.ts";
 
 export const AI_REVIEW_QUEUE_MESSAGE_VERSION = "castingcompass.ai-review-queue/1.0.0";
@@ -480,10 +484,15 @@ async function settleAbandonedJob(
       db.prepare(`UPDATE trips SET ai_review_status = 'needs_attention', ai_review_json = NULL,
           ai_review_model = NULL, ai_reviewed_at = NULL
         WHERE id = ? AND (ai_review_status IS NULL OR ai_review_status != 'reviewed')
+          AND (ai_review_status IS NULL OR ai_review_status != 'processing'
+            OR ai_review_json IS NULL
+            OR (json_valid(ai_review_json)
+              AND json_extract(ai_review_json, '$.version') = ?
+              AND json_extract(ai_review_json, '$.leaseExpiresAt') <= ?))
           AND EXISTS (SELECT 1 FROM ai_review_jobs WHERE id = ? AND attempts >= ?
             AND ((state = 'pending' OR state = 'queued' OR state = 'retry')
               OR (state = 'processing' AND (lease_expires_at IS NULL OR lease_expires_at <= ?))))`)
-        .bind(tripId, jobId, MAX_ATTEMPTS, nowIso),
+        .bind(tripId, REVIEW_CLAIM_VERSION, nowIso, jobId, MAX_ATTEMPTS, nowIso),
       db.prepare(`UPDATE ai_review_jobs SET state = 'needs_attention', available_at = ?,
           lease_expires_at = NULL, lease_token = NULL,
           last_error_code = 'review_lease_abandoned', updated_at = ?

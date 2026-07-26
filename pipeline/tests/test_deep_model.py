@@ -11,6 +11,19 @@ from pipeline.contourcast.structure import STRUCTURE_CHANNELS
 
 
 class DeepModelTests(unittest.TestCase):
+    def test_checkpoint_snapshot_does_not_alias_live_cpu_parameters(self):
+        if deep_model.torch is None:
+            self.skipTest("PyTorch is optional")
+        torch = deep_model.torch
+        model = torch.nn.Linear(2, 2, bias=False)
+        with torch.no_grad():
+            model.weight.fill_(1.0)
+        snapshot = training._snapshot_state_dict(model)
+        with torch.no_grad():
+            model.weight.add_(2.0)
+        self.assertTrue(bool(torch.all(snapshot["weight"] == 1.0)))
+        self.assertTrue(bool(torch.all(model.weight == 3.0)))
+
     def test_dependency_guard_or_architecture_shapes(self):
         if deep_model.torch is None:
             with self.assertRaisesRegex(RuntimeError, "PyTorch is required"):

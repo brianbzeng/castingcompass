@@ -246,6 +246,69 @@ class MultiScaleTrainingTests(unittest.TestCase):
         self.assertEqual(metadata["source_shape"], [256, 256])
         self.assertGreaterEqual(metadata["sampling"]["tiles_processed"], 1)
 
+    @unittest.skipIf(rasterio is None, "rasterio is optional")
+    def test_integer_aligned_layer_without_nodata_marks_uncovered_pixels_unavailable(self):
+        rows, cols = np.mgrid[0:256, 0:256]
+        elevation = -(5 + 0.02 * rows + np.sin(cols / 8)).astype(np.float32)
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            source = root / "source.tif"
+            aligned = root / "partial-backscatter.tif"
+            output = root / "corpus.npz"
+            with rasterio.open(
+                source,
+                "w",
+                driver="GTiff",
+                height=256,
+                width=256,
+                count=1,
+                dtype="float32",
+                crs="EPSG:32610",
+                transform=from_origin(500000, 4200000, 2, 2),
+                nodata=-9999,
+            ) as dataset:
+                dataset.write(elevation, 1)
+            with rasterio.open(
+                aligned,
+                "w",
+                driver="GTiff",
+                height=128,
+                width=128,
+                count=1,
+                dtype="uint8",
+                crs="EPSG:32610",
+                transform=from_origin(500000, 4200000, 2, 2),
+            ) as dataset:
+                dataset.write(np.full((128, 128), 7, dtype=np.uint8), 1)
+
+            layer_name = "backscatter_intensity_partial_survey"
+            build_geotiff_pretraining_corpus(
+                source,
+                output,
+                source_id="usgs_sf_state_waters_2m",
+                vertical_datum="NAVD88",
+                radii_m=(8, 16, 32),
+                output_size=9,
+                stride_m=16,
+                max_centers=64,
+                min_valid_fraction=1.0,
+                local_radius=2,
+                broad_radius=4,
+                relief_radius=2,
+                horizontal_accuracy_m=2,
+                tile_size=128,
+                seed=7,
+                aligned_layer_paths={layer_name: aligned},
+                aligned_layer_expected_sha256={layer_name: sha256_file(aligned)},
+                min_aligned_valid_fraction=0.0,
+            )
+            patches, _, _, names, _ = load_patch_corpus(output)
+
+        availability_index = names.index(f"{layer_name}__available")
+        availability = patches[:, :, availability_index]
+        self.assertTrue(np.any(availability == 1.0))
+        self.assertTrue(np.any(availability == 0.0))
+
 
 if __name__ == "__main__":
     unittest.main()

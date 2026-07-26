@@ -16,7 +16,7 @@ const SOURCE_RUNBOOK_PATH = "docs/POLLUTION-SCORE-SOURCE-BOUNDARY.md";
 const PACKAGE_PATH = "package.json";
 
 export const LOCKED_SOURCE_COMMIT = "9fd337d561056fef5227eb013fa8f7b909f69343";
-export const LOCKED_POLICY_SHA256 = "1061fcffec8283bf48e333a20a58ac8ea77545f5537f1d68685dda267d89d250";
+export const LOCKED_POLICY_SHA256 = "396c00e770a87bc65bcd4ad6342146d4e9f7113f0c61315fe543fee99035e2ae";
 const LOCKED_CONTRACT_SHA256 = "c3c67fdf02e39f20729c71ca3c5ceb3a0f734fe7a6d96de3590ead63065cd60e";
 const REVIEW_SCHEMA_VERSION = "castingcompass.pollution-score-independent-review/1.0.0";
 const RECEIPT_SCHEMA_VERSION = "castingcompass.pollution-score-independent-review-receipt/1.0.0";
@@ -291,6 +291,7 @@ export async function verifyPolicy(root = DEFAULT_ROOT) {
       !== "node scripts/verify-pollution-score-independent-review.mjs verify-policy"
     || scripts["verify:pollution-score-independent-review"]
       !== "node scripts/verify-pollution-score-independent-review.mjs evaluate --fisheries-review-file \"$POLLUTION_FISHERIES_REVIEW_FILE\" --public-health-review-file \"$POLLUTION_PUBLIC_HEALTH_REVIEW_FILE\" --expected-source-commit \"$POLLUTION_REVIEW_EXPECTED_SOURCE_COMMIT\""
+    || typeof scripts.security !== "string"
     || !scripts.security.includes("security:pollution-score-independent-review")) {
     throw new Error("Package scripts do not bind the pollution score independent-review policy.");
   }

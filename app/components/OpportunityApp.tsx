@@ -931,7 +931,7 @@ function pressureTrendLabel(value?: number) {
 }
 
 function wavePowerReport(power?: number, period?: number, applies = true) {
-  if (!applies) return { value: "Sheltered water", note: "Open-coast wave power is not applied at this Bay location", tone: "calm" };
+  if (!applies) return { value: "Sheltered water", note: "Open-coast wave power is not applied at this sheltered location", tone: "calm" };
   if (!isFiniteNumber(power)) return { value: "Unavailable", note: "No fresh wave height + period pair", tone: "unknown" };
   const periodText = isFiniteNumber(period) ? ` · ${Math.round(period)} s period` : "";
   if (power >= 15) return { value: `${power.toFixed(1)} kW/m${periodText}`, note: "Very powerful surf—exposed water may be unsafe or unfishable", tone: "danger" };
@@ -1135,11 +1135,6 @@ export function OpportunityApp() {
     open: showLocationDisclosure,
     onClose: () => setShowLocationDisclosure(false),
   });
-  const detailDialogRef = useModalDialog<HTMLElement>({
-    open: Boolean(selectedSiteId),
-    onClose: closeSiteDetail,
-    restoreFocus: restoreDetailFocus,
-  });
   const methodDialogRef = useModalDialog<HTMLElement>({
     open: showMethod,
     onClose: () => setShowMethod(false),
@@ -1265,10 +1260,9 @@ export function OpportunityApp() {
       : "Sorted with nearby access first"
     : locationMessage;
 
-  const rankedSites = useMemo(() => {
+  const inScopeSites = useMemo(() => {
     return sites
       .filter((site) => site.accessStatus !== "closed")
-      .filter((site) => waterQuality?.sites[site.id]?.recommendationEffect !== "suppress")
       .filter((site) => (
         region === "All water" ||
         (region === "Saved locations" ? account.savedSiteIds.has(site.id) : site.region === region)
@@ -1283,7 +1277,12 @@ export function OpportunityApp() {
         !userPosition || activeRadiusMiles === null ||
         site.distanceMiles === undefined || site.distanceMiles <= activeRadiusMiles
       ))
-      .filter((site) => windowsBySite.has(site.id))
+      .filter((site) => windowsBySite.has(site.id));
+  }, [account.savedSiteIds, activeRadiusMiles, sites, region, userPosition, windowsBySite]);
+
+  const rankedSites = useMemo(() => {
+    return inScopeSites
+      .filter((site) => waterQuality?.sites[site.id]?.recommendationEffect !== "suppress")
       .sort((a, b) => {
         if (userPosition && a.distanceMiles !== undefined && b.distanceMiles !== undefined) {
           const distanceDifference = a.distanceMiles - b.distanceMiles;
@@ -1291,14 +1290,13 @@ export function OpportunityApp() {
         }
         return (windowsBySite.get(b.id)?.score ?? 0) - (windowsBySite.get(a.id)?.score ?? 0);
       });
-  }, [account.savedSiteIds, activeRadiusMiles, sites, region, userPosition, waterQuality, windowsBySite]);
+  }, [inScopeSites, userPosition, waterQuality, windowsBySite]);
 
   const waterQualitySuppressedSites = useMemo(
-    () => sites.filter((site) => (
-      site.accessStatus !== "closed"
-      && waterQuality?.sites[site.id]?.recommendationEffect === "suppress"
-    )),
-    [sites, waterQuality],
+    () => inScopeSites.filter(
+      (site) => waterQuality?.sites[site.id]?.recommendationEffect === "suppress",
+    ),
+    [inScopeSites, waterQuality],
   );
   const firstSuppressedWaterQualitySourceUrl = waterQualitySuppressedSites.length
     ? waterQuality?.sites[waterQualitySuppressedSites[0].id]?.sourceUrl
@@ -1312,6 +1310,11 @@ export function OpportunityApp() {
     ? snapshot.windows.find((window) => window.siteId === selectedSiteId && window.id === selectedDetailWindowId)
       ?? defaultSelectedWindow
     : defaultSelectedWindow;
+  const detailDialogRef = useModalDialog<HTMLElement>({
+    open: Boolean(selectedSite && selectedWindow),
+    onClose: closeSiteDetail,
+    restoreFocus: restoreDetailFocus,
+  });
   const detailDayWindows = useMemo(() => {
     if (!selectedSiteId || !selectedWindow) return [];
     const selectedDay = dateInputValue(new Date(selectedWindow.start));

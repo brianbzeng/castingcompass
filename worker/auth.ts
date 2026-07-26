@@ -2911,6 +2911,7 @@ async function claimSignInAttempt(
     && pendingCount <= recentFailedCount;
   if (!receiptReadSucceeded || !countsValid) return "unconfirmed";
   if (pendingCount === 1 && anyCount === 1 && recentFailedCount <= 10) return "claimed";
+  if (pendingCount === 1 && anyCount === 1 && recentFailedCount > 10) return "rate_limited";
   if (pendingCount === 0 && anyCount === 0 && recentFailedCount >= 10) return "rate_limited";
   return "unconfirmed";
 }

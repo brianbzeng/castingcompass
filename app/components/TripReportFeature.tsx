@@ -1174,7 +1174,7 @@ export function TripReportFeature({ sites, snapshot, request, canSubmit, onRequi
                   <small>If the mode changed after you started, choose the mode that best describes the whole attempt. The report will stay useful as context.</small>
                 </label>
                 <TripGearFields fields={fields} setFields={setFields} gearProfiles={gearProfiles} applyGearProfile={applyGearProfile} includeObservations />
-                <TripCompletionFields fields={fields} setFields={setFields} updateCount={updateCount} photo={photo} rejectedPhoto={rejectedPhoto} photoTransferState={photoTransferState} photoInputRef={photoInputRef} onPhoto={handlePhoto} onRemovePhoto={removePhoto} hideTimes />
+                <TripCompletionFields fields={fields} setFields={setFields} updateCount={updateCount} photo={photo} rejectedPhoto={rejectedPhoto} photoTransferState={photoTransferState} photoInputRef={photoInputRef} onPhoto={handlePhoto} onRemovePhoto={removePhoto} canUploadPhoto={canSubmit} hideTimes />
                 </fieldset>
                 <button className="trip-submit" type="submit" disabled={submitState === "submitting" || submitState === "success" || networkState === "offline"}>
                   {submitState === "submitting"
@@ -1259,7 +1259,7 @@ export function TripReportFeature({ sites, snapshot, request, canSubmit, onRequi
                   </label>
                 </div> : <>
                 <TripGearFields fields={fields} setFields={setFields} gearProfiles={gearProfiles} applyGearProfile={applyGearProfile} includeObservations />
-                <TripCompletionFields fields={fields} setFields={setFields} updateCount={updateCount} photo={photo} rejectedPhoto={rejectedPhoto} photoTransferState={photoTransferState} photoInputRef={photoInputRef} onPhoto={handlePhoto} onRemovePhoto={removePhoto} hideTimes />
+                <TripCompletionFields fields={fields} setFields={setFields} updateCount={updateCount} photo={photo} rejectedPhoto={rejectedPhoto} photoTransferState={photoTransferState} photoInputRef={photoInputRef} onPhoto={handlePhoto} onRemovePhoto={removePhoto} canUploadPhoto={canSubmit} hideTimes />
                 </>}
                 {formStep === 2 ? <button className="trip-back-button" type="button" onClick={() => setFormStep(1)}>← Back to trip details</button> : null}
                 </fieldset>
@@ -1290,6 +1290,7 @@ interface TripCompletionFieldsProps {
   photoInputRef: React.RefObject<HTMLInputElement | null>;
   onPhoto: (event: ChangeEvent<HTMLInputElement>) => void;
   onRemovePhoto: () => void;
+  canUploadPhoto: boolean;
   hideTimes?: boolean;
 }
 
@@ -1347,6 +1348,7 @@ function TripCompletionFields({
   photoInputRef,
   onPhoto,
   onRemovePhoto,
+  canUploadPhoto,
   hideTimes = false,
 }: TripCompletionFieldsProps) {
   return (
@@ -1392,7 +1394,7 @@ function TripCompletionFields({
         <small>Do not include names, contact details, precise locations, access codes, or other private information.</small>
         <small className="discussion-publish-notice">Automated review may prepare a shortened discussion draft. It is not posted automatically and must be approved by a human moderator before it can appear publicly.</small>
       </label>
-      {PHOTO_UPLOADS_ENABLED ? (
+      {PHOTO_UPLOADS_ENABLED && canUploadPhoto ? (
         <TripPhotoField
           photo={photo}
           rejectedPhoto={rejectedPhoto}

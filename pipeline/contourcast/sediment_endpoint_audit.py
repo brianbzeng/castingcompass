@@ -384,11 +384,11 @@ def _whole_source_partition_audit(
         return {"rows": rows_total, "sites": sites_total, "anchors": anchors}
 
     eligible: list[Mapping[str, Any]] = []
-    candidate_count = (1 << (len(groups) - 1)) - 1
-    for mask in range(1, 1 << (len(groups) - 1)):
+    candidate_count = (1 << len(groups)) - 2
+    for mask in range(1, (1 << len(groups)) - 1):
         test_groups = tuple(
-            groups[index + 1]
-            for index in range(len(groups) - 1)
+            groups[index]
+            for index in range(len(groups))
             if mask & (1 << index)
         )
         test_set = set(test_groups)

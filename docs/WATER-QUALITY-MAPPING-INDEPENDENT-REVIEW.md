@@ -36,7 +36,7 @@ Both reviews bind to the exact consolidated draft integration receipt:
 
 - source commit: `377dec41c9fc1842c682b7556f2b0a8b1b83e87c`
 - policy version: `castingcompass.water-quality-advisory/official-programs-0.5.0`
-- aggregate review-target SHA-256: `6cb921149782483338f602b5b3df09ae41243e6a05743ae1534a0fe6892d3346`
+- aggregate review-target SHA-256: `c6c897c0d7cf24bd2f2f855c7960cd6cc60c84355a173eed0a71d747ac41b180`
 - catalog outcomes: 61 total, 39 mapped, 22 `not-covered`
 
 The aggregate digest binds the exact site catalog, water-quality policy, public advisory artifact,

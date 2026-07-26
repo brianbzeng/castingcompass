@@ -574,3 +574,48 @@ test("an abandoned fifth queue lease settles to attention instead of redispatchi
     "needs_attention",
   );
 });
+
+test("abandoned queue settlement preserves an independently active trip claim", async () => {
+  const { sqlite, d1 } = await database();
+  const { env, queue, job } = await scheduledJob(sqlite, d1);
+  sqlite.prepare(`UPDATE ai_review_jobs SET state = 'processing', attempts = 5,
+      available_at = ?, lease_expires_at = ?, lease_token = ? WHERE id = ?`)
+    .run(
+      "2000-01-01T00:00:00.000Z",
+      "2000-01-01T00:01:00.000Z",
+      `airl_${"d".repeat(32)}`,
+      job.id,
+    );
+  const activeTripClaim = JSON.stringify({
+    version: "castingcompass.ai-review-claim/1.0.0",
+    token: `airc_${"e".repeat(32)}`,
+    leaseExpiresAt: "2099-01-01T00:00:00.000Z",
+  });
+  sqlite.prepare(`UPDATE trips SET ai_review_status = 'processing', ai_review_json = ?
+    WHERE id = 'trip_queue'`).run(activeTripClaim);
+
+  assert.equal(await dispatchAiReviewBacklog(env, []), 1);
+  assert.equal(queue.sent.length, 1);
+  assert.deepEqual(
+    {
+      ...sqlite.prepare(`SELECT state, attempts, lease_token, last_error_code
+        FROM ai_review_jobs WHERE id = ?`).get(job.id),
+    },
+    {
+      state: "needs_attention",
+      attempts: 5,
+      lease_token: null,
+      last_error_code: "review_lease_abandoned",
+    },
+  );
+  assert.deepEqual(
+    {
+      ...sqlite.prepare(`SELECT ai_review_status, ai_review_json
+        FROM trips WHERE id = 'trip_queue'`).get(),
+    },
+    {
+      ai_review_status: "processing",
+      ai_review_json: activeTripClaim,
+    },
+  );
+});

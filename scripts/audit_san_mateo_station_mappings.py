@@ -12,6 +12,7 @@ import argparse
 import hashlib
 import json
 import math
+import re
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -37,6 +38,7 @@ REGISTRY_MACHINE_URL = "https://datahub.smcgov.org/api/id/kpd9-xf4h.json"
 MAX_RECORD_BYTES = 64 * 1024
 EARTH_RADIUS_METERS = 6_371_008.8
 UNMAPPED_REVIEW_SITE_IDS = ("poplar-beach", "seal-point-park")
+STATION_ID_PATTERN = re.compile(r"^[A-Za-z0-9_.-]{1,64}$")
 
 
 def coordinate(value: Any, *, latitude: bool) -> float:
@@ -76,6 +78,8 @@ def read_response(response: Any) -> bytes:
 def fetch_registry_records(station_ids: list[str]) -> bytes:
     records: list[dict[str, Any]] = []
     for station_id in station_ids:
+        if not STATION_ID_PATTERN.fullmatch(station_id):
+            raise WaterQualityError("invalid-station-id")
         query = urllib.parse.urlencode(
             {
                 "$select": "site_id,site_name,site_type,process_da,location",

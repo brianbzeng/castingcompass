@@ -224,14 +224,16 @@ test("every supported snapshot refresh chains the advisory overlay and byte-bind
     refresh.indexOf("generate_snapshot.py") < refresh.indexOf("generate_opportunity_attestations.py"),
   );
   assert.match(workflow, /PYTHONPATH: \./);
-  assert.ok(
-    workflow.indexOf("python scripts/refresh_water_quality.py") <
-      workflow.indexOf("python scripts/generate_snapshot.py"),
+  const workflowWaterQualityStep = workflow.indexOf("python scripts/refresh_water_quality.py");
+  const workflowSnapshotStep = workflow.indexOf("python scripts/generate_snapshot.py");
+  const workflowAttestationStep = workflow.indexOf(
+    "python scripts/generate_opportunity_attestations.py",
   );
-  assert.ok(
-    workflow.indexOf("python scripts/generate_snapshot.py") <
-      workflow.indexOf("python scripts/generate_opportunity_attestations.py"),
-  );
+  assert.ok(workflowWaterQualityStep >= 0);
+  assert.ok(workflowSnapshotStep >= 0);
+  assert.ok(workflowAttestationStep >= 0);
+  assert.ok(workflowWaterQualityStep < workflowSnapshotStep);
+  assert.ok(workflowSnapshotStep < workflowAttestationStep);
   assert.match(workflow, /python -m json\.tool public\/data\/opportunity-attestations\.json/);
   assert.match(workflow, /python -m json\.tool public\/data\/water-quality\.json/);
   assert.doesNotMatch(snapshotGenerator, /opportunity-attestations|write_opportunity_attestation/);

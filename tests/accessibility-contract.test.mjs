@@ -56,6 +56,6 @@ test("focus and skip-link styles remain visible while reduced motion stays globa
 
   assert.match(styles, /:where\(a, button, input, select, textarea, summary, \[tabindex\]\):focus-visible/);
   assert.match(styles, /\.skip-link:focus-visible[\s\S]*transform: translateY\(0\)/);
-  assert.match(styles, /\.sr-only[\s\S]*clip: rect\(0, 0, 0, 0\)/);
+  assert.match(styles, /\.sr-only[\s\S]*clip-path: inset\(50%\)/);
   assert.match(styles, /@media \(prefers-reduced-motion: reduce\)/);
 });

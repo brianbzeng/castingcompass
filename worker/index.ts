@@ -258,6 +258,9 @@ async function routeRequest(
         const protectedTripMutation = apiPolicy.authorization === "owner";
         let tripSession = authenticatedSession;
         if (protectedTripMutation) {
+          // This second live lookup is deliberate: the first authorization
+          // precedes body guarding, while execution must let a concurrent
+          // session revocation or deletion fence win before any trip mutation.
           const ownerAuthorization = await authorizeOwnerRequest(request, env, {
             currentLegalAcceptanceRequired: apiPolicy.currentLegalAcceptanceRequired,
             deletionFenceAccessAllowed: apiPolicy.deletionFenceAccessAllowed,

@@ -5,7 +5,7 @@
   "sourceFiles": [
     {
       "file": "worker/auth.ts",
-      "sha256": "b733a51e04f49d132fea92100603406059b13f156d63f76283316d3c1f5333f0",
+      "sha256": "09edce23481d9df3c541364dfa745d633f327d76b210de918a7c99b987f7fb47",
       "prepareCallCount": 133
     },
     {
@@ -25,12 +25,12 @@
     },
     {
       "file": "worker/trip-review-queue.ts",
-      "sha256": "86f2d9571b9f46e33305f326badb9aa56042fc0bef1184094d1832ac8bd832c2",
+      "sha256": "58eb9772ede4fe557922c12fda19fbb928cda23488450008caab52d6d38f7955",
       "prepareCallCount": 21
     },
     {
       "file": "worker/trip-review.ts",
-      "sha256": "f9f57e21bbc03c50aafc90726e597cadea7e0a2a841e6bd7ac98d746fa33f23c",
+      "sha256": "19c4a40b6696149aa0f2dc32dc423baf22658f08e20779a89ce414403c9f96e5",
       "prepareCallCount": 9
     },
     {
@@ -1880,7 +1880,7 @@
     {
       "callSiteId": "5e786d7ac76fbed398a4b447",
       "file": "worker/auth.ts",
-      "line": 2931,
+      "line": 2932,
       "containingFunction": "classifySignInAttemptSuccessful",
       "occurrence": 81,
       "executionMode": "run",
@@ -1902,7 +1902,7 @@
     {
       "callSiteId": "966f1ad24c62859cd6f26a2e",
       "file": "worker/auth.ts",
-      "line": 2942,
+      "line": 2943,
       "containingFunction": "classifySignInAttemptSuccessful",
       "occurrence": 82,
       "executionMode": "first",
@@ -1924,7 +1924,7 @@
     {
       "callSiteId": "254d792e258dc693b0a54f9f",
       "file": "worker/auth.ts",
-      "line": 2974,
+      "line": 2975,
       "containingFunction": "prepareConditionalFeasibilityCorrectionInsert",
       "occurrence": 83,
       "executionMode": "returned-statement",
@@ -1947,7 +1947,7 @@
     {
       "callSiteId": "88783f19c26d0bd5cf919117",
       "file": "worker/auth.ts",
-      "line": 3044,
+      "line": 3045,
       "containingFunction": "selectDeletionJobByReceipt",
       "occurrence": 84,
       "executionMode": "first",
@@ -1969,7 +1969,7 @@
     {
       "callSiteId": "19a483b8ed4ed17cd282df27",
       "file": "worker/auth.ts",
-      "line": 3064,
+      "line": 3065,
       "containingFunction": "exactAccountDeletionCommit",
       "occurrence": 85,
       "executionMode": "first",
@@ -1998,7 +1998,7 @@
     {
       "callSiteId": "569d7d48a7fd16120d40c73c",
       "file": "worker/auth.ts",
-      "line": 3175,
+      "line": 3176,
       "containingFunction": "exactPendingTripDeletionCommit",
       "occurrence": 86,
       "executionMode": "first",
@@ -2023,7 +2023,7 @@
     {
       "callSiteId": "fdf9fedc31412de0b7b8593f",
       "file": "worker/auth.ts",
-      "line": 3304,
+      "line": 3305,
       "containingFunction": "processPrivacyDeletionTasks",
       "occurrence": 87,
       "executionMode": "prepared-statement",
@@ -2032,7 +2032,7 @@
       "expressionSha256": "a8b771920b8319e47251d1360f5e880bc18e8d329b0f0d003ea3c7e615558947",
       "declarationReference": {
         "name": "query",
-        "declarationLine": 3292,
+        "declarationLine": 3293,
         "initializerSha256": "fc86e2cf8e86409a6e41550f70c81a8c657a49da07558f4db56abaa6d44eb576"
       },
       "statementClass": "UNRESOLVED",
@@ -2047,7 +2047,7 @@
     {
       "callSiteId": "7a54d43991c0fd37b1708700",
       "file": "worker/auth.ts",
-      "line": 3321,
+      "line": 3322,
       "containingFunction": "processPrivacyDeletionTasks",
       "occurrence": 88,
       "executionMode": "run",
@@ -2069,7 +2069,7 @@
     {
       "callSiteId": "01a63ced3e2e0af418d31b34",
       "file": "worker/auth.ts",
-      "line": 3333,
+      "line": 3334,
       "containingFunction": "processPrivacyDeletionTasks",
       "occurrence": 89,
       "executionMode": "run",
@@ -2091,7 +2091,7 @@
     {
       "callSiteId": "62af53bb43b2e7934b04cac2",
       "file": "worker/auth.ts",
-      "line": 3350,
+      "line": 3351,
       "containingFunction": "processPrivacyDeletionTasks",
       "occurrence": 90,
       "executionMode": "run",
@@ -2113,7 +2113,7 @@
     {
       "callSiteId": "b144690382df7613f1e1912e",
       "file": "worker/auth.ts",
-      "line": 3362,
+      "line": 3363,
       "containingFunction": "processPrivacyDeletionTasks",
       "occurrence": 91,
       "executionMode": "run",
@@ -2135,7 +2135,7 @@
     {
       "callSiteId": "5b5fe75ab3cfadb42cf18143",
       "file": "worker/auth.ts",
-      "line": 3372,
+      "line": 3373,
       "containingFunction": "processPrivacyDeletionTasks",
       "occurrence": 92,
       "executionMode": "first",
@@ -2157,7 +2157,7 @@
     {
       "callSiteId": "8736ac994a4fb72688b532cc",
       "file": "worker/auth.ts",
-      "line": 3394,
+      "line": 3395,
       "containingFunction": "processPrivacyDeletionTasks",
       "occurrence": 93,
       "executionMode": "run",
@@ -2179,7 +2179,7 @@
     {
       "callSiteId": "d2e6a636c5db1240f14bee09",
       "file": "worker/auth.ts",
-      "line": 3403,
+      "line": 3404,
       "containingFunction": "processPrivacyDeletionTasks",
       "occurrence": 94,
       "executionMode": "run",
@@ -2201,7 +2201,7 @@
     {
       "callSiteId": "2d367564af06b00e1f3f0ec3",
       "file": "worker/auth.ts",
-      "line": 3409,
+      "line": 3410,
       "containingFunction": "processPrivacyDeletionTasks",
       "occurrence": 95,
       "executionMode": "prepared-statement",
@@ -2223,7 +2223,7 @@
     {
       "callSiteId": "3ab18dc8eb816c74cfb28a24",
       "file": "worker/auth.ts",
-      "line": 3417,
+      "line": 3418,
       "containingFunction": "processPrivacyDeletionTasks",
       "occurrence": 96,
       "executionMode": "prepared-statement",
@@ -2245,7 +2245,7 @@
     {
       "callSiteId": "953d5b09a312ff5ce8f7a107",
       "file": "worker/auth.ts",
-      "line": 3427,
+      "line": 3428,
       "containingFunction": "processPrivacyDeletionTasks",
       "occurrence": 97,
       "executionMode": "first",
@@ -2267,7 +2267,7 @@
     {
       "callSiteId": "3a20c7dc5cd171a8dd405641",
       "file": "worker/auth.ts",
-      "line": 3445,
+      "line": 3446,
       "containingFunction": "processPrivacyDeletionTasks",
       "occurrence": 98,
       "executionMode": "first",
@@ -2289,7 +2289,7 @@
     {
       "callSiteId": "216795a73381dd8b529c4991",
       "file": "worker/auth.ts",
-      "line": 3459,
+      "line": 3460,
       "containingFunction": "processPrivacyDeletionTasks",
       "occurrence": 99,
       "executionMode": "run",
@@ -2311,7 +2311,7 @@
     {
       "callSiteId": "550eb1a0ee40b8e1ca6b78d6",
       "file": "worker/auth.ts",
-      "line": 3475,
+      "line": 3476,
       "containingFunction": "refreshDeletionJobStatus",
       "occurrence": 100,
       "executionMode": "run",
@@ -2334,7 +2334,7 @@
     {
       "callSiteId": "e2a3030c1751f0ae87f16355",
       "file": "worker/auth.ts",
-      "line": 3517,
+      "line": 3518,
       "containingFunction": "reconcileDeletionJobs",
       "occurrence": 101,
       "executionMode": "run",
@@ -2357,7 +2357,7 @@
     {
       "callSiteId": "75db9a405387de5a70d92208",
       "file": "worker/auth.ts",
-      "line": 3587,
+      "line": 3588,
       "containingFunction": "cleanupAuthRetentionData",
       "occurrence": 102,
       "executionMode": "first",
@@ -2380,7 +2380,7 @@
     {
       "callSiteId": "a03e57c3ee604629633b5253",
       "file": "worker/auth.ts",
-      "line": 3634,
+      "line": 3635,
       "containingFunction": "cleanupAuthRetentionData",
       "occurrence": 103,
       "executionMode": "prepared-statement",
@@ -2402,7 +2402,7 @@
     {
       "callSiteId": "3d8b3633b2ae788269648864",
       "file": "worker/auth.ts",
-      "line": 3638,
+      "line": 3639,
       "containingFunction": "cleanupAuthRetentionData",
       "occurrence": 104,
       "executionMode": "prepared-statement",
@@ -2424,7 +2424,7 @@
     {
       "callSiteId": "377308f0910b89a7f7784b0b",
       "file": "worker/auth.ts",
-      "line": 3642,
+      "line": 3643,
       "containingFunction": "cleanupAuthRetentionData",
       "occurrence": 105,
       "executionMode": "prepared-statement",
@@ -2446,7 +2446,7 @@
     {
       "callSiteId": "a800bea7668ddfaf8c35497a",
       "file": "worker/auth.ts",
-      "line": 3646,
+      "line": 3647,
       "containingFunction": "cleanupAuthRetentionData",
       "occurrence": 106,
       "executionMode": "prepared-statement",
@@ -2468,7 +2468,7 @@
     {
       "callSiteId": "766e15d27a40e09205ff0dc6",
       "file": "worker/auth.ts",
-      "line": 3667,
+      "line": 3668,
       "containingFunction": "cleanupAuthRetentionData",
       "occurrence": 107,
       "executionMode": "prepared-statement",
@@ -2490,7 +2490,7 @@
     {
       "callSiteId": "afb0471d2369317a416a0ff4",
       "file": "worker/auth.ts",
-      "line": 3679,
+      "line": 3680,
       "containingFunction": "cleanupAuthRetentionData",
       "occurrence": 108,
       "executionMode": "prepared-statement",
@@ -2513,7 +2513,7 @@
     {
       "callSiteId": "24fbb982d9edfe31aa396c31",
       "file": "worker/auth.ts",
-      "line": 3703,
+      "line": 3704,
       "containingFunction": "cleanupAuthRetentionData",
       "occurrence": 109,
       "executionMode": "prepared-statement",
@@ -2535,7 +2535,7 @@
     {
       "callSiteId": "49910aa6d3979ba02e04824c",
       "file": "worker/auth.ts",
-      "line": 3716,
+      "line": 3717,
       "containingFunction": "cleanupAuthRetentionData",
       "occurrence": 110,
       "executionMode": "prepared-statement",
@@ -2558,7 +2558,7 @@
     {
       "callSiteId": "b765e45908f8828cd19d7921",
       "file": "worker/auth.ts",
-      "line": 3735,
+      "line": 3736,
       "containingFunction": "cleanupAuthRetentionData",
       "occurrence": 111,
       "executionMode": "prepared-statement",
@@ -2580,7 +2580,7 @@
     {
       "callSiteId": "602b0e1538de0f3b679ec557",
       "file": "worker/auth.ts",
-      "line": 3751,
+      "line": 3752,
       "containingFunction": "selectUserForSession",
       "occurrence": 112,
       "executionMode": "first",
@@ -2602,7 +2602,7 @@
     {
       "callSiteId": "80f0d1a140de4ea3af1485b4",
       "file": "worker/auth.ts",
-      "line": 3772,
+      "line": 3773,
       "containingFunction": "map-callback",
       "occurrence": 113,
       "executionMode": "all",
@@ -2624,7 +2624,7 @@
     {
       "callSiteId": "f31921b8d9d754e49113a034",
       "file": "worker/auth.ts",
-      "line": 3776,
+      "line": 3777,
       "containingFunction": "createSessionResponse",
       "occurrence": 114,
       "executionMode": "batch",
@@ -2648,7 +2648,7 @@
     {
       "callSiteId": "1bf0419d80f10a42d602a028",
       "file": "worker/auth.ts",
-      "line": 3795,
+      "line": 3796,
       "containingFunction": "createSessionResponse",
       "occurrence": 115,
       "executionMode": "first",
@@ -2672,7 +2672,7 @@
     {
       "callSiteId": "5978f607f698779e8f30a868",
       "file": "worker/auth.ts",
-      "line": 3818,
+      "line": 3819,
       "containingFunction": "createSessionResponse",
       "occurrence": 116,
       "executionMode": "run",
@@ -2694,7 +2694,7 @@
     {
       "callSiteId": "b831fc52aa6077cc68b57dc0",
       "file": "worker/auth.ts",
-      "line": 4048,
+      "line": 4049,
       "containingFunction": "createSignupAgeProof",
       "occurrence": 117,
       "executionMode": "run",
@@ -2716,7 +2716,7 @@
     {
       "callSiteId": "10f5e2b21bad9de6e3bbe2db",
       "file": "worker/auth.ts",
-      "line": 4059,
+      "line": 4060,
       "containingFunction": "createSignupAgeProof",
       "occurrence": 118,
       "executionMode": "first",
@@ -2738,7 +2738,7 @@
     {
       "callSiteId": "6dfeb11371b9a1f190a5a217",
       "file": "worker/auth.ts",
-      "line": 4090,
+      "line": 4091,
       "containingFunction": "validateSignupAgeProof",
       "occurrence": 119,
       "executionMode": "first",
@@ -2760,7 +2760,7 @@
     {
       "callSiteId": "0f648b246653e4fc93acbc53",
       "file": "worker/auth.ts",
-      "line": 4116,
+      "line": 4117,
       "containingFunction": "consumeSignupAgeProof",
       "occurrence": 120,
       "executionMode": "run",
@@ -2782,7 +2782,7 @@
     {
       "callSiteId": "358636641f45c8264eb1e463",
       "file": "worker/auth.ts",
-      "line": 4136,
+      "line": 4137,
       "containingFunction": "consumeSignupAgeProof",
       "occurrence": 121,
       "executionMode": "first",
@@ -2804,7 +2804,7 @@
     {
       "callSiteId": "afdebc05d6a926b824d2f541",
       "file": "worker/auth.ts",
-      "line": 4302,
+      "line": 4303,
       "containingFunction": "createEmailChallenge",
       "occurrence": 122,
       "executionMode": "run",
@@ -2826,7 +2826,7 @@
     {
       "callSiteId": "4c8bf4d36f4613e70c84d06c",
       "file": "worker/auth.ts",
-      "line": 4316,
+      "line": 4317,
       "containingFunction": "createEmailChallenge",
       "occurrence": 123,
       "executionMode": "first",
@@ -2848,7 +2848,7 @@
     {
       "callSiteId": "1148cde2d3d61bc236e6600c",
       "file": "worker/auth.ts",
-      "line": 4373,
+      "line": 4374,
       "containingFunction": "transitionEmailChallengeForResend",
       "occurrence": 124,
       "executionMode": "run",
@@ -2870,7 +2870,7 @@
     {
       "callSiteId": "afce657475ab26f9e661a96e",
       "file": "worker/auth.ts",
-      "line": 4393,
+      "line": 4394,
       "containingFunction": "transitionEmailChallengeForResend",
       "occurrence": 125,
       "executionMode": "first",
@@ -2892,7 +2892,7 @@
     {
       "callSiteId": "10a37d4fd93d311850891570",
       "file": "worker/auth.ts",
-      "line": 4450,
+      "line": 4451,
       "containingFunction": "assertEmailChallengeAllowed",
       "occurrence": 126,
       "executionMode": "first",
@@ -2914,7 +2914,7 @@
     {
       "callSiteId": "74672e3285b01ac49b631886",
       "file": "worker/auth.ts",
-      "line": 4469,
+      "line": 4470,
       "containingFunction": "verifyEmailChallenge",
       "occurrence": 127,
       "executionMode": "first",
@@ -2936,7 +2936,7 @@
     {
       "callSiteId": "6ec98dec574ca962f3f490e2",
       "file": "worker/auth.ts",
-      "line": 4504,
+      "line": 4505,
       "containingFunction": "verifyEmailChallenge",
       "occurrence": 128,
       "executionMode": "run",
@@ -2958,7 +2958,7 @@
     {
       "callSiteId": "6f0bc9aae63413bcadda69c6",
       "file": "worker/auth.ts",
-      "line": 4517,
+      "line": 4518,
       "containingFunction": "verifyEmailChallenge",
       "occurrence": 129,
       "executionMode": "first",
@@ -2980,7 +2980,7 @@
     {
       "callSiteId": "da695cee1b1612fc70c54d3a",
       "file": "worker/auth.ts",
-      "line": 4721,
+      "line": 4722,
       "containingFunction": "map-callback",
       "occurrence": 130,
       "executionMode": "batch",
@@ -3002,7 +3002,7 @@
     {
       "callSiteId": "7a576f7b7d6838d86758ca8e",
       "file": "worker/auth.ts",
-      "line": 4729,
+      "line": 4730,
       "containingFunction": "map-callback",
       "occurrence": 131,
       "executionMode": "first",
@@ -3024,7 +3024,7 @@
     {
       "callSiteId": "ccdc5dcb8fa3cd8dceb22ee2",
       "file": "worker/auth.ts",
-      "line": 4769,
+      "line": 4770,
       "containingFunction": "cleanupSignupAgeProofCandidate",
       "occurrence": 132,
       "executionMode": "run",
@@ -3046,7 +3046,7 @@
     {
       "callSiteId": "f745736611b0f9b67d64a7ad",
       "file": "worker/auth.ts",
-      "line": 4784,
+      "line": 4785,
       "containingFunction": "cleanupEmailChallengeCandidate",
       "occurrence": 133,
       "executionMode": "run",
@@ -4131,7 +4131,7 @@
     {
       "callSiteId": "c28ae8d8cab28b58cd995962",
       "file": "worker/trip-review-queue.ts",
-      "line": 93,
+      "line": 97,
       "containingFunction": "scheduleTripReview",
       "occurrence": 1,
       "executionMode": "run",
@@ -4153,7 +4153,7 @@
     {
       "callSiteId": "2672cc32f69d89712fbe5ef0",
       "file": "worker/trip-review-queue.ts",
-      "line": 127,
+      "line": 131,
       "containingFunction": "dispatchAiReviewBacklog",
       "occurrence": 2,
       "executionMode": "all",
@@ -4176,7 +4176,7 @@
     {
       "callSiteId": "93cbb5f80306500dbcff8832",
       "file": "worker/trip-review-queue.ts",
-      "line": 139,
+      "line": 143,
       "containingFunction": "dispatchAiReviewBacklog",
       "occurrence": 3,
       "executionMode": "all",
@@ -4198,7 +4198,7 @@
     {
       "callSiteId": "587fc95c8aa23fb56d5abec8",
       "file": "worker/trip-review-queue.ts",
-      "line": 205,
+      "line": 209,
       "containingFunction": "ensureAiReviewJob",
       "occurrence": 4,
       "executionMode": "run",
@@ -4222,7 +4222,7 @@
     {
       "callSiteId": "a1b767b2d49b4b6d0a521c77",
       "file": "worker/trip-review-queue.ts",
-      "line": 231,
+      "line": 235,
       "containingFunction": "ensureAiReviewJob",
       "occurrence": 5,
       "executionMode": "first",
@@ -4244,7 +4244,7 @@
     {
       "callSiteId": "509abcb5b40dc6a07185d893",
       "file": "worker/trip-review-queue.ts",
-      "line": 256,
+      "line": 260,
       "containingFunction": "dispatchJob",
       "occurrence": 6,
       "executionMode": "run",
@@ -4266,7 +4266,7 @@
     {
       "callSiteId": "54de30c71342754adcd837fe",
       "file": "worker/trip-review-queue.ts",
-      "line": 269,
+      "line": 273,
       "containingFunction": "dispatchJob",
       "occurrence": 7,
       "executionMode": "first",
@@ -4288,7 +4288,7 @@
     {
       "callSiteId": "a707aef00e0238e37c421c0c",
       "file": "worker/trip-review-queue.ts",
-      "line": 278,
+      "line": 282,
       "containingFunction": "dispatchJob",
       "occurrence": 8,
       "executionMode": "run",
@@ -4310,7 +4310,7 @@
     {
       "callSiteId": "ee1e5f42888b837278687bef",
       "file": "worker/trip-review-queue.ts",
-      "line": 301,
+      "line": 305,
       "containingFunction": "consumeMessage",
       "occurrence": 9,
       "executionMode": "run",
@@ -4332,7 +4332,7 @@
     {
       "callSiteId": "66b429f3a682209ab3637faf",
       "file": "worker/trip-review-queue.ts",
-      "line": 314,
+      "line": 318,
       "containingFunction": "consumeMessage",
       "occurrence": 10,
       "executionMode": "first",
@@ -4354,7 +4354,7 @@
     {
       "callSiteId": "40ab7367dd1642580b6b9e69",
       "file": "worker/trip-review-queue.ts",
-      "line": 325,
+      "line": 329,
       "containingFunction": "consumeMessage",
       "occurrence": 11,
       "executionMode": "run",
@@ -4377,7 +4377,7 @@
     {
       "callSiteId": "65073b81a37752648fa70c03",
       "file": "worker/trip-review-queue.ts",
-      "line": 334,
+      "line": 338,
       "containingFunction": "consumeMessage",
       "occurrence": 12,
       "executionMode": "first",
@@ -4399,7 +4399,7 @@
     {
       "callSiteId": "80c8f3990498f7b65dd0adb4",
       "file": "worker/trip-review-queue.ts",
-      "line": 340,
+      "line": 344,
       "containingFunction": "consumeMessage",
       "occurrence": 13,
       "executionMode": "run",
@@ -4421,7 +4421,7 @@
     {
       "callSiteId": "51398a4f9306ad4aeca18fd3",
       "file": "worker/trip-review-queue.ts",
-      "line": 358,
+      "line": 362,
       "containingFunction": "consumeMessage",
       "occurrence": 14,
       "executionMode": "prepared-statement",
@@ -4443,7 +4443,7 @@
     {
       "callSiteId": "cac05ee821169a97dba40b33",
       "file": "worker/trip-review-queue.ts",
-      "line": 372,
+      "line": 376,
       "containingFunction": "consumeMessage",
       "occurrence": 15,
       "executionMode": "batch",
@@ -4466,7 +4466,7 @@
     {
       "callSiteId": "89309bc12a0abb8568796598",
       "file": "worker/trip-review-queue.ts",
-      "line": 396,
+      "line": 400,
       "containingFunction": "settleUnclaimedMessage",
       "occurrence": 16,
       "executionMode": "first",
@@ -4488,7 +4488,7 @@
     {
       "callSiteId": "cfb3cb384611fc5fbe9ca22d",
       "file": "worker/trip-review-queue.ts",
-      "line": 409,
+      "line": 413,
       "containingFunction": "settleUnclaimedMessage",
       "occurrence": 17,
       "executionMode": "first",
@@ -4510,7 +4510,7 @@
     {
       "callSiteId": "6865de88eeabb900b3c745e4",
       "file": "worker/trip-review-queue.ts",
-      "line": 440,
+      "line": 444,
       "containingFunction": "deferMessage",
       "occurrence": 18,
       "executionMode": "run",
@@ -4532,7 +4532,7 @@
     {
       "callSiteId": "91bf2bdd89e5d1c20bd2dc9f",
       "file": "worker/trip-review-queue.ts",
-      "line": 455,
+      "line": 459,
       "containingFunction": "settleAfterOwnedMutation",
       "occurrence": 19,
       "executionMode": "first",
@@ -4552,24 +4552,24 @@
       "hasLimit": true
     },
     {
-      "callSiteId": "2c46f2b1cba8116ccb9e7024",
+      "callSiteId": "2af69a64cf542ba2f6eed527",
       "file": "worker/trip-review-queue.ts",
-      "line": 480,
+      "line": 484,
       "containingFunction": "settleAbandonedJob",
       "occurrence": 20,
       "executionMode": "batch",
       "argumentKind": "literal",
-      "expression": "`UPDATE trips SET ai_review_status = 'needs_attention', ai_review_json = NULL,\n          ai_review_model = NULL, ai_reviewed_at = NULL\n        WHERE id = ? AND (ai_review_status IS NULL OR ai_review_status != 'reviewed')\n          AND EXISTS (SELECT 1 FROM ai_review_jobs WHERE id = ? AND attempts >= ?\n            AND ((state = 'pending' OR state = 'queued' OR state = 'retry')\n              OR (state = 'processing' AND (lease_expires_at IS NULL OR lease_expires_at <= ?))))`",
-      "expressionSha256": "cc206a923cb54033919f097f54ad39b410e669a77dab77d96e4a119a65cbc49a",
+      "expression": "`UPDATE trips SET ai_review_status = 'needs_attention', ai_review_json = NULL,\n          ai_review_model = NULL, ai_reviewed_at = NULL\n        WHERE id = ? AND (ai_review_status IS NULL OR ai_review_status != 'reviewed')\n          AND (ai_review_status IS NULL OR ai_review_status != 'processing'\n            OR ai_review_json IS NULL\n            OR (json_valid(ai_review_json)\n              AND json_extract(ai_review_json, '$.version') = ?\n              AND json_extract(ai_review_json, '$.leaseExpiresAt') <= ?))\n          AND EXISTS (SELECT 1 FROM ai_review_jobs WHERE id = ? AND attempts >= ?\n            AND ((state = 'pending' OR state = 'queued' OR state = 'retry')\n              OR (state = 'processing' AND (lease_expires_at IS NULL OR lease_expires_at <= ?))))`",
+      "expressionSha256": "aab36010dc85961ed0f2100f61e65099280d126546c0b99a1443dec4889cbf0b",
       "declarationReference": null,
       "statementClass": "UPDATE",
-      "sql": "UPDATE trips SET ai_review_status = 'needs_attention', ai_review_json = NULL, ai_review_model = NULL, ai_reviewed_at = NULL WHERE id = ? AND (ai_review_status IS NULL OR ai_review_status != 'reviewed') AND EXISTS (SELECT 1 FROM ai_review_jobs WHERE id = ? AND attempts >= ? AND ((state = 'pending' OR state = 'queued' OR state = 'retry') OR (state = 'processing' AND (lease_expires_at IS NULL OR lease_expires_at <= ?))))",
-      "sqlSha256": "5efc31d5300b71caf969148c7f3f06a87dc7b637e9250d43257730682295c16d",
+      "sql": "UPDATE trips SET ai_review_status = 'needs_attention', ai_review_json = NULL, ai_review_model = NULL, ai_reviewed_at = NULL WHERE id = ? AND (ai_review_status IS NULL OR ai_review_status != 'reviewed') AND (ai_review_status IS NULL OR ai_review_status != 'processing' OR ai_review_json IS NULL OR (json_valid(ai_review_json) AND json_extract(ai_review_json, '$.version') = ? AND json_extract(ai_review_json, '$.leaseExpiresAt') <= ?)) AND EXISTS (SELECT 1 FROM ai_review_jobs WHERE id = ? AND attempts >= ? AND ((state = 'pending' OR state = 'queued' OR state = 'retry') OR (state = 'processing' AND (lease_expires_at IS NULL OR lease_expires_at <= ?))))",
+      "sqlSha256": "0f8751c3782ec8ba141aa75792b3a114a80b438e06c9ad23fbb1e580750137c0",
       "tables": [
         "ai_review_jobs",
         "trips"
       ],
-      "placeholderCount": 4,
+      "placeholderCount": 6,
       "hasWhere": true,
       "hasOrderBy": false,
       "hasLimit": false
@@ -4577,7 +4577,7 @@
     {
       "callSiteId": "8aa848012ff82123a9dd6eef",
       "file": "worker/trip-review-queue.ts",
-      "line": 487,
+      "line": 496,
       "containingFunction": "settleAbandonedJob",
       "occurrence": 21,
       "executionMode": "batch",

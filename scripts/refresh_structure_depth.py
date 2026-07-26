@@ -12,6 +12,7 @@ import argparse
 import hashlib
 import json
 import math
+import os
 import re
 import tempfile
 import urllib.parse
@@ -81,10 +82,19 @@ def sha256_path(path: Path) -> str:
 
 def write_atomic(path: Path, body: bytes) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
-    with tempfile.NamedTemporaryFile(dir=path.parent, delete=False) as temporary:
-        temporary.write(body)
-        temporary_path = Path(temporary.name)
-    temporary_path.replace(path)
+    temporary_path: Path | None = None
+    try:
+        with tempfile.NamedTemporaryFile(dir=path.parent, delete=False) as temporary:
+            temporary.write(body)
+            temporary.flush()
+            os.fsync(temporary.fileno())
+            temporary_path = Path(temporary.name)
+        temporary_path.chmod(0o644)
+        temporary_path.replace(path)
+        temporary_path = None
+    finally:
+        if temporary_path is not None:
+            temporary_path.unlink(missing_ok=True)
 
 
 def parse_as_of(raw: str | None) -> datetime:
@@ -125,7 +135,17 @@ def load_inputs() -> tuple[dict[str, Any], list[dict[str, Any]], bytes, bytes]:
         raise StructureDepthError("unsafe-catalog-mutation-policy")
     if not isinstance(sites, list):
         raise StructureDepthError("invalid-site-catalog")
-    site_by_id = {site.get("id"): site for site in sites if isinstance(site, dict)}
+    if any(not isinstance(site, dict) for site in sites):
+        raise StructureDepthError("invalid-site-catalog")
+    site_ids = [site.get("id") for site in sites]
+    if any(
+        not isinstance(site_id, str) or not SAFE_TAG_PATTERN.fullmatch(site_id)
+        for site_id in site_ids
+    ):
+        raise StructureDepthError("invalid-site-catalog")
+    if len(set(site_ids)) != len(site_ids):
+        raise StructureDepthError("duplicate-site-id")
+    site_by_id = {site["id"]: site for site in sites}
     expected_ids = policy.get("covered_site_ids")
     if (
         not isinstance(expected_ids, list)
@@ -616,6 +636,11 @@ def get_query(site_snapshot: dict[str, Any], key: str) -> dict[str, Any]:
     return query
 
 
+def require_aggregate_bound(values: Any, maximum: int) -> None:
+    if len(values) > maximum:
+        raise StructureDepthError("source-aggregate-bound-exceeded")
+
+
 def derive_depth(
     site: dict[str, Any],
     site_snapshot: dict[str, Any],
@@ -685,6 +710,13 @@ def derive_depth(
         all_features = sector_soundings + context_soundings + contours + areas
         dates, partial_dates, has_undated_records = source_dates(all_features)
         cells = source_cells(all_features)
+        require_aggregate_bound(bands, 40)
+        require_aggregate_bound(contour_depths, 80)
+        require_aggregate_bound(sector_depths, 200)
+        require_aggregate_bound(deduplicated_context, 1_000)
+        require_aggregate_bound(dates, 80)
+        require_aggregate_bound(partial_dates, 80)
+        require_aggregate_bound(cells, 80)
     except StructureDepthError:
         return {
             "status": "source-unavailable",
@@ -790,6 +822,11 @@ def derive_structure(
             group["partialDates"].update(partial_dates)
             group["hasUndatedRecords"] = group["hasUndatedRecords"] or has_undated_records
             group["cells"].update(source_cells(query["features"]))
+        for group in grouped.values():
+            require_aggregate_bound(group["features"], 1_000)
+            require_aggregate_bound(group["dates"], 80)
+            require_aggregate_bound(group["partialDates"], 80)
+            require_aggregate_bound(group["cells"], 80)
         charted = [
             {
                 "category": category,
@@ -803,6 +840,7 @@ def derive_structure(
             for category, group in sorted(grouped.items())
             if group["features"]
         ]
+        require_aggregate_bound(charted, 20)
     except StructureDepthError:
         return {
             "status": "source-unavailable",

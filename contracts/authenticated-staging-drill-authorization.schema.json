@@ -96,10 +96,10 @@
         "exact_source_deployed"
       ],
       "properties": {
-        "synthetic_data_only": { "type": "boolean" },
-        "production_bindings_attached": { "type": "boolean" },
-        "production_user_data_accessible": { "type": "boolean" },
-        "real_ai_provider_credentials_attached": { "type": "boolean" },
+        "synthetic_data_only": { "const": true },
+        "production_bindings_attached": { "const": false },
+        "production_user_data_accessible": { "const": false },
+        "real_ai_provider_credentials_attached": { "const": false },
         "exercise_service_binding_attached": { "type": "boolean" },
         "email_sink_only": { "type": "boolean" },
         "outbound_callbacks_disabled": { "type": "boolean" },

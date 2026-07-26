@@ -64,6 +64,8 @@ test("San Mateo mapping audit rejects malformed registry coordinates", async (t)
     ],
     { cwd: new URL("..", import.meta.url), encoding: "utf8" },
   );
+  assert.equal(result.error, undefined, String(result.error));
+  assert.equal(typeof result.status, "number");
   assert.notEqual(result.status, 0);
   await assert.rejects(readFile(output));
 });

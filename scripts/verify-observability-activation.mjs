@@ -13,7 +13,7 @@ import {
   unlinkSync,
   writeFileSync,
 } from "node:fs";
-import { basename, dirname, isAbsolute, relative, resolve } from "node:path";
+import { basename, dirname, isAbsolute, relative, resolve, sep } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
 export const POLICY_SCHEMA_VERSION =
@@ -616,8 +616,7 @@ function privateTemplateOutputPath(outputFile) {
   }
   const parentReal = realpathSync(parent);
   const rootReal = realpathSync(ROOT);
-  const fromRoot = relative(rootReal, parentReal);
-  if (fromRoot === "" || (!fromRoot.startsWith("..") && !isAbsolute(fromRoot))) {
+  if (!isOutsideRoot(rootReal, parentReal)) {
     refuse("private-file-required", "Template output must remain outside the repository");
   }
   if ((parentMetadata.mode & 0o077) !== 0) {
@@ -713,8 +712,7 @@ export function loadPrivateEvidence(path, policy = loadPolicy()) {
     refuse("private-file-required", "Evidence file is empty or exceeds its byte limit");
   }
   const actual = realpathSync(requested);
-  const fromRoot = relative(ROOT, actual);
-  if (fromRoot === "" || (!fromRoot.startsWith("..") && !isAbsolute(fromRoot))) {
+  if (!isOutsideRoot(realpathSync(ROOT), actual)) {
     refuse("private-file-required", "Evidence file must remain outside the repository");
   }
   let descriptor;
@@ -841,4 +839,8 @@ if (import.meta.url === pathToFileURL(process.argv[1]).href) {
     }
     throw error;
   }
+}
+function isOutsideRoot(rootReal, candidate) {
+  const fromRoot = relative(rootReal, candidate);
+  return fromRoot === ".." || fromRoot.startsWith(`..${sep}`) || isAbsolute(fromRoot);
 }

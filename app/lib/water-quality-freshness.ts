@@ -50,11 +50,11 @@ function expireNeutralAssessment(
     || sampleOrdinals.length === 0
     || sampleOrdinals.some((ordinal) => ordinal === null)
   );
-  const stale = invalid || sampleOrdinals.some((ordinal) => (
-    ordinal === null
-    || currentOrdinal - ordinal < 0
-    || currentOrdinal - ordinal > maximumSampleAgeDays
-  ));
+  const stale = invalid || currentOrdinal === null || sampleOrdinals.some((ordinal) => {
+    if (ordinal === null) return true;
+    const ageDays = currentOrdinal - ordinal;
+    return ageDays < 0 || ageDays > maximumSampleAgeDays;
+  });
   if (!stale) return assessment;
   return {
     ...assessment,

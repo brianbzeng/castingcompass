@@ -55,7 +55,8 @@ test("published advisory overlay is contract-bound and never boosts the score", 
   ]);
   const ajv = new Ajv2020({ allErrors: true, strict: true });
   addFormats(ajv);
-  assert.equal(ajv.validate(schema, overlay), true, JSON.stringify(ajv.errors));
+  const validate = ajv.compile(schema);
+  assert.equal(validate(overlay), true, JSON.stringify(validate.errors));
   assert.equal(overlay.schemaVersion, "castingcompass.water-quality-advisory/2.0.0");
   assert.equal(overlay.policyVersion, policy.policy_version);
   assert.equal(overlay.policySha256, sha256(policyBytes));
@@ -72,6 +73,10 @@ test("published advisory overlay is contract-bound and never boosts the score", 
   assert.match(interfaceSource, /does not improve this fishing score/);
   assert.match(disclosure, /broader roadmap item stays open/i);
   assert.match(disclosure, /every numeric scoreDelta remains null/i);
+  assert.equal(validate({ ...overlay, sites: {} }), false);
+  const mismatched = structuredClone(overlay);
+  mismatched.sites["baker-beach"].recommendationEffect = "suppress";
+  assert.equal(validate(mismatched), false);
 });
 
 test("deterministic fixtures preserve source-specific suppression, neutral, unknown, and uncovered states", async (t) => {

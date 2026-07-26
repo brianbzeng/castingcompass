@@ -16,6 +16,7 @@ import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { spawnSync } from "node:child_process";
 import test from "node:test";
+import { fileURLToPath } from "node:url";
 
 import {
   LOCKED_REVIEW_TARGET_SHA256,
@@ -32,7 +33,7 @@ import {
   writeReviewTemplate,
 } from "../scripts/verify-water-quality-mapping-independent-review.mjs";
 
-const root = new URL("../", import.meta.url).pathname;
+const root = fileURLToPath(new URL("../", import.meta.url));
 const target = await loadReviewTarget(root);
 
 function digest(label) {

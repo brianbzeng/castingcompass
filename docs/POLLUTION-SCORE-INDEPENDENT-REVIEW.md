@@ -32,7 +32,7 @@ Both reviews bind to the exact final receipt head of draft PR `#145`:
 
 - source commit: `9fd337d561056fef5227eb013fa8f7b909f69343`
 - policy version: `castingcompass.pollution-score-candidates/0.1.0`
-- policy SHA-256: `1061fcffec8283bf48e333a20a58ac8ea77545f5537f1d68685dda267d89d250`
+- policy SHA-256: `396c00e770a87bc65bcd4ad6342146d4e9f7113f0c61315fe543fee99035e2ae`
 
 Obtain the full source commit through a channel independent of the review template and confirm it
 against the protected repository history. A later policy edit, new source, new meaning, collector,
