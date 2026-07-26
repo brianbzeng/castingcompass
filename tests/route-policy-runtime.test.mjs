@@ -27,7 +27,11 @@ test("every declared API route example resolves to its exact executable policy",
     const method = policy.methods[0] === "*" ? "OPTIONS" : policy.methods[0];
     assert.equal(apiRoutePolicyForRequest(request(policy.examplePath, method))?.id, policy.id, policy.id);
     const mutates = policy.methods.some((method) => ["POST", "PUT", "PATCH", "DELETE"].includes(method));
-    if (mutates && policy.id !== "auth.signup_retired") {
+    if (mutates && ![
+      "auth.signup_retired",
+      "native_oauth.token",
+      "native_oauth.revoke",
+    ].includes(policy.id)) {
       assert.equal(policy.sameOriginRequired, true, policy.id);
     }
     if (policy.currentLegalAcceptanceRequired) {
@@ -87,6 +91,8 @@ test("every declared API route example resolves to its exact executable policy",
       "auth.password_request",
       "auth.password_reset",
       "auth.login",
+      "native_oauth.token",
+      "native_oauth.revoke",
       "trips.summary",
       "discussions.site",
     ],
@@ -122,6 +128,7 @@ test("public execution requires the exact independently reviewed policy contract
     { ...login, sameOriginRequired: false },
     { ...login, currentLegalAcceptanceRequired: true },
     { ...login, deletionFenceAccessAllowed: true },
+    { ...login, nativeScopes: ["profile:read"] },
     { ...login, rateLimitTags: [] },
     { ...login, rateLimitTags: ["email", "auth"] },
   ]) {
@@ -165,6 +172,7 @@ test("owner execution requires the exact independently reviewed request and cont
     { ...exportDownload, sameOriginRequired: true },
     { ...exportDownload, currentLegalAcceptanceRequired: true },
     { ...exportDownload, deletionFenceAccessAllowed: false },
+    { ...exportDownload, nativeScopes: ["profile:read"] },
     { ...exportDownload, rateLimitTags: [] },
     { ...exportDownload, rateLimitTags: ["auth", "sensitive"] },
   ]) {
@@ -252,6 +260,7 @@ test("receipt execution requires the exact independently reviewed request and co
     { ...receipt, sameOriginRequired: true },
     { ...receipt, currentLegalAcceptanceRequired: true },
     { ...receipt, deletionFenceAccessAllowed: true },
+    { ...receipt, nativeScopes: ["profile:read"] },
     { ...receipt, rateLimitTags: ["sensitive"] },
   ]) {
     assert.equal(isReviewedReceiptApiRequest(receiptRequest, drifted), false, JSON.stringify(drifted));
@@ -290,6 +299,7 @@ test("optional-session execution requires the exact independently reviewed reque
     { ...logout, sameOriginRequired: false },
     { ...logout, currentLegalAcceptanceRequired: true },
     { ...logout, deletionFenceAccessAllowed: true },
+    { ...logout, nativeScopes: ["profile:read"] },
     { ...logout, rateLimitTags: ["auth"] },
   ]) {
     assert.equal(isReviewedOptionalSessionApiRequest(logoutRequest, drifted), false, JSON.stringify(drifted));
@@ -495,6 +505,36 @@ test("every same-origin policy rejects missing, opaque, malformed, noncanonical,
   });
 });
 
+test("only a strict scoped native bearer without browser-origin authority may replace CSRF origin", () => {
+  const bearer = `Bearer ${"a".repeat(43)}`;
+  const nativeTrip = request("/api/trips/start", "POST", { Authorization: bearer });
+  assert.equal(apiRouteRejectionForRequest(nativeTrip), null);
+
+  for (const headers of [
+    { Authorization: "Bearer malformed" },
+    { Authorization: bearer, Cookie: "__Host-cc_session=ambient" },
+    { Authorization: bearer, Origin: "https://attacker.example" },
+    { Authorization: bearer, Origin: "null" },
+  ]) {
+    assert.deepEqual(apiRouteRejectionForRequest(request("/api/trips/start", "POST", headers)), {
+      status: 403,
+      code: "invalid_origin",
+      message: "State-changing requests must come from CastingCompass.",
+      allowedMethods: [],
+    });
+  }
+
+  assert.deepEqual(
+    apiRouteRejectionForRequest(request("/api/gear-profiles", "POST", { Authorization: bearer })),
+    {
+      status: 403,
+      code: "invalid_origin",
+      message: "State-changing requests must come from CastingCompass.",
+      allowedMethods: [],
+    },
+  );
+});
+
 test("overlapping policies fail closed instead of granting first-match precedence", () => {
   const tripStart = API_ROUTE_POLICIES.find((policy) => policy.id === "trips.start");
   assert.ok(tripStart);
@@ -546,7 +586,7 @@ test("overlapping policies fail closed instead of granting first-match precedenc
 });
 
 test("every literal route branch in Worker handlers is represented in the policy registry", async () => {
-  const files = ["auth.ts", "trips.ts", "turnstile.ts", "security.ts"];
+  const files = ["auth.ts", "native-auth.ts", "trips.ts", "turnstile.ts", "security.ts"];
   for (const file of files) {
     const source = await readFile(new URL(`../worker/${file}`, import.meta.url), "utf8");
     const paths = [...source.matchAll(/url\.pathname\s*[!=]==?\s*"(\/api\/[^"]+)"/g)].map((match) => match[1]);

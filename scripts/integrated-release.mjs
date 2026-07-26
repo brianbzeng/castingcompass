@@ -35,6 +35,7 @@ export const STAGED_MIGRATIONS = Object.freeze([
   "0018_ai_review_queue.sql",
   "0019_async_privacy_exports.sql",
   "0020_trip_photo_upload_reservations.sql",
+  "0021_native_oauth.sql",
 ]);
 export const ALL_RELEASE_MIGRATIONS = Object.freeze([
   ...BASE_APPLIED_MIGRATIONS,
@@ -157,6 +158,26 @@ const STAGE_ABSENCE_QUERIES = Object.freeze({
         ))
       + (SELECT COUNT(*) FROM pragma_table_info('trips')
         WHERE name = 'photo_key_hash') AS target_artifacts_found`,
+  "0021_native_oauth.sql": `
+    SELECT
+      (SELECT COUNT(*) FROM sqlite_master
+        WHERE type = 'table' AND name IN (
+          'native_oauth_authorization_codes',
+          'native_oauth_refresh_families',
+          'native_oauth_refresh_tokens',
+          'native_oauth_access_tokens'
+        ))
+      + (SELECT COUNT(*) FROM sqlite_master
+        WHERE type = 'index' AND name IN (
+          'native_oauth_authorization_codes_expiry_idx',
+          'native_oauth_authorization_codes_user_client_expiry_idx',
+          'native_oauth_refresh_families_user_idx',
+          'native_oauth_refresh_families_expiry_idx',
+          'native_oauth_refresh_tokens_expiry_idx',
+          'native_oauth_access_tokens_user_idx',
+          'native_oauth_access_tokens_family_idx',
+          'native_oauth_access_tokens_expiry_idx'
+        )) AS target_artifacts_found`,
 });
 
 function fail(label, expected, actual) {
@@ -309,6 +330,9 @@ export function verifyFinalPostflight(payload) {
     trip_photo_reservation_indexes: 5,
     trip_photo_reservation_owner_columns: 1,
     trip_photo_reservation_rows: 0,
+    native_oauth_tables: 4,
+    native_oauth_indexes: 8,
+    native_oauth_rows: 0,
     non_legacy_trip_rows: 0,
     trip_photo_locators: 0,
     trip_photo_locators_without_hash: 0,

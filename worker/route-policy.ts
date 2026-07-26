@@ -9,8 +9,11 @@
  * unambiguous security policy therefore fails closed before body parsing.
  */
 
+import type { NativeOAuthScope } from "../shared/native-auth-contract.ts";
+import { hasStrictNativeBearerCandidate } from "./native-auth.ts";
+
 export type ApiAuthorization = "public" | "optional_session" | "receipt" | "owner";
-export type ApiHandler = "health" | "turnstile" | "account" | "trips" | "discussions";
+export type ApiHandler = "health" | "turnstile" | "account" | "native_auth" | "trips" | "discussions";
 export type RequestLimitClass = "auth" | "email" | "write" | "sensitive" | "read";
 
 type ApiMethod = "GET" | "HEAD" | "POST" | "PUT" | "PATCH" | "DELETE" | "*";
@@ -25,6 +28,7 @@ export interface ApiRoutePolicy {
   sameOriginRequired: boolean;
   currentLegalAcceptanceRequired: boolean;
   deletionFenceAccessAllowed: boolean;
+  nativeScopes: readonly NativeOAuthScope[];
   rateLimitTags: readonly Exclude<RequestLimitClass, "read" | "write">[];
   matches(pathname: string): boolean;
 }
@@ -61,6 +65,7 @@ const route = (
     sameOriginRequired?: boolean;
     currentLegalAcceptanceRequired?: boolean;
     deletionFenceAccessAllowed?: boolean;
+    nativeScopes?: readonly NativeOAuthScope[];
     rateLimitTags?: readonly Exclude<RequestLimitClass, "read" | "write">[];
     matches?: (pathname: string) => boolean;
   } = {},
@@ -74,6 +79,7 @@ const route = (
   sameOriginRequired: options.sameOriginRequired ?? false,
   currentLegalAcceptanceRequired: options.currentLegalAcceptanceRequired ?? false,
   deletionFenceAccessAllowed: options.deletionFenceAccessAllowed ?? false,
+  nativeScopes: options.nativeScopes ?? [],
   rateLimitTags: options.rateLimitTags ?? [],
   matches: options.matches ?? exact(pathTemplate),
 });
@@ -194,6 +200,33 @@ export const API_ROUTE_POLICIES: readonly ApiRoutePolicy[] = [
     { sameOriginRequired: true },
   ),
   route(
+    "native_oauth.authorize",
+    "/api/native/oauth/authorize",
+    "/api/native/oauth/authorize",
+    ["POST"],
+    "owner",
+    "native_auth",
+    { sameOriginRequired: true, currentLegalAcceptanceRequired: true, rateLimitTags: ["auth", "sensitive"] },
+  ),
+  route(
+    "native_oauth.token",
+    "/api/native/oauth/token",
+    "/api/native/oauth/token",
+    ["POST"],
+    "public",
+    "native_auth",
+    { rateLimitTags: ["auth", "sensitive"] },
+  ),
+  route(
+    "native_oauth.revoke",
+    "/api/native/oauth/revoke",
+    "/api/native/oauth/revoke",
+    ["POST"],
+    "public",
+    "native_auth",
+    { rateLimitTags: ["auth", "sensitive"] },
+  ),
+  route(
     "auth.eligibility",
     "/api/auth/eligibility",
     "/api/auth/eligibility",
@@ -261,6 +294,7 @@ export const API_ROUTE_POLICIES: readonly ApiRoutePolicy[] = [
   route("profile.read", "/api/profile", "/api/profile", ["GET"], "owner", "account", {
     currentLegalAcceptanceRequired: true,
     deletionFenceAccessAllowed: true,
+    nativeScopes: ["profile:read"],
   }),
   route("profile.delete", "/api/profile", "/api/profile", ["DELETE"], "owner", "account", {
     sameOriginRequired: true,
@@ -313,7 +347,11 @@ export const API_ROUTE_POLICIES: readonly ApiRoutePolicy[] = [
     ["PATCH"],
     ownerMutation.authorization,
     "account",
-    { ...ownerMutation, matches: (path) => API_ROUTE_PATTERNS.profileTrip.test(path) },
+    {
+      ...ownerMutation,
+      nativeScopes: ["trips:write"],
+      matches: (path) => API_ROUTE_PATTERNS.profileTrip.test(path),
+    },
   ),
   route(
     "profile.trip_delete",
@@ -325,6 +363,7 @@ export const API_ROUTE_POLICIES: readonly ApiRoutePolicy[] = [
     {
       ...ownerMutation,
       rateLimitTags: ["sensitive"],
+      nativeScopes: ["trips:write"],
       matches: (path) => API_ROUTE_PATTERNS.profileTrip.test(path),
     },
   ),
@@ -350,7 +389,10 @@ export const API_ROUTE_POLICIES: readonly ApiRoutePolicy[] = [
     { ...ownerMutation, matches: (path) => API_ROUTE_PATTERNS.savedSite.test(path) },
   ),
   route("trips.summary", "/api/trips/summary", "/api/trips/summary", ["GET"], "public", "trips"),
-  route("trips.start", "/api/trips/start", "/api/trips/start", ["POST"], "owner", "trips", ownerMutation),
+  route("trips.start", "/api/trips/start", "/api/trips/start", ["POST"], "owner", "trips", {
+    ...ownerMutation,
+    nativeScopes: ["trips:write"],
+  }),
   route(
     "trips.cancel",
     "/api/trips/{tripId}/cancel",
@@ -358,7 +400,11 @@ export const API_ROUTE_POLICIES: readonly ApiRoutePolicy[] = [
     ["POST"],
     ownerMutation.authorization,
     "trips",
-    { ...ownerMutation, matches: (path) => API_ROUTE_PATTERNS.tripCancel.test(path) },
+    {
+      ...ownerMutation,
+      nativeScopes: ["trips:write"],
+      matches: (path) => API_ROUTE_PATTERNS.tripCancel.test(path),
+    },
   ),
   route(
     "trips.complete",
@@ -367,9 +413,16 @@ export const API_ROUTE_POLICIES: readonly ApiRoutePolicy[] = [
     ["POST"],
     ownerMutation.authorization,
     "trips",
-    { ...ownerMutation, matches: (path) => API_ROUTE_PATTERNS.tripComplete.test(path) },
+    {
+      ...ownerMutation,
+      nativeScopes: ["trips:write"],
+      matches: (path) => API_ROUTE_PATTERNS.tripComplete.test(path),
+    },
   ),
-  route("trips.report", "/api/trips/report", "/api/trips/report", ["POST"], "owner", "trips", ownerMutation),
+  route("trips.report", "/api/trips/report", "/api/trips/report", ["POST"], "owner", "trips", {
+    ...ownerMutation,
+    nativeScopes: ["trips:write"],
+  }),
   route(
     "discussions.site",
     "/api/discussions/{siteId}",
@@ -387,6 +440,7 @@ type ReviewedPublicApiRouteContract = Readonly<{
   methods: readonly ApiMethod[];
   handler: ApiHandler;
   sameOriginRequired: boolean;
+  nativeScopes?: readonly NativeOAuthScope[];
   rateLimitTags: readonly Exclude<RequestLimitClass, "read" | "write">[];
 }>;
 
@@ -398,6 +452,7 @@ type ReviewedOwnerApiRouteContract = Readonly<{
   sameOriginRequired: boolean;
   currentLegalAcceptanceRequired: boolean;
   deletionFenceAccessAllowed: boolean;
+  nativeScopes?: readonly NativeOAuthScope[];
   rateLimitTags: readonly Exclude<RequestLimitClass, "read" | "write">[];
 }>;
 
@@ -409,6 +464,7 @@ type ReviewedReceiptApiRouteContract = Readonly<{
   sameOriginRequired: boolean;
   currentLegalAcceptanceRequired: boolean;
   deletionFenceAccessAllowed: boolean;
+  nativeScopes?: readonly NativeOAuthScope[];
   rateLimitTags: readonly Exclude<RequestLimitClass, "read" | "write">[];
 }>;
 
@@ -420,6 +476,7 @@ type ReviewedOptionalSessionApiRouteContract = Readonly<{
   sameOriginRequired: boolean;
   currentLegalAcceptanceRequired: boolean;
   deletionFenceAccessAllowed: boolean;
+  nativeScopes?: readonly NativeOAuthScope[];
   rateLimitTags: readonly Exclude<RequestLimitClass, "read" | "write">[];
 }>;
 
@@ -527,6 +584,22 @@ const REVIEWED_PUBLIC_API_ROUTE_CONTRACTS: Readonly<Record<string, ReviewedPubli
     sameOriginRequired: true,
     rateLimitTags: ["auth"],
   },
+  "native_oauth.token": {
+    pathTemplate: "/api/native/oauth/token",
+    pathPattern: /^\/api\/native\/oauth\/token$/,
+    methods: ["POST"],
+    handler: "native_auth",
+    sameOriginRequired: false,
+    rateLimitTags: ["auth", "sensitive"],
+  },
+  "native_oauth.revoke": {
+    pathTemplate: "/api/native/oauth/revoke",
+    pathPattern: /^\/api\/native\/oauth\/revoke$/,
+    methods: ["POST"],
+    handler: "native_auth",
+    sameOriginRequired: false,
+    rateLimitTags: ["auth", "sensitive"],
+  },
   "trips.summary": {
     pathTemplate: "/api/trips/summary",
     pathPattern: /^\/api\/trips\/summary$/,
@@ -552,6 +625,17 @@ const REVIEWED_PUBLIC_API_ROUTE_CONTRACTS: Readonly<Record<string, ReviewedPubli
  * stronger abuse tags before the Worker resolves a session or reads a body.
  */
 const REVIEWED_OWNER_API_ROUTE_CONTRACTS: Readonly<Record<string, ReviewedOwnerApiRouteContract>> = {
+  "native_oauth.authorize": {
+    pathTemplate: "/api/native/oauth/authorize",
+    pathPattern: /^\/api\/native\/oauth\/authorize$/,
+    methods: ["POST"],
+    handler: "native_auth",
+    sameOriginRequired: true,
+    currentLegalAcceptanceRequired: true,
+    deletionFenceAccessAllowed: false,
+    nativeScopes: [],
+    rateLimitTags: ["auth", "sensitive"],
+  },
   "auth.eligibility": {
     pathTemplate: "/api/auth/eligibility",
     pathPattern: /^\/api\/auth\/eligibility$/,
@@ -620,6 +704,7 @@ const REVIEWED_OWNER_API_ROUTE_CONTRACTS: Readonly<Record<string, ReviewedOwnerA
     sameOriginRequired: false,
     currentLegalAcceptanceRequired: true,
     deletionFenceAccessAllowed: true,
+    nativeScopes: ["profile:read"],
     rateLimitTags: [],
   },
   "profile.delete": {
@@ -690,6 +775,7 @@ const REVIEWED_OWNER_API_ROUTE_CONTRACTS: Readonly<Record<string, ReviewedOwnerA
     sameOriginRequired: true,
     currentLegalAcceptanceRequired: true,
     deletionFenceAccessAllowed: false,
+    nativeScopes: ["trips:write"],
     rateLimitTags: [],
   },
   "profile.trip_delete": {
@@ -700,6 +786,7 @@ const REVIEWED_OWNER_API_ROUTE_CONTRACTS: Readonly<Record<string, ReviewedOwnerA
     sameOriginRequired: true,
     currentLegalAcceptanceRequired: true,
     deletionFenceAccessAllowed: false,
+    nativeScopes: ["trips:write"],
     rateLimitTags: ["sensitive"],
   },
   "saved_sites.read": {
@@ -740,6 +827,7 @@ const REVIEWED_OWNER_API_ROUTE_CONTRACTS: Readonly<Record<string, ReviewedOwnerA
     sameOriginRequired: true,
     currentLegalAcceptanceRequired: true,
     deletionFenceAccessAllowed: false,
+    nativeScopes: ["trips:write"],
     rateLimitTags: [],
   },
   "trips.cancel": {
@@ -750,6 +838,7 @@ const REVIEWED_OWNER_API_ROUTE_CONTRACTS: Readonly<Record<string, ReviewedOwnerA
     sameOriginRequired: true,
     currentLegalAcceptanceRequired: true,
     deletionFenceAccessAllowed: false,
+    nativeScopes: ["trips:write"],
     rateLimitTags: [],
   },
   "trips.complete": {
@@ -760,6 +849,7 @@ const REVIEWED_OWNER_API_ROUTE_CONTRACTS: Readonly<Record<string, ReviewedOwnerA
     sameOriginRequired: true,
     currentLegalAcceptanceRequired: true,
     deletionFenceAccessAllowed: false,
+    nativeScopes: ["trips:write"],
     rateLimitTags: [],
   },
   "trips.report": {
@@ -770,6 +860,7 @@ const REVIEWED_OWNER_API_ROUTE_CONTRACTS: Readonly<Record<string, ReviewedOwnerA
     sameOriginRequired: true,
     currentLegalAcceptanceRequired: true,
     deletionFenceAccessAllowed: false,
+    nativeScopes: ["trips:write"],
     rateLimitTags: [],
   },
 };
@@ -843,6 +934,7 @@ export function isReviewedPublicApiRequest(request: Request, policy: ApiRoutePol
     policy.sameOriginRequired === reviewed.sameOriginRequired &&
     policy.currentLegalAcceptanceRequired === false &&
     policy.deletionFenceAccessAllowed === false &&
+    sameOrderedValues(policy.nativeScopes, reviewed.nativeScopes ?? []) &&
     sameOrderedValues(policy.rateLimitTags, reviewed.rateLimitTags);
 }
 
@@ -859,6 +951,7 @@ export function isReviewedOwnerApiRequest(request: Request, policy: ApiRoutePoli
     policy.sameOriginRequired === reviewed.sameOriginRequired &&
     policy.currentLegalAcceptanceRequired === reviewed.currentLegalAcceptanceRequired &&
     policy.deletionFenceAccessAllowed === reviewed.deletionFenceAccessAllowed &&
+    sameOrderedValues(policy.nativeScopes, reviewed.nativeScopes ?? []) &&
     sameOrderedValues(policy.rateLimitTags, reviewed.rateLimitTags);
 }
 
@@ -875,6 +968,7 @@ export function isReviewedReceiptApiRequest(request: Request, policy: ApiRoutePo
     policy.sameOriginRequired === reviewed.sameOriginRequired &&
     policy.currentLegalAcceptanceRequired === reviewed.currentLegalAcceptanceRequired &&
     policy.deletionFenceAccessAllowed === reviewed.deletionFenceAccessAllowed &&
+    sameOrderedValues(policy.nativeScopes, reviewed.nativeScopes ?? []) &&
     sameOrderedValues(policy.rateLimitTags, reviewed.rateLimitTags);
 }
 
@@ -891,6 +985,7 @@ export function isReviewedOptionalSessionApiRequest(request: Request, policy: Ap
     policy.sameOriginRequired === reviewed.sameOriginRequired &&
     policy.currentLegalAcceptanceRequired === reviewed.currentLegalAcceptanceRequired &&
     policy.deletionFenceAccessAllowed === reviewed.deletionFenceAccessAllowed &&
+    sameOrderedValues(policy.nativeScopes, reviewed.nativeScopes ?? []) &&
     sameOrderedValues(policy.rateLimitTags, reviewed.rateLimitTags);
 }
 
@@ -968,7 +1063,12 @@ export function apiRouteRejectionForRequest(
     };
   }
   if (matches.length === 1) {
-    if (matches[0].sameOriginRequired && !requestHasSameOrigin(request)) {
+    const bearerMaySubstituteForOrigin =
+      matches[0].authorization === "owner" &&
+      matches[0].nativeScopes.length > 0 &&
+      !request.headers.has("Origin") &&
+      hasStrictNativeBearerCandidate(request);
+    if (matches[0].sameOriginRequired && !requestHasSameOrigin(request) && !bearerMaySubstituteForOrigin) {
       return {
         status: 403,
         code: "invalid_origin",

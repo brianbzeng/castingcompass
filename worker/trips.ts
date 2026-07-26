@@ -631,6 +631,7 @@ export interface TripHandlerOptions {
   store?: TripStore;
   now?: () => Date;
   accountId?: string | null;
+  requestAuthority?: "browser_cookie" | "native_access_token";
   onTripCompleted?: (trip: TripRow) => void;
 }
 
@@ -2454,7 +2455,7 @@ export async function handleTripRequest(
     }
 
     if (request.method !== "POST") return methodNotAllowed("POST");
-    assertSameOrigin(request);
+    if (options.requestAuthority !== "native_access_token") assertSameOrigin(request);
 
     if (url.pathname === "/api/trips/start") {
       assertContentType(request, "application/json");

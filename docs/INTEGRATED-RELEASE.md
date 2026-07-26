@@ -1,7 +1,7 @@
 # Integrated production release
 
 This runbook is the authoritative path for the first release containing migrations
-`0009` through `0020`. It exists because production has a known, narrowly bounded drift:
+`0009` through `0021`. It exists because production has a known, narrowly bounded drift:
 the eight nullable `0007_legal_acceptance.sql` columns are already present, while the D1
 migration ledger records only `0000` through `0006`. Running Wrangler against the normal
 `drizzle` directory would try `0007` again and then every later migration. Do not run raw
@@ -40,8 +40,8 @@ Checkout verification, static confirmation flags, or a previous phase's packet c
 | Phase | Worker serving traffic | Permitted schema state | Safe recovery |
 | --- | --- | --- | --- |
 | A | pinned discussion safety floor | through `0010` | route back to the recorded safety version |
-| B | reviewed full release with maintenance on | `0010` through `0018` | remain on the recorded maintenance version and fix forward |
-| C | reviewed full release with maintenance off | exactly through `0018` | re-enable the same release's maintenance version while investigating |
+| B | reviewed full release with maintenance on | `0010` through `0021` | remain on the recorded maintenance version and fix forward |
+| C | reviewed full release with maintenance off | exactly through `0021` | re-enable the same release's maintenance version while investigating |
 
 The safety-floor Worker is not a valid normal-traffic rollback after `0011`: the species
 contract adds completion guards that older trip writes do not satisfy. A Time Travel restore
@@ -92,7 +92,7 @@ npm run preflight:cloudflare:remote
 ```
 
 Stop unless the preflight succeeds. It must observe the exact `0000`–`0006` ledger; all eight
-`0007` columns; no `0009`–`0020` release schema or indexes; no photo locators; no
+`0007` columns; no `0009`–`0021` release schema or indexes; no photo locators; no
 foreign-key violations; and
 only aggregate user, trip, and discussion counts. Preserve its aggregate evidence hash and
 output. The zero-photo-locator result is the protected boundary that permits `0020` to add a
@@ -206,6 +206,11 @@ export RELEASE_AUTHORIZATION_FILE=/PRIVATE/ENCRYPTED/PATH/migrate-0020.json
 npm run migrate:cloudflare:remote -- \
   --confirm-primary contourcast-trips --confirm-bookmark-recorded
 
+export RELEASE_MIGRATION=0021_native_oauth.sql
+export RELEASE_AUTHORIZATION_FILE=/PRIVATE/ENCRYPTED/PATH/migrate-0021.json
+npm run migrate:cloudflare:remote -- \
+  --confirm-primary contourcast-trips --confirm-bookmark-recorded
+
 npm run postflight:cloudflare:remote
 ```
 
@@ -215,12 +220,17 @@ text trip-idempotency column; the exact empty advisory-review job table and its 
 the exact empty privacy-export job table, its five indexes, and the deletion-task storage class;
 the exact empty account-deletion-fence and trip-photo reservation tables, their six indexes, and
 the reservation owner-hash column; the exact nullable text `trips.photo_key_hash` column and zero
-photo locators missing that hash;
+photo locators missing that hash; the exact four empty native OAuth tables and their eight indexes;
 every pre-release trip classified `legacy_unverified`; zero photo locators; zero discussion
 approval metadata; zero validation activations/events; and no
 foreign-key violations. Preserve its aggregate evidence hash. Once `0011` begins, never route
 ordinary traffic to the older safety Worker. On failure, keep the maintenance bridge active
 and fix forward from a newly reviewed immutable commit.
+
+Migration `0021` only installs an empty credential ledger. It does not activate native
+authentication. Keep `NATIVE_OAUTH_ENABLED` unset or `false`, and do not configure a native
+client or redirect URI, until the isolated-staging, system-browser, physical-device, signing,
+revocation, alerting, and rollback gates in `docs/NATIVE-IOS-AUTH.md` have passed.
 
 After postflight succeeds, run `PRAGMA optimize` as a separate reviewed primary-D1 operation,
 then capture the representative `EXPLAIN QUERY PLAN` and rows-read evidence defined in

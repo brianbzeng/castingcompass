@@ -59,10 +59,15 @@ by that discovery.
 - [ ] Keep ordinary friend reports truthful. Until the separately reviewed feasibility protocol
       is activated, new reports are privacy-minimized product observations only and cannot be
       retroactively relabeled as pilot or confirmatory rows.
-- [ ] Build the narrow native collection path before TestFlight: a reviewed versioned client
-      contract, system-browser authorization code with PKCE, short-lived access tokens,
-      OS-protected token storage, rotated refresh tokens with server revocation, and no embedded
-      secret or browser-cookie reinterpretation.
+- [ ] Build the narrow native collection path before TestFlight. The local default-off server
+      boundary is implemented: exact public client/redirect, PKCE `S256`, five-minute one-use
+      codes, ten-minute access tokens, 30-day rotating refresh families, hash-only storage,
+      reuse-family revocation, idempotent revoke, strict Cookie/Bearer separation, narrow
+      `profile:read`/`trips:write` scopes, owner/legal/deletion fences, password-reset revocation,
+      bounded cleanup, guarded migration `0021`, fail-closed policy/query-plan tests, and a
+      noindex first-party browser continue page with exact query/callback/state validation. The
+      parent remains open for SwiftUI/Keychain integration with that system-browser page,
+      isolated staging, signing, physical-device acceptance, independent review, and activation.
 - [ ] Complete the owner/device gates for TestFlight: active Apple Developer membership and App
       Store Connect access, full Xcode installation, final bundle/app identity, signing and
       provisioning, accurate privacy/export-compliance metadata, physical-device acceptance, and

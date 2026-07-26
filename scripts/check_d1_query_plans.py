@@ -55,6 +55,154 @@ CHECKS = (
         ),
     ),
     PlanCheck(
+        "native authorization issuance ceiling",
+        """INSERT INTO native_oauth_authorization_codes (
+             code_hash, user_id, client_id, redirect_uri, code_challenge, scope,
+             issued_at, expires_at
+           )
+           SELECT ?, ?, ?, ?, ?, ?, ?, ?
+           WHERE EXISTS (SELECT 1 FROM users WHERE id = ?)
+             AND NOT EXISTS (SELECT 1 FROM account_deletion_fences WHERE user_id = ?)
+             AND (SELECT COUNT(*) FROM native_oauth_authorization_codes
+               WHERE user_id = ? AND client_id = ?
+                 AND consumed_at IS NULL AND expires_at > ?) < 5""",
+        (
+            "code_hash_fixture",
+            "user_fixture",
+            "com.castingcompass.ios",
+            "com.castingcompass.ios:/oauth/callback",
+            "challenge_fixture",
+            "profile:read trips:write",
+            "2026-07-17T00:00:00.000Z",
+            "2026-07-17T00:05:00.000Z",
+            "user_fixture",
+            "user_fixture",
+            "user_fixture",
+            "com.castingcompass.ios",
+            "2026-07-17T00:00:00.000Z",
+        ),
+        (
+            "sqlite_autoindex_users_1",
+            "sqlite_autoindex_account_deletion_fences_1",
+            "native_oauth_authorization_codes_user_client_expiry_idx",
+        ),
+    ),
+    PlanCheck(
+        "native access credential lookup",
+        """SELECT
+             users.id, users.email, users.age_eligibility_confirmed_at,
+             users.terms_accepted_at, users.terms_version,
+             users.privacy_accepted_at, users.privacy_version,
+             users.created_at, users.updated_at,
+             native_oauth_access_tokens.expires_at AS access_expires_at,
+             native_oauth_access_tokens.client_id,
+             native_oauth_access_tokens.scope,
+             CASE WHEN users.age_eligibility_confirmed_at IS NOT NULL THEN 1 ELSE 0 END AS age_eligible,
+             CASE WHEN users.age_eligibility_confirmed_at IS NOT NULL
+               AND users.terms_version = ? AND users.privacy_version = ?
+               THEN 1 ELSE 0 END AS legal_accepted,
+             CASE WHEN EXISTS (SELECT 1 FROM account_deletion_fences
+               WHERE account_deletion_fences.user_id = users.id)
+               THEN 1 ELSE 0 END AS deletion_fenced
+           FROM native_oauth_access_tokens
+           JOIN native_oauth_refresh_families
+             ON native_oauth_refresh_families.id = native_oauth_access_tokens.family_id
+           JOIN users ON users.id = native_oauth_access_tokens.user_id
+           WHERE native_oauth_access_tokens.token_hash = ?
+             AND native_oauth_access_tokens.client_id = ?
+             AND native_oauth_access_tokens.expires_at > ?
+             AND native_oauth_access_tokens.revoked_at IS NULL
+             AND native_oauth_refresh_families.client_id = ?
+             AND native_oauth_refresh_families.expires_at > ?
+             AND native_oauth_refresh_families.revoked_at IS NULL
+           LIMIT 1""",
+        (
+            "2026-07-16",
+            "2026-07-16",
+            "access_hash_fixture",
+            "com.castingcompass.ios",
+            "2026-07-17T00:00:00.000Z",
+            "com.castingcompass.ios",
+            "2026-07-17T00:00:00.000Z",
+        ),
+        (
+            "sqlite_autoindex_native_oauth_access_tokens_1",
+            "sqlite_autoindex_native_oauth_refresh_families_1",
+            "sqlite_autoindex_users_1",
+            "sqlite_autoindex_account_deletion_fences_1",
+        ),
+    ),
+    PlanCheck(
+        "native refresh credential lookup",
+        """SELECT
+             native_oauth_refresh_tokens.family_id,
+             native_oauth_refresh_tokens.generation,
+             native_oauth_refresh_tokens.created_at,
+             native_oauth_refresh_tokens.expires_at AS token_expires_at,
+             native_oauth_refresh_tokens.consumed_at,
+             native_oauth_refresh_tokens.consumed_by,
+             native_oauth_refresh_tokens.successor_token_hash,
+             native_oauth_refresh_families.user_id,
+             native_oauth_refresh_families.client_id,
+             native_oauth_refresh_families.scope,
+             native_oauth_refresh_families.expires_at AS family_expires_at,
+             native_oauth_refresh_families.revoked_at
+           FROM native_oauth_refresh_tokens
+           JOIN native_oauth_refresh_families
+             ON native_oauth_refresh_families.id = native_oauth_refresh_tokens.family_id
+           WHERE native_oauth_refresh_tokens.token_hash = ? LIMIT 1""",
+        ("refresh_hash_fixture",),
+        (
+            "sqlite_autoindex_native_oauth_refresh_tokens_1",
+            "sqlite_autoindex_native_oauth_refresh_families_1",
+        ),
+    ),
+    PlanCheck(
+        "expired native authorization codes",
+        """DELETE FROM native_oauth_authorization_codes WHERE code_hash IN (
+             SELECT code_hash FROM native_oauth_authorization_codes
+             WHERE expires_at <= ? ORDER BY expires_at, code_hash LIMIT ?
+           )""",
+        ("2026-07-17T00:00:00.000Z", 100),
+        ("native_oauth_authorization_codes_expiry_idx",),
+    ),
+    PlanCheck(
+        "expired native access tokens",
+        """DELETE FROM native_oauth_access_tokens WHERE token_hash IN (
+             SELECT token_hash FROM native_oauth_access_tokens
+             WHERE expires_at <= ? ORDER BY expires_at, token_hash LIMIT ?
+           )""",
+        ("2026-07-17T00:00:00.000Z", 100),
+        ("native_oauth_access_tokens_expiry_idx",),
+    ),
+    PlanCheck(
+        "expired native refresh tokens",
+        """DELETE FROM native_oauth_refresh_tokens WHERE token_hash IN (
+             SELECT token_hash FROM native_oauth_refresh_tokens
+             WHERE expires_at <= ? ORDER BY expires_at, token_hash LIMIT ?
+           )""",
+        ("2026-07-17T00:00:00.000Z", 100),
+        ("native_oauth_refresh_tokens_expiry_idx",),
+    ),
+    PlanCheck(
+        "expired childless native refresh families",
+        """DELETE FROM native_oauth_refresh_families WHERE id IN (
+             SELECT families.id FROM native_oauth_refresh_families AS families
+             WHERE families.expires_at <= ?
+               AND NOT EXISTS (SELECT 1 FROM native_oauth_refresh_tokens
+                 WHERE native_oauth_refresh_tokens.family_id = families.id)
+               AND NOT EXISTS (SELECT 1 FROM native_oauth_access_tokens
+                 WHERE native_oauth_access_tokens.family_id = families.id)
+             ORDER BY families.expires_at, families.id LIMIT ?
+           )""",
+        ("2026-07-17T00:00:00.000Z", 100),
+        (
+            "native_oauth_refresh_families_expiry_idx",
+            "sqlite_autoindex_native_oauth_refresh_tokens_2",
+            "native_oauth_access_tokens_family_idx",
+        ),
+    ),
+    PlanCheck(
         "exact sign-out revocation receipt",
         "SELECT COUNT(*) AS count FROM auth_sessions WHERE token_hash = ?",
         ("session_hash_fixture",),
@@ -143,6 +291,12 @@ CHECKS = (
                  AND updated_at = ?) AS exact_user_count,
              (SELECT COUNT(*) FROM users WHERE id = ?) AS any_user_count,
              (SELECT COUNT(*) FROM auth_sessions WHERE user_id = ?) AS session_count,
+             (SELECT COUNT(*) FROM native_oauth_authorization_codes
+               WHERE user_id = ?) AS native_code_count,
+             (SELECT COUNT(*) FROM native_oauth_refresh_families
+               WHERE user_id = ? AND revoked_at IS NULL) AS native_family_count,
+             (SELECT COUNT(*) FROM native_oauth_access_tokens
+               WHERE user_id = ? AND revoked_at IS NULL) AS native_access_count,
              (SELECT COUNT(*) FROM email_challenges
                WHERE id = ? AND kind = 'password_reset' AND user_id = ? AND code_hash = ?
                  AND created_at = ? AND attempts = ? AND expires_at > ?) AS exact_challenge_count,
@@ -154,6 +308,9 @@ CHECKS = (
             "salt_fixture",
             "password_hash_fixture",
             "2026-07-17T00:00:00.000Z",
+            "user_fixture",
+            "user_fixture",
+            "user_fixture",
             "user_fixture",
             "user_fixture",
             "challenge_fixture",
@@ -168,6 +325,9 @@ CHECKS = (
         (
             "sqlite_autoindex_users_1",
             "auth_sessions_user_idx",
+            "native_oauth_authorization_codes_user_client_expiry_idx",
+            "native_oauth_refresh_families_user_idx",
+            "native_oauth_access_tokens_user_idx",
             "sqlite_autoindex_email_challenges_1",
             "sqlite_autoindex_account_deletion_fences_1",
         ),
@@ -999,8 +1159,8 @@ CHECKS = (
 
 def apply_migrations(connection: sqlite3.Connection) -> list[Path]:
     migrations = sorted(MIGRATIONS.glob("*.sql"))
-    if not migrations or migrations[-1].name != "0020_trip_photo_upload_reservations.sql":
-        raise AssertionError("0020_trip_photo_upload_reservations.sql must be the latest D1 migration")
+    if not migrations or migrations[-1].name != "0021_native_oauth.sql":
+        raise AssertionError("0021_native_oauth.sql must be the latest D1 migration")
     connection.execute("PRAGMA foreign_keys = ON")
     for path in migrations:
         sql = path.read_text(encoding="utf-8").replace("--> statement-breakpoint", "")

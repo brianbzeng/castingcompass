@@ -3536,6 +3536,102 @@ footer > div {
   }
 }
 
+/* First-party system-browser handoff for the default-off native public client. */
+.native-authorization-page {
+  min-height: 100dvh;
+  display: grid;
+  place-items: center;
+  padding:
+    max(1rem, var(--safe-area-top))
+    max(1rem, var(--safe-area-right))
+    max(1rem, var(--safe-area-bottom))
+    max(1rem, var(--safe-area-left));
+}
+
+.native-authorization-card {
+  width: min(560px, 100%);
+  min-width: 0;
+  padding: clamp(1.4rem, 5vw, 2.8rem);
+  border: 1px solid var(--line-strong);
+  background: rgba(4, 22, 45, 0.94);
+  box-shadow: 0 28px 90px rgba(0, 5, 15, 0.4);
+}
+
+.native-authorization-brand {
+  display: block;
+  margin-bottom: 2.4rem;
+  color: var(--ink);
+  font-size: 1rem;
+  font-weight: 820;
+  letter-spacing: -0.04em;
+}
+
+.native-authorization-card h1 {
+  margin: 0.75rem 0 1rem;
+  color: var(--ink);
+  font-size: clamp(2rem, 10vw, 5.2rem);
+  font-weight: 590;
+  letter-spacing: -0.06em;
+  line-height: 0.92;
+}
+
+.native-authorization-card p,
+.native-authorization-card li {
+  color: var(--ink-soft);
+  font-size: 0.88rem;
+  line-height: 1.7;
+}
+
+.native-authorization-card strong {
+  color: var(--ink);
+}
+
+.native-authorization-card ul {
+  margin: 1.25rem 0;
+  padding-left: 1.2rem;
+}
+
+.native-authorization-primary,
+.native-authorization-secondary {
+  width: 100%;
+  min-height: 48px;
+  margin-top: 0.75rem;
+  padding: 0.8rem 1rem;
+  border: 1px solid var(--line-strong);
+  font-size: 0.82rem;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.native-authorization-primary {
+  color: var(--ocean-deep);
+  background: var(--lime);
+}
+
+.native-authorization-secondary {
+  color: var(--ink);
+  background: rgba(12, 48, 84, 0.76);
+}
+
+.native-authorization-primary:disabled,
+.native-authorization-secondary:disabled {
+  cursor: wait;
+  opacity: 0.58;
+}
+
+.native-authorization-status {
+  margin: 1rem 0 0;
+  padding: 0.75rem;
+  border-left: 3px solid var(--seafoam);
+  background: rgba(12, 48, 84, 0.62);
+}
+
+.native-authorization-note {
+  margin: 1rem 0 0;
+  color: var(--quiet) !important;
+  font-size: 0.75rem !important;
+}
+
 .profile-section {
   margin-top: 1.25rem;
 }

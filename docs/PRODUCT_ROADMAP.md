@@ -1057,6 +1057,16 @@ after its acceptance checks pass in the intended environment.
     review boundary only; independent human review and every deployment/provider gate remain open.
   - [ ] Complete native-client contract/authentication work, isolated staging and provider setup,
     physical-device acceptance, deployment, and production-scale performance/failure evidence.
+    - [x] Implement the local, default-off server boundary: exact public client/redirect,
+      PKCE `S256`, five-minute one-use codes,
+      ten-minute access tokens, 30-day rotating refresh families, hash-only credential tables,
+      reuse-family revocation, idempotent revoke, strict Cookie/Bearer separation, narrow
+      `profile:read`/`trips:write` route scopes, owner/legal/deletion predicates, password-reset
+      revocation, bounded retention, query-plan/index checks, guarded migration `0021`, a
+      fail-closed mobile policy verifier, and a noindex first-party browser continue page with
+      exact query/callback/state validation. This is local implementation evidence only; the
+      SwiftUI/Keychain client, isolated staging, Apple signing, physical-device
+      acceptance, independent review, and provider activation remain open.
 
 ## P2 — Species and business expansion
 
