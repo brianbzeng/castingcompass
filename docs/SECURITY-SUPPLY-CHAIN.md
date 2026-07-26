@@ -225,7 +225,7 @@ the pair for future Dependabot proposals. The API does not mount `StaticFiles`, 
 `FileResponse`, parse forms, or define `HTTPEndpoint` subclasses, and it allows only GET/OPTIONS;
 those facts reduce reachability but do not justify retaining a vulnerable framework. Isolated
 tests must also exercise the patched malformed-Host/path URL boundaries and reject unsupported
-methods before this change is merged. The test-only graph uses exact `httpx2` 2.7.0, Starlette's
+methods before this change is merged. The test-only graph uses exact `httpx2` 2.9.1, Starlette's
 preferred test-client backend, instead of relying on its deprecated `httpx` compatibility path.
 
 The 2026-07-18 provider evidence is complete at merge commit

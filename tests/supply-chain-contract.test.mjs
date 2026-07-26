@@ -230,7 +230,7 @@ test("Python API and pipeline installs use exact source-bound wheel hashes", asy
     new URL("services/api/requirements-test.in", root),
     "utf8",
   );
-  assert.match(apiTestRequirements, /^httpx2==2\.7\.0$/m);
+  assert.match(apiTestRequirements, /^httpx2==2\.9\.1$/m);
   assert.doesNotMatch(apiTestRequirements, /^httpx==/m);
 
   const validationLock = await readFile(new URL("pipeline/requirements-validation.lock", root));
