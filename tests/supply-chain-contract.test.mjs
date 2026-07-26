@@ -281,7 +281,7 @@ test("the deterministic production SBOM is bound to the lock and direct runtime 
   assert.equal(sbom.bomFormat, "CycloneDX");
   assert.equal(sbom.specVersion, "1.5");
   assert.match(sbom.serialNumber, /^urn:uuid:[0-9a-f]{8}-[0-9a-f]{4}-5[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/u);
-  assert.equal(sbom.serialNumber, "urn:uuid:0f1830cd-642e-59c6-877f-5a4bb1862503");
+  assert.equal(sbom.serialNumber, "urn:uuid:e5d5ad3c-3471-52a1-8940-059520efd025");
   assert.equal("timestamp" in sbom.metadata, false);
   assert.equal(sbom.metadata.component.name, manifest.name);
   assert.deepEqual(sbom.metadata.properties, [{

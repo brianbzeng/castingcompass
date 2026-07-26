@@ -2,7 +2,7 @@
   "$schema": "http://cyclonedx.org/schema/bom-1.5.schema.json",
   "bomFormat": "CycloneDX",
   "specVersion": "1.5",
-  "serialNumber": "urn:uuid:0f1830cd-642e-59c6-877f-5a4bb1862503",
+  "serialNumber": "urn:uuid:e5d5ad3c-3471-52a1-8940-059520efd025",
   "version": 1,
   "metadata": {
     "lifecycles": [
@@ -32,7 +32,7 @@
     "properties": [
       {
         "name": "castingcompass:package-lock-sha256",
-        "value": "1c0ba994fa0e2a647d591aeb8d9c20c1870271521010f318346bfe201cdb0a08"
+        "value": "02ff66244905f134a38bca4a995354734b1a50bef267f0dbc75026fc07230dc7"
       }
     ]
   },
