@@ -85,6 +85,8 @@ interface SummaryView {
 interface TripReportFeatureProps {
   sites: FishingSite[];
   snapshot: OpportunitySnapshot;
+  forecastReady: boolean;
+  forecastUnavailable: boolean;
   request: TripReportRequest | null;
   canSubmit: boolean;
   onRequireLogin(): void;
@@ -519,7 +521,15 @@ function elapsedLabel(startedAt: string) {
   return `${hours}h ${remainder}m underway`;
 }
 
-export function TripReportFeature({ sites, snapshot, request, canSubmit, onRequireLogin }: TripReportFeatureProps) {
+export function TripReportFeature({
+  sites,
+  snapshot,
+  forecastReady,
+  forecastUnavailable,
+  request,
+  canSubmit,
+  onRequireLogin,
+}: TripReportFeatureProps) {
   const openerRef = useRef<HTMLElement | null>(null);
   const lastRequestKeyRef = useRef<number | null>(null);
   const handledInitialQueryRef = useRef(false);
@@ -553,6 +563,11 @@ export function TripReportFeature({ sites, snapshot, request, canSubmit, onRequi
     : submitState === "idle" && networkState === "restored"
       ? "This device reports that its connection is back. Nothing was resubmitted automatically; review any earlier status before trying again."
       : message;
+  const tripEntryDisabledTitle = forecastUnavailable
+    ? "Forecast verification failed. Retry the forecast before logging a trip."
+    : !forecastReady || sites.length === 0
+      ? "Wait for the fishing-location catalog and forecast snapshot to load"
+      : undefined;
 
   const resetFeedback = useCallback(() => {
     setSubmitState("idle");
@@ -564,10 +579,14 @@ export function TripReportFeature({ sites, snapshot, request, canSubmit, onRequi
   }, []);
 
   const openPanel = useCallback((nextPanel: Panel, siteId?: string, forecastWindow?: OpportunityWindow) => {
+    // Finishing a previously started trip must remain possible during a forecast outage.
+    // Starting or backfilling a location-bound trip requires the verified catalog and snapshot.
+    if (nextPanel !== "complete" && (!forecastReady || sites.length === 0)) return;
     if (!canSubmit) {
       onRequireLogin();
       return;
     }
+    handledInitialQueryRef.current = true;
     const activeElement = document.activeElement;
     openerRef.current = activeElement instanceof HTMLElement ? activeElement : null;
     resetFeedback();
@@ -619,7 +638,7 @@ export function TripReportFeature({ sites, snapshot, request, canSubmit, onRequi
       window.history.replaceState(null, "", `${url.pathname}${url.search}${url.hash}`);
     }
     setPanel(nextPanel);
-  }, [activeTrip, canSubmit, onRequireLogin, resetFeedback, sites]);
+  }, [activeTrip, canSubmit, forecastReady, onRequireLogin, resetFeedback, sites]);
 
   const closePanel = useCallback(() => {
     setPanel(null);
@@ -638,6 +657,13 @@ export function TripReportFeature({ sites, snapshot, request, canSubmit, onRequi
   });
 
   useEffect(() => {
+    if (panel && panel !== "complete" && (!forecastReady || sites.length === 0)) {
+      const frame = window.requestAnimationFrame(closePanel);
+      return () => window.cancelAnimationFrame(frame);
+    }
+  }, [closePanel, forecastReady, panel, sites.length]);
+
+  useEffect(() => {
     if (restoredClientStateRef.current) return;
     restoredClientStateRef.current = true;
     const stored = parseStoredTrip(
@@ -649,18 +675,34 @@ export function TripReportFeature({ sites, snapshot, request, canSubmit, onRequi
     const query = new URL(window.location.href).searchParams;
     const referralCode = query.get("ref");
     referralCodeRef.current = referralCode && /^[a-z0-9_-]{1,64}$/i.test(referralCode) ? referralCode : null;
-    if (!handledInitialQueryRef.current && query.get("report") === "trip") {
-      handledInitialQueryRef.current = true;
-      window.requestAnimationFrame(() => openPanel("past"));
-    }
+    if (query.get("report") !== "trip") handledInitialQueryRef.current = true;
     return () => window.cancelAnimationFrame(restoreFrame);
-  }, [openPanel]);
+  }, []);
 
   useEffect(() => {
-    if (!request || request.key === lastRequestKeyRef.current) return;
+    const query = new URL(window.location.href).searchParams;
+    if (
+      !handledInitialQueryRef.current &&
+      query.get("report") === "trip" &&
+      forecastReady &&
+      sites.length > 0
+    ) {
+      handledInitialQueryRef.current = true;
+      const frame = window.requestAnimationFrame(() => openPanel("past"));
+      return () => window.cancelAnimationFrame(frame);
+    }
+  }, [forecastReady, openPanel, sites.length]);
+
+  useEffect(() => {
+    if (
+      !request ||
+      request.key === lastRequestKeyRef.current ||
+      !forecastReady ||
+      sites.length === 0
+    ) return;
     lastRequestKeyRef.current = request.key;
     openPanel(request.mode, request.siteId, request.window);
-  }, [openPanel, request]);
+  }, [forecastReady, openPanel, request, sites.length]);
 
   useEffect(() => {
     let active = true;
@@ -759,6 +801,11 @@ export function TripReportFeature({ sites, snapshot, request, canSubmit, onRequi
 
   const startTrip = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    if (!forecastReady || sites.length === 0) {
+      setSubmitState("error");
+      setMessage("The trip was not started because the location catalog or forecast snapshot is no longer verified.");
+      return;
+    }
     if (networkState === "offline") {
       setSubmitState("error");
       setMessage("This device appears offline. The trip was not submitted; reconnect before starting it.");
@@ -934,6 +981,11 @@ export function TripReportFeature({ sites, snapshot, request, canSubmit, onRequi
 
   const reportPastTrip = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    if (!forecastReady || sites.length === 0) {
+      setSubmitState("error");
+      setMessage("The report was not submitted because the location catalog or forecast snapshot is no longer verified.");
+      return;
+    }
     if (networkState === "offline") {
       setSubmitState("error");
       setMessage("This device appears offline. The report was not submitted and its draft remains on this device.");
@@ -1031,8 +1083,22 @@ export function TripReportFeature({ sites, snapshot, request, canSubmit, onRequi
             time, effort, method, catches, whether it’s a skunk or not are useful and genuinely appreciated.
           </p>
           <div className="validation-actions">
-            <button type="button" onClick={() => openPanel("start", sites[0]?.id)}>Start a trip <ArrowIcon /></button>
-            <button type="button" onClick={openShareableReport}>Log a past trip</button>
+            <button
+              type="button"
+              disabled={!forecastReady || sites.length === 0}
+              title={tripEntryDisabledTitle}
+              onClick={() => openPanel("start", sites[0]?.id)}
+            >
+              Start a trip <ArrowIcon />
+            </button>
+            <button
+              type="button"
+              disabled={!forecastReady || sites.length === 0}
+              title={tripEntryDisabledTitle}
+              onClick={openShareableReport}
+            >
+              Log a past trip
+            </button>
           </div>
           <small>
             Beta · a separate validation protocol decides whether a report can become model evidence; nothing enters training automatically. This public ledger shows aggregate totals only;

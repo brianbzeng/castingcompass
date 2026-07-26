@@ -20,7 +20,7 @@ async function preparePastTrip(page: Page) {
   await expect(page.locator(".account-label-compact")).toHaveText("Profile");
   await expect(page.locator(".data-pill")).toHaveAttribute(
     "aria-label",
-    /Current status: (?:live|cached)$/,
+    /Current status: (?:Live data|Cached)$/,
   );
   await page.locator(".log-trip-button").click();
   const modal = page.locator(".trip-modal");

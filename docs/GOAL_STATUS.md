@@ -34,6 +34,31 @@ by that discovery.
       remain production-release boundaries; they do not require local model or frontend work to
       stay frozen.
 
+## Active checkpoint — truthful forecast loading and recovery
+
+- [x] Remove the fabricated emergency ranking from the home route. Initial state is now an empty
+      typed snapshot with no sites, windows, scores, sources, conditions, or model identity; the
+      server-rendered shell exposes loading status and cannot emit a score card or location rank.
+- [x] Keep verified cached data distinct from failed data. Static and API reads share one
+      abortable attempt, only a successfully parsed response can set `live` or `cached`, and a
+      failed core catalog/snapshot read sets `unavailable`, closes stale forecast surfaces, and
+      cannot be relabeled as a cached planning result.
+- [x] Add an accessible recovery path without claiming write progress. Loading and unavailable
+      states suppress the ranking, filters, map, comparison, score example, and source ledger;
+      disable every trip-location entry point until the catalog exists; explain why scores are
+      hidden; and provide an explicit read-only retry that restores the verified interface.
+- [x] Complete local acceptance under pinned Node `22.23.1` and npm `10.9.8`: the complete
+      security/SBOM/query-policy chain, zero-vulnerability complete and production dependency
+      audits, production-off and feature-on builds, ESLint, TypeScript, all 752/752 Node tests,
+      8/8 Chromium/WebKit photo cases, and 248/248 mobile/offline/recovery/map cases pass.
+      A compatible Python environment also passes Ruff, all 29/29 API tests, all 149/149
+      pipeline tests with 11 declared optional-dependency skips, and all 54 critical D1 query
+      plans.
+- [ ] Obtain hosted CI, CodeQL, release-provenance, and automated-review acceptance on the exact
+      implementation head; merge only accepted evidence to protected `main`; and reconcile the
+      exact merge commit. No deployment, provider mutation, data refresh, score/model change, or
+      production acceptance is authorized by this frontend boundary.
+
 ## Active checkpoint — zero-exception npm and lint graph
 
 - [x] Eliminate the expiring `GHSA-mh99-v99m-4gvg` development exception without an

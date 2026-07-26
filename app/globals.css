@@ -262,6 +262,11 @@ button.data-pill {
   animation: pulse 1.4s ease-in-out infinite;
 }
 
+.data-pill.unavailable i {
+  background: var(--coral);
+  box-shadow: 0 0 0 4px rgba(255, 114, 92, 0.13);
+}
+
 .install-button {
   position: relative;
   color: rgba(191, 243, 209, 0.46);
@@ -315,6 +320,13 @@ button.data-pill {
 
 .log-trip-button:hover {
   background: #e4f4ad;
+}
+
+.log-trip-button:disabled {
+  color: rgba(4, 19, 38, 0.58);
+  border-color: rgba(162, 197, 229, 0.18);
+  background: rgba(204, 209, 203, 0.58);
+  cursor: not-allowed;
 }
 
 .forecast-intro {
@@ -456,6 +468,74 @@ footer {
   transform: translateY(-3px);
   border-color: rgba(168, 216, 242, 0.42);
   box-shadow: 0 24px 70px rgba(1, 9, 21, 0.4), 0 0 34px rgba(27, 100, 162, 0.13);
+}
+
+.forecast-state-card {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 1rem;
+  min-height: 154px;
+  padding: 1.4rem;
+  border: 1px solid var(--line-strong);
+  border-radius: 3px;
+  background: rgba(6, 27, 53, 0.82);
+  box-shadow: 0 18px 60px rgba(1, 9, 21, 0.3);
+}
+
+.forecast-state-card.unavailable {
+  border-color: rgba(255, 114, 92, 0.45);
+  background: linear-gradient(135deg, rgba(92, 31, 38, 0.56), rgba(6, 27, 53, 0.9));
+}
+
+.forecast-state-card > svg {
+  width: 30px;
+  height: 30px;
+  color: #ffab9f;
+}
+
+.forecast-state-indicator {
+  width: 28px;
+  height: 28px;
+  border: 3px solid rgba(168, 216, 242, 0.24);
+  border-top-color: var(--seafoam);
+  border-radius: 50%;
+  animation: forecast-state-spin 900ms linear infinite;
+}
+
+.forecast-state-card strong,
+.source-recovery strong {
+  display: block;
+  font-size: 0.92rem;
+}
+
+.forecast-state-card p {
+  margin: 0.5rem 0 0;
+  color: var(--ink-soft);
+  font-size: 0.74rem;
+  line-height: 1.55;
+}
+
+.forecast-state-card button,
+.source-recovery button {
+  margin-top: 0.9rem;
+  padding: 0.62rem 0.82rem;
+  border: 1px solid rgba(168, 216, 242, 0.42);
+  color: var(--ink);
+  background: rgba(27, 100, 162, 0.28);
+  font-size: 0.72rem;
+  font-weight: 750;
+  cursor: pointer;
+}
+
+.forecast-state-card button:hover,
+.source-recovery button:hover {
+  border-color: var(--seafoam);
+  background: rgba(27, 100, 162, 0.44);
+}
+
+@keyframes forecast-state-spin {
+  to { transform: rotate(360deg); }
 }
 
 .score-orbit {
@@ -1402,6 +1482,21 @@ footer {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
   border-top: 1px solid var(--line-strong);
+}
+
+.source-recovery {
+  align-self: end;
+  min-height: 128px;
+  padding: 1.2rem;
+  border: 1px solid rgba(255, 114, 92, 0.35);
+  background: rgba(6, 27, 53, 0.7);
+}
+
+.source-recovery.loading {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  border-color: var(--line-strong);
 }
 
 .source-row {
@@ -3930,6 +4025,13 @@ footer > div {
   border-color: var(--lime);
   color: var(--ocean-deep);
   background: var(--lime);
+}
+
+.validation-actions button:disabled {
+  color: var(--quiet);
+  border-color: var(--line);
+  background: rgba(93, 112, 132, 0.22);
+  cursor: not-allowed;
 }
 
 .validation-actions svg {

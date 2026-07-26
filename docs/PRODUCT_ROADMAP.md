@@ -1256,6 +1256,13 @@ after its acceptance checks pass in the intended environment.
   route-appropriate skeletons, immediate acknowledgement, progressive status for slow work,
   inline retry/cancel where safe, and carefully scoped optimistic updates that roll back on
   failure. Do not display fake precision or let optimistic UI imply a privileged write succeeded.
+  - [x] Make the primary forecast read fail closed instead of inventing an offline ranking. The
+    server and first client render now contain an empty forecast contract, not hard-coded sites,
+    scores, conditions, freshness, or model identity. Only a successfully loaded static snapshot
+    or API response may reveal the ranking, filters, map, source ledger, score example, or
+    trip-location actions. A catalog/snapshot failure is distinct from a verified stale snapshot,
+    cancels superseded reads, closes stale forecast dialogs, labels the forecast unavailable, and
+    offers an explicit read-only retry; successful retry restores the authoritative interface.
   - [x] Add and locally verify an accessible route-level indeterminate loading shell plus a
     render-error boundary with generic copy, explicit retry/home actions, reduced-motion
     behavior, no raw diagnostics, and no claim that an in-flight account write completed.

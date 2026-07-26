@@ -59,41 +59,15 @@ import structureImages from "../data/structure-images.json";
 const PACIFIC_TIME_ZONE = "America/Los_Angeles";
 const ContourMap = lazy(() => import("./ContourMap").then((module) => ({ default: module.ContourMap })));
 
-const FALLBACK_SITES: FishingSite[] = [
-  {
-    id: "oyster-point-pier",
-    name: "Oyster Point Pier",
-    latitude: 37.665,
-    longitude: -122.377,
-    region: "South Bay",
-    type: "Pier",
-    access: "Public shoreline pier; verify posted access hours before departure.",
-    regulationUrl: "https://wildlife.ca.gov/Fishing/Ocean/Regulations/Fishing-Map/sf-bay",
-    structureTags: ["channel edge", "sand flat"],
-  },
-  {
-    id: "pacifica-pier",
-    name: "Pacifica Municipal Pier",
-    latitude: 37.633,
-    longitude: -122.495,
-    region: "Coast",
-    type: "Pier",
-    access: "Public municipal pier; closures can occur during heavy swell.",
-    regulationUrl: "https://wildlife.ca.gov/Fishing/Ocean/Regulations/Fishing-Map/San-Francisco",
-    structureTags: ["open coast", "sand trough"],
-  },
-  {
-    id: "berkeley-pier-shore",
-    name: "Berkeley Marina Shoreline",
-    latitude: 37.865,
-    longitude: -122.314,
-    region: "East Bay",
-    type: "Shore",
-    access: "Public shoreline access near the marina.",
-    regulationUrl: "https://wildlife.ca.gov/Fishing/Ocean/Regulations/Fishing-Map/sf-bay",
-    structureTags: ["marina edge", "mud-sand transition"],
-  },
-];
+type ForecastDataState = "loading" | "live" | "cached" | "unavailable";
+
+const EMPTY_FORECAST_SNAPSHOT: OpportunitySnapshot = {
+  generatedAt: "",
+  modelVersion: "",
+  methodology: "",
+  sources: [],
+  windows: [],
+};
 
 interface ApiSourceFreshness {
   source: string;
@@ -260,19 +234,19 @@ function normalizeApiSnapshot(payload: ApiOpportunityResponse): OpportunitySnaps
   };
 }
 
-async function loadForecastData() {
-  const staticSitesPromise = fetch("/data/sites.json").then((response) => {
+async function loadForecastData(signal: AbortSignal) {
+  const staticSitesPromise = fetch("/data/sites.json", { signal }).then((response) => {
     if (!response.ok) throw new Error("sites unavailable");
     return response.json() as Promise<FishingSite[]>;
   });
-  const communityPromise = fetch("/data/community-pulse.json")
+  const communityPromise = fetch("/data/community-pulse.json", { signal })
     .then(async (response) => {
       if (!response.ok) return [];
       const payload = (await response.json()) as CommunityPulse[] | { pulses?: CommunityPulse[] };
       return Array.isArray(payload) ? payload : payload.pulses ?? [];
     })
     .catch(() => [] as CommunityPulse[]);
-  const waterQualityPromise = fetch("/data/water-quality.json")
+  const waterQualityPromise = fetch("/data/water-quality.json", { signal })
     .then(async (response) => {
       if (!response.ok) return null;
       return applyCurrentWaterQualityFreshness(
@@ -280,7 +254,7 @@ async function loadForecastData() {
       );
     })
     .catch(() => null as WaterQualitySnapshot | null);
-  const structureDepthPromise = fetch("/data/structure-depth.json")
+  const structureDepthPromise = fetch("/data/structure-depth.json", { signal })
     .then(async (response) => {
       if (!response.ok) return null;
       return (await response.json()) as StructureDepthSnapshot;
@@ -299,6 +273,7 @@ async function loadForecastData() {
       const from = new Date().toISOString();
       const response = await fetch(
         `${apiBase}/v1/opportunities?species=california-halibut&from=${encodeURIComponent(from)}&hours=72`,
+        { signal },
       );
       if (!response.ok) throw new Error(`API returned ${response.status}`);
       const apiSnapshot = (await response.json()) as ApiOpportunityResponse;
@@ -314,7 +289,8 @@ async function loadForecastData() {
           : "cached" as const,
       };
     } catch {
-      const response = await fetch("/data/opportunities.json");
+      if (signal.aborted) throw new DOMException("Forecast request aborted", "AbortError");
+      const response = await fetch("/data/opportunities.json", { signal });
       if (!response.ok) throw new Error("API and snapshot unavailable");
       const snapshot = applyCurrentFreshness((await response.json()) as OpportunitySnapshot);
       return {
@@ -332,7 +308,7 @@ async function loadForecastData() {
 
   const [staticSites, staticSnapshot, community, waterQuality, structureDepth] = await Promise.all([
     staticSitesPromise,
-    fetch("/data/opportunities.json").then((response) => {
+    fetch("/data/opportunities.json", { signal }).then((response) => {
       if (!response.ok) throw new Error("snapshot unavailable");
       return response.json() as Promise<OpportunitySnapshot>;
     }),
@@ -376,51 +352,6 @@ function depthSourceDateLabel(evidence: StructureDepthSiteEvidence) {
   if (evidence.depth.partialSourceDates.length) qualifiers.push("some dates have year/month precision");
   if (evidence.depth.hasUndatedRecords) qualifiers.push("some records have no source date");
   return qualifiers.length ? `${range}; ${qualifiers.join("; ")}` : range;
-}
-
-function fallbackSnapshot(): OpportunitySnapshot {
-  const start = new Date();
-  start.setMinutes(0, 0, 0);
-  const sources: SourceFreshness[] = [
-    {
-      name: "Cached planning snapshot",
-      observedAt: start.toISOString(),
-      status: "aging",
-      detail: "Live sources unavailable; scores are illustrative until refreshed.",
-    },
-  ];
-  const windows = FALLBACK_SITES.map((site, index) => ({
-    id: `${site.id}-${start.toISOString()}`,
-    siteId: site.id,
-    start: new Date(start.getTime() + index * 60 * 60 * 1000).toISOString(),
-    end: new Date(start.getTime() + (index + 2) * 60 * 60 * 1000).toISOString(),
-    score: 72 - index * 7,
-    habitatScore: 76 - index * 5,
-    seasonalityScore: 68,
-    dynamicScore: 69 - index * 4,
-    fishabilityScore: 66 - index * 3,
-    confidence: "low",
-    rank: index + 1,
-    explanationFactors: ["Accessible casting zone", "Seasonal halibut pattern", "Cached conditions"],
-    conditions: {
-      tideStage: "Loading",
-      windMph: 9,
-      waterTempF: 58,
-      daylight: true,
-      cloudCoverPct: 45,
-      moonPhase: "waxing crescent",
-      moonIlluminationPct: 32,
-    },
-    modelVersion: "fallback-0.1",
-    sources,
-  }));
-  return {
-    generatedAt: start.toISOString(),
-    modelVersion: "fallback-0.1",
-    methodology: "Offline interface fallback",
-    sources,
-    windows,
-  };
 }
 
 function distanceMiles(a: [number, number], b: [number, number]) {
@@ -1088,8 +1019,8 @@ export function OpportunityApp() {
   const detailTriggerRef = useRef<HTMLElement | null>(null);
   const detailTriggerSiteIdRef = useRef<string | null>(null);
   const mapWrapRef = useRef<HTMLDivElement>(null);
-  const [sites, setSites] = useState<FishingSite[]>(FALLBACK_SITES);
-  const [snapshot, setSnapshot] = useState<OpportunitySnapshot>(fallbackSnapshot);
+  const [sites, setSites] = useState<FishingSite[]>([]);
+  const [snapshot, setSnapshot] = useState<OpportunitySnapshot>(EMPTY_FORECAST_SNAPSHOT);
   const [communityPulses, setCommunityPulses] = useState<CommunityPulse[]>([]);
   const [waterQuality, setWaterQuality] = useState<WaterQualitySnapshot | null>(null);
   const [structureDepth, setStructureDepth] = useState<StructureDepthSnapshot | null>(null);
@@ -1111,7 +1042,10 @@ export function OpportunityApp() {
   const [locationMessage, setLocationMessage] = useState("");
   const [showMethod, setShowMethod] = useState(false);
   const [showCompare, setShowCompare] = useState(false);
-  const [dataState, setDataState] = useState<"loading" | "live" | "cached">("loading");
+  const [dataState, setDataState] = useState<ForecastDataState>("loading");
+  const [forecastLoadAttempt, setForecastLoadAttempt] = useState(0);
+  const forecastReady = dataState === "live" || dataState === "cached";
+  const forecastUnavailable = dataState === "unavailable";
   const [tripReportRequest, setTripReportRequest] = useState<TripReportRequest | null>(null);
   const [mapEnabled, setMapEnabled] = useState(false);
   const [showRespectNotice, setShowRespectNotice] = useState(false);
@@ -1155,7 +1089,8 @@ export function OpportunityApp() {
 
   useEffect(() => {
     let active = true;
-    loadForecastData()
+    const controller = new AbortController();
+    loadForecastData(controller.signal)
       .then(({ sites: nextSites, snapshot: nextSnapshot, community, waterQuality: nextWaterQuality, structureDepth: nextStructureDepth, state }) => {
         if (!active) return;
         setSites(nextSites);
@@ -1166,12 +1101,17 @@ export function OpportunityApp() {
         setDataState(state);
       })
       .catch(() => {
-        if (active) setDataState("cached");
+        if (!active || controller.signal.aborted) return;
+        setSelectedSiteId(null);
+        setSelectedDetailWindowId(null);
+        setShowCompare(false);
+        setDataState("unavailable");
       });
     return () => {
       active = false;
+      controller.abort();
     };
-  }, []);
+  }, [forecastLoadAttempt]);
 
   useEffect(() => {
     if (!selectedSiteId) return;
@@ -1225,7 +1165,7 @@ export function OpportunityApp() {
     );
     observer.observe(mapWrapRef.current);
     return () => observer.disconnect();
-  }, [mapEnabled, view]);
+  }, [forecastReady, mapEnabled, view]);
 
   const windowsBySite = useMemo(
     () => latestPerSite(
@@ -1344,6 +1284,13 @@ export function OpportunityApp() {
     ? structureDepth?.sites[selectedSiteId] ?? null
     : null;
   const selectedStructureGuides = selectedSite ? structureGuidesForSite(selectedSite) : [];
+  const dataStateLabel = dataState === "loading"
+    ? "Loading"
+    : dataState === "live"
+      ? "Live data"
+      : dataState === "cached"
+        ? "Cached"
+        : "Unavailable";
   const hasHourFilter = Boolean(availableFrom || availableUntil);
   const strongestWindowLabel = hasHourFilter
     ? "Best match for your hours"
@@ -1380,6 +1327,11 @@ export function OpportunityApp() {
     setShowLocationDisclosure(true);
   }, [activeRadiusMiles, userPosition]);
 
+  const retryForecast = useCallback(() => {
+    setDataState("loading");
+    setForecastLoadAttempt((attempt) => attempt + 1);
+  }, []);
+
   const continueFromRespectNotice = useCallback(() => {
     if (rememberRespectNotice) {
       window.localStorage.setItem("castingcompass.respect-water.v1", "dismissed");
@@ -1398,10 +1350,9 @@ export function OpportunityApp() {
   }, [windowsBySite]);
 
   useEffect(() => {
-    // Do not validate a shared site link against the three-site emergency fallback. Wait until
-    // the catalog request has either settled successfully or failed closed, otherwise valid
-    // regional links are discarded before their site exists in state.
-    if (initialSiteHandledRef.current || dataState === "loading") return;
+    // Do not validate a shared site link before a verified catalog exists. Otherwise a valid
+    // regional link could be discarded during loading or a failed catalog read.
+    if (initialSiteHandledRef.current || !forecastReady) return;
     const siteId = new URLSearchParams(window.location.search).get("site");
     if (!siteId || !sites.some((site) => site.id === siteId)) {
       initialSiteHandledRef.current = true;
@@ -1413,7 +1364,7 @@ export function OpportunityApp() {
     window.history.replaceState(null, "", `${nextUrl.pathname}${nextUrl.search}${nextUrl.hash}`);
     const frame = window.requestAnimationFrame(() => openSiteDetail(siteId));
     return () => window.cancelAnimationFrame(frame);
-  }, [dataState, openSiteDetail, sites]);
+  }, [forecastReady, openSiteDetail, sites]);
 
   const openTripReport = useCallback((mode: "start" | "past", siteId?: string, window?: OpportunityWindow) => {
     if (!account.user) {
@@ -1424,7 +1375,7 @@ export function OpportunityApp() {
     setTripReportRequest({ key: tripReportRequestKeyRef.current, mode, siteId, window });
   }, [account]);
 
-  const scrollToSection = useCallback((sectionId: "forecast" | "sources") => {
+  const scrollToSection = useCallback((sectionId: "forecast" | "forecast-status" | "sources") => {
     setShowMethod(false);
     setShowCompare(false);
 
@@ -1470,7 +1421,7 @@ export function OpportunityApp() {
           <em>California coast beta</em>
         </a>
         <nav className="desktop-nav" aria-label="Primary navigation">
-          <button type="button" onClick={() => scrollToSection("forecast")}>Forecast</button>
+          <button type="button" onClick={() => scrollToSection(forecastReady ? "forecast" : "forecast-status")}>Forecast</button>
           <button type="button" onClick={() => setShowMethod(true)}>How It Works</button>
           <button type="button" onClick={() => scrollToSection("sources")}>Data</button>
         </nav>
@@ -1482,14 +1433,26 @@ export function OpportunityApp() {
             <span className="account-label">{account.loading ? "Account" : account.user ? account.user.email.split("@")[0] : "Sign in"}</span>
             <span className="account-label-compact">{account.user ? "Profile" : "Sign in"}</span>
           </button>
-          <button className="log-trip-button" type="button" onClick={() => openTripReport("past")}>Log trip</button>
+          <button
+            className="log-trip-button"
+            type="button"
+            disabled={!forecastReady}
+            title={forecastReady
+              ? undefined
+              : forecastUnavailable
+                ? "Forecast verification failed. Retry the forecast before logging a trip."
+                : "Wait for the fishing-location catalog and forecast snapshot to load"}
+            onClick={() => openTripReport("past")}
+          >
+            Log trip
+          </button>
           <button
             className={`data-pill ${dataState}`}
             type="button"
             onClick={() => scrollToSection("sources")}
-            aria-label={`Open forecast data sources. Current status: ${dataState}`}
+            aria-label={`Open forecast data sources. Current status: ${dataStateLabel}`}
           >
-            <i /> {dataState === "loading" ? "Loading" : dataState === "live" ? "Live data" : "Cached"}
+            <i /> {dataStateLabel}
           </button>
           <button className="install-button" type="button" disabled title="Coming Soon" aria-label="Install app — coming soon">
             <DownloadIcon /> Install
@@ -1515,7 +1478,30 @@ export function OpportunityApp() {
               time of year, tide, current, wind, swell, wave power, water temperature, clouds, pressure, daylight, moon phase, and expected fishing pressure.
             </p>
           </div>
-          {bestSite && bestWindow ? (
+          {dataState === "loading" ? (
+            <div
+              className="forecast-state-card loading"
+              id="forecast-status"
+              role="status"
+              aria-live="polite"
+              aria-busy="true"
+            >
+              <span className="forecast-state-indicator" aria-hidden="true" />
+              <div>
+                <strong>Loading the current forecast</strong>
+                <p>Checking the fishing-location catalog and the latest public planning snapshot.</p>
+              </div>
+            </div>
+          ) : dataState === "unavailable" ? (
+            <div className="forecast-state-card unavailable" id="forecast-status" role="alert">
+              <InfoIcon />
+              <div>
+                <strong>Forecast unavailable</strong>
+                <p>No fishing scores are shown because the current catalog or planning snapshot could not be verified. Nothing on this screen is being presented as a cached forecast.</p>
+                <button type="button" onClick={retryForecast}>Retry forecast</button>
+              </div>
+            </div>
+          ) : bestSite && bestWindow ? (
             <button className="next-window-card" type="button" onClick={() => openSiteDetail(bestSite.id)}>
               <div className={`score-orbit ${scoreTone(bestWindow.score)}`}>
                 <span>{Math.round(bestWindow.score)}</span>
@@ -1534,6 +1520,8 @@ export function OpportunityApp() {
         </div>
       </section>
 
+      {forecastReady ? (
+        <>
       <section className="control-deck" id="forecast">
         <div className="forecast-time-controls">
           <div className="time-tabs" role="group" aria-label="Forecast period">
@@ -1781,10 +1769,14 @@ export function OpportunityApp() {
         </div>
         <button type="button" onClick={() => setShowMethod(true)}>How It Works <ArrowIcon /></button>
       </section>
+        </>
+      ) : null}
 
       <TripReportFeature
         sites={sites}
         snapshot={snapshot}
+        forecastReady={forecastReady}
+        forecastUnavailable={forecastUnavailable}
         request={tripReportRequest}
         canSubmit={Boolean(account.user?.legalAccepted)}
         onRequireLogin={() => account.openAccount("Sign in before submitting a trip report. Complete trips and skunks are tied to an account so reports can be reviewed privately before any separate decision about model evidence.")}
@@ -1794,11 +1786,29 @@ export function OpportunityApp() {
         <div className="source-heading">
           <span>Forecast check</span>
           <h2>See what is current.</h2>
-          <p>Old weather and tide readings are not treated as live. If something is too old to trust, it is left out.</p>
+          <p>
+            {forecastReady
+              ? "Old weather and tide readings are not treated as live. If something is too old to trust, it is left out."
+              : dataState === "loading"
+                ? "The source list will appear only after the catalog and planning snapshot load."
+                : "The source list is unavailable because the current catalog or planning snapshot could not be verified."}
+          </p>
         </div>
-        <div className="source-grid">
-          {snapshot.sources.map((source) => <SourceStatus key={source.name} source={source} />)}
-        </div>
+        {forecastReady ? (
+          <div className="source-grid">
+            {snapshot.sources.map((source) => <SourceStatus key={source.name} source={source} />)}
+          </div>
+        ) : dataState === "unavailable" ? (
+          <div className="source-recovery" role="status">
+            <strong>No verified source status is available.</strong>
+            <button type="button" onClick={retryForecast}>Retry forecast</button>
+          </div>
+        ) : (
+          <div className="source-recovery loading" role="status" aria-live="polite" aria-busy="true">
+            <span className="forecast-state-indicator" aria-hidden="true" />
+            <strong>Loading source status…</strong>
+          </div>
+        )}
       </section>
       </main>
 
