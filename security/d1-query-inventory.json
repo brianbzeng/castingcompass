@@ -15,7 +15,7 @@
     },
     {
       "file": "worker/native-auth.ts",
-      "sha256": "e06814b90f4eb67b8b2837528276497aaa1c8a6426b508e048fe0f231995d886",
+      "sha256": "87e13a6508487162e74d3fc0945756ace0fbf144203476cac77f5bb15e77d6c4",
       "prepareCallCount": 28
     },
     {
@@ -3211,7 +3211,7 @@
     {
       "callSiteId": "c60108b750f6e0d624399f7e",
       "file": "worker/native-auth.ts",
-      "line": 161,
+      "line": 144,
       "containingFunction": "getNativeAccessIdentity",
       "occurrence": 2,
       "executionMode": "first",
@@ -3236,7 +3236,7 @@
     {
       "callSiteId": "66c4f4d0e1a86a0552b11b2a",
       "file": "worker/native-auth.ts",
-      "line": 343,
+      "line": 326,
       "containingFunction": "issueAuthorizationCode",
       "occurrence": 3,
       "executionMode": "first",
@@ -3258,7 +3258,7 @@
     {
       "callSiteId": "73ccd285515ba34425ec7790",
       "file": "worker/native-auth.ts",
-      "line": 357,
+      "line": 340,
       "containingFunction": "issueAuthorizationCode",
       "occurrence": 4,
       "executionMode": "run",
@@ -3282,7 +3282,7 @@
     {
       "callSiteId": "326bd9ce3e6a07e076ab5e03",
       "file": "worker/native-auth.ts",
-      "line": 385,
+      "line": 368,
       "containingFunction": "issueAuthorizationCode",
       "occurrence": 5,
       "executionMode": "first",
@@ -3305,7 +3305,7 @@
     {
       "callSiteId": "2ea903d9b1d3c1435dfd1ccc",
       "file": "worker/native-auth.ts",
-      "line": 427,
+      "line": 410,
       "containingFunction": "exchangeAuthorizationCode",
       "occurrence": 6,
       "executionMode": "first",
@@ -3327,7 +3327,7 @@
     {
       "callSiteId": "9de124a48935f4d2e0f905e5",
       "file": "worker/native-auth.ts",
-      "line": 465,
+      "line": 448,
       "containingFunction": "exchangeAuthorizationCode",
       "occurrence": 7,
       "executionMode": "batch",
@@ -3349,7 +3349,7 @@
     {
       "callSiteId": "10ca3cfe505a890ace0ab7d8",
       "file": "worker/native-auth.ts",
-      "line": 483,
+      "line": 466,
       "containingFunction": "exchangeAuthorizationCode",
       "occurrence": 8,
       "executionMode": "batch",
@@ -3374,7 +3374,7 @@
     {
       "callSiteId": "9d692ae6b9a5f04a964cd6fb",
       "file": "worker/native-auth.ts",
-      "line": 494,
+      "line": 477,
       "containingFunction": "exchangeAuthorizationCode",
       "occurrence": 9,
       "executionMode": "batch",
@@ -3397,7 +3397,7 @@
     {
       "callSiteId": "df0527d0354169f275b994d4",
       "file": "worker/native-auth.ts",
-      "line": 500,
+      "line": 483,
       "containingFunction": "exchangeAuthorizationCode",
       "occurrence": 10,
       "executionMode": "batch",
@@ -3420,7 +3420,7 @@
     {
       "callSiteId": "f43a4e49b0c423df15f02216",
       "file": "worker/native-auth.ts",
-      "line": 539,
+      "line": 522,
       "containingFunction": "rotateRefreshToken",
       "occurrence": 11,
       "executionMode": "first",
@@ -3443,7 +3443,7 @@
     {
       "callSiteId": "11c18b056eadddaf2c4f8f41",
       "file": "worker/native-auth.ts",
-      "line": 597,
+      "line": 580,
       "containingFunction": "rotateRefreshToken",
       "occurrence": 12,
       "executionMode": "batch",
@@ -3466,7 +3466,7 @@
     {
       "callSiteId": "8ad4f3b1f4800cd49bfc8e0f",
       "file": "worker/native-auth.ts",
-      "line": 617,
+      "line": 600,
       "containingFunction": "rotateRefreshToken",
       "occurrence": 13,
       "executionMode": "batch",
@@ -3489,7 +3489,7 @@
     {
       "callSiteId": "11ef9f736050b5c83d1af61d",
       "file": "worker/native-auth.ts",
-      "line": 623,
+      "line": 606,
       "containingFunction": "rotateRefreshToken",
       "occurrence": 14,
       "executionMode": "batch",
@@ -3511,7 +3511,7 @@
     {
       "callSiteId": "616e7eb66d267325921bb8bc",
       "file": "worker/native-auth.ts",
-      "line": 639,
+      "line": 622,
       "containingFunction": "rotateRefreshToken",
       "occurrence": 15,
       "executionMode": "batch",
@@ -3535,7 +3535,7 @@
     {
       "callSiteId": "46ec7ef123d59c93a50d69b5",
       "file": "worker/native-auth.ts",
-      "line": 697,
+      "line": 680,
       "containingFunction": "revokeNativeToken",
       "occurrence": 16,
       "executionMode": "first",
@@ -3558,7 +3558,7 @@
     {
       "callSiteId": "3f4dffd9e17e52180ea4ee5d",
       "file": "worker/native-auth.ts",
-      "line": 711,
+      "line": 694,
       "containingFunction": "revokeNativeToken",
       "occurrence": 17,
       "executionMode": "first",
@@ -3580,7 +3580,7 @@
     {
       "callSiteId": "a84fc249ebadd6f4148a5f3f",
       "file": "worker/native-auth.ts",
-      "line": 717,
+      "line": 700,
       "containingFunction": "revokeNativeToken",
       "occurrence": 18,
       "executionMode": "run",
@@ -3602,7 +3602,7 @@
     {
       "callSiteId": "8b171e6be4474568955ea367",
       "file": "worker/native-auth.ts",
-      "line": 724,
+      "line": 707,
       "containingFunction": "revokeNativeToken",
       "occurrence": 19,
       "executionMode": "first",
@@ -3624,7 +3624,7 @@
     {
       "callSiteId": "e979e5ee6214f92a929c3d37",
       "file": "worker/native-auth.ts",
-      "line": 749,
+      "line": 732,
       "containingFunction": "confirmIssuedPair",
       "occurrence": 20,
       "executionMode": "first",
@@ -3649,7 +3649,7 @@
     {
       "callSiteId": "9f2289b843278d7f9a1b4a9c",
       "file": "worker/native-auth.ts",
-      "line": 801,
+      "line": 784,
       "containingFunction": "revokeFamily",
       "occurrence": 21,
       "executionMode": "batch",
@@ -3671,7 +3671,7 @@
     {
       "callSiteId": "c86839e3f4a04eeea11af3d4",
       "file": "worker/native-auth.ts",
-      "line": 809,
+      "line": 792,
       "containingFunction": "revokeFamily",
       "occurrence": 22,
       "executionMode": "batch",
@@ -3693,7 +3693,7 @@
     {
       "callSiteId": "993380a78b2462458f189647",
       "file": "worker/native-auth.ts",
-      "line": 818,
+      "line": 801,
       "containingFunction": "revokeFamily",
       "occurrence": 23,
       "executionMode": "first",
@@ -3716,7 +3716,7 @@
     {
       "callSiteId": "334db873992b0b7510851511",
       "file": "worker/native-auth.ts",
-      "line": 837,
+      "line": 825,
       "containingFunction": "cleanupNativeOAuthData",
       "occurrence": 24,
       "executionMode": "batch",
@@ -3738,7 +3738,7 @@
     {
       "callSiteId": "0b7efd92d68b13404f7519db",
       "file": "worker/native-auth.ts",
-      "line": 841,
+      "line": 829,
       "containingFunction": "cleanupNativeOAuthData",
       "occurrence": 25,
       "executionMode": "batch",
@@ -3760,7 +3760,7 @@
     {
       "callSiteId": "a7d82022466e80f3b50829ab",
       "file": "worker/native-auth.ts",
-      "line": 845,
+      "line": 833,
       "containingFunction": "cleanupNativeOAuthData",
       "occurrence": 26,
       "executionMode": "batch",
@@ -3782,7 +3782,7 @@
     {
       "callSiteId": "8e1dd8b0d2c6564d5d88067a",
       "file": "worker/native-auth.ts",
-      "line": 849,
+      "line": 837,
       "containingFunction": "cleanupNativeOAuthData",
       "occurrence": 27,
       "executionMode": "batch",
@@ -3806,7 +3806,7 @@
     {
       "callSiteId": "b8724cfbd61fd2942357f3bc",
       "file": "worker/native-auth.ts",
-      "line": 968,
+      "line": 956,
       "containingFunction": "bestEffortDeleteAuthorizationCode",
       "occurrence": 28,
       "executionMode": "run",

@@ -1,11 +1,11 @@
 import {
   NATIVE_OAUTH_ACCESS_TOKEN_SECONDS,
-  NATIVE_OAUTH_ALLOWED_REDIRECT_PROTOCOLS,
   NATIVE_OAUTH_AUTHORIZATION_CODE_SECONDS,
   NATIVE_OAUTH_CODE_CHALLENGE_METHOD,
   NATIVE_OAUTH_REFRESH_TOKEN_SECONDS,
   NATIVE_OAUTH_SCOPE,
   NATIVE_OAUTH_TOKEN_TYPE,
+  isSafeNativeRedirectUri,
   type NativeOAuthScope,
 } from "../shared/native-auth-contract.ts";
 import type { AuthUser, AuthenticatedSession } from "./auth.ts";
@@ -111,23 +111,6 @@ function nativeOAuthConfiguration(env: NativeOAuthEnv): NativeOAuthConfiguration
     );
   }
   return { clientId, redirectUri };
-}
-
-function isSafeNativeRedirectUri(value: string) {
-  if (value.length < 12 || value.length > 512) return false;
-  try {
-    const parsed = new URL(value);
-    if (parsed.username || parsed.password || parsed.search || parsed.hash) return false;
-    if (!NATIVE_OAUTH_ALLOWED_REDIRECT_PROTOCOLS.includes(
-      parsed.protocol as typeof NATIVE_OAUTH_ALLOWED_REDIRECT_PROTOCOLS[number],
-    )) return false;
-    if (parsed.protocol === "https:") {
-      return Boolean(parsed.hostname) && parsed.pathname !== "/";
-    }
-    return parsed.protocol === "castingcompass:" && parsed.pathname !== "/";
-  } catch {
-    return false;
-  }
 }
 
 export function hasStrictNativeBearerCandidate(request: Request) {
@@ -831,7 +814,12 @@ async function revokeFamily(
 
 export async function cleanupNativeOAuthData(env: NativeOAuthEnv) {
   if (!env.DB) return;
-  await initializeNativeOAuth(env.DB);
+  try {
+    await initializeNativeOAuth(env.DB);
+  } catch (error) {
+    if (error instanceof NativeOAuthError && error.code === "native_auth_schema_unavailable") return;
+    throw error;
+  }
   const now = new Date().toISOString();
   await env.DB.batch([
     env.DB.prepare(`DELETE FROM native_oauth_authorization_codes WHERE code_hash IN (

@@ -42,6 +42,18 @@ const [
   ]);
 
 const policy = JSON.parse(policySource);
+const routeEntry = (routeId) => {
+  const marker = `"${routeId}",`;
+  const idIndex = routePolicySource.indexOf(marker);
+  assert.notEqual(idIndex, -1, `Missing route policy ${routeId}.`);
+  const start = routePolicySource.lastIndexOf("route(", idIndex);
+  const next = routePolicySource.indexOf("\n  route(", idIndex + marker.length);
+  assert.notEqual(start, -1, `Missing route() boundary for ${routeId}.`);
+  return routePolicySource.slice(start, next === -1 ? routePolicySource.length : next);
+};
+const nativeAuthorizeRoute = routeEntry("native_oauth.authorize");
+const nativeTokenRoute = routeEntry("native_oauth.token");
+
 assert.deepEqual(Object.keys(policy).sort(), [
   "api", "authentication", "coverage", "productionReadiness", "schemaVersion", "sharedContracts",
 ]);
@@ -84,6 +96,7 @@ assert.match(nativeContractSource, /NATIVE_OAUTH_REFRESH_TOKEN_SECONDS = 30 \* 2
 assert.match(nativeContractSource, /"profile:read",\s+"trips:write"/);
 assert.match(nativeContractSource, /NATIVE_OAUTH_CODE_CHALLENGE_METHOD = "S256"/);
 assert.match(nativeContractSource, /NATIVE_OAUTH_ALLOWED_REDIRECT_PROTOCOLS = \["https:", "castingcompass:"\]/);
+assert.match(nativeContractSource, /export function isSafeNativeRedirectUri/);
 assert.match(nativeAuthSource, /env\.NATIVE_OAUTH_ENABLED !== "true"/);
 assert.match(nativeAuthSource, /value !== configuration\.clientId/);
 assert.match(nativeAuthSource, /body\.redirectUri !== configuration\.redirectUri/);
@@ -92,15 +105,16 @@ assert.match(nativeAuthSource, /UPDATE native_oauth_refresh_families\s+SET revok
 assert.match(nativeAuthSource, /request\.headers\.has\("Cookie"\)/);
 assert.match(nativeAuthSource, /request\.headers\.get\("Origin"\) !== new URL\(request\.url\)\.origin/);
 assert.match(nativeAuthSource, /Native token operations must not include browser or bearer authority/);
-assert.match(routePolicySource, /"native_oauth\.authorize"[\s\S]*sameOriginRequired: true/);
-assert.match(routePolicySource, /"native_oauth\.token"[\s\S]*"public",\s+"native_auth"/);
+assert.match(nativeAuthorizeRoute, /"owner",\s+"native_auth"/);
+assert.match(nativeAuthorizeRoute, /sameOriginRequired: true/);
+assert.match(nativeTokenRoute, /\["POST"\],\s+"public",\s+"native_auth"/);
 assert.match(routePolicySource, /nativeScopes: \["profile:read"\]/);
 assert.match(routePolicySource, /nativeScopes: \["trips:write"\]/);
 assert.equal((nativeMigrationSource.match(/CREATE TABLE `native_oauth_/g) ?? []).length, 4);
 assert.equal((nativeMigrationSource.match(/CREATE INDEX `native_oauth_/g) ?? []).length, 8);
 assert.doesNotMatch(nativeMigrationSource, /client_secret|access_token` text|refresh_token` text/i);
 assert.match(nativeBrowserContractSource, /params\.getAll\(field\)\.length !== 1/);
-assert.match(nativeBrowserContractSource, /NATIVE_OAUTH_ALLOWED_REDIRECT_PROTOCOLS\.includes/);
+assert.match(nativeBrowserContractSource, /isSafeNativeRedirectUri\(redirectUri\)/);
 assert.match(nativeBrowserContractSource, /actual\.searchParams\.get\("state"\) !== request\.state/);
 assert.match(nativeAuthorizationPageSource, /fetch\("\/api\/native\/oauth\/authorize"/);
 assert.match(nativeAuthorizationPageSource, /window\.location\.assign\(callback\)/);

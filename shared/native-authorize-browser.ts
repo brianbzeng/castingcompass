@@ -1,9 +1,11 @@
 import {
-  NATIVE_OAUTH_ALLOWED_REDIRECT_PROTOCOLS,
   NATIVE_OAUTH_AUTHORIZATION_CODE_SECONDS,
   NATIVE_OAUTH_CODE_CHALLENGE_METHOD,
   NATIVE_OAUTH_SCOPE,
+  isSafeNativeRedirectUri,
 } from "./native-auth-contract.ts";
+
+export { isSafeNativeRedirectUri as isSafeNativeCallbackBase } from "./native-auth-contract.ts";
 
 const CODE_CHALLENGE_PATTERN = /^[A-Za-z0-9_-]{43}$/;
 const STATE_PATTERN = /^[A-Za-z0-9._~-]{32,160}$/;
@@ -42,7 +44,7 @@ export function parseNativeAuthorizationRequest(search: string): NativeAuthoriza
   const state = params.get("state") ?? "";
   const scope = params.get("scope") ?? "";
   if (!CLIENT_ID_PATTERN.test(clientId)
-    || !isSafeNativeCallbackBase(redirectUri)
+    || !isSafeNativeRedirectUri(redirectUri)
     || !CODE_CHALLENGE_PATTERN.test(codeChallenge)
     || codeChallengeMethod !== NATIVE_OAUTH_CODE_CHALLENGE_METHOD
     || !STATE_PATTERN.test(state)
@@ -57,21 +59,6 @@ export function parseNativeAuthorizationRequest(search: string): NativeAuthoriza
     state,
     scope: NATIVE_OAUTH_SCOPE,
   };
-}
-
-export function isSafeNativeCallbackBase(value: string) {
-  if (value.length < 12 || value.length > 512) return false;
-  try {
-    const parsed = new URL(value);
-    if (parsed.username || parsed.password || parsed.search || parsed.hash) return false;
-    if (!NATIVE_OAUTH_ALLOWED_REDIRECT_PROTOCOLS.includes(
-      parsed.protocol as typeof NATIVE_OAUTH_ALLOWED_REDIRECT_PROTOCOLS[number],
-    )) return false;
-    if (parsed.protocol === "https:") return Boolean(parsed.hostname) && parsed.pathname !== "/";
-    return parsed.protocol === "castingcompass:" && parsed.pathname !== "/";
-  } catch {
-    return false;
-  }
 }
 
 export function verifiedNativeAuthorizationCallback(

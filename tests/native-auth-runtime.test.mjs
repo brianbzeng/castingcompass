@@ -451,7 +451,38 @@ test("native revocation is idempotent and does not disclose unknown tokens", asy
   const issued = await exchange(d1, code, verifier);
   const pair = await issued.json();
 
-  for (const token of [pair.refreshToken, "u".repeat(43)]) {
+  const accessRevoked = await handleNativeOAuthRequest(
+    jsonRequest("/api/native/oauth/revoke", {
+      clientId: CLIENT_ID,
+      token: pair.accessToken,
+      tokenTypeHint: "access_token",
+    }),
+    environment(d1),
+    null,
+  );
+  assert.equal(accessRevoked?.status, 200);
+  assert.deepEqual(await accessRevoked.json(), { revoked: true });
+  const revokedAccess = new Request(`${ORIGIN}/api/profile`, {
+    headers: { Authorization: `Bearer ${pair.accessToken}` },
+  });
+  assert.equal(
+    await getNativeAccessIdentity(revokedAccess, environment(d1), ["profile:read"], LEGAL_VERSION),
+    null,
+  );
+
+  const rotated = await handleNativeOAuthRequest(
+    jsonRequest("/api/native/oauth/token", {
+      grantType: "refresh_token",
+      clientId: CLIENT_ID,
+      refreshToken: pair.refreshToken,
+    }),
+    environment(d1),
+    null,
+  );
+  assert.equal(rotated?.status, 200);
+  const rotatedPair = await rotated.json();
+
+  for (const token of [rotatedPair.refreshToken, "u".repeat(43)]) {
     const revoked = await handleNativeOAuthRequest(
       jsonRequest("/api/native/oauth/revoke", {
         clientId: CLIENT_ID,
@@ -465,11 +496,31 @@ test("native revocation is idempotent and does not disclose unknown tokens", asy
     assert.deepEqual(await revoked.json(), { revoked: true });
   }
   const access = new Request(`${ORIGIN}/api/profile`, {
-    headers: { Authorization: `Bearer ${pair.accessToken}` },
+    headers: { Authorization: `Bearer ${rotatedPair.accessToken}` },
   });
   assert.equal(
     await getNativeAccessIdentity(access, environment(d1), ["profile:read"], LEGAL_VERSION),
     null,
+  );
+});
+
+test("native credential cleanup is a no-op only when its migration is absent", async () => {
+  const sqlite = new DatabaseSync(":memory:");
+  await cleanupNativeOAuthData({ DB: new D1(sqlite) });
+
+  const unexpectedFailure = new Error("unexpected storage failure");
+  await assert.rejects(
+    cleanupNativeOAuthData({
+      DB: {
+        prepare() {
+          throw unexpectedFailure;
+        },
+        async batch() {
+          return [];
+        },
+      },
+    }),
+    unexpectedFailure,
   );
 });
 

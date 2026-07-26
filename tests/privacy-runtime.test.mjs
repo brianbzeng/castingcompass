@@ -285,6 +285,7 @@ async function addPasswordResetChallenge(sqlite, user, code, now = new Date()) {
 
 async function addNativeCredentials(sqlite, user, suffix) {
   const createdAt = new Date().toISOString();
+  const codeExpiresAt = new Date(Date.now() + 5 * 60_000).toISOString();
   const accessExpiresAt = new Date(Date.now() + 10 * 60_000).toISOString();
   const refreshExpiresAt = new Date(Date.now() + 30 * 24 * 60 * 60_000).toISOString();
   const familyId = `native_family_${suffix}`;
@@ -295,7 +296,7 @@ async function addNativeCredentials(sqlite, user, suffix) {
       (code_hash, user_id, client_id, redirect_uri, code_challenge, scope, issued_at, expires_at)
     VALUES (?, ?, 'com.castingcompass.app', 'castingcompass://oauth/callback', ?, ?, ?, ?)`)
     .run(codeHash, user.id, await sha256(`native-verifier-${suffix}`),
-      "profile:read trips:write", createdAt, accessExpiresAt);
+      "profile:read trips:write", createdAt, codeExpiresAt);
   sqlite.prepare(`INSERT INTO native_oauth_refresh_families
       (id, user_id, client_id, scope, created_at, expires_at)
     VALUES (?, ?, 'com.castingcompass.app', ?, ?, ?)`)
