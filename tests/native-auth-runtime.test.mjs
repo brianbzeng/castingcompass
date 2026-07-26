@@ -13,7 +13,7 @@ import { LEGAL_VERSION } from "../worker/auth.ts";
 
 const ORIGIN = "https://castingcompass.com";
 const CLIENT_ID = "com.castingcompass.ios";
-const REDIRECT_URI = "com.castingcompass.ios:/oauth/callback";
+const REDIRECT_URI = "castingcompass://oauth/callback";
 const SCOPE = "profile:read trips:write";
 const migrations = new URL("../drizzle/", import.meta.url);
 
@@ -175,7 +175,7 @@ async function authorize(d1, verifier = "v".repeat(64), state = "s".repeat(43)) 
   const payload = await response.json();
   assert.equal(payload.expiresInSeconds, 300);
   const redirect = new URL(payload.redirectTo);
-  assert.equal(redirect.protocol, "com.castingcompass.ios:");
+  assert.equal(redirect.protocol, "castingcompass:");
   assert.equal(redirect.searchParams.get("state"), state);
   return { code: redirect.searchParams.get("code"), verifier };
 }
@@ -212,6 +212,23 @@ test("native OAuth stays disabled until one exact public client and redirect are
   );
   assert.equal(disabled?.status, 503);
   assert.equal((await disabled.json()).error.code, "native_auth_disabled");
+
+  for (const unsafeRedirect of [
+    "vbscript://oauth/callback",
+    "attacker://oauth/callback",
+    "com.castingcompass.ios:/oauth/callback",
+  ]) {
+    const unsafeConfiguration = await handleNativeOAuthRequest(
+      browserJsonRequest("/api/native/oauth/authorize", {
+        ...body,
+        redirectUri: unsafeRedirect,
+      }),
+      environment(d1, { NATIVE_OAUTH_REDIRECT_URI: unsafeRedirect }),
+      browserSession(),
+    );
+    assert.equal(unsafeConfiguration?.status, 503);
+    assert.equal((await unsafeConfiguration.json()).error.code, "native_auth_configuration_invalid");
+  }
 
   const wrongRedirect = await handleNativeOAuthRequest(
     browserJsonRequest("/api/native/oauth/authorize", { ...body, redirectUri: `${REDIRECT_URI}/extra` }),

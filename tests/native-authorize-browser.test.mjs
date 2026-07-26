@@ -54,7 +54,10 @@ test("callback bases reject browser, credential-bearing, query, fragment, and da
     "https://castingcompass.com/native/callback?code=attacker",
     "https://castingcompass.com/native/callback#fragment",
     "javascript://oauth/callback",
+    "vbscript://oauth/callback",
     "file:///oauth/callback",
+    "attacker://oauth/callback",
+    "com.castingcompass.ios:/oauth/callback",
   ]) {
     assert.equal(isSafeNativeCallbackBase(value), false);
   }

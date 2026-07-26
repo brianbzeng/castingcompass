@@ -25,8 +25,10 @@ duplicate callbacks, missing state, mismatched state, or a restarted attempt dis
 
 The planned client identifier is `com.castingcompass.app`, subject to final Apple bundle-ID
 approval. The final redirect URI must be fixed once and configured identically in the app and
-Worker. The Worker rejects wildcard, per-request, HTTP, credential-bearing, query-bearing, and
-fragment-bearing redirects.
+Worker. The Worker positively allows only `https:` or the dedicated `castingcompass:` scheme and
+rejects every other protocol, including browser-executable and arbitrary custom schemes. It also
+rejects wildcard, per-request, HTTP, credential-bearing, query-bearing, and fragment-bearing
+redirects.
 
 ## Endpoint contract
 

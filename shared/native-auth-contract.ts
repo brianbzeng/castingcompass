@@ -12,3 +12,4 @@ export type NativeOAuthScope = typeof NATIVE_OAUTH_SCOPE_VALUES[number];
 export const NATIVE_OAUTH_SCOPE = NATIVE_OAUTH_SCOPE_VALUES.join(" ");
 export const NATIVE_OAUTH_CODE_CHALLENGE_METHOD = "S256";
 export const NATIVE_OAUTH_TOKEN_TYPE = "Bearer";
+export const NATIVE_OAUTH_ALLOWED_REDIRECT_PROTOCOLS = ["https:", "castingcompass:"] as const;

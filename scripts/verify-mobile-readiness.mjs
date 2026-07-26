@@ -59,6 +59,7 @@ assert.deepEqual(policy.authentication.native, {
   publicClient: true,
   clientSecretAllowed: false,
   exactClientAndRedirectRequired: true,
+  allowedRedirectProtocols: ["https:", "castingcompass:"],
   authorizationBrowser: "system_browser_required",
   codeChallengeMethod: "S256",
   authorizationCodeSeconds: 300,
@@ -82,6 +83,7 @@ assert.match(nativeContractSource, /NATIVE_OAUTH_ACCESS_TOKEN_SECONDS = 10 \* 60
 assert.match(nativeContractSource, /NATIVE_OAUTH_REFRESH_TOKEN_SECONDS = 30 \* 24 \* 60 \* 60/);
 assert.match(nativeContractSource, /"profile:read",\s+"trips:write"/);
 assert.match(nativeContractSource, /NATIVE_OAUTH_CODE_CHALLENGE_METHOD = "S256"/);
+assert.match(nativeContractSource, /NATIVE_OAUTH_ALLOWED_REDIRECT_PROTOCOLS = \["https:", "castingcompass:"\]/);
 assert.match(nativeAuthSource, /env\.NATIVE_OAUTH_ENABLED !== "true"/);
 assert.match(nativeAuthSource, /value !== configuration\.clientId/);
 assert.match(nativeAuthSource, /body\.redirectUri !== configuration\.redirectUri/);
@@ -98,6 +100,7 @@ assert.equal((nativeMigrationSource.match(/CREATE TABLE `native_oauth_/g) ?? [])
 assert.equal((nativeMigrationSource.match(/CREATE INDEX `native_oauth_/g) ?? []).length, 8);
 assert.doesNotMatch(nativeMigrationSource, /client_secret|access_token` text|refresh_token` text/i);
 assert.match(nativeBrowserContractSource, /params\.getAll\(field\)\.length !== 1/);
+assert.match(nativeBrowserContractSource, /NATIVE_OAUTH_ALLOWED_REDIRECT_PROTOCOLS\.includes/);
 assert.match(nativeBrowserContractSource, /actual\.searchParams\.get\("state"\) !== request\.state/);
 assert.match(nativeAuthorizationPageSource, /fetch\("\/api\/native\/oauth\/authorize"/);
 assert.match(nativeAuthorizationPageSource, /window\.location\.assign\(callback\)/);

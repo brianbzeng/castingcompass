@@ -37,8 +37,9 @@ authorization code with exact client and redirect matching, PKCE `S256`, five-mi
 codes, ten-minute access tokens, 30-day rotating refresh families, hash-only database storage,
 family-wide revocation on refresh reuse, explicit idempotent revocation, narrowly declared
 `profile:read` and `trips:write` scopes, and the same owner/legal/deletion-fence predicates used
-by the web app. A cookie and bearer credential may never be mixed. The code contains no client
-secret because an installed app cannot keep one.
+by the web app. Redirect protocols are positively limited to `https:` and the dedicated
+`castingcompass:` app scheme. A cookie and bearer credential may never be mixed. The code contains
+no client secret because an installed app cannot keep one.
 
 The first-party `/native/authorize` page now validates one exact query envelope, reuses the
 existing browser sign-in/legal flow, describes the narrow scopes, calls only the same-origin

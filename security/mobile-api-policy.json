@@ -16,6 +16,10 @@
       "publicClient": true,
       "clientSecretAllowed": false,
       "exactClientAndRedirectRequired": true,
+      "allowedRedirectProtocols": [
+        "https:",
+        "castingcompass:"
+      ],
       "authorizationBrowser": "system_browser_required",
       "codeChallengeMethod": "S256",
       "authorizationCodeSeconds": 300,

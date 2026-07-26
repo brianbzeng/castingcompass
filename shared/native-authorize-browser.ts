@@ -1,4 +1,5 @@
 import {
+  NATIVE_OAUTH_ALLOWED_REDIRECT_PROTOCOLS,
   NATIVE_OAUTH_AUTHORIZATION_CODE_SECONDS,
   NATIVE_OAUTH_CODE_CHALLENGE_METHOD,
   NATIVE_OAUTH_SCOPE,
@@ -62,13 +63,12 @@ export function isSafeNativeCallbackBase(value: string) {
   if (value.length < 12 || value.length > 512) return false;
   try {
     const parsed = new URL(value);
-    if (parsed.username || parsed.password || parsed.search || parsed.hash
-      || parsed.protocol === "http:" || parsed.protocol === "file:"
-      || parsed.protocol === "data:" || parsed.protocol === "javascript:") {
-      return false;
-    }
+    if (parsed.username || parsed.password || parsed.search || parsed.hash) return false;
+    if (!NATIVE_OAUTH_ALLOWED_REDIRECT_PROTOCOLS.includes(
+      parsed.protocol as typeof NATIVE_OAUTH_ALLOWED_REDIRECT_PROTOCOLS[number],
+    )) return false;
     if (parsed.protocol === "https:") return Boolean(parsed.hostname) && parsed.pathname !== "/";
-    return /^[a-z][a-z0-9+.-]{2,63}:$/.test(parsed.protocol) && parsed.pathname !== "/";
+    return parsed.protocol === "castingcompass:" && parsed.pathname !== "/";
   } catch {
     return false;
   }
