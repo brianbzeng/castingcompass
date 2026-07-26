@@ -23,12 +23,12 @@ comparison:
 
 | Complexity | Candidate family | Current implementation truth |
 | --- | --- | --- |
-| 0 | Naive prevalence and positive-catch mean | Implemented |
-| 1 | Regularized linear occurrence and CPUE heads | Implemented |
-| 2 | Spline/GAM occurrence and CPUE heads | Planned |
-| 3 | Random-forest occurrence and CPUE heads | Planned |
-| 4 | Histogram-gradient-boosted occurrence and CPUE heads | Implemented |
-| 5 | Spatial/hierarchical partial-pooling heads | Planned |
+| 0 | Naive prevalence and positive-catch mean | Synthetic-only shared adapter implemented |
+| 1 | Regularized linear occurrence and CPUE heads | Synthetic-only shared adapter implemented |
+| 2 | Spline/GAM occurrence and CPUE heads | Synthetic-only shared adapter implemented |
+| 3 | Random-forest occurrence and CPUE heads | Synthetic-only shared adapter implemented |
+| 4 | Histogram-gradient-boosted occurrence and CPUE heads | Synthetic-only shared adapter implemented |
+| 5 | Spatial/hierarchical partial-pooling heads | Synthetic-only shared adapter implemented |
 | 6 | Bathymetric deep encoder and two heads | Encoder/heads implemented; site-window adapter and eligible target run are open |
 | 7 | Predeclared hybrid or ensemble | Conditional only; it needs an outcome-blind complementary-error rationale |
 
@@ -51,6 +51,13 @@ Every execution and release flag in the plan is false:
 The current public score remains a heuristic relative ranking. The local plan
 does not turn the completed target-agnostic terrain experiments into halibut
 accuracy evidence.
+
+The six classical families share a deterministic two-head capability adapter
+in `pipeline/contourcast/candidate_models.py`. That adapter accepts only a
+fictional synthetic target and refuses real labels, benchmark authority,
+locked-test access, winner selection, score changes, and serving changes. Its
+existence proves interface compatibility only; it supplies no comparative
+metric or evidence that any family is better.
 
 ## Shared future evidence
 
@@ -98,9 +105,13 @@ Run:
 
 ```bash
 python -m pipeline.contourcast.model_selection_plan audit
-python -m unittest pipeline.tests.test_model_selection_plan -v
+python -m pipeline.contourcast.candidate_models
+python -m unittest pipeline.tests.test_model_selection_plan \
+  pipeline.tests.test_candidate_models -v
 ```
 
 The audit emits only plan identity, implementation counts, open-gate count,
 closed authority flags, and a claim boundary. It reads no observation or model
-artifact and produces no performance result.
+artifact and produces no performance result. The candidate capability command
+emits only deterministic shape, finiteness, and bounds checks over fictional
+rows; it deliberately emits no model metrics, comparison, or winner.

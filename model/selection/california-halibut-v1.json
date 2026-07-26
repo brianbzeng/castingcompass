@@ -78,7 +78,7 @@
       "complexity_rank": 0,
       "required_in_future_comparison": true,
       "implementation_status": "implemented",
-      "current_implementation": "pipeline.contourcast.baselines:naive",
+      "current_implementation": "pipeline.contourcast.candidate_models:fit_predict_classical_candidate",
       "occurrence_head": "training-fold target prevalence",
       "cpue_head": "training-fold positive-catch arithmetic mean",
       "explanation_boundary": "fold-local aggregate rates only"
@@ -89,7 +89,7 @@
       "complexity_rank": 1,
       "required_in_future_comparison": true,
       "implementation_status": "implemented",
-      "current_implementation": "pipeline.contourcast.baselines:linear",
+      "current_implementation": "pipeline.contourcast.candidate_models:fit_predict_classical_candidate",
       "occurrence_head": "standardized class-weighted logistic regression",
       "cpue_head": "standardized ridge regression on positive log1p cpue",
       "explanation_boundary": "coefficients and fold-local transforms"
@@ -99,8 +99,8 @@
       "family": "generalized-additive",
       "complexity_rank": 2,
       "required_in_future_comparison": true,
-      "implementation_status": "planned",
-      "current_implementation": null,
+      "implementation_status": "implemented",
+      "current_implementation": "pipeline.contourcast.candidate_models:fit_predict_classical_candidate",
       "occurrence_head": "regularized logistic additive spline terms",
       "cpue_head": "regularized additive spline regression on positive log1p cpue",
       "explanation_boundary": "frozen univariate smooth effects with uncertainty"
@@ -110,8 +110,8 @@
       "family": "bagged-tree",
       "complexity_rank": 3,
       "required_in_future_comparison": true,
-      "implementation_status": "planned",
-      "current_implementation": null,
+      "implementation_status": "implemented",
+      "current_implementation": "pipeline.contourcast.candidate_models:fit_predict_classical_candidate",
       "occurrence_head": "class-balanced random forest probability",
       "cpue_head": "random forest regression on positive log1p cpue",
       "explanation_boundary": "permutation importance and support-aware partial effects"
@@ -122,7 +122,7 @@
       "complexity_rank": 4,
       "required_in_future_comparison": true,
       "implementation_status": "implemented",
-      "current_implementation": "pipeline.contourcast.baselines:boosted",
+      "current_implementation": "pipeline.contourcast.candidate_models:fit_predict_classical_candidate",
       "occurrence_head": "regularized histogram gradient boosting classifier",
       "cpue_head": "regularized histogram gradient boosting on positive log1p cpue",
       "explanation_boundary": "held-out permutation importance and calibrated response summaries"
@@ -132,8 +132,8 @@
       "family": "spatial-hierarchical",
       "complexity_rank": 5,
       "required_in_future_comparison": true,
-      "implementation_status": "planned",
-      "current_implementation": null,
+      "implementation_status": "implemented",
+      "current_implementation": "pipeline.contourcast.candidate_models:fit_predict_classical_candidate",
       "occurrence_head": "preregistered partial-pooling spatial occurrence model",
       "cpue_head": "preregistered partial-pooling positive log1p cpue model",
       "explanation_boundary": "site-region-season effects with uncertainty and no locked-test tuning"
@@ -144,7 +144,7 @@
       "complexity_rank": 6,
       "required_in_future_comparison": true,
       "implementation_status": "encoder-and-heads-implemented-site-window-adapter-open",
-      "current_implementation": "pipeline.contourcast.deep_model:MultiTaskHalibutNet",
+      "current_implementation": "pipeline.contourcast.deep_model:CatchMultiTaskModel",
       "occurrence_head": "terrain-encoder occurrence logit with frozen site-window aggregation",
       "cpue_head": "terrain-encoder positive log1p cpue with frozen site-window aggregation",
       "explanation_boundary": "ablations attribution stability and explicit missing-coverage abstention"

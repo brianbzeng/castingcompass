@@ -990,6 +990,13 @@ after its acceptance checks pass in the intended environment.
     reporting; resource/latency/maintainability comparison; and a simpler-model tie break.
     The strict evaluator rejects candidate omission/reordering, evidence asymmetry, deep-learning
     preference, locked-test tuning, or any training/selection/score/serving/deployment authority.
+  - [x] Implement and locally verify one deterministic synthetic-only two-head adapter for all six
+    classical families. It covers naive, regularized-linear, spline/GAM, random-forest,
+    histogram-gradient-boosted, and spatial partial-pooling candidates, including an unseen-region
+    fallback. The adapter refuses California-halibut labels, real datasets, benchmark or
+    locked-test authority, winner selection, and score/serving changes. Its metric-free receipt
+    proves callable interface, shape, finiteness, bounds, and repeatability only; it is not a
+    benchmark result.
   - [ ] After eligible data and a separate confirmatory design exist, freeze the actual input
     adapters, search spaces, final primary metrics, materiality thresholds, slice floors,
     calibration ceiling, and independent-reproduction procedure before any locked-test access.
