@@ -3,6 +3,7 @@
   "sourceFiles": [
     "worker/auth.ts",
     "worker/discussions.ts",
+    "worker/native-auth.ts",
     "worker/privacy-export.ts",
     "worker/security.ts",
     "worker/trip-review-queue.ts",
@@ -11,9 +12,9 @@
     "worker/validation-feasibility-export.ts"
   ],
   "expectedSummary": {
-    "prepareCallCount": 255,
-    "literalCallCount": 241,
-    "nonLiteralCallCount": 14,
+    "prepareCallCount": 286,
+    "literalCallCount": 271,
+    "nonLiteralCallCount": 15,
     "multiRowLiteralWithoutLimitCount": 9
   },
   "allowedNonLiteralExpressions": [
@@ -44,6 +45,13 @@
       "staticAuthority": "module-level DISCUSSION_SCHEMA_READY_SQL constant",
       "executionContract": "one read-only schema-readiness probe per D1 binding when public discussions are enabled",
       "rationale": "Production discussion schema is migration-owned; the default-off runtime fails closed with one static readiness query instead of issuing table or index DDL on a cold isolate."
+    },
+    {
+      "file": "worker/native-auth.ts",
+      "expressionSha256": "31a519c692e61c6d7149aa11067c81505634129fb843d609d0c456ec6d503b1b",
+      "staticAuthority": "module-level NATIVE_SCHEMA_READY_SQL constant",
+      "executionContract": "one read-only native-credential schema-readiness probe per D1 binding when native auth is explicitly enabled",
+      "rationale": "Migration 0021 owns the native credential schema; the default-off runtime fails closed with one static readiness query and never creates tables from a request."
     },
     {
       "file": "worker/trips.ts",

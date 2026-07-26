@@ -1,6 +1,6 @@
 # Mobile and API compatibility boundary
 
-Last reviewed: **2026-07-20 UTC**
+Last reviewed: **2026-07-26 UTC**
 
 This document defines the repository controls for mobile web clients and future native clients.
 It does not authorize a production deployment, claim native-app readiness, or replace an isolated
@@ -30,10 +30,24 @@ Those schemas do not imply that every Worker response is already suitable for a 
 
 The current web application continues to use same-origin, secure, host-only, HttpOnly session
 cookies with server-side authorization. Credentials and session tokens must not be placed in
-`localStorage`. A native client is not authorized for release yet. Before any native release, use
-an authorization-code flow with PKCE, short-lived access tokens in OS-protected storage, rotated
-refresh tokens, server-side revocation, and the existing owner/role checks. Do not embed a shared
-secret in an app binary and do not reinterpret the browser cookie flow as a native-token design.
+`localStorage`.
+
+The server now implements a separate, default-off native public-client boundary:
+authorization code with exact client and redirect matching, PKCE `S256`, five-minute one-use
+codes, ten-minute access tokens, 30-day rotating refresh families, hash-only database storage,
+family-wide revocation on refresh reuse, explicit idempotent revocation, narrowly declared
+`profile:read` and `trips:write` scopes, and the same owner/legal/deletion-fence predicates used
+by the web app. A cookie and bearer credential may never be mixed. The code contains no client
+secret because an installed app cannot keep one.
+
+The first-party `/native/authorize` page now validates one exact query envelope, reuses the
+existing browser sign-in/legal flow, describes the narrow scopes, calls only the same-origin
+authorization endpoint, verifies the exact callback base/code/state receipt, and is `noindex`.
+This implementation is still not native-release authorization. The native client must use
+`ASWebAuthenticationSession` (not an embedded web view), bind high-entropy state to its PKCE
+verifier, store refresh/access credentials only in the iOS Keychain, recover from a lost refresh
+response by signing in again, and prove revocation on physical devices. The exact endpoint and
+activation contract is in [Native iOS authentication](NATIVE-IOS-AUTH.md).
 
 ## Mobile web coverage
 
@@ -59,14 +73,16 @@ npx playwright install --with-deps chromium webkit
 npm run test:mobile
 ```
 
-The policy verifier fails closed if the runtime order, version/header constants, shared contracts,
-safe-area variables, WebKit project, CI browser installation, or offline/safe-area browser tests
-drift from the reviewed contract.
+The policy verifier fails closed if the runtime order, version/header constants, native
+lifetimes/scopes/configuration/migration, shared contracts, safe-area variables, WebKit project,
+CI browser installation, or offline/safe-area browser tests drift from the reviewed contract.
 
 ## Still open
 
 - Isolated staging, production bindings, release rehearsal, and physical iOS/Android acceptance.
-- A reviewed native-client API surface and the PKCE/token lifecycle described above.
+- A signed SwiftUI client, Keychain implementation, `ASWebAuthenticationSession` integration
+  with the reviewed browser handoff, exact callback handling, isolated-staging configuration,
+  and physical-device PKCE/rotation/revocation acceptance.
 - Production performance, cache, queue, cost, rate-limit, and failure-mode evidence at approved
   scale; repository safeguards alone cannot establish provider capacity.
 - Provider configuration and deployment evidence. This repository change intentionally performs

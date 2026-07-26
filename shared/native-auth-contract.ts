@@ -1,0 +1,14 @@
+export const NATIVE_OAUTH_AUTHORIZATION_CODE_SECONDS = 5 * 60;
+export const NATIVE_OAUTH_ACCESS_TOKEN_SECONDS = 10 * 60;
+export const NATIVE_OAUTH_REFRESH_TOKEN_SECONDS = 30 * 24 * 60 * 60;
+
+export const NATIVE_OAUTH_SCOPE_VALUES = [
+  "profile:read",
+  "trips:write",
+] as const;
+
+export type NativeOAuthScope = typeof NATIVE_OAUTH_SCOPE_VALUES[number];
+
+export const NATIVE_OAUTH_SCOPE = NATIVE_OAUTH_SCOPE_VALUES.join(" ");
+export const NATIVE_OAUTH_CODE_CHALLENGE_METHOD = "S256";
+export const NATIVE_OAUTH_TOKEN_TYPE = "Bearer";

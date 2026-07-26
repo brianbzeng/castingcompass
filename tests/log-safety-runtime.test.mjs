@@ -147,6 +147,24 @@ function authDatabase() {
     CREATE TABLE trip_validation_provenance (id TEXT PRIMARY KEY NOT NULL);
     CREATE TABLE validation_feasibility_events (id TEXT PRIMARY KEY NOT NULL);
     CREATE TABLE validation_feasibility_corrections (id TEXT PRIMARY KEY NOT NULL);
+    CREATE TABLE native_oauth_authorization_codes (
+      code_hash TEXT PRIMARY KEY NOT NULL, user_id TEXT NOT NULL,
+      FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+    );
+    CREATE TABLE native_oauth_refresh_families (
+      id TEXT PRIMARY KEY NOT NULL, user_id TEXT NOT NULL, revoked_at TEXT,
+      FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+    );
+    CREATE TABLE native_oauth_refresh_tokens (
+      token_hash TEXT PRIMARY KEY NOT NULL, family_id TEXT NOT NULL,
+      FOREIGN KEY (family_id) REFERENCES native_oauth_refresh_families(id) ON DELETE CASCADE
+    );
+    CREATE TABLE native_oauth_access_tokens (
+      token_hash TEXT PRIMARY KEY NOT NULL, family_id TEXT NOT NULL,
+      user_id TEXT NOT NULL, revoked_at TEXT,
+      FOREIGN KEY (family_id) REFERENCES native_oauth_refresh_families(id) ON DELETE CASCADE,
+      FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+    );
   `);
   return { sqlite, d1: new D1Adapter(sqlite) };
 }

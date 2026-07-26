@@ -47,6 +47,7 @@ import {
   type ApiRoutePolicy,
 } from "./route-policy";
 import { unsupportedApiVersionResponse } from "./api-version.ts";
+import { handleNativeOAuthRequest, type NativeOAuthEnv } from "./native-auth.ts";
 import {
   attachRequestId,
   internalErrorResponse,
@@ -65,7 +66,8 @@ interface AssetFetcher {
   fetch(request: Request): Promise<Response>;
 }
 
-interface Env extends TripApiEnv, TurnstileEnv, RateLimitEnv, ObservabilityEnv, AiReviewQueueEnv, PrivacyExportEnv {
+interface Env extends TripApiEnv, TurnstileEnv, RateLimitEnv, ObservabilityEnv, AiReviewQueueEnv, PrivacyExportEnv,
+  NativeOAuthEnv {
   ASSETS: AssetFetcher;
   PUBLIC_DISCUSSIONS_ENABLED?: string;
   RELEASE_MAINTENANCE_MODE?: string;
@@ -176,6 +178,7 @@ async function handleFetchRequest(request: Request, env: Env, ctx: ExecutionCont
     const ownerAuthorization = await authorizeOwnerRequest(request, env, {
       currentLegalAcceptanceRequired: apiPolicy.currentLegalAcceptanceRequired,
       deletionFenceAccessAllowed: apiPolicy.deletionFenceAccessAllowed,
+      nativeScopes: apiPolicy.nativeScopes,
     });
     if (ownerAuthorization.response) return ownerAuthorization.response;
     authenticatedSession = ownerAuthorization.session;
@@ -245,6 +248,7 @@ async function routeRequest(
         break;
       case "account":
         apiResponse = await handleAccountRequest(request, env, sites, {
+          nativeScopes: apiPolicy.nativeScopes,
           waitUntil: (promise) => ctx.waitUntil(promise),
           onTripUpdated: (trip) => ctx.waitUntil(
             scheduleTripReview(env, trip.id, sites, { resetForNewInput: true }),
@@ -253,6 +257,9 @@ async function routeRequest(
             scheduleTripReview(env, trip.id, sites, { expediteRetry: true }),
           ),
         });
+        break;
+      case "native_auth":
+        apiResponse = await handleNativeOAuthRequest(request, env, authenticatedSession);
         break;
       case "trips": {
         const protectedTripMutation = apiPolicy.authorization === "owner";
@@ -264,6 +271,7 @@ async function routeRequest(
           const ownerAuthorization = await authorizeOwnerRequest(request, env, {
             currentLegalAcceptanceRequired: apiPolicy.currentLegalAcceptanceRequired,
             deletionFenceAccessAllowed: apiPolicy.deletionFenceAccessAllowed,
+            nativeScopes: apiPolicy.nativeScopes,
           });
           if (ownerAuthorization.response) return ownerAuthorization.response;
           tripSession = ownerAuthorization.session;
@@ -277,6 +285,7 @@ async function routeRequest(
         }
         apiResponse = await handleTripRequest(request, env, sites, {
           accountId: authenticatedUser?.id ?? null,
+          requestAuthority: tripSession?.credentialKind,
           onTripCompleted: (trip) => ctx.waitUntil(scheduleTripReview(env, trip.id, sites)),
         });
         break;

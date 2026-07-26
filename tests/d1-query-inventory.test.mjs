@@ -56,13 +56,13 @@ test("the committed inventory covers every Worker prepare site and its reviewed 
   validatePolicy(policy, inventory);
   assert.deepEqual(JSON.parse(committed), inventory);
   assert.deepEqual(inventory.summary, {
-    prepareCallCount: 255,
-    literalCallCount: 241,
-    nonLiteralCallCount: 14,
+    prepareCallCount: 286,
+    literalCallCount: 271,
+    nonLiteralCallCount: 15,
     multiRowLiteralWithoutLimitCount: 9,
   });
-  assert.equal(inventory.sourceFiles.length, 8);
-  assert.equal(new Set(inventory.queries.map(({ callSiteId }) => callSiteId)).size, 255);
+  assert.equal(inventory.sourceFiles.length, 9);
+  assert.equal(new Set(inventory.queries.map(({ callSiteId }) => callSiteId)).size, 286);
   assert.ok(inventory.queries.every(({ tables }) => !tables.includes("SET")));
   assert.equal(policy.multiRowReadContracts.filter(({ rowBoundStatus }) => rowBoundStatus === "open-account-cardinality").length, 0);
   assert.equal(policy.multiRowReadContracts.filter(({ rowBoundStatus }) => rowBoundStatus === "complete-rights-export").length, 9);
@@ -143,7 +143,7 @@ test("the committed inventory covers every Worker prepare site and its reviewed 
   assert.ok(inventory.queries.some(({ executionMode, statementClass, sql }) =>
     executionMode === "first"
       && statementClass === "SELECT"
-      && sql === "SELECT (SELECT COUNT(*) FROM users WHERE id = ? AND email = ? AND password_salt = ? AND password_hash = ? AND updated_at = ?) AS exact_user_count, (SELECT COUNT(*) FROM users WHERE id = ?) AS any_user_count, (SELECT COUNT(*) FROM auth_sessions WHERE user_id = ?) AS session_count, (SELECT COUNT(*) FROM email_challenges WHERE id = ? AND kind = 'password_reset' AND user_id = ? AND code_hash = ? AND created_at = ? AND attempts = ? AND expires_at > ?) AS exact_challenge_count, (SELECT COUNT(*) FROM email_challenges WHERE id = ?) AS any_challenge_count, (SELECT COUNT(*) FROM account_deletion_fences WHERE user_id = ?) AS fence_count"));
+      && sql === "SELECT (SELECT COUNT(*) FROM users WHERE id = ? AND email = ? AND password_salt = ? AND password_hash = ? AND updated_at = ?) AS exact_user_count, (SELECT COUNT(*) FROM users WHERE id = ?) AS any_user_count, (SELECT COUNT(*) FROM auth_sessions WHERE user_id = ?) AS session_count, (SELECT COUNT(*) FROM native_oauth_authorization_codes WHERE user_id = ?) AS native_code_count, (SELECT COUNT(*) FROM native_oauth_refresh_families WHERE user_id = ? AND revoked_at IS NULL) AS native_family_count, (SELECT COUNT(*) FROM native_oauth_access_tokens WHERE user_id = ? AND revoked_at IS NULL) AS native_access_count, (SELECT COUNT(*) FROM email_challenges WHERE id = ? AND kind = 'password_reset' AND user_id = ? AND code_hash = ? AND created_at = ? AND attempts = ? AND expires_at > ?) AS exact_challenge_count, (SELECT COUNT(*) FROM email_challenges WHERE id = ?) AS any_challenge_count, (SELECT COUNT(*) FROM account_deletion_fences WHERE user_id = ?) AS fence_count"));
   assert.ok(inventory.queries.some(({ executionMode, statementClass, sql }) =>
     executionMode === "first"
       && statementClass === "SELECT"

@@ -45,6 +45,7 @@ const MIGRATIONS = [
   "0018_ai_review_queue.sql",
   "0019_async_privacy_exports.sql",
   "0020_trip_photo_upload_reservations.sql",
+  "0021_native_oauth.sql",
 ];
 
 let tripRequestSequence = 0;
@@ -280,6 +281,34 @@ async function addPasswordResetChallenge(sqlite, user, code, now = new Date()) {
       now.toISOString(),
     );
   return id;
+}
+
+async function addNativeCredentials(sqlite, user, suffix) {
+  const createdAt = new Date().toISOString();
+  const accessExpiresAt = new Date(Date.now() + 10 * 60_000).toISOString();
+  const refreshExpiresAt = new Date(Date.now() + 30 * 24 * 60 * 60_000).toISOString();
+  const familyId = `native_family_${suffix}`;
+  const codeHash = await sha256(`native-code-${suffix}`);
+  const refreshHash = await sha256(`native-refresh-${suffix}`);
+  const accessHash = await sha256(`native-access-${suffix}`);
+  sqlite.prepare(`INSERT INTO native_oauth_authorization_codes
+      (code_hash, user_id, client_id, redirect_uri, code_challenge, scope, issued_at, expires_at)
+    VALUES (?, ?, 'com.castingcompass.app', 'castingcompass://oauth/callback', ?, ?, ?, ?)`)
+    .run(codeHash, user.id, await sha256(`native-verifier-${suffix}`),
+      "profile:read trips:write", createdAt, accessExpiresAt);
+  sqlite.prepare(`INSERT INTO native_oauth_refresh_families
+      (id, user_id, client_id, scope, created_at, expires_at)
+    VALUES (?, ?, 'com.castingcompass.app', ?, ?, ?)`)
+    .run(familyId, user.id, "profile:read trips:write", createdAt, refreshExpiresAt);
+  sqlite.prepare(`INSERT INTO native_oauth_refresh_tokens
+      (token_hash, family_id, generation, created_at, expires_at)
+    VALUES (?, ?, 0, ?, ?)`)
+    .run(refreshHash, familyId, createdAt, refreshExpiresAt);
+  sqlite.prepare(`INSERT INTO native_oauth_access_tokens
+      (token_hash, family_id, user_id, client_id, scope, created_at, expires_at)
+    VALUES (?, ?, ?, 'com.castingcompass.app', ?, ?, ?)`)
+    .run(accessHash, familyId, user.id, "profile:read trips:write", createdAt, accessExpiresAt);
+  return { familyId, codeHash, refreshHash, accessHash };
 }
 
 async function addSignupChallenge(sqlite, suffix, code, now = new Date()) {
@@ -1557,6 +1586,7 @@ test("password recovery remains enumeration-resistant through request, resend, a
 test("password reset revokes every prior session before issuing a fresh one", async () => {
   const { sqlite, d1 } = await database();
   const user = await addUser(sqlite, "44");
+  const native = await addNativeCredentials(sqlite, user, "password-reset-44");
   const secondToken = Buffer.alloc(32, 45).toString("base64url");
   const now = new Date();
   sqlite.prepare("INSERT INTO auth_sessions (token_hash, user_id, expires_at, created_at) VALUES (?, ?, ?, ?)")
@@ -1592,6 +1622,12 @@ test("password reset revokes every prior session before issuing a fresh one", as
     assert.equal(sqlite.prepare("SELECT COUNT(*) AS count FROM auth_sessions WHERE token_hash = ?").get(await sha256(secondToken)).count, 0);
     assert.equal(sqlite.prepare("SELECT COUNT(*) AS count FROM auth_sessions WHERE token_hash = ?").get(await sha256(freshToken)).count, 1);
     assert.equal(sqlite.prepare("SELECT COUNT(*) AS count FROM email_challenges WHERE id = ?").get(challengeId).count, 0);
+    assert.equal(sqlite.prepare("SELECT COUNT(*) AS count FROM native_oauth_authorization_codes WHERE code_hash = ?")
+      .get(native.codeHash).count, 0);
+    assert.notEqual(sqlite.prepare("SELECT revoked_at FROM native_oauth_refresh_families WHERE id = ?")
+      .get(native.familyId).revoked_at, null);
+    assert.notEqual(sqlite.prepare("SELECT revoked_at FROM native_oauth_access_tokens WHERE token_hash = ?")
+      .get(native.accessHash).revoked_at, null);
   } finally {
     globalThis.fetch = originalFetch;
   }
@@ -4124,6 +4160,7 @@ test("owner mutations reject undeclared gear and profile fields", async () => {
 test("account deletion transaction removes public/account rows and completes successful object purge", async () => {
   const { sqlite, d1 } = await database();
   const user = await addUser(sqlite);
+  await addNativeCredentials(sqlite, user, "account-deletion");
   const tripId = addTrip(sqlite, user, { photoKey: "private/photo.jpg" });
   addDiscussion(sqlite, tripId);
   sqlite.prepare("INSERT INTO saved_sites (user_id, site_id, created_at) VALUES (?, 'ocean-beach', '2026-07-01')").run(user.id);
@@ -4144,6 +4181,10 @@ test("account deletion transaction removes public/account rows and completes suc
   assert.equal(sqlite.prepare("SELECT COUNT(*) AS count FROM trips").get().count, 0);
   assert.equal(sqlite.prepare("SELECT COUNT(*) AS count FROM site_discussion_posts").get().count, 0);
   assert.equal(sqlite.prepare("SELECT COUNT(*) AS count FROM saved_sites").get().count, 0);
+  assert.equal(sqlite.prepare("SELECT COUNT(*) AS count FROM native_oauth_authorization_codes").get().count, 0);
+  assert.equal(sqlite.prepare("SELECT COUNT(*) AS count FROM native_oauth_refresh_families").get().count, 0);
+  assert.equal(sqlite.prepare("SELECT COUNT(*) AS count FROM native_oauth_refresh_tokens").get().count, 0);
+  assert.equal(sqlite.prepare("SELECT COUNT(*) AS count FROM native_oauth_access_tokens").get().count, 0);
   const task = sqlite.prepare("SELECT state, object_key, object_key_hash FROM privacy_deletion_tasks").get();
   assert.equal(task.state, "completed");
   assert.equal(task.object_key, null);
