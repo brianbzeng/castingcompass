@@ -14,15 +14,43 @@ access/correction/portability/deletion workflow are maintained in
 - Signup eligibility accepts only a birth date. It stores a short-lived hash and timestamps,
   never the entered date, email, password, or legal choices. A proof is single use.
 - An ineligible response sets a bounded first-party marker without age or identity data.
-- Account/trip deletion inserts its job and the locators inventoried immediately before it in
-  the same D1 batch that removes active rows and linked public discussion copies. Because that
-  inventory is not fenced against a concurrent photo write, the Worker independently rejects
-  every photo upload unless `TRIP_PHOTO_UPLOADS_ENABLED` is explicitly `true`; production and
-  checked-in configuration keep it `false`.
+- After password reauthentication, account deletion first claims an exact, high-entropy leased
+  `account_deletion_fences` row. New sessions, account-bound trip inserts, photo reservations,
+  and photo attachment repeat the absence of that fence in their authoritative statements.
+  Only then does deletion materialize its complete locator inventory inside D1 with four source-
+  bound `INSERT INTO ... SELECT` statements and atomically insert its job/tasks while removing
+  active rows and linked public copies. The destructive transaction is fixed at 18 statements
+  regardless of object count. Production and checked-in upload gates remain `false`.
+- Before any enabled path writes R2, it must first commit and exactly read back a
+  `trip_photo_upload_reservations` row containing the typed locator hash. Exact trip attachment
+  removes the reservation; ambiguous D1/R2 responses retain it for leased scheduled
+  reconciliation. The reconciler preserves an attached object, idempotently deletes an
+  unattached object, and fails closed without R2 on a locator-hash mismatch.
+- Account deletion inventories every reservation by its pseudonymous owner hash and adopts its
+  locator into the deletion ledger before deleting the reservation row. The task preserves the
+  reservation's later `available_at`, preventing cleanup from racing an in-flight R2 write.
+  Attached trip photos carry `photo_key_hash`; deletion inserts its job only if every non-null
+  locator has that source-bound hash. Every destructive statement repeats both the exact fence
+  lease and deletion job. A missing legacy hash or rolled-back batch removes no active row and
+  leaves the fence in place, so account mutations stay frozen until a safe protected migration
+  or retry takes ownership.
+- Object cleanup claims at most five tasks per invocation and reconciles at most 100 jobs with
+  one set-based update. The normal account response attempts at most three objects inline; a
+  lost-committed-response recovery attempts one. Direct-D1 tests keep cold 75-photo and recovery
+  paths within 50 total queries and 100 bound parameters per query.
 - HTTP `200` means active rows and all known objects are gone. HTTP `202` means active rows are
   gone while object cleanup is processing or needs attention.
 - Completed tasks erase their plaintext object locator. Pseudonymous completed tombstones
   outlive the permitted backup window; unresolved tasks remain until resolved.
+- An object delete requires an exact read-back of the worker's high-entropy lease plus the
+  expected task, store, locator, locator hash, attempt, and expiry. Immediately before R2, the
+  Worker recomputes `SHA-256(object_store + NUL + object_key)` and fails closed to
+  `object_locator_hash_mismatch` without an object-store call if D1 no longer matches.
+- Task completion is accepted only after exact terminal read-back. For privacy-export objects,
+  clearing the export locator and completing the deletion task share one D1 batch, so a lost
+  response is resolved from the complete atomic state rather than mutation metadata. An
+  ambiguous object delete remains safe to retry because R2 deletion is idempotent; a stale
+  worker cannot complete a newer lease.
 - Authenticated account deletion automatically requeues that account's earlier
   `needs_attention` photo tasks, preserving cumulative attempts, so the account job and prior
   trip job can each perform an idempotent, lease-owned delete. This is the bounded exception
@@ -32,7 +60,7 @@ access/correction/portability/deletion workflow are maintained in
 
 ## Migration sequence
 
-Migration `0010_privacy_durability.sql` is part of the authoritative
+Migrations `0010_privacy_durability.sql` and `0020_trip_photo_upload_reservations.sql` are part of the authoritative
 [integrated production release](INTEGRATED-RELEASE.md). Use its immutable release verifier,
 read-only aggregate preflight, Time Travel evidence, explicit `0007` reconciliation, and
 one-file migration wrapper. Do not run raw `wrangler d1 migrations apply`, and do not pass a
@@ -48,7 +76,10 @@ accounts will be paused, but export and deletion remain available without reacce
 A fresh migration must report 6 age-proof columns, 13 deletion-job columns, 13
 deletion-task columns, one owner lookup index, exactly one `trips.user_id` → `users.id`
 foreign key with `ON DELETE SET NULL`, zero new-table rows, zero forbidden age/identity
-columns, and zero foreign key violations. Remote D1 does not authorize
+columns, an exact nullable text `trips.photo_key_hash` column, zero non-null photo locators
+without that hash, and zero foreign key violations. The preflight must prove zero existing trip
+photo locators before `0020`; that is the protected release boundary for adding the hash without
+inventing legacy object identity. Remote D1 does not authorize
 `PRAGMA integrity_check`; the complete migration chain and isolated restore must report
 `integrity_check = ok` in local/restore verification. Stop on any mismatch.
 
@@ -109,6 +140,11 @@ account identifier into a ticket, terminal transcript, or alert.
    tasks belonging to that one still-open job. Run this through the reviewed D1 operations
    path and have a second operator verify the job ID and affected-row count before execution:
 
+   `object_locator_hash_mismatch` is not a transient incident. Stop and independently reconcile
+   the ledger against the original source record and intended private bucket. Do not edit either
+   the plaintext locator or its hash merely to make them agree, and do not requeue that task until
+   the correct pair has been re-established through a reviewed recovery procedure.
+
    ```sql
    UPDATE privacy_deletion_tasks
    SET state = 'pending', available_at = strftime('%Y-%m-%dT%H:%M:%fZ','now'),
@@ -151,10 +187,14 @@ Time Travel window must remain shorter than the 90-day completed-tombstone reten
 the evidence and second-person-review requirements in `docs/PRODUCTION-OPERATIONS.md`.
 
 Photo uploads remain disabled in the reviewed production build, including a server-side gate
-that defaults off. Do not enable them until the private bucket binding, object inventory,
+that defaults off. Do not enable them until the `0020` account-fence and reservation tables plus
+the exact nullable text `trips.photo_key_hash` column are applied, the two new tables and existing
+photo-locator cohort are initially empty, and the private bucket binding, object inventory,
 retry alert, export, deletion, orphan-upload cleanup, and R2 restore/deletion drill have all
-passed. Before the first enablement, account deletion must establish a D1-serialized write
-fence before taking its photo inventory so an upload/attach request cannot commit a new R2
-locator between inventory and active-row removal. Cleanup must also be bounded below the
-deployed Cloudflare plan's D1-query and subrequest limits, or the release record must include
-reviewed evidence that its plan safely covers the worst case.
+passed. Migration `0020` must be applied, its initial reservation count must be zero, and every
+aged `pending`, expired `leased`, or `needs_attention` row must be monitored without logging a
+locator. The local account-deletion fence and interleaving tests do not prove the production
+migration, intended bucket identity, alerting, provider behavior, or operational drill. Cleanup
+is locally bounded below Cloudflare's current 50-query Free ceiling, but the guarded release must
+still record the actual deployed plan, production-shaped rows-read/written and timing evidence,
+and subrequest budget before upload activation.

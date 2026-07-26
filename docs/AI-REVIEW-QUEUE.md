@@ -23,8 +23,12 @@ CastingCompass therefore uses this boundary:
 
 - A queue message has exactly `version` and an opaque `airj_` job ID. It contains no trip ID,
   account ID, site, note, prompt, model output, token, email, photo, or authorization claim.
-- D1 `ai_review_jobs` is the authoritative outbox and state ledger. Its unique trip predicate,
-  atomic job lease, and the trip row's existing review claim make duplicate delivery idempotent.
+- D1 `ai_review_jobs` is the authoritative outbox and state ledger. Its unique trip predicate
+  and high-entropy, exact compare-and-set job lease coordinate Queue delivery. A private dispatch
+  token must be read back before the producer sends, and every consumer terminal write repeats
+  its private processing token. Independently, a processing trip carries a
+  high-entropy, 60-second compare-and-set claim envelope in `ai_review_json`; profile and
+  portability reads suppress that internal envelope, and terminal state overwrites or clears it.
 - The consumer refetches the trip from D1, rechecks the deletion tombstone immediately before
   provider dispatch, uses the existing minimized prompt boundary, and never publishes output.
 - Processing is sequential and capped at five messages per invocation. The application permits
@@ -34,10 +38,15 @@ CastingCompass therefore uses this boundary:
   reloads and the owner retry endpoint cannot reset that ceiling. An owner retry may bring an
   ordinary delayed retry forward without changing its attempt count. A genuine owner edit is
   new input and may reset its job; otherwise only the guarded operator replay can do so.
+  One owner request may durably admit ten exact queued trip versions but starts only one immediate
+  scheduler in that Worker invocation. The other rows remain visible to the bounded backlog; this
+  avoids ten concurrent D1/provider pipelines and does not weaken their individual retry state.
   Infrastructure failures that prevent the application from settling a message require the
-  provider DLQ.
-- Release maintenance acknowledges a valid message only after returning its D1 job to pending.
-  An intentional queue disable does the same, while the direct scheduled backlog resumes.
+  provider DLQ. An abandoned expired fifth processing lease is reconciled directly to
+  `needs_attention` instead of being republished forever.
+- Release maintenance acknowledges a valid message only after returning its unleased or expired
+  D1 job to pending. An active worker keeps its private lease. An intentional queue disable uses
+  the same boundary while the direct scheduled backlog resumes.
 - A deleted trip cascades its job. A stale provider message then has no D1 authority and is
   acknowledged without a provider call.
 
@@ -61,13 +70,27 @@ flowchart LR
   RETRY -->|fifth attempt| ATTENTION["needs_attention"]
 ```
 
-The outbox marks a job `queued` with a 15-minute redispatch deadline before publishing. If the
-Worker stops between that D1 update and the send, the scheduled dispatcher republishes after the
-deadline. If a send failure is observable, the job returns to `pending` after one minute; an
-ambiguous failure may duplicate the message, which is safe. If delivery is delayed or lost, the
-scheduled dispatcher also republishes after the deadline. A
-60-second application lease exceeds the provider's 10-second hard deadline and allows a crashed
-consumer to recover a stranded `processing` trip before retrying.
+The outbox marks a job `queued` with a private dispatch token and a 15-minute redispatch deadline
+before publishing. Exact token read-back resolves missing or lost D1 mutation metadata without
+guessing whether publishing is authorized. If the Worker stops between that D1 update and the
+send, the scheduled dispatcher republishes after the deadline. If a send failure is observable,
+only the matching dispatch token can return the job to `pending` after one minute; an ambiguous
+failure may duplicate the message, which is safe. If delivery is delayed or lost, the scheduled
+dispatcher also republishes after the deadline. A consumer likewise reads back its own private
+60-second processing token before provider work and repeats it on every terminal write, so a
+late worker cannot settle a replacement lease. A 60-second trip claim exceeds the provider's
+30-second maximum configured deadline. A worker must read back its own exact claim before
+provider dispatch, every terminal write repeats that claim, the bounded backlog can reclaim only
+a well-formed expired claim, and a late stale worker cannot overwrite a newer lease. Queue-job
+redispatch deliberately does not reset trip state from a stale snapshot; the independently owned
+trip lease resolves it.
+
+The shared five-minute cron does not run every background pipeline at once. Its deterministic
+four-lane rotation reaches advisory/portability queue dispatch every 20 minutes; that lane
+dispatches at most one advisory-review job before at most five privacy-export jobs, sequentially.
+When the advisory Queue is deliberately disabled, the same one-trip cap applies to the direct
+backlog/provider fallback. This is a Free-tier query and subrequest safety bound, not a production
+throughput claim; backlog age/depth and activation capacity still require isolated staging.
 
 ## Operator replay without an admin backdoor
 
@@ -88,6 +111,11 @@ publish later. Never paste trip/account content into the replay record.
 ## Production activation gates
 
 All boxes stay open until provider access and an isolated synthetic environment are approved:
+
+The narrow ten-row direct/Queue overlap portion has a strict plan-only authorization and internal
+stub-provider boundary in [AUTHENTICATED-STAGING-DRILL.md](AUTHENTICATED-STAGING-DRILL.md). That
+repository preparation creates no Queue, binding, staging deployment, provider call, or evidence;
+the boxes below remain external gates.
 
 - [ ] Apply `0018_ai_review_queue.sql` through the guarded maintenance release; postflight must
       prove the exact table/two indexes, zero initial jobs, and no foreign-key violations.

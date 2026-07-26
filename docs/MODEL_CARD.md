@@ -1,10 +1,30 @@
 # CastingCompass model card
 
-**Status:** multiscale encoder and exactly reproduced full-survey official-
-bathymetry self-supervised pretraining implemented; catch heads remain
-untrained; no catch performance measured.
+**Status:** multiscale encoder and exactly reproduced official bathymetry,
+backscatter, and fused self-supervised pretraining plus common-substrate and
+rare-structure transfer probes and a cross-survey shortcut diagnostic
+implemented; no encoder passed the frozen
+classical baselines, catch heads remain untrained, and no catch performance has
+been measured.
 
-**Version:** 0.3.0
+**Version:** 0.7.0
+
+## Live regional-ranking boundary
+
+The public live ranker is a separate heuristic configuration, not the untrained
+research heads described below. Its catalog covers the Bay Area plus 14 public
+Santa Barbara South Coast access locations from Gaviota through Rincon. Santa
+Barbara sites use curated casting-zone exposure and habitat priors together with
+Santa Barbara tide, weather, buoy, and marine-forecast inputs. They do not use a
+Santa Barbara-trained terrain model and have not been validated against local trip
+outcomes. Scores remain relative percentiles across the current candidate set, so
+adding a region changes the comparison universe rather than creating a catch
+probability.
+
+Ordinary trip reports from the new region remain private, reviewable product
+observations. They cannot become evidence for the frozen Bay Area validation pilot
+or a performance claim without a separately approved, prospective protocol that
+defines the new geography before outcomes are known.
 
 ## Model purpose
 
@@ -40,6 +60,8 @@ predeclared metrics under the same geographic folds.
 - three residual stages with spatial downsampling and global average pooling;
 - a shared-weight multiscale encoder with learned scale attention;
 - a SimCLR-style projection head for self-supervised terrain pretraining;
+- a target-agnostic hybrid pretraining head that combines spatial contrastive
+  learning with masked reconstruction of declared measured value channels;
 - a two-head fine-tuning model:
   - occurrence logit;
   - conditional `log1p(CPUE)` prediction.
@@ -51,7 +73,12 @@ channel dropout. Reflections are disabled by default so shoreline-relative
 orientation, bedform direction, and linear alignment remain meaningful. The
 contrastive objective is NT-Xent, with nearby overlapping locations excluded
 from the negative-pair set so the model is not rewarded for separating the same
-geomorphic structure sampled twice. The
+geomorphic structure sampled twice. For the frozen follow-up experiment,
+bathymetry-only, backscatter-only, and fused runs use identical geographic
+folds and budgets. Each survey-bound backscatter raster retains a paired binary
+availability channel; those channels are never corrupted or reconstructed,
+and reconstruction loss is computed only where a real source pixel exists. Hybrid loss remains an
+optimization diagnostic rather than habitat or fishing accuracy. The
 fine-tuning objective combines binary cross-entropy and positive-only SmoothL1
 log-CPUE loss, with optional batch-normalized sample-count weights for released
 CRFS reliability fields. Loss weights, random seeds, architecture width/depth, optimizer,
@@ -121,6 +148,47 @@ For a neural report, also compare random initialization against self-supervised
 pretraining under identical folds and fine-tuning budgets. Additional temporal,
 weather, tide, or user-history features belong in separately named experiments;
 they must not be slipped into the terrain-only benchmark.
+
+The next seafloor-representation report additionally requires a locked
+three-way modality ablation:
+
+| Modality | Model inputs | Reconstruction targets |
+| --- | --- | --- |
+| `bathymetry` | Ten declared structure channels | Measured depth |
+| `backscatter` | Survey-bound backscatter intensities plus their availability masks | Available measured intensities only |
+| `fused` | Ten structure channels plus survey-bound intensities and availability | Depth plus available measured intensities |
+
+All three runs must use the same corpus locations, spatial split, seed,
+encoder width/depth, optimizer, mask policy, and epoch budget. The required
+input and reconstruction layers produce small parameter-count differences
+(818,050 bathymetry; 816,645 backscatter; 824,710 fused), all within about one
+percent; they are not literally identical-capacity networks. Comparing losses
+across different folds or source coverage is prohibited, and even same-fold
+hybrid loss does not rank representation quality because reconstruction targets
+differ by modality.
+
+The fixed USGS v1 comparison uses validation fold `3`: it is the first seeded
+geographic fold with nonzero training coverage from every one of the four
+survey-bound intensity channels. This availability-only choice is frozen before
+optimization and never consulted a habitat, catch, or probe label.
+
+The three 20-epoch runs and their clean-commit repeats reproduced every loss-
+history value, learned tensor, normalization statistic, and corpus binding.
+The [minimized receipt](../pipeline/evidence/hybrid-seafloor-v1.receipt.json)
+binds the source commit, official corpus, exact model identities, parameters,
+best epochs, and local artifact hashes. Its numeric hybrid losses remain
+optimization diagnostics only; the independent habitat and rare-structure
+probes below are still required.
+
+The official raw video follow-up is a pre-training admissibility audit, not a
+model result. Direct scientist-recorded camera classes are a more independent
+measurement than the interpreted character map, but adjacent one-minute rows
+remain inside one exact cruise/line/tape group. A valid comparison requires at
+least 16 examples of every collapsed class in both train and held-out whole
+groups. The current four retained groups produce zero eligible partitions, so
+the implementation deliberately fits no probe. The target-agnostic
+`official_video_endpoint_admissibility_audit` run kind records this negative
+result without creating validation or promotion authority.
 
 ## Version and promotion contract
 
@@ -200,6 +268,10 @@ feature work, or candidate configuration.
   than where fish live.
 - Spatial autocorrelation can make random validation look unrealistically good.
 - Self-supervised pretraining may encode survey seams or DEM artifacts.
+- The frozen hybrid geographic holdout is source-degenerate: measured centers
+  come from only the 2004 backscatter footprint. Availability/missingness adds
+  reliable apparent skill within that fold, while fused pretraining is reliably
+  worse than bathymetry pretraining on both support-eligible unseen surveys.
 - Conditional CPUE ignores zero catches by design and must always be interpreted
   alongside occurrence probability.
 - Calibration can drift across seasons, species, regulations, survey modes, and
@@ -227,6 +299,18 @@ channel order, source version, or coverage contract fails.
 | Self-supervised pretraining | [Pilot completed on official USGS 2 m bathymetry](experiments/2026-07-11-usgs-sf-2m-ssl-pilot.md) | Best geographically held-out NT-Xent 2.6161 at epoch 1; optimization/provenance validation only, not catch accuracy |
 | Full-survey self-supervised pretraining | [Completed and exactly reproduced on 4,096 USGS 2 m locations](experiments/2026-07-11-usgs-sf-2m-full-ssl-v1.md) | Best geographically held-out NT-Xent 1.4683 at epoch 20; eligible for habitat probing, not live scoring |
 | Frozen seafloor-character probe | [Completed and exactly reproduced on a strict unseen region](experiments/2026-07-11-usgs-sf-2m-seafloor-probe-v1.md) | Pretrained macro F1 0.3914; beats depth-only but is reliably worse than classical structure summaries, so it is not promoted |
+| Hybrid bathymetry/backscatter pretraining | [Completed and exactly reproduced on one 4,096-location corpus](../pipeline/evidence/hybrid-seafloor-v1.receipt.json) | All three target-agnostic encoders reproduced exactly; differently targeted optimization losses do not rank representation quality |
+| Hybrid common-substrate probe | [Completed and exactly reproduced on pretraining holdout 3](experiments/2026-07-22-usgs-sf-hybrid-seafloor-probes-v1.md) | Fused deep macro F1 0.7020 reliably exceeds both single-modality encoders but remains reliably below fused classical summaries at 0.7574 |
+| Rare mapped-structure case-control probe | [Completed and exactly reproduced with whole-component holdout](experiments/2026-07-22-usgs-sf-hybrid-seafloor-probes-v1.md) | Fused deep macro F1 0.7259 beats fused random initialization, but does not reliably beat fused classical summaries; balanced sampling cannot estimate prevalence |
+| Hybrid source-shortcut diagnostic | [Completed and exactly reproduced with strict per-class survey support](experiments/2026-07-22-usgs-sf-hybrid-shortcut-diagnostic-v1.md) | Fixed fold contains only the 2004 measured source; fused deep is reliably worse than bathymetry deep on both eligible unseen-survey domains; shortcut risk remains unresolved |
+| Direct-video endpoint admissibility | [Completed and exactly reproduced with whole-track groups](experiments/2026-07-22-usgs-sf-video-endpoint-admissibility-audit-v1.md) | 166 complete hybrid rows across four groups; zero of seven whole-group partitions meet the per-class floor, so no probe is fit and no model is promoted |
+| Santa Barbara South Coast direct-video admissibility | [Completed and exactly reproduced with whole-cruise holdout](experiments/2026-07-22-usgs-south-coast-video-endpoint-admissibility-audit-v1.md) | 1,327 complete hybrid rows across four cruises, but all four official archives have zero raw class-4 observations; zero of seven whole-cruise partitions pass, so no probe is fit and no model is promoted |
+| Residual statewide direct-video support screen | [Completed and exactly reproduced before raster acquisition](experiments/2026-07-22-usgs-residual-statewide-video-support-screen-v1.md) | 18,722 official records expose numerical support, but one of two class-4 cruises has 444 out-of-domain class-0 rows and 26 incomplete group identities; among schema-valid archives class 4 occurs in only one cruise, so the endpoint fails closed and no model is fit |
+| Direct measured-sediment support screen | [Completed and exactly reproduced before outcome aggregation](experiments/2026-07-22-usgs-ds182-sediment-endpoint-support-v1.md) | The exact 16,485-row `PAC_EXT.txt` member has 14,950 31-field rows under its 32-field header; the protocol forbids padding or switching to dBASE, so no composition support is calculated and no model is fit |
+| Exploratory measured-sediment dBASE support screen | [Completed and exactly reproduced under a separately frozen protocol](experiments/2026-07-22-usgs-ds182-sediment-dbf-support-v1.md) | The exact fixed-width schema and Point pairing validate, but only 136 distinct-sample records are inside the exact San Francisco footprint and zero satisfy every frozen endpoint rule; no source-quality review, raster pairing, or model fit is authorized |
+| Santa Barbara South Coast direct-sediment support screen | [Completed and exactly reproduced across four metadata-only footprints](experiments/2026-07-22-usgs-south-coast-sediment-support-v1.md) | 26 valid rows/sites span three source groups but contain zero gravel-bearing and only three sand-dominant observations; zero of three whole-source partitions passes, so no pixels are read and no model is fit |
+| Independent endpoint source inventory | [Completed with a fail-closed machine policy](experiments/2026-07-22-independent-endpoint-source-inventory-v1.md) | Seven official candidate families reviewed; mapped substrate/cover and the halibut HSM are derived or circular, Digital Coast grabs lack California/hard-bottom support, and DS781/DS182 are already audited support-incomplete families; no candidate receives an evidence role or model authority |
+| Prospective direct-video endpoint collection | [Protocol frozen locally but not activated](experiments/2026-07-22-prospective-seafloor-endpoint-collection-protocol-v1.md) | Outcome-blind site frame, blinded dual labels, whole-day groups, 512 m buffers, and fixed three-class support gates are locked; no participants, sites, observations, rasters, or model actions are authorized |
 | Two-head fine-tuning | Unrun | No checkpoint |
 | Geographic generalization | Unrun | No result |
 | Calibration / ablations | Unrun on official data | No result |

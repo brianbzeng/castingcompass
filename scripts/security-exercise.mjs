@@ -19,11 +19,11 @@ import addFormats from "ajv-formats";
 import { verifyReleaseCheckout } from "./verify-release-checkout.mjs";
 
 export const SECURITY_EXERCISE_POLICY_VERSION =
-  "castingcompass.security-exercise-policy/1.0.0";
+  "castingcompass.security-exercise-policy/1.1.0";
 export const SECURITY_EXERCISE_AUTHORIZATION_VERSION =
-  "castingcompass.security-exercise-authorization/1.0.0";
+  "castingcompass.security-exercise-authorization/1.1.0";
 export const SECURITY_EXERCISE_RECEIPT_VERSION =
-  "castingcompass.security-exercise-receipt/1.0.0";
+  "castingcompass.security-exercise-receipt/1.1.0";
 export const ACTIVE_EXECUTION_CONFIRMATION =
   "I_HAVE_WRITTEN_AUTHORIZATION_FOR_THIS_ISOLATED_STAGING_TARGET";
 
@@ -52,6 +52,7 @@ const EXCLUDED_PATH_PATTERNS = [
 ];
 const EXPECTED_IMAGE_DIGEST =
   "sha256:8d387b1a63e3425beef4846e39719f5af2a787753af2d8b6558c6257d7a577a2";
+const EXPECTED_API_COMPATIBILITY_VERSION = "1";
 const EXPECTED_LIMITS = {
   maximum_authorization_window_minutes: 480,
   maximum_spider_minutes: 2,
@@ -190,13 +191,14 @@ function privateWrite(path, value) {
 export function validatePolicy(policy) {
   exactKeys(policy, [
     "schema_version", "policy_id", "authorization_contract_version",
-    "receipt_contract_version", "scanner", "production_hosts", "public_path_patterns",
-    "excluded_path_patterns", "limits", "production_gates",
+    "receipt_contract_version", "api_compatibility_version", "scanner", "production_hosts",
+    "public_path_patterns", "excluded_path_patterns", "limits", "production_gates",
   ], "Security-exercise policy");
   if (policy.schema_version !== SECURITY_EXERCISE_POLICY_VERSION
     || policy.policy_id !== "castingcompass-isolated-security-exercise-v1"
     || policy.authorization_contract_version !== SECURITY_EXERCISE_AUTHORIZATION_VERSION
-    || policy.receipt_contract_version !== SECURITY_EXERCISE_RECEIPT_VERSION) {
+    || policy.receipt_contract_version !== SECURITY_EXERCISE_RECEIPT_VERSION
+    || policy.api_compatibility_version !== EXPECTED_API_COMPATIBILITY_VERSION) {
     refuse("policy-invalid", "Security-exercise policy identity is invalid");
   }
   exactKeys(policy.scanner, [
@@ -297,6 +299,12 @@ export function validateAuthorization(authorization, policy, options = {}) {
     authorization.mode,
     authorization.environment,
   );
+  if (authorization.expected_api_compatibility_version !== policy.api_compatibility_version) {
+    refuse(
+      "api-compatibility-mismatch",
+      "Authorization API compatibility version disagrees with the locked policy",
+    );
+  }
   const start = canonicalTimestamp(authorization.window_start_at);
   const end = canonicalTimestamp(authorization.window_end_at);
   const now = options.now instanceof Date ? options.now : new Date();
@@ -363,9 +371,11 @@ export async function preflightTarget(validated, policy, options = {}) {
     refuse("preflight-body", "Staging health body was not valid JSON");
   }
   exactKeys(body, [
-    "status", "service", "workerVersionId", "releaseMaintenance", "securityExerciseId",
+    "status", "service", "apiCompatibilityVersion", "workerVersionId",
+    "releaseMaintenance", "securityExerciseId",
   ], "Staging health body");
   if (body.status !== "ok" || body.service !== "castingcompass-web"
+    || body.apiCompatibilityVersion !== validated.authorization.expected_api_compatibility_version
     || body.workerVersionId !== validated.authorization.expected_worker_version_id
     || body.securityExerciseId !== validated.authorization.exercise_id
     || body.releaseMaintenance !== false) {
@@ -535,6 +545,7 @@ export function buildAggregateReceipt({ policy, authorization, report, exitCode,
     policy_sha256: sha256(canonicalJson(policy)),
     authorization_sha256: sha256(canonicalJson(authorization)),
     source_commit: authorization.source_commit,
+    api_compatibility_version: policy.api_compatibility_version,
     mode: authorization.mode,
     completed_at: completedAt.toISOString(),
     scanner: {

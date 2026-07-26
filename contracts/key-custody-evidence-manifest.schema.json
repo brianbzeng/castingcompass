@@ -1,0 +1,92 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://castingcompass.com/contracts/key-custody-evidence-manifest.schema.json",
+  "title": "CastingCompass private key-custody evidence manifest",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "source_commit",
+    "environment",
+    "captured_at",
+    "runtime_secret_names",
+    "backup_key_roles",
+    "runtime_inventory_sha256",
+    "backup_custody_inventory_sha256",
+    "access_and_mfa_review_sha256",
+    "rotation_recovery_exercise_sha256",
+    "restore_deletion_replay_sha256",
+    "redaction_test_sha256",
+    "secret_values_captured"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "castingcompass.key-custody-evidence-manifest/1.0.0"
+    },
+    "source_commit": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{40}$"
+    },
+    "environment": {
+      "const": "production"
+    },
+    "captured_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "runtime_secret_names": {
+      "type": "array",
+      "prefixItems": [
+        { "const": "MIMO_API_KEY" },
+        { "const": "OBSERVABILITY_PSEUDONYM_SECRET" },
+        { "const": "RATE_LIMIT_KEY_SECRET" },
+        { "const": "RESEND_API_KEY" },
+        { "const": "TURNSTILE_SECRET_KEY" },
+        { "const": "VALIDATION_PARTICIPANT_HMAC_SECRET" },
+        { "const": "VALIDATION_RECRUITMENT_HMAC_SECRET" }
+      ],
+      "items": false,
+      "minItems": 7,
+      "maxItems": 7
+    },
+    "backup_key_roles": {
+      "type": "array",
+      "prefixItems": [
+        { "const": "current-deletion-ledger" },
+        { "const": "operational-d1-snapshot" },
+        { "const": "validation-snapshot" },
+        { "const": "validation-suppression-ledger" }
+      ],
+      "items": false,
+      "minItems": 4,
+      "maxItems": 4
+    },
+    "runtime_inventory_sha256": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "backup_custody_inventory_sha256": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "access_and_mfa_review_sha256": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "rotation_recovery_exercise_sha256": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "restore_deletion_replay_sha256": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "redaction_test_sha256": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "secret_values_captured": {
+      "const": false
+    }
+  }
+}

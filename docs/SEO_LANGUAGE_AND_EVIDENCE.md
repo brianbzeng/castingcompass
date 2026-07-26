@@ -20,16 +20,17 @@ claim that the page does not support.
 
 ### `/` — public opportunity planner
 
-- **Audience questions:** How can someone compare public Bay Area halibut fishing
-  windows? Which available shore, beach, jetty, or pier options fit the forecast
-  inputs? Why is one option ranked above another?
+- **Audience questions:** How can someone compare public Bay Area and Santa Barbara
+  South Coast halibut fishing windows? Which available shore, beach, jetty, or pier
+  options fit the forecast inputs? Why is one option ranked above another?
 - **Honest purpose:** Compare options with a transparent heuristic relative ranking,
   while showing inputs, freshness, and limitations.
 - **Candidate phrases:** “California halibut fishing planner,” “Bay Area halibut
-  shore fishing conditions,” “halibut fishing window comparison,” and “Bay Area
-  pier beach jetty fishing planner.”
+  shore fishing conditions,” “Santa Barbara halibut fishing planner,” “Goleta shore
+  fishing conditions,” “halibut fishing window comparison,” and “California pier
+  beach jetty fishing planner.”
 - **Current title:** “CastingCompass — California halibut opportunity planner.”
-- **Desired snippet:** “Compare public Bay Area shore, beach, jetty, and pier fishing
+- **Desired snippet:** “Compare public Bay Area and Santa Barbara South Coast fishing
   windows using explainable relative rankings from habitat, seasonality, and current
   conditions.”
 - **Useful next action:** Review ranking inputs and freshness before choosing a

@@ -34,6 +34,7 @@ export const STAGED_MIGRATIONS = Object.freeze([
   "0017_trip_idempotency.sql",
   "0018_ai_review_queue.sql",
   "0019_async_privacy_exports.sql",
+  "0020_trip_photo_upload_reservations.sql",
 ]);
 export const ALL_RELEASE_MIGRATIONS = Object.freeze([
   ...BASE_APPLIED_MIGRATIONS,
@@ -139,6 +140,23 @@ const STAGE_ABSENCE_QUERIES = Object.freeze({
           'privacy_export_jobs_owner_idx',
           'privacy_deletion_tasks_store_retry_idx'
         )) AS target_artifacts_found`,
+  "0020_trip_photo_upload_reservations.sql": `
+    SELECT
+      (SELECT COUNT(*) FROM sqlite_master
+        WHERE type = 'table' AND name IN (
+          'account_deletion_fences', 'trip_photo_upload_reservations'
+        ))
+      + (SELECT COUNT(*) FROM sqlite_master
+        WHERE type = 'index' AND name IN (
+          'account_deletion_fences_owner_unique',
+          'trip_photo_upload_reservations_object_key_unique',
+          'trip_photo_upload_reservations_object_key_hash_unique',
+          'trip_photo_upload_reservations_retry_idx',
+          'trip_photo_upload_reservations_trip_idx',
+          'trip_photo_upload_reservations_owner_idx'
+        ))
+      + (SELECT COUNT(*) FROM pragma_table_info('trips')
+        WHERE name = 'photo_key_hash') AS target_artifacts_found`,
 });
 
 function fail(label, expected, actual) {
@@ -276,14 +294,24 @@ export function verifyFinalPostflight(payload) {
     snapshot_suppression_columns: 2,
     data_resilience_indexes: 15,
     exact_trip_idempotency_columns: 1,
+    exact_trip_photo_hash_columns: 1,
     ai_review_queue_tables: 1,
+    exact_ai_review_queue_lease_columns: 1,
     ai_review_queue_indexes: 2,
     ai_review_queue_rows: 0,
     privacy_export_queue_tables: 1,
     privacy_export_queue_indexes: 5,
     privacy_export_queue_rows: 0,
+    account_deletion_fence_tables: 1,
+    account_deletion_fence_indexes: 1,
+    account_deletion_fence_rows: 0,
+    trip_photo_reservation_tables: 1,
+    trip_photo_reservation_indexes: 5,
+    trip_photo_reservation_owner_columns: 1,
+    trip_photo_reservation_rows: 0,
     non_legacy_trip_rows: 0,
     trip_photo_locators: 0,
+    trip_photo_locators_without_hash: 0,
     discussion_rows_with_approval_metadata: 0,
     validation_activation_rows: 0,
     validation_event_rows: 0,

@@ -11,12 +11,17 @@ from .deep_model import architecture_smoke_test
 from .first_party_validation import evaluate_site_window
 from .geo import validate_observation_extent, verify_projected_crs
 from .habitat_probe import run_frozen_seafloor_probe
+from .hybrid_probe import run_hybrid_seafloor_probe
+from .hybrid_shortcut_diagnostic import run_hybrid_shortcut_diagnostic
 from .ingest import ingest_bathymetry, ingest_observations, load_grid, load_model_observations
 from .metadata import sha256_file, write_json
+from .rare_structure_probe import build_rare_structure_corpus, run_rare_structure_probe
 from .sources import summarize_sources
 from .structure import (
+    append_aligned_layers,
     audit_feature_resolution,
     derive_structure_channels,
+    load_feature_stack,
     save_feature_stack,
 )
 from .terrain import (
@@ -28,6 +33,12 @@ from .training import (
     build_geotiff_pretraining_corpus,
     build_pretraining_corpus,
     run_bathymetry_pretraining,
+    run_hybrid_seafloor_pretraining,
+)
+from .video_endpoint_audit import (
+    audit_usgs_residual_statewide_video_support,
+    audit_usgs_sf_video_endpoint,
+    audit_usgs_south_coast_video_endpoint,
 )
 from .validation_protocol import (
     DEFAULT_PROTOCOL_PATH,
@@ -40,6 +51,30 @@ from .workflow import run_baseline_workflow, run_smoke_workflow
 
 def _path(value: str) -> Path:
     return Path(value).expanduser()
+
+
+def _named_values(values: Sequence[str], *, paths: bool = False) -> dict[str, Any]:
+    parsed: dict[str, Any] = {}
+    for value in values:
+        name, separator, item = value.partition("=")
+        if not separator or not name or not item or name in parsed:
+            raise ValueError("named values must be unique NAME=VALUE pairs")
+        parsed[name] = _path(item) if paths else item
+    return parsed
+
+
+def _region_named_paths(values: Sequence[str]) -> dict[str, dict[str, Path]]:
+    parsed: dict[str, dict[str, Path]] = {}
+    for value in values:
+        key, separator, item = value.partition("=")
+        region, region_separator, name = key.partition(":")
+        if not separator or not region_separator or not region or not name or not item:
+            raise ValueError("region layers must be REGION:NAME=PATH values")
+        region_layers = parsed.setdefault(region, {})
+        if name in region_layers:
+            raise ValueError("region-layer names must be unique within each region")
+        region_layers[name] = _path(item)
+    return parsed
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -85,6 +120,14 @@ def build_parser() -> argparse.ArgumentParser:
     resolution.add_argument("--horizontal-accuracy-m", type=float)
     resolution.add_argument("--feature-widths-m", type=float, nargs="+")
 
+    aligned = subcommands.add_parser("append-aligned-layer")
+    aligned.add_argument("--feature-stack", required=True, type=_path)
+    aligned.add_argument("--layer", required=True, type=_path)
+    aligned.add_argument("--layer-name", required=True)
+    aligned.add_argument("--output", required=True, type=_path)
+    aligned.add_argument("--feature-stack-sha256")
+    aligned.add_argument("--layer-sha256")
+
     corpus = subcommands.add_parser("build-pretraining-corpus")
     corpus.add_argument("--feature-stack", required=True, type=_path)
     corpus.add_argument("--output", required=True, type=_path)
@@ -112,6 +155,9 @@ def build_parser() -> argparse.ArgumentParser:
     geotiff_corpus.add_argument("--horizontal-accuracy-m", type=float)
     geotiff_corpus.add_argument("--tile-size", type=int, default=1024)
     geotiff_corpus.add_argument("--seed", type=int, default=42)
+    geotiff_corpus.add_argument("--aligned-layer", action="append", default=[])
+    geotiff_corpus.add_argument("--aligned-layer-sha256", action="append", default=[])
+    geotiff_corpus.add_argument("--min-aligned-valid-fraction", type=float, default=0.0)
 
     pretrain = subcommands.add_parser("pretrain-bathymetry")
     pretrain.add_argument("--corpus", required=True, type=_path)
@@ -130,6 +176,31 @@ def build_parser() -> argparse.ArgumentParser:
     pretrain.add_argument("--device", default="auto")
     pretrain.add_argument("--seed", type=int, default=42)
 
+    hybrid = subcommands.add_parser("pretrain-hybrid-seafloor")
+    hybrid.add_argument("--corpus", required=True, type=_path)
+    hybrid.add_argument("--output-dir", required=True, type=_path)
+    hybrid.add_argument(
+        "--modality",
+        required=True,
+        choices=("bathymetry", "backscatter", "fused"),
+    )
+    hybrid.add_argument("--epochs", type=int, default=10)
+    hybrid.add_argument("--batch-size", type=int, default=32)
+    hybrid.add_argument("--learning-rate", type=float, default=3e-4)
+    hybrid.add_argument("--weight-decay", type=float, default=1e-4)
+    hybrid.add_argument("--base-width", type=int, default=32)
+    hybrid.add_argument("--blocks-per-stage", type=int, default=2)
+    hybrid.add_argument("--projection-dim", type=int, default=128)
+    hybrid.add_argument("--temperature", type=float, default=0.2)
+    hybrid.add_argument("--min-negative-distance-m", type=float, default=512)
+    hybrid.add_argument("--reconstruction-weight", type=float, default=1.0)
+    hybrid.add_argument("--mask-fraction", type=float, default=0.25)
+    hybrid.add_argument("--mask-block-size", type=int, default=4)
+    hybrid.add_argument("--validation-fold", type=int, default=0)
+    hybrid.add_argument("--split-regions", type=int, default=5)
+    hybrid.add_argument("--device", default="auto")
+    hybrid.add_argument("--seed", type=int, default=42)
+
     probe = subcommands.add_parser("probe-seafloor-character")
     probe.add_argument("--corpus", required=True, type=_path)
     probe.add_argument("--checkpoint", required=True, type=_path)
@@ -142,6 +213,175 @@ def build_parser() -> argparse.ArgumentParser:
     probe.add_argument("--device", default="cpu")
     probe.add_argument("--bootstrap-samples", type=int, default=1000)
     probe.add_argument("--seed", type=int, default=42)
+
+    hybrid_probe = subcommands.add_parser("probe-hybrid-seafloor-character")
+    hybrid_probe.add_argument("--corpus", required=True, type=_path)
+    hybrid_probe.add_argument("--bathymetry-checkpoint", required=True, type=_path)
+    hybrid_probe.add_argument("--backscatter-checkpoint", required=True, type=_path)
+    hybrid_probe.add_argument("--fused-checkpoint", required=True, type=_path)
+    hybrid_probe.add_argument("--labels", required=True, type=_path)
+    hybrid_probe.add_argument("--output-dir", required=True, type=_path)
+    hybrid_probe.add_argument("--label-sha256")
+    hybrid_probe.add_argument("--validation-fold", type=int, default=3)
+    hybrid_probe.add_argument("--split-regions", type=int, default=5)
+    hybrid_probe.add_argument("--batch-size", type=int, default=64)
+    hybrid_probe.add_argument("--device", default="cpu")
+    hybrid_probe.add_argument("--bootstrap-samples", type=int, default=1000)
+    hybrid_probe.add_argument("--seed", type=int, default=42)
+
+    shortcut_diagnostic = subcommands.add_parser(
+        "diagnose-hybrid-seafloor-shortcuts"
+    )
+    shortcut_diagnostic.add_argument("--corpus", required=True, type=_path)
+    shortcut_diagnostic.add_argument("--bathymetry-checkpoint", required=True, type=_path)
+    shortcut_diagnostic.add_argument("--backscatter-checkpoint", required=True, type=_path)
+    shortcut_diagnostic.add_argument("--fused-checkpoint", required=True, type=_path)
+    shortcut_diagnostic.add_argument("--labels", required=True, type=_path)
+    shortcut_diagnostic.add_argument("--output-dir", required=True, type=_path)
+    shortcut_diagnostic.add_argument("--label-sha256")
+    shortcut_diagnostic.add_argument("--validation-fold", type=int, default=3)
+    shortcut_diagnostic.add_argument("--split-regions", type=int, default=5)
+    shortcut_diagnostic.add_argument("--min-domain-rows", type=int, default=32)
+    shortcut_diagnostic.add_argument("--min-domain-class-rows", type=int, default=16)
+    shortcut_diagnostic.add_argument("--batch-size", type=int, default=64)
+    shortcut_diagnostic.add_argument("--device", default="cpu")
+    shortcut_diagnostic.add_argument("--bootstrap-samples", type=int, default=1000)
+    shortcut_diagnostic.add_argument("--seed", type=int, default=42)
+
+    video_endpoint = subcommands.add_parser("audit-usgs-sf-video-endpoint")
+    video_endpoint.add_argument("--bathymetry", required=True, type=_path)
+    video_endpoint.add_argument(
+        "--aligned-layer",
+        action="append",
+        default=[],
+        metavar="NAME=PATH",
+        help="Repeat for each source-manifest backscatter layer.",
+    )
+    video_endpoint.add_argument(
+        "--video-archive",
+        action="append",
+        default=[],
+        metavar="CRUISE_ID=PATH",
+        help="Repeat for each source-manifest video cruise archive.",
+    )
+    video_endpoint.add_argument("--output-dir", required=True, type=_path)
+    video_endpoint.add_argument("--source-id", default="usgs_sf_state_waters_2m")
+    video_endpoint.add_argument("--vertical-datum", default="NAVD88")
+    video_endpoint.add_argument("--radii-m", type=float, nargs="+", default=[32, 128, 512])
+    video_endpoint.add_argument("--output-size", type=int, default=33)
+    video_endpoint.add_argument("--min-valid-fraction", type=float, default=0.8)
+    video_endpoint.add_argument("--min-aligned-valid-fraction", type=float, default=0.5)
+    video_endpoint.add_argument("--local-radius", type=int, default=4)
+    video_endpoint.add_argument("--broad-radius", type=int, default=24)
+    video_endpoint.add_argument("--relief-radius", type=int, default=8)
+    video_endpoint.add_argument("--horizontal-accuracy-m", type=float, default=2.0)
+    video_endpoint.add_argument("--tile-size", type=int, default=1024)
+    video_endpoint.add_argument("--min-group-class-rows", type=int, default=16)
+
+    south_coast_video = subcommands.add_parser(
+        "audit-usgs-south-coast-video-endpoint"
+    )
+    south_coast_video.add_argument(
+        "--region-bathymetry",
+        action="append",
+        default=[],
+        metavar="REGION=PATH",
+        help="Repeat for each frozen South Coast map block.",
+    )
+    south_coast_video.add_argument(
+        "--region-aligned-layer",
+        action="append",
+        default=[],
+        metavar="REGION:NAME=PATH",
+        help="Repeat for every region-specific source-manifest backscatter layer.",
+    )
+    south_coast_video.add_argument(
+        "--video-archive",
+        action="append",
+        default=[],
+        metavar="CRUISE_ID=PATH",
+        help="Repeat for each source-manifest video cruise archive.",
+    )
+    south_coast_video.add_argument("--output-dir", required=True, type=_path)
+    south_coast_video.add_argument(
+        "--source-id", default="usgs_santa_barbara_south_coast_2m"
+    )
+    south_coast_video.add_argument("--vertical-datum", default="NAVD88")
+    south_coast_video.add_argument(
+        "--radii-m", type=float, nargs="+", default=[32, 128, 512]
+    )
+    south_coast_video.add_argument("--output-size", type=int, default=33)
+    south_coast_video.add_argument("--min-valid-fraction", type=float, default=0.8)
+    south_coast_video.add_argument(
+        "--min-aligned-valid-fraction", type=float, default=0.5
+    )
+    south_coast_video.add_argument("--local-radius", type=int, default=4)
+    south_coast_video.add_argument("--broad-radius", type=int, default=24)
+    south_coast_video.add_argument("--relief-radius", type=int, default=8)
+    south_coast_video.add_argument(
+        "--horizontal-accuracy-m", type=float, default=2.0
+    )
+    south_coast_video.add_argument("--tile-size", type=int, default=1024)
+    south_coast_video.add_argument("--min-group-class-rows", type=int, default=16)
+
+    residual_video = subcommands.add_parser(
+        "audit-usgs-residual-statewide-video-support"
+    )
+    residual_video.add_argument(
+        "--video-archive",
+        action="append",
+        default=[],
+        metavar="CRUISE_ID=PATH",
+        help="Repeat for each frozen residual DS 781 video cruise archive.",
+    )
+    residual_video.add_argument("--output-dir", required=True, type=_path)
+    residual_video.add_argument(
+        "--source-id", default="usgs_ds781_residual_video_observations"
+    )
+    residual_video.add_argument("--min-group-class-rows", type=int, default=16)
+
+    rare_corpus = subcommands.add_parser("build-rare-structure-corpus")
+    rare_corpus.add_argument("--input", required=True, type=_path)
+    rare_corpus.add_argument("--labels", required=True, type=_path)
+    rare_corpus.add_argument("--output", required=True, type=_path)
+    rare_corpus.add_argument("--source-id", required=True)
+    rare_corpus.add_argument("--vertical-datum", required=True)
+    rare_corpus.add_argument("--expected-sha256")
+    rare_corpus.add_argument("--label-sha256")
+    rare_corpus.add_argument("--aligned-layer", action="append", default=[])
+    rare_corpus.add_argument("--aligned-layer-sha256", action="append", default=[])
+    rare_corpus.add_argument("--samples-per-class", type=int, default=64)
+    rare_corpus.add_argument("--candidate-multiplier", type=float, default=1.75)
+    rare_corpus.add_argument("--spacing-m", type=float, default=8)
+    rare_corpus.add_argument("--minimum-resolvable-cells", type=int, default=3)
+    rare_corpus.add_argument("--control-min-distance-m", type=float, default=16)
+    rare_corpus.add_argument("--control-max-distance-m", type=float, default=128)
+    rare_corpus.add_argument("--radii-m", type=float, nargs="+", default=[32, 128, 512])
+    rare_corpus.add_argument("--output-size", type=int, default=33)
+    rare_corpus.add_argument("--min-valid-fraction", type=float, default=0.8)
+    rare_corpus.add_argument("--min-aligned-valid-fraction", type=float, default=0.5)
+    rare_corpus.add_argument("--local-radius", type=int, default=4)
+    rare_corpus.add_argument("--broad-radius", type=int, default=24)
+    rare_corpus.add_argument("--relief-radius", type=int, default=8)
+    rare_corpus.add_argument("--horizontal-accuracy-m", type=float, default=2)
+    rare_corpus.add_argument("--tile-size", type=int, default=1024)
+    rare_corpus.add_argument("--split-regions", type=int, default=3)
+    rare_corpus.add_argument("--seed", type=int, default=42)
+
+    rare_probe = subcommands.add_parser("probe-rare-seafloor-structure")
+    rare_probe.add_argument("--probe-corpus", required=True, type=_path)
+    rare_probe.add_argument("--pretraining-corpus", required=True, type=_path)
+    rare_probe.add_argument("--bathymetry-checkpoint", required=True, type=_path)
+    rare_probe.add_argument("--backscatter-checkpoint", required=True, type=_path)
+    rare_probe.add_argument("--fused-checkpoint", required=True, type=_path)
+    rare_probe.add_argument("--labels", required=True, type=_path)
+    rare_probe.add_argument("--output-dir", required=True, type=_path)
+    rare_probe.add_argument("--validation-fold", type=int)
+    rare_probe.add_argument("--buffer-m", type=float, default=512)
+    rare_probe.add_argument("--batch-size", type=int, default=64)
+    rare_probe.add_argument("--device", default="cpu")
+    rare_probe.add_argument("--bootstrap-samples", type=int, default=1000)
+    rare_probe.add_argument("--seed", type=int, default=42)
 
     validate = subcommands.add_parser("validate")
     validate.add_argument("--bathymetry", required=True, type=_path)
@@ -314,6 +554,55 @@ def main(argv: Sequence[str] | None = None) -> int:
                 candidate_widths_m=widths,
             )
         )
+    elif args.command == "append-aligned-layer":
+        if args.output.resolve() == args.feature_stack.resolve():
+            raise ValueError("append-aligned-layer requires a distinct output path")
+        for path, expected, label in (
+            (args.feature_stack, args.feature_stack_sha256, "feature stack"),
+            (args.layer, args.layer_sha256, "aligned layer"),
+        ):
+            if expected and sha256_file(path) != expected.lower():
+                raise ValueError(f"{label} checksum does not match the declared SHA-256")
+        channels, reference, channel_names, feature_metadata = load_feature_stack(
+            args.feature_stack
+        )
+        layer = load_grid(args.layer)
+        combined, combined_names, layer_metadata = append_aligned_layers(
+            channels,
+            channel_names,
+            reference,
+            {args.layer_name: layer},
+        )
+        existing_layers = feature_metadata.get("aligned_layers", {})
+        if not isinstance(existing_layers, dict):
+            raise ValueError("feature stack aligned_layers metadata must be an object")
+        if args.layer_name in existing_layers:
+            raise ValueError("feature stack already declares this aligned layer")
+        combined_metadata = {
+            **feature_metadata,
+            "aligned_layers": {**existing_layers, **layer_metadata},
+        }
+        save_feature_stack(
+            args.output,
+            combined,
+            reference,
+            combined_names,
+            combined_metadata,
+        )
+        provenance = {
+            "status": "completed",
+            "feature_stack_sha256": sha256_file(args.feature_stack),
+            "layer_sha256": sha256_file(args.layer),
+            "output_sha256": sha256_file(args.output),
+            "layer_name": args.layer_name,
+            "layer_metadata": layer_metadata[args.layer_name],
+            "claim_boundary": (
+                "Alignment and missingness are recorded preprocessing facts only; this output "
+                "does not establish habitat, catch, or live-score validity."
+            ),
+        }
+        write_json(args.output.with_suffix(".provenance.json"), provenance)
+        _print(provenance)
     elif args.command == "build-pretraining-corpus":
         _print(
             build_pretraining_corpus(
@@ -346,6 +635,9 @@ def main(argv: Sequence[str] | None = None) -> int:
                 horizontal_accuracy_m=args.horizontal_accuracy_m,
                 tile_size=args.tile_size,
                 seed=args.seed,
+                aligned_layer_paths=_named_values(args.aligned_layer, paths=True),
+                aligned_layer_expected_sha256=_named_values(args.aligned_layer_sha256),
+                min_aligned_valid_fraction=args.min_aligned_valid_fraction,
             )
         )
     elif args.command == "pretrain-bathymetry":
@@ -368,6 +660,30 @@ def main(argv: Sequence[str] | None = None) -> int:
                 seed=args.seed,
             )
         )
+    elif args.command == "pretrain-hybrid-seafloor":
+        _print(
+            run_hybrid_seafloor_pretraining(
+                args.corpus,
+                args.output_dir,
+                modality=args.modality,
+                epochs=args.epochs,
+                batch_size=args.batch_size,
+                learning_rate=args.learning_rate,
+                weight_decay=args.weight_decay,
+                base_width=args.base_width,
+                blocks_per_stage=args.blocks_per_stage,
+                projection_dim=args.projection_dim,
+                temperature=args.temperature,
+                min_negative_distance_m=args.min_negative_distance_m,
+                reconstruction_weight=args.reconstruction_weight,
+                mask_fraction=args.mask_fraction,
+                mask_block_size=args.mask_block_size,
+                validation_fold=args.validation_fold,
+                split_regions=args.split_regions,
+                device=args.device,
+                seed=args.seed,
+            )
+        )
     elif args.command == "probe-seafloor-character":
         _print(
             run_frozen_seafloor_probe(
@@ -378,6 +694,152 @@ def main(argv: Sequence[str] | None = None) -> int:
                 label_raster_sha256=args.label_sha256,
                 validation_fold=args.validation_fold,
                 split_regions=args.split_regions,
+                batch_size=args.batch_size,
+                device=args.device,
+                bootstrap_samples=args.bootstrap_samples,
+                seed=args.seed,
+            )
+        )
+    elif args.command == "probe-hybrid-seafloor-character":
+        _print(
+            run_hybrid_seafloor_probe(
+                args.corpus,
+                {
+                    "bathymetry": args.bathymetry_checkpoint,
+                    "backscatter": args.backscatter_checkpoint,
+                    "fused": args.fused_checkpoint,
+                },
+                args.labels,
+                args.output_dir,
+                label_raster_sha256=args.label_sha256,
+                validation_fold=args.validation_fold,
+                split_regions=args.split_regions,
+                batch_size=args.batch_size,
+                device=args.device,
+                bootstrap_samples=args.bootstrap_samples,
+                seed=args.seed,
+            )
+        )
+    elif args.command == "diagnose-hybrid-seafloor-shortcuts":
+        _print(
+            run_hybrid_shortcut_diagnostic(
+                args.corpus,
+                {
+                    "bathymetry": args.bathymetry_checkpoint,
+                    "backscatter": args.backscatter_checkpoint,
+                    "fused": args.fused_checkpoint,
+                },
+                args.labels,
+                args.output_dir,
+                label_raster_sha256=args.label_sha256,
+                validation_fold=args.validation_fold,
+                split_regions=args.split_regions,
+                min_domain_rows=args.min_domain_rows,
+                min_domain_class_rows=args.min_domain_class_rows,
+                batch_size=args.batch_size,
+                device=args.device,
+                bootstrap_samples=args.bootstrap_samples,
+                seed=args.seed,
+            )
+        )
+    elif args.command == "audit-usgs-sf-video-endpoint":
+        _print(
+            audit_usgs_sf_video_endpoint(
+                args.bathymetry,
+                _named_values(args.aligned_layer, paths=True),
+                _named_values(args.video_archive, paths=True),
+                args.output_dir,
+                source_id=args.source_id,
+                vertical_datum=args.vertical_datum,
+                radii_m=args.radii_m,
+                output_size=args.output_size,
+                min_valid_fraction=args.min_valid_fraction,
+                min_aligned_valid_fraction=args.min_aligned_valid_fraction,
+                local_radius=args.local_radius,
+                broad_radius=args.broad_radius,
+                relief_radius=args.relief_radius,
+                horizontal_accuracy_m=args.horizontal_accuracy_m,
+                tile_size=args.tile_size,
+                min_group_class_rows=args.min_group_class_rows,
+            )
+        )
+    elif args.command == "audit-usgs-south-coast-video-endpoint":
+        _print(
+            audit_usgs_south_coast_video_endpoint(
+                _named_values(args.region_bathymetry, paths=True),
+                _region_named_paths(args.region_aligned_layer),
+                _named_values(args.video_archive, paths=True),
+                args.output_dir,
+                source_id=args.source_id,
+                vertical_datum=args.vertical_datum,
+                radii_m=args.radii_m,
+                output_size=args.output_size,
+                min_valid_fraction=args.min_valid_fraction,
+                min_aligned_valid_fraction=args.min_aligned_valid_fraction,
+                local_radius=args.local_radius,
+                broad_radius=args.broad_radius,
+                relief_radius=args.relief_radius,
+                horizontal_accuracy_m=args.horizontal_accuracy_m,
+                tile_size=args.tile_size,
+                min_group_class_rows=args.min_group_class_rows,
+            )
+        )
+    elif args.command == "audit-usgs-residual-statewide-video-support":
+        _print(
+            audit_usgs_residual_statewide_video_support(
+                _named_values(args.video_archive, paths=True),
+                args.output_dir,
+                source_id=args.source_id,
+                min_group_class_rows=args.min_group_class_rows,
+            )
+        )
+    elif args.command == "build-rare-structure-corpus":
+        _print(
+            build_rare_structure_corpus(
+                args.input,
+                args.labels,
+                args.output,
+                source_id=args.source_id,
+                vertical_datum=args.vertical_datum,
+                aligned_layer_paths=_named_values(args.aligned_layer, paths=True),
+                expected_source_sha256=args.expected_sha256,
+                aligned_layer_expected_sha256=_named_values(
+                    args.aligned_layer_sha256
+                ),
+                label_raster_sha256=args.label_sha256,
+                samples_per_class=args.samples_per_class,
+                candidate_multiplier=args.candidate_multiplier,
+                spacing_m=args.spacing_m,
+                minimum_resolvable_cells=args.minimum_resolvable_cells,
+                control_min_distance_m=args.control_min_distance_m,
+                control_max_distance_m=args.control_max_distance_m,
+                radii_m=args.radii_m,
+                output_size=args.output_size,
+                min_valid_fraction=args.min_valid_fraction,
+                min_aligned_valid_fraction=args.min_aligned_valid_fraction,
+                local_radius=args.local_radius,
+                broad_radius=args.broad_radius,
+                relief_radius=args.relief_radius,
+                horizontal_accuracy_m=args.horizontal_accuracy_m,
+                tile_size=args.tile_size,
+                split_regions=args.split_regions,
+                seed=args.seed,
+            )
+        )
+    elif args.command == "probe-rare-seafloor-structure":
+        _print(
+            run_rare_structure_probe(
+                args.probe_corpus,
+                args.pretraining_corpus,
+                {
+                    "bathymetry": args.bathymetry_checkpoint,
+                    "backscatter": args.backscatter_checkpoint,
+                    "fused": args.fused_checkpoint,
+                },
+                args.labels,
+                args.output_dir,
+                validation_fold=args.validation_fold,
+                buffer_m=args.buffer_m,
                 batch_size=args.batch_size,
                 device=args.device,
                 bootstrap_samples=args.bootstrap_samples,

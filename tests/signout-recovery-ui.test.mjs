@@ -2,8 +2,10 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 
-const [accountFeature, authWorker] = await Promise.all([
+const [accountFeature, accountBrowserStorage, tripFeature, authWorker] = await Promise.all([
   readFile(new URL("../app/components/AccountFeature.tsx", import.meta.url), "utf8"),
+  readFile(new URL("../app/lib/account-browser-storage.ts", import.meta.url), "utf8"),
+  readFile(new URL("../app/components/TripReportFeature.tsx", import.meta.url), "utf8"),
   readFile(new URL("../worker/auth.ts", import.meta.url), "utf8"),
 ]);
 
@@ -22,6 +24,26 @@ test("sign-out requires the exact server receipt before clearing local account s
     receiptCheck >= 0 && receiptCheck < accountFeature.indexOf("completeLocalSignOut();", receiptCheck),
     "local account state must clear only after the server receipt is verified",
   );
+});
+
+test("confirmed sign-out uses the shared exhaustive trip-recovery storage manifest", () => {
+  assert.match(accountFeature, /import \{[^]*clearCastingCompassAccountStorage[^]*\} from "\.\.\/lib\/account-browser-storage"/);
+  assert.match(tripFeature, /from "\.\.\/lib\/account-browser-storage"/);
+  assert.match(accountFeature, /const browserStorageCleared = clearCastingCompassAccountStorage\(\)/);
+  for (const storageKey of [
+    "castingcompass.active-trip.v1",
+    "castingcompass.reporter-key.v1",
+    "contourcast.active-trip.v1",
+    "contourcast.reporter-key.v1",
+    "castingcompass.trip-draft.v1.",
+    "castingcompass.profile-trip-draft.v1.",
+    "castingcompass.trip-request.v1.",
+    "castingcompass.trip-pending.v1.",
+  ]) {
+    assert.ok(accountBrowserStorage.includes(`"${storageKey}"`), `${storageKey} must be in the account cleanup manifest`);
+  }
+  assert.match(accountFeature, /Signed out\. This browser blocked removal of locally stored trip recovery data/);
+  assert.match(accountFeature, /Clear CastingCompass site data before sharing this device/);
 });
 
 test("slow and ambiguous sign-out remains visibly unconfirmed", () => {
