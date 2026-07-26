@@ -90,6 +90,13 @@ by that discovery.
       Compatible hash-locked Python environments also pass Ruff, 29/29 API tests, 149/149
       pipeline tests with 11 declared optional-dependency skips, deterministic synthetic smoke,
       and all 54 critical D1 query plans.
+  - [x] Address every actionable automated-review note without weakening the recovery boundary:
+        share the public age/challenge/cooldown contract between the Worker and browser,
+        preserve the visible disabled `Checking…` control while the read-only session request is
+        in flight, remove the redundant browser route fixture, and regenerate the hash-bound D1
+        inventory plus release SBOM. The complete 755-test Node suite, security chain, both
+        zero-vulnerability audits, build, lint, TypeScript, and the four-profile lost-response
+        browser case pass after these changes.
 - [ ] Obtain hosted CI, CodeQL, release-provenance, and automated-review acceptance on the exact
       implementation head; merge only accepted evidence to protected `main`; and reconcile the
       exact merge commit. This account-entry checkpoint changes no API, database, provider,

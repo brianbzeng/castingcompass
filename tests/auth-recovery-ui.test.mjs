@@ -1,10 +1,17 @@
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
+import {
+  AUTH_AGE_PROOF_MINUTES,
+  AUTH_AGE_PROOF_SECONDS,
+  AUTH_EMAIL_CHALLENGE_MINUTES,
+  AUTH_RESEND_COOLDOWN_SECONDS,
+} from "../shared/auth-contract.ts";
 
-const [accountFeature, networkStateHook] = await Promise.all([
+const [accountFeature, networkStateHook, authWorker] = await Promise.all([
   readFile(new URL("../app/components/AccountFeature.tsx", import.meta.url), "utf8"),
   readFile(new URL("../app/lib/use-client-network-state.ts", import.meta.url), "utf8"),
+  readFile(new URL("../worker/auth.ts", import.meta.url), "utf8"),
 ]);
 
 test("account entry writes pause offline and never replay when the connection returns", () => {
@@ -48,13 +55,21 @@ test("successful account transitions require typed receipts and uncertain sessio
   assert.match(accountFeature, /expectedKeys\.every\(\(key\) => Object\.hasOwn\(candidate, key\)\)/);
   assert.match(accountFeature, /function isExactAccountSession/);
   assert.match(accountFeature, /function eligibilityProofFromResponse/);
-  assert.match(accountFeature, /value\.expiresInMinutes !== 10/);
-  assert.match(accountFeature, /value\.expiresInSeconds !== 600/);
+  assert.equal(AUTH_AGE_PROOF_MINUTES, 10);
+  assert.equal(AUTH_AGE_PROOF_SECONDS, 600);
+  assert.equal(AUTH_EMAIL_CHALLENGE_MINUTES, 15);
+  assert.equal(AUTH_RESEND_COOLDOWN_SECONDS, 60);
+  assert.match(accountFeature, /value\.expiresInMinutes !== AUTH_AGE_PROOF_MINUTES/);
+  assert.match(accountFeature, /value\.expiresInSeconds !== AUTH_AGE_PROOF_SECONDS/);
   assert.match(accountFeature, /function challengeIdFromResponse/);
   assert.match(accountFeature, /operation === "recover" && value\.requested !== true/);
-  assert.match(accountFeature, /value\.expiresInMinutes !== 15/);
+  assert.match(accountFeature, /value\.expiresInMinutes !== AUTH_EMAIL_CHALLENGE_MINUTES/);
   assert.match(accountFeature, /function resendCooldownFromResponse/);
-  assert.match(accountFeature, /value\.retryAfterSeconds !== 60/);
+  assert.match(accountFeature, /value\.retryAfterSeconds !== AUTH_RESEND_COOLDOWN_SECONDS/);
+  assert.match(authWorker, /expiresInMinutes: AUTH_AGE_PROOF_MINUTES/);
+  assert.match(authWorker, /expiresInSeconds: AUTH_AGE_PROOF_SECONDS/);
+  assert.match(authWorker, /expiresInMinutes: AUTH_EMAIL_CHALLENGE_MINUTES/);
+  assert.match(authWorker, /retryAfterSeconds: AUTH_RESEND_COOLDOWN_SECONDS/);
   assert.match(accountFeature, /function accountUserFromMutationResponse/);
   assert.match(accountFeature, /function legalAcceptanceUserFromResponse/);
   assert.match(accountFeature, /value\.legalVersion !== LEGAL_DOCUMENT_VERSION/);
@@ -69,4 +84,5 @@ test("successful account transitions require typed receipts and uncertain sessio
   assert.doesNotMatch(sessionCheck, /method:\s*"POST"|method:\s*"PUT"|method:\s*"PATCH"|method:\s*"DELETE"/);
   assert.match(sessionCheck, /Do not reuse the code/);
   assert.match(accountFeature, /Check account status/);
+  assert.match(accountFeature, /authRequest\.operation === "sessionCheck" && authRequest\.state === "submitting"/);
 });

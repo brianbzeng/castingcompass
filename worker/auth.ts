@@ -1,3 +1,10 @@
+import {
+  AUTH_AGE_PROOF_MINUTES,
+  AUTH_AGE_PROOF_SECONDS,
+  AUTH_EMAIL_CHALLENGE_MILLISECONDS,
+  AUTH_EMAIL_CHALLENGE_MINUTES,
+  AUTH_RESEND_COOLDOWN_SECONDS,
+} from "../shared/auth-contract.ts";
 import { buildSpeciesObservationFields, hasServerControlledObservationFields } from "./trips.ts";
 import type { CuratedSite, D1DatabaseLike, TripRow } from "./trips.ts";
 import {
@@ -31,7 +38,6 @@ const DELETION_RECEIPT_COOKIE = "cc_deletion_receipt";
 const AGE_INELIGIBLE_COOKIE = "cc_age_ineligible";
 const SESSION_SECONDS = 30 * 24 * 60 * 60;
 const DELETION_RECEIPT_SECONDS = 30 * 24 * 60 * 60;
-const AGE_PROOF_SECONDS = 10 * 60;
 const MAX_DELETION_ATTEMPTS = 8;
 const ACCOUNT_DELETION_FENCE_LEASE_MS = 5 * 60 * 1000;
 const MAX_SAVED_SITES_PER_ACCOUNT = 100;
@@ -493,7 +499,7 @@ export async function handleAccountRequest(
       const proof = randomSecret(32);
       const proofHash = await sha256(proof);
       const createdAt = new Date();
-      const expiresAt = new Date(createdAt.getTime() + AGE_PROOF_SECONDS * 1000);
+      const expiresAt = new Date(createdAt.getTime() + AUTH_AGE_PROOF_SECONDS * 1000);
       const proofCandidate: SignupAgeProofCandidate = {
         tokenHash: proofHash,
         confirmedAt,
@@ -511,8 +517,8 @@ export async function handleAccountRequest(
       }
       return jsonResponse({
         eligibilityProof: proof,
-        expiresInMinutes: AGE_PROOF_SECONDS / 60,
-        expiresInSeconds: AGE_PROOF_SECONDS,
+        expiresInMinutes: AUTH_AGE_PROOF_MINUTES,
+        expiresInSeconds: AUTH_AGE_PROOF_SECONDS,
       }, 200, clearAgeIneligibleCookie());
     }
 
@@ -561,7 +567,7 @@ export async function handleAccountRequest(
         age_eligibility_confirmed_at: ageEligibilityConfirmedAt,
         terms_version: LEGAL_VERSION,
         privacy_version: LEGAL_VERSION,
-        expires_at: new Date(timestamp.getTime() + 15 * 60 * 1000).toISOString(),
+        expires_at: new Date(timestamp.getTime() + AUTH_EMAIL_CHALLENGE_MILLISECONDS).toISOString(),
         attempts: 0,
         resend_count: 0,
         created_at: timestamp.toISOString(),
@@ -584,7 +590,7 @@ export async function handleAccountRequest(
         await cleanupEmailChallengeCandidate(db, challenge);
         throw error;
       }
-      return jsonResponse({ challengeId: id, expiresInMinutes: 15 });
+      return jsonResponse({ challengeId: id, expiresInMinutes: AUTH_EMAIL_CHALLENGE_MINUTES });
     }
 
     if (url.pathname === "/api/auth/signup/verify") {
@@ -753,7 +759,10 @@ export async function handleAccountRequest(
         return passwordRecoveryResendResponse(challengeId);
       }
       const createdAt = new Date(challenge.created_at).getTime();
-      const retryAfterSeconds = Math.max(0, 60 - Math.floor((Date.now() - createdAt) / 1000));
+      const retryAfterSeconds = Math.max(
+        0,
+        AUTH_RESEND_COOLDOWN_SECONDS - Math.floor((Date.now() - createdAt) / 1000),
+      );
       if (challenge.kind === "password_reset") {
         const responseNotBefore = minimumDelay(PASSWORD_RECOVERY_MINIMUM_RESPONSE_MS);
         if (retryAfterSeconds > 0 || Number(challenge.resend_count ?? 0) >= 4) {
@@ -821,7 +830,12 @@ export async function handleAccountRequest(
         await cleanupEmailChallengeCandidate(db, nextChallenge);
         throw error;
       }
-      return jsonResponse({ requested: true, challengeId, expiresInMinutes: 15, retryAfterSeconds: 60 });
+      return jsonResponse({
+        requested: true,
+        challengeId,
+        expiresInMinutes: AUTH_EMAIL_CHALLENGE_MINUTES,
+        retryAfterSeconds: AUTH_RESEND_COOLDOWN_SECONDS,
+      });
     }
 
     if (url.pathname === "/api/auth/password/request") {
@@ -867,7 +881,7 @@ export async function handleAccountRequest(
         age_eligibility_confirmed_at: null,
         terms_version: null,
         privacy_version: null,
-        expires_at: new Date(timestamp.getTime() + 15 * 60 * 1000).toISOString(),
+        expires_at: new Date(timestamp.getTime() + AUTH_EMAIL_CHALLENGE_MILLISECONDS).toISOString(),
         attempts: 0,
         resend_count: 0,
         created_at: timestamp.toISOString(),
@@ -4352,7 +4366,7 @@ function resentEmailChallenge(challenge: EmailChallengeRow, codeHash: string, ti
   return {
     ...challenge,
     code_hash: codeHash,
-    expires_at: new Date(timestamp.getTime() + 15 * 60 * 1000).toISOString(),
+    expires_at: new Date(timestamp.getTime() + AUTH_EMAIL_CHALLENGE_MILLISECONDS).toISOString(),
     attempts: 0,
     resend_count: Number(challenge.resend_count ?? 0) + 1,
     created_at: timestamp.toISOString(),
@@ -4746,11 +4760,20 @@ function minimumDelay(milliseconds: number) {
 }
 
 function passwordRecoveryRequestedResponse(challengeId = `challenge_${crypto.randomUUID()}`) {
-  return jsonResponse({ requested: true, challengeId, expiresInMinutes: 15 });
+  return jsonResponse({
+    requested: true,
+    challengeId,
+    expiresInMinutes: AUTH_EMAIL_CHALLENGE_MINUTES,
+  });
 }
 
 function passwordRecoveryResendResponse(challengeId: string) {
-  return jsonResponse({ requested: true, challengeId, expiresInMinutes: 15, retryAfterSeconds: 60 });
+  return jsonResponse({
+    requested: true,
+    challengeId,
+    expiresInMinutes: AUTH_EMAIL_CHALLENGE_MINUTES,
+    retryAfterSeconds: AUTH_RESEND_COOLDOWN_SECONDS,
+  });
 }
 
 function deferPasswordRecoveryEmail(

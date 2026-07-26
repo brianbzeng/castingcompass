@@ -171,11 +171,6 @@ async function prepareSavedSiteMutation(page: Page) {
 }
 
 async function prepareAnonymousAccount(page: Page) {
-  await page.route("**/api/auth/turnstile-config", (route) => route.fulfill({
-    status: 200,
-    contentType: "application/json",
-    body: JSON.stringify({ turnstile: { enabled: false } }),
-  }));
   await page.locator(".account-button").click();
   const modal = page.locator(".account-modal");
   await expect(modal.getByRole("heading", { name: "Welcome back." })).toBeVisible();
@@ -1318,18 +1313,28 @@ test.describe("account entry recovery", () => {
   });
 
   test("lost sign-in response requires a read-only session check before retry", async ({ page }) => {
+    let releaseSessionResponse: (() => void) | undefined;
+    const sessionResponseGate = new Promise<void>((resolve) => {
+      releaseSessionResponse = resolve;
+    });
     await page.route("**/api/auth/login", (route) => route.abort("failed"));
-    await page.route("**/api/auth/session", (route) => route.fulfill({
-      status: 200,
-      contentType: "application/json",
-      body: JSON.stringify({ user: null }),
-    }));
+    await page.route("**/api/auth/session", async (route) => {
+      await sessionResponseGate;
+      return route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ user: null }),
+      });
+    });
     const modal = await prepareAnonymousAccount(page);
     await modal.locator("form").getByRole("button", { name: "Sign in", exact: true }).click();
     await expect(modal.getByRole("alert").filter({ hasText: "A session may already exist" })).toBeVisible();
     await expect(modal.getByRole("button", { name: "Account status unresolved" })).toBeDisabled();
 
     await modal.getByRole("button", { name: "Check account status" }).click();
+    await expect(modal.getByRole("button", { name: "Checking…" })).toBeVisible();
+    await expect(modal.getByRole("button", { name: "Checking…" })).toBeDisabled();
+    releaseSessionResponse?.();
     await expect(modal.getByRole("alert").filter({ hasText: "not signed in" })).toBeVisible();
     await expect(modal.locator("form").getByRole("button", { name: "Sign in", exact: true })).toBeEnabled();
   });

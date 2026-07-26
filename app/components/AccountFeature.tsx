@@ -2,6 +2,12 @@
 
 import Link from "next/link";
 import { FormEvent, useCallback, useEffect, useRef, useState } from "react";
+import {
+  AUTH_AGE_PROOF_MINUTES,
+  AUTH_AGE_PROOF_SECONDS,
+  AUTH_EMAIL_CHALLENGE_MINUTES,
+  AUTH_RESEND_COOLDOWN_SECONDS,
+} from "../../shared/auth-contract";
 import { CloseIcon } from "./icons";
 import { GearCatalogFields } from "./GearCatalogFields";
 import { LEGAL_DOCUMENT_VERSION } from "./LegalPage";
@@ -149,8 +155,8 @@ function eligibilityProofFromResponse(value: unknown) {
   if (!isExactRecord(value, ["eligibilityProof", "expiresInMinutes", "expiresInSeconds"]) ||
     typeof value.eligibilityProof !== "string" ||
     !/^[A-Za-z0-9_-]{43}$/.test(value.eligibilityProof) ||
-    value.expiresInMinutes !== 10 ||
-    value.expiresInSeconds !== 600) return null;
+    value.expiresInMinutes !== AUTH_AGE_PROOF_MINUTES ||
+    value.expiresInSeconds !== AUTH_AGE_PROOF_SECONDS) return null;
   return value.eligibilityProof;
 }
 
@@ -160,7 +166,7 @@ function challengeIdFromResponse(value: unknown, operation: "signupDetails" | "r
     : ["challengeId", "expiresInMinutes"];
   if (!isExactRecord(value, expectedKeys) ||
     (operation === "recover" && value.requested !== true) ||
-    value.expiresInMinutes !== 15 ||
+    value.expiresInMinutes !== AUTH_EMAIL_CHALLENGE_MINUTES ||
     typeof value.challengeId !== "string" ||
     !/^challenge_[a-f0-9-]{36}$/.test(value.challengeId)) return null;
   return value.challengeId;
@@ -170,8 +176,8 @@ function resendCooldownFromResponse(value: unknown, expectedChallengeId: string)
   if (!isExactRecord(value, ["requested", "challengeId", "expiresInMinutes", "retryAfterSeconds"]) ||
     value.requested !== true ||
     value.challengeId !== expectedChallengeId ||
-    value.expiresInMinutes !== 15 ||
-    value.retryAfterSeconds !== 60) return null;
+    value.expiresInMinutes !== AUTH_EMAIL_CHALLENGE_MINUTES ||
+    value.retryAfterSeconds !== AUTH_RESEND_COOLDOWN_SECONDS) return null;
   return value.retryAfterSeconds;
 }
 
@@ -1065,8 +1071,11 @@ export function AccountModal({
         ? "This device reports that its connection is back. No account request was submitted automatically."
         : ""
   );
-  const canCheckAuthSession = authRequest?.state === "ambiguous" &&
-    ["login", "verify", "reset", "legalAcceptance", "sessionCheck"].includes(authRequest.operation);
+  const canCheckAuthSession = authRequest !== null && (
+    (authRequest.state === "ambiguous" &&
+      ["login", "verify", "reset", "legalAcceptance", "sessionCheck"].includes(authRequest.operation)) ||
+    (authRequest.operation === "sessionCheck" && authRequest.state === "submitting")
+  );
   const authSubmitDisabled = busy || networkState === "offline" || primaryAuthMutationBlocked;
   const authSessionCheckDisabled = busy || networkState === "offline";
   const displayedAccountDeletionState = accountDeletionState === "idle" && networkState === "offline"
