@@ -57,10 +57,21 @@ test("loading and failure suppress rankings and expose a safe explicit retry", a
   assert.match(app, /setForecastLoadAttempt\(\(attempt\) => attempt \+ 1\)/u);
   assert.match(app, /disabled=\{!forecastReady\}/u);
   assert.match(app, /initialSiteHandledRef\.current \|\| !forecastReady/u);
+  assert.match(app, /\[forecastReady, mapEnabled, view\]/u);
+  assert.match(app, /forecastReady=\{forecastReady\}/u);
   assert.match(styles, /\.data-pill\.unavailable i/u);
   assert.match(styles, /\.forecast-state-card\.unavailable/u);
   assert.match(styles, /\.source-recovery/u);
-  assert.match(tripFeature, /disabled=\{sites\.length === 0\}/u);
+  assert.match(tripFeature, /forecastReady: boolean/u);
+  assert.match(
+    tripFeature,
+    /nextPanel !== "complete" && \(!forecastReady \|\| sites\.length === 0\)/u,
+  );
+  assert.match(
+    tripFeature,
+    /query\.get\("report"\) === "trip"[\s\S]*forecastReady &&[\s\S]*sites\.length > 0/u,
+  );
+  assert.match(tripFeature, /disabled=\{!forecastReady \|\| sites\.length === 0\}/u);
   assert.match(browser, /forecast failure hides unverified scores until an explicit retry succeeds/u);
   assert.match(browser, /await expect\(page\.locator\("\.score-orbit"\)\)\.toHaveCount\(0\)/u);
   assert.match(browser, /await expect\(page\.locator\("\.workspace"\)\)\.toHaveCount\(0\)/u);

@@ -78,7 +78,10 @@ test("trip entry points are present in the top bar, forecast detail, and validat
   assert.match(app, /Fish this window/);
   assert.match(app, /<TripReportFeature/);
   assert.match(app, /sites=\{sites\}/);
+  assert.match(app, /forecastReady=\{forecastReady\}/);
   assert.match(app, /canSubmit=\{Boolean\(account\.user\?\.legalAccepted\)\}/);
+  assert.match(feature, /nextPanel !== "complete" && \(!forecastReady \|\| sites\.length === 0\)/);
+  assert.match(feature, /query\.get\("report"\) === "trip"[\s\S]*forecastReady/);
   assert.doesNotMatch(app, /training data can be checked/);
   assert.match(feature, /id="validation"/);
   assert.match(feature, /The skunks/);

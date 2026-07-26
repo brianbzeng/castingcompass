@@ -103,6 +103,7 @@ async function preparePastTripForSubmission(page: Page) {
   await fishingMode.selectOption("shore");
   await modal.getByLabel("Did the score influence this trip?").selectOption("no");
   await modal.getByRole("button", { name: "Continue to gear + result" }).click();
+  await expect(modal.getByRole("button", { name: "Record no-fish trip" })).toBeVisible();
   for (const checkbox of await modal.locator(".consent-field input").all()) await checkbox.check();
   return modal;
 }
@@ -453,9 +454,11 @@ test.beforeEach(async ({ page }, testInfo) => {
     status: 200,
     contentType: "application/json",
     body: JSON.stringify({
-      user: profileRecoveryTest
-        ? { id: "user_profile_recovery", email: "profiletest@example.com", ageEligible: true, legalAccepted: true }
-        : tripRecoveryTest
+      user: forecastRecoveryTest
+        ? { id: "user_forecast_recovery", email: "forecasttest@example.com", ageEligible: true, legalAccepted: true }
+        : profileRecoveryTest
+          ? { id: "user_profile_recovery", email: "profiletest@example.com", ageEligible: true, legalAccepted: true }
+          : tripRecoveryTest
           ? { id: "user_trip_recovery", email: "triptest@example.com", ageEligible: true, legalAccepted: true }
           : accountDeletionRecoveryTest
             ? { id: "user_account_deletion", email: "deletiontest@example.com", ageEligible: true, legalAccepted: true }
@@ -472,7 +475,7 @@ test.beforeEach(async ({ page }, testInfo) => {
         : null,
     }),
   }));
-  if (profileRecoveryTest || tripRecoveryTest || accountDeletionRecoveryTest || tripDeletionRecoveryTest || tripEditRecoveryTest || gearMutationRecoveryTest || signOutRecoveryTest || savedSiteRecoveryTest) {
+  if (forecastRecoveryTest || profileRecoveryTest || tripRecoveryTest || accountDeletionRecoveryTest || tripDeletionRecoveryTest || tripEditRecoveryTest || gearMutationRecoveryTest || signOutRecoveryTest || savedSiteRecoveryTest) {
     await page.route("**/api/saved-sites", (route) => route.fulfill({
       status: 200,
       contentType: "application/json",
@@ -616,7 +619,7 @@ test.beforeEach(async ({ page }, testInfo) => {
       window.localStorage.setItem("contourcast.respect-water.v1", "dismissed");
     }
   });
-  await page.goto("/");
+  await page.goto(forecastRecoveryTest ? "/?report=trip" : "/");
   if (forecastRecoveryTest) {
     await expect(page.locator(".forecast-state-card.unavailable")).toBeVisible();
   } else {
@@ -635,6 +638,7 @@ test("forecast failure hides unverified scores until an explicit retry succeeds"
   await expect(page.getByRole("button", { name: "Start a trip" })).toBeDisabled();
   await expect(page.getByRole("button", { name: "Log a past trip" })).toBeDisabled();
   await expect(page.locator(".source-grid")).toHaveCount(0);
+  await expect(page.locator(".trip-modal")).toHaveCount(0);
 
   await unavailable.getByRole("button", { name: "Retry forecast" }).click();
 
@@ -646,6 +650,12 @@ test("forecast failure hides unverified scores until an explicit retry succeeds"
   await expect(page.getByRole("button", { name: "Start a trip" })).toBeEnabled();
   await expect(page.getByRole("button", { name: "Log a past trip" })).toBeEnabled();
   await expect(unavailable).toHaveCount(0);
+  await expect(page.locator(".trip-modal")).toBeVisible();
+  await page.getByRole("button", { name: "Close trip report" }).click();
+
+  const map = page.locator(".map-wrap");
+  await map.scrollIntoViewIfNeeded();
+  await expect(map.locator(".maplibregl-map")).toBeVisible();
 });
 
 test("primary controls stay inside common phone viewports", async ({ page }) => {

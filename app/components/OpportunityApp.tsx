@@ -1044,6 +1044,7 @@ export function OpportunityApp() {
   const [showCompare, setShowCompare] = useState(false);
   const [dataState, setDataState] = useState<ForecastDataState>("loading");
   const [forecastLoadAttempt, setForecastLoadAttempt] = useState(0);
+  const forecastReady = dataState === "live" || dataState === "cached";
   const [tripReportRequest, setTripReportRequest] = useState<TripReportRequest | null>(null);
   const [mapEnabled, setMapEnabled] = useState(false);
   const [showRespectNotice, setShowRespectNotice] = useState(false);
@@ -1163,7 +1164,7 @@ export function OpportunityApp() {
     );
     observer.observe(mapWrapRef.current);
     return () => observer.disconnect();
-  }, [mapEnabled, view]);
+  }, [forecastReady, mapEnabled, view]);
 
   const windowsBySite = useMemo(
     () => latestPerSite(
@@ -1282,7 +1283,6 @@ export function OpportunityApp() {
     ? structureDepth?.sites[selectedSiteId] ?? null
     : null;
   const selectedStructureGuides = selectedSite ? structureGuidesForSite(selectedSite) : [];
-  const forecastReady = dataState === "live" || dataState === "cached";
   const dataStateLabel = dataState === "loading"
     ? "Loading"
     : dataState === "live"
@@ -1770,6 +1770,7 @@ export function OpportunityApp() {
       <TripReportFeature
         sites={sites}
         snapshot={snapshot}
+        forecastReady={forecastReady}
         request={tripReportRequest}
         canSubmit={Boolean(account.user?.legalAccepted)}
         onRequireLogin={() => account.openAccount("Sign in before submitting a trip report. Complete trips and skunks are tied to an account so reports can be reviewed privately before any separate decision about model evidence.")}
