@@ -138,13 +138,6 @@
       "platform": "linux/amd64",
       "classification": "virtual dependency marker with no distributable package payload",
       "source": "https://github.com/docker-library/python/tree/f79aea5b8f6b2d65b31ba2bb3f69c0c2083345c8/3.13/alpine3.24"
-    },
-    {
-      "package": "annotated-types",
-      "version": "0.8.0",
-      "type": "python",
-      "classification": "MIT license confirmed from the exact upstream release",
-      "source": "https://github.com/annotated-types/annotated-types/blob/v0.8.0/LICENSE"
     }
   ],
   "mitigatedModules": [

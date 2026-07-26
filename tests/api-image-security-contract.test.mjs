@@ -26,7 +26,7 @@ async function acceptedEvidence(platform = "linux/arm64") {
     name,
     version,
     purl: `pkg:pypi/${name}@${version}`,
-    licenses: name === "annotated-types" ? [] : [{ license: { id: "MIT" } }],
+    licenses: [{ license: { id: "MIT" } }],
   }));
   const runtimeMarker = policy.missingLicenseReviews
     .find((review) => review.package === ".python-rundeps" && review.platform === platform);
@@ -151,7 +151,6 @@ test("API image evidence binds the architecture-specific runtime marker", async 
   });
   assert.deepEqual(summary.inventory.missingLicenseReviews, [
     "apk:-python-rundeps@20260616.002554",
-    "python:annotated-types@0.8.0",
   ]);
 });
 
