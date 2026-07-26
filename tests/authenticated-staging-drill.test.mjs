@@ -234,6 +234,12 @@ test("the plan is non-executing and distinguishes client response loss from D1 r
 });
 
 test("the CLI writes only a private, unapproved template and deliberately has no run command", () => {
+  const source = readFileSync("scripts/authenticated-staging-drill.mjs", "utf8");
+  assert.match(source, /expectedCommit: validated\.authorization\.source_commit/u);
+  assert.match(
+    source,
+    /validateConfigurationReceiptForAuthorization\(configurationReceipt, validated\.authorization, policy\)/u,
+  );
   const parent = privateParent();
   try {
     const output = join(parent, "authorization.json");

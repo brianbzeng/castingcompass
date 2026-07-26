@@ -2184,10 +2184,10 @@
       ],
       "exposure": "harbor-mouth"
     },
-    "accessSourceUrl": "https://santabarbaraca.gov/things-do/waterfront/visitor-activities",
+    "accessSourceUrl": "https://santabarbaraca.gov/sites/default/files/documents/Services/LCP%20Update/City%20of%20Santa%20Barbara%20Complete%20Certified%20Coastal%20LUP.pdf",
     "accessStatus": "limited",
-    "accessStatusNote": "The City identifies the Breakwater as a public waterfront activity area, but wave exposure and harbor operations constrain where it is safe to stand.",
-    "accessStatusUpdatedAt": "2026-07-19",
+    "accessStatusNote": "The City's certified Coastal Land Use Plan identifies the breakwater as a public walkway used for recreational fishing. Confirm current Harbor Patrol restrictions before visiting.",
+    "accessStatusUpdatedAt": "2026-07-26",
     "streetViewLatitude": 34.40496,
     "streetViewLongitude": -119.69176,
     "streetViewRoadDistanceMeters": 226

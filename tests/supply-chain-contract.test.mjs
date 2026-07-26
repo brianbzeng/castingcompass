@@ -154,6 +154,13 @@ test("CI fixes runner versions and enforces dependency review, audits, and SBOM 
     /concurrency:\n\s+group: \$\{\{ github\.workflow \}\}-\$\{\{ github\.event\.pull_request\.number \|\| github\.ref \}\}\n\s+cancel-in-progress: \$\{\{ github\.event_name == 'pull_request' \}\}/u,
   );
   assert.doesNotMatch(`${ci}\n${refresh}\n${optional}`, /(?:ubuntu|macos)-latest|node-version:\s*22\s*$|python-version:\s*["']?3\.12["']?\s*$/m);
+  for (const workflow of [ci, refresh, optional]) {
+    const checkoutCount = (workflow.match(/uses: actions\/checkout@/g) ?? []).length;
+    const hardenedCheckoutCount = (
+      workflow.match(/uses: actions\/checkout@[^\n]+\n\s+with:\n\s+persist-credentials: false/g) ?? []
+    ).length;
+    assert.equal(hardenedCheckoutCount, checkoutCount);
+  }
   assert.equal((`${ci}\n${refresh}`.match(/node-version:\s*22\.23\.1/g) ?? []).length, 3);
   assert.equal((`${ci}\n${refresh}\n${optional}`.match(/python-version:\s*["']3\.12\.13["']/g) ?? []).length, 4);
   assert.equal((ci.match(/python-version:\s*["']3\.13\.14["']/g) ?? []).length, 1);

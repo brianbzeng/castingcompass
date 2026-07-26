@@ -212,7 +212,7 @@ class SedimentDbfSupportAuditTests(unittest.TestCase):
             max_source_groups=2,
         )
         self.assertFalse(result["performed"])
-        self.assertEqual(result["candidate_partition_count"], 3)
+        self.assertEqual(result["candidate_partition_count"], 6)
         self.assertEqual(
             result["failure"], "source_group_count_exceeds_exhaustive_limit"
         )

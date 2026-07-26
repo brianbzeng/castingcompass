@@ -21,6 +21,8 @@ jobs:
       PYTHONPATH: .
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
       - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
         with:
           python-version: "3.12.13"
@@ -55,8 +57,11 @@ jobs:
           git switch -C "$BRANCH"
           git add public/data
           git commit -m "data: refresh 72-hour opportunity snapshot"
-          git fetch origin "refs/heads/$BRANCH:refs/remotes/origin/$BRANCH" || true
-          git push --force-with-lease origin "HEAD:refs/heads/$BRANCH"
+          git fetch "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" \
+            "refs/heads/$BRANCH:refs/remotes/origin/$BRANCH" || true
+          git push --force-with-lease \
+            "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" \
+            "HEAD:refs/heads/$BRANCH"
           OPEN_PR="$(gh pr list --head "$BRANCH" --state open \
             --json number,isCrossRepository \
             --jq '[.[] | select(.isCrossRepository == false)][0].number // ""')"

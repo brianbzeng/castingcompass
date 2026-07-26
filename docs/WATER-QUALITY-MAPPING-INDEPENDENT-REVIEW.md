@@ -36,7 +36,7 @@ Both reviews bind to the exact consolidated draft integration receipt:
 
 - source commit: `281dbdcbc3cd1cf68f5f363ecb182ac51ebceb73`
 - policy version: `castingcompass.water-quality-advisory/official-programs-0.5.0`
-- aggregate review-target SHA-256: `5bc88f3f64b6bd2aae868e9b0fb5571ee5fe1b04521c578a2a1dcb2e9020a0b6`
+- aggregate review-target SHA-256: `fd66070e2edc3828a4cbe394047800717ff1fff2e1a17dc083b1aa9dcd5e4ca9`
 - catalog outcomes: 61 total, 38 mapped, 23 `not-covered`
 - coverage evidence: 22 `not-covered` sites have source-bound negative evidence;
   Dumbarton remains explicitly unknown because one relevant official registry was empty

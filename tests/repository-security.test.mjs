@@ -208,7 +208,11 @@ test("scheduled snapshot refreshes require review instead of pushing the default
   assert.match(workflow, /gh pr list --head "\$BRANCH" --state open/);
   assert.match(workflow, /select\(\.isCrossRepository == false\)/);
   assert.match(workflow, /gh pr edit "\$OPEN_PR"/);
-  assert.match(workflow, /git push --force-with-lease origin "HEAD:refs\/heads\/\$BRANCH"/);
+  assert.match(
+    workflow,
+    /git push --force-with-lease\s+\\\s+"https:\/\/x-access-token:\$\{GH_TOKEN\}@github\.com\/\$\{GITHUB_REPOSITORY\}\.git"\s+\\\s+"HEAD:refs\/heads\/\$BRANCH"/u,
+  );
+  assert.doesNotMatch(workflow, /git remote set-url/u);
   assert.doesNotMatch(workflow, /^\s+git push\s*$/m);
 });
 

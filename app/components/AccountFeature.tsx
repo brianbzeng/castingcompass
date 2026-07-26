@@ -1071,7 +1071,8 @@ export function AccountModal({
       method: "POST",
       signal: controller.signal,
     })
-      .then(() => {
+      .then((response) => {
+        if (!response.ok) throw new Error("Review retry request was rejected.");
         if (!controller.signal.aborted) {
           refreshTimer = window.setTimeout(() => void loadProfile({ background: true }), 2500);
         }

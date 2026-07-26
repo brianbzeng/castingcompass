@@ -15,7 +15,7 @@ const ADVISORY_RUNBOOK_PATH = "docs/WATER-QUALITY-ADVISORY.md";
 const PACKAGE_PATH = "package.json";
 
 export const LOCKED_SOURCE_COMMIT = "281dbdcbc3cd1cf68f5f363ecb182ac51ebceb73";
-export const LOCKED_REVIEW_TARGET_SHA256 = "5bc88f3f64b6bd2aae868e9b0fb5571ee5fe1b04521c578a2a1dcb2e9020a0b6";
+export const LOCKED_REVIEW_TARGET_SHA256 = "fd66070e2edc3828a4cbe394047800717ff1fff2e1a17dc083b1aa9dcd5e4ca9";
 const LOCKED_CONTRACT_SHA256 = "4124bd5652c58c15a26f727d72700f199e99a767b88f14ac83c1aea4cf848cff";
 const REVIEW_SCHEMA_VERSION = "castingcompass.water-quality-mapping-independent-review/1.0.0";
 const RECEIPT_SCHEMA_VERSION = "castingcompass.water-quality-mapping-independent-review-receipt/1.0.0";
@@ -28,13 +28,13 @@ const POLICY_REVIEWED_AT = Date.parse("2026-07-21T00:00:00.000Z");
 const FUTURE_SKEW_MS = 5 * 60 * 1000;
 
 export const REVIEW_TARGET_INPUTS = Object.freeze([
-  Object.freeze({ path: "data/sites.json", sha256: "25b0c945c3e9311a7b3d7a62476a8b140808d3abce09c98a0a91e1ec38932c70" }),
-  Object.freeze({ path: "public/data/water-quality.json", sha256: "25eba044746deac0a6118e0f7e30246585d062867956193e0005049b6d9d653f" }),
-  Object.freeze({ path: "water-quality/audits/east-bay-parks-beachwatch-station-mappings.json", sha256: "71c69d5ab971d59ccbd830dc10b7a172e86b9620deb10fa73ccaacfae8e62ea3" }),
-  Object.freeze({ path: "water-quality/audits/launch-catalog-coverage.json", sha256: "7fa8c32c42bb3129564cb62de48e1dafda51152e076dc864c739682bc098bff5" }),
-  Object.freeze({ path: "water-quality/audits/marin-beachwatch-station-mappings.json", sha256: "ff157e24f66ffe5c30b6ed76f1b689007a0467293e337bdaf64a26fbe708ea2b" }),
-  Object.freeze({ path: "water-quality/audits/san-mateo-station-mappings.json", sha256: "294d76468334eacae49cff75d28079a82c71f0bff07a28fd0c52af7eb8c5f1a2" }),
-  Object.freeze({ path: "water-quality/audits/sf-unmapped-station-candidates.json", sha256: "0d279def4c01f96a53a8526768145c20580c759ce894a3932a837da1f44a7e69" }),
+  Object.freeze({ path: "data/sites.json", sha256: "9b1b367852abb789584f7c8270388975b780fdc4e537a8e57a74aea857b60bac" }),
+  Object.freeze({ path: "public/data/water-quality.json", sha256: "af6bc9538997e8a999f6f9cb9736d9f9bcc179e3adc5b5ba316ea3937375938c" }),
+  Object.freeze({ path: "water-quality/audits/east-bay-parks-beachwatch-station-mappings.json", sha256: "dac81e4b6ea9e7407871ad274d85ab7b46b56faa1608ee0cbe97bed6972fb849" }),
+  Object.freeze({ path: "water-quality/audits/launch-catalog-coverage.json", sha256: "9c18ae3174afaf461a7e179880038ee2cba7ba6ca9e63cee236b6c1a2bb55f1f" }),
+  Object.freeze({ path: "water-quality/audits/marin-beachwatch-station-mappings.json", sha256: "20d1b6e8881bc87d3956d78cfe790028a859257d2e51af693ea3fb9f328ac141" }),
+  Object.freeze({ path: "water-quality/audits/san-mateo-station-mappings.json", sha256: "f0d0fd9fc7226aaddf5f9643734cfe58cb92c68951020c0dc8d638168fb58c34" }),
+  Object.freeze({ path: "water-quality/audits/sf-unmapped-station-candidates.json", sha256: "f28761a7c6a564f92912293c11cd0b5ebc06248e6438c203bcb16fce13b95d2e" }),
   Object.freeze({ path: "water-quality/policy.json", sha256: "fcd98a818934375b31843eb333bef25128ceefda5784dabe3e63050d63199d60" }),
 ]);
 
