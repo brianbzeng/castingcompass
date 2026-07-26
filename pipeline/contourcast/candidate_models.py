@@ -50,6 +50,7 @@ IMPLEMENTATION_ENTRYPOINT = (
     "pipeline.contourcast.candidate_models:fit_predict_classical_candidate"
 )
 DEEP_IMPLEMENTATION_ENTRYPOINT = "pipeline.contourcast.deep_model:CatchMultiTaskModel"
+MIN_SPLINE_POSITIVE_ROWS = 8
 
 
 @dataclass(frozen=True)
@@ -206,6 +207,11 @@ def _fit_spline_gam(
         occurrence,
         cpue,
     )
+    if len(positive_x) < MIN_SPLINE_POSITIVE_ROWS:
+        raise ValueError(
+            "spline GAM CPUE head requires at least "
+            f"{MIN_SPLINE_POSITIVE_ROWS} positive rows"
+        )
     occurrence_model = make_pipeline(
         SplineTransformer(
             n_knots=5,
@@ -234,7 +240,12 @@ def _fit_spline_gam(
         Ridge(alpha=2.0),
     )
     occurrence_model.fit(train_features, occurrence)
-    cpue_model.fit(positive_x, positive_log_cpue)
+    try:
+        cpue_model.fit(positive_x, positive_log_cpue)
+    except ValueError as exc:
+        raise ValueError(
+            "spline GAM CPUE head requires adequate positive-row feature variation"
+        ) from exc
     probability = occurrence_model.predict_proba(test_features)[:, 1]
     predicted_cpue = np.maximum(
         np.expm1(cpue_model.predict(test_features)),
@@ -410,6 +421,7 @@ def fit_predict_classical_candidate(
     _validate_scope(scope)
     if candidate_id not in CLASSICAL_CANDIDATE_IDS:
         if candidate_id == DEEP_CANDIDATE_ID:
+            _resolve_entrypoint(DEEP_IMPLEMENTATION_ENTRYPOINT)
             raise ValueError(
                 "the deep candidate requires patch tensors and a frozen site-window adapter"
             )
@@ -474,7 +486,7 @@ def fit_predict_classical_candidate(
             test_x,
             random_state=seed,
         )
-    else:
+    elif candidate_id == "spatial-hierarchical-two-head":
         predictions = _fit_spatial_partial_pooling(
             train_x,
             occurrence,
@@ -484,6 +496,8 @@ def fit_predict_classical_candidate(
             test_groups,
             random_state=seed,
         )
+    else:  # pragma: no cover - guarded by the exact membership check above
+        raise ValueError(f"no adapter is wired for candidate {candidate_id!r}")
     return _validate_predictions(predictions, len(test_x))
 
 
@@ -493,7 +507,6 @@ def validate_registry_against_plan(
     """Require the implementation registry to match the frozen plan exactly."""
 
     _resolve_entrypoint(IMPLEMENTATION_ENTRYPOINT)
-    _resolve_entrypoint(DEEP_IMPLEMENTATION_ENTRYPOINT)
 
     selected = plan if plan is not None else load_model_selection_plan()
     candidates = {

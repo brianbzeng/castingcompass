@@ -6,6 +6,7 @@ import tempfile
 import unittest
 from dataclasses import replace
 from pathlib import Path
+from unittest import mock
 
 import numpy as np
 
@@ -23,7 +24,11 @@ from pipeline.contourcast.model_selection_plan import load_model_selection_plan
 
 
 class CandidateModelTests(unittest.TestCase):
+    """Exercise the synthetic-only candidate adapter and authority boundary."""
+
     def setUp(self):
+        """Build one deterministic fictional two-head training fixture."""
+
         generator = np.random.default_rng(20260726)
         self.train_features = generator.normal(size=(160, 6))
         self.test_features = generator.normal(size=(30, 6))
@@ -55,6 +60,8 @@ class CandidateModelTests(unittest.TestCase):
         self.scope = synthetic_capability_scope()
 
     def fit(self, candidate_id, **overrides):
+        """Fit one candidate while allowing a test to replace selected inputs."""
+
         values = {
             "train_features": self.train_features,
             "train_occurrence": self.occurrence,
@@ -69,6 +76,8 @@ class CandidateModelTests(unittest.TestCase):
         return fit_predict_classical_candidate(candidate_id, **values)
 
     def test_registry_matches_the_frozen_plan(self):
+        """Require the callable registry to match the plan inventory exactly."""
+
         plan = validate_registry_against_plan()
         self.assertEqual(plan, load_model_selection_plan())
         self.assertEqual(
@@ -80,6 +89,8 @@ class CandidateModelTests(unittest.TestCase):
         )
 
     def test_every_classical_adapter_is_deterministic_and_bounded(self):
+        """Require stable, finite, bounded outputs from every classical family."""
+
         for candidate_id in CLASSICAL_CANDIDATE_IDS:
             with self.subTest(candidate_id=candidate_id):
                 first = self.fit(candidate_id)
@@ -107,6 +118,8 @@ class CandidateModelTests(unittest.TestCase):
                 self.assertTrue(np.all(first.positive_catch_cpue >= 0))
 
     def test_scope_refuses_real_targets_datasets_and_authority(self):
+        """Reject any scope that resembles real data or execution authority."""
+
         rejected_scopes = [
             replace(self.scope, dataset_kind="eligible_observations"),
             replace(self.scope, target_taxon_id="174933"),
@@ -123,11 +136,15 @@ class CandidateModelTests(unittest.TestCase):
             self.fit(CLASSICAL_CANDIDATE_IDS[0], scope={})
 
     def test_deep_hybrid_and_unknown_candidates_remain_closed(self):
+        """Keep unwired and unknown candidate families unavailable."""
+
         for candidate_id in (DEEP_CANDIDATE_ID, HYBRID_CANDIDATE_ID, "invented-model"):
             with self.subTest(candidate_id=candidate_id), self.assertRaises(ValueError):
                 self.fit(candidate_id)
 
     def test_invalid_features_labels_and_groups_fail_closed(self):
+        """Reject malformed inputs before a candidate can fit."""
+
         invalid_cases = [
             {"train_features": np.asarray([1.0, 2.0])},
             {
@@ -183,9 +200,31 @@ class CandidateModelTests(unittest.TestCase):
             ):
                 self.fit(CLASSICAL_CANDIDATE_IDS[0], **overrides)
 
+        sparse_occurrence = np.zeros(len(self.train_features), dtype=int)
+        sparse_occurrence[:7] = 1
+        sparse_cpue = np.where(sparse_occurrence == 1, 1.0, 0.0)
+        with self.assertRaisesRegex(ValueError, "at least 8 positive rows"):
+            self.fit(
+                "spline-gam-two-head",
+                train_occurrence=sparse_occurrence,
+                train_cpue=sparse_cpue,
+            )
+        with (
+            mock.patch(
+                "pipeline.contourcast.candidate_models.Ridge.fit",
+                side_effect=ValueError("duplicate quantile knots"),
+            ),
+            self.assertRaisesRegex(
+                ValueError, "adequate positive-row feature variation"
+            ),
+        ):
+            self.fit("spline-gam-two-head")
+
     def test_spatial_adapter_partially_pools_known_groups_and_falls_back_for_unseen(
         self,
     ):
+        """Shrink known group effects and use the global base for unseen groups."""
+
         generator = np.random.default_rng(11)
         paired_features = generator.normal(size=(40, 4))
         train_features = np.vstack([paired_features, paired_features])
@@ -229,12 +268,16 @@ class CandidateModelTests(unittest.TestCase):
         )
 
     def test_registry_rejects_unfrozen_implementation_truth(self):
+        """Reject a plan that understates or rewires implemented candidates."""
+
         plan = copy.deepcopy(load_model_selection_plan())
         plan["candidate_families"][2]["implementation_status"] = "planned"
         with self.assertRaisesRegex(ValueError, "not marked implemented"):
             validate_registry_against_plan(plan)
 
     def test_metric_free_audit_and_cli_preserve_the_closed_boundary(self):
+        """Emit capability facts and identical CLI output, never model metrics."""
+
         receipt = audit_synthetic_candidate_capabilities()
         self.assertEqual(receipt["status"], CAPABILITY_STATUS)
         self.assertEqual(receipt["candidate_count"], len(CLASSICAL_CANDIDATE_IDS))
@@ -268,6 +311,25 @@ class CandidateModelTests(unittest.TestCase):
                 json.loads(output.read_text(encoding="utf-8")),
                 receipt,
             )
+
+        isolated = subprocess.run(
+            [
+                sys.executable,
+                "-c",
+                (
+                    "import sys; "
+                    "from pipeline.contourcast.candidate_models import "
+                    "audit_synthetic_candidate_capabilities; "
+                    "audit_synthetic_candidate_capabilities(); "
+                    "raise SystemExit("
+                    "'pipeline.contourcast.deep_model' in sys.modules)"
+                ),
+            ],
+            check=False,
+            capture_output=True,
+            text=True,
+        )
+        self.assertEqual(isolated.returncode, 0, isolated.stderr)
 
 
 if __name__ == "__main__":

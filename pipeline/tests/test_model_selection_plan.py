@@ -20,10 +20,16 @@ REPOSITORY_ROOT = Path(__file__).resolve().parents[2]
 
 
 class ModelSelectionPlanTests(unittest.TestCase):
+    """Exercise the closed, model-neutral selection-plan contract."""
+
     def setUp(self):
+        """Load one validated copy of the checked-in plan."""
+
         self.plan = load_model_selection_plan()
 
     def test_plan_is_deterministic_model_neutral_and_fully_closed(self):
+        """Keep plan identity deterministic and execution authority closed."""
+
         validate_model_selection_plan(self.plan)
         self.assertEqual(
             canonical_plan_sha256(self.plan),
@@ -58,6 +64,8 @@ class ModelSelectionPlanTests(unittest.TestCase):
         )
 
     def test_plan_rejects_authority_expansion_or_asymmetric_evidence(self):
+        """Reject shortcuts that privilege a candidate or expose locked evidence."""
+
         mutations = []
 
         changed = copy.deepcopy(self.plan)
@@ -106,6 +114,8 @@ class ModelSelectionPlanTests(unittest.TestCase):
                 validate_model_selection_plan(mutation)
 
     def test_audit_receipt_is_minimized_and_non_authorizing(self):
+        """Limit the plan receipt to inventory and closed-authority facts."""
+
         receipt = audit_model_selection_plan(self.plan)
         self.assertRegex(receipt["plan_sha256"], r"^[a-f0-9]{64}$")
         self.assertEqual(receipt["candidate_family_count"], 8)
@@ -128,10 +138,14 @@ class ModelSelectionPlanTests(unittest.TestCase):
         self.assertNotIn("winner", receipt)
 
     def test_audit_rejects_an_explicit_empty_mapping(self):
+        """Reject an empty supplied plan instead of silently loading defaults."""
+
         with self.assertRaisesRegex(ValueError, "keys changed"):
             audit_model_selection_plan({})
 
     def test_schema_identity_and_cli_preserve_the_closed_boundary(self):
+        """Keep schema and CLI validation equally non-authorizing."""
+
         schema = json.loads(
             (
                 REPOSITORY_ROOT / "contracts" / "model-selection-plan.schema.json"
