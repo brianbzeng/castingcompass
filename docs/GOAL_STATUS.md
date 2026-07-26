@@ -35,12 +35,18 @@ by that discovery.
       vulnerabilities and the focused audit/supply-chain suite passes 15/15.
 - [x] Complete the full local acceptance under pinned Node `22.23.1` and npm `10.9.8`:
       the complete security/SBOM/query-policy chain, production-off builds, feature-on build,
-      ESLint, TypeScript, all 743/743 Node tests, 8/8 Chromium/WebKit photo cases, and 244/244
+      ESLint, TypeScript, all 747/747 Node tests, 8/8 Chromium/WebKit photo cases, and 244/244
       mobile/offline/recovery/map cases pass.
-- [ ] Obtain exact-head hosted CI and CodeQL evidence, followed by independent human review of
-      the maintained lint-rule composition. This checkpoint changes no production configuration
-      and authorizes no merge, deployment, provider mutation, DNS change, migration, or
-      production acceptance.
+- [x] Obtain exact-head hosted CI evidence. At follow-up head
+      `11dfcaacf05996c41934c5accb152ee46db46046`, CI passed the complete web/security chain,
+      747/747 Node tests, 8/8 photo cases, both production-shaped builds, and the 244/244
+      mobile/offline/recovery/map matrix; API, pipeline, release-bundle, both native API-image
+      architectures, Linux CPU, and macOS ARM64 jobs also passed.
+- [ ] Obtain CodeQL evidence after the stacked follow-up is retargeted to protected `main`, then
+      obtain independent human review of the maintained lint-rule composition. GitHub default
+      setup does not scan a pull request whose base is the non-default integration branch. This
+      checkpoint changes no production configuration and authorizes no merge, deployment,
+      provider mutation, DNS change, migration, or production acceptance.
 
 ## Active checkpoint — consolidated reviewed dependency and RecFIN follow-up
 
@@ -4129,8 +4135,16 @@ supersedes this mutation-metadata authority while preserving its fail-closed beh
       policy/schema validation, provenance metadata, staging authorization, JSONC parsing,
       privacy-export recovery, immutable download caching, schema readiness, database contract
       tests, and deletion-fenced trip writes. Production and provider state remain unchanged.
-- [ ] Complete exact-head local and hosted verification for this follow-up and obtain the
-      independent review still required before merging the stacked launch foundations.
+- [x] Complete exact-head local and hosted verification for the follow-up at
+      `11dfcaacf05996c41934c5accb152ee46db46046`. Local acceptance passed lint, TypeScript,
+      747/747 Node tests, the full zero-exception security chain, both production-shaped builds,
+      252/252 browser cases, 29/29 API tests, Ruff, 132/132 pipeline tests, the D1 plan contract,
+      and deterministic model smoke. Hosted CI, API, pipeline, release-bundle, both native
+      API-image architectures, Linux CPU, and macOS ARM64 checks passed for the same commit.
+- [ ] After independent review permits `#146` to merge, retarget `#171` to protected `main` and
+      obtain the otherwise inapplicable dependency-review, CodeQL, and focused CodeRabbit
+      evidence before any merge. This stacked checkpoint authorizes no merge, deployment,
+      provider mutation, DNS change, migration, feature activation, or production acceptance.
 
 ## Product-owner work that is safe while production changes remain on hold
 
