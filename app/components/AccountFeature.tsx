@@ -2,8 +2,15 @@
 
 import Link from "next/link";
 import { FormEvent, useCallback, useEffect, useRef, useState } from "react";
+import {
+  AUTH_AGE_PROOF_MINUTES,
+  AUTH_AGE_PROOF_SECONDS,
+  AUTH_EMAIL_CHALLENGE_MINUTES,
+  AUTH_RESEND_COOLDOWN_SECONDS,
+} from "../../shared/auth-contract";
 import { CloseIcon } from "./icons";
 import { GearCatalogFields } from "./GearCatalogFields";
+import { LEGAL_DOCUMENT_VERSION } from "./LegalPage";
 import { SiteCombobox } from "./SiteCombobox";
 import {
   TurnstileChallenge,
@@ -118,6 +125,139 @@ class AmbiguousMutationError extends Error {}
 
 function isConnectionFailure(error: unknown) {
   return error instanceof TypeError;
+}
+
+type AuthOperation = AccountMode | "resend" | "legalAcceptance" | "sessionCheck";
+
+interface AuthRequest {
+  operation: AuthOperation;
+  state: MutationRequestState;
+  message: string;
+}
+
+function isExactRecord(
+  value: unknown,
+  expectedKeys: readonly string[],
+): value is Record<string, unknown> {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return false;
+  const candidate = value as Record<string, unknown>;
+  const actualKeys = Object.keys(candidate);
+  return actualKeys.length === expectedKeys.length &&
+    expectedKeys.every((key) => Object.hasOwn(candidate, key));
+}
+
+function isExactAccountSession(value: unknown): value is { user: AccountUser | null } {
+  return isExactRecord(value, ["user"]) &&
+    (value.user === null || isAccountUser(value.user));
+}
+
+function eligibilityProofFromResponse(value: unknown) {
+  if (!isExactRecord(value, ["eligibilityProof", "expiresInMinutes", "expiresInSeconds"]) ||
+    typeof value.eligibilityProof !== "string" ||
+    !/^[A-Za-z0-9_-]{43}$/.test(value.eligibilityProof) ||
+    value.expiresInMinutes !== AUTH_AGE_PROOF_MINUTES ||
+    value.expiresInSeconds !== AUTH_AGE_PROOF_SECONDS) return null;
+  return value.eligibilityProof;
+}
+
+function challengeIdFromResponse(value: unknown, operation: "signupDetails" | "recover") {
+  const expectedKeys = operation === "recover"
+    ? ["requested", "challengeId", "expiresInMinutes"]
+    : ["challengeId", "expiresInMinutes"];
+  if (!isExactRecord(value, expectedKeys) ||
+    (operation === "recover" && value.requested !== true) ||
+    value.expiresInMinutes !== AUTH_EMAIL_CHALLENGE_MINUTES ||
+    typeof value.challengeId !== "string" ||
+    !/^challenge_[a-f0-9-]{36}$/.test(value.challengeId)) return null;
+  return value.challengeId;
+}
+
+function resendCooldownFromResponse(value: unknown, expectedChallengeId: string) {
+  if (!isExactRecord(value, ["requested", "challengeId", "expiresInMinutes", "retryAfterSeconds"]) ||
+    value.requested !== true ||
+    value.challengeId !== expectedChallengeId ||
+    value.expiresInMinutes !== AUTH_EMAIL_CHALLENGE_MINUTES ||
+    value.retryAfterSeconds !== AUTH_RESEND_COOLDOWN_SECONDS) return null;
+  return value.retryAfterSeconds;
+}
+
+function accountUserFromMutationResponse(value: unknown) {
+  return isExactAccountSession(value) && value.user ? value.user : null;
+}
+
+function legalAcceptanceUserFromResponse(value: unknown) {
+  if (!isExactRecord(value, ["user", "legalVersion"]) ||
+    value.legalVersion !== LEGAL_DOCUMENT_VERSION ||
+    !isAccountUser(value.user) ||
+    !value.user.legalAccepted) return null;
+  return value.user;
+}
+
+function authRequestStartedMessage(operation: AuthOperation) {
+  switch (operation) {
+    case "signup":
+      return "Checking age eligibility on the server. No result is confirmed yet.";
+    case "signupDetails":
+      return "Requesting an email verification code. No code request is confirmed yet.";
+    case "verify":
+      return "Verifying the code and creating the account. No account or session is confirmed yet.";
+    case "recover":
+      return "Requesting a password-reset code. No email request is confirmed yet.";
+    case "reset":
+      return "Changing the password and replacing prior sessions. No change is confirmed yet.";
+    case "login":
+      return "Signing in on the server. No session is confirmed yet.";
+    case "resend":
+      return "Requesting another email code. The previous code may remain current until the server confirms this request.";
+    case "legalAcceptance":
+      return "Saving the current legal acceptance. Account features remain paused until the server confirms it.";
+    case "sessionCheck":
+      return "Checking the current server session without repeating the account write.";
+  }
+}
+
+function authRequestSlowMessage(operation: AuthOperation) {
+  switch (operation) {
+    case "signup":
+      return "Still checking eligibility. Keep this form open; no result is confirmed yet.";
+    case "signupDetails":
+    case "recover":
+    case "resend":
+      return "Still waiting for the server. A code may be sent, but this page has not received a usable confirmation yet.";
+    case "verify":
+      return "Still waiting for the server. Account creation and sign-in remain unconfirmed.";
+    case "reset":
+      return "Still waiting for the server. The password and session state remain unconfirmed.";
+    case "login":
+      return "Still waiting for the server. Do not assume this browser is signed in yet.";
+    case "legalAcceptance":
+      return "Still waiting for the server. The current legal acceptance remains unconfirmed.";
+    case "sessionCheck":
+      return "Still checking the server session. No account state has been changed by this check.";
+  }
+}
+
+function authRequestAmbiguousMessage(operation: AuthOperation) {
+  switch (operation) {
+    case "signup":
+      return "No confirmation arrived. The age result may exist, but no birth date was retained. Retry the age check explicitly when connected.";
+    case "signupDetails":
+      return "No confirmation arrived. A verification email may have been sent, but this page has no usable challenge receipt. Restart from the age check instead of repeating this request.";
+    case "verify":
+      return "No confirmation arrived. The account may already exist. Check account status before doing anything else; if no session exists, try signing in with the password you chose.";
+    case "recover":
+      return "No confirmation arrived. A reset email may have been sent, but this page has no usable challenge receipt. Return to sign in and start password recovery again only if needed.";
+    case "reset":
+      return "No confirmation arrived. The password may already have changed. Check account status first; if no session exists, try signing in with the new password before requesting another code.";
+    case "login":
+      return "No confirmation arrived. A session may already exist. Check sign-in status before retrying.";
+    case "resend":
+      return "No confirmation arrived. A new code may have been sent and may supersede the prior code. Do not request another one automatically; use the latest email or start the flow over.";
+    case "legalAcceptance":
+      return "No confirmation arrived. The current terms may already be accepted. Check account status before submitting them again.";
+    case "sessionCheck":
+      return "The server session could not be verified. Do not repeat the account write; reconnect if needed and check again.";
+  }
 }
 
 function MutationRequestStatus({ state, message }: { state: MutationRequestState; message: string }) {
@@ -316,12 +456,15 @@ export function SavedSiteControls({ account, siteId }: { account: AccountControl
 }
 
 function isAccountUser(value: unknown): value is AccountUser {
-  if (!value || typeof value !== "object" || Array.isArray(value)) return false;
-  const candidate = value as Record<string, unknown>;
-  return typeof candidate.id === "string" &&
-    typeof candidate.email === "string" &&
-    typeof candidate.ageEligible === "boolean" &&
-    typeof candidate.legalAccepted === "boolean";
+  return isExactRecord(value, ["id", "email", "ageEligible", "legalAccepted"]) &&
+    typeof value.id === "string" &&
+    value.id.length > 0 &&
+    value.id.length <= 128 &&
+    typeof value.email === "string" &&
+    value.email.length > 0 &&
+    value.email.length <= 254 &&
+    typeof value.ageEligible === "boolean" &&
+    typeof value.legalAccepted === "boolean";
 }
 
 function savedSiteIdsFromReceipt(value: unknown): string[] | null {
@@ -528,8 +671,11 @@ export function useAccount(): AccountController {
   const refresh = useCallback(async () => {
     try {
       const response = await fetch("/api/auth/session", { cache: "no-store" });
-      const body = await response.json() as { user?: AccountUser | null };
-      const nextUser = response.ok ? body.user ?? null : null;
+      const body = await response.json().catch(() => null) as unknown;
+      if (response.status !== 200 || !isExactAccountSession(body)) {
+        throw new Error("Account session could not be verified.");
+      }
+      const nextUser = body.user;
       setUser(nextUser);
       if (!nextUser || !nextUser.legalAccepted) {
         setSavedSiteIds(new Set());
@@ -627,8 +773,8 @@ export function useAccount(): AccountController {
     });
     try {
       const response = await fetch("/api/auth/session", { cache: "no-store" });
-      const body = await response.json().catch(() => null) as { user?: unknown } | null;
-      if (!response.ok || !body || !Object.hasOwn(body, "user") || (body.user !== null && !isAccountUser(body.user))) {
+      const body = await response.json().catch(() => null) as unknown;
+      if (response.status !== 200 || !isExactAccountSession(body)) {
         throw new Error("The server session response could not be verified.");
       }
       if (body.user === null) {
@@ -868,6 +1014,7 @@ export function AccountModal({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
+  const [authRequest, setAuthRequest] = useState<AuthRequest | null>(null);
   const [challengeId, setChallengeId] = useState("");
   const [eligibilityProof, setEligibilityProof] = useState("");
   const [signupAvailable, setSignupAvailable] = useState<boolean | null>(null);
@@ -912,6 +1059,25 @@ export function AccountModal({
   const reviewRetryRequestedRef = useRef(false);
   const deletionStatusCheckedRef = useRef(false);
   const networkState = useClientNetworkState();
+  const authMutationAmbiguous = authRequest?.state === "ambiguous";
+  const primaryAuthMutationBlocked = authMutationAmbiguous && authRequest?.operation !== "resend";
+  const displayedAuthState: MutationRequestState = authRequest?.state ?? (
+    networkState === "offline" ? "error" : "idle"
+  );
+  const displayedAuthMessage = authRequest?.message ?? (
+    networkState === "offline"
+      ? "This device appears offline. Account requests are paused, and nothing will be submitted automatically after reconnection."
+      : networkState === "restored"
+        ? "This device reports that its connection is back. No account request was submitted automatically."
+        : ""
+  );
+  const canCheckAuthSession = authRequest !== null && (
+    (authRequest.state === "ambiguous" &&
+      ["login", "verify", "reset", "legalAcceptance", "sessionCheck"].includes(authRequest.operation)) ||
+    (authRequest.operation === "sessionCheck" && authRequest.state === "submitting")
+  );
+  const authSubmitDisabled = busy || networkState === "offline" || primaryAuthMutationBlocked;
+  const authSessionCheckDisabled = busy || networkState === "offline";
   const displayedAccountDeletionState = accountDeletionState === "idle" && networkState === "offline"
     ? "error"
     : accountDeletionState;
@@ -992,6 +1158,8 @@ export function AccountModal({
   const changeMode = useCallback((nextMode: AccountMode) => {
     resetTurnstile();
     resetResendTurnstile();
+    setAuthRequest(null);
+    setBusy(false);
     setMode(nextMode);
   }, [resetResendTurnstile, resetTurnstile]);
   const closeAccount = useCallback(() => {
@@ -1136,29 +1304,49 @@ export function AccountModal({
 
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    if (networkState === "offline") {
+      setAuthRequest({
+        operation: mode,
+        state: "error",
+        message: "This device appears offline. No account request was submitted, and nothing will be submitted automatically after reconnection.",
+      });
+      return;
+    }
+    if (primaryAuthMutationBlocked) return;
     if (!turnstileCanSubmit) {
       setError("Complete the security verification before continuing.");
       return;
     }
+    const submittedMode = mode;
     setBusy(true);
     setError("");
     setNotice("");
+    setAuthRequest({
+      operation: submittedMode,
+      state: "submitting",
+      message: authRequestStartedMessage(submittedMode),
+    });
+    const slowNotice = window.setTimeout(() => {
+      setAuthRequest((current) => current?.operation === submittedMode && current.state === "submitting"
+        ? { ...current, message: authRequestSlowMessage(submittedMode) }
+        : current);
+    }, SLOW_MUTATION_NOTICE_MS);
     const form = new FormData(event.currentTarget);
     try {
-      const endpoint = mode === "signupDetails"
+      const endpoint = submittedMode === "signupDetails"
         ? "/api/auth/signup/request"
-        : mode === "verify"
+        : submittedMode === "verify"
           ? "/api/auth/signup/verify"
-          : mode === "recover"
+          : submittedMode === "recover"
             ? "/api/auth/password/request"
-            : mode === "reset"
+            : submittedMode === "reset"
               ? "/api/auth/password/reset"
               : "/api/auth/login";
-      const payload = mode === "verify"
+      const payload = submittedMode === "verify"
         ? { challengeId, code: form.get("code"), turnstileToken }
-        : mode === "reset"
+        : submittedMode === "reset"
           ? { challengeId, code: form.get("code"), password: form.get("password"), turnstileToken }
-          : mode === "signupDetails"
+          : submittedMode === "signupDetails"
             ? {
                 eligibilityProof,
                 email: form.get("email"),
@@ -1167,7 +1355,7 @@ export function AccountModal({
                 privacyAccepted: form.get("privacyAccepted") === "on",
                 turnstileToken,
               }
-            : mode === "recover"
+            : submittedMode === "recover"
               ? { email: form.get("email"), turnstileToken }
               : { email: form.get("email"), password: form.get("password"), turnstileToken };
       const response = await fetch(endpoint, {
@@ -1175,19 +1363,68 @@ export function AccountModal({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
-      const body = await response.json() as { challengeId?: string; error?: { message?: string } };
-      if (!response.ok) throw new Error(body.error?.message ?? "The account request failed.");
-      if ((mode === "signupDetails" || mode === "recover") && body.challengeId) {
-        setChallengeId(body.challengeId);
+      const body = await response.json().catch(() => null) as {
+        challengeId?: string;
+        user?: AccountUser;
+        error?: { code?: string; message?: string };
+      } | null;
+      if (!response.ok) {
+        const knownPreMutationFailure = body?.error?.code === "security_verification_unavailable" ||
+          body?.error?.code === "storage_unavailable" ||
+          body?.error?.code === "auth_schema_unavailable";
+        if (response.status >= 500 && !knownPreMutationFailure) {
+          throw new AmbiguousMutationError(body?.error?.message ?? "The server could not confirm the account request.");
+        }
+        throw new Error(body?.error?.message ?? "The account request failed.");
+      }
+      if (submittedMode === "signupDetails" || submittedMode === "recover") {
+        const nextChallengeId = challengeIdFromResponse(body, submittedMode);
+        if (response.status !== 200 || !nextChallengeId) {
+          throw new AmbiguousMutationError("The email-code response could not be verified.");
+        }
+        setChallengeId(nextChallengeId);
         setResendCooldown(60);
-        changeMode(mode === "signupDetails" ? "verify" : "reset");
+        changeMode(submittedMode === "signupDetails" ? "verify" : "reset");
+        setNotice(submittedMode === "signupDetails"
+          ? "Verification email request confirmed. Enter the latest code from that email."
+          : "Password-reset email request confirmed. Enter the latest code from that email.");
         return;
       }
+      const confirmedUser = accountUserFromMutationResponse(body);
+      const expectedStatus = submittedMode === "verify" ? 201 : 200;
+      if (response.status !== expectedStatus || !confirmedUser) {
+        throw new AmbiguousMutationError("The account-session response could not be verified.");
+      }
+      setAuthRequest({
+        operation: submittedMode,
+        state: "idle",
+        message: submittedMode === "login"
+          ? "Sign-in confirmed by the server."
+          : submittedMode === "verify"
+            ? "Account creation and sign-in confirmed by the server."
+            : "Password change and new session confirmed by the server.",
+      });
       await account.refresh();
       closeAccount();
     } catch (submissionError) {
-      setError(submissionError instanceof Error ? submissionError.message : "The account request failed.");
+      const ambiguous = isConnectionFailure(submissionError) || submissionError instanceof AmbiguousMutationError;
+      if (ambiguous) {
+        setAuthRequest({
+          operation: submittedMode,
+          state: "ambiguous",
+          message: authRequestAmbiguousMessage(submittedMode),
+        });
+      } else {
+        const message = submissionError instanceof Error ? submissionError.message : "The account request failed.";
+        setError("");
+        setAuthRequest({
+          operation: submittedMode,
+          state: "error",
+          message,
+        });
+      }
     } finally {
+      window.clearTimeout(slowNotice);
       resetTurnstile();
       setBusy(false);
     }
@@ -1195,6 +1432,15 @@ export function AccountModal({
 
   const submitSignupEligibility = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    if (networkState === "offline") {
+      setAuthRequest({
+        operation: "signup",
+        state: "error",
+        message: "This device appears offline. The age check was not submitted, and nothing will be submitted automatically after reconnection.",
+      });
+      return;
+    }
+    if (primaryAuthMutationBlocked) return;
     if (!turnstileCanSubmit) {
       setError("Complete the security verification before continuing.");
       return;
@@ -1202,6 +1448,16 @@ export function AccountModal({
     setBusy(true);
     setError("");
     setNotice("");
+    setAuthRequest({
+      operation: "signup",
+      state: "submitting",
+      message: authRequestStartedMessage("signup"),
+    });
+    const slowNotice = window.setTimeout(() => {
+      setAuthRequest((current) => current?.operation === "signup" && current.state === "submitting"
+        ? { ...current, message: authRequestSlowMessage("signup") }
+        : current);
+    }, SLOW_MUTATION_NOTICE_MS);
     const form = new FormData(event.currentTarget);
     try {
       const response = await fetch("/api/auth/signup/eligibility", {
@@ -1209,48 +1465,125 @@ export function AccountModal({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ birthDate: form.get("birthDate"), turnstileToken }),
       });
-      const body = await response.json().catch(() => ({})) as { eligibilityProof?: string };
-      if (!response.ok || !body.eligibilityProof) {
+      const body = await response.json().catch(() => null) as unknown;
+      if (!response.ok) {
         if (response.status === 403) setSignupAvailable(false);
         if (response.status === 503) {
           throw new Error("Security verification is temporarily unavailable. Try again shortly.");
         }
         throw new Error("Account signup is not available with the information provided.");
       }
-      setEligibilityProof(body.eligibilityProof);
+      const nextEligibilityProof = eligibilityProofFromResponse(body);
+      if (response.status !== 200 || !nextEligibilityProof) {
+        throw new AmbiguousMutationError("The age-eligibility response could not be verified.");
+      }
+      setEligibilityProof(nextEligibilityProof);
       changeMode("signupDetails");
     } catch (eligibilityError) {
       setEligibilityProof("");
-      setError(eligibilityError instanceof Error
-        ? eligibilityError.message
-        : "Account signup is not available with the information provided.");
+      const ambiguous = isConnectionFailure(eligibilityError) || eligibilityError instanceof AmbiguousMutationError;
+      if (ambiguous) {
+        setAuthRequest({
+          operation: "signup",
+          state: "ambiguous",
+          message: authRequestAmbiguousMessage("signup"),
+        });
+      } else {
+        const message = eligibilityError instanceof Error
+          ? eligibilityError.message
+          : "Account signup is not available with the information provided.";
+        setError("");
+        setAuthRequest({
+          operation: "signup",
+          state: "error",
+          message,
+        });
+      }
     } finally {
+      window.clearTimeout(slowNotice);
       resetTurnstile();
       setBusy(false);
     }
   };
 
   const resendCode = async () => {
-    if (!challengeId || resendCooldown > 0 || busy) return;
+    if (!challengeId || resendCooldown > 0 || busy || authRequest?.state === "ambiguous") return;
+    if (networkState === "offline") {
+      setAuthRequest({
+        operation: "resend",
+        state: "error",
+        message: "This device appears offline. No replacement code was requested, and nothing will be submitted automatically after reconnection.",
+      });
+      return;
+    }
     if (!resendTurnstileCanSubmit) {
       setError("Complete the resend security verification before requesting another code.");
       return;
     }
     setBusy(true);
     setError("");
+    setNotice("");
+    setAuthRequest({
+      operation: "resend",
+      state: "submitting",
+      message: authRequestStartedMessage("resend"),
+    });
+    const slowNotice = window.setTimeout(() => {
+      setAuthRequest((current) => current?.operation === "resend" && current.state === "submitting"
+        ? { ...current, message: authRequestSlowMessage("resend") }
+        : current);
+    }, SLOW_MUTATION_NOTICE_MS);
     try {
       const response = await fetch("/api/auth/challenge/resend", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ challengeId, turnstileToken: resendTurnstileToken }),
       });
-      const body = await response.json() as { retryAfterSeconds?: number; error?: { message?: string } };
-      if (!response.ok) throw new Error(body.error?.message ?? "A new code could not be sent.");
-      setResendCooldown(body.retryAfterSeconds ?? 60);
+      const body = await response.json().catch(() => null) as {
+        requested?: boolean;
+        challengeId?: string;
+        retryAfterSeconds?: number;
+        error?: { code?: string; message?: string };
+      } | null;
+      if (!response.ok) {
+        const knownPreMutationFailure = body?.error?.code === "security_verification_unavailable" ||
+          body?.error?.code === "storage_unavailable" ||
+          body?.error?.code === "auth_schema_unavailable";
+        if (response.status >= 500 && !knownPreMutationFailure) {
+          throw new AmbiguousMutationError(body?.error?.message ?? "The replacement-code request could not be confirmed.");
+        }
+        throw new Error(body?.error?.message ?? "A new code could not be sent.");
+      }
+      const retryAfterSeconds = resendCooldownFromResponse(body, challengeId);
+      if (response.status !== 200 || retryAfterSeconds === null) {
+        throw new AmbiguousMutationError("The replacement-code response could not be verified.");
+      }
+      setResendCooldown(retryAfterSeconds);
       setNotice("A new code was requested. Check spam, promotions, and All Mail too.");
+      setAuthRequest({
+        operation: "resend",
+        state: "idle",
+        message: "The server confirmed the replacement-code request. Use only the latest email.",
+      });
     } catch (resendError) {
-      setError(resendError instanceof Error ? resendError.message : "A new code could not be sent.");
+      const ambiguous = isConnectionFailure(resendError) || resendError instanceof AmbiguousMutationError;
+      if (ambiguous) {
+        setAuthRequest({
+          operation: "resend",
+          state: "ambiguous",
+          message: authRequestAmbiguousMessage("resend"),
+        });
+      } else {
+        const message = resendError instanceof Error ? resendError.message : "A new code could not be sent.";
+        setError("");
+        setAuthRequest({
+          operation: "resend",
+          state: "error",
+          message,
+        });
+      }
     } finally {
+      window.clearTimeout(slowNotice);
       resetResendTurnstile();
       setBusy(false);
     }
@@ -1258,8 +1591,27 @@ export function AccountModal({
 
   const submitLegalAcceptance = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    if (networkState === "offline") {
+      setAuthRequest({
+        operation: "legalAcceptance",
+        state: "error",
+        message: "This device appears offline. Legal acceptance was not submitted, and account features remain paused.",
+      });
+      return;
+    }
+    if (primaryAuthMutationBlocked) return;
     setBusy(true);
     setError("");
+    setAuthRequest({
+      operation: "legalAcceptance",
+      state: "submitting",
+      message: authRequestStartedMessage("legalAcceptance"),
+    });
+    const slowNotice = window.setTimeout(() => {
+      setAuthRequest((current) => current?.operation === "legalAcceptance" && current.state === "submitting"
+        ? { ...current, message: authRequestSlowMessage("legalAcceptance") }
+        : current);
+    }, SLOW_MUTATION_NOTICE_MS);
     const form = new FormData(event.currentTarget);
     try {
       const response = await fetch("/api/auth/eligibility", {
@@ -1270,12 +1622,118 @@ export function AccountModal({
           privacyAccepted: form.get("privacyAccepted") === "on",
         }),
       });
-      const body = await response.json() as { error?: { message?: string } };
-      if (!response.ok) throw new Error(body.error?.message ?? "Legal acceptance could not be saved.");
+      const body = await response.json().catch(() => null) as {
+        user?: AccountUser;
+        legalVersion?: string;
+        error?: { message?: string };
+      } | null;
+      if (!response.ok) {
+        if (response.status >= 500) {
+          throw new AmbiguousMutationError(body?.error?.message ?? "Legal acceptance could not be confirmed.");
+        }
+        throw new Error(body?.error?.message ?? "Legal acceptance could not be saved.");
+      }
+      const confirmedUser = legalAcceptanceUserFromResponse(body);
+      if (response.status !== 200 || !confirmedUser) {
+        throw new AmbiguousMutationError("The legal-acceptance response could not be verified.");
+      }
+      setAuthRequest({
+        operation: "legalAcceptance",
+        state: "idle",
+        message: "The server confirmed the current legal acceptance.",
+      });
       await account.refresh();
     } catch (acceptanceError) {
-      setError(acceptanceError instanceof Error ? acceptanceError.message : "Legal acceptance could not be saved.");
+      const ambiguous = isConnectionFailure(acceptanceError) || acceptanceError instanceof AmbiguousMutationError;
+      if (ambiguous) {
+        setAuthRequest({
+          operation: "legalAcceptance",
+          state: "ambiguous",
+          message: authRequestAmbiguousMessage("legalAcceptance"),
+        });
+      } else {
+        const message = acceptanceError instanceof Error ? acceptanceError.message : "Legal acceptance could not be saved.";
+        setError("");
+        setAuthRequest({
+          operation: "legalAcceptance",
+          state: "error",
+          message,
+        });
+      }
     } finally {
+      window.clearTimeout(slowNotice);
+      setBusy(false);
+    }
+  };
+
+  const checkAuthSessionStatus = async () => {
+    const unresolved = authRequest;
+    if (!unresolved || unresolved.state !== "ambiguous" ||
+      !["login", "verify", "reset", "legalAcceptance", "sessionCheck"].includes(unresolved.operation) ||
+      networkState === "offline" || busy) return;
+    setBusy(true);
+    setError("");
+    setAuthRequest({
+      operation: "sessionCheck",
+      state: "submitting",
+      message: authRequestStartedMessage("sessionCheck"),
+    });
+    const slowNotice = window.setTimeout(() => {
+      setAuthRequest((current) => current?.operation === "sessionCheck" && current.state === "submitting"
+        ? { ...current, message: authRequestSlowMessage("sessionCheck") }
+        : current);
+    }, SLOW_MUTATION_NOTICE_MS);
+    try {
+      const response = await fetch("/api/auth/session", { cache: "no-store" });
+      const body = await response.json().catch(() => null) as unknown;
+      if (response.status !== 200 || !isExactAccountSession(body)) {
+        throw new Error("The server session response could not be verified.");
+      }
+      if (body.user) {
+        if (unresolved.operation === "legalAcceptance" && !body.user.legalAccepted) {
+          setAuthRequest({
+            operation: unresolved.operation,
+            state: "error",
+            message: "The server confirms the current terms are not accepted yet. You can submit the form again with fresh confirmation.",
+          });
+          return;
+        }
+        setAuthRequest({
+          operation: unresolved.operation,
+          state: "idle",
+          message: unresolved.operation === "legalAcceptance"
+            ? "The server confirms the current terms are accepted."
+            : "The server confirms this browser has an active account session.",
+        });
+        await account.refresh();
+        if (unresolved.operation !== "legalAcceptance") closeAccount();
+        return;
+      }
+      if (unresolved.operation === "login" || unresolved.operation === "legalAcceptance") {
+        setAuthRequest({
+          operation: unresolved.operation,
+          state: "error",
+          message: unresolved.operation === "login"
+            ? "The server confirms this browser is not signed in. You can retry sign-in with a fresh security check."
+            : "The account session has ended. Sign in again before accepting the current terms.",
+        });
+        return;
+      }
+      setAuthRequest({
+        operation: unresolved.operation,
+        state: "ambiguous",
+        message: unresolved.operation === "verify"
+          ? "No active session exists, but account creation may still have completed. Do not reuse the code; return to sign in with the password you chose."
+          : "No active session exists, but the password may still have changed. Do not reuse the code; return to sign in with the new password.",
+      });
+    } catch {
+      setAuthRequest({
+        operation: unresolved.operation,
+        state: "ambiguous",
+        message: authRequestAmbiguousMessage("sessionCheck"),
+      });
+    } finally {
+      window.clearTimeout(slowNotice);
       setBusy(false);
     }
   };
@@ -1751,11 +2209,25 @@ export function AccountModal({
             <span className="eyebrow"><span /> Account update</span>
             <h2 id="account-title">Review the<br />current terms.</h2>
             <p>Your existing age-eligibility confirmation remains in place. Review and accept the current legal documents to resume account features; no birth date is requested again.</p>
-            <form onSubmit={submitLegalAcceptance}>
+            <form onSubmit={submitLegalAcceptance} aria-busy={busy}>
               <label className="account-consent"><input name="termsAccepted" type="checkbox" required /><span>I agree to the <Link href="/terms" target="_blank">Terms of Service</Link>.</span></label>
               <label className="account-consent"><input name="privacyAccepted" type="checkbox" required /><span>I acknowledge the <Link href="/privacy" target="_blank">Privacy Policy</Link>, including the use of service providers and automated review.</span></label>
               {error ? <p className="account-error" role="alert">{error}</p> : null}
-              <button className="account-primary" type="submit" disabled={busy}>{busy ? "Saving…" : "Accept and continue"}</button>
+              <button className="account-primary" type="submit" disabled={authSubmitDisabled}>
+                {busy
+                  ? authRequest?.operation === "sessionCheck" ? "Checking account status…" : "Saving…"
+                  : authMutationAmbiguous
+                    ? "Acceptance status unresolved"
+                    : networkState === "offline"
+                      ? "Reconnect to accept"
+                      : "Accept and continue"}
+              </button>
+              {canCheckAuthSession ? (
+                <button className="account-secondary" type="button" disabled={authSessionCheckDisabled} onClick={() => void checkAuthSessionStatus()}>
+                  {busy ? "Checking…" : networkState === "offline" ? "Reconnect to check account status" : "Check account status"}
+                </button>
+              ) : null}
+              <MutationRequestStatus state={displayedAuthState} message={displayedAuthMessage} />
             </form>
             <PrivacyExportControl />
             <details className="account-delete-details">
@@ -2088,12 +2560,12 @@ export function AccountModal({
                 : account.modalMessage || "Save locations and contribute trip reports to improve the forecast."}</p>
             {mode === "login" || mode === "signup" ? (
               <div className="account-tabs" role="tablist" aria-label="Account action">
-                <button type="button" className={mode === "login" ? "active" : ""} onClick={() => { changeMode("login"); setEligibilityProof(""); setError(""); }}>Sign in</button>
-                <button type="button" className={mode === "signup" ? "active" : ""} onClick={() => { changeMode("signup"); setSignupAvailable(null); setEligibilityProof(""); setError(""); }}>Create account</button>
+                <button type="button" disabled={busy} className={mode === "login" ? "active" : ""} onClick={() => { changeMode("login"); setEligibilityProof(""); setError(""); }}>Sign in</button>
+                <button type="button" disabled={busy} className={mode === "signup" ? "active" : ""} onClick={() => { changeMode("signup"); setSignupAvailable(null); setEligibilityProof(""); setError(""); }}>Create account</button>
               </div>
             ) : null}
             {mode === "signup" && signupAvailable === true ? (
-              <form aria-label="Age eligibility" onSubmit={submitSignupEligibility}>
+              <form aria-label="Age eligibility" aria-busy={busy} onSubmit={submitSignupEligibility}>
                 <label>Birth date<input name="birthDate" type="date" autoComplete="bday" required /></label>
                 <small>The entered date is not retained. The service keeps only a short-lived eligibility result without your birth date, email, or account details.</small>
                 <TurnstileChallenge
@@ -2103,7 +2575,25 @@ export function AccountModal({
                   onStateChange={setTurnstileState}
                 />
                 {error ? <p className="account-error" role="alert">{error}</p> : null}
-                <button className="account-primary" type="submit" disabled={busy || !turnstileCanSubmit}>{busy ? "Checking…" : "Continue"}</button>
+                <button className="account-primary" type="submit" disabled={authSubmitDisabled || !turnstileCanSubmit}>
+                  {busy
+                    ? "Checking…"
+                    : authMutationAmbiguous
+                      ? "Eligibility status unresolved"
+                      : networkState === "offline"
+                        ? "Reconnect to continue"
+                        : "Continue"}
+                </button>
+                {authRequest?.operation === "signup" && authRequest.state === "ambiguous" ? (
+                  <button className="account-secondary" type="button" disabled={busy || networkState === "offline"} onClick={() => {
+                    setAuthRequest(null);
+                    setError("");
+                    resetTurnstile();
+                  }}>
+                    Retry age check explicitly
+                  </button>
+                ) : null}
+                <MutationRequestStatus state={displayedAuthState} message={displayedAuthMessage} />
               </form>
             ) : mode === "signup" ? (
               <p className={signupAvailable === false ? "account-error" : "account-notice"} role="status">
@@ -2112,7 +2602,7 @@ export function AccountModal({
                   : "Checking whether account signup is available…"}
               </p>
             ) : (
-              <form onSubmit={submit}>
+              <form onSubmit={submit} aria-busy={busy}>
                 {mode !== "verify" && mode !== "reset" ? <label>Email<input name="email" type="email" autoComplete="email" required maxLength={254} /></label> : null}
                 {mode === "login" || mode === "signupDetails" || mode === "reset" ? <label>{mode === "reset" ? "New password" : "Password"}<input name="password" type="password" autoComplete={mode === "login" ? "current-password" : "new-password"} required minLength={mode === "login" ? 10 : 15} maxLength={128} /></label> : null}
                 {mode === "signupDetails" ? <label className="account-consent"><input name="termsAccepted" type="checkbox" required /><span>I agree to the <Link href="/terms" target="_blank">Terms of Service</Link>.</span></label> : null}
@@ -2129,7 +2619,21 @@ export function AccountModal({
                 />
                 {error ? <p className="account-error" role="alert">{error}</p> : null}
                 {notice ? <p className="account-notice" role="status">{notice}</p> : null}
-                <button className="account-primary" type="submit" disabled={busy || !turnstileCanSubmit}>{busy ? "Please wait…" : mode === "login" ? "Sign in" : mode === "signupDetails" ? "Email verification code" : mode === "verify" ? "Verify and create account" : mode === "recover" ? "Email reset code" : "Set new password"}</button>
+                <button className="account-primary" type="submit" disabled={authSubmitDisabled || !turnstileCanSubmit}>
+                  {busy
+                    ? authRequest?.operation === "sessionCheck" ? "Checking account status…" : "Please wait…"
+                    : primaryAuthMutationBlocked
+                      ? "Account status unresolved"
+                      : networkState === "offline"
+                        ? "Reconnect to continue"
+                        : mode === "login" ? "Sign in" : mode === "signupDetails" ? "Email verification code" : mode === "verify" ? "Verify and create account" : mode === "recover" ? "Email reset code" : "Set new password"}
+                </button>
+                {canCheckAuthSession ? (
+                  <button className="account-secondary" type="button" disabled={authSessionCheckDisabled} onClick={() => void checkAuthSessionStatus()}>
+                    {busy ? "Checking…" : networkState === "offline" ? "Reconnect to check account status" : "Check account status"}
+                  </button>
+                ) : null}
+                <MutationRequestStatus state={displayedAuthState} message={displayedAuthMessage} />
               </form>
             )}
             {mode === "verify" || mode === "reset" ? (
@@ -2142,14 +2646,18 @@ export function AccountModal({
                     onStateChange={setResendTurnstileState}
                   />
                 ) : null}
-                <button className="account-text-button" type="button" disabled={busy || resendCooldown > 0 || !resendTurnstileCanSubmit} onClick={() => void resendCode()}>
-                  {resendCooldown > 0 ? `Send another code in ${resendCooldown}s` : "Send another code"}
+                <button className="account-text-button" type="button" disabled={busy || networkState === "offline" || authRequest?.state === "ambiguous" || resendCooldown > 0 || !resendTurnstileCanSubmit} onClick={() => void resendCode()}>
+                  {authRequest?.operation === "resend" && authRequest.state === "ambiguous"
+                    ? "Replacement-code status unresolved"
+                    : networkState === "offline"
+                      ? "Reconnect to request another code"
+                      : resendCooldown > 0 ? `Send another code in ${resendCooldown}s` : "Send another code"}
                 </button>
               </div>
             ) : null}
-            {mode === "login" ? <button className="account-text-button" type="button" onClick={() => { changeMode("recover"); setError(""); }}>Forgot password?</button> : null}
-            {mode === "signupDetails" ? <button className="account-text-button" type="button" onClick={() => { changeMode("signup"); setSignupAvailable(null); setEligibilityProof(""); setError(""); }}>Start age check again</button> : null}
-            {mode === "recover" || mode === "verify" || mode === "reset" ? <button className="account-text-button" type="button" onClick={() => { changeMode("login"); setEligibilityProof(""); setError(""); setChallengeId(""); }}>Back to sign in</button> : null}
+            {mode === "login" ? <button className="account-text-button" type="button" disabled={busy} onClick={() => { changeMode("recover"); setError(""); }}>Forgot password?</button> : null}
+            {mode === "signupDetails" ? <button className="account-text-button" type="button" disabled={busy} onClick={() => { changeMode("signup"); setSignupAvailable(null); setEligibilityProof(""); setError(""); }}>Start age check again</button> : null}
+            {mode === "recover" || mode === "verify" || mode === "reset" ? <button className="account-text-button" type="button" disabled={busy} onClick={() => { changeMode("login"); setEligibilityProof(""); setError(""); setChallengeId(""); }}>Back to sign in</button> : null}
             <p className="account-legal-links"><Link href="/terms">Terms</Link><Link href="/privacy">Privacy</Link><Link href="/ai-disclosure">AI disclosure</Link></p>
           </>
         )}

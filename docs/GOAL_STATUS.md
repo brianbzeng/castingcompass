@@ -16,11 +16,11 @@ by that discovery.
 ## Current protected-main reconciliation — 2026-07-26
 
 - [x] Reconcile the complete protected branch after the reviewed merge sequence. Exact `main`
-      commit `e47daa7798dd7d5abf28292183ea239c4fb2f3cf` passed CI `30208630870` (web, API,
+      commit `0c1656bbc2a3af42dc92b122933da33d1316d59d` passed CI `30218402135` (web, API,
       pipeline, dependency submission, the complete security chain, both production-shaped
-      builds, 747/747 Node tests, 8/8 photo cases, and the 244/244
-      mobile/offline/recovery/map matrix), CodeQL `30208630610`, and release provenance
-      `30208630881`.
+      builds, 752/752 Node tests, 8/8 photo cases, and the 248/248
+      mobile/offline/recovery/map matrix), CodeQL `30218401771`, and release provenance
+      `30218402115`.
 - [x] Reconcile the public repository queues read-only. Dependabot, code-scanning, and
       secret-scanning alerts are all zero; issue `#86` remains open for the mandatory API-image
       exception review by 2026-08-08.
@@ -54,10 +54,53 @@ by that discovery.
       A compatible Python environment also passes Ruff, all 29/29 API tests, all 149/149
       pipeline tests with 11 declared optional-dependency skips, and all 54 critical D1 query
       plans.
+- [x] Obtain hosted CI, CodeQL, release-provenance, and automated-review acceptance on exact head
+      `3f950ca1c96d87818da984ffae06eaa7d20b81fe`: CI `30217975368`, CodeQL
+      `30217974684`, release provenance `30217975360`, and CodeRabbit passed before protected
+      merge `#181`. Post-merge `main` at
+      `0c1656bbc2a3af42dc92b122933da33d1316d59d` passed the protected-branch receipts above. No
+      deployment, provider mutation, data refresh, score/model change, or production acceptance
+      is authorized by this frontend boundary.
+
+## Active checkpoint — truthful account-entry recovery
+
+- [x] Keep every account-entry write visibly unconfirmed until its exact server response arrives.
+      Sign-in, age eligibility, signup challenge creation, account verification, password
+      recovery, password reset, code resend, and legal reacceptance now expose operation-specific
+      immediate and slow states, pause while offline, retain user-entered fields, and never replay
+      automatically when the browser reports that its connection returned.
+- [x] Validate the smallest authoritative success receipt before changing account state.
+      Session-producing writes and read-only session checks require the expected status, exact
+      top-level shape, and an exact typed account user. Age proof, signup challenge, password-
+      recovery challenge, and resend receipts require their operation-specific field sets,
+      generated identities, fixed expiry contracts, and bounded cooldown. Legal reacceptance
+      requires the exact accepted account and current public legal-document version. Missing or
+      additional fields, malformed success, and post-mutation server/transport failures cannot
+      be relabeled as success or an ordinary retry.
+- [x] Provide bounded recovery without repeating an uncertain write. Ambiguous sign-in,
+      verification, password-reset, and legal-acceptance outcomes offer only the read-only
+      session endpoint first; an absent session permits a fresh sign-in retry but never reuses a
+      consumed code. An uncertain resend is blocked because the latest email may supersede the
+      prior code, while an isolated age check can be explicitly repeated because no birth date is
+      retained and no account authority was granted.
+- [x] Complete local acceptance under pinned Node `22.23.1` and npm `10.9.8`: the complete
+      security/SBOM/query-policy chain, zero-vulnerability complete and production dependency
+      audits, production-off and feature-on builds, ESLint, TypeScript, all 755/755 Node tests,
+      8/8 Chromium/WebKit photo cases, and 272/272 mobile/offline/recovery/map cases pass.
+      Compatible hash-locked Python environments also pass Ruff, 29/29 API tests, 149/149
+      pipeline tests with 11 declared optional-dependency skips, deterministic synthetic smoke,
+      and all 54 critical D1 query plans.
+  - [x] Address every actionable automated-review note without weakening the recovery boundary:
+        share the public age/challenge/cooldown contract between the Worker and browser,
+        preserve the visible disabled `Checking…` control while the read-only session request is
+        in flight, remove the redundant browser route fixture, and regenerate the hash-bound D1
+        inventory plus release SBOM. The complete 755-test Node suite, security chain, both
+        zero-vulnerability audits, build, lint, TypeScript, and the four-profile lost-response
+        browser case pass after these changes.
 - [ ] Obtain hosted CI, CodeQL, release-provenance, and automated-review acceptance on the exact
       implementation head; merge only accepted evidence to protected `main`; and reconcile the
-      exact merge commit. No deployment, provider mutation, data refresh, score/model change, or
-      production acceptance is authorized by this frontend boundary.
+      exact merge commit. This account-entry checkpoint changes no API, database, provider,
+      deployment, model, score, or production state.
 
 ## Active checkpoint — zero-exception npm and lint graph
 

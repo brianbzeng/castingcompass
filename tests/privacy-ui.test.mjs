@@ -14,7 +14,7 @@ const [account, accountBrowserStorage, privacy, terms, legalPage, compliance] = 
 test("signup collects age before and separately from credentials", () => {
   const ageFormStart = account.indexOf('<form aria-label="Age eligibility"');
   const ageFormEnd = account.indexOf("</form>", ageFormStart);
-  const detailsFormStart = account.indexOf("<form onSubmit={submit}>", ageFormEnd);
+  const detailsFormStart = account.indexOf("<form onSubmit={submit} aria-busy={busy}>", ageFormEnd);
   const detailsFormEnd = account.indexOf("</form>", detailsFormStart);
   assert.ok(ageFormStart > 0 && ageFormEnd > ageFormStart);
   assert.ok(detailsFormStart > ageFormEnd && detailsFormEnd > detailsFormStart);
@@ -40,8 +40,8 @@ test("signup sends only age and security token to eligibility, then proof with c
   assert.match(ageHandler, /Account signup is not available with the information provided\./);
   assert.doesNotMatch(ageHandler, /body\.error/);
 
-  const payloadStart = account.indexOf(': mode === "signupDetails"');
-  const payloadEnd = account.indexOf(': { email: form.get("email")', payloadStart);
+  const payloadStart = account.indexOf(': submittedMode === "signupDetails"');
+  const payloadEnd = account.indexOf(': submittedMode === "recover"', payloadStart);
   const signupPayload = account.slice(payloadStart, payloadEnd);
   assert.match(signupPayload, /eligibilityProof/);
   assert.match(signupPayload, /termsAccepted/);
