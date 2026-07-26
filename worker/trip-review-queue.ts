@@ -167,7 +167,14 @@ export async function consumeAiReviewQueue(
   const mode = aiReviewQueueMode(env);
   if (mode === "disabled" && env.DB) {
     for (const message of batch.messages) {
-      await deferMessage(env.DB, message, "queue_disabled", REDISPATCH_SECONDS);
+      try {
+        await deferMessage(env.DB, message, "queue_disabled", REDISPATCH_SECONDS);
+      } catch {
+        logEvent("error", "ai_review.queue.message_failed", {
+          error_code: "queue_message_failed",
+        });
+        message.retry({ delaySeconds: RETRY_DELAYS_SECONDS[0] });
+      }
     }
     return;
   }
@@ -181,7 +188,14 @@ export async function consumeAiReviewQueue(
 
   if (releaseMaintenanceEnabled(env)) {
     for (const message of batch.messages) {
-      await deferMessage(env.DB, message, "release_maintenance", MAINTENANCE_DELAY_SECONDS);
+      try {
+        await deferMessage(env.DB, message, "release_maintenance", MAINTENANCE_DELAY_SECONDS);
+      } catch {
+        logEvent("error", "ai_review.queue.message_failed", {
+          error_code: "queue_message_failed",
+        });
+        message.retry({ delaySeconds: RETRY_DELAYS_SECONDS[0] });
+      }
     }
     return;
   }
@@ -199,7 +213,14 @@ export async function consumeAiReviewQueue(
       message.ack();
       continue;
     }
-    await consumeMessage(env, env.DB, sites, message, body);
+    try {
+      await consumeMessage(env, env.DB, sites, message, body);
+    } catch {
+      logEvent("error", "ai_review.queue.message_failed", {
+        error_code: "queue_message_failed",
+      });
+      message.retry({ delaySeconds: RETRY_DELAYS_SECONDS[0] });
+    }
   }
 }
 

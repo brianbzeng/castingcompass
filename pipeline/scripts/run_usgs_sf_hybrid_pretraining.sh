@@ -66,14 +66,24 @@ PY
 mkdir -p "$RAW_DIR" "$EXTRACTED_DIR" "$PROCESSED_DIR" "$ARTIFACT_DIR"
 for index in "${!FILENAMES[@]}"; do
   archive="$RAW_DIR/${FILENAMES[$index]}"
-  if [[ ! -f "$archive" ]]; then
-    curl -L --fail --retry 3 \
-      -o "$archive" \
-      "https://pubs.usgs.gov/ds/781/OffshoreSanFrancisco/data/${FILENAMES[$index]}"
+  if [[ -f "$archive" ]] && [[ "$(hash_file "$archive")" != "${ARCHIVE_SHA256[$index]}" ]]; then
+    rm -f "$archive"
   fi
-  if [[ "$(hash_file "$archive")" != "${ARCHIVE_SHA256[$index]}" ]]; then
-    echo "USGS archive checksum mismatch: ${FILENAMES[$index]}" >&2
-    exit 1
+  if [[ ! -f "$archive" ]]; then
+    tmp_archive="$(mktemp "${archive}.XXXXXX")"
+    if ! curl -L --fail --retry 3 \
+      -o "$tmp_archive" \
+      "https://pubs.usgs.gov/ds/781/OffshoreSanFrancisco/data/${FILENAMES[$index]}"; then
+      rm -f "$tmp_archive"
+      echo "Download failed: ${FILENAMES[$index]}" >&2
+      exit 1
+    fi
+    if [[ "$(hash_file "$tmp_archive")" != "${ARCHIVE_SHA256[$index]}" ]]; then
+      rm -f "$tmp_archive"
+      echo "USGS archive checksum mismatch: ${FILENAMES[$index]}" >&2
+      exit 1
+    fi
+    mv "$tmp_archive" "$archive"
   fi
   geotiff="$EXTRACTED_DIR/${GEOTIFF_FILENAMES[$index]}"
   if [[ ! -f "$geotiff" ]]; then

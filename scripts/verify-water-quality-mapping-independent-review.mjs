@@ -15,7 +15,7 @@ const ADVISORY_RUNBOOK_PATH = "docs/WATER-QUALITY-ADVISORY.md";
 const PACKAGE_PATH = "package.json";
 
 export const LOCKED_SOURCE_COMMIT = "281dbdcbc3cd1cf68f5f363ecb182ac51ebceb73";
-export const LOCKED_REVIEW_TARGET_SHA256 = "c6c897c0d7cf24bd2f2f855c7960cd6cc60c84355a173eed0a71d747ac41b180";
+export const LOCKED_REVIEW_TARGET_SHA256 = "5bc88f3f64b6bd2aae868e9b0fb5571ee5fe1b04521c578a2a1dcb2e9020a0b6";
 const LOCKED_CONTRACT_SHA256 = "4124bd5652c58c15a26f727d72700f199e99a767b88f14ac83c1aea4cf848cff";
 const REVIEW_SCHEMA_VERSION = "castingcompass.water-quality-mapping-independent-review/1.0.0";
 const RECEIPT_SCHEMA_VERSION = "castingcompass.water-quality-mapping-independent-review-receipt/1.0.0";
@@ -29,13 +29,13 @@ const FUTURE_SKEW_MS = 5 * 60 * 1000;
 
 export const REVIEW_TARGET_INPUTS = Object.freeze([
   Object.freeze({ path: "data/sites.json", sha256: "25b0c945c3e9311a7b3d7a62476a8b140808d3abce09c98a0a91e1ec38932c70" }),
-  Object.freeze({ path: "public/data/water-quality.json", sha256: "3e8fce7d780641ad33c6ae7f428b86e2ab6f9ceb33760f4e38187efb701819c5" }),
-  Object.freeze({ path: "water-quality/audits/east-bay-parks-beachwatch-station-mappings.json", sha256: "5e2bcaec6cecc9b7f1309f1bddf69fda2edd4f80716e70584cfad9b9ed13e685" }),
-  Object.freeze({ path: "water-quality/audits/launch-catalog-coverage.json", sha256: "fa8fc0ed36eee4272023525b497a7f4ccebd1fa840a1314457bcd7f6b979210a" }),
-  Object.freeze({ path: "water-quality/audits/marin-beachwatch-station-mappings.json", sha256: "88d6d8274215f3656eca6b9bf862a59bbbb17ca42b0299931f8b414c5cc4858b" }),
-  Object.freeze({ path: "water-quality/audits/san-mateo-station-mappings.json", sha256: "ef4c78584e351938fec2e629fdf22f8d8db85f1267deace7c428db39e23e8b5f" }),
+  Object.freeze({ path: "public/data/water-quality.json", sha256: "25eba044746deac0a6118e0f7e30246585d062867956193e0005049b6d9d653f" }),
+  Object.freeze({ path: "water-quality/audits/east-bay-parks-beachwatch-station-mappings.json", sha256: "71c69d5ab971d59ccbd830dc10b7a172e86b9620deb10fa73ccaacfae8e62ea3" }),
+  Object.freeze({ path: "water-quality/audits/launch-catalog-coverage.json", sha256: "7fa8c32c42bb3129564cb62de48e1dafda51152e076dc864c739682bc098bff5" }),
+  Object.freeze({ path: "water-quality/audits/marin-beachwatch-station-mappings.json", sha256: "ff157e24f66ffe5c30b6ed76f1b689007a0467293e337bdaf64a26fbe708ea2b" }),
+  Object.freeze({ path: "water-quality/audits/san-mateo-station-mappings.json", sha256: "294d76468334eacae49cff75d28079a82c71f0bff07a28fd0c52af7eb8c5f1a2" }),
   Object.freeze({ path: "water-quality/audits/sf-unmapped-station-candidates.json", sha256: "0d279def4c01f96a53a8526768145c20580c759ce894a3932a837da1f44a7e69" }),
-  Object.freeze({ path: "water-quality/policy.json", sha256: "13914b407929b98f804874e04ae4d474a4a6acd0f9d91ce4d25aa44927a65445" }),
+  Object.freeze({ path: "water-quality/policy.json", sha256: "fcd98a818934375b31843eb333bef25128ceefda5784dabe3e63050d63199d60" }),
 ]);
 
 export const REVIEW_ROLES = Object.freeze([
@@ -251,15 +251,19 @@ export async function loadReviewTarget(root = DEFAULT_ROOT) {
     || coverage.siteCatalogSha256 !== overlay.siteCatalogSha256
     || coverage.overlaySha256 !== REVIEW_TARGET_INPUTS.find(({ path }) => path === "public/data/water-quality.json").sha256
     || coverage.automaticMappingAllowed !== false
-    || coverage.independentReviewRequired !== true) {
+    || coverage.independentReviewRequired !== true
+    || coverage.coverageComplete !== false
+    || coverage.counts?.remainingAfterThisAudit !== 1) {
     throw new Error("Coverage inventory is not bound to the review target.");
   }
   const mappings = policy.site_mappings ?? {};
   const mappedIds = Object.keys(mappings).sort(compare);
-  const notCovered = coverage.reviewedNotCoveredSites ?? [];
-  const notCoveredIds = notCovered.map(({ siteId }) => siteId).sort(compare);
-  if (mappedIds.length !== 39 || notCoveredIds.length !== 22 || new Set(notCoveredIds).size !== 22) {
-    throw new Error("Review target mapping counts must remain 39 mapped and 22 not covered.");
+  const notCoveredIds = Object.entries(overlay.sites ?? {})
+    .filter(([, site]) => site?.status === "not-covered")
+    .map(([siteId]) => siteId)
+    .sort(compare);
+  if (mappedIds.length !== 38 || notCoveredIds.length !== 23 || new Set(notCoveredIds).size !== 23) {
+    throw new Error("Review target mapping counts must remain 38 mapped and 23 not covered.");
   }
   if (mappedIds.some((siteId) => notCoveredIds.includes(siteId))
     || JSON.stringify([...mappedIds, ...notCoveredIds].sort(compare)) !== JSON.stringify(catalogIds)) {
@@ -425,7 +429,7 @@ export async function verifyPolicy(root = DEFAULT_ROOT) {
   ]) {
     if (!runbook.includes(phrase)) throw new Error(`Mapping-review runbook is missing required boundary: ${phrase}`);
   }
-  if (!advisoryRunbook.includes("All 22 remaining sites are deliberately `not-covered`, unknown, and null-score")) {
+  if (!advisoryRunbook.includes("23 are deliberately `not-covered`")) {
     throw new Error("Water-quality advisory runbook no longer preserves the complete negative-evidence boundary.");
   }
   const scripts = packageJson.scripts ?? {};

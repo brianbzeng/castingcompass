@@ -37,7 +37,11 @@ DEFAULT_OUTPUT = ROOT / "water-quality" / "audits" / "san-mateo-station-mappings
 REGISTRY_MACHINE_URL = "https://datahub.smcgov.org/api/id/kpd9-xf4h.json"
 MAX_RECORD_BYTES = 64 * 1024
 EARTH_RADIUS_METERS = 6_371_008.8
-UNMAPPED_REVIEW_SITE_IDS = ("poplar-beach", "seal-point-park")
+UNMAPPED_REVIEW_SITE_IDS = (
+    "pacifica-municipal-pier",
+    "poplar-beach",
+    "seal-point-park",
+)
 STATION_ID_PATTERN = re.compile(r"^[A-Za-z0-9_.-]{1,64}$")
 
 

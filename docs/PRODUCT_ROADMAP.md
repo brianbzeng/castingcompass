@@ -1065,7 +1065,8 @@ after its acceptance checks pass in the intended environment.
     - [x] Complete a hash-bound negative-evidence inventory for the current 61-site launch catalog.
       All 22 sites without a provisional source mapping now bind to an explicit review receipt.
       Dumbarton Fishing Pier remains unmapped because the State directory exposes no Alameda
-      County program and neither relevant option set contains a Dumbarton identity; the audit
+      County program and one relevant registry is empty; the audit treats that response as
+      source-incomplete instead of proof that no Dumbarton identity exists, and
       fails closed if a candidate later appears instead of creating a mapping automatically.
     - [x] Freeze a machine-checked source and meaning boundary before considering any numeric
       pollution component. Water-contact actions, bacteria samples, consumption advisories,

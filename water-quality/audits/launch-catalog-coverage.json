@@ -1,15 +1,16 @@
 {
   "schemaVersion": "castingcompass.water-quality-coverage-inventory/1.0.0",
   "generatedAt": "2026-07-21T16:20:00Z",
-  "meaning": "negative station-mapping evidence for launch-catalog coverage; never current water quality, clean-water, seafood-safety, or fishing-score evidence",
+  "meaning": "station-mapping coverage evidence inventory; incomplete sources never prove station absence, current water quality, clean water, seafood safety, or fishing-score value",
   "automaticMappingAllowed": false,
   "independentReviewRequired": true,
+  "coverageComplete": false,
   "counts": {
     "catalogSites": 61,
-    "mappedSites": 39,
-    "notCoveredSites": 22,
-    "priorAuditedNotCoveredSites": 21,
-    "remainingAfterThisAudit": 0
+    "mappedSites": 38,
+    "notCoveredSites": 23,
+    "priorAuditedNotCoveredSites": 22,
+    "remainingAfterThisAudit": 1
   },
   "officialDirectory": {
     "directoryUrl": "https://beachwatch.waterboards.ca.gov/public/result.php",
@@ -94,13 +95,15 @@
         "programName": "East Bay Parks District",
         "responseSha256": "1e5cd009fd7d6b010cd7dd5db58e1f26036516a45d54b95b42c1d9677833052e",
         "stationCount": 8,
+        "errorCategory": null,
         "dumbartonMatches": []
       },
       {
         "programId": "20",
         "programName": "Water Boards",
         "responseSha256": "d82f70bceb7f7ba5744da108ca8d991c39d090949ed35a64cd703b6282174c8e",
-        "stationCount": 0,
+        "stationCount": null,
+        "errorCategory": "invalid-station-registry",
         "dumbartonMatches": []
       }
     ]
@@ -113,10 +116,10 @@
       "longitude": -122.119
     },
     "policyMapped": false,
-    "reviewStatus": "local-preliminary-do-not-map",
+    "reviewStatus": "source-incomplete-do-not-map",
     "automaticMappingAllowed": false,
-    "result": "no-exact-official-station-identity-in-reviewed-directory-scope",
-    "reason": "The State directory exposes no Alameda County program, and neither the East Bay Parks District nor Water Boards option set contains a Dumbarton station identity."
+    "result": "unknown-registry-source-unavailable",
+    "reason": "At least one relevant official station registry was empty or invalid, so station absence cannot be concluded and this site remains not covered."
   },
   "negativeEvidenceReceipts": [
     {
@@ -131,15 +134,16 @@
     },
     {
       "path": "water-quality/audits/san-mateo-station-mappings.json",
-      "sha256": "ef4c78584e351938fec2e629fdf22f8d8db85f1267deace7c428db39e23e8b5f",
+      "sha256": "294d76468334eacae49cff75d28079a82c71f0bff07a28fd0c52af7eb8c5f1a2",
       "siteIds": [
+        "pacifica-municipal-pier",
         "poplar-beach",
         "seal-point-park"
       ]
     },
     {
       "path": "water-quality/audits/marin-beachwatch-station-mappings.json",
-      "sha256": "88d6d8274215f3656eca6b9bf862a59bbbb17ca42b0299931f8b414c5cc4858b",
+      "sha256": "ff157e24f66ffe5c30b6ed76f1b689007a0467293e337bdaf64a26fbe708ea2b",
       "siteIds": [
         "limantour-beach",
         "point-reyes-south-beach",
@@ -149,7 +153,7 @@
     },
     {
       "path": "water-quality/audits/east-bay-parks-beachwatch-station-mappings.json",
-      "sha256": "5e2bcaec6cecc9b7f1309f1bddf69fda2edd4f80716e70584cfad9b9ed13e685",
+      "sha256": "71c69d5ab971d59ccbd830dc10b7a172e86b9620deb10fa73ccaacfae8e62ea3",
       "siteIds": [
         "ferry-point-pier",
         "point-isabel-shoreline",
@@ -183,10 +187,6 @@
       "evidence": "water-quality/audits/east-bay-parks-beachwatch-station-mappings.json"
     },
     {
-      "siteId": "dumbarton-pier",
-      "evidence": "this-receipt:official-directory-review"
-    },
-    {
       "siteId": "emeryville-marina-pier",
       "evidence": "water-quality/audits/east-bay-parks-beachwatch-station-mappings.json"
     },
@@ -213,6 +213,10 @@
     {
       "siteId": "oyster-bay-shoreline",
       "evidence": "water-quality/audits/east-bay-parks-beachwatch-station-mappings.json"
+    },
+    {
+      "siteId": "pacifica-municipal-pier",
+      "evidence": "water-quality/audits/san-mateo-station-mappings.json"
     },
     {
       "siteId": "paradise-beach-pier",
@@ -255,8 +259,8 @@
       "evidence": "water-quality/audits/sf-unmapped-station-candidates.json"
     }
   ],
-  "policySha256": "13914b407929b98f804874e04ae4d474a4a6acd0f9d91ce4d25aa44927a65445",
+  "policySha256": "fcd98a818934375b31843eb333bef25128ceefda5784dabe3e63050d63199d60",
   "siteCatalogSha256": "25b0c945c3e9311a7b3d7a62476a8b140808d3abce09c98a0a91e1ec38932c70",
-  "overlaySha256": "3e8fce7d780641ad33c6ae7f428b86e2ab6f9ceb33760f4e38187efb701819c5",
-  "auditToolSha256": "bea55a0d771ba393d93f63e9921f9ddd266a63f650b7268d1581bdc608652e39"
+  "overlaySha256": "25eba044746deac0a6118e0f7e30246585d062867956193e0005049b6d9d653f",
+  "auditToolSha256": "26a1fc3eab03d0ce23b7636ebadee498b1c18a222e7b27bca53e1beaad55cdf7"
 }

@@ -4116,6 +4116,22 @@ supersedes this mutation-metadata authority while preserving its fail-closed beh
 - [ ] Refresh visual design, graphics, species art, empty states, social cards, and brand
       illustration. Artist collaboration remains deferred until higher-risk work is complete.
 
+## Active checkpoint — CodeRabbit launch-foundation follow-up
+
+- [x] Correct the unsupported Pacifica Municipal Pier water-quality alias. The pier now remains
+      `not-covered`, unknown, and null-score instead of inheriting Sharp Park station evidence;
+      the launch catalog now has 38 provisional mappings and 23 fail-closed gaps.
+- [x] Reject an empty official station registry as evidence of station absence. Twenty-two
+      `not-covered` sites retain source-bound negative evidence, while Dumbarton is explicitly
+      source-incomplete because the Water Boards option set is empty. No mapping, safety, or
+      score claim is inferred from that failed source.
+- [x] Apply the remaining repository-only review corrections across release concurrency,
+      policy/schema validation, provenance metadata, staging authorization, JSONC parsing,
+      privacy-export recovery, immutable download caching, schema readiness, database contract
+      tests, and deletion-fenced trip writes. Production and provider state remain unchanged.
+- [ ] Complete exact-head local and hosted verification for this follow-up and obtain the
+      independent review still required before merging the stacked launch foundations.
+
 ## Product-owner work that is safe while production changes remain on hold
 
 - [ ] Audit MFA/passkeys and recovery methods for GitHub, Cloudflare, the domain registrar,

@@ -79,11 +79,19 @@ done
 VIDEO_ARGS=()
 for index in "${!CRUISE_IDS[@]}"; do
   archive="$RAW_DIR/${CRUISE_IDS[$index]}_video_observations.zip"
+  if [[ -f "$archive" ]] && [[ "$(hash_file "$archive")" != "${VIDEO_SHA256[$index]}" ]]; then
+    rm -f "$archive"
+  fi
   if [[ ! -f "$archive" ]]; then
     tmp_archive="$(mktemp "${archive}.XXXXXX")"
     if ! curl -L --fail --retry 3 -o "$tmp_archive" "${VIDEO_URLS[$index]}"; then
       rm -f "$tmp_archive"
       echo "Download failed: ${VIDEO_URLS[$index]}" >&2
+      exit 1
+    fi
+    if [[ "$(hash_file "$tmp_archive")" != "${VIDEO_SHA256[$index]}" ]]; then
+      rm -f "$tmp_archive"
+      echo "USGS video archive checksum mismatch: ${CRUISE_IDS[$index]}" >&2
       exit 1
     fi
     mv "$tmp_archive" "$archive"

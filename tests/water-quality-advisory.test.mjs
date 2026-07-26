@@ -75,7 +75,7 @@ test("published advisory overlay is contract-bound and never boosts the score", 
   assert.match(disclosure, /every numeric scoreDelta remains null/i);
   assert.equal(validate({ ...overlay, sites: {} }), false);
   const mismatched = structuredClone(overlay);
-  mismatched.sites["baker-beach"].recommendationEffect = "suppress";
+  mismatched.sites["baker-beach"].recommendationEffect = "neutral";
   assert.equal(validate(mismatched), false);
 });
 

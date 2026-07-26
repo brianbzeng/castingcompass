@@ -988,6 +988,21 @@ export function createTripStore(db: D1DatabaseLike): TripStore {
       .bind(id, accountId)
       .first<TripRow>();
 
+  const assertAccountWriteAllowed = async (accountId: string) => {
+    const state = await db.prepare(`SELECT
+        EXISTS(SELECT 1 FROM users WHERE id = ?) AS user_exists,
+        EXISTS(SELECT 1 FROM account_deletion_fences WHERE user_id = ?) AS deletion_fenced`)
+      .bind(accountId, accountId)
+      .first<{ user_exists: number; deletion_fenced: number }>();
+    if (Number(state?.user_exists ?? 0) !== 1 || Number(state?.deletion_fenced ?? 0) === 1) {
+      throw new ApiError(
+        403,
+        "account_write_forbidden",
+        "This account can no longer create or change trip data.",
+      );
+    }
+  };
+
   return {
     initialize,
 
@@ -1110,7 +1125,10 @@ export function createTripStore(db: D1DatabaseLike): TripStore {
       await db.batch(statements);
 
       const inserted = await getTrip(record.id, record.userId);
-      if (!inserted) throw new Error("Trip insert did not return a record");
+      if (!inserted) {
+        if (record.userId) await assertAccountWriteAllowed(record.userId);
+        throw new ApiError(409, "trip_write_conflict", "The trip write could not be confirmed.");
+      }
       return inserted;
     },
 
@@ -1165,7 +1183,9 @@ export function createTripStore(db: D1DatabaseLike): TripStore {
           reservation.createdAt,
         )
         .first<{ id: string }>();
-      return receipt?.id === reservation.id;
+      if (receipt?.id === reservation.id) return true;
+      await assertAccountWriteAllowed(reservation.accountId);
+      return false;
     },
 
     async releasePhotoUploadReservation(tripId, objectKey, objectKeyHash) {

@@ -4372,8 +4372,8 @@ test("a stale authenticated photo request cannot cross an active deletion fence 
     now: () => new Date("2026-07-21T18:00:00.000Z"),
   });
 
-  assert.equal(response.status, 503);
-  assert.equal((await response.json()).error.code, "photo_storage_unavailable");
+  assert.equal(response.status, 403);
+  assert.equal((await response.json()).error.code, "account_write_forbidden");
   assert.equal(r2Puts, 0);
   assert.equal(sqlite.prepare("SELECT COUNT(*) AS count FROM trip_photo_upload_reservations").get().count, 0);
   assert.equal(sqlite.prepare("SELECT COUNT(*) AS count FROM trips WHERE user_id = ?").get(user.id).count, 0);

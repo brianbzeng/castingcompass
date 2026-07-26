@@ -1,7 +1,7 @@
 {
   "bomFormat": "CycloneDX",
   "specVersion": "1.5",
-  "serialNumber": "urn:uuid:06d6dd14-f980-5896-871c-adf2e733644a",
+  "serialNumber": "urn:uuid:868d0e80-5c21-59d2-b480-6319348dc0fb",
   "version": 1,
   "metadata": {
     "component": {
@@ -113,7 +113,7 @@
         },
         {
           "name": "castingcompass:input-sha256",
-          "value": "public/data/water-quality.json:3e8fce7d780641ad33c6ae7f428b86e2ab6f9ceb33760f4e38187efb701819c5"
+          "value": "public/data/water-quality.json:25eba044746deac0a6118e0f7e30246585d062867956193e0005049b6d9d653f"
         },
         {
           "name": "castingcompass:input-sha256",
@@ -137,11 +137,11 @@
         },
         {
           "name": "castingcompass:input-sha256",
-          "value": "security/d1-query-inventory-policy.json:d7c257f31227ccce0b2b82b5f3788838d21668050485be07e8ae62f773d3ea37"
+          "value": "security/d1-query-inventory-policy.json:20c450b2ade6fbc538718b0ebea315af495b0a69c1fde76c55f36a8857e0459e"
         },
         {
           "name": "castingcompass:input-sha256",
-          "value": "security/d1-query-inventory.json:0a578c42c2f912cc1dae082b6798026bae2fd2231b3d376c734f54205c6b3caa"
+          "value": "security/d1-query-inventory.json:7a31a0c625a940a74e44831201badb6d719846b21396372d219aec62fa8f8ad5"
         },
         {
           "name": "castingcompass:input-sha256",
@@ -197,19 +197,19 @@
         },
         {
           "name": "castingcompass:input-sha256",
-          "value": "water-quality/audits/east-bay-parks-beachwatch-station-mappings.json:5e2bcaec6cecc9b7f1309f1bddf69fda2edd4f80716e70584cfad9b9ed13e685"
+          "value": "water-quality/audits/east-bay-parks-beachwatch-station-mappings.json:71c69d5ab971d59ccbd830dc10b7a172e86b9620deb10fa73ccaacfae8e62ea3"
         },
         {
           "name": "castingcompass:input-sha256",
-          "value": "water-quality/audits/launch-catalog-coverage.json:fa8fc0ed36eee4272023525b497a7f4ccebd1fa840a1314457bcd7f6b979210a"
+          "value": "water-quality/audits/launch-catalog-coverage.json:7fa8c32c42bb3129564cb62de48e1dafda51152e076dc864c739682bc098bff5"
         },
         {
           "name": "castingcompass:input-sha256",
-          "value": "water-quality/audits/marin-beachwatch-station-mappings.json:88d6d8274215f3656eca6b9bf862a59bbbb17ca42b0299931f8b414c5cc4858b"
+          "value": "water-quality/audits/marin-beachwatch-station-mappings.json:ff157e24f66ffe5c30b6ed76f1b689007a0467293e337bdaf64a26fbe708ea2b"
         },
         {
           "name": "castingcompass:input-sha256",
-          "value": "water-quality/audits/san-mateo-station-mappings.json:ef4c78584e351938fec2e629fdf22f8d8db85f1267deace7c428db39e23e8b5f"
+          "value": "water-quality/audits/san-mateo-station-mappings.json:294d76468334eacae49cff75d28079a82c71f0bff07a28fd0c52af7eb8c5f1a2"
         },
         {
           "name": "castingcompass:input-sha256",
@@ -217,11 +217,11 @@
         },
         {
           "name": "castingcompass:input-sha256",
-          "value": "water-quality/policy.json:13914b407929b98f804874e04ae4d474a4a6acd0f9d91ce4d25aa44927a65445"
+          "value": "water-quality/policy.json:fcd98a818934375b31843eb333bef25128ceefda5784dabe3e63050d63199d60"
         },
         {
           "name": "castingcompass:input-sha256",
-          "value": "water-quality/pollution-score-source-policy.json:396c00e770a87bc65bcd4ad6342146d4e9f7113f0c61315fe543fee99035e2ae"
+          "value": "water-quality/pollution-score-source-policy.json:2d00357144fd899e098df7da0b0f2bf16776587cae92605adce18d876648c8d5"
         },
         {
           "name": "castingcompass:input-sha256",

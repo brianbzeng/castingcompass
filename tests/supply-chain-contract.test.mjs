@@ -130,11 +130,15 @@ test("CI fixes runner versions and enforces dependency review, audits, and SBOM 
   for (const workflow of [ci, release]) {
     assert.match(workflow, /on:\n\s+push:\n\s+branches:\n\s+- main\n\s+pull_request:\n/u);
     assert.match(workflow, /workflow_dispatch:/u);
-    assert.match(
-      workflow,
-      /concurrency:\n\s+group: \$\{\{ github\.workflow \}\}-\$\{\{ github\.event\.pull_request\.number \|\| github\.ref \}\}\n\s+cancel-in-progress: true/u,
-    );
   }
+  assert.match(
+    ci,
+    /concurrency:\n\s+group: \$\{\{ github\.workflow \}\}-\$\{\{ github\.event\.pull_request\.number \|\| github\.ref \}\}\n\s+cancel-in-progress: true/u,
+  );
+  assert.match(
+    release,
+    /concurrency:\n\s+group: \$\{\{ github\.workflow \}\}-\$\{\{ github\.event\.pull_request\.number \|\| github\.ref \}\}\n\s+cancel-in-progress: \$\{\{ github\.event_name == 'pull_request' \}\}/u,
+  );
   assert.doesNotMatch(`${ci}\n${refresh}\n${optional}`, /(?:ubuntu|macos)-latest|node-version:\s*22\s*$|python-version:\s*["']?3\.12["']?\s*$/m);
   assert.equal((`${ci}\n${refresh}`.match(/node-version:\s*22\.23\.1/g) ?? []).length, 3);
   assert.equal((`${ci}\n${refresh}\n${optional}`.match(/python-version:\s*["']3\.12\.13["']/g) ?? []).length, 4);

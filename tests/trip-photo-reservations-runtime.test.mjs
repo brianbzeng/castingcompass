@@ -349,7 +349,10 @@ test("an account-deletion fence blocks both new reservations and pre-fence attac
 
   const secondTripId = "trip_80000000-0000-4000-8000-000000000008";
   const secondKey = `trip-photos/2026/07/${secondTripId}/post-fence.webp`;
-  assert.equal(await store.reservePhotoUpload(reservation(secondKey, secondTripId)), false);
+  await assert.rejects(
+    store.reservePhotoUpload(reservation(secondKey, secondTripId)),
+    (error) => error?.status === 403 && error?.code === "account_write_forbidden",
+  );
   assert.equal(sqlite.prepare(`SELECT COUNT(*) AS count FROM trip_photo_upload_reservations
     WHERE trip_id = ?`).get(secondTripId).count, 0);
 

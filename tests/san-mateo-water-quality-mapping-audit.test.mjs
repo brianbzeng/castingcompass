@@ -34,18 +34,20 @@ test("San Mateo mapping audit is deterministic, bounded, and review-only", async
   assert.equal(payload.independentReviewRequired, true);
   assert.equal(payload.source.stationCount, 17);
   assert.equal(payload.source.registryUse, "station identity and spatial context only; never current status");
-  assert.equal(payload.mappedSites.length, 11);
+  assert.equal(payload.mappedSites.length, 10);
   assert.deepEqual(
     payload.unmappedSites.map((site) => site.siteId),
-    ["poplar-beach", "seal-point-park"],
+    ["pacifica-municipal-pier", "poplar-beach", "seal-point-park"],
   );
   assert.ok(payload.mappedSites.every((site) => site.policyMapped));
   assert.ok(payload.mappedSites.every((site) => site.reviewStatus === "local-preliminary-independent-review-required"));
   assert.ok(payload.mappedSites.every((site) => site.stationSupport.every((station) => station.distanceMeters <= 995)));
-  assert.equal(payload.unmappedSites[0].nearestReviewedStation.distanceMeters, 1944);
-  assert.equal(payload.unmappedSites[1].nearestReviewedStation.stationId, "AB18762");
-  assert.equal(payload.unmappedSites[1].nearestReviewedStation.stationName, "COYOTE POINT");
-  assert.equal(payload.unmappedSites[1].nearestReviewedStation.distanceMeters, 2102);
+  assert.equal(payload.unmappedSites[0].nearestReviewedStation.stationId, "AB4111");
+  assert.equal(payload.unmappedSites[0].nearestReviewedStation.distanceMeters, 140);
+  assert.equal(payload.unmappedSites[1].nearestReviewedStation.distanceMeters, 1944);
+  assert.equal(payload.unmappedSites[2].nearestReviewedStation.stationId, "AB18762");
+  assert.equal(payload.unmappedSites[2].nearestReviewedStation.stationName, "COYOTE POINT");
+  assert.equal(payload.unmappedSites[2].nearestReviewedStation.distanceMeters, 2102);
 });
 
 test("San Mateo mapping audit rejects malformed registry coordinates", async (t) => {
@@ -80,10 +82,10 @@ test("checked-in San Mateo receipt binds every provisional mapping and preserves
     readFile(new URL("data/sites.json", root)),
   ]);
   const expectedMappedSiteIds = [
-    "pacifica-municipal-pier", "sharp-park-beach", "rockaway-beach",
-    "pacifica-state-beach", "montara-state-beach", "pillar-point-west-jetty",
-    "pillar-point-east-jetty", "surfers-beach", "francis-state-beach",
-    "coyote-point-jetty", "oyster-point-fishing-pier",
+    "sharp-park-beach", "rockaway-beach", "pacifica-state-beach",
+    "montara-state-beach", "pillar-point-west-jetty", "pillar-point-east-jetty",
+    "surfers-beach", "francis-state-beach", "coyote-point-jetty",
+    "oyster-point-fishing-pier",
   ];
   assert.deepEqual(audit.mappedSites.map((site) => site.siteId), expectedMappedSiteIds);
   assert.equal(audit.auditToolSha256, createHash("sha256").update(auditTool).digest("hex"));
@@ -98,7 +100,7 @@ test("checked-in San Mateo receipt binds every provisional mapping and preserves
     );
     assert.equal(overlay.sites[site.siteId].scoreDelta, null);
   }
-  for (const siteId of ["poplar-beach", "seal-point-park"]) {
+  for (const siteId of ["pacifica-municipal-pier", "poplar-beach", "seal-point-park"]) {
     assert.equal(policy.site_mappings[siteId], undefined);
     assert.equal(overlay.sites[siteId].status, "not-covered");
     assert.equal(overlay.sites[siteId].recommendationEffect, "unknown");

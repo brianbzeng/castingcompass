@@ -39,11 +39,11 @@ test("D1 migrations and schema own indexes while runtime bootstrap is read-only"
   assert.match(auth, /FROM sqlite_master WHERE type = 'table'/);
   assert.match(auth, /FROM pragma_table_info\('trips'\) WHERE name = 'photo_key_hash'/);
   assert.match(auth, /"auth_schema_unavailable"/);
-  assert.doesNotMatch(auth, /CREATE (?:TABLE|INDEX)/);
+  assert.doesNotMatch(auth, /CREATE\s+(?:UNIQUE\s+)?(?:TABLE|INDEX)\b/iu);
   assert.match(discussions, /const DISCUSSION_SCHEMA_READY_SQL = `SELECT/);
   assert.match(discussions, /FROM pragma_foreign_key_list\('site_discussion_posts'\)/);
   assert.match(discussions, /"discussion_schema_unavailable"/);
-  assert.doesNotMatch(discussions, /CREATE (?:TABLE|INDEX)/);
+  assert.doesNotMatch(discussions, /CREATE\s+(?:UNIQUE\s+)?(?:TABLE|INDEX)\b/iu);
   for (const name of names.slice(8, 13)) assert.match(trips, new RegExp(`\\b${name}\\b`));
   assert.match(ci, /python scripts\/check_d1_query_plans\.py/);
   assert.match(checker, /EXPLAIN QUERY PLAN/);

@@ -25,6 +25,18 @@ from shared.species_contract import (
     validate_contract_assets,
 )
 
+TARGET_AGNOSTIC_DATASET_KINDS = frozenset(
+    {
+        "official_unlabeled_bathymetry",
+        "official_unlabeled_seafloor_remote_sensing",
+        "official_seafloor_character_probe",
+        "official_video_endpoint_admissibility_audit",
+        "official_sediment_endpoint_support_audit",
+        "official_sediment_endpoint_exploratory_dbf_support_audit",
+        "official_sediment_endpoint_exploratory_south_coast_support_audit",
+    }
+)
+
 
 def sha256_file(path: Path) -> str:
     digest = hashlib.sha256()
@@ -165,17 +177,8 @@ def verify_run_record_integrity(
     expected_scope = target_scope(target_taxon_id if isinstance(target_taxon_id, str) else None)
     if record.get("target_scope") != expected_scope:
         raise ValueError("run record target scope is inconsistent")
-    target_agnostic_kinds = {
-        "official_unlabeled_bathymetry",
-        "official_unlabeled_seafloor_remote_sensing",
-        "official_seafloor_character_probe",
-        "official_video_endpoint_admissibility_audit",
-        "official_sediment_endpoint_support_audit",
-        "official_sediment_endpoint_exploratory_dbf_support_audit",
-        "official_sediment_endpoint_exploratory_south_coast_support_audit",
-    }
     if target_taxon_id is None:
-        if dataset_kind not in target_agnostic_kinds:
+        if dataset_kind not in TARGET_AGNOSTIC_DATASET_KINDS:
             raise ValueError("target-agnostic scope is not valid for this dataset kind")
         if record.get("observation_contract_version") is not None:
             raise ValueError("target-agnostic runs must disclaim an observation contract")
@@ -186,7 +189,7 @@ def verify_run_record_integrity(
             raise ValueError("synthetic_fixture run target is invalid")
     else:
         environment = "production"
-        if dataset_kind in target_agnostic_kinds or target_taxon_id != PRODUCTION_TARGET_TAXON_ID:
+        if dataset_kind in TARGET_AGNOSTIC_DATASET_KINDS or target_taxon_id != PRODUCTION_TARGET_TAXON_ID:
             raise ValueError("production run target is invalid")
     if environment is not None:
         if record.get("observation_contract_version") != OBSERVATION_CONTRACT_VERSION:
@@ -255,16 +258,7 @@ def build_run_record(
     notes: str = "",
 ) -> Dict[str, Any]:
     validate_contract_assets()
-    target_agnostic_kinds = {
-        "official_unlabeled_bathymetry",
-        "official_unlabeled_seafloor_remote_sensing",
-        "official_seafloor_character_probe",
-        "official_video_endpoint_admissibility_audit",
-        "official_sediment_endpoint_support_audit",
-        "official_sediment_endpoint_exploratory_dbf_support_audit",
-        "official_sediment_endpoint_exploratory_south_coast_support_audit",
-    }
-    if dataset_kind in target_agnostic_kinds:
+    if dataset_kind in TARGET_AGNOSTIC_DATASET_KINDS:
         if target_taxon_id is not None:
             raise ValueError(f"{dataset_kind} must declare target-agnostic scope")
     elif dataset_kind == "synthetic_fixture":

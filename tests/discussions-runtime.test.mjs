@@ -65,7 +65,7 @@ function database() {
     );
     CREATE TABLE site_discussion_posts (
       id TEXT PRIMARY KEY NOT NULL,
-      trip_id TEXT NOT NULL UNIQUE,
+      trip_id TEXT NOT NULL,
       site_id TEXT NOT NULL,
       summary TEXT NOT NULL,
       gear_summary TEXT,

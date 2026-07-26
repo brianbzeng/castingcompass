@@ -8,6 +8,7 @@ import test from "node:test";
 import {
   buildConfigurationReceipt,
   loadPolicy,
+  parseJsonc,
   validateConfiguration,
   validateConfigurationPair,
   validateConfigurationReceipt,
@@ -15,6 +16,25 @@ import {
 } from "../scripts/verify-isolated-staging-config.mjs";
 
 const EXERCISE_ID = "sec_0123456789abcdef0123456789abcdef";
+
+test("the production Wrangler config parser accepts JSONC without changing string contents", () => {
+  assert.deepEqual(
+    parseJsonc(`{
+      // Wrangler permits comments.
+      "url": "https://example.test/path//literal",
+      "values": [1, 2,],
+      /* and block comments */
+    }`, "test wrangler.jsonc"),
+    {
+      url: "https://example.test/path//literal",
+      values: [1, 2],
+    },
+  );
+  assert.throws(
+    () => parseJsonc("{ /* unterminated", "test wrangler.jsonc"),
+    /not valid JSONC/u,
+  );
+});
 
 function configuration(mode = "direct") {
   const policy = loadPolicy();

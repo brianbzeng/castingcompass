@@ -24,6 +24,11 @@ class D1StatementAdapter {
   }
 
   async first() {
+    if (this.owner.throwOnceBeforeReadSubstring
+      && this.query.includes(this.owner.throwOnceBeforeReadSubstring)) {
+      this.owner.throwOnceBeforeReadSubstring = null;
+      throw new Error("injected transient read failure");
+    }
     return this.statement.get(...this.values) ?? null;
   }
 
@@ -52,6 +57,7 @@ class D1Adapter {
     this.sqlite = sqlite;
     this.omitOnceMutationMetadataSubstring = null;
     this.throwOnceAfterMutationSubstring = null;
+    this.throwOnceBeforeReadSubstring = null;
   }
 
   prepare(query) {
@@ -294,6 +300,41 @@ test("a committed consumer claim whose response is lost is proven before provide
     { ...sqlite.prepare("SELECT state, attempts, lease_token FROM ai_review_jobs").get() },
     { state: "completed", attempts: 1, lease_token: null },
   );
+});
+
+test("a transient consumer read retries only that message and continues the queue batch", async () => {
+  const { sqlite, d1 } = await database();
+  const { env, queue } = await scheduledJob(sqlite, d1);
+  const missing = queueMessage({
+    version: AI_REVIEW_QUEUE_MESSAGE_VERSION,
+    jobId: `airj_${"0".repeat(32)}`,
+  });
+  const valid = queueMessage(queue.sent[0].body);
+  d1.throwOnceBeforeReadSubstring = "WHERE id = ? AND state = 'processing'";
+  let providerCalls = 0;
+  const originalFetch = globalThis.fetch;
+  const originalError = console.error;
+  globalThis.fetch = async () => {
+    providerCalls += 1;
+    return strictProviderResponse();
+  };
+  console.error = () => undefined;
+  try {
+    await consumeAiReviewQueue(
+      { queue: "ai-review", messages: [missing, valid] },
+      env,
+      [{ id: "ocean-beach" }],
+    );
+  } finally {
+    globalThis.fetch = originalFetch;
+    console.error = originalError;
+  }
+  assert.equal(missing.acknowledgements, 0);
+  assert.deepEqual(missing.retries, [{ delaySeconds: 60 }]);
+  assert.equal(valid.acknowledgements, 1);
+  assert.deepEqual(valid.retries, []);
+  assert.equal(providerCalls, 1);
+  assert.equal(sqlite.prepare("SELECT state FROM ai_review_jobs").get().state, "completed");
 });
 
 test("missing producer configuration preserves pending D1 work without provider dispatch", async () => {

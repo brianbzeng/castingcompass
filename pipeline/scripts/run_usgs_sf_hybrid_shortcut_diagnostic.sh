@@ -55,8 +55,22 @@ require_hash() {
 }
 
 mkdir -p "$RAW_DIR" "$RESULT_DIR"
+if [[ -f "$LABEL_ARCHIVE" ]] && [[ "$(hash_file "$LABEL_ARCHIVE")" != "$LABEL_ARCHIVE_SHA256" ]]; then
+  rm -f "$LABEL_ARCHIVE"
+fi
 if [[ ! -f "$LABEL_ARCHIVE" ]]; then
-  curl -L --fail --retry 3 -o "$LABEL_ARCHIVE" "$LABEL_URL"
+  tmp_archive="$(mktemp "${LABEL_ARCHIVE}.XXXXXX")"
+  if ! curl -L --fail --retry 3 -o "$tmp_archive" "$LABEL_URL"; then
+    rm -f "$tmp_archive"
+    echo "Download failed: $LABEL_URL" >&2
+    exit 1
+  fi
+  if [[ "$(hash_file "$tmp_archive")" != "$LABEL_ARCHIVE_SHA256" ]]; then
+    rm -f "$tmp_archive"
+    echo "USGS seafloor-character archive checksum mismatch" >&2
+    exit 1
+  fi
+  mv "$tmp_archive" "$LABEL_ARCHIVE"
 fi
 require_hash "$LABEL_ARCHIVE" "$LABEL_ARCHIVE_SHA256"
 if [[ ! -f "$LABEL_TIF" ]]; then

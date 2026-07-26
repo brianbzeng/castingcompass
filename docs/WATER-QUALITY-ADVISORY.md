@@ -280,18 +280,20 @@ signs remain authoritative.
 
 `water-quality/audits/launch-catalog-coverage.json` reconciles the current
 61-site catalog, five-source advisory artifact, policy, and four source-specific
-mapping audits. Thirty-nine sites have provisional official-source mappings.
-All 22 remaining sites are deliberately `not-covered`, unknown, and null-score,
-and each now binds to exactly one negative-evidence receipt.
+mapping audits. After removing the unsupported Pacifica Municipal Pier alias,
+38 sites have
+provisional official-source mappings and 23 are deliberately `not-covered`,
+unknown, and null-score. Twenty-two of those sites bind to source-specific
+negative evidence.
 
-Dumbarton Fishing Pier was the only prior receipt gap. The fixed State Board
-directory captured at `2026-07-21T16:22:00Z` exposes no Alameda County program;
-its East Bay Parks District option set contains eight stations and its Water
-Boards option set contains none. Neither contains a Dumbarton identity. The
-audit therefore preserves Dumbarton as unmapped and fails closed if a candidate
-later appears. Directory absence is not a clean-water conclusion and does not
-show that another official source cannot exist; exact coverage and independent
-review remain open.
+Dumbarton Fishing Pier remains the evidence gap. The fixed State Board directory
+captured at `2026-07-21T16:20:00Z` exposes no Alameda County program, and its
+East Bay Parks District option set contains eight non-Dumbarton stations. The
+Water Boards option set is empty, which is now treated as an invalid registry
+response rather than proof of station absence. Dumbarton therefore remains
+unmapped and explicitly unknown. Directory absence is not a clean-water
+conclusion and does not show that another official source cannot exist; exact
+coverage and independent review remain open.
 
 ## Future pollution-score research boundary
 

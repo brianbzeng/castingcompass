@@ -19,7 +19,7 @@ async function readJson(path) {
   return JSON.parse(await readFile(new URL(path, root), "utf8"));
 }
 
-test("launch-catalog coverage inventory is deterministic, complete, and review-only", async (t) => {
+test("launch-catalog coverage inventory is deterministic, fail-closed, and review-only", async (t) => {
   const directory = await mkdtemp(join(tmpdir(), "castingcompass-water-coverage-"));
   t.after(() => rm(directory, { recursive: true, force: true }));
   const output = join(directory, "audit.json");
@@ -35,22 +35,26 @@ test("launch-catalog coverage inventory is deterministic, complete, and review-o
   assert.equal(payload.independentReviewRequired, true);
   assert.deepEqual(payload.counts, {
     catalogSites: 61,
-    mappedSites: 39,
-    notCoveredSites: 22,
-    priorAuditedNotCoveredSites: 21,
-    remainingAfterThisAudit: 0,
+    mappedSites: 38,
+    notCoveredSites: 23,
+    priorAuditedNotCoveredSites: 22,
+    remainingAfterThisAudit: 1,
   });
+  assert.equal(payload.coverageComplete, false);
   assert.equal(payload.officialDirectory.countyPrograms.length, 17);
   assert.equal(payload.officialDirectory.alamedaCountyProgramPresent, false);
   assert.deepEqual(
     payload.officialDirectory.relevantRegistries.map((source) => [source.programId, source.stationCount]),
-    [["19", 8], ["20", 0]],
+    [["19", 8], ["20", null]],
   );
+  assert.equal(payload.officialDirectory.relevantRegistries[1].errorCategory, "invalid-station-registry");
   assert.ok(payload.officialDirectory.relevantRegistries.every((source) => source.dumbartonMatches.length === 0));
   assert.equal(payload.dumbartonReview.siteId, "dumbarton-pier");
   assert.equal(payload.dumbartonReview.policyMapped, false);
   assert.equal(payload.dumbartonReview.automaticMappingAllowed, false);
+  assert.equal(payload.dumbartonReview.result, "unknown-registry-source-unavailable");
   assert.equal(payload.reviewedNotCoveredSites.length, 22);
+  assert.equal(payload.reviewedNotCoveredSites.some(({ siteId }) => siteId === "dumbarton-pier"), false);
 });
 
 test("coverage inventory refuses to preserve negative evidence after a Dumbarton candidate appears", async (t) => {
@@ -89,10 +93,13 @@ test("checked-in inventory binds every not-covered site without changing policy 
     .filter(([, site]) => site.status === "not-covered")
     .map(([siteId]) => siteId)
     .sort();
+  const evidenceBackedSiteIds = notCoveredSiteIds.filter((siteId) => siteId !== "dumbarton-pier");
   assert.deepEqual(
     audit.reviewedNotCoveredSites.map((site) => site.siteId),
-    notCoveredSiteIds,
+    evidenceBackedSiteIds,
   );
+  assert.equal(audit.coverageComplete, false);
+  assert.equal(audit.dumbartonReview.result, "unknown-registry-source-unavailable");
   assert.equal(audit.auditToolSha256, createHash("sha256").update(tool).digest("hex"));
   assert.equal(audit.policySha256, createHash("sha256").update(policyBytes).digest("hex"));
   assert.equal(audit.siteCatalogSha256, createHash("sha256").update(siteBytes).digest("hex"));
