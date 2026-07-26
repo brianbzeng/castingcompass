@@ -32,9 +32,9 @@ async function freshReleaseRoot(directory) {
     lockfileVersion: 3,
     requires: true,
     packages: {
-      "": { devDependencies: { wrangler: "4.112.0" } },
+      "": { devDependencies: { wrangler: "4.114.0" } },
       "node_modules/wrangler": {
-        version: "4.112.0",
+        version: "4.114.0",
         integrity: "sha512-dGVzdA==",
       },
     },
@@ -202,7 +202,7 @@ test("release wrapper supports a fresh checkout with no preinstalled Wrangler", 
           writeFileSync(join(releaseRoot, "node_modules/wrangler/bin/wrangler.js"), "// installed\n");
           writeFileSync(join(releaseRoot, "node_modules/wrangler/package.json"), `${JSON.stringify({
             name: "wrangler",
-            version: "4.112.0",
+            version: "4.114.0",
           })}\n`);
         }
         return "";

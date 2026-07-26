@@ -8,7 +8,7 @@ import { verifyProductionChangeAuthorization } from "./verify-production-change-
 
 const POLICY_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const EXPECTED_NPM_VERSION = "10.9.8";
-const EXPECTED_WRANGLER_VERSION = "4.112.0";
+const EXPECTED_WRANGLER_VERSION = "4.114.0";
 const MODES = Object.freeze({
   normal: Object.freeze({
     action: "deploy:normal",

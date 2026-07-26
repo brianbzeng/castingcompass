@@ -1,7 +1,7 @@
 {
   "bomFormat": "CycloneDX",
   "specVersion": "1.5",
-  "serialNumber": "urn:uuid:4d99e176-22ad-51fb-add3-d16a73c97819",
+  "serialNumber": "urn:uuid:9d6c027d-154b-590e-ba89-36aea3f7b9c6",
   "version": 1,
   "metadata": {
     "component": {
@@ -97,11 +97,11 @@
         },
         {
           "name": "castingcompass:input-sha256",
-          "value": "package-lock.json:02ff66244905f134a38bca4a995354734b1a50bef267f0dbc75026fc07230dc7"
+          "value": "package-lock.json:372c7d03b83aa143d3951fa8f0ae627c2bf212322080bb2d3b24355a82b04d4d"
         },
         {
           "name": "castingcompass:input-sha256",
-          "value": "package.json:ff4a8be163fcabf7938573d8dff1350c9391cf516899a8ef437e36065848199e"
+          "value": "package.json:11efbe4d258b4d0ea6549fece8b4d3101d03cb7f1d2875221e2d89de6507168b"
         },
         {
           "name": "castingcompass:input-sha256",
@@ -133,7 +133,7 @@
         },
         {
           "name": "castingcompass:input-sha256",
-          "value": "security/cloudflare-provider-state-policy.json:d95530d8400909171a87d6d3d65bbbbd8b6fc4d1caf76a0554f95b809be9c26f"
+          "value": "security/cloudflare-provider-state-policy.json:b1989e7da9b5dfaa4fa8015c36f1d4e6e080b4c5c5180a3ad2db63f2de35e137"
         },
         {
           "name": "castingcompass:input-sha256",
@@ -157,7 +157,7 @@
         },
         {
           "name": "castingcompass:input-sha256",
-          "value": "security/npm-install-policy.json:47ca88e3f0eee379c07ab186824de0750b248437662dab755d54081cf2f75203"
+          "value": "security/npm-install-policy.json:c3adc5a60d35eebbcc1890103b4aba1308f1bf9877024106d5dd9e1b686e86b7"
         },
         {
           "name": "castingcompass:input-sha256",
@@ -177,7 +177,7 @@
         },
         {
           "name": "castingcompass:input-sha256",
-          "value": "security/sbom.cdx.json:580c49e92a7c6efc09e97fee7891c5ade0f8200d2204a5c74538399e3ab121c1"
+          "value": "security/sbom.cdx.json:fb8043c1f7b5bab8ff9e8fe836afdebebfb5c895ae6d0f7969d2c4defb508b1a"
         },
         {
           "name": "castingcompass:input-sha256",
@@ -7637,7 +7637,7 @@
         },
         {
           "name": "castingcompass:wrangler-version",
-          "value": "4.112.0"
+          "value": "4.114.0"
         },
         {
           "name": "castingcompass:wrangler-sha256",

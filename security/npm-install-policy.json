@@ -67,8 +67,8 @@
       {
         "path": "node_modules/workerd",
         "name": "workerd",
-        "version": "1.20260714.1",
-        "integrity": "sha512-oIbQzfdyl9UQUnG6XLegcSq0Mgt/7WKDbFOoqGgOWCS+/fhyGB460uKEgdAQQ9RHCO/ttcNCX/KiMIQzdoeu3Q==",
+        "version": "1.20260722.1",
+        "integrity": "sha512-NycKuc1x2onvsRfGGpM093vRlLFU2zHDAM0+APpccfg4+gZxDGCH27RmdDvkeBuoZyYqgLo3oAfF6re4mvC3vQ==",
         "development": true,
         "optional": false,
         "execution": "disabled"

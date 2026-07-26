@@ -142,7 +142,7 @@ export function validatePolicy(policy) {
   exactKeys(policy.worker, ["name", "config_path", "wrangler_version"], "Worker policy");
   if (policy.worker.name !== "contourcast-halibut"
     || policy.worker.config_path !== "wrangler.jsonc"
-    || policy.worker.wrangler_version !== "4.112.0") {
+    || policy.worker.wrangler_version !== "4.114.0") {
     refuse("policy-invalid", "Worker identity is not locked");
   }
 

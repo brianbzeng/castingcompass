@@ -4,7 +4,7 @@
   "worker": {
     "name": "contourcast-halibut",
     "config_path": "wrangler.jsonc",
-    "wrangler_version": "4.112.0"
+    "wrangler_version": "4.114.0"
   },
   "production_hold": {
     "required": true,
