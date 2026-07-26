@@ -982,6 +982,18 @@ after its acceptance checks pass in the intended environment.
   held-out advantage. If candidates are statistically indistinguishable, prefer the simpler
   model. Do not begin this benchmark or tune the comparison set against confirmation data before
   the validation/data-eligibility gates above are satisfied.
+  - [x] Freeze and locally verify the non-executing v1 family inventory and fairness contract:
+    naive, regularized linear, spline/GAM, random forest, histogram-gradient boosting,
+    spatial/hierarchical, bathymetric deep, and conditional hybrid/ensemble candidates; identical
+    compatible rows/folds/features; source/geography/time/participant separation; fold-local
+    preprocessing; development-only selection; calibration/ranking/CPUE/coverage/uncertainty
+    reporting; resource/latency/maintainability comparison; and a simpler-model tie break.
+    The strict evaluator rejects candidate omission/reordering, evidence asymmetry, deep-learning
+    preference, locked-test tuning, or any training/selection/score/serving/deployment authority.
+  - [ ] After eligible data and a separate confirmatory design exist, freeze the actual input
+    adapters, search spaces, final primary metrics, materiality thresholds, slice floors,
+    calibration ceiling, and independent-reproduction procedure before any locked-test access.
+    The local v1 template is not a preregistration and runs no benchmark.
 - [ ] Define model promotion, drift, and rollback gates: beat preregistered geographic/time
   holdout baselines before promotion; monitor by site, season, mode, and taxon; version every
   release; and require rollback/revalidation when performance or data support drifts. **Local

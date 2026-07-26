@@ -1,0 +1,240 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "castingcompass.model-selection-plan/1.0.0",
+  "title": "CastingCompass model-selection plan 1.0.0",
+  "description": "Strict local planning contract for a future model-agnostic California-halibut benchmark. It grants no data, training, locked-test, promotion, score, serving, or deployment authority.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "plan_id",
+    "plan_version",
+    "status",
+    "target_taxon_id",
+    "contract_versions",
+    "authority",
+    "data_gates",
+    "common_evaluation",
+    "candidate_families",
+    "selection_rule",
+    "resource_reporting"
+  ],
+  "properties": {
+    "schema_version": { "const": "castingcompass.model-selection-plan/1.0.0" },
+    "plan_id": { "const": "california-halibut-model-selection-v1" },
+    "plan_version": { "const": "1.0.0" },
+    "status": { "const": "frozen-local-template-not-preregistered" },
+    "target_taxon_id": { "const": "california-halibut" },
+    "contract_versions": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["model_run", "observation", "taxon_catalog"],
+      "properties": {
+        "model_run": { "const": "castingcompass.model-run/2.0.0" },
+        "observation": { "const": "castingcompass.observation/2.0.0" },
+        "taxon_catalog": { "const": "castingcompass.taxa/1.0.0" }
+      }
+    },
+    "authority": { "$ref": "#/$defs/authority" },
+    "data_gates": {
+      "type": "array",
+      "minItems": 10,
+      "uniqueItems": true,
+      "items": { "$ref": "#/$defs/slug" }
+    },
+    "common_evaluation": { "$ref": "#/$defs/commonEvaluation" },
+    "candidate_families": {
+      "type": "array",
+      "minItems": 8,
+      "maxItems": 8,
+      "items": { "$ref": "#/$defs/candidate" }
+    },
+    "selection_rule": { "$ref": "#/$defs/selectionRule" },
+    "resource_reporting": {
+      "type": "array",
+      "minItems": 8,
+      "uniqueItems": true,
+      "items": { "$ref": "#/$defs/slug" }
+    }
+  },
+  "$defs": {
+    "slug": {
+      "type": "string",
+      "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+    },
+    "authority": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "eligible_labeled_data_available",
+        "separate_confirmatory_protocol_available",
+        "benchmark_execution_authorized",
+        "target_specific_training_authorized",
+        "locked_test_access_authorized",
+        "winner_selection_authorized",
+        "score_change_authorized",
+        "serving_change_authorized",
+        "deployment_authorized",
+        "reason"
+      ],
+      "properties": {
+        "eligible_labeled_data_available": { "const": false },
+        "separate_confirmatory_protocol_available": { "const": false },
+        "benchmark_execution_authorized": { "const": false },
+        "target_specific_training_authorized": { "const": false },
+        "locked_test_access_authorized": { "const": false },
+        "winner_selection_authorized": { "const": false },
+        "score_change_authorized": { "const": false },
+        "serving_change_authorized": { "const": false },
+        "deployment_authorized": { "const": false },
+        "reason": {
+          "const": "eligible-source-separated-confirmatory-labels-and-an-externally-timestamped-protocol-do-not-exist"
+        }
+      }
+    },
+    "commonEvaluation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "unit",
+        "required_outputs",
+        "candidate_input_contract_frozen",
+        "same_rows_folds_and_features_for_every_compatible_candidate",
+        "source_separated_development_and_locked_test",
+        "geographic_and_temporal_outer_holdouts",
+        "participant_cluster_preserved",
+        "fold_local_preprocessing_only",
+        "development_only_inner_selection",
+        "locked_test_single_use",
+        "pilot_rows_excluded",
+        "legacy_unverified_rows_excluded",
+        "required_metrics",
+        "final_primary_metric_set_frozen",
+        "materiality_thresholds_frozen",
+        "uncertainty_method",
+        "missing_coverage_rule"
+      ],
+      "properties": {
+        "unit": {
+          "const": "one-complete-california-halibut-targeted-site-window-attempt"
+        },
+        "required_outputs": {
+          "type": "array",
+          "minItems": 3,
+          "maxItems": 3,
+          "uniqueItems": true,
+          "items": {
+            "enum": [
+              "target-occurrence-probability",
+              "positive-catch-cpue",
+              "expected-opportunity-ranking"
+            ]
+          }
+        },
+        "candidate_input_contract_frozen": { "const": false },
+        "same_rows_folds_and_features_for_every_compatible_candidate": { "const": true },
+        "source_separated_development_and_locked_test": { "const": true },
+        "geographic_and_temporal_outer_holdouts": { "const": true },
+        "participant_cluster_preserved": { "const": true },
+        "fold_local_preprocessing_only": { "const": true },
+        "development_only_inner_selection": { "const": true },
+        "locked_test_single_use": { "const": true },
+        "pilot_rows_excluded": { "const": true },
+        "legacy_unverified_rows_excluded": { "const": true },
+        "required_metrics": {
+          "type": "array",
+          "minItems": 10,
+          "uniqueItems": true,
+          "items": { "$ref": "#/$defs/slug" }
+        },
+        "final_primary_metric_set_frozen": { "const": false },
+        "materiality_thresholds_frozen": { "const": false },
+        "uncertainty_method": {
+          "const": "participant-clustered-and-geography-aware-intervals"
+        },
+        "missing_coverage_rule": {
+          "const": "report-abstention-and-support-separately-never-impute-outside-validated-support"
+        }
+      }
+    },
+    "candidate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "candidate_id",
+        "family",
+        "complexity_rank",
+        "required_in_future_comparison",
+        "implementation_status",
+        "current_implementation",
+        "occurrence_head",
+        "cpue_head",
+        "explanation_boundary"
+      ],
+      "properties": {
+        "candidate_id": { "$ref": "#/$defs/slug" },
+        "family": {
+          "enum": [
+            "naive",
+            "regularized-linear",
+            "generalized-additive",
+            "bagged-tree",
+            "boosted-tree",
+            "spatial-hierarchical",
+            "deep-neural",
+            "hybrid-ensemble"
+          ]
+        },
+        "complexity_rank": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 7
+        },
+        "required_in_future_comparison": { "type": "boolean" },
+        "implementation_status": {
+          "enum": [
+            "implemented",
+            "planned",
+            "encoder-and-heads-implemented-site-window-adapter-open",
+            "conditional-plan-only"
+          ]
+        },
+        "current_implementation": {
+          "type": ["string", "null"],
+          "maxLength": 160
+        },
+        "occurrence_head": { "type": "string", "minLength": 8, "maxLength": 160 },
+        "cpue_head": { "type": "string", "minLength": 8, "maxLength": 160 },
+        "explanation_boundary": { "type": "string", "minLength": 8, "maxLength": 200 }
+      }
+    },
+    "selectionRule": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "deep_learning_is_default",
+        "locked_test_can_tune_or_create_candidates",
+        "all_required_metrics_must_be_estimable",
+        "candidate_must_materially_beat_best_preregistered_baseline",
+        "calibration_must_clear_frozen_ceiling",
+        "required_slice_floor_must_hold",
+        "independent_reproduction_required",
+        "prefer_simpler_when_statistically_indistinguishable",
+        "hybrid_requires_predeclared_complementary_error_rationale",
+        "negative_and_inconclusive_results_must_be_reported"
+      ],
+      "properties": {
+        "deep_learning_is_default": { "const": false },
+        "locked_test_can_tune_or_create_candidates": { "const": false },
+        "all_required_metrics_must_be_estimable": { "const": true },
+        "candidate_must_materially_beat_best_preregistered_baseline": { "const": true },
+        "calibration_must_clear_frozen_ceiling": { "const": true },
+        "required_slice_floor_must_hold": { "const": true },
+        "independent_reproduction_required": { "const": true },
+        "prefer_simpler_when_statistically_indistinguishable": { "const": true },
+        "hybrid_requires_predeclared_complementary_error_rationale": { "const": true },
+        "negative_and_inconclusive_results_must_be_reported": { "const": true }
+      }
+    }
+  }
+}
