@@ -1,6 +1,15 @@
 "use client";
 
-import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  lazy,
+  Suspense,
+  type MouseEvent as ReactMouseEvent,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { AccountModal, SavedSiteControls, useAccount } from "./AccountFeature";
@@ -1438,9 +1447,22 @@ export function OpportunityApp() {
     });
   }, []);
 
+  const skipToMainContent = useCallback((event: ReactMouseEvent<HTMLAnchorElement>) => {
+    const target = document.getElementById("main-content");
+    if (!target) return;
+
+    event.preventDefault();
+    target.focus();
+    if (window.location.hash !== "#main-content") {
+      window.history.pushState(null, "", "#main-content");
+    }
+  }, []);
+
   return (
     <div className="app-shell">
-      <a className="skip-link" href="#main-content">Skip to forecast content</a>
+      <a className="skip-link" href="#main-content" onClick={skipToMainContent}>
+        Skip to forecast content
+      </a>
       <header className="topbar">
         <a className="brand" href="#top" aria-label="CastingCompass home">
           <span className="brand-icon" aria-hidden="true" />

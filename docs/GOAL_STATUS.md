@@ -4141,6 +4141,12 @@ supersedes this mutation-metadata authority while preserving its fail-closed beh
       252/252 browser cases, 29/29 API tests, Ruff, 132/132 pipeline tests, the D1 plan contract,
       and deterministic model smoke. Hosted CI, API, pipeline, release-bundle, both native
       API-image architectures, Linux CPU, and macOS ARM64 checks passed for the same commit.
+- [x] Close the WebKit skip-navigation focus race exposed by the documentation-only hosted
+      revalidation. Skip-link activation now explicitly focuses the existing `main` target and
+      records the native fragment without removing the real anchor fallback. Lint, TypeScript,
+      the 747/747 Node suite, the production-off build, 40/40 parallel WebKit focus repetitions,
+      and the resource-bounded 244/244 mobile matrix pass; an unrelated four-worker fixture
+      timeout passed 5/5 alone before the complete two-worker matrix.
 - [ ] After independent review permits `#146` to merge, retarget `#171` to protected `main` and
       obtain the otherwise inapplicable dependency-review, CodeQL, and focused CodeRabbit
       evidence before any merge. This stacked checkpoint authorizes no merge, deployment,
