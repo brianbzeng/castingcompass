@@ -224,12 +224,16 @@ SLUG_PATTERN = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
 
 
 def _mapping(value: Any, context: str) -> Mapping[str, Any]:
+    """Require an object-like value and preserve its original mapping."""
+
     if not isinstance(value, Mapping):
         raise ValueError(f"{context} must be an object")
     return value
 
 
 def _exact_keys(value: Mapping[str, Any], expected: set[str], context: str) -> None:
+    """Reject missing or additional keys at a strict contract boundary."""
+
     actual = set(value)
     if actual != expected:
         missing = sorted(expected - actual)
@@ -238,6 +242,8 @@ def _exact_keys(value: Mapping[str, Any], expected: set[str], context: str) -> N
 
 
 def _ordered_unique_slugs(value: Any, expected: list[str], context: str) -> None:
+    """Require the exact ordered inventory of unique slug values."""
+
     if not isinstance(value, list) or value != expected:
         raise ValueError(f"{context} changed")
     if len(set(value)) != len(value) or any(SLUG_PATTERN.fullmatch(item) is None for item in value):
@@ -245,6 +251,8 @@ def _ordered_unique_slugs(value: Any, expected: list[str], context: str) -> None
 
 
 def canonical_plan_sha256(plan: Mapping[str, Any]) -> str:
+    """Return the SHA-256 of the canonical JSON representation of a plan."""
+
     payload = json.dumps(
         plan,
         sort_keys=True,
@@ -256,6 +264,8 @@ def canonical_plan_sha256(plan: Mapping[str, Any]) -> str:
 
 
 def load_model_selection_plan(path: Path = DEFAULT_PLAN_PATH) -> Mapping[str, Any]:
+    """Load and validate a model-selection plan from disk."""
+
     try:
         plan = json.loads(path.read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError) as exc:
@@ -397,7 +407,7 @@ def audit_model_selection_plan(
 ) -> Mapping[str, Any]:
     """Return a content-minimized non-authorizing audit receipt."""
 
-    selected = plan or load_model_selection_plan()
+    selected = plan if plan is not None else load_model_selection_plan()
     validate_model_selection_plan(selected)
     implementation_counts: dict[str, int] = {}
     for candidate in selected["candidate_families"]:
@@ -430,6 +440,8 @@ def audit_model_selection_plan(
 
 
 def _write_json(value: Mapping[str, Any], output: Path | None) -> None:
+    """Write stable human-readable JSON to stdout or a selected path."""
+
     payload = json.dumps(value, indent=2, sort_keys=True) + "\n"
     if output is None:
         sys.stdout.write(payload)
@@ -439,6 +451,8 @@ def _write_json(value: Mapping[str, Any], output: Path | None) -> None:
 
 
 def main(argv: list[str] | None = None) -> int:
+    """Run the non-authorizing plan audit command-line interface."""
+
     parser = argparse.ArgumentParser(description=__doc__)
     subparsers = parser.add_subparsers(dest="command", required=True)
     audit = subparsers.add_parser("audit", help="validate the plan and emit a minimized receipt")

@@ -114,6 +114,10 @@ class ModelSelectionPlanTests(unittest.TestCase):
         self.assertNotIn("metrics", receipt)
         self.assertNotIn("winner", receipt)
 
+    def test_audit_rejects_an_explicit_empty_mapping(self):
+        with self.assertRaisesRegex(ValueError, "keys changed"):
+            audit_model_selection_plan({})
+
     def test_schema_identity_and_cli_preserve_the_closed_boundary(self):
         schema = json.loads(
             (REPOSITORY_ROOT / "contracts" / "model-selection-plan.schema.json").read_text(
