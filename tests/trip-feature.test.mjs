@@ -73,15 +73,19 @@ test("trip entry points are present in the top bar, forecast detail, and validat
   ]);
 
   assert.match(app, /disabled=\{!forecastReady\}/);
-  assert.match(app, /Wait for the fishing-location catalog to load/);
+  assert.match(app, /Wait for the fishing-location catalog and forecast snapshot to load/);
+  assert.match(app, /Forecast verification failed\. Retry the forecast before logging a trip\./);
   assert.match(app, /Log trip\s*<\/button>/);
   assert.match(app, /Fish this window/);
   assert.match(app, /<TripReportFeature/);
   assert.match(app, /sites=\{sites\}/);
   assert.match(app, /forecastReady=\{forecastReady\}/);
+  assert.match(app, /forecastUnavailable=\{forecastUnavailable\}/);
   assert.match(app, /canSubmit=\{Boolean\(account\.user\?\.legalAccepted\)\}/);
   assert.match(feature, /nextPanel !== "complete" && \(!forecastReady \|\| sites\.length === 0\)/);
   assert.match(feature, /query\.get\("report"\) === "trip"[\s\S]*forecastReady/);
+  assert.match(feature, /panel && panel !== "complete" && \(!forecastReady \|\| sites\.length === 0\)/);
+  assert.match(feature, /const startTrip[\s\S]*if \(!forecastReady \|\| sites\.length === 0\)/);
   assert.doesNotMatch(app, /training data can be checked/);
   assert.match(feature, /id="validation"/);
   assert.match(feature, /The skunks/);

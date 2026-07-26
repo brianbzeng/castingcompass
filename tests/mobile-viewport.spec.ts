@@ -637,6 +637,10 @@ test("forecast failure hides unverified scores until an explicit retry succeeds"
   await expect(page.getByRole("button", { name: "Log trip" })).toBeDisabled();
   await expect(page.getByRole("button", { name: "Start a trip" })).toBeDisabled();
   await expect(page.getByRole("button", { name: "Log a past trip" })).toBeDisabled();
+  await expect(page.locator(".log-trip-button")).toHaveAttribute(
+    "title",
+    "Forecast verification failed. Retry the forecast before logging a trip.",
+  );
   await expect(page.locator(".source-grid")).toHaveCount(0);
   await expect(page.locator(".trip-modal")).toHaveCount(0);
 

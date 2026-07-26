@@ -86,6 +86,7 @@ interface TripReportFeatureProps {
   sites: FishingSite[];
   snapshot: OpportunitySnapshot;
   forecastReady: boolean;
+  forecastUnavailable: boolean;
   request: TripReportRequest | null;
   canSubmit: boolean;
   onRequireLogin(): void;
@@ -524,6 +525,7 @@ export function TripReportFeature({
   sites,
   snapshot,
   forecastReady,
+  forecastUnavailable,
   request,
   canSubmit,
   onRequireLogin,
@@ -561,6 +563,11 @@ export function TripReportFeature({
     : submitState === "idle" && networkState === "restored"
       ? "This device reports that its connection is back. Nothing was resubmitted automatically; review any earlier status before trying again."
       : message;
+  const tripEntryDisabledTitle = forecastUnavailable
+    ? "Forecast verification failed. Retry the forecast before logging a trip."
+    : !forecastReady || sites.length === 0
+      ? "Wait for the fishing-location catalog and forecast snapshot to load"
+      : undefined;
 
   const resetFeedback = useCallback(() => {
     setSubmitState("idle");
@@ -648,6 +655,13 @@ export function TripReportFeature({
     onClose: closePanel,
     openerRef,
   });
+
+  useEffect(() => {
+    if (panel && panel !== "complete" && (!forecastReady || sites.length === 0)) {
+      const frame = window.requestAnimationFrame(closePanel);
+      return () => window.cancelAnimationFrame(frame);
+    }
+  }, [closePanel, forecastReady, panel, sites.length]);
 
   useEffect(() => {
     if (restoredClientStateRef.current) return;
@@ -787,6 +801,11 @@ export function TripReportFeature({
 
   const startTrip = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    if (!forecastReady || sites.length === 0) {
+      setSubmitState("error");
+      setMessage("The trip was not started because the location catalog or forecast snapshot is no longer verified.");
+      return;
+    }
     if (networkState === "offline") {
       setSubmitState("error");
       setMessage("This device appears offline. The trip was not submitted; reconnect before starting it.");
@@ -962,6 +981,11 @@ export function TripReportFeature({
 
   const reportPastTrip = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    if (!forecastReady || sites.length === 0) {
+      setSubmitState("error");
+      setMessage("The report was not submitted because the location catalog or forecast snapshot is no longer verified.");
+      return;
+    }
     if (networkState === "offline") {
       setSubmitState("error");
       setMessage("This device appears offline. The report was not submitted and its draft remains on this device.");
@@ -1062,7 +1086,7 @@ export function TripReportFeature({
             <button
               type="button"
               disabled={!forecastReady || sites.length === 0}
-              title={!forecastReady || sites.length === 0 ? "Wait for the fishing-location catalog to load" : undefined}
+              title={tripEntryDisabledTitle}
               onClick={() => openPanel("start", sites[0]?.id)}
             >
               Start a trip <ArrowIcon />
@@ -1070,7 +1094,7 @@ export function TripReportFeature({
             <button
               type="button"
               disabled={!forecastReady || sites.length === 0}
-              title={!forecastReady || sites.length === 0 ? "Wait for the fishing-location catalog to load" : undefined}
+              title={tripEntryDisabledTitle}
               onClick={openShareableReport}
             >
               Log a past trip

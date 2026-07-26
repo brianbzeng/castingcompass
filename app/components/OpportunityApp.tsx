@@ -1045,6 +1045,7 @@ export function OpportunityApp() {
   const [dataState, setDataState] = useState<ForecastDataState>("loading");
   const [forecastLoadAttempt, setForecastLoadAttempt] = useState(0);
   const forecastReady = dataState === "live" || dataState === "cached";
+  const forecastUnavailable = dataState === "unavailable";
   const [tripReportRequest, setTripReportRequest] = useState<TripReportRequest | null>(null);
   const [mapEnabled, setMapEnabled] = useState(false);
   const [showRespectNotice, setShowRespectNotice] = useState(false);
@@ -1436,7 +1437,11 @@ export function OpportunityApp() {
             className="log-trip-button"
             type="button"
             disabled={!forecastReady}
-            title={forecastReady ? undefined : "Wait for the fishing-location catalog to load"}
+            title={forecastReady
+              ? undefined
+              : forecastUnavailable
+                ? "Forecast verification failed. Retry the forecast before logging a trip."
+                : "Wait for the fishing-location catalog and forecast snapshot to load"}
             onClick={() => openTripReport("past")}
           >
             Log trip
@@ -1771,6 +1776,7 @@ export function OpportunityApp() {
         sites={sites}
         snapshot={snapshot}
         forecastReady={forecastReady}
+        forecastUnavailable={forecastUnavailable}
         request={tripReportRequest}
         canSubmit={Boolean(account.user?.legalAccepted)}
         onRequireLogin={() => account.openAccount("Sign in before submitting a trip report. Complete trips and skunks are tied to an account so reports can be reviewed privately before any separate decision about model evidence.")}
