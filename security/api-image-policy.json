@@ -141,10 +141,10 @@
     },
     {
       "package": "annotated-types",
-      "version": "0.7.0",
+      "version": "0.8.0",
       "type": "python",
       "classification": "MIT license confirmed from the exact upstream release",
-      "source": "https://github.com/annotated-types/annotated-types/blob/v0.7.0/LICENSE"
+      "source": "https://github.com/annotated-types/annotated-types/blob/v0.8.0/LICENSE"
     }
   ],
   "mitigatedModules": [

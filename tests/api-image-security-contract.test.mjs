@@ -151,7 +151,7 @@ test("API image evidence binds the architecture-specific runtime marker", async 
   });
   assert.deepEqual(summary.inventory.missingLicenseReviews, [
     "apk:-python-rundeps@20260616.002554",
-    "python:annotated-types@0.7.0",
+    "python:annotated-types@0.8.0",
   ]);
 });
 
