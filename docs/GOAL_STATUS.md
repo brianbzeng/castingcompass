@@ -13,6 +13,27 @@ Current provider truth overrides historical “paused” language in completed r
 2026-07-19 read-only reconciliation found an active Worker; no production mutation is authorized
 by that discovery.
 
+## Current protected-main reconciliation — 2026-07-26
+
+- [x] Reconcile the complete protected branch after the reviewed merge sequence. Exact `main`
+      commit `e47daa7798dd7d5abf28292183ea239c4fb2f3cf` passed CI `30208630870` (web, API,
+      pipeline, dependency submission, the complete security chain, both production-shaped
+      builds, 747/747 Node tests, 8/8 photo cases, and the 244/244
+      mobile/offline/recovery/map matrix), CodeQL `30208630610`, and release provenance
+      `30208630881`.
+- [x] Reconcile the public repository queues read-only. Dependabot, code-scanning, and
+      secret-scanning alerts are all zero; issue `#86` remains open for the mandatory API-image
+      exception review by 2026-08-08.
+- [x] Quarantine the five remaining automated major-upgrade proposals instead of treating their
+      red compatibility checks as regressions in the accepted stack: Python 3.14 `#159`,
+      setup-uv 9 `#161`, setup-python 7 `#162`, MapLibre 6 `#169`, and globals 17 `#175`.
+      These require separate compatibility work and are not prerequisites for local model/data
+      research or frontend iteration.
+- [ ] Complete the independent human, isolated-staging/provider, production security, physical
+      device/accessibility, legal/business, and guarded deployment gates listed below. These
+      remain production-release boundaries; they do not require local model or frontend work to
+      stay frozen.
+
 ## Active checkpoint — zero-exception npm and lint graph
 
 - [x] Eliminate the expiring `GHSA-mh99-v99m-4gvg` development exception without an
@@ -42,11 +63,17 @@ by that discovery.
       747/747 Node tests, 8/8 photo cases, both production-shaped builds, and the 244/244
       mobile/offline/recovery/map matrix; API, pipeline, release-bundle, both native API-image
       architectures, Linux CPU, and macOS ARM64 jobs also passed.
-- [ ] Obtain CodeQL evidence after the stacked follow-up is retargeted to protected `main`, then
-      obtain independent human review of the maintained lint-rule composition. GitHub default
-      setup does not scan a pull request whose base is the non-default integration branch. This
-      checkpoint changes no production configuration and authorizes no merge, deployment,
-      provider mutation, DNS change, migration, or production acceptance.
+- [x] Obtain the formerly inapplicable protected-`main` automation evidence. After `#146` merged,
+      `#171` was retargeted to `main`; exact head
+      `3006f49e528f67f9820a3b6cb8bdc3cca5648277` passed CI `30195438118`, CodeQL
+      `30195436711`, dependency review, release bundle `30195438104`, both native API-image
+      architectures, and both optional research platforms before merge commit
+      `8f54043c4c5d83012effe304f0e31c5ac0839508`.
+- [ ] Obtain independent human review of the maintained lint-rule composition. Owner
+      authorization, CodeRabbit review, and green automation are useful evidence but do not
+      substitute for that acceptance boundary. This checkpoint changes no production
+      configuration and authorizes no deployment, provider mutation, DNS change, migration, or
+      production acceptance.
 
 ## Active checkpoint — consolidated reviewed dependency and RecFIN follow-up
 
@@ -68,10 +95,18 @@ by that discovery.
       fresh Python `3.12.13` hash-only environment passes Ruff, all 129/129 pipeline tests with
       eight declared optional-dependency skips, and deterministic smoke; the complete Node
       security chain and 28 documentation/governance tests also pass.
-- [ ] Obtain exact-head hosted CI, CodeQL, and independent human review after this local
-      follow-up has an authorized review destination. No branch push, pull request, merge,
-      deployment, migration, provider mutation, DNS change, data request, raw-data acquisition,
-      model role, or production acceptance is authorized by this checkpoint.
+- [x] Obtain exact-head hosted automation after the consolidated follow-up reached an authorized
+      protected-`main` review destination. PR `#146` head
+      `1677aa0a6aee1fc208a7e82c04f49d7591b67291` passed CI `30193554180`, CodeQL
+      `30193553228`, dependency review, release bundle `30193554219`, both native API-image
+      architectures, and both optional research platforms before merge commit
+      `54c143d1fc01d2f008198c6c3fe4a800fe011e3c`. The exact retargeted successor evidence is
+      recorded above.
+- [ ] Obtain independent human review of the consolidated dependency and RecFIN boundary.
+      CodeRabbit comments, owner authorization, and green automation are not recorded as
+      independent human acceptance. No deployment, migration, provider mutation, DNS change,
+      raw-data acquisition, model role, or production acceptance is authorized by this
+      checkpoint.
 
 ## Active checkpoint — 2026-07-25 npm advisory response
 
@@ -87,10 +122,12 @@ by that discovery.
       Cloudflare build, ESLint, TypeScript, all 740/740 Node tests, and the focused advisory plus
       release-inventory suite 11/11 pass. Production still audits with zero vulnerabilities; the
       sole temporary root advisory remains confined to the exact development-only graph.
-- [ ] Obtain exact-head hosted CI and CodeQL evidence for the isolated follow-up. Pull-request
-      automation can verify the source boundary, but actual scheduled delivery cannot be claimed
-      until the independently reviewed workflow reaches protected `main` and a scheduled run is
-      observed.
+- [x] Obtain exact-head hosted CI and CodeQL evidence for the isolated follow-up, then observe the
+      read-only timer after the workflow reaches protected `main`. PR `#171` head
+      `3006f49e528f67f9820a3b6cb8bdc3cca5648277` passed CI `30195438118` and CodeQL
+      `30195436711`; scheduled NPM advisory watch run `30198188901` then passed on protected-main
+      commit `ffb2448b4d044a0bc62fab22190d07e45b1a3a1d` without write permission, secrets, install
+      hooks, or production authority.
 - [x] Patch every compatible edge surfaced by the fresh advisory database: PostCSS is locked at
       `8.5.18`; React, React DOM, and the development RSC package are locked at `19.2.8`; and the
       minimatch `10.2.5` development edge receives brace-expansion `5.0.8`. The production npm
@@ -4147,10 +4184,17 @@ supersedes this mutation-metadata authority while preserving its fail-closed beh
       the 747/747 Node suite, the production-off build, 40/40 parallel WebKit focus repetitions,
       and the resource-bounded 244/244 mobile matrix pass; an unrelated four-worker fixture
       timeout passed 5/5 alone before the complete two-worker matrix.
-- [ ] After independent review permits `#146` to merge, retarget `#171` to protected `main` and
-      obtain the otherwise inapplicable dependency-review, CodeQL, and focused CodeRabbit
-      evidence before any merge. This stacked checkpoint authorizes no merge, deployment,
-      provider mutation, DNS change, migration, feature activation, or production acceptance.
+- [x] Reconcile the stacked review path. PR `#146` head
+      `1677aa0a6aee1fc208a7e82c04f49d7591b67291` passed hosted CI, CodeQL, dependency review,
+      release, native-image, optional-platform, and CodeRabbit review before owner-authorized
+      merge `54c143d1fc01d2f008198c6c3fe4a800fe011e3c`. PR `#171` was then retargeted to protected
+      `main`; exact head `3006f49e528f67f9820a3b6cb8bdc3cca5648277` passed the same applicable
+      automation plus focused CodeRabbit review before owner-authorized merge
+      `8f54043c4c5d83012effe304f0e31c5ac0839508`.
+- [ ] Obtain the still-missing independent human review of the consolidated launch-foundation
+      boundary. Owner authorization, CodeRabbit, and green automation are not represented as
+      independent human acceptance. No deployment, provider mutation, DNS change, migration,
+      feature activation, or production acceptance follows from the merges.
 
 ## Product-owner work that is safe while production changes remain on hold
 
