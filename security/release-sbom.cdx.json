@@ -1,7 +1,7 @@
 {
   "bomFormat": "CycloneDX",
   "specVersion": "1.5",
-  "serialNumber": "urn:uuid:95f361e6-6069-59d2-b11a-bd1b2c98b261",
+  "serialNumber": "urn:uuid:a82612f5-7332-54fe-ab7f-dc8d93129e82",
   "version": 1,
   "metadata": {
     "component": {
@@ -14,6 +14,10 @@
         {
           "name": "castingcompass:claim-scope",
           "value": "source-bound release inventory; not Cloudflare deployment provenance"
+        },
+        {
+          "name": "castingcompass:input-sha256",
+          "value": ".github/workflows/npm-advisory-watch.yml:1e9a08bf6c21e8a49391cfaa57d8ef0f2108f1306d5727a0ff97b4301698c04a"
         },
         {
           "name": "castingcompass:input-sha256",
@@ -93,11 +97,11 @@
         },
         {
           "name": "castingcompass:input-sha256",
-          "value": "package-lock.json:c648e2433adbba011d5ebe3da4105d230be4a0e9e79b527d5fad56632d140954"
+          "value": "package-lock.json:dcaf6d98eef894d7c0c97ee720cbbc29919337ce357c2b1440f0f4322db11ad0"
         },
         {
           "name": "castingcompass:input-sha256",
-          "value": "package.json:b17ad9661c492d0e9b3d1da8b01850903d758ae0095d2dadb96d41e559bec670"
+          "value": "package.json:59e92a0ef9fe4586a2adbe6ae5f39fdf25898d59db5c38909452e46ce45a91b2"
         },
         {
           "name": "castingcompass:input-sha256",
@@ -113,7 +117,7 @@
         },
         {
           "name": "castingcompass:input-sha256",
-          "value": "scripts/verify-npm-audit-policy.mjs:17e5447ed12fa2f2e4110ae01126042be076d613839b6a0e3d035574fcd9fb58"
+          "value": "scripts/verify-npm-audit-policy.mjs:c2e100fd33b096fc35b1b3e8c56abfea344df2d6c33f3fc4ec42b075742f49d2"
         },
         {
           "name": "castingcompass:input-sha256",
@@ -149,11 +153,11 @@
         },
         {
           "name": "castingcompass:input-sha256",
-          "value": "security/npm-audit-policy.json:6ef260cbacdaa496a80faeac76da8b48dc12cfe4b09dfd987111101cb294279c"
+          "value": "security/npm-audit-policy.json:0e2c48047404c9efc55c2a853ac5334f90556445bd62e1bc7cbd857cc10154ef"
         },
         {
           "name": "castingcompass:input-sha256",
-          "value": "security/npm-install-policy.json:7d024df77a7f7f8ea86336c78344420af85b61cf6e7187dfbb018a8d0e16f48b"
+          "value": "security/npm-install-policy.json:47ca88e3f0eee379c07ab186824de0750b248437662dab755d54081cf2f75203"
         },
         {
           "name": "castingcompass:input-sha256",
@@ -173,7 +177,7 @@
         },
         {
           "name": "castingcompass:input-sha256",
-          "value": "security/sbom.cdx.json:8955c2f484fdebe8d9c7f712d8c73fd8ad0c54cfd63034c57d2096cf126299df"
+          "value": "security/sbom.cdx.json:d014f7ea8dc1fcfd379804303ae684d4d0ccf52180630f1a61fa11beeaad6b86"
         },
         {
           "name": "castingcompass:input-sha256",

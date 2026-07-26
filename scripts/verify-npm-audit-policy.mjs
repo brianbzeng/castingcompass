@@ -6,9 +6,13 @@ import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
-const POLICY_SCHEMA = "castingcompass.npm-audit-policy/1.0.0";
+const POLICY_SCHEMA = "castingcompass.npm-audit-policy/2.0.0";
 const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/u;
 const VERSION_PATTERN = /^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?$/u;
+const SEVERITIES = ["info", "low", "moderate", "high", "critical", "total"];
+const WATCH_WORKFLOW_PATH = ".github/workflows/npm-advisory-watch.yml";
+const WATCH_CHECKOUT_ACTION = "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1";
+const WATCH_SETUP_NODE_ACTION = "actions/setup-node@820762786026740c76f36085b0efc47a31fe5020";
 
 function invariant(condition, message) {
   if (!condition) throw new Error(message);
@@ -43,12 +47,70 @@ function utcDate(value, label) {
   const parsed = new Date(`${value}T00:00:00.000Z`);
   invariant(Number.isFinite(parsed.valueOf()) && parsed.toISOString().slice(0, 10) === value,
     `${label} is invalid`);
-  return parsed;
+}
+
+function exactMatches(source, pattern) {
+  return [...source.matchAll(pattern)].map((match) => match[1]);
+}
+
+export function verifyNpmAuditWatchWorkflow(source) {
+  invariant(typeof source === "string" && source.length > 0,
+    "npm advisory watch workflow is missing");
+  invariant(source.startsWith("name: NPM advisory watch\n\n"),
+    "npm advisory watch name drifted");
+  invariant(source.includes([
+    "on:",
+    "  schedule:",
+    "    - cron: \"47 8 * * *\"",
+    "  workflow_dispatch:",
+    "",
+  ].join("\n")), "npm advisory watch must run daily and on manual dispatch");
+  invariant(exactMatches(source, /^\s+- cron:\s+"([^"]+)"$/gmu).length === 1,
+    "npm advisory watch must define exactly one schedule");
+  invariant(source.includes("permissions:\n  contents: read\n"),
+    "npm advisory watch must have read-only contents permission");
+  invariant(!/^\s+[A-Za-z-]+:\s*write\s*$/gmu.test(source),
+    "npm advisory watch must not have write permission");
+  invariant(source.includes([
+    "concurrency:",
+    "  group: npm-advisory-watch",
+    "  cancel-in-progress: true",
+    "",
+  ].join("\n")), "npm advisory watch concurrency is invalid");
+  invariant(source.includes("    runs-on: ubuntu-24.04\n    timeout-minutes: 10\n"),
+    "npm advisory watch runner or timeout drifted");
+
+  const actions = exactMatches(source, /^\s+- uses:\s+([^\s#]+)(?:\s+#.*)?$/gmu);
+  invariant(JSON.stringify(actions) === JSON.stringify([
+    WATCH_CHECKOUT_ACTION,
+    WATCH_SETUP_NODE_ACTION,
+  ]), "npm advisory watch actions must remain exact and immutable");
+  invariant(source.includes("          persist-credentials: false\n"),
+    "npm advisory watch checkout credentials must remain disabled");
+  invariant(source.includes("          node-version: 22.23.1\n"),
+    "npm advisory watch Node version drifted");
+
+  const commands = exactMatches(source, /^\s+run:\s+(.+)$/gmu);
+  invariant(JSON.stringify(commands) === JSON.stringify(["npm run security:dependencies"]),
+    "npm advisory watch command must remain the audit-policy verifier only");
+  invariant(!/\$\{\{\s*secrets\.|^\s+env:|curl\s|wget\s|npm\s+(?:ci|install)|upload-artifact|download-artifact/imu
+    .test(source), "npm advisory watch gained secret, install, download, or artifact authority");
+
+  return {
+    schemaVersion: "castingcompass.npm-advisory-watch/1.0.0",
+    workflow: WATCH_WORKFLOW_PATH,
+    cron: "47 8 * * *",
+    maximumScheduleIntervalHours: 24,
+    permissions: "contents:read",
+    installsDependencies: false,
+    productionAuthority: false,
+  };
 }
 
 function vulnerabilityCounts(report, label) {
-  const counts = plainObject(report?.metadata?.vulnerabilities, `${label} vulnerability counts`);
-  for (const severity of ["info", "low", "moderate", "high", "critical", "total"]) {
+  const counts = exactKeys(report?.metadata?.vulnerabilities, SEVERITIES,
+    `${label} vulnerability counts`);
+  for (const severity of SEVERITIES) {
     invariant(Number.isSafeInteger(counts[severity]) && counts[severity] >= 0,
       `${label} ${severity} count is invalid`);
   }
@@ -57,77 +119,51 @@ function vulnerabilityCounts(report, label) {
   return counts;
 }
 
-function rootAdvisories(name, vulnerabilities, visited = new Set()) {
-  invariant(!visited.has(name), `npm audit vulnerability graph contains a cycle at ${name}`);
-  const entry = plainObject(vulnerabilities[name], `npm audit vulnerability ${name}`);
-  const nextVisited = new Set(visited).add(name);
-  const advisories = [];
-  invariant(Array.isArray(entry.via), `npm audit vulnerability ${name} via field is invalid`);
-  for (const via of entry.via) {
-    if (typeof via === "string") {
-      invariant(vulnerabilities[via], `npm audit vulnerability ${name} references missing ${via}`);
-      advisories.push(...rootAdvisories(via, vulnerabilities, nextVisited));
-    } else {
-      advisories.push(plainObject(via, `npm audit advisory for ${name}`));
-    }
+function validateRequiredCounts(value, label) {
+  const counts = exactKeys(value, SEVERITIES, label);
+  for (const severity of SEVERITIES) {
+    invariant(counts[severity] === 0, `${label} must require zero ${severity} vulnerabilities`);
   }
-  return advisories;
+  return counts;
 }
 
-function validatePolicy(policy, now) {
-  exactKeys(policy, ["schemaVersion", "reviewedOn", "owner", "exception"], "npm audit policy");
-  invariant(policy.schemaVersion === POLICY_SCHEMA, "npm audit policy schema is unsupported");
-  const reviewedOn = utcDate(policy.reviewedOn, "npm audit policy reviewedOn");
-  invariant(/^[a-z0-9][a-z0-9-]{2,63}$/u.test(policy.owner ?? ""), "npm audit policy owner is invalid");
-
-  const exception = exactKeys(
-    policy.exception,
+function validatePolicy(policy) {
+  exactKeys(
+    policy,
     [
-      "expiresOn",
-      "reason",
-      "advisory",
-      "expectedHighVulnerabilities",
-      "vulnerableNodes",
+      "schemaVersion",
+      "reviewedOn",
+      "owner",
+      "requiredAuditCounts",
       "requiredLockPackages",
+      "forbiddenLockPackages",
     ],
-    "npm audit exception",
+    "npm audit policy",
   );
-  const expiresOn = utcDate(exception.expiresOn, "npm audit exception expiresOn");
-  const durationDays = (expiresOn.valueOf() - reviewedOn.valueOf()) / 86_400_000;
-  invariant(durationDays >= 0 && durationDays <= 14,
-    "npm audit exception may cover at most fourteen days");
-  const today = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
-  invariant(today <= expiresOn, `npm audit exception expired on ${exception.expiresOn}`);
-  invariant(typeof exception.reason === "string" && exception.reason.length >= 120
-    && exception.reason.length <= 800, "npm audit exception reason is invalid");
+  invariant(policy.schemaVersion === POLICY_SCHEMA, "npm audit policy schema is unsupported");
+  utcDate(policy.reviewedOn, "npm audit policy reviewedOn");
+  invariant(/^[a-z0-9][a-z0-9-]{2,63}$/u.test(policy.owner ?? ""),
+    "npm audit policy owner is invalid");
 
-  const advisory = exactKeys(
-    exception.advisory,
-    ["source", "id", "url", "package", "severity", "affectedRange", "patchedVersion"],
-    "npm audit exception advisory",
+  const requiredAuditCounts = exactKeys(
+    policy.requiredAuditCounts,
+    ["complete", "production"],
+    "npm audit required counts",
   );
-  invariant(Number.isSafeInteger(advisory.source) && advisory.source > 0,
-    "npm audit advisory source is invalid");
-  invariant(/^GHSA-[23456789cfghjmpqrvwx]{4}-[23456789cfghjmpqrvwx]{4}-[23456789cfghjmpqrvwx]{4}$/u
-    .test(advisory.id ?? ""), "npm audit advisory ID is invalid");
-  invariant(advisory.url === `https://github.com/advisories/${advisory.id}`,
-    "npm audit advisory URL is invalid");
-  invariant(advisory.package === "brace-expansion", "npm audit exception package is invalid");
-  invariant(advisory.severity === "high", "npm audit exception severity is invalid");
-  invariant(advisory.affectedRange === "<=5.0.7", "npm audit exception affected range is invalid");
-  invariant(VERSION_PATTERN.test(advisory.patchedVersion ?? ""),
-    "npm audit exception patched version is invalid");
+  validateRequiredCounts(requiredAuditCounts.complete, "complete npm audit required counts");
+  validateRequiredCounts(requiredAuditCounts.production, "production npm audit required counts");
 
-  exactStringArray(exception.expectedHighVulnerabilities,
-    "npm audit expected high vulnerabilities");
-  exactStringArray(exception.vulnerableNodes, "npm audit vulnerable nodes");
-  const requiredLockPackages = plainObject(exception.requiredLockPackages,
-    "npm audit required lock packages");
+  const requiredLockPackages = plainObject(
+    policy.requiredLockPackages,
+    "npm audit required lock packages",
+  );
   invariant(Object.keys(requiredLockPackages).length > 0,
     "npm audit required lock packages must not be empty");
-  invariant(JSON.stringify(Object.keys(requiredLockPackages))
-    === JSON.stringify(Object.keys(requiredLockPackages).sort()),
-  "npm audit required lock package paths must be sorted");
+  invariant(
+    JSON.stringify(Object.keys(requiredLockPackages))
+      === JSON.stringify(Object.keys(requiredLockPackages).sort()),
+    "npm audit required lock package paths must be sorted",
+  );
   for (const [path, requirement] of Object.entries(requiredLockPackages)) {
     invariant(path.startsWith("node_modules/") && !path.includes(".."),
       `npm audit required lock path is invalid: ${path}`);
@@ -137,24 +173,43 @@ function validatePolicy(policy, now) {
     invariant(typeof requirement.dev === "boolean",
       `npm audit lock requirement dev flag is invalid: ${path}`);
   }
-  for (const node of exception.vulnerableNodes) {
-    invariant(requiredLockPackages[node]?.dev === true,
-      `npm audit vulnerable node is not an exact dev-only lock requirement: ${node}`);
-  }
-  return exception;
+
+  const forbiddenLockPackages = exactStringArray(
+    policy.forbiddenLockPackages,
+    "npm audit forbidden lock packages",
+  );
+  invariant(forbiddenLockPackages.every(
+    (path) => path.startsWith("node_modules/") && !path.includes(".."),
+  ), "npm audit forbidden lock package path is invalid");
+  invariant(forbiddenLockPackages.every((path) => !Object.hasOwn(requiredLockPackages, path)),
+    "npm audit package cannot be both required and forbidden");
+
+  return { requiredAuditCounts, requiredLockPackages, forbiddenLockPackages };
 }
 
-function validateLockfile(lockfile, exception) {
+function validateLockfile(lockfile, policy) {
   invariant(lockfile?.lockfileVersion === 3, "npm lockfile version must remain 3");
   const packages = plainObject(lockfile?.packages, "npm lockfile packages");
-  for (const [path, requirement] of Object.entries(exception.requiredLockPackages)) {
+  for (const [path, requirement] of Object.entries(policy.requiredLockPackages)) {
     const actual = plainObject(packages[path], `npm lock package ${path}`);
     invariant(actual.version === requirement.version,
       `npm lock package ${path} must remain ${requirement.version}`);
     invariant(Boolean(actual.dev) === requirement.dev,
       `npm lock package ${path} dev classification drifted`);
   }
-  return packages;
+  for (const path of policy.forbiddenLockPackages) {
+    invariant(!Object.hasOwn(packages, path),
+      `npm lockfile restored forbidden legacy lint package ${path}`);
+  }
+}
+
+function verifyZeroReport(report, expected, label) {
+  const counts = vulnerabilityCounts(report, label);
+  invariant(JSON.stringify(counts) === JSON.stringify(expected),
+    `${label} must report zero vulnerabilities`);
+  const vulnerabilities = plainObject(report?.vulnerabilities, `${label} vulnerabilities`);
+  invariant(Object.keys(vulnerabilities).length === 0,
+    `${label} vulnerability inventory must be empty`);
 }
 
 export function verifyNpmAuditPolicy({
@@ -162,75 +217,26 @@ export function verifyNpmAuditPolicy({
   lockfile,
   fullReport,
   productionReport,
-  now = new Date(),
 }) {
-  invariant(now instanceof Date && Number.isFinite(now.valueOf()), "npm audit verification time is invalid");
-  const exception = validatePolicy(policy, now);
-  const packages = validateLockfile(lockfile, exception);
-  const productionCounts = vulnerabilityCounts(productionReport, "production npm audit");
-  invariant(productionCounts.total === 0,
-    "production npm audit must report zero vulnerabilities");
-
-  const fullCounts = vulnerabilityCounts(fullReport, "complete npm audit");
-  invariant(fullCounts.critical === 0, "complete npm audit must report zero critical vulnerabilities");
-  const vulnerabilities = plainObject(fullReport?.vulnerabilities, "complete npm audit vulnerabilities");
-  const highNames = Object.entries(vulnerabilities)
-    .filter(([, entry]) => entry?.severity === "high")
-    .map(([name]) => name)
-    .sort();
-  invariant(fullCounts.high === highNames.length,
-    "complete npm audit high count does not match its vulnerability inventory");
-  invariant(
-    JSON.stringify(highNames) === JSON.stringify(exception.expectedHighVulnerabilities),
-    "complete npm audit high vulnerability inventory drifted",
+  const validatedPolicy = validatePolicy(policy);
+  validateLockfile(lockfile, validatedPolicy);
+  verifyZeroReport(
+    fullReport,
+    validatedPolicy.requiredAuditCounts.complete,
+    "complete npm audit",
+  );
+  verifyZeroReport(
+    productionReport,
+    validatedPolicy.requiredAuditCounts.production,
+    "production npm audit",
   );
 
-  const advisoryIdentities = new Set();
-  for (const name of highNames) {
-    const entry = plainObject(vulnerabilities[name], `complete npm audit vulnerability ${name}`);
-    invariant(Array.isArray(entry.nodes) && entry.nodes.length > 0,
-      `complete npm audit vulnerability ${name} has no nodes`);
-    for (const node of entry.nodes) {
-      invariant(packages[node], `complete npm audit node is absent from the lockfile: ${node}`);
-      invariant(packages[node].dev === true,
-        `complete npm audit vulnerability escaped the dev-only graph: ${node}`);
-    }
-    const advisories = rootAdvisories(name, vulnerabilities);
-    invariant(advisories.length > 0, `complete npm audit vulnerability ${name} has no root advisory`);
-    for (const advisory of advisories) {
-      advisoryIdentities.add(JSON.stringify({
-        source: advisory.source,
-        name: advisory.name,
-        url: advisory.url,
-        severity: advisory.severity,
-        range: advisory.range,
-      }));
-    }
-  }
-
-  const expectedAdvisory = exception.advisory;
-  const expectedIdentity = JSON.stringify({
-    source: expectedAdvisory.source,
-    name: expectedAdvisory.package,
-    url: expectedAdvisory.url,
-    severity: expectedAdvisory.severity,
-    range: expectedAdvisory.affectedRange,
-  });
-  invariant(advisoryIdentities.size === 1 && advisoryIdentities.has(expectedIdentity),
-    "complete npm audit contains an unreviewed root advisory");
-  const vulnerableEntry = plainObject(vulnerabilities[expectedAdvisory.package],
-    `complete npm audit vulnerability ${expectedAdvisory.package}`);
-  invariant(JSON.stringify([...vulnerableEntry.nodes].sort())
-    === JSON.stringify(exception.vulnerableNodes),
-  "npm audit vulnerable package nodes drifted");
-
   return {
-    schemaVersion: "castingcompass.npm-audit-verification/1.0.0",
+    schemaVersion: "castingcompass.npm-audit-verification/2.0.0",
     policyValid: true,
+    completeVulnerabilities: 0,
     productionVulnerabilities: 0,
-    temporaryDevAdvisory: expectedAdvisory.id,
-    affectedDevAuditEntries: highNames.length,
-    expiresOn: exception.expiresOn,
+    temporaryExceptions: 0,
   };
 }
 
@@ -287,9 +293,11 @@ function cliReports(argumentsList) {
 async function main() {
   const policy = JSON.parse(readFileSync(resolve(ROOT, "security/npm-audit-policy.json"), "utf8"));
   const lockfile = JSON.parse(readFileSync(resolve(ROOT, "package-lock.json"), "utf8"));
+  const watchWorkflow = readFileSync(resolve(ROOT, WATCH_WORKFLOW_PATH), "utf8");
+  const scheduledWatch = verifyNpmAuditWatchWorkflow(watchWorkflow);
   const reports = cliReports(process.argv.slice(2));
   const result = verifyNpmAuditPolicy({ policy, lockfile, ...reports });
-  process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);
+  process.stdout.write(`${JSON.stringify({ ...result, scheduledWatch }, null, 2)}\n`);
 }
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {

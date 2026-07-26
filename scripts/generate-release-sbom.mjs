@@ -14,6 +14,7 @@ if (!["--stdout", "--check", "--write"].includes(mode) || process.argv.length > 
 }
 
 const inputPaths = [
+  ".github/workflows/npm-advisory-watch.yml",
   ".node-version",
   ".npmrc",
   ".python-version",

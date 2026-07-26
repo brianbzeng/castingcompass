@@ -27,7 +27,7 @@ test("direct npm packages and build runtimes are exact reviewed versions", async
     next: "16.2.11",
     react: "19.2.8",
     "react-dom": "19.2.8",
-    "eslint-config-next": "16.2.11",
+    "@next/eslint-plugin-next": "16.2.11",
     "react-server-dom-webpack": "19.2.8",
   };
   for (const [name, version] of Object.entries(reactFramework)) {
@@ -61,7 +61,11 @@ test("direct npm packages and build runtimes are exact reviewed versions", async
   const dependabot = await readFile(new URL(".github/dependabot.yml", root), "utf8");
   assert.match(
     dependabot,
-    /react-framework:[\s\S]+next[\s\S]+eslint-config-next[\s\S]+react[\s\S]+react-dom[\s\S]+react-server-dom-webpack/,
+    /react-framework:[\s\S]+next[\s\S]+@next\/eslint-plugin-next[\s\S]+react[\s\S]+react-dom[\s\S]+react-server-dom-webpack/,
+  );
+  assert.match(
+    dependabot,
+    /lint-toolchain:[\s\S]+@eslint-react\/eslint-plugin[\s\S]+eslint-plugin-import-x[\s\S]+eslint-plugin-jsx-a11y-x[\s\S]+typescript-eslint/,
   );
   assert.match(dependabot, /cloudflare-toolchain:[\s\S]+@cloudflare\/vite-plugin[\s\S]+wrangler/);
   assert.match(dependabot, /tailwind-toolchain:[\s\S]+@tailwindcss\/postcss[\s\S]+tailwindcss/);
@@ -69,10 +73,22 @@ test("direct npm packages and build runtimes are exact reviewed versions", async
 
   assert.equal(lock.packages["node_modules/@babel/core"].version, "7.29.7");
   assert.equal(manifest.overrides["fast-uri"], "3.1.4");
-  assert.equal(lock.packages["node_modules/fast-uri"].version, "3.1.4");
-  assert.equal(lock.packages["node_modules/js-yaml"].version, "4.3.0");
   assert.equal(manifest.overrides.sharp, "0.35.3");
+  assert.equal(lock.packages["node_modules/eslint"].version, "10.8.0");
+  assert.equal(lock.packages["node_modules/minimatch"].version, "10.2.5");
+  assert.equal(lock.packages["node_modules/brace-expansion"].version, "5.0.8");
+  assert.equal(lock.packages["node_modules/fast-uri"].version, "3.1.4");
+  assert.equal(lock.packages["node_modules/postcss"].version, "8.5.18");
   assert.equal(lock.packages["node_modules/sharp"].version, "0.35.3");
+  for (const removedPackage of [
+    "@eslint/eslintrc",
+    "eslint-config-next",
+    "eslint-plugin-import",
+    "eslint-plugin-jsx-a11y",
+    "eslint-plugin-react",
+  ]) {
+    assert.equal(lock.packages[`node_modules/${removedPackage}`], undefined);
+  }
   assert.equal(
     lock.packages["node_modules/@esbuild-kit/core-utils/node_modules/esbuild"].version,
     "0.25.12",
@@ -251,7 +267,7 @@ test("the deterministic production SBOM is bound to the lock and direct runtime 
   assert.equal(sbom.bomFormat, "CycloneDX");
   assert.equal(sbom.specVersion, "1.5");
   assert.match(sbom.serialNumber, /^urn:uuid:[0-9a-f]{8}-[0-9a-f]{4}-5[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/u);
-  assert.equal(sbom.serialNumber, "urn:uuid:b20b6268-15ac-5014-a342-dead84a7b464");
+  assert.equal(sbom.serialNumber, "urn:uuid:1ccce08c-d062-54eb-9dbb-c27f72fbfb79");
   assert.equal("timestamp" in sbom.metadata, false);
   assert.equal(sbom.metadata.component.name, manifest.name);
   assert.deepEqual(sbom.metadata.properties, [{
