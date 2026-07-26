@@ -19,8 +19,8 @@ path so security fixes are not frozen out.
 | GitHub Python dependency graph | A main-only job waits for the tested API/pipeline locks, then submits exact versioned PyPI package URLs for all three exercised graphs; user submissions take precedence over incomplete managed/static parses | GitHub owns storage, precedence, and alert refresh; verify the accepted snapshot and alert state after each relevant merge rather than treating a successful upload as the final receipt |
 | Worker runtime contract | `wrangler.jsonc` fixes `compatibility_date` and the reviewed compatibility flags | Cloudflare implements the runtime; a date pin needs deliberate compatibility review and periodic advancement |
 | Direct npm packages | Every direct production and development dependency uses an exact version in `package.json` | A package version can still be malicious or vulnerable; review source/provenance, advisories, licenses, and install scripts |
-| Transitive npm tree | `package-lock.json` records exact versions, registry locations, and integrity hashes; npm `10.9.8` is selected with an exact engine gate, `.npmrc` disables lifecycle scripts, CI/release also pass `--ignore-scripts`, and the exact eight script-bearing lock paths are reviewed in a fail-closed policy | Registry availability, npm implementation integrity, and preinstalled optional native binaries remain external; the hosted runner itself is not bit-for-bit pinned |
-| Known npm advisories | Compatible Babel and YAML fixes are forced; the deprecated Drizzle loader's vulnerable esbuild is overridden to tested `0.25.12`; the resulting complete npm tree currently audits clean | Replace the deprecated `@esbuild-kit` loader path when Drizzle removes it; do not leave the override indefinitely without tests |
+| Transitive npm tree | `package-lock.json` records exact versions, registry locations, and integrity hashes; npm `10.9.8` is selected with an exact engine gate, `.npmrc` disables lifecycle scripts, CI/release also pass `--ignore-scripts`, and the exact seven script-bearing lock paths are reviewed in a fail-closed policy | Registry availability, npm implementation integrity, and preinstalled optional native binaries remain external; the hosted runner itself is not bit-for-bit pinned |
+| Known npm advisories | The deprecated Drizzle loader's vulnerable esbuild is overridden to tested `0.25.12`; PostCSS is fixed at `8.5.18`; React, React DOM, and the development RSC package are fixed at `19.2.8`; the legacy Next lint bundle is replaced by exact maintained Next, TypeScript, React, import, and accessibility plugins on minimatch `10.2.5` plus brace-expansion `5.0.8`; complete and production npm graphs must both audit with zero vulnerabilities | Advisory databases and upstream packages remain mutable external inputs; the read-only daily verifier detects drift, while each lint-toolchain update must preserve rule coverage instead of merely making an audit quiet |
 | GitHub Actions | Every `uses:` reference is a full immutable commit SHA; runner labels are fixed to `ubuntu-24.04` and `macos-15` rather than mutable `-latest` aliases | GitHub updates the images behind those labels; a release still records the workflow run and source commit |
 | Default-branch integrity | Live `main` protection requires pull requests, strict successful `api`, `pipeline`, `web`, and `dependency-review` checks from the GitHub Actions app plus the `CodeQL` result from the GitHub Advanced Security app, resolved review conversations, and applies to the owner; force-pushes and branch deletion are disabled | This is provider-side configuration rather than source code; verify it again for the exact release and preserve a separate emergency-access procedure |
 | Pull-request dependency changes | The SHA-pinned GitHub dependency-review action rejects newly introduced high/critical runtime or development advisories on release PRs targeting the default branch, and the live `main` protection requires that check | GitHub builds the graph from the default branch, so stacked PRs cannot supply this evidence; the complete-tree audit and SBOM remain mandatory |
@@ -34,6 +34,56 @@ The exact Node release is the current patched release selected for the maintaine
 not a claim that Node 22 should remain forever. The API has moved to maintained Python 3.13.14;
 Python 3.12.13 remains only for the scientific pipeline while its broader binary/platform
 compatibility is reviewed. Do not let that bounded split turn into an indefinite support gap.
+
+### Zero-exception npm development graph
+
+The 2026-07-25 advisory refresh found three newly published high-severity npm advisories. The
+reviewed lock update installs PostCSS `8.5.18`, React/React DOM/react-server-dom-webpack
+`19.2.8`, and brace-expansion `5.0.8` under compatible minimatch `10.2.5` edges.
+
+The first response temporarily isolated
+[`GHSA-mh99-v99m-4gvg`](https://github.com/advisories/GHSA-mh99-v99m-4gvg) against
+`brace-expansion@1.1.16` behind an August 1 fail-closed deadline because forcing
+brace-expansion 5 through minimatch 3 breaks the older CommonJS function API. A 2026-07-26
+primary-source recheck confirmed that the advisory still lists only `5.0.8` as patched and the
+legacy plugins bundled by `eslint-config-next` still select minimatch 3. The repository did not
+extend the exception or carry a private fork. Instead it removed that bundle and composes the
+same lint boundaries directly from exact maintained packages:
+
+- `@next/eslint-plugin-next` retains the framework and Core Web Vitals rules at the exact
+  `16.2.11` runtime release;
+- `typescript-eslint` and the official React Hooks plugin retain TypeScript and compiler-hook
+  checks;
+- `eslint-plugin-import-x` and `eslint-plugin-jsx-a11y-x` replace their minimatch-3 predecessors
+  while preserving the configured import and accessibility rules; and
+- `@eslint-react/eslint-plugin` replaces legacy React rules with maintained React, DOM, RSC, and
+  browser-lifecycle checks. Overlapping compiler rules remain owned by the official React Hooks
+  plugin.
+
+ESLint `10.8.0`, minimatch `10.2.5`, and brace-expansion `5.0.8` now form the only lint glob
+edge. The unused legacy YAML override disappeared with the old bundle. Both complete and
+production `npm audit` reports are zero.
+
+`security/npm-audit-policy.json` v2 permits no exception. It binds the exact replacement
+packages, forbids restoration of the five legacy lint lock paths, and requires empty
+vulnerability inventories plus zero counts at every severity in both complete and production
+reports.
+The read-only `.github/workflows/npm-advisory-watch.yml` workflow is configured to run the same
+fail-closed complete/production verifier every day without installing dependencies, receiving
+secrets, or holding write permission. Its source contract is checked by the verifier itself, and
+the workflow is part of the deterministic release inventory. Scheduled execution begins only
+after the reviewed workflow reaches the default branch; pull-request CI proves the source
+contract but is not evidence that GitHub delivered a scheduled run.
+`scripts/verify-npm-audit-policy.mjs` independently executes complete and production audits and
+fails if either graph reports any vulnerability, if metadata and inventory disagree, if an exact
+replacement package drifts, if a legacy lint package returns, or if policy fields attempt to
+reintroduce an exception.
+
+The policy, verifier, lockfile, and regenerated SBOMs are release-inventory inputs. The deadline
+was removed by eliminating the affected dependency rather than by moving the date. Future lint
+updates must run the full source, type, build, browser, security, and audit matrix because a
+nominally clean dependency graph is not evidence that lint coverage or application behavior
+survived.
 
 ## CI security gates
 
@@ -88,15 +138,18 @@ npm run security:sbom
 ```
 
 The generator takes npm's complete lockfile-only CycloneDX graph and selects component instances
-by their exact lockfile package paths, excluding only paths marked strictly development-only by
-npm. It merges duplicate package identities and dependency edges, replaces npm's random serial
-number with a lock-derived UUIDv5, removes time/tool metadata, sorts components and dependency
-edges, normalizes the root component name, and embeds the current `package-lock.json` SHA-256.
-Using lockfile path flags rather than the host installation keeps production-optional native
-variants deterministic across macOS and Linux without admitting a development-only package that
-happens to share a name/version with production. Tests also require every direct runtime package,
-unique graph references, and the signer-required deterministic serial number. Review both the
-lock diff and SBOM diff in the same pull request. CI rejects a stale SBOM.
+by their exact lockfile package paths. It resolves reachability from the lockfile root's production
+dependencies through
+required, optional, and required-peer edges rather than trusting npm's per-path `dev` flag alone.
+That keeps production-optional native variants deterministic across macOS and Linux even when npm
+marks a shared optional path as development-reachable, without admitting a truly development-only
+package that happens to share a name/version with production. It merges duplicate package
+identities and dependency edges, replaces npm's random serial number with a lock-derived UUIDv5,
+removes time/tool metadata, sorts components and dependency edges, normalizes the root component
+name, and embeds the current `package-lock.json` SHA-256. Tests also require every direct runtime
+package, representative Sharp platform artifacts, exclusion of Playwright and the development-only
+Ajv `fast-uri` path, unique graph references, and the signer-required deterministic serial number.
+Review both the lock diff and SBOM diff in the same pull request. CI rejects a stale SBOM.
 
 The focused npm SBOM intentionally covers the production npm tree only. Development tools remain
 visible in `package-lock.json`, the complete-tree audit, and dependency review. The deterministic
@@ -245,6 +298,21 @@ candidate version or dismissing an alert. Recreate such candidates in an owner b
 canonical lock first, regenerate every source-bound hash, compare old/new behavior, and run all
 required checks before merge.
 
+## Hosted validation scheduling
+
+Feature branches receive one automatic CI and release-provenance execution through their pull
+request. The workflows do not also run the identical matrices for the branch `push`; automatic
+push execution is restricted to protected `main`, where dependency submission and release
+attestation have their release authority. Manual dispatch remains available for an explicit
+operator rerun.
+
+Each workflow uses a workflow-name plus pull-request-number or ref concurrency key and cancels a
+superseded execution. CI and release provenance therefore cannot cancel each other, different
+pull requests remain independent, and a newer commit stops stale validation for only its own PR
+or ref. This scheduling control changes no job, required audit, test command, permission, release
+identity, or main-only signing condition. Hosted-minute and queue-time savings remain provider
+evidence to measure after the change reaches protected `main`.
+
 ## Exact GitHub Python dependency snapshot
 
 GitHub's configured graph updates completed after the Psycopg and constraint fixes and recorded
@@ -309,7 +377,8 @@ Dependabot proposes npm, Python, and GitHub Action updates weekly. For every upd
    updating the digest. Build and smoke the image; a tag alone is not immutable.
 5. For GitHub Actions, resolve the reviewed release tag to its commit, use the full commit SHA,
    and preserve the human-readable version comment.
-6. Run secret scanning, Python lock verification, both npm audits, SBOM verification, lint,
+6. Run secret scanning, Python lock verification, the fail-closed complete/production npm audit
+   policy, SBOM verification, lint,
    typecheck, all tests, build, mobile tests, Python tests, release verifiers, and the Wrangler
    dry-run as applicable.
 7. Release from the immutable reviewed commit through the guarded workflow. Keep migrations,
@@ -331,10 +400,10 @@ demands it:
 
 ## Install-script boundary
 
-The current npm tree declares install hooks for esbuild binaries, optional `fsevents`, Sharp,
+The current npm tree declares install hooks for esbuild binaries, optional `fsevents`,
 `unrs-resolver`, and the local Cloudflare `workerd` runtime. CastingCompass pins npm `10.9.8`,
 sets `engine-strict=true` and `ignore-scripts=true`, passes `--ignore-scripts` explicitly in CI
-and release jobs, and binds all eight exact script-bearing lock paths, versions, integrity
+and release jobs, and binds all seven exact script-bearing lock paths, versions, integrity
 digests, development/optional flags, and a `disabled` disposition in
 `security/npm-install-policy.json`. The pre-install verifier rejects npm/Node drift, root
 install lifecycle hooks, workflow overrides, a newly introduced hook, or stale policy. A fresh

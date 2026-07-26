@@ -330,6 +330,21 @@ test("validates actual target-specific and target-agnostic run metadata shapes",
   assert.equal(validateModelRunContract(synthetic, { environment: "test" }).ok, true);
   const agnostic = modelRun(null, "production");
   assert.equal(validateModelRunContract(agnostic).ok, true);
+  assert.equal(
+    validateModelRunContract({
+      ...agnostic,
+      dataset_kind: "official_unlabeled_seafloor_remote_sensing",
+    }).ok,
+    true,
+  );
+  for (const datasetKind of [
+    "official_video_endpoint_admissibility_audit",
+    "official_sediment_endpoint_support_audit",
+    "official_sediment_endpoint_exploratory_dbf_support_audit",
+    "official_sediment_endpoint_exploratory_south_coast_support_audit",
+  ]) {
+    assert.equal(validateModelRunContract({ ...agnostic, dataset_kind: datasetKind }).ok, true);
+  }
   const halibut = modelRun(CALIFORNIA_HALIBUT_TAXON_ID, "production");
   assert.equal(validateModelRunContract(halibut).ok, true);
   assert.notEqual(buildModelVersionMaterial(halibut), buildModelVersionMaterial(synthetic));

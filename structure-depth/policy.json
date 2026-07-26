@@ -1,0 +1,275 @@
+{
+  "schema_version": "castingcompass.structure-depth-policy/1.0.0",
+  "policy_version": "castingcompass.california-enc-approach/0.6.0",
+  "meaning": "source-bound planning context for nearby charted depths and selected chart features at reviewed California catalog locations; never a casting-depth guarantee, navigation product, safety claim, or catch-probability input",
+  "score_contribution": "excluded-pending-site-review-and-validation",
+  "catalog_mutation": "forbidden",
+  "geometry": {
+    "sector_half_width_degrees": 45,
+    "context_radius_meters": 1000,
+    "horizontal_crs": "EPSG:4326",
+    "distance_model": "WGS84-mean-radius-geodesic"
+  },
+  "source": {
+    "source_id": "noaa-enc-direct-approach",
+    "agency": "NOAA Office of Coast Survey",
+    "product": "ENC Direct to GIS — Approach usage band",
+    "program_url": "https://nauticalcharts.noaa.gov/learn/encdirect/",
+    "service_url": "https://encdirect.noaa.gov/arcgis/rest/services/encdirect/enc_approach/MapServer",
+    "usage_band": "Approach",
+    "depth_units": "meters",
+    "vertical_datum": "Mean Lower Low Water (MLLW)",
+    "vertical_datum_basis": "NOAA states that tidal nautical-chart depths use MLLW; the selected ENC Direct feature records do not consistently expose VERDAT",
+    "resolution_status": "vector-chart-features-no-fixed-grid-resolution",
+    "positional_accuracy_status": "not-exposed-by-selected-service-layers",
+    "uncertainty_status": "not-exposed-by-selected-service-layers",
+    "not_for_navigation": true,
+    "layers": {
+      "soundings": {
+        "id": 80,
+        "name": "Approach.Sounding_point",
+        "query_scope": "sector-and-context",
+        "fields": ["OBJECTID", "SCAMIN", "SORDAT", "SORIND", "DSNM", "Z", "QUASOU"]
+      },
+      "depthContours": {
+        "id": 108,
+        "name": "Approach.Depth_Contour_line",
+        "query_scope": "sector",
+        "fields": ["VALDCO", "VERDAT", "INFORM", "SORDAT", "SORIND", "DSNM", "SCAMIN"]
+      },
+      "depthAreas": {
+        "id": 232,
+        "name": "Approach.Depth_Area",
+        "query_scope": "sector",
+        "fields": ["DRVAL1", "DRVAL2", "QUASOU", "SOUACC", "VERDAT", "INFORM", "SORDAT", "SORIND", "DSNM", "SCAMIN"]
+      },
+      "obstructionPoints": {
+        "id": 36,
+        "name": "Approach.Obstruction_point",
+        "query_scope": "context",
+        "category": "charted-obstruction",
+        "fields": ["CATOBS", "OBJNAM", "VALSOU", "NATSUR", "INFORM", "SORDAT", "SORIND", "DSNM"]
+      },
+      "wreckPoints": {
+        "id": 39,
+        "name": "Approach.Wreck_point",
+        "query_scope": "context",
+        "category": "charted-wreck",
+        "fields": ["CATWRK", "OBJNAM", "VALSOU", "INFORM", "SORDAT", "SORIND", "DSNM"]
+      },
+      "pilePoints": {
+        "id": 62,
+        "name": "Approach.Pile_point",
+        "query_scope": "context",
+        "category": "charted-pile",
+        "fields": ["CATPLE", "OBJNAM", "INFORM", "SORDAT", "SORIND", "DSNM"]
+      },
+      "seabedPoints": {
+        "id": 75,
+        "name": "Approach.Seabed_Area_point",
+        "query_scope": "context",
+        "category": "charted-seabed-description",
+        "fields": ["NATQUA", "NATSUR", "OBJNAM", "INFORM", "SORDAT", "SORIND", "DSNM"]
+      },
+      "shorelineConstructionPoints": {
+        "id": 20,
+        "name": "Approach.Shoreline_Construction_point",
+        "query_scope": "context",
+        "category": "charted-shoreline-construction",
+        "fields": ["CATSLC", "NATCON", "OBJNAM", "INFORM", "SORDAT", "SORIND", "DSNM"]
+      },
+      "shorelineConstructionLines": {
+        "id": 89,
+        "name": "Approach.Shoreline_Construction_line",
+        "query_scope": "context",
+        "category": "charted-shoreline-construction",
+        "fields": ["CATSLC", "NATCON", "OBJNAM", "INFORM", "SORDAT", "SORIND", "DSNM"]
+      },
+      "shorelineConstructionAreas": {
+        "id": 143,
+        "name": "Approach.Shoreline_Construction_area",
+        "query_scope": "context",
+        "category": "charted-shoreline-construction",
+        "fields": ["CATSLC", "NATCON", "OBJNAM", "INFORM", "SORDAT", "SORIND", "DSNM"]
+      },
+      "seabedAreas": {
+        "id": 205,
+        "name": "Approach.Seabed_Area",
+        "query_scope": "context",
+        "category": "charted-seabed-description",
+        "fields": ["NATQUA", "NATSUR", "OBJNAM", "INFORM", "SORDAT", "SORIND", "DSNM"]
+      },
+      "dredgedAreas": {
+        "id": 233,
+        "name": "Approach.Dredged_Area",
+        "query_scope": "context",
+        "category": "charted-dredged-area",
+        "fields": ["DRVAL1", "DRVAL2", "OBJNAM", "INFORM", "SORDAT", "SORIND", "DSNM"]
+      },
+      "vegetationAreas": {
+        "id": 244,
+        "name": "Approach.Vegetation_area",
+        "query_scope": "context",
+        "category": "charted-vegetation",
+        "fields": ["CATVEG", "OBJNAM", "INFORM", "SORDAT", "SORIND", "DSNM"]
+      }
+    }
+  },
+  "covered_site_ids": [
+    "torpedo-wharf",
+    "crissy-field-east-beach",
+    "baker-beach",
+    "china-beach",
+    "ocean-beach-north",
+    "ocean-beach-south",
+    "pier-7",
+    "pier-14",
+    "crane-cove-park",
+    "herons-head-park-pier",
+    "pacifica-municipal-pier",
+    "sharp-park-beach",
+    "rockaway-beach",
+    "pacifica-state-beach",
+    "montara-state-beach",
+    "pillar-point-west-jetty",
+    "pillar-point-east-jetty",
+    "surfers-beach",
+    "francis-state-beach",
+    "poplar-beach",
+    "gaviota-state-park-beach",
+    "refugio-state-beach",
+    "el-capitan-state-beach",
+    "haskells-beach",
+    "goleta-beach",
+    "arroyo-burro-beach",
+    "mesa-lane-beach",
+    "leadbetter-beach",
+    "santa-barbara-harbor-breakwater",
+    "stearns-wharf",
+    "east-beach-santa-barbara",
+    "summerland-beach-lookout-park",
+    "carpinteria-state-beach",
+    "rincon-beach-park",
+    "limantour-beach",
+    "drakes-beach",
+    "point-reyes-south-beach",
+    "bolinas-beach",
+    "stinson-beach",
+    "muir-beach",
+    "rodeo-beach",
+    "mcnears-beach-pier",
+    "paradise-beach-pier",
+    "fort-baker-pier",
+    "ferry-point-pier",
+    "keller-beach",
+    "point-isabel-shoreline",
+    "albany-bulb",
+    "berkeley-marina-north-basin",
+    "cesar-chavez-park",
+    "emeryville-marina-pier",
+    "port-view-park-pier",
+    "middle-harbor-shoreline",
+    "alameda-south-shore-rockwall",
+    "crown-memorial-state-beach",
+    "oyster-bay-shoreline",
+    "san-leandro-marina-shore",
+    "dumbarton-pier",
+    "coyote-point-jetty",
+    "seal-point-park",
+    "oyster-point-fishing-pier"
+  ],
+  "source_selection_receipt": {
+    "reviewed_at": "2026-07-21T12:10:36Z",
+    "blue_topo": {
+      "tile_scheme_url": "https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/BlueTopo/_BlueTopo_Tile_Scheme/BlueTopo_Tile_Scheme_20260626_132625.gpkg",
+      "tile_scheme_sha256": "dc854cc98608eaae19e5cc8e4ccf92f9f61af998cc135c61c649d2052c3fc319",
+      "published_site_ids": ["gaviota-state-park-beach", "refugio-state-beach", "el-capitan-state-beach"],
+      "unpublished_site_count": 11,
+      "selection_result": "not-used-as-regional-baseline-because-current-coverage-is-incomplete"
+    },
+    "usgs_santa_barbara_channel_10m": {
+      "catalog_url": "https://pubs.usgs.gov/ds/702/data.html",
+      "archive_url": "https://pubs.usgs.gov/ds/702/data/bathymetry/sbchannel_10mbathy.zip",
+      "archive_sha256": "5ae764fe1d154b43deb2dcd1c1a1de253c737abb5b2221529783ccbead79453b",
+      "published_year": 2012,
+      "configured_sector_coverage_site_count": 6,
+      "selection_result": "retained-as-future-secondary-reference-not-used-as-complete-regional-baseline"
+    },
+    "noaa_enc_direct": {
+      "configured_sector_depth_area_site_count": 56,
+      "selection_result": "selected-as-consistent-reviewed-location-chart-context"
+    },
+    "san_francisco_extension": {
+      "site_ids": [
+        "torpedo-wharf",
+        "crissy-field-east-beach",
+        "baker-beach",
+        "china-beach",
+        "ocean-beach-north",
+        "ocean-beach-south",
+        "pier-7",
+        "pier-14",
+        "crane-cove-park",
+        "herons-head-park-pier"
+      ],
+      "selection_result": "accepted-with-one-explicit-partial-depth-sector"
+    },
+    "san_mateo_coast_extension": {
+      "site_ids": [
+        "pacifica-municipal-pier",
+        "sharp-park-beach",
+        "rockaway-beach",
+        "pacifica-state-beach",
+        "montara-state-beach",
+        "pillar-point-west-jetty",
+        "pillar-point-east-jetty",
+        "surfers-beach",
+        "francis-state-beach",
+        "poplar-beach"
+      ],
+      "selection_result": "accepted-with-all-ten-configured-sectors"
+    },
+    "marin_coast_extension": {
+      "site_ids": [
+        "limantour-beach",
+        "drakes-beach",
+        "point-reyes-south-beach",
+        "bolinas-beach",
+        "stinson-beach",
+        "muir-beach",
+        "rodeo-beach"
+      ],
+      "selection_result": "accepted-with-two-explicit-partial-depth-sectors"
+    },
+    "north_east_bay_extension": {
+      "site_ids": [
+        "mcnears-beach-pier",
+        "paradise-beach-pier",
+        "fort-baker-pier",
+        "ferry-point-pier",
+        "keller-beach",
+        "point-isabel-shoreline",
+        "albany-bulb",
+        "berkeley-marina-north-basin",
+        "cesar-chavez-park",
+        "emeryville-marina-pier"
+      ],
+      "selection_result": "accepted-with-two-explicit-partial-depth-sectors"
+    },
+    "oakland_south_bay_extension": {
+      "site_ids": [
+        "port-view-park-pier",
+        "middle-harbor-shoreline",
+        "alameda-south-shore-rockwall",
+        "crown-memorial-state-beach",
+        "oyster-bay-shoreline",
+        "san-leandro-marina-shore",
+        "dumbarton-pier",
+        "coyote-point-jetty",
+        "seal-point-park",
+        "oyster-point-fishing-pier"
+      ],
+      "selection_result": "accepted-with-all-ten-configured-sectors"
+    }
+  }
+}

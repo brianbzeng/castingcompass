@@ -47,6 +47,7 @@ test("the migrated schema preserves the documented account and trip cascade boun
   assertForeignKey(sqlite, "validation_feasibility_corrections", "trip_id", "trips", "id", "CASCADE");
   assertForeignKey(sqlite, "validation_feasibility_recruitment_events", "user_id", "users", "id", "CASCADE");
   assertForeignKey(sqlite, "privacy_deletion_tasks", "job_id", "privacy_deletion_jobs", "id", "CASCADE");
+  assertForeignKey(sqlite, "account_deletion_fences", "user_id", "users", "id", "CASCADE");
 
   const triggerNames = new Set(sqlite.prepare(
     "SELECT name FROM sqlite_master WHERE type = ? ORDER BY name",
@@ -73,9 +74,13 @@ test("account deletion keeps tombstone creation and every active-row removal in 
   const end = source.indexOf("if (!user.legalAccepted)", start);
   assert.ok(start >= 0 && end > start);
   const block = source.slice(start, end);
+  const fenceClaim = block.indexOf("claimAccountDeletionFence");
+  const reservationInventory = block.indexOf("inventoryStatementsForAccountFence");
   assert.match(block, /await db\.batch\(\[/);
-  assert.match(block, /deletion\.jobStatement\(db\)/);
-  assert.match(block, /\.\.\.deletion\.taskStatements\(db\)/);
+  assert.match(block, /deletion\.jobStatementForAccountFence\(db, user\.id, fence\.leaseToken\)/);
+  assert.match(block, /\.\.\.deletion\.inventoryStatementsForAccountFence\(db, user\.id, fence\.leaseToken\)/);
+  assert.match(block, /deletion\.finalizeInventoryStatementForAccountFence\(db, user\.id, fence\.leaseToken\)/);
+  assert.ok(fenceClaim >= 0 && reservationInventory > fenceClaim, "the write fence must precede locator inventory");
 
   const orderedDeletes = [
     "DELETE FROM site_discussion_posts",
@@ -83,11 +88,11 @@ test("account deletion keeps tombstone creation and every active-row removal in 
     "DELETE FROM saved_sites WHERE user_id = ?",
     "DELETE FROM gear_profiles WHERE user_id = ?",
     "DELETE FROM auth_sessions WHERE user_id = ?",
-    "DELETE FROM email_challenges WHERE email = ? OR user_id = ?",
+    "DELETE FROM email_challenges WHERE (email = ? OR user_id = ?)",
     "DELETE FROM auth_attempts WHERE email_hash = ?",
     "DELETE FROM users WHERE id = ?",
   ];
-  let cursor = block.indexOf("deletion.jobStatement(db)");
+  let cursor = block.indexOf("deletion.jobStatementForAccountFence(db, user.id, fence.leaseToken)");
   for (const statement of orderedDeletes) {
     const position = block.indexOf(statement, cursor + 1);
     assert.ok(position > cursor, `${statement} must remain in the ordered deletion batch`);

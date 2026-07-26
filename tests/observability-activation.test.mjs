@@ -1,6 +1,16 @@
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
-import { chmodSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import {
+  chmodSync,
+  linkSync,
+  lstatSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  symlinkSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
@@ -9,9 +19,12 @@ import { fileURLToPath } from "node:url";
 import {
   ObservabilityActivationRefusal,
   assertPublicReceipt,
+  createObservabilityActivationTemplate,
   evaluateEvidence,
+  loadPrivateEvidence,
   loadPolicy,
   validatePolicy,
+  writeObservabilityActivationTemplate,
 } from "../scripts/verify-observability-activation.mjs";
 
 const NOW = new Date("2026-07-19T20:00:00.000Z");
@@ -141,6 +154,134 @@ test("complete fresh evidence produces a data-minimized commit-bound ready recei
   ]) {
     assert.equal(publicJson.includes(privateValue), false);
   }
+});
+
+test("the guarded template is complete in shape, unfilled, and non-authorizing", () => {
+  const template = createObservabilityActivationTemplate({
+    reviewedCommit: EXPECTED_COMMIT,
+  });
+  assert.equal(template.release_binding.reviewed_commit, EXPECTED_COMMIT);
+  assert.equal(template.observed_at, "");
+  assert.equal(template.evidence_packet_sha256, "");
+  assert.equal(template.dashboards.saved_views.length, 9);
+  assert.equal(template.alerts.drills.length, 5);
+  assert.equal(template.uptime.checks.length, 3);
+  assert.equal(template.reconstruction.drills.length, 6);
+  assert.equal(template.alerts.drills.every((entry) =>
+    entry.delivered === false
+      && entry.acknowledged === false
+      && entry.closed === false
+      && entry.redaction_tested === false), true);
+  assert.equal(template.production_change_authorized, false);
+  assert.throws(() => evaluate(template), /canonical UTC timestamp/u);
+});
+
+test("guarded observability writer creates one owner-only file and never overwrites", (context) => {
+  const directory = mkdtempSync(join(tmpdir(), "castingcompass-observability-writer-"));
+  context.after(() => rmSync(directory, { recursive: true, force: true }));
+  chmodSync(directory, 0o700);
+  const outputFile = join(directory, "observability-evidence.json");
+
+  const receipt = writeObservabilityActivationTemplate({
+    outputFile,
+    reviewedCommit: EXPECTED_COMMIT,
+  });
+  const metadata = lstatSync(outputFile);
+  const originalBytes = readFileSync(outputFile);
+  const payload = JSON.parse(originalBytes.toString("utf8"));
+  assert.equal(metadata.isFile(), true);
+  assert.equal(metadata.isSymbolicLink(), false);
+  assert.equal(metadata.mode & 0o777, 0o600);
+  assert.equal(metadata.nlink, 1);
+  assert.equal(payload.release_binding.reviewed_commit, EXPECTED_COMMIT);
+  assert.equal(payload.observed_at, "");
+  assert.equal(receipt.owner_only_file_written, true);
+  assert.equal(receipt.existing_file_overwritten, false);
+  assert.equal(receipt.activation_ready, false);
+  assert.equal(receipt.provider_query_performed, false);
+  assert.equal(receipt.production_change_authorized, false);
+  assert.equal(JSON.stringify(receipt).includes(directory), false);
+  assert.deepEqual(loadPrivateEvidence(outputFile), payload);
+
+  assert.throws(
+    () => writeObservabilityActivationTemplate({
+      outputFile,
+      reviewedCommit: EXPECTED_COMMIT,
+    }),
+    /must not already exist/u,
+  );
+  assert.deepEqual(readFileSync(outputFile), originalBytes);
+});
+
+test("observability template and reader reject unsafe filesystem boundaries", (context) => {
+  const directory = mkdtempSync(join(tmpdir(), "castingcompass-observability-boundary-"));
+  context.after(() => rmSync(directory, { recursive: true, force: true }));
+  chmodSync(directory, 0o700);
+  const permissiveDirectory = join(directory, "permissive");
+  const privateDirectory = join(directory, "private");
+  const linkedDirectory = join(directory, "linked-directory");
+  mkdirSync(permissiveDirectory, { mode: 0o755 });
+  chmodSync(permissiveDirectory, 0o755);
+  mkdirSync(privateDirectory, { mode: 0o700 });
+  symlinkSync(privateDirectory, linkedDirectory);
+
+  assert.throws(
+    () => writeObservabilityActivationTemplate({
+      outputFile: "relative.json",
+      reviewedCommit: EXPECTED_COMMIT,
+    }),
+    /must be absolute/u,
+  );
+  assert.throws(
+    () => writeObservabilityActivationTemplate({
+      outputFile: fileURLToPath(new URL("../private-evidence.json", import.meta.url)),
+      reviewedCommit: EXPECTED_COMMIT,
+    }),
+    /outside the repository/u,
+  );
+  assert.throws(
+    () => writeObservabilityActivationTemplate({
+      outputFile: join(permissiveDirectory, "evidence.json"),
+      reviewedCommit: EXPECTED_COMMIT,
+    }),
+    /must not grant group or other permissions/u,
+  );
+  assert.throws(
+    () => writeObservabilityActivationTemplate({
+      outputFile: join(linkedDirectory, "evidence.json"),
+      reviewedCommit: EXPECTED_COMMIT,
+    }),
+    /non-symlink directory/u,
+  );
+
+  const broadFile = join(privateDirectory, "broad.json");
+  writeFileSync(broadFile, "{}\n", { mode: 0o600 });
+  chmodSync(broadFile, 0o644);
+  assert.throws(() => loadPrivateEvidence(broadFile), /exactly 0600/u);
+
+  const hardLinkSource = join(privateDirectory, "hard-link-source.json");
+  const hardLink = join(privateDirectory, "hard-link.json");
+  writeFileSync(hardLinkSource, "{}\n", { mode: 0o600 });
+  chmodSync(hardLinkSource, 0o600);
+  linkSync(hardLinkSource, hardLink);
+  assert.throws(() => loadPrivateEvidence(hardLinkSource), /must not be hard-linked/u);
+
+  const symlinkTarget = join(privateDirectory, "symlink-target.json");
+  const symlinkFile = join(privateDirectory, "symlink.json");
+  writeFileSync(symlinkTarget, "{}\n", { mode: 0o600 });
+  chmodSync(symlinkTarget, 0o600);
+  symlinkSync(symlinkTarget, symlinkFile);
+  assert.throws(() => loadPrivateEvidence(symlinkFile), /regular, non-symlink/u);
+
+  const emptyFile = join(privateDirectory, "empty.json");
+  writeFileSync(emptyFile, "", { mode: 0o600 });
+  chmodSync(emptyFile, 0o600);
+  assert.throws(() => loadPrivateEvidence(emptyFile), /empty or exceeds/u);
+
+  const oversizedFile = join(privateDirectory, "oversized.json");
+  writeFileSync(oversizedFile, Buffer.alloc(262_145), { mode: 0o600 });
+  chmodSync(oversizedFile, 0o600);
+  assert.throws(() => loadPrivateEvidence(oversizedFile), /empty or exceeds/u);
 });
 
 test("a dashboard cannot substitute for access, alerts, retention, or incident evidence", () => {
@@ -336,6 +477,8 @@ test("CI and release provenance verify only the locked policy", () => {
     /"security:observability-activation": "node scripts\/verify-observability-activation\.mjs verify-policy"/u);
   assert.match(manifest,
     /"verify:observability:activation": "node scripts\/verify-observability-activation\.mjs evaluate --evidence-file/iu);
+  assert.match(manifest,
+    /"write:observability:activation-template": "node scripts\/verify-observability-activation\.mjs write-template"/iu);
   assert.match(manifest, /--expected-commit \\"\$OBSERVABILITY_EXPECTED_COMMIT\\"/u);
   for (const workflow of [ci, release]) {
     assert.match(workflow, /npm run security:observability-activation/u);

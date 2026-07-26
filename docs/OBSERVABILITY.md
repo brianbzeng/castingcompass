@@ -140,9 +140,27 @@ process. Never place an exported production log file in the repository or pass i
 ## Fail-closed activation receipt
 
 `npm run security:observability-activation` verifies the locked repository policy in CI without
-reading a provider account. After an authorized operator completes the provider checklist, place
-a private aggregate evidence manifest outside every checkout, set its permissions to owner-only,
-and run:
+reading a provider account. Before collecting provider evidence, create an owner-only directory
+outside every checkout and use the guarded writer to materialize an unfilled manifest bound to
+the exact reviewed commit:
+
+```sh
+mkdir -p /absolute/private/path
+chmod 700 /absolute/private/path
+npm run write:observability:activation-template -- --output-file /absolute/private/path/observability-evidence.json --expected-commit 377dec41c9fc1842c682b7556f2b0a8b1b83e87c
+```
+
+The writer creates one canonical `0600` regular file exclusively, synchronizes it before
+success, never overwrites an existing destination, and refuses relative paths, checkout paths,
+symlinked or broadly accessible directories, and directories not owned by the current user. Its
+printed receipt contains no private path or provider evidence and keeps `activation_ready`,
+provider query, and production authorization false. The file starts with blank timestamps and
+digests plus false operational claims; its existence is not evidence that any provider step ran.
+
+After an authorized operator completes the provider checklist, fill every existing field from
+the separately retained evidence without adding fields. Keep the private path, packet, provider
+identifiers, screenshots, and raw events out of Git, Codex, analytics, and public receipts. Then
+run:
 
 ```sh
 OBSERVABILITY_EVIDENCE_FILE=/absolute/private/path/observability-evidence.json \
@@ -158,8 +176,10 @@ log-hygiene, saved-view, access, alert, uptime, reconstruction, pseudonym-key, a
 The operator must also supply the independently reviewed commit through
 `OBSERVABILITY_EXPECTED_COMMIT`; evaluation refuses a missing, malformed, or mismatched value.
 It rejects unknown fields, provider/account identifiers, URLs, raw event data, stale or
-future-dated evidence, files inside Git, symlinks, group/world-readable files, and any claim that
-the manifest authorizes a production change.
+future-dated evidence, files inside Git, symlinks, hard links, non-owner files, anything other
+than exact `0600` permissions, empty or oversized files, and any claim that the manifest
+authorizes a production change. The reader checks device, inode, ownership, link count, mode,
+size, and modification identity through a no-follow descriptor before and after reading.
 
 The printed receipt is public-safe and data-minimized: it includes the expected reviewed commit
 so the claim cannot float between releases, but no evidence digest, saved-view name, provider ID,

@@ -18,7 +18,10 @@ const activationSchemaUrl = new URL(
   "contracts/validation-feasibility-activation.schema.json",
   root,
 );
-const siteCatalogUrl = new URL("public/data/sites.json", root);
+const siteCatalogUrl = new URL(
+  "validation/catalogs/california-halibut-bay-area-v1.json",
+  root,
+);
 
 function sha256(bytes) {
   return createHash("sha256").update(bytes).digest("hex");

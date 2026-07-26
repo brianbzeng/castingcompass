@@ -56,6 +56,32 @@ mode, sampling fields, query parameters, and its own raw checksum before supervi
 even be reviewed. Expanded estimates and catch-only exports remain rejected. The prospective
 first-party cohort also remains open.
 
+### Public SD002 discovery
+
+On 2026-07-25 the public RecFIN `nobody` role exposed SD002, “Recreational Fishery Sample
+Report: Sample Records,” including California trip date, county, trip type, primary target, mode,
+species, and catch fields. A public Santa Barbara County query showed California-halibut-target
+rows with target catches, non-target catches, and blank species/catch rows. This establishes that
+a technically relevant official sample source exists. It does not establish that blank rows are
+confirmed complete zero-catch attempts.
+
+RecFIN's public 71-field SD002/SD502 dictionary includes stable sample, angler, catch, and
+location identifiers plus target, mode, angler count, catch dispositions, survey, and spatial
+fields. The exact observed 62,835-byte workbook is bound by SHA-256
+`b17ebe6ec617014a0a4c0e0b70f502f50554e41e85f234f6126f8d7c524e2139`. It documents
+`NUMBER_HOURS_FISHED` as Oregon-only, so no California effort duration may be inferred.
+
+The public report's default output omits those stable identifiers. RecFIN's own QueryBuilder
+manual states that raw-data queries require an active authorized account, and the large-export
+manual binds large exports to a user profile. No official automated-bulk, commercial-ML,
+derived-product, retention, or redistribution permission was found. Public visibility is not a
+license. The source therefore remains unadmitted for normalization or any model role.
+
+The exact discovery evidence is in
+`pipeline/sources/receipts/recfin-sd002-public-discovery-20260725.receipt.json`; a minimal,
+copyable official request and post-response acceptance boundary are in
+`docs/RECFIN_COMPLETE_EFFORT_REQUEST.md`. No raw sample corpus was acquired.
+
 ## Source drift caught during acquisition
 
 The ArcGIS convenience-download endpoint for ds3185 returned an older 4,154-feature export with
@@ -107,8 +133,11 @@ source evidence; it is not legal advice or a substitute for counsel.
 
 ## Next acceptance gates
 
-- Obtain a reproducible, permitted complete-effort CRFS/RecFIN sample export with query and
-  dictionary receipts; do not substitute these aggregate layers.
+- Send the drafted request or obtain an authorized QueryBuilder account, then obtain a
+  reproducible, permitted complete-effort CRFS/RecFIN sample export with stable identities,
+  confirmed zero-catch semantics, a valid California effort unit, query and dictionary receipts,
+  and written intended-use terms; do not substitute these aggregate layers or scrape the public
+  report.
 - Define a source-specific transformation that preserves survey design and missingness and
   cannot create point labels from blocks.
 - Begin the consented prospective first-party cohort under the still-closed validation gate.

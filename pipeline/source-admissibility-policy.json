@@ -107,6 +107,30 @@
       ]
     },
     {
+      "source_id": "usgs_ds182_pacific_ext_sediment",
+      "source_class": "official-sediment-measurement",
+      "allowed_operations": ["endpoint-support-audit"],
+      "supervised_model_training_authorized": false,
+      "model_validation_authorized": false,
+      "production_scoring_authorized": false,
+      "conditions": [
+        "Only the exact content-addressed official EXT archive and source table may enter the preregistered bulk-surficial composition support audit.",
+        "A passing raw whole-source screen does not authorize source-accuracy admission, raster alignment, model training, validation, promotion, production scoring, or deployment."
+      ]
+    },
+    {
+      "source_id": "usgs_ds781_residual_video_observations",
+      "source_class": "official-video-observation",
+      "allowed_operations": ["endpoint-support-audit"],
+      "supervised_model_training_authorized": false,
+      "model_validation_authorized": false,
+      "production_scoring_authorized": false,
+      "conditions": [
+        "Only exact content-addressed official archives may enter the frozen raw whole-cruise endpoint-support audit.",
+        "A passing support screen does not authorize raster alignment, model training, validation, promotion, production scoring, or deployment."
+      ]
+    },
+    {
       "source_id": "usgs_sf_state_waters_2m",
       "source_class": "official-bathymetry",
       "allowed_operations": ["bathymetry-ingest", "terrain-pretraining"],
@@ -116,6 +140,23 @@
       "conditions": [
         "The exact official asset, source metadata, checksum, CRS, datum, license, and access date must be receipted before use.",
         "Unlabeled terrain pretraining cannot measure or claim catch-prediction skill."
+      ]
+    },
+    {
+      "source_id": "usgs_santa_barbara_south_coast_2m",
+      "source_class": "official-bathymetry",
+      "allowed_operations": [
+        "bathymetry-ingest",
+        "terrain-pretraining",
+        "endpoint-support-footprint"
+      ],
+      "supervised_model_training_authorized": false,
+      "model_validation_authorized": false,
+      "production_scoring_authorized": false,
+      "conditions": [
+        "The exact official asset, source metadata, checksum, CRS, datum, license, and access date must be receipted before use.",
+        "Unlabeled terrain pretraining cannot measure or claim catch-prediction skill.",
+        "Endpoint-support-footprint use is limited to exact CRS, transform, shape, and bounds checks without reading raster pixels or authorizing labels, training, validation, production scoring, or deployment."
       ]
     }
   ],

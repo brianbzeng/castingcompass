@@ -153,7 +153,7 @@ test("turns site structure tags into angler-facing water-reading cues", async ()
   assert.match(app, /Eelgrass edge/);
 });
 
-test("uses a marine basemap with map-native clustered points and deterministic Bay controls", async () => {
+test("uses a marine basemap with map-native clustered points and deterministic regional controls", async () => {
   const map = await readFile(
     new URL("../app/components/ContourMap.tsx", import.meta.url),
     "utf8",
@@ -167,7 +167,7 @@ test("uses a marine basemap with map-native clustered points and deterministic B
   assert.match(map, /cooperativeGestures: true/);
   assert.match(map, /new ResizeObserver/);
   assert.match(map, /retainPadding: false/);
-  assert.match(map, /Center Bay/);
+  assert.match(map, /Fit sites/);
   assert.doesNotMatch(map, /new maplibregl\.Marker/);
   assert.doesNotMatch(map, /openfreemap|versatiles/i);
   assert.doesNotMatch(map, /tile\.openstreetmap\.org/);
@@ -201,7 +201,12 @@ test("defers the interactive map and keeps the offline snapshot lightweight", as
   assert.match(app, /new IntersectionObserver/);
   assert.match(app, /Open interactive map/);
   const transferSize = gzipSync(snapshot).byteLength;
-  assert.ok(transferSize < 150_000, `compressed forecast snapshot is ${transferSize} bytes`);
+  const windowCount = JSON.parse(snapshot.toString("utf8")).windows.length;
+  assert.ok(transferSize < 210_000, `compressed forecast snapshot is ${transferSize} bytes`);
+  assert.ok(
+    transferSize / windowCount < 100,
+    `compressed forecast snapshot is ${(transferSize / windowCount).toFixed(1)} bytes per window`,
+  );
   assert.match(css, /url\("\/topography-contours-v2\.webp"\)/);
   assert.match(css, /content-visibility:\s*auto/);
 });

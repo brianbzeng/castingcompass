@@ -169,7 +169,7 @@
           "type": "array",
           "const": ["shore", "beach", "pier", "jetty"]
         },
-        "curated_site_catalog_path": { "const": "public/data/sites.json" },
+        "curated_site_catalog_path": { "const": "validation/catalogs/california-halibut-bay-area-v1.json" },
         "curated_site_catalog_sha256": { "$ref": "#/$defs/sha256" },
         "exact_coordinates_required": { "const": false },
         "photo_required": { "const": false },
