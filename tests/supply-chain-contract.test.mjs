@@ -242,13 +242,13 @@ test("Python API and pipeline installs use exact source-bound wheel hashes", asy
   assert.match(validationLock.toString(), /^scipy==1\.18\.0$/m);
   const pipelineRanges = await readFile(new URL("pipeline/requirements-smoke.txt", root), "utf8");
   assert.match(pipelineRanges, /^scipy>=1\.18,<2$/m);
-  assert.match(pipelineRanges, /^pandas>=3\.0\.3,<4$/m);
+  assert.match(pipelineRanges, /^pandas>=3\.0\.5,<4$/m);
   const pipelineInput = await readFile(new URL("pipeline/requirements-ci.in", root), "utf8");
   assert.match(pipelineInput, /^-c requirements-validation\.txt$/m);
-  assert.match(pipelineInput, /^pandas==3\.0\.3$/m);
+  assert.match(pipelineInput, /^pandas==3\.0\.5$/m);
   assert.doesNotMatch(pipelineInput, /^-c .*\.lock$/m);
   const pipelineLock = await readFile(new URL("pipeline/requirements-ci.lock", root), "utf8");
-  assert.match(pipelineLock, /^pandas==3\.0\.3\s+\\$/m);
+  assert.match(pipelineLock, /^pandas==3\.0\.5\s+\\$/m);
   assert.doesNotMatch(pipelineLock, /^pytz==/m);
   assert.match(dependabot, /scientific-runtime:[\s\S]+numpy[\s\S]+scipy[\s\S]+scikit-learn[\s\S]+pandas/);
   assert.match(dependabot, /geo-deep-runtime:[\s\S]+pyproj[\s\S]+rasterio[\s\S]+torch/);
