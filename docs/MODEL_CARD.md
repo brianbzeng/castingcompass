@@ -260,6 +260,16 @@ That protocol and every hashed input must be sealed and deployed before its
 first eligible row; locked-test outcomes cannot influence baseline selection,
 feature work, or candidate configuration.
 
+The local [model-selection plan](MODEL-SELECTION-PLAN.md) now makes that future
+comparison architecture-neutral without starting it. Its strict machine
+contract inventories naive, regularized linear, spline/GAM, random-forest,
+histogram-gradient-boosted, spatial/hierarchical, bathymetric deep, and
+conditional hybrid/ensemble families. Only the naive, linear, boosted, and
+deep encoder/head plumbing currently exist; no eligible target-specific run,
+winner, or promotion claim exists. Every execution, locked-test, score,
+serving, and deployment flag remains false until a separately preregistered
+confirmatory design freezes the shared evidence and clears the data gates.
+
 ## Limitations and risks
 
 - Terrain alone cannot represent fish behavior, seasonality, temperature,
@@ -311,6 +321,7 @@ channel order, source version, or coverage contract fails.
 | Santa Barbara South Coast direct-sediment support screen | [Completed and exactly reproduced across four metadata-only footprints](experiments/2026-07-22-usgs-south-coast-sediment-support-v1.md) | 26 valid rows/sites span three source groups but contain zero gravel-bearing and only three sand-dominant observations; zero of three whole-source partitions passes, so no pixels are read and no model is fit |
 | Independent endpoint source inventory | [Completed with a fail-closed machine policy](experiments/2026-07-22-independent-endpoint-source-inventory-v1.md) | Seven official candidate families reviewed; mapped substrate/cover and the halibut HSM are derived or circular, Digital Coast grabs lack California/hard-bottom support, and DS781/DS182 are already audited support-incomplete families; no candidate receives an evidence role or model authority |
 | Prospective direct-video endpoint collection | [Protocol frozen locally but not activated](experiments/2026-07-22-prospective-seafloor-endpoint-collection-protocol-v1.md) | Outcome-blind site frame, blinded dual labels, whole-day groups, 512 m buffers, and fixed three-class support gates are locked; no participants, sites, observations, rasters, or model actions are authorized |
+| Model-agnostic California-halibut selection | [Family inventory frozen locally but not preregistered or executable](MODEL-SELECTION-PLAN.md) | Eight representative families share one future evidence contract; eligible labels, final input/metric/materiality freezes, benchmark execution, locked-test access, winner selection, and score/serving authority all remain absent |
 | Two-head fine-tuning | Unrun | No checkpoint |
 | Geographic generalization | Unrun | No result |
 | Calibration / ablations | Unrun on official data | No result |

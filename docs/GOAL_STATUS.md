@@ -832,6 +832,38 @@ by that discovery.
       staging, provider, migration, deployment, and production-acceptance gates. Consolidation
       and green repository checks do not satisfy any of those external gates.
 
+## Active checkpoint — model-neutral California-halibut selection plan
+
+- [x] Replace architecture preference with a strict local comparison inventory. The frozen v1
+      template includes naive, regularized linear, spline/GAM, random-forest,
+      histogram-gradient-boosted, spatial/hierarchical, bathymetric deep, and conditional
+      hybrid/ensemble families in increasing complexity order. Deep learning is explicitly not
+      the default, and a statistically indistinguishable complex model loses to the simpler one.
+- [x] Bind every compatible candidate to the same future evidence: complete target-specific
+      attempts, identical rows/folds/features, source-separated development and locked test,
+      geographic/time holdouts, participant groups, fold-local preprocessing, development-only
+      selection, single-use locked test, pilot-row and legacy-row exclusion, and shared
+      discrimination/calibration/CPUE/ranking/coverage/uncertainty metrics.
+- [x] Keep current implementation truth explicit. Naive, regularized-linear, and
+      histogram-gradient-boosted two-head baselines exist; the terrain encoder and deep heads
+      exist but lack the frozen site-window adapter and any eligible target-specific run; GAM,
+      random-forest, and spatial/hierarchical candidates remain planned; a hybrid remains
+      conditional on a predeclared complementary-error rationale.
+- [x] Add a fail-closed evaluator, minimized audit receipt, adversarial tests, and deterministic
+      release-inventory bindings. It rejects candidate omission/reordering, asymmetric evidence,
+      deep preference, locked-test tuning, prematurely frozen metrics, or any expansion of
+      training, benchmark, locked-test, winner, score, serving, provider, or deployment authority.
+- [x] Complete local acceptance under pinned Node `22.23.1`, npm `10.9.8`, Python `3.12.13`, and
+      Ruff `0.15.22`: production-off Cloudflare build, ESLint, TypeScript, all 749/749 Node tests,
+      strict schema tests, all 136/136 pipeline tests with ten declared optional-dependency skips,
+      deterministic synthetic smoke, the complete offline security/policy chain, both
+      zero-vulnerability npm audits, and deterministic release inventory pass.
+- [ ] Obtain permitted eligible labels and pass the feasibility/data/legal/privacy/custody gates;
+      then externally preregister a separate confirmatory protocol that freezes actual input
+      adapters, search spaces, primary metrics, materiality thresholds, slice floors, calibration
+      ceiling, and independent reproduction before locked-test access. No benchmark or
+      target-specific training is authorized by this local template.
+
 ## Active checkpoint — deduplicated hosted validation
 
 - [x] Stop feature-branch pushes from running the complete CI and release-provenance matrices a

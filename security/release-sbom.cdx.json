@@ -1,7 +1,7 @@
 {
   "bomFormat": "CycloneDX",
   "specVersion": "1.5",
-  "serialNumber": "urn:uuid:9d6c027d-154b-590e-ba89-36aea3f7b9c6",
+  "serialNumber": "urn:uuid:8add0926-7980-5097-b4a7-791b8276ee5e",
   "version": 1,
   "metadata": {
     "component": {
@@ -53,6 +53,10 @@
         },
         {
           "name": "castingcompass:input-sha256",
+          "value": "contracts/model-selection-plan.schema.json:55a9d42afdbaa8afd6b21276a1ecca3de5b2bc61becc1f62ef95b85673d416c6"
+        },
+        {
+          "name": "castingcompass:input-sha256",
           "value": "contracts/pollution-score-independent-review.schema.json:c3c67fdf02e39f20729c71ca3c5ceb3a0f734fe7a6d96de3590ead63065cd60e"
         },
         {
@@ -94,6 +98,10 @@
         {
           "name": "castingcompass:input-sha256",
           "value": "field-review/santa-barbara-structure-depth-review-policy.json:0d795c3b2f764dfb2524bb6244903d1117e5b04d44d296e531f19009760ba11f"
+        },
+        {
+          "name": "castingcompass:input-sha256",
+          "value": "model/selection/california-halibut-v1.json:cf7dbd0fc2c55db368cb75fb61f27fbed33299b90b269521016a75413cc03beb"
         },
         {
           "name": "castingcompass:input-sha256",
