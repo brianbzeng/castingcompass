@@ -10,10 +10,19 @@ updates:
       react-framework:
         patterns:
           - next
-          - eslint-config-next
+          - "@next/eslint-plugin-next"
           - react
           - react-dom
           - react-server-dom-webpack
+      lint-toolchain:
+        patterns:
+          - "@eslint-react/eslint-plugin"
+          - eslint
+          - eslint-plugin-import-x
+          - eslint-plugin-jsx-a11y-x
+          - eslint-plugin-react-hooks
+          - globals
+          - typescript-eslint
       cloudflare-toolchain:
         patterns:
           - "@cloudflare/vite-plugin"
