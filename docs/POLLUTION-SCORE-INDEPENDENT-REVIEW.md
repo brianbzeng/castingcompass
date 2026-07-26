@@ -30,7 +30,7 @@ review record uses a random UUID only to enforce separation; it is not a public 
 
 Both reviews bind to the exact final receipt head of draft PR `#145`:
 
-- source commit: `281dbdcbc3cd1cf68f5f363ecb182ac51ebceb73`
+- source commit: `2fabec419ea2add8c341938827383c68f56c6008`
 - policy version: `castingcompass.pollution-score-candidates/0.1.0`
 - policy SHA-256: `5901791c40b4cc85f2b2bea78722c88937e62d7c5cf932ea523342cf351214dd`
 
@@ -80,7 +80,7 @@ review is a human evidence decision, never a template default.
 ```sh
 export POLLUTION_FISHERIES_REVIEW_FILE=/PRIVATE/PATH/fisheries-review.json
 export POLLUTION_PUBLIC_HEALTH_REVIEW_FILE=/PRIVATE/PATH/public-health-review.json
-export POLLUTION_REVIEW_EXPECTED_SOURCE_COMMIT=281dbdcbc3cd1cf68f5f363ecb182ac51ebceb73
+export POLLUTION_REVIEW_EXPECTED_SOURCE_COMMIT=2fabec419ea2add8c341938827383c68f56c6008
 npm run verify:pollution-score-independent-review
 ```
 

@@ -34,7 +34,7 @@ public receipt. The random UUID exists only to enforce separation and is not a p
 
 Both reviews bind to the exact consolidated draft integration receipt:
 
-- source commit: `281dbdcbc3cd1cf68f5f363ecb182ac51ebceb73`
+- source commit: `2fabec419ea2add8c341938827383c68f56c6008`
 - policy version: `castingcompass.water-quality-advisory/official-programs-0.5.0`
 - aggregate review-target SHA-256: `fd66070e2edc3828a4cbe394047800717ff1fff2e1a17dc083b1aa9dcd5e4ca9`
 - catalog outcomes: 61 total, 38 mapped, 23 `not-covered`
@@ -99,7 +99,7 @@ available for read-only inspection, but shell redirection is not the approved pr
 ```sh
 export WATER_QUALITY_MAPPING_REVIEW_FILE=/PRIVATE/PATH/mapping-review.json
 export WATER_QUALITY_PUBLIC_HEALTH_REVIEW_FILE=/PRIVATE/PATH/public-health-review.json
-export WATER_QUALITY_REVIEW_EXPECTED_SOURCE_COMMIT=281dbdcbc3cd1cf68f5f363ecb182ac51ebceb73
+export WATER_QUALITY_REVIEW_EXPECTED_SOURCE_COMMIT=2fabec419ea2add8c341938827383c68f56c6008
 npm run verify:water-quality-mapping-independent-review
 ```
 

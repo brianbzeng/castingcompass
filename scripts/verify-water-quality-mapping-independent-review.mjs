@@ -14,7 +14,7 @@ const RUNBOOK_PATH = "docs/WATER-QUALITY-MAPPING-INDEPENDENT-REVIEW.md";
 const ADVISORY_RUNBOOK_PATH = "docs/WATER-QUALITY-ADVISORY.md";
 const PACKAGE_PATH = "package.json";
 
-export const LOCKED_SOURCE_COMMIT = "281dbdcbc3cd1cf68f5f363ecb182ac51ebceb73";
+export const LOCKED_SOURCE_COMMIT = "2fabec419ea2add8c341938827383c68f56c6008";
 export const LOCKED_REVIEW_TARGET_SHA256 = "fd66070e2edc3828a4cbe394047800717ff1fff2e1a17dc083b1aa9dcd5e4ca9";
 const LOCKED_CONTRACT_SHA256 = "4124bd5652c58c15a26f727d72700f199e99a767b88f14ac83c1aea4cf848cff";
 const REVIEW_SCHEMA_VERSION = "castingcompass.water-quality-mapping-independent-review/1.0.0";

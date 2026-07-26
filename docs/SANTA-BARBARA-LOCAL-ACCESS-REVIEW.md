@@ -50,7 +50,7 @@ to create a blank manifest bound to the reviewed catalog commit:
 ```sh
 mkdir -p /absolute/private/path
 chmod 700 /absolute/private/path
-npm run write:santa-barbara-access-review-template -- --output-file /absolute/private/path/access-review.json --expected-commit 281dbdcbc3cd1cf68f5f363ecb182ac51ebceb73
+npm run write:santa-barbara-access-review-template -- --output-file /absolute/private/path/access-review.json --expected-commit 2fabec419ea2add8c341938827383c68f56c6008
 ```
 
 The writer creates a new `0600` regular file exclusively and refuses relative
