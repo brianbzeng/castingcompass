@@ -15,7 +15,7 @@ const RUNBOOK_PATH = "docs/POLLUTION-SCORE-INDEPENDENT-REVIEW.md";
 const SOURCE_RUNBOOK_PATH = "docs/POLLUTION-SCORE-SOURCE-BOUNDARY.md";
 const PACKAGE_PATH = "package.json";
 
-export const LOCKED_SOURCE_COMMIT = "9fd337d561056fef5227eb013fa8f7b909f69343";
+export const LOCKED_SOURCE_COMMIT = "281dbdcbc3cd1cf68f5f363ecb182ac51ebceb73";
 export const LOCKED_POLICY_SHA256 = "396c00e770a87bc65bcd4ad6342146d4e9f7113f0c61315fe543fee99035e2ae";
 const LOCKED_CONTRACT_SHA256 = "c3c67fdf02e39f20729c71ca3c5ceb3a0f734fe7a6d96de3590ead63065cd60e";
 const REVIEW_SCHEMA_VERSION = "castingcompass.pollution-score-independent-review/1.0.0";
