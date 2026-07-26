@@ -65,7 +65,7 @@ test("Python dependency snapshot publishes exact versioned lock inventories", ()
     scope: "development",
   });
   assert.deepEqual(pipeline.resolved.pandas, {
-    package_url: "pkg:pypi/pandas@3.0.3",
+    package_url: "pkg:pypi/pandas@3.0.5",
     relationship: "direct",
     scope: "development",
   });
