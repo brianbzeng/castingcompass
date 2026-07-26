@@ -18,7 +18,7 @@ EXPECTED_VERSIONS = {
     "cryptography": "48.0.1",
     "narwhals": "2.24.0",
     "numpy": "2.5.1",
-    "pandas": "3.0.3",
+    "pandas": "3.0.5",
     "pyproj": "3.7.2",
     "rasterio": "1.5.0",
     "scikit-learn": "1.9.0",
