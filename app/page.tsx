@@ -1,3 +1,5 @@
+/* eslint-disable @eslint-react/dom-no-dangerously-set-innerhtml -- The only raw HTML is a static,
+ * JSON-stringified schema object with less-than characters escaped below. */
 import type { Metadata } from "next";
 import { OpportunityApp } from "./components/OpportunityApp";
 

@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "reviewedAt": "2026-07-21",
+  "reviewedAt": "2026-07-26",
   "packageManager": {
     "name": "npm",
     "version": "10.9.8",
@@ -58,8 +58,8 @@
       {
         "path": "node_modules/unrs-resolver",
         "name": "unrs-resolver",
-        "version": "1.11.1",
-        "integrity": "sha512-bSjt9pjaEBnNiGgc9rUiHGKv5l4/TGzDmYw3RhnkJGtLhbnnA/5qJj7x3dNDCRx/PJxu774LlH8lCOlB4hEfKg==",
+        "version": "1.12.2",
+        "integrity": "sha512-dmlRxBJJayXjqTwC+JtF1HhJmgf3ftQ3YejFcZrf4+KKtJv0qDsK1pjqaaVjG7wJ5NJ6UVP1OqRMQ71Z4C3rxQ==",
         "development": true,
         "optional": false,
         "execution": "disabled"

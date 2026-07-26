@@ -1,6 +1,6 @@
 # CastingCompass goal status
 
-Last reconciled: **2026-07-25 UTC**
+Last reconciled: **2026-07-26 UTC**
 
 This is the owner-facing dashboard for the complete goal list. The detailed acceptance
 criteria and immutable receipts remain in [PRODUCT_ROADMAP.md](PRODUCT_ROADMAP.md); provider
@@ -12,6 +12,35 @@ also satisfied.
 Current provider truth overrides historical “paused” language in completed receipts below. The
 2026-07-19 read-only reconciliation found an active Worker; no production mutation is authorized
 by that discovery.
+
+## Active checkpoint — zero-exception npm and lint graph
+
+- [x] Eliminate the expiring `GHSA-mh99-v99m-4gvg` development exception without an
+      API-incompatible override. The legacy `eslint-config-next` and ESLint plugin bundle is
+      replaced by directly composed maintained Next, TypeScript, React Hooks, React, import,
+      JSX accessibility, and globals packages whose exact lock graph reaches patched
+      `brace-expansion` `5.0.8`.
+- [x] Replace the temporary exception contract with npm audit policy schema v2. Both the complete
+      and production graphs must report zero vulnerabilities and empty advisory inventories; the
+      verifier also rejects any temporary exception, exact-version or development-classification
+      drift, or restoration of the removed legacy lint packages. The daily read-only advisory
+      watch remains bound to that stricter verifier.
+- [x] Preserve lint coverage while resolving the maintained rules' actionable findings:
+      request retries now own and clean up their abort deadlines, gear loading has cancellation
+      cleanup, pending-trip identity uses a stable ref, set initialization is lazy, and the sole
+      raw-HTML use is narrowly documented and remains limited to escaped static JSON-LD.
+- [x] Refresh the reviewed install-hook inventory, Dependabot groups, deterministic CycloneDX
+      SBOMs, supply-chain runbook, and threat model. A fresh pinned npm install executes zero of
+      seven reviewed lifecycle hooks; the complete and production npm audits both report zero
+      vulnerabilities and the focused audit/supply-chain suite passes 15/15.
+- [x] Complete the full local acceptance under pinned Node `22.23.1` and npm `10.9.8`:
+      the complete security/SBOM/query-policy chain, production-off builds, feature-on build,
+      ESLint, TypeScript, all 743/743 Node tests, 8/8 Chromium/WebKit photo cases, and 244/244
+      mobile/offline/recovery/map cases pass.
+- [ ] Obtain exact-head hosted CI and CodeQL evidence, followed by independent human review of
+      the maintained lint-rule composition. This checkpoint changes no production configuration
+      and authorizes no merge, deployment, provider mutation, DNS change, migration, or
+      production acceptance.
 
 ## Active checkpoint — consolidated reviewed dependency and RecFIN follow-up
 

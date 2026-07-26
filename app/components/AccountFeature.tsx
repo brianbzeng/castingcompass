@@ -508,7 +508,7 @@ function ProfileSectionLoading({ label }: { label: string }) {
 export function useAccount(): AccountController {
   const [user, setUser] = useState<AccountUser | null>(null);
   const [loading, setLoading] = useState(true);
-  const [savedSiteIds, setSavedSiteIds] = useState<Set<string>>(new Set());
+  const [savedSiteIds, setSavedSiteIds] = useState<Set<string>>(() => new Set());
   const [modalOpen, setModalOpen] = useState(false);
   const [modalMessage, setModalMessage] = useState("");
   const [signOutRequest, setSignOutRequest] = useState<{
@@ -1065,9 +1065,24 @@ export function AccountModal({
   useEffect(() => {
     if (!account.user?.legalAccepted || reviewRetryRequestedRef.current || !profile?.trips.some((trip) => !trip.ai_review_status || trip.ai_review_status === "retry")) return;
     reviewRetryRequestedRef.current = true;
-    fetch("/api/profile/reviews/retry", { method: "POST" })
-      .then(() => window.setTimeout(() => void loadProfile({ background: true }), 2500))
-      .catch(() => { reviewRetryRequestedRef.current = false; });
+    const controller = new AbortController();
+    let refreshTimer: number | null = null;
+    void fetch("/api/profile/reviews/retry", {
+      method: "POST",
+      signal: controller.signal,
+    })
+      .then(() => {
+        if (!controller.signal.aborted) {
+          refreshTimer = window.setTimeout(() => void loadProfile({ background: true }), 2500);
+        }
+      })
+      .catch(() => {
+        if (!controller.signal.aborted) reviewRetryRequestedRef.current = false;
+      });
+    return () => {
+      controller.abort();
+      if (refreshTimer !== null) window.clearTimeout(refreshTimer);
+    };
   }, [account.user, loadProfile, profile]);
 
   useEffect(() => {

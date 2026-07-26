@@ -133,12 +133,14 @@ that could become a privacy, integrity, or availability incident.
 - **Recovery:** Block promotion, remove or upgrade the dependency, regenerate exact locks and
   SBOMs, rebuild from the reviewed commit, and verify provenance before restoring the feature.
 - **Residual risk:** Advisory and scanner databases lag new issues; a correctly named package
-  can still be compromised. The exact dev-only brace-expansion/ESLint exception expires
-  2026-08-01. The owner-bound CPython image exceptions require re-review when Python 3.13.15 is
+  can still be compromised. The minimatch 3 development edge and its August 1 exception were
+  removed, but the new exact lint composition must continue to prove equivalent-or-stronger rule
+  coverage. The owner-bound CPython image exceptions require re-review when Python 3.13.15 is
   scheduled on 2026-08-04 and expire 2026-08-08.
-- **Next gate:** Replace the minimatch 3 development edge as soon as maintained ESLint plugins
-  publish a compatible release, and adopt/natively verify the first fixed stable official Python
-  image. Fail closed at either deadline rather than silently extending an exception.
+- **Next gate:** Keep both npm graphs at zero through the daily verifier, independently review
+  lint-toolchain updates for coverage as well as advisories, and adopt/natively verify the first
+  fixed stable official Python image. Fail closed at the image deadline rather than silently
+  extending an exception.
 
 ### L04 — Static application security testing
 

@@ -12,156 +12,152 @@ const watchWorkflow = await readFile(
   "utf8",
 );
 
-const highNames = [
-  "@eslint/config-array",
-  "@eslint/eslintrc",
-  "brace-expansion",
-  "eslint",
-  "eslint-config-next",
-  "eslint-plugin-import",
-  "eslint-plugin-jsx-a11y",
-  "eslint-plugin-react",
-  "minimatch",
-];
-const advisory = {
-  source: 1124334,
-  name: "brace-expansion",
-  dependency: "brace-expansion",
-  title: "bounded fixture",
-  url: "https://github.com/advisories/GHSA-mh99-v99m-4gvg",
-  severity: "high",
-  range: "<=5.0.7",
-};
 const requiredLockPackages = {
-  "node_modules/@typescript-eslint/typescript-estree/node_modules/brace-expansion": {
-    version: "5.0.8",
-    dev: true,
-  },
-  "node_modules/@typescript-eslint/typescript-estree/node_modules/minimatch": {
-    version: "10.2.5",
-    dev: true,
-  },
-  "node_modules/brace-expansion": { version: "1.1.16", dev: true },
-  "node_modules/minimatch": { version: "3.1.5", dev: true },
+  "node_modules/@eslint-react/eslint-plugin": { version: "5.18.0", dev: true },
+  "node_modules/@next/eslint-plugin-next": { version: "16.2.11", dev: true },
+  "node_modules/brace-expansion": { version: "5.0.8", dev: true },
+  "node_modules/eslint": { version: "10.8.0", dev: true },
+  "node_modules/eslint-plugin-import-x": { version: "4.17.1", dev: true },
+  "node_modules/eslint-plugin-jsx-a11y-x": { version: "0.2.0", dev: true },
+  "node_modules/eslint-plugin-react-hooks": { version: "7.1.1", dev: true },
+  "node_modules/globals": { version: "16.4.0", dev: true },
+  "node_modules/minimatch": { version: "10.2.5", dev: true },
   "node_modules/postcss": { version: "8.5.18", dev: false },
   "node_modules/react": { version: "19.2.8", dev: false },
   "node_modules/react-dom": { version: "19.2.8", dev: false },
   "node_modules/react-server-dom-webpack": { version: "19.2.8", dev: true },
+  "node_modules/typescript-eslint": { version: "8.65.0", dev: true },
+};
+
+const forbiddenLockPackages = [
+  "node_modules/@eslint/eslintrc",
+  "node_modules/eslint-config-next",
+  "node_modules/eslint-plugin-import",
+  "node_modules/eslint-plugin-jsx-a11y",
+  "node_modules/eslint-plugin-react",
+];
+
+const zeroCounts = {
+  info: 0,
+  low: 0,
+  moderate: 0,
+  high: 0,
+  critical: 0,
+  total: 0,
 };
 
 function fixture() {
-  const policy = {
-    schemaVersion: "castingcompass.npm-audit-policy/1.0.0",
-    reviewedOn: "2026-07-25",
-    owner: "dependency-release-owner",
-    exception: {
-      expiresOn: "2026-08-01",
-      reason: "The maintained ESLint plugin releases still require minimatch 3, whose CommonJS brace-expansion 1 API is incompatible with patched brace-expansion 5. Production is clean and the exception expires.",
-      advisory: {
-        source: 1124334,
-        id: "GHSA-mh99-v99m-4gvg",
-        url: "https://github.com/advisories/GHSA-mh99-v99m-4gvg",
-        package: "brace-expansion",
-        severity: "high",
-        affectedRange: "<=5.0.7",
-        patchedVersion: "5.0.8",
-      },
-      expectedHighVulnerabilities: [...highNames],
-      vulnerableNodes: ["node_modules/brace-expansion"],
-      requiredLockPackages: structuredClone(requiredLockPackages),
-    },
-  };
-  const packages = Object.fromEntries(Object.entries(requiredLockPackages).map(([path, value]) => [
-    path,
-    { ...value },
-  ]));
-  for (const name of highNames) {
-    packages[`node_modules/${name}`] ??= { version: "1.0.0", dev: true };
-  }
-  const vulnerabilities = {};
-  for (const name of highNames) {
-    vulnerabilities[name] = {
-      name,
-      severity: "high",
-      via: name === "brace-expansion" ? [{ ...advisory }] : ["brace-expansion"],
-      effects: [],
-      range: "*",
-      nodes: [`node_modules/${name}`],
-    };
-  }
-  vulnerabilities["brace-expansion"].nodes = ["node_modules/brace-expansion"];
   return {
-    policy,
-    lockfile: { lockfileVersion: 3, packages },
+    policy: {
+      schemaVersion: "castingcompass.npm-audit-policy/2.0.0",
+      reviewedOn: "2026-07-26",
+      owner: "dependency-release-owner",
+      requiredAuditCounts: {
+        complete: { ...zeroCounts },
+        production: { ...zeroCounts },
+      },
+      requiredLockPackages: structuredClone(requiredLockPackages),
+      forbiddenLockPackages: [...forbiddenLockPackages],
+    },
+    lockfile: {
+      lockfileVersion: 3,
+      packages: Object.fromEntries(Object.entries(requiredLockPackages).map(([path, value]) => [
+        path,
+        { ...value },
+      ])),
+    },
     fullReport: {
-      vulnerabilities,
+      vulnerabilities: {},
       metadata: {
-        vulnerabilities: { info: 0, low: 0, moderate: 0, high: 9, critical: 0, total: 9 },
+        vulnerabilities: { ...zeroCounts },
       },
     },
     productionReport: {
       vulnerabilities: {},
       metadata: {
-        vulnerabilities: { info: 0, low: 0, moderate: 0, high: 0, critical: 0, total: 0 },
+        vulnerabilities: { ...zeroCounts },
       },
     },
-    now: new Date("2026-07-25T20:00:00.000Z"),
   };
 }
 
-test("accepts the exact dev-only advisory graph while production remains clean", () => {
-  const result = verifyNpmAuditPolicy(fixture());
-  assert.equal(result.productionVulnerabilities, 0);
-  assert.equal(result.temporaryDevAdvisory, "GHSA-mh99-v99m-4gvg");
-  assert.equal(result.affectedDevAuditEntries, 9);
-  assert.equal(result.expiresOn, "2026-08-01");
+test("requires zero vulnerabilities in the complete and production npm graphs", () => {
+  assert.deepEqual(verifyNpmAuditPolicy(fixture()), {
+    schemaVersion: "castingcompass.npm-audit-verification/2.0.0",
+    policyValid: true,
+    completeVulnerabilities: 0,
+    productionVulnerabilities: 0,
+    temporaryExceptions: 0,
+  });
+});
+
+test("rejects any complete-graph vulnerability", () => {
+  const input = fixture();
+  input.fullReport.metadata.vulnerabilities.high = 1;
+  input.fullReport.metadata.vulnerabilities.total = 1;
+  input.fullReport.vulnerabilities["brace-expansion"] = {
+    severity: "high",
+    via: [],
+    effects: [],
+    range: "<=5.0.7",
+    nodes: ["node_modules/brace-expansion"],
+  };
+  assert.throws(() => verifyNpmAuditPolicy(input), /complete npm audit must report zero/u);
 });
 
 test("rejects any production vulnerability", () => {
   const input = fixture();
   input.productionReport.metadata.vulnerabilities.high = 1;
   input.productionReport.metadata.vulnerabilities.total = 1;
+  input.productionReport.vulnerabilities.next = {
+    severity: "high",
+    via: [],
+    effects: [],
+    range: "*",
+    nodes: ["node_modules/next"],
+  };
   assert.throws(() => verifyNpmAuditPolicy(input), /production npm audit must report zero/u);
 });
 
-test("rejects an additional root advisory", () => {
+test("rejects a hidden vulnerability inventory even when metadata claims zero", () => {
   const input = fixture();
-  input.fullReport.vulnerabilities["brace-expansion"].via.push({
-    ...advisory,
-    source: 9999999,
-    url: "https://github.com/advisories/GHSA-2345-2345-2345",
-  });
-  assert.throws(() => verifyNpmAuditPolicy(input), /unreviewed root advisory/u);
-});
-
-test("rejects a changed high wrapper inventory", () => {
-  const input = fixture();
-  delete input.fullReport.vulnerabilities["eslint-plugin-react"];
-  input.fullReport.metadata.vulnerabilities.high = 8;
-  input.fullReport.metadata.vulnerabilities.total = 8;
-  assert.throws(() => verifyNpmAuditPolicy(input), /high vulnerability inventory drifted/u);
-});
-
-test("rejects an expired exception", () => {
-  const input = fixture();
-  input.now = new Date("2026-08-02T00:00:00.000Z");
-  assert.throws(() => verifyNpmAuditPolicy(input), /expired on 2026-08-01/u);
-});
-
-test("rejects a vulnerability node outside the dev-only graph", () => {
-  const input = fixture();
-  input.lockfile.packages["node_modules/eslint"].dev = false;
-  assert.throws(() => verifyNpmAuditPolicy(input), /escaped the dev-only graph/u);
+  input.fullReport.vulnerabilities.minimatch = {
+    severity: "high",
+    via: [],
+    effects: [],
+    range: "*",
+    nodes: ["node_modules/minimatch"],
+  };
+  assert.throws(() => verifyNpmAuditPolicy(input), /inventory must be empty/u);
 });
 
 test("rejects exact lock-version or dev-classification drift", () => {
   const versionInput = fixture();
-  versionInput.lockfile.packages["node_modules/postcss"].version = "8.5.17";
-  assert.throws(() => verifyNpmAuditPolicy(versionInput), /must remain 8.5.18/u);
+  versionInput.lockfile.packages["node_modules/eslint"].version = "10.7.0";
+  assert.throws(() => verifyNpmAuditPolicy(versionInput), /must remain 10\.8\.0/u);
 
   const classificationInput = fixture();
   classificationInput.lockfile.packages["node_modules/react-server-dom-webpack"].dev = false;
   assert.throws(() => verifyNpmAuditPolicy(classificationInput), /dev classification drifted/u);
+});
+
+test("rejects restoration of a legacy vulnerable lint package", () => {
+  const input = fixture();
+  input.lockfile.packages["node_modules/eslint-config-next"] = {
+    version: "16.2.11",
+    dev: true,
+  };
+  assert.throws(() => verifyNpmAuditPolicy(input), /restored forbidden legacy lint package/u);
+});
+
+test("rejects an exception or weaker count added back to policy", () => {
+  const exceptionInput = fixture();
+  exceptionInput.policy.exception = { expiresOn: "2026-08-01" };
+  assert.throws(() => verifyNpmAuditPolicy(exceptionInput), /policy fields are invalid/u);
+
+  const weakerInput = fixture();
+  weakerInput.policy.requiredAuditCounts.complete.high = 1;
+  assert.throws(() => verifyNpmAuditPolicy(weakerInput), /must require zero high/u);
 });
 
 test("binds a daily read-only no-install advisory watch to the exact verifier", () => {

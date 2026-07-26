@@ -1108,7 +1108,7 @@ export function OpportunityApp() {
   const [showRespectNotice, setShowRespectNotice] = useState(false);
   const [rememberRespectNotice, setRememberRespectNotice] = useState(false);
   const [showLocationDisclosure, setShowLocationDisclosure] = useState(false);
-  const tripReportRequestKey = useRef(0);
+  const tripReportRequestKeyRef = useRef(0);
   const initialSiteHandledRef = useRef(false);
   const discussionPosts = discussionFeed?.siteId === selectedSiteId ? discussionFeed.posts : [];
 
@@ -1411,8 +1411,8 @@ export function OpportunityApp() {
       account.openAccount("Sign in before submitting a trip report. Complete trips and skunks are tied to an account so reports can be reviewed privately before any separate decision about model evidence.");
       return;
     }
-    tripReportRequestKey.current += 1;
-    setTripReportRequest({ key: tripReportRequestKey.current, mode, siteId, window });
+    tripReportRequestKeyRef.current += 1;
+    setTripReportRequest({ key: tripReportRequestKeyRef.current, mode, siteId, window });
   }, [account]);
 
   const scrollToSection = useCallback((sectionId: "forecast" | "sources") => {

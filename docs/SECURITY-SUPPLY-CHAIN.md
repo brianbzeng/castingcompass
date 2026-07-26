@@ -20,7 +20,7 @@ path so security fixes are not frozen out.
 | Worker runtime contract | `wrangler.jsonc` fixes `compatibility_date` and the reviewed compatibility flags | Cloudflare implements the runtime; a date pin needs deliberate compatibility review and periodic advancement |
 | Direct npm packages | Every direct production and development dependency uses an exact version in `package.json` | A package version can still be malicious or vulnerable; review source/provenance, advisories, licenses, and install scripts |
 | Transitive npm tree | `package-lock.json` records exact versions, registry locations, and integrity hashes; npm `10.9.8` is selected with an exact engine gate, `.npmrc` disables lifecycle scripts, CI/release also pass `--ignore-scripts`, and the exact seven script-bearing lock paths are reviewed in a fail-closed policy | Registry availability, npm implementation integrity, and preinstalled optional native binaries remain external; the hosted runner itself is not bit-for-bit pinned |
-| Known npm advisories | Compatible Babel and YAML fixes are forced; the deprecated Drizzle loader's vulnerable esbuild is overridden to tested `0.25.12`; PostCSS is fixed at `8.5.18`; React, React DOM, and the development RSC package are fixed at `19.2.8`; the production npm graph audits with zero vulnerabilities | Maintained ESLint plugins still require minimatch 3 and its incompatible brace-expansion 1 API. The exact dev-only `GHSA-mh99-v99m-4gvg` graph is fail-closed and expires 2026-08-01; replace it as soon as upstream publishes a compatible release |
+| Known npm advisories | The deprecated Drizzle loader's vulnerable esbuild is overridden to tested `0.25.12`; PostCSS is fixed at `8.5.18`; React, React DOM, and the development RSC package are fixed at `19.2.8`; the legacy Next lint bundle is replaced by exact maintained Next, TypeScript, React, import, and accessibility plugins on minimatch `10.2.5` plus brace-expansion `5.0.8`; complete and production npm graphs must both audit with zero vulnerabilities | Advisory databases and upstream packages remain mutable external inputs; the read-only daily verifier detects drift, while each lint-toolchain update must preserve rule coverage instead of merely making an audit quiet |
 | GitHub Actions | Every `uses:` reference is a full immutable commit SHA; runner labels are fixed to `ubuntu-24.04` and `macos-15` rather than mutable `-latest` aliases | GitHub updates the images behind those labels; a release still records the workflow run and source commit |
 | Default-branch integrity | Live `main` protection requires pull requests, strict successful `api`, `pipeline`, `web`, and `dependency-review` checks from the GitHub Actions app plus the `CodeQL` result from the GitHub Advanced Security app, resolved review conversations, and applies to the owner; force-pushes and branch deletion are disabled | This is provider-side configuration rather than source code; verify it again for the exact release and preserve a separate emergency-access procedure |
 | Pull-request dependency changes | The SHA-pinned GitHub dependency-review action rejects newly introduced high/critical runtime or development advisories on release PRs targeting the default branch, and the live `main` protection requires that check | GitHub builds the graph from the default branch, so stacked PRs cannot supply this evidence; the complete-tree audit and SBOM remain mandatory |
@@ -35,23 +35,39 @@ not a claim that Node 22 should remain forever. The API has moved to maintained 
 Python 3.12.13 remains only for the scientific pipeline while its broader binary/platform
 compatibility is reviewed. Do not let that bounded split turn into an indefinite support gap.
 
-### Temporary npm development-graph exception
+### Zero-exception npm development graph
 
 The 2026-07-25 advisory refresh found three newly published high-severity npm advisories. The
 reviewed lock update installs PostCSS `8.5.18`, React/React DOM/react-server-dom-webpack
-`19.2.8`, and brace-expansion `5.0.8` under the compatible minimatch `10.2.5` edge. A direct
-`npm audit --omit=dev` reports zero vulnerabilities.
+`19.2.8`, and brace-expansion `5.0.8` under compatible minimatch `10.2.5` edges.
 
-The only remaining root advisory is
+The first response temporarily isolated
 [`GHSA-mh99-v99m-4gvg`](https://github.com/advisories/GHSA-mh99-v99m-4gvg) against
-`brace-expansion@1.1.16`. It is reachable only through the locked minimatch `3.1.5` development
-graph used by maintained ESLint plugins. Forcing brace-expansion 5 into that graph is not a safe
-patch: minimatch 3 calls the CommonJS brace-expansion 1 function API, while brace-expansion 5
-exports a different named API. The latest reviewed ESLint plugin releases still retain
-minimatch 3.
+`brace-expansion@1.1.16` behind an August 1 fail-closed deadline because forcing
+brace-expansion 5 through minimatch 3 breaks the older CommonJS function API. A 2026-07-26
+primary-source recheck confirmed that the advisory still lists only `5.0.8` as patched and the
+legacy plugins bundled by `eslint-config-next` still select minimatch 3. The repository did not
+extend the exception or carry a private fork. Instead it removed that bundle and composes the
+same lint boundaries directly from exact maintained packages:
 
-`security/npm-audit-policy.json` therefore permits exactly that root advisory, its nine known
-development-only npm-audit wrapper entries, and its exact lock paths through **2026-08-01**.
+- `@next/eslint-plugin-next` retains the framework and Core Web Vitals rules at the exact
+  `16.2.11` runtime release;
+- `typescript-eslint` and the official React Hooks plugin retain TypeScript and compiler-hook
+  checks;
+- `eslint-plugin-import-x` and `eslint-plugin-jsx-a11y-x` replace their minimatch-3 predecessors
+  while preserving the configured import and accessibility rules; and
+- `@eslint-react/eslint-plugin` replaces legacy React rules with maintained React, DOM, RSC, and
+  browser-lifecycle checks. Overlapping compiler rules remain owned by the official React Hooks
+  plugin.
+
+ESLint `10.8.0`, minimatch `10.2.5`, and brace-expansion `5.0.8` now form the only lint glob
+edge. The unused legacy YAML override disappeared with the old bundle. Both complete and
+production `npm audit` reports are zero.
+
+`security/npm-audit-policy.json` v2 permits no exception. It binds the exact replacement
+packages, forbids restoration of the five legacy lint lock paths, and requires empty
+vulnerability inventories plus zero counts at every severity in both complete and production
+reports.
 The read-only `.github/workflows/npm-advisory-watch.yml` workflow is configured to run the same
 fail-closed complete/production verifier every day without installing dependencies, receiving
 secrets, or holding write permission. Its source contract is checked by the verifier itself, and
@@ -59,18 +75,15 @@ the workflow is part of the deterministic release inventory. Scheduled execution
 after the reviewed workflow reaches the default branch; pull-request CI proves the source
 contract but is not evidence that GitHub delivered a scheduled run.
 `scripts/verify-npm-audit-policy.mjs` independently executes complete and production audits and
-fails if:
-
-- the production graph contains any vulnerability;
-- a critical or second root advisory appears;
-- any affected node is not marked development-only;
-- the nine-entry wrapper inventory, advisory identity, lock versions, or patched sibling paths
-  drift; or
-- the exception expires.
+fails if either graph reports any vulnerability, if metadata and inventory disagree, if an exact
+replacement package drifts, if a legacy lint package returns, or if policy fields attempt to
+reintroduce an exception.
 
 The policy, verifier, lockfile, and regenerated SBOMs are release-inventory inputs. The deadline
-must not be moved merely to make CI pass. Recheck upstream first and remove the exception as soon
-as a compatible ESLint/minimatch release exists.
+was removed by eliminating the affected dependency rather than by moving the date. Future lint
+updates must run the full source, type, build, browser, security, and audit matrix because a
+nominally clean dependency graph is not evidence that lint coverage or application behavior
+survived.
 
 ## CI security gates
 

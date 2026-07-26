@@ -680,13 +680,20 @@ export function TripReportFeature({ sites, snapshot, request, canSubmit, onRequi
   useEffect(() => {
     if (!canSubmit) return;
     let active = true;
-    void fetch("/api/gear-profiles", { cache: "no-store" })
+    const controller = new AbortController();
+    void fetch("/api/gear-profiles", {
+      cache: "no-store",
+      signal: controller.signal,
+    })
       .then((response) => response.ok ? response.json() : { gearProfiles: [] })
       .then((body: { gearProfiles?: GearProfile[] }) => {
         if (active) setGearProfiles(body.gearProfiles ?? []);
       })
       .catch(() => undefined);
-    return () => { active = false; };
+    return () => {
+      active = false;
+      controller.abort();
+    };
   }, [canSubmit, panel]);
 
   useEffect(() => {
