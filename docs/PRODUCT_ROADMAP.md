@@ -1299,6 +1299,14 @@ after its acceptance checks pass in the intended environment.
     the last confirmed local state, require an exact action/site receipt, keep slow or dropped
     responses visibly unconfirmed, block conflicting location writes, and reconcile an ambiguous
     outcome through the read-only saved-location list before allowing a retry.
+  - [x] Make account entry and legal reacceptance fail safe: pause sign-in, signup, verification,
+    password recovery/reset, code resend, age eligibility, and acceptance writes while offline;
+    show operation-specific immediate and slow unconfirmed states; require exact-shaped session,
+    age-proof, operation-specific challenge, resend-expiry/cooldown, and current-legal-version
+    receipts; and never replay after reconnection.
+    Ambiguous session-producing writes reconcile through the read-only session endpoint before a
+    retry, consumed codes are never reused, and a possibly superseded code request remains blocked
+    until the user starts over or uses the latest email.
   - [ ] Add operation-specific progress, timeout, retry, cancellation, and reconnection states
     only where the underlying API can report them truthfully; retain authoritative confirmation
     for account, trip, privacy, and other privileged writes.

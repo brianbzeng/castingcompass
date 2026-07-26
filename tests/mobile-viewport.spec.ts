@@ -170,6 +170,20 @@ async function prepareSavedSiteMutation(page: Page) {
   return { detail, controls: detail.locator(".saved-site-controls") };
 }
 
+async function prepareAnonymousAccount(page: Page) {
+  await page.route("**/api/auth/turnstile-config", (route) => route.fulfill({
+    status: 200,
+    contentType: "application/json",
+    body: JSON.stringify({ turnstile: { enabled: false } }),
+  }));
+  await page.locator(".account-button").click();
+  const modal = page.locator(".account-modal");
+  await expect(modal.getByRole("heading", { name: "Welcome back." })).toBeVisible();
+  await modal.getByLabel("Email").fill("angler@example.com");
+  await modal.getByLabel("Password").fill("correct horse battery staple");
+  return modal;
+}
+
 async function expectSelectorInsideViewport(page: Page, selector: string) {
   const locators = page.locator(selector);
   const count = await locators.count();
@@ -1223,6 +1237,165 @@ test.describe("profile recovery", () => {
     await expect(page.getByText("Limantour Beach", { exact: true })).toBeVisible();
     await expect(page.locator(".profile-summary")).toContainText("1Saved locations");
     await expect(page.locator(".profile-summary")).toContainText("0Completed trips");
+  });
+});
+
+test.describe("account entry recovery", () => {
+  test.beforeEach(async ({ page }) => {
+    await page.route("**/api/auth/turnstile-config", (route) => route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({ turnstile: { enabled: false } }),
+    }));
+  });
+
+  test("sign-in pauses while offline and never submits automatically after reconnection", async ({ page, context }) => {
+    let loginRequests = 0;
+    await page.route("**/api/auth/login", (route) => {
+      loginRequests += 1;
+      return route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          user: { id: "user_auth_recovery", email: "angler@example.com", ageEligible: true, legalAccepted: true },
+        }),
+      });
+    });
+    await context.setOffline(true);
+    const modal = await prepareAnonymousAccount(page);
+    await expect(modal.getByRole("button", { name: "Reconnect to continue" })).toBeDisabled();
+    await expect(modal.getByRole("alert").filter({ hasText: "Account requests are paused" })).toBeVisible();
+    expect(loginRequests).toBe(0);
+
+    await context.setOffline(false);
+    const retryVerification = modal.getByRole("button", { name: "Retry security verification" });
+    if (await retryVerification.isVisible().catch(() => false)) {
+      await retryVerification.click();
+    }
+    await expect(modal.locator("form").getByRole("button", { name: "Sign in", exact: true })).toBeEnabled();
+    await expect(modal.getByRole("status")).toContainText("No account request was submitted automatically");
+    await page.waitForTimeout(200);
+    expect(loginRequests).toBe(0);
+  });
+
+  test("slow sign-in stays unconfirmed until an exact account receipt arrives", async ({ page }) => {
+    let signedIn = false;
+    let releaseLoginResponse: (() => void) | undefined;
+    const loginResponseGate = new Promise<void>((resolve) => {
+      releaseLoginResponse = resolve;
+    });
+    await page.route("**/api/auth/session", (route) => route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        user: signedIn
+          ? { id: "user_auth_recovery", email: "angler@example.com", ageEligible: true, legalAccepted: true }
+          : null,
+      }),
+    }));
+    await page.route("**/api/saved-sites", (route) => route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({ siteIds: [] }),
+    }));
+    await page.route("**/api/auth/login", async (route) => {
+      await loginResponseGate;
+      signedIn = true;
+      return route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          user: { id: "user_auth_recovery", email: "angler@example.com", ageEligible: true, legalAccepted: true },
+        }),
+      });
+    });
+    const modal = await prepareAnonymousAccount(page);
+    await modal.locator("form").getByRole("button", { name: "Sign in", exact: true }).click();
+    await expect(modal.getByRole("status")).toContainText("No session is confirmed yet");
+    await expect(modal.getByRole("status")).toContainText("Do not assume this browser is signed in yet", { timeout: 5_500 });
+    releaseLoginResponse?.();
+    await expect(modal).toBeHidden({ timeout: 8_000 });
+  });
+
+  test("lost sign-in response requires a read-only session check before retry", async ({ page }) => {
+    await page.route("**/api/auth/login", (route) => route.abort("failed"));
+    await page.route("**/api/auth/session", (route) => route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({ user: null }),
+    }));
+    const modal = await prepareAnonymousAccount(page);
+    await modal.locator("form").getByRole("button", { name: "Sign in", exact: true }).click();
+    await expect(modal.getByRole("alert").filter({ hasText: "A session may already exist" })).toBeVisible();
+    await expect(modal.getByRole("button", { name: "Account status unresolved" })).toBeDisabled();
+
+    await modal.getByRole("button", { name: "Check account status" }).click();
+    await expect(modal.getByRole("alert").filter({ hasText: "not signed in" })).toBeVisible();
+    await expect(modal.locator("form").getByRole("button", { name: "Sign in", exact: true })).toBeEnabled();
+  });
+
+  test("a successful status with an over-broad sign-in receipt stays unresolved", async ({ page }) => {
+    await page.route("**/api/auth/login", (route) => route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        user: { id: "user_auth_recovery", email: "angler@example.com", ageEligible: true, legalAccepted: true },
+        diagnostics: "must not be accepted",
+      }),
+    }));
+    const modal = await prepareAnonymousAccount(page);
+    await modal.locator("form").getByRole("button", { name: "Sign in", exact: true }).click();
+    await expect(modal.getByRole("alert").filter({ hasText: "A session may already exist" })).toBeVisible();
+    await expect(modal.getByRole("button", { name: "Account status unresolved" })).toBeDisabled();
+  });
+
+  test("password recovery requires the exact requested challenge receipt", async ({ page }) => {
+    await page.route("**/api/auth/password/request", (route) => route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        challengeId: "challenge_11111111-1111-4111-8111-111111111111",
+        expiresInMinutes: 15,
+      }),
+    }));
+    const modal = await prepareAnonymousAccount(page);
+    await modal.getByRole("button", { name: "Forgot password?" }).click();
+    await modal.getByLabel("Email").fill("angler@example.com");
+    await modal.getByRole("button", { name: "Email reset code" }).click();
+    await expect(modal.getByRole("alert")).toContainText("no usable challenge receipt");
+    await expect(modal.getByRole("heading", { name: "Reset your password." })).toBeVisible();
+  });
+
+  test("lost password-reset response directs the user to sign in instead of reusing the code", async ({ page }) => {
+    await page.route("**/api/auth/password/request", (route) => route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        requested: true,
+        challengeId: "challenge_11111111-1111-4111-8111-111111111111",
+        expiresInMinutes: 15,
+      }),
+    }));
+    await page.route("**/api/auth/password/reset", (route) => route.abort("failed"));
+    await page.route("**/api/auth/session", (route) => route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({ user: null }),
+    }));
+    const modal = await prepareAnonymousAccount(page);
+    await modal.getByRole("button", { name: "Forgot password?" }).click();
+    await modal.getByLabel("Email").fill("angler@example.com");
+    await modal.getByRole("button", { name: "Email reset code" }).click();
+    await expect(modal.getByRole("heading", { name: "Enter your reset code." })).toBeVisible();
+    await modal.getByLabel("Six-digit email code").fill("123456");
+    await modal.getByLabel("New password").fill("new correct horse battery staple");
+    await modal.getByRole("button", { name: "Set new password" }).click();
+    await expect(modal.getByRole("alert")).toContainText("password may already have changed");
+
+    await modal.getByRole("button", { name: "Check account status" }).click();
+    await expect(modal.getByRole("alert")).toContainText("Do not reuse the code");
+    await modal.getByRole("button", { name: "Back to sign in" }).click();
+    await expect(modal.getByRole("heading", { name: "Welcome back." })).toBeVisible();
   });
 });
 

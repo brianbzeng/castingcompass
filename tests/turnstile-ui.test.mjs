@@ -57,9 +57,9 @@ test("every account attempt carries a fresh action-bound token and resets it", (
   assert.match(account, /body: JSON\.stringify\(\{ challengeId, turnstileToken: resendTurnstileToken \}\)/);
   assert.match(account, /resetTurnstile\(\);[\s\S]*setBusy\(false\)/);
   assert.match(account, /resetResendTurnstile\(\);[\s\S]*setBusy\(false\)/);
-  assert.match(account, /changeMode\(mode === "signupDetails" \? "verify" : "reset"\)/);
-  assert.match(account, /disabled=\{busy \|\| !turnstileCanSubmit\}/);
-  assert.match(account, /disabled=\{busy \|\| resendCooldown > 0 \|\| !resendTurnstileCanSubmit\}/);
+  assert.match(account, /changeMode\(submittedMode === "signupDetails" \? "verify" : "reset"\)/);
+  assert.match(account, /disabled=\{authSubmitDisabled \|\| !turnstileCanSubmit\}/);
+  assert.match(account, /disabled=\{busy \|\| networkState === "offline" \|\| authRequest\?\.state === "ambiguous" \|\| resendCooldown > 0 \|\| !resendTurnstileCanSubmit\}/);
   assert.match(component, /window\.turnstile\.remove/);
   assert.match(component, /\[action, onStateChange, onTokenChange, resetKey, retryKey\]/);
 });
