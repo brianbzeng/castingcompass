@@ -1031,8 +1031,22 @@ export function TripReportFeature({ sites, snapshot, request, canSubmit, onRequi
             time, effort, method, catches, whether it’s a skunk or not are useful and genuinely appreciated.
           </p>
           <div className="validation-actions">
-            <button type="button" onClick={() => openPanel("start", sites[0]?.id)}>Start a trip <ArrowIcon /></button>
-            <button type="button" onClick={openShareableReport}>Log a past trip</button>
+            <button
+              type="button"
+              disabled={sites.length === 0}
+              title={sites.length === 0 ? "Wait for the fishing-location catalog to load" : undefined}
+              onClick={() => openPanel("start", sites[0]?.id)}
+            >
+              Start a trip <ArrowIcon />
+            </button>
+            <button
+              type="button"
+              disabled={sites.length === 0}
+              title={sites.length === 0 ? "Wait for the fishing-location catalog to load" : undefined}
+              onClick={openShareableReport}
+            >
+              Log a past trip
+            </button>
           </div>
           <small>
             Beta · a separate validation protocol decides whether a report can become model evidence; nothing enters training automatically. This public ledger shows aggregate totals only;

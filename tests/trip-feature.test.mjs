@@ -72,7 +72,9 @@ test("trip entry points are present in the top bar, forecast detail, and validat
     readFile(appPath, "utf8"),
   ]);
 
-  assert.match(app, />Log trip<\/button>/);
+  assert.match(app, /disabled=\{!forecastReady\}/);
+  assert.match(app, /Wait for the fishing-location catalog to load/);
+  assert.match(app, /Log trip\s*<\/button>/);
   assert.match(app, /Fish this window/);
   assert.match(app, /<TripReportFeature/);
   assert.match(app, /sites=\{sites\}/);

@@ -203,6 +203,9 @@ async function ensureInteractiveMap(page: Page) {
 
 test.beforeEach(async ({ page }, testInfo) => {
   const testTitle = testInfo.titlePath.join(" ");
+  const forecastRecoveryTest = testTitle.includes(
+    "forecast failure hides unverified scores",
+  );
   const keyboardSkipNavigationTest = testTitle.includes(
     "keyboard users can skip repeated navigation",
   );
@@ -222,11 +225,18 @@ test.beforeEach(async ({ page }, testInfo) => {
     contentType: "application/json",
     body: SITES_FIXTURE,
   }));
-  await page.route("**/data/opportunities.json", (route) => route.fulfill({
-    status: 200,
-    contentType: "application/json",
-    body: OPPORTUNITIES_FIXTURE,
-  }));
+  let opportunitySnapshotAttempts = 0;
+  await page.route("**/data/opportunities.json", (route) => {
+    opportunitySnapshotAttempts += 1;
+    if (forecastRecoveryTest && opportunitySnapshotAttempts === 1) {
+      return route.abort("failed");
+    }
+    return route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: OPPORTUNITIES_FIXTURE,
+    });
+  });
   await page.route("**/data/structure-depth.json", (route) => route.fulfill({
     status: 200,
     contentType: "application/json",
@@ -607,7 +617,35 @@ test.beforeEach(async ({ page }, testInfo) => {
     }
   });
   await page.goto("/");
+  if (forecastRecoveryTest) {
+    await expect(page.locator(".forecast-state-card.unavailable")).toBeVisible();
+  } else {
+    await expect(page.locator(".availability-filter")).toBeVisible();
+  }
+});
+
+test("forecast failure hides unverified scores until an explicit retry succeeds", async ({ page }) => {
+  const unavailable = page.locator(".forecast-state-card.unavailable");
+  await expect(unavailable).toContainText("Forecast unavailable");
+  await expect(page.locator(".data-pill")).toContainText("Unavailable");
+  await expect(page.locator(".score-orbit")).toHaveCount(0);
+  await expect(page.locator(".site-card")).toHaveCount(0);
+  await expect(page.locator(".workspace")).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Log trip" })).toBeDisabled();
+  await expect(page.getByRole("button", { name: "Start a trip" })).toBeDisabled();
+  await expect(page.getByRole("button", { name: "Log a past trip" })).toBeDisabled();
+  await expect(page.locator(".source-grid")).toHaveCount(0);
+
+  await unavailable.getByRole("button", { name: "Retry forecast" }).click();
+
   await expect(page.locator(".availability-filter")).toBeVisible();
+  await expect(page.locator(".site-card").first()).toBeVisible();
+  await expect(page.locator(".score-orbit")).toHaveCount(1);
+  await expect(page.locator(".source-grid")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Log trip" })).toBeEnabled();
+  await expect(page.getByRole("button", { name: "Start a trip" })).toBeEnabled();
+  await expect(page.getByRole("button", { name: "Log a past trip" })).toBeEnabled();
+  await expect(unavailable).toHaveCount(0);
 });
 
 test("primary controls stay inside common phone viewports", async ({ page }) => {

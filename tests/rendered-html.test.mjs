@@ -36,7 +36,9 @@ test("server-renders the CastingCompass product shell", async () => {
   assert.match(html, /Pick the hours you have/);
   assert.match(html, /Work in progress/);
   assert.match(html, /currently hunts for California halibut only/);
-  assert.match(html, /It is <strong>not<\/strong> an 80% chance/i);
+  assert.match(html, /Loading the current forecast/i);
+  assert.match(html, /Wait for the fishing-location catalog to load/i);
+  assert.doesNotMatch(html, /class="score-orbit|class="site-card/i);
   assert.match(html, /CDFW Bay regulations/);
   assert.doesNotMatch(html, /codex-preview|Your site is taking shape|SkeletonPreview/i);
 });
