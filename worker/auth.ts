@@ -33,6 +33,7 @@ const SESSION_SECONDS = 30 * 24 * 60 * 60;
 const DELETION_RECEIPT_SECONDS = 30 * 24 * 60 * 60;
 const AGE_PROOF_SECONDS = 10 * 60;
 const MAX_DELETION_ATTEMPTS = 8;
+const ACCOUNT_DELETION_FENCE_LEASE_MS = 5 * 60 * 1000;
 const MAX_SAVED_SITES_PER_ACCOUNT = 100;
 const MAX_GEAR_PROFILES_PER_ACCOUNT = 100;
 const AUTH_RETENTION_DELETE_BATCH = 100;
@@ -48,6 +49,8 @@ const PWNED_PASSWORDS_TIMEOUT_MS = 3_000;
 const PWNED_PASSWORDS_MAX_RESPONSE_BYTES = 64 * 1024;
 const PASSWORD_RECOVERY_MINIMUM_RESPONSE_MS = 250;
 const DUMMY_PASSWORD_SALT = "Y2FzdGluZ2NvbXBhc3MtdGltaW5n";
+const PRIVACY_DELETION_TASK_BATCH = 5;
+const ACCOUNT_DELETION_INLINE_TASK_BATCH = 3;
 
 export interface AuthApiEnv extends TurnstileEnv, PrivacyExportEnv {
   DB?: D1DatabaseLike;
@@ -64,7 +67,7 @@ export interface AuthUser {
 
 interface AccountRequestOptions {
   onTripUpdated?(trip: TripRow): void;
-  onTripsReviewRequested?(trips: TripRow[]): void;
+  onTripReviewRequested?(trip: TripRow): void;
   waitUntil?(promise: Promise<unknown>): void;
   now?(): Date;
 }
@@ -115,188 +118,29 @@ function safeProviderIdentifier(value: unknown) {
   return typeof value === "string" && /^[A-Za-z0-9_.:-]{1,128}$/.test(value) ? value : undefined;
 }
 
-const CREATE_USERS_SQL = `CREATE TABLE IF NOT EXISTS users (
-  id TEXT PRIMARY KEY NOT NULL,
-  email TEXT NOT NULL UNIQUE,
-  password_salt TEXT NOT NULL,
-  password_hash TEXT NOT NULL,
-  age_eligibility_confirmed_at TEXT,
-  terms_accepted_at TEXT,
-  terms_version TEXT,
-  privacy_accepted_at TEXT,
-  privacy_version TEXT,
-  created_at TEXT NOT NULL,
-  updated_at TEXT NOT NULL
-)`;
-
-const CREATE_SESSIONS_SQL = `CREATE TABLE IF NOT EXISTS auth_sessions (
-  token_hash TEXT PRIMARY KEY NOT NULL,
-  user_id TEXT NOT NULL,
-  expires_at TEXT NOT NULL,
-  created_at TEXT NOT NULL,
-  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
-)`;
-
-const CREATE_SAVED_SITES_SQL = `CREATE TABLE IF NOT EXISTS saved_sites (
-  user_id TEXT NOT NULL,
-  site_id TEXT NOT NULL,
-  created_at TEXT NOT NULL,
-  PRIMARY KEY (user_id, site_id),
-  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
-)`;
-
-const CREATE_AUTH_ATTEMPTS_SQL = `CREATE TABLE IF NOT EXISTS auth_attempts (
-  id TEXT PRIMARY KEY NOT NULL,
-  email_hash TEXT NOT NULL,
-  attempted_at TEXT NOT NULL,
-  successful INTEGER NOT NULL DEFAULT 0
-)`;
-
-const CREATE_EMAIL_CHALLENGES_SQL = `CREATE TABLE IF NOT EXISTS email_challenges (
-  id TEXT PRIMARY KEY NOT NULL,
-  kind TEXT NOT NULL,
-  email TEXT NOT NULL,
-  user_id TEXT,
-  code_hash TEXT NOT NULL,
-  password_salt TEXT,
-  password_hash TEXT,
-  age_eligibility_confirmed_at TEXT,
-  terms_version TEXT,
-  privacy_version TEXT,
-  expires_at TEXT NOT NULL,
-  attempts INTEGER NOT NULL DEFAULT 0,
-  resend_count INTEGER NOT NULL DEFAULT 0,
-  created_at TEXT NOT NULL,
-  CONSTRAINT email_challenges_kind_check CHECK (kind in ('signup', 'password_reset'))
-)`;
-
-const CREATE_GEAR_PROFILES_SQL = `CREATE TABLE IF NOT EXISTS gear_profiles (
-  id TEXT PRIMARY KEY NOT NULL,
-  user_id TEXT NOT NULL,
-  name TEXT NOT NULL,
-  rod TEXT,
-  reel TEXT,
-  bait_lure TEXT,
-  rig TEXT,
-  created_at TEXT NOT NULL,
-  updated_at TEXT NOT NULL,
-  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
-)`;
-
-const CREATE_SIGNUP_AGE_PROOFS_SQL = `CREATE TABLE IF NOT EXISTS signup_age_proofs (
-  token_hash TEXT PRIMARY KEY NOT NULL,
-  confirmed_at TEXT NOT NULL,
-  gate_version TEXT NOT NULL,
-  expires_at TEXT NOT NULL,
-  consumed_at TEXT,
-  created_at TEXT NOT NULL
-)`;
-
-const CREATE_PRIVACY_DELETION_JOBS_SQL = `CREATE TABLE IF NOT EXISTS privacy_deletion_jobs (
-  id TEXT PRIMARY KEY NOT NULL,
-  receipt_hash TEXT NOT NULL UNIQUE,
-  scope TEXT NOT NULL CHECK (scope IN ('account', 'trip')),
-  subject_hash TEXT NOT NULL,
-  owner_subject_hash TEXT NOT NULL,
-  state TEXT NOT NULL CHECK (state IN ('active_data_removed', 'purging', 'completed', 'needs_attention')),
-  objects_total INTEGER NOT NULL DEFAULT 0,
-  objects_deleted INTEGER NOT NULL DEFAULT 0,
-  last_error_code TEXT,
-  requested_at TEXT NOT NULL,
-  active_data_removed_at TEXT,
-  completed_at TEXT,
-  updated_at TEXT NOT NULL
-)`;
-
-const CREATE_PRIVACY_DELETION_TASKS_SQL = `CREATE TABLE IF NOT EXISTS privacy_deletion_tasks (
-  id TEXT PRIMARY KEY NOT NULL,
-  job_id TEXT NOT NULL,
-  object_key TEXT,
-  object_key_hash TEXT NOT NULL,
-  object_store TEXT NOT NULL DEFAULT 'trip_photos' CHECK (object_store IN ('trip_photos', 'privacy_exports')),
-  state TEXT NOT NULL CHECK (state IN ('pending', 'leased', 'completed', 'needs_attention')),
-  attempts INTEGER NOT NULL DEFAULT 0,
-  available_at TEXT NOT NULL,
-  lease_expires_at TEXT,
-  lease_token TEXT,
-  last_error_code TEXT,
-  created_at TEXT NOT NULL,
-  updated_at TEXT NOT NULL,
-  completed_at TEXT,
-  FOREIGN KEY (job_id) REFERENCES privacy_deletion_jobs(id) ON DELETE CASCADE,
-  UNIQUE (job_id, object_key_hash),
-  CHECK ((state = 'completed' AND object_key IS NULL)
-    OR (state != 'completed' AND object_key IS NOT NULL))
-)`;
-
-const CREATE_PRIVACY_EXPORT_JOBS_SQL = `CREATE TABLE IF NOT EXISTS privacy_export_jobs (
-  id TEXT PRIMARY KEY NOT NULL,
-  user_id TEXT,
-  owner_subject_hash TEXT NOT NULL,
-  state TEXT NOT NULL CHECK (state IN ('pending', 'queued', 'processing', 'retry', 'completed', 'canceled', 'expired', 'needs_attention')),
-  attempts INTEGER NOT NULL DEFAULT 0 CHECK (attempts >= 0 AND attempts <= 5),
-  available_at TEXT NOT NULL,
-  lease_expires_at TEXT,
-  lease_token TEXT,
-  object_key TEXT,
-  object_key_hash TEXT,
-  content_sha256 TEXT,
-  size_bytes INTEGER,
-  record_count INTEGER,
-  last_error_code TEXT,
-  requested_at TEXT NOT NULL,
-  updated_at TEXT NOT NULL,
-  completed_at TEXT,
-  expires_at TEXT,
-  CHECK ((object_key IS NULL AND object_key_hash IS NULL)
-    OR (object_key IS NOT NULL AND object_key_hash IS NOT NULL)),
-  CHECK (state != 'completed' OR (user_id IS NOT NULL AND object_key IS NOT NULL
-    AND content_sha256 IS NOT NULL AND size_bytes IS NOT NULL AND record_count IS NOT NULL
-    AND completed_at IS NOT NULL AND expires_at IS NOT NULL)),
-  CHECK (state != 'expired' OR (user_id IS NULL AND object_key IS NULL))
-)`;
+const AUTH_SCHEMA_READY_SQL = `SELECT
+  (SELECT COUNT(*) FROM sqlite_master WHERE type = 'table' AND name IN (
+    'users', 'auth_sessions', 'saved_sites', 'auth_attempts', 'email_challenges',
+    'gear_profiles', 'signup_age_proofs', 'privacy_deletion_jobs',
+    'privacy_deletion_tasks', 'privacy_export_jobs', 'account_deletion_fences',
+    'trip_photo_upload_reservations', 'trips'
+  )) AS required_tables,
+  (SELECT COUNT(*) FROM pragma_table_info('trips') WHERE name = 'photo_key_hash') AS photo_hash_columns`;
 
 async function initialize(db: D1DatabaseLike) {
   let pending = initializedDatabases.get(db as object);
   if (!pending) {
     pending = (async () => {
-      await db.batch([
-        db.prepare(CREATE_USERS_SQL),
-        db.prepare(CREATE_SESSIONS_SQL),
-        db.prepare(CREATE_SAVED_SITES_SQL),
-        db.prepare(CREATE_AUTH_ATTEMPTS_SQL),
-        db.prepare(CREATE_EMAIL_CHALLENGES_SQL),
-        db.prepare(CREATE_GEAR_PROFILES_SQL),
-        db.prepare(CREATE_SIGNUP_AGE_PROOFS_SQL),
-        db.prepare(CREATE_PRIVACY_DELETION_JOBS_SQL),
-        db.prepare(CREATE_PRIVACY_DELETION_TASKS_SQL),
-        db.prepare(CREATE_PRIVACY_EXPORT_JOBS_SQL),
-      ]);
-      await db.batch([
-        db.prepare("CREATE INDEX IF NOT EXISTS auth_sessions_user_idx ON auth_sessions (user_id, expires_at)"),
-        db.prepare("CREATE INDEX IF NOT EXISTS auth_sessions_expires_idx ON auth_sessions (expires_at)"),
-        db.prepare("CREATE INDEX IF NOT EXISTS saved_sites_user_created_idx ON saved_sites (user_id, created_at DESC)"),
-        db.prepare("CREATE INDEX IF NOT EXISTS auth_attempts_email_time_idx ON auth_attempts (email_hash, attempted_at)"),
-        db.prepare("CREATE INDEX IF NOT EXISTS auth_attempts_attempted_idx ON auth_attempts (attempted_at)"),
-        db.prepare("CREATE INDEX IF NOT EXISTS email_challenges_email_time_idx ON email_challenges (email, created_at)"),
-        db.prepare("CREATE INDEX IF NOT EXISTS email_challenges_expires_idx ON email_challenges (expires_at)"),
-        db.prepare("CREATE INDEX IF NOT EXISTS email_challenges_user_idx ON email_challenges (user_id) WHERE user_id IS NOT NULL"),
-        db.prepare("CREATE UNIQUE INDEX IF NOT EXISTS gear_profiles_user_name_unique ON gear_profiles (user_id, name)"),
-        db.prepare("CREATE INDEX IF NOT EXISTS gear_profiles_user_updated_idx ON gear_profiles (user_id, updated_at)"),
-        db.prepare("CREATE INDEX IF NOT EXISTS signup_age_proofs_expiry_idx ON signup_age_proofs (expires_at, consumed_at)"),
-        db.prepare("CREATE INDEX IF NOT EXISTS signup_age_proofs_consumed_idx ON signup_age_proofs (consumed_at) WHERE consumed_at IS NOT NULL"),
-        db.prepare("CREATE INDEX IF NOT EXISTS privacy_deletion_jobs_state_updated_idx ON privacy_deletion_jobs (state, updated_at)"),
-        db.prepare("CREATE INDEX IF NOT EXISTS privacy_deletion_jobs_owner_state_idx ON privacy_deletion_jobs (owner_subject_hash, state, updated_at)"),
-        db.prepare("CREATE INDEX IF NOT EXISTS privacy_deletion_jobs_scope_subject_idx ON privacy_deletion_jobs (scope, subject_hash)"),
-        db.prepare("CREATE INDEX IF NOT EXISTS privacy_deletion_jobs_state_completed_idx ON privacy_deletion_jobs (state, completed_at)"),
-        db.prepare("CREATE INDEX IF NOT EXISTS privacy_deletion_tasks_retry_idx ON privacy_deletion_tasks (state, available_at, lease_expires_at)"),
-        db.prepare("CREATE INDEX IF NOT EXISTS privacy_deletion_tasks_store_retry_idx ON privacy_deletion_tasks (object_store, state, available_at, lease_expires_at)"),
-        db.prepare("CREATE UNIQUE INDEX IF NOT EXISTS privacy_export_jobs_active_user_unique ON privacy_export_jobs (user_id) WHERE user_id IS NOT NULL AND state IN ('pending', 'queued', 'processing', 'retry', 'completed', 'needs_attention')"),
-        db.prepare("CREATE UNIQUE INDEX IF NOT EXISTS privacy_export_jobs_object_key_unique ON privacy_export_jobs (object_key) WHERE object_key IS NOT NULL"),
-        db.prepare("CREATE INDEX IF NOT EXISTS privacy_export_jobs_dispatch_idx ON privacy_export_jobs (state, available_at, lease_expires_at)"),
-        db.prepare("CREATE INDEX IF NOT EXISTS privacy_export_jobs_expiry_idx ON privacy_export_jobs (state, expires_at, lease_expires_at)"),
-        db.prepare("CREATE INDEX IF NOT EXISTS privacy_export_jobs_owner_idx ON privacy_export_jobs (owner_subject_hash, updated_at)"),
-      ]);
+      const readiness = await db.prepare(AUTH_SCHEMA_READY_SQL)
+        .first<{ required_tables: number; photo_hash_columns: number }>();
+      if (Number(readiness?.required_tables ?? 0) !== 13
+        || Number(readiness?.photo_hash_columns ?? 0) !== 1) {
+        throw new AuthError(
+          503,
+          "auth_schema_unavailable",
+          "Account services are paused until the reviewed database migration is complete.",
+        );
+      }
     })().catch((error) => {
       initializedDatabases.delete(db as object);
       throw error;
@@ -306,9 +150,25 @@ async function initialize(db: D1DatabaseLike) {
   await pending;
 }
 
-interface AuthenticatedSession {
+export interface AuthenticatedSession {
   user: AuthUser;
+  accountVersion: AuthenticatedAccountVersion;
+  sessionTokenHash: string;
+  sessionExpiresAt: string;
+  deletionFenced: boolean;
   cookieName: typeof SESSION_COOKIE | typeof LEGACY_SESSION_COOKIE;
+}
+
+interface AuthenticatedAccountVersion {
+  id: string;
+  email: string;
+  ageEligibilityConfirmedAt: string;
+  termsAcceptedAt: string | null;
+  termsVersion: string | null;
+  privacyAcceptedAt: string | null;
+  privacyVersion: string | null;
+  createdAt: string;
+  updatedAt: string;
 }
 
 async function getAuthenticatedSession(request: Request, env: AuthApiEnv): Promise<AuthenticatedSession | null> {
@@ -316,21 +176,56 @@ async function getAuthenticatedSession(request: Request, env: AuthApiEnv): Promi
   await initialize(env.DB);
   const now = new Date().toISOString();
   for (const presented of presentedSessionTokens(request)) {
+    const tokenHash = await sha256(presented.token);
     const row = await env.DB
       .prepare(`SELECT users.id, users.email,
+          users.age_eligibility_confirmed_at, users.terms_accepted_at, users.terms_version,
+          users.privacy_accepted_at, users.privacy_version, users.created_at, users.updated_at,
+          auth_sessions.expires_at AS session_expires_at,
           CASE WHEN users.age_eligibility_confirmed_at IS NOT NULL THEN 1 ELSE 0 END AS age_eligible,
           CASE WHEN users.age_eligibility_confirmed_at IS NOT NULL
             AND users.terms_version = ? AND users.privacy_version = ?
-            THEN 1 ELSE 0 END AS legal_accepted
+            THEN 1 ELSE 0 END AS legal_accepted,
+          CASE WHEN EXISTS (SELECT 1 FROM account_deletion_fences
+            WHERE account_deletion_fences.user_id = users.id)
+            THEN 1 ELSE 0 END AS deletion_fenced
         FROM auth_sessions
         JOIN users ON users.id = auth_sessions.user_id
         WHERE auth_sessions.token_hash = ? AND auth_sessions.expires_at > ?
         LIMIT 1`)
-      .bind(LEGAL_VERSION, LEGAL_VERSION, await sha256(presented.token), now)
-      .first<{ id: string; email: string; age_eligible: number; legal_accepted: number }>();
+      .bind(LEGAL_VERSION, LEGAL_VERSION, tokenHash, now)
+      .first<{
+        id: string;
+        email: string;
+        age_eligibility_confirmed_at: string | null;
+        terms_accepted_at: string | null;
+        terms_version: string | null;
+        privacy_accepted_at: string | null;
+        privacy_version: string | null;
+        created_at: string;
+        updated_at: string;
+        session_expires_at: string;
+        age_eligible: number;
+        legal_accepted: number;
+        deletion_fenced: number;
+      }>();
     if (row) {
       return {
+        accountVersion: {
+          id: row.id,
+          email: row.email,
+          ageEligibilityConfirmedAt: row.age_eligibility_confirmed_at ?? "",
+          termsAcceptedAt: row.terms_accepted_at,
+          termsVersion: row.terms_version,
+          privacyAcceptedAt: row.privacy_accepted_at,
+          privacyVersion: row.privacy_version,
+          createdAt: row.created_at,
+          updatedAt: row.updated_at,
+        },
+        sessionTokenHash: tokenHash,
+        sessionExpiresAt: row.session_expires_at,
         cookieName: presented.cookieName,
+        deletionFenced: Boolean(row.deletion_fenced),
         user: {
           id: row.id,
           email: row.email,
@@ -344,7 +239,167 @@ async function getAuthenticatedSession(request: Request, env: AuthApiEnv): Promi
 }
 
 export async function getAuthenticatedUser(request: Request, env: AuthApiEnv): Promise<AuthUser | null> {
-  return (await getAuthenticatedSession(request, env))?.user ?? null;
+  const session = await getAuthenticatedSession(request, env);
+  return session && !session.deletionFenced ? session.user : null;
+}
+
+export interface OwnerAuthorizationOptions {
+  currentLegalAcceptanceRequired: boolean;
+  deletionFenceAccessAllowed: boolean;
+}
+
+export type OwnerAuthorizationResult =
+  | { session: AuthenticatedSession; response: null }
+  | { session: null; response: Response };
+
+export type DeletionReceiptAuthorizationResult =
+  | { response: null }
+  | { response: Response };
+
+export type OptionalSessionAuthorizationResult =
+  | { response: null }
+  | { response: Response };
+
+/**
+ * Resolve registry-declared owner access before a protected request body is read.
+ * Receipt routes use their separate resource-token preflight, while optional-
+ * session routes deliberately admit both authenticated and anonymous callers.
+ */
+export async function authorizeOwnerRequest(
+  request: Request,
+  env: AuthApiEnv,
+  options: OwnerAuthorizationOptions,
+): Promise<OwnerAuthorizationResult> {
+  if (!env.DB) {
+    return {
+      session: null,
+      response: errorResponse(503, "storage_unavailable", "Account storage is temporarily unavailable."),
+    };
+  }
+  try {
+    const session = await getAuthenticatedSession(request, env);
+    if (!session) return { session: null, response: unauthorizedResponse() };
+    if (session.deletionFenced && !options.deletionFenceAccessAllowed) {
+      return { session: null, response: accountDeletionInProgressResponse() };
+    }
+    if (options.currentLegalAcceptanceRequired && !session.user.legalAccepted) {
+      return {
+        session: null,
+        response: legalAcceptanceRequiredResponse(session.user.ageEligible),
+      };
+    }
+    return { session, response: null };
+  } catch (error) {
+    return { session: null, response: accountRequestErrorResponse(error) };
+  }
+}
+
+/**
+ * Bind the registry's optional-session class to the two reviewed account
+ * routes before a request body is read. These routes intentionally admit an
+ * anonymous caller, but account storage and schema still have to be readable;
+ * any future optional-session route must receive its own explicit preflight.
+ */
+export async function authorizeOptionalSessionRequest(
+  request: Request,
+  env: AuthApiEnv,
+): Promise<OptionalSessionAuthorizationResult> {
+  const url = new URL(request.url);
+  const reviewedRoute =
+    (request.method === "GET" && url.pathname === "/api/auth/session") ||
+    (request.method === "POST" && url.pathname === "/api/auth/logout");
+  if (!reviewedRoute) {
+    return {
+      response: errorResponse(
+        503,
+        "route_unavailable",
+        "This API route is temporarily unavailable.",
+      ),
+    };
+  }
+  if (!env.DB) {
+    return {
+      response: errorResponse(
+        503,
+        "storage_unavailable",
+        "Account storage is temporarily unavailable.",
+      ),
+    };
+  }
+  try {
+    await initialize(env.DB);
+    return { response: null };
+  } catch (error) {
+    return { response: accountRequestErrorResponse(error) };
+  }
+}
+
+/**
+ * Resolve the registry's deletion-receipt authority before account dispatch.
+ * The account handler intentionally repeats this live lookup at execution so
+ * an expired or removed receipt cannot survive on cached preflight state.
+ */
+export async function authorizeDeletionReceiptRequest(
+  request: Request,
+  env: AuthApiEnv,
+): Promise<DeletionReceiptAuthorizationResult> {
+  const url = new URL(request.url);
+  if (request.method !== "GET" || url.pathname !== "/api/privacy/deletion-status") {
+    return {
+      response: errorResponse(
+        503,
+        "route_unavailable",
+        "This API route is temporarily unavailable.",
+      ),
+    };
+  }
+  if (!env.DB) {
+    return {
+      response: errorResponse(
+        503,
+        "storage_unavailable",
+        "Account storage is temporarily unavailable.",
+      ),
+    };
+  }
+  try {
+    await initialize(env.DB);
+    const receipt = parseCookies(request.headers.get("Cookie") ?? "").get(DELETION_RECEIPT_COOKIE);
+    if (!receipt || !/^[A-Za-z0-9_-]{40,160}$/.test(receipt)) {
+      return {
+        response: errorResponse(
+          404,
+          "deletion_receipt_not_found",
+          "No deletion status receipt was found in this browser.",
+        ),
+      };
+    }
+    const job = await selectDeletionJobByReceipt(env.DB, receipt);
+    if (!job) {
+      return {
+        response: errorResponse(
+          404,
+          "deletion_receipt_not_found",
+          "That deletion status receipt is no longer available.",
+        ),
+      };
+    }
+    return { response: null };
+  } catch (error) {
+    return { response: accountRequestErrorResponse(error) };
+  }
+}
+
+function accountRequestAllowedWhileDeletionFenced(request: Request) {
+  const url = new URL(request.url);
+  if (url.pathname === "/api/profile") {
+    return request.method === "GET" || request.method === "DELETE";
+  }
+  if (request.method !== "GET") return false;
+  return url.pathname === "/api/profile/export" ||
+    API_ROUTE_PATTERNS.profileExportPhoto.test(url.pathname) ||
+    API_ROUTE_PATTERNS.profileExportStatus.test(url.pathname) ||
+    API_ROUTE_PATTERNS.profileExportDownload.test(url.pathname);
 }
 
 export async function handleAccountRequest(
@@ -363,6 +418,14 @@ export async function handleAccountRequest(
     !url.pathname.startsWith("/api/profile/reviews/") &&
     !url.pathname.startsWith("/api/profile/trips/")
   ) return null;
+  if (url.pathname === "/api/privacy/deletion-status" && request.method === "DELETE") {
+    try {
+      assertSameOrigin(request);
+      return jsonResponse({ cleared: true }, 200, clearDeletionReceiptCookie());
+    } catch (error) {
+      return accountRequestErrorResponse(error);
+    }
+  }
   if (!env.DB) return errorResponse(503, "storage_unavailable", "Account storage is temporarily unavailable.");
 
   const db = env.DB;
@@ -378,9 +441,8 @@ export async function handleAccountRequest(
       return accountRequestErrorResponse(error);
     }
   }
-  await initialize(db);
-
   try {
+    await initialize(db);
     if (url.pathname === "/api/auth/session") {
       if (request.method !== "GET") return methodNotAllowed("GET");
       const session = await getAuthenticatedSession(request, env);
@@ -388,10 +450,13 @@ export async function handleAccountRequest(
         return jsonResponse(
           { user: null },
           200,
-          presentedSessionTokens(request).length > 0 ? clearSessionCookies(request) : undefined,
+          hasPresentedSessionCookie(request) ? clearSessionCookies(request) : undefined,
         );
       }
-      if (session.cookieName === LEGACY_SESSION_COOKIE && new URL(request.url).protocol === "https:") {
+      if (
+        !session.deletionFenced && session.cookieName === LEGACY_SESSION_COOKIE &&
+        new URL(request.url).protocol === "https:"
+      ) {
         return createSessionResponse(db, request, session.user);
       }
       return jsonResponse({ user: session.user });
@@ -424,13 +489,24 @@ export async function handleAccountRequest(
         throw error;
       }
       const proof = randomSecret(32);
+      const proofHash = await sha256(proof);
       const createdAt = new Date();
       const expiresAt = new Date(createdAt.getTime() + AGE_PROOF_SECONDS * 1000);
-      await db.prepare(`INSERT INTO signup_age_proofs
-        (token_hash, confirmed_at, gate_version, expires_at, consumed_at, created_at)
-        VALUES (?, ?, ?, ?, NULL, ?)`)
-        .bind(await sha256(proof), confirmedAt, AGE_GATE_VERSION, expiresAt.toISOString(), createdAt.toISOString())
-        .run();
+      const proofCandidate: SignupAgeProofCandidate = {
+        tokenHash: proofHash,
+        confirmedAt,
+        gateVersion: AGE_GATE_VERSION,
+        expiresAt: expiresAt.toISOString(),
+        createdAt: createdAt.toISOString(),
+      };
+      if (!await createSignupAgeProof(db, proofCandidate)) {
+        await cleanupSignupAgeProofCandidate(db, proofCandidate);
+        return errorResponse(
+          503,
+          "eligibility_proof_unconfirmed",
+          "Age eligibility could not be confirmed. Retry the age step.",
+        );
+      }
       return jsonResponse({
         eligibilityProof: proof,
         expiresInMinutes: AGE_PROOF_SECONDS / 60,
@@ -439,11 +515,7 @@ export async function handleAccountRequest(
     }
 
     if (url.pathname === "/api/privacy/deletion-status") {
-      if (request.method === "DELETE") {
-        assertSameOrigin(request);
-        return jsonResponse({ cleared: true }, 200, clearDeletionReceiptCookie());
-      }
-      if (request.method !== "GET") return methodNotAllowed("GET, DELETE");
+      if (request.method !== "GET") return methodNotAllowed("GET");
       const receipt = parseCookies(request.headers.get("Cookie") ?? "").get(DELETION_RECEIPT_COOKIE);
       if (!receipt || !/^[A-Za-z0-9_-]{40,160}$/.test(receipt)) {
         return errorResponse(404, "deletion_receipt_not_found", "No deletion status receipt was found in this browser.");
@@ -472,29 +544,42 @@ export async function handleAccountRequest(
       await assertEmailChallengeAllowed(db, email);
       const id = `challenge_${crypto.randomUUID()}`;
       const code = randomCode();
+      const codeHash = await sha256(`${id}:${code}`);
       const salt = randomSecret(18);
       const timestamp = new Date();
-      await db.prepare(`INSERT INTO email_challenges
-        (id, kind, email, user_id, code_hash, password_salt, password_hash,
-          age_eligibility_confirmed_at, terms_version, privacy_version, expires_at, attempts, created_at)
-        VALUES (?, 'signup', ?, NULL, ?, ?, ?, ?, ?, ?, ?, 0, ?)`)
-        .bind(
-          id,
-          email,
-          await sha256(`${id}:${code}`),
-          salt,
-          await hashPassword(password, salt),
-          ageEligibilityConfirmedAt,
-          LEGAL_VERSION,
-          LEGAL_VERSION,
-          new Date(timestamp.getTime() + 15 * 60 * 1000).toISOString(),
-          timestamp.toISOString(),
-        )
-        .run();
+      const challengeCutoff = new Date(timestamp.getTime() - 60 * 60 * 1000).toISOString();
+      const challenge: EmailChallengeRow = {
+        id,
+        kind: "signup",
+        email,
+        user_id: null,
+        code_hash: codeHash,
+        password_salt: salt,
+        password_hash: await hashPassword(password, salt),
+        age_eligibility_confirmed_at: ageEligibilityConfirmedAt,
+        terms_version: LEGAL_VERSION,
+        privacy_version: LEGAL_VERSION,
+        expires_at: new Date(timestamp.getTime() + 15 * 60 * 1000).toISOString(),
+        attempts: 0,
+        resend_count: 0,
+        created_at: timestamp.toISOString(),
+      };
+      const challengeClaim = await createEmailChallenge(db, challenge, challengeCutoff);
+      if (challengeClaim === "rate_limited") {
+        throw new AuthError(429, "too_many_codes", "Too many email codes were requested. Try again in an hour.");
+      }
+      if (challengeClaim !== "created") {
+        await cleanupEmailChallengeCandidate(db, challenge);
+        throw new AuthError(
+          503,
+          "challenge_creation_unconfirmed",
+          "Email verification could not be confirmed. Restart signup from the age step.",
+        );
+      }
       try {
         await sendVerificationEmail(env, email, code, "Confirm your CastingCompass account");
       } catch (error) {
-        await db.prepare("DELETE FROM email_challenges WHERE id = ?").bind(id).run();
+        await cleanupEmailChallengeCandidate(db, challenge);
         throw error;
       }
       return jsonResponse({ challengeId: id, expiresInMinutes: 15 });
@@ -519,17 +604,127 @@ export async function handleAccountRequest(
         legalAccepted: true,
       };
       const timestamp = new Date().toISOString();
-      await db.batch([
-        db.prepare(`INSERT INTO users (id, email, password_salt, password_hash,
-          age_eligibility_confirmed_at, terms_accepted_at, terms_version,
-          privacy_accepted_at, privacy_version, created_at, updated_at)
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`).bind(
+      try {
+        await db.batch([
+          db.prepare(`INSERT INTO users (id, email, password_salt, password_hash,
+            age_eligibility_confirmed_at, terms_accepted_at, terms_version,
+            privacy_accepted_at, privacy_version, created_at, updated_at)
+            SELECT ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
+            WHERE EXISTS (SELECT 1 FROM email_challenges
+              WHERE id = ? AND kind = 'signup' AND email = ? AND code_hash = ?
+                AND password_salt = ? AND password_hash = ?
+                AND age_eligibility_confirmed_at = ? AND terms_version = ?
+                AND privacy_version = ? AND created_at = ? AND attempts = ?
+                AND resend_count = ? AND expires_at = ? AND expires_at > ?)`).bind(
+              user.id, user.email, challenge.password_salt, challenge.password_hash,
+              challenge.age_eligibility_confirmed_at, timestamp, LEGAL_VERSION,
+              timestamp, LEGAL_VERSION, timestamp, timestamp,
+              challenge.id, challenge.email, challenge.code_hash,
+              challenge.password_salt, challenge.password_hash,
+              challenge.age_eligibility_confirmed_at, challenge.terms_version,
+              challenge.privacy_version, challenge.created_at, Number(challenge.attempts),
+              Number(challenge.resend_count ?? 0), challenge.expires_at, timestamp,
+            ),
+          db.prepare(`DELETE FROM email_challenges
+            WHERE id = ? AND kind = 'signup' AND email = ? AND code_hash = ?
+              AND password_salt = ? AND password_hash = ?
+              AND age_eligibility_confirmed_at = ? AND terms_version = ?
+              AND privacy_version = ? AND created_at = ? AND attempts = ?
+              AND resend_count = ? AND expires_at = ? AND expires_at > ?`)
+            .bind(
+              challenge.id, challenge.email, challenge.code_hash,
+              challenge.password_salt, challenge.password_hash,
+              challenge.age_eligibility_confirmed_at, challenge.terms_version,
+              challenge.privacy_version, challenge.created_at, Number(challenge.attempts),
+              Number(challenge.resend_count ?? 0), challenge.expires_at, timestamp,
+            ),
+        ]);
+      } catch {
+        // A committed atomic signup can lose its batch response. Only the complete post-state decides.
+      }
+      let receipt: AccountCreationReceiptRow | null = null;
+      let receiptReadSucceeded = false;
+      try {
+        receipt = await db.prepare(`SELECT
+            (SELECT COUNT(*) FROM users
+              WHERE id = ? AND email = ? AND password_salt = ? AND password_hash = ?
+                AND age_eligibility_confirmed_at = ? AND terms_accepted_at = ?
+                AND terms_version = ? AND privacy_accepted_at = ? AND privacy_version = ?
+                AND created_at = ? AND updated_at = ?) AS exact_user_count,
+            (SELECT COUNT(*) FROM users WHERE id = ?) AS any_user_count,
+            (SELECT COUNT(*) FROM users WHERE email = ?) AS email_user_count,
+            (SELECT COUNT(*) FROM auth_sessions WHERE user_id = ?) AS session_count,
+            (SELECT COUNT(*) FROM email_challenges
+              WHERE id = ? AND kind = 'signup' AND email = ? AND code_hash = ?
+                AND password_salt = ? AND password_hash = ?
+                AND age_eligibility_confirmed_at = ? AND terms_version = ?
+                AND privacy_version = ? AND created_at = ? AND attempts = ?
+                AND resend_count = ? AND expires_at = ? AND expires_at > ?) AS exact_challenge_count,
+            (SELECT COUNT(*) FROM email_challenges WHERE id = ?) AS any_challenge_count,
+            (SELECT COUNT(*) FROM account_deletion_fences WHERE user_id = ?) AS fence_count`)
+          .bind(
             user.id, user.email, challenge.password_salt, challenge.password_hash,
             challenge.age_eligibility_confirmed_at, timestamp, LEGAL_VERSION,
             timestamp, LEGAL_VERSION, timestamp, timestamp,
-          ),
-        db.prepare("DELETE FROM email_challenges WHERE id = ?").bind(challenge.id),
-      ]);
+            user.id, user.email, user.id,
+            challenge.id, challenge.email, challenge.code_hash,
+            challenge.password_salt, challenge.password_hash,
+            challenge.age_eligibility_confirmed_at, challenge.terms_version,
+            challenge.privacy_version, challenge.created_at, Number(challenge.attempts),
+            Number(challenge.resend_count ?? 0), challenge.expires_at, timestamp,
+            challenge.id, user.id,
+          )
+          .first<AccountCreationReceiptRow>();
+        receiptReadSucceeded = true;
+      } catch {
+        // Welcome delivery and session issuance must not escape an unreadable account boundary.
+      }
+      const exactUserCount = Number(receipt?.exact_user_count);
+      const anyUserCount = Number(receipt?.any_user_count);
+      const emailUserCount = Number(receipt?.email_user_count);
+      const sessionCount = Number(receipt?.session_count);
+      const exactChallengeCount = Number(receipt?.exact_challenge_count);
+      const anyChallengeCount = Number(receipt?.any_challenge_count);
+      const fenceCount = Number(receipt?.fence_count);
+      const counts = [
+        exactUserCount,
+        anyUserCount,
+        emailUserCount,
+        sessionCount,
+        exactChallengeCount,
+        anyChallengeCount,
+        fenceCount,
+      ];
+      if (!receiptReadSucceeded || counts.some((count) => !Number.isSafeInteger(count) || count < 0)
+        || exactUserCount > 1 || anyUserCount > 1 || emailUserCount > 1
+        || exactChallengeCount > 1 || anyChallengeCount > 1 || fenceCount > 1
+        || exactUserCount > anyUserCount || exactUserCount > emailUserCount
+        || exactChallengeCount > anyChallengeCount) {
+        throw new AuthError(
+          503,
+          "account_creation_unconfirmed",
+          "Account creation could not be confirmed. Try signing in before starting signup again.",
+        );
+      }
+      if (exactUserCount === 0 && anyUserCount === 0 && emailUserCount === 1) {
+        throw new AuthError(409, "email_in_use", "An account already uses this email.");
+      }
+      if (exactUserCount === 0 && anyUserCount === 0 && emailUserCount === 0
+        && anyChallengeCount === 1 && exactChallengeCount === 0) {
+        throw new AuthError(
+          409,
+          "signup_challenge_changed",
+          "That verification request changed. Use its latest code or start signup again.",
+        );
+      }
+      if (exactUserCount !== 1 || anyUserCount !== 1 || emailUserCount !== 1
+        || sessionCount !== 0 || anyChallengeCount !== 0 || fenceCount !== 0) {
+        throw new AuthError(
+          503,
+          "account_creation_unconfirmed",
+          "Account creation could not be confirmed. Try signing in before starting signup again.",
+        );
+      }
       // Account creation should succeed even if the optional welcome message is
       // delayed. Verification already proved ownership of the address.
       await sendWelcomeEmail(env, user.email, user.id).catch((error) => {
@@ -564,21 +759,18 @@ export async function handleAccountRequest(
           return passwordRecoveryResendResponse(challengeId);
         }
         const code = randomCode();
+        const codeHash = await sha256(`${challenge.id}:${code}`);
         const timestamp = new Date();
-        await db.prepare(`UPDATE email_challenges
-          SET code_hash = ?, expires_at = ?, attempts = 0, resend_count = resend_count + 1, created_at = ?
-          WHERE id = ?`)
-          .bind(
-            await sha256(`${challenge.id}:${code}`),
-            new Date(timestamp.getTime() + 15 * 60 * 1000).toISOString(),
-            timestamp.toISOString(),
-            challenge.id,
-          )
-          .run();
+        const nextChallenge = resentEmailChallenge(challenge, codeHash, timestamp);
+        if (await transitionEmailChallengeForResend(db, challenge, nextChallenge) !== "updated") {
+          await cleanupEmailChallengeCandidate(db, nextChallenge);
+          await responseNotBefore;
+          return passwordRecoveryResendResponse(challengeId);
+        }
         const delivery = deferPasswordRecoveryEmail(
           options,
           db,
-          challenge.id,
+          nextChallenge,
           sendVerificationEmail(
             env,
             challenge.email,
@@ -604,24 +796,29 @@ export async function handleAccountRequest(
         throw new AuthError(429, "too_many_codes", "Too many email codes were requested. Start again in an hour.");
       }
       const code = randomCode();
+      const codeHash = await sha256(`${challenge.id}:${code}`);
       const timestamp = new Date();
-      await sendVerificationEmail(
-        env,
-        challenge.email,
-        code,
-        challenge.kind === "signup" ? "Confirm your CastingCompass account" : "Reset your CastingCompass password",
-        `${challenge.id}:resend:${Number(challenge.resend_count ?? 0) + 1}`,
-      );
-      await db.prepare(`UPDATE email_challenges
-        SET code_hash = ?, expires_at = ?, attempts = 0, resend_count = resend_count + 1, created_at = ?
-        WHERE id = ?`)
-        .bind(
-          await sha256(`${challenge.id}:${code}`),
-          new Date(timestamp.getTime() + 15 * 60 * 1000).toISOString(),
-          timestamp.toISOString(),
-          challenge.id,
-        )
-        .run();
+      const nextChallenge = resentEmailChallenge(challenge, codeHash, timestamp);
+      const transition = await transitionEmailChallengeForResend(db, challenge, nextChallenge);
+      if (transition !== "updated") {
+        if (transition === "unconfirmed") {
+          await cleanupEmailChallengeCandidate(db, nextChallenge);
+          throw new AuthError(503, "challenge_update_unconfirmed", "The new verification code could not be confirmed. Restart email verification.");
+        }
+        throw new AuthError(409, "challenge_changed", "That verification request changed. Use its latest code or start again.");
+      }
+      try {
+        await sendVerificationEmail(
+          env,
+          challenge.email,
+          code,
+          "Confirm your CastingCompass account",
+          `${challenge.id}:resend:${Number(challenge.resend_count ?? 0) + 1}`,
+        );
+      } catch (error) {
+        await cleanupEmailChallengeCandidate(db, nextChallenge);
+        throw error;
+      }
       return jsonResponse({ requested: true, challengeId, expiresInMinutes: 15, retryAfterSeconds: 60 });
     }
 
@@ -654,16 +851,34 @@ export async function handleAccountRequest(
       }
       const id = `challenge_${crypto.randomUUID()}`;
       const code = randomCode();
+      const codeHash = await sha256(`${id}:${code}`);
       const timestamp = new Date();
-      await db.prepare(`INSERT INTO email_challenges
-        (id, kind, email, user_id, code_hash, expires_at, attempts, created_at)
-        VALUES (?, 'password_reset', ?, ?, ?, ?, 0, ?)`)
-        .bind(id, email, user.id, await sha256(`${id}:${code}`), new Date(timestamp.getTime() + 15 * 60 * 1000).toISOString(), timestamp.toISOString())
-        .run();
+      const challengeCutoff = new Date(timestamp.getTime() - 60 * 60 * 1000).toISOString();
+      const challenge: EmailChallengeRow = {
+        id,
+        kind: "password_reset",
+        email,
+        user_id: user.id,
+        code_hash: codeHash,
+        password_salt: null,
+        password_hash: null,
+        age_eligibility_confirmed_at: null,
+        terms_version: null,
+        privacy_version: null,
+        expires_at: new Date(timestamp.getTime() + 15 * 60 * 1000).toISOString(),
+        attempts: 0,
+        resend_count: 0,
+        created_at: timestamp.toISOString(),
+      };
+      if (await createEmailChallenge(db, challenge, challengeCutoff) !== "created") {
+        await cleanupEmailChallengeCandidate(db, challenge);
+        await responseNotBefore;
+        return passwordRecoveryRequestedResponse();
+      }
       const delivery = deferPasswordRecoveryEmail(
         options,
         db,
-        id,
+        challenge,
         sendVerificationEmail(env, email, code, "Reset your CastingCompass password"),
       );
       if (!options.waitUntil) await delivery;
@@ -688,13 +903,138 @@ export async function handleAccountRequest(
       if (!challenge.user_id) throw new AuthError(400, "invalid_challenge", "Request a new reset code.");
       await assertNewPasswordAllowed(password, challenge.email);
       const salt = randomSecret(18);
+      const passwordHash = await hashPassword(password, salt);
       const timestamp = new Date().toISOString();
-      await db.batch([
-        db.prepare("UPDATE users SET password_salt = ?, password_hash = ?, updated_at = ? WHERE id = ?")
-          .bind(salt, await hashPassword(password, salt), timestamp, challenge.user_id),
-        db.prepare("DELETE FROM auth_sessions WHERE user_id = ?").bind(challenge.user_id),
-        db.prepare("DELETE FROM email_challenges WHERE id = ?").bind(challenge.id),
-      ]);
+      try {
+        await db.batch([
+          db.prepare(`UPDATE users SET password_salt = ?, password_hash = ?, updated_at = ?
+            WHERE id = ? AND EXISTS (SELECT 1 FROM email_challenges
+              WHERE id = ? AND kind = 'password_reset' AND user_id = ? AND code_hash = ?
+                AND created_at = ? AND attempts = ? AND expires_at > ?)`)
+            .bind(
+              salt,
+              passwordHash,
+              timestamp,
+              challenge.user_id,
+              challenge.id,
+              challenge.user_id,
+              challenge.code_hash,
+              challenge.created_at,
+              Number(challenge.attempts),
+              timestamp,
+            ),
+          db.prepare(`DELETE FROM auth_sessions WHERE user_id = ?
+            AND EXISTS (SELECT 1 FROM email_challenges
+              WHERE id = ? AND kind = 'password_reset' AND user_id = ? AND code_hash = ?
+                AND created_at = ? AND attempts = ? AND expires_at > ?)`)
+            .bind(
+              challenge.user_id,
+              challenge.id,
+              challenge.user_id,
+              challenge.code_hash,
+              challenge.created_at,
+              Number(challenge.attempts),
+              timestamp,
+            ),
+          db.prepare(`DELETE FROM email_challenges
+            WHERE id = ? AND kind = 'password_reset' AND user_id = ? AND code_hash = ?
+              AND created_at = ? AND attempts = ? AND expires_at > ?`)
+            .bind(
+              challenge.id,
+              challenge.user_id,
+              challenge.code_hash,
+              challenge.created_at,
+              Number(challenge.attempts),
+              timestamp,
+            ),
+        ]);
+      } catch {
+        // A committed atomic reset can lose its batch response. Only the complete post-state decides.
+      }
+      let receipt: PasswordResetReceiptRow | null = null;
+      let receiptReadSucceeded = false;
+      try {
+        receipt = await db.prepare(`SELECT
+            (SELECT COUNT(*) FROM users
+              WHERE id = ? AND email = ? AND password_salt = ? AND password_hash = ?
+                AND updated_at = ?) AS exact_user_count,
+            (SELECT COUNT(*) FROM users WHERE id = ?) AS any_user_count,
+            (SELECT COUNT(*) FROM auth_sessions WHERE user_id = ?) AS session_count,
+            (SELECT COUNT(*) FROM email_challenges
+              WHERE id = ? AND kind = 'password_reset' AND user_id = ? AND code_hash = ?
+                AND created_at = ? AND attempts = ? AND expires_at > ?) AS exact_challenge_count,
+            (SELECT COUNT(*) FROM email_challenges WHERE id = ?) AS any_challenge_count,
+            (SELECT COUNT(*) FROM account_deletion_fences WHERE user_id = ?) AS fence_count`)
+          .bind(
+            challenge.user_id,
+            challenge.email,
+            salt,
+            passwordHash,
+            timestamp,
+            challenge.user_id,
+            challenge.user_id,
+            challenge.id,
+            challenge.user_id,
+            challenge.code_hash,
+            challenge.created_at,
+            Number(challenge.attempts),
+            timestamp,
+            challenge.id,
+            challenge.user_id,
+          )
+          .first<PasswordResetReceiptRow>();
+        receiptReadSucceeded = true;
+      } catch {
+        // Never create a replacement session when the credential lifecycle is unreadable.
+      }
+      const exactUserCount = Number(receipt?.exact_user_count);
+      const anyUserCount = Number(receipt?.any_user_count);
+      const sessionCount = Number(receipt?.session_count);
+      const exactChallengeCount = Number(receipt?.exact_challenge_count);
+      const anyChallengeCount = Number(receipt?.any_challenge_count);
+      const fenceCount = Number(receipt?.fence_count);
+      const counts = [
+        exactUserCount,
+        anyUserCount,
+        sessionCount,
+        exactChallengeCount,
+        anyChallengeCount,
+        fenceCount,
+      ];
+      if (!receiptReadSucceeded || counts.some((count) => !Number.isSafeInteger(count) || count < 0)
+        || exactUserCount > 1 || anyUserCount > 1 || exactChallengeCount > 1
+        || anyChallengeCount > 1 || fenceCount > 1 || exactUserCount > anyUserCount
+        || exactChallengeCount > anyChallengeCount) {
+        return errorResponse(
+          503,
+          "password_reset_unconfirmed",
+          "The password reset could not be confirmed. Try signing in with the new password before requesting another code.",
+          clearSessionCookies(request),
+        );
+      }
+      if (anyUserCount === 0) {
+        return errorResponse(
+          404,
+          "account_not_found",
+          "The account could not be found.",
+          clearSessionCookies(request),
+        );
+      }
+      if (exactUserCount !== 1 || sessionCount !== 0 || anyChallengeCount !== 0 || fenceCount !== 0) {
+        if (anyChallengeCount === 1 && exactChallengeCount === 0) {
+          return errorResponse(
+            409,
+            "password_reset_challenge_changed",
+            "That reset request changed. Use its latest code or request another one.",
+          );
+        }
+        return errorResponse(
+          503,
+          "password_reset_unconfirmed",
+          "The password reset could not be confirmed. Try signing in with the new password before requesting another code.",
+          clearSessionCookies(request),
+        );
+      }
       const user = await selectUserForSession(db, challenge.user_id);
       if (!user) throw new AuthError(404, "account_not_found", "The account could not be found.");
       return createSessionResponse(db, request, user);
@@ -708,13 +1048,20 @@ export async function handleAccountRequest(
       const email = parseEmail(body.email);
       const password = parsePassword(body.password);
       const emailHash = await sha256(email);
-      const cutoff = new Date(Date.now() - 60 * 60 * 1000).toISOString();
-      const recent = await db
-        .prepare("SELECT COUNT(*) AS count FROM auth_attempts WHERE email_hash = ? AND successful = 0 AND attempted_at >= ?")
-        .bind(emailHash, cutoff)
-        .first<{ count: number }>();
-      if (Number(recent?.count ?? 0) >= 10) {
+      const attemptedAt = options.now?.() ?? new Date();
+      const attemptedAtIso = attemptedAt.toISOString();
+      const cutoff = new Date(attemptedAt.getTime() - 60 * 60 * 1000).toISOString();
+      const attemptId = `attempt_${crypto.randomUUID()}`;
+      const attemptClaim = await claimSignInAttempt(db, attemptId, emailHash, attemptedAtIso, cutoff);
+      if (attemptClaim === "rate_limited") {
         return errorResponse(429, "too_many_attempts", "Too many sign-in attempts. Try again in an hour.");
+      }
+      if (attemptClaim !== "claimed") {
+        return errorResponse(
+          503,
+          "sign_in_accounting_unconfirmed",
+          "The sign-in attempt could not be confirmed. Try again shortly.",
+        );
       }
 
       const row = await db
@@ -735,10 +1082,14 @@ export async function handleAccountRequest(
       const valid = row
         ? await verifyPassword(password, row.password_salt, row.password_hash)
         : (await hashPassword(password, DUMMY_PASSWORD_SALT), false);
-      await db.prepare("INSERT INTO auth_attempts (id, email_hash, attempted_at, successful) VALUES (?, ?, ?, ?)")
-        .bind(`attempt_${crypto.randomUUID()}`, emailHash, new Date().toISOString(), Number(valid))
-        .run();
       if (!row || !valid) return errorResponse(401, "invalid_credentials", "Email or password is incorrect.");
+      if (!await classifySignInAttemptSuccessful(db, attemptId, emailHash, attemptedAtIso)) {
+        return errorResponse(
+          503,
+          "sign_in_accounting_unconfirmed",
+          "The sign-in attempt could not be confirmed. Try again shortly.",
+        );
+      }
       return createSessionResponse(db, request, {
         id: row.id,
         email: row.email,
@@ -751,15 +1102,22 @@ export async function handleAccountRequest(
       if (request.method !== "POST") return methodNotAllowed("POST");
       assertSameOrigin(request);
       const tokens = presentedSessionTokens(request);
-      if (tokens.length > 0) {
-        await db.batch(await Promise.all(tokens.map(async ({ token }) =>
-          db.prepare("DELETE FROM auth_sessions WHERE token_hash = ?").bind(await sha256(token)))));
+      if (!await revokePresentedSessions(db, tokens)) {
+        return errorResponse(
+          503,
+          "sign_out_unconfirmed",
+          "The server could not confirm that this session ended. Retry sign-out or check its status.",
+        );
       }
       return jsonResponse({ signedOut: true, user: null }, 200, clearSessionCookies(request));
     }
 
-    const user = await getAuthenticatedUser(request, env);
-    if (!user) return unauthorizedResponse();
+    const authenticatedSession = await getAuthenticatedSession(request, env);
+    if (!authenticatedSession) return unauthorizedResponse();
+    const user = authenticatedSession.user;
+    if (authenticatedSession.deletionFenced && !accountRequestAllowedWhileDeletionFenced(request)) {
+      return accountDeletionInProgressResponse();
+    }
 
     if (url.pathname === "/api/auth/eligibility") {
       if (request.method !== "POST") return methodNotAllowed("POST");
@@ -770,11 +1128,19 @@ export async function handleAccountRequest(
       if (!user.ageEligible) {
         throw new AuthError(428, "age_eligibility_unavailable", "Account features are paused. Contact privacy support or delete the account.");
       }
-      const timestamp = new Date().toISOString();
-      await db.prepare(`UPDATE users SET terms_accepted_at = ?, terms_version = ?,
-        privacy_accepted_at = ?, privacy_version = ?, updated_at = ? WHERE id = ?`)
-        .bind(timestamp, LEGAL_VERSION, timestamp, LEGAL_VERSION, timestamp, user.id)
-        .run();
+      const timestamp = (options.now?.() ?? new Date()).toISOString();
+      const acceptance = await acceptCurrentLegalTerms(db, authenticatedSession, timestamp);
+      if (acceptance === "authentication_missing") {
+        return errorResponse(
+          401,
+          "authentication_required",
+          "This account session has ended. Refresh before continuing.",
+          clearSessionCookies(request),
+        );
+      }
+      if (acceptance !== "accepted") {
+        throw new AuthError(503, "legal_acceptance_unconfirmed", "Legal acceptance could not be confirmed.");
+      }
       return jsonResponse({ user: { ...user, legalAccepted: true }, legalVersion: LEGAL_VERSION });
     }
 
@@ -866,50 +1232,183 @@ export async function handleAccountRequest(
       if (!credentials || !await verifyPassword(password, credentials.password_salt, credentials.password_hash)) {
         throw new AuthError(401, "invalid_credentials", "Your password is incorrect.");
       }
-      const photos = await db.prepare("SELECT photo_key FROM trips WHERE user_id = ? AND photo_key IS NOT NULL")
-        .bind(user.id).all<{ photo_key: string }>();
       const ownerSubjectHash = await sha256(`account:${user.id}`);
-      const pendingObjects = await db.prepare(`SELECT privacy_deletion_tasks.object_key,
-          privacy_deletion_tasks.object_store
-        FROM privacy_deletion_tasks
-        JOIN privacy_deletion_jobs ON privacy_deletion_jobs.id = privacy_deletion_tasks.job_id
-        WHERE privacy_deletion_jobs.owner_subject_hash = ?
-          AND privacy_deletion_tasks.state != 'completed' AND privacy_deletion_tasks.object_key IS NOT NULL`)
-        .bind(ownerSubjectHash).all<{ object_key: string; object_store: PrivacyObjectStore }>();
-      const exportObjects = await db.prepare(`SELECT object_key FROM privacy_export_jobs
-        WHERE owner_subject_hash = ? AND object_key IS NOT NULL
-          AND state IN ('pending', 'queued', 'processing', 'retry', 'completed', 'needs_attention')`)
-        .bind(ownerSubjectHash).all<{ object_key: string }>();
-      const deletionObjects: PrivacyDeletionObject[] = [
-        ...(photos.results ?? []).map((photo) => ({ objectStore: "trip_photos" as const, objectKey: photo.photo_key })),
-        ...(pendingObjects.results ?? []).map((object) => ({ objectStore: object.object_store, objectKey: object.object_key })),
-        ...(exportObjects.results ?? []).map((object) => ({ objectStore: "privacy_exports" as const, objectKey: object.object_key })),
-      ];
-      const deletion = await prepareDeletionJob("account", user.id, user.id, deletionObjects);
-      await db.batch([
-        deletion.jobStatement(db),
-        ...deletion.taskStatements(db),
+      const fence = await claimAccountDeletionFence(
+        db,
+        user.id,
+        ownerSubjectHash,
+        options.now?.() ?? new Date(),
+      );
+      const deletion = await prepareDeletionJob(
+        "account",
+        user.id,
+        user.id,
+        [],
+        fence.requestedAt,
+      );
+      const emailHash = await sha256(user.email);
+      let deletionBatchResponseLost = false;
+      try {
+        await db.batch([
+        deletion.jobStatementForAccountFence(db, user.id, fence.leaseToken),
+        ...deletion.inventoryStatementsForAccountFence(db, user.id, fence.leaseToken),
+        deletion.finalizeInventoryStatementForAccountFence(db, user.id, fence.leaseToken),
         db.prepare(`UPDATE privacy_deletion_tasks SET state = 'pending', available_at = ?,
           lease_expires_at = NULL, lease_token = NULL, last_error_code = NULL, updated_at = ?
           WHERE state = 'needs_attention' AND object_key IS NOT NULL
-            AND job_id IN (SELECT id FROM privacy_deletion_jobs WHERE owner_subject_hash = ?)`)
-          .bind(deletion.requestedAt, deletion.requestedAt, ownerSubjectHash),
+            AND job_id IN (SELECT id FROM privacy_deletion_jobs WHERE owner_subject_hash = ?)
+            AND EXISTS (SELECT 1 FROM account_deletion_fences
+              WHERE user_id = ? AND owner_subject_hash = ? AND lease_token = ?)
+            AND EXISTS (SELECT 1 FROM privacy_deletion_jobs
+              WHERE id = ? AND owner_subject_hash = ?)`)
+          .bind(
+            deletion.requestedAt,
+            deletion.requestedAt,
+            ownerSubjectHash,
+            user.id,
+            ownerSubjectHash,
+            fence.leaseToken,
+            deletion.id,
+            ownerSubjectHash,
+          ),
         db.prepare(`UPDATE privacy_export_jobs
           SET state = 'canceled', user_id = NULL, lease_expires_at = NULL, lease_token = NULL,
             last_error_code = 'account_deleted', updated_at = ?
           WHERE owner_subject_hash = ?
-            AND state IN ('pending', 'queued', 'processing', 'retry', 'completed', 'needs_attention')`)
-          .bind(deletion.requestedAt, ownerSubjectHash),
-        db.prepare("DELETE FROM site_discussion_posts WHERE trip_id IN (SELECT id FROM trips WHERE user_id = ?)").bind(user.id),
-        db.prepare("DELETE FROM trips WHERE user_id = ?").bind(user.id),
-        db.prepare("DELETE FROM saved_sites WHERE user_id = ?").bind(user.id),
-        db.prepare("DELETE FROM gear_profiles WHERE user_id = ?").bind(user.id),
-        db.prepare("DELETE FROM auth_sessions WHERE user_id = ?").bind(user.id),
-        db.prepare("DELETE FROM email_challenges WHERE email = ? OR user_id = ?").bind(user.email, user.id),
-        db.prepare("DELETE FROM auth_attempts WHERE email_hash = ?").bind(await sha256(user.email)),
-        db.prepare("DELETE FROM users WHERE id = ?").bind(user.id),
-      ]);
-      const status = await deletionStatusAfterCommit(env, deletion);
+            AND state IN ('pending', 'queued', 'processing', 'retry', 'completed', 'needs_attention')
+            AND EXISTS (SELECT 1 FROM account_deletion_fences
+              WHERE user_id = ? AND owner_subject_hash = ? AND lease_token = ?)
+            AND EXISTS (SELECT 1 FROM privacy_deletion_jobs
+              WHERE id = ? AND owner_subject_hash = ?)`)
+          .bind(
+            deletion.requestedAt,
+            ownerSubjectHash,
+            user.id,
+            ownerSubjectHash,
+            fence.leaseToken,
+            deletion.id,
+            ownerSubjectHash,
+          ),
+        db.prepare(`DELETE FROM trip_photo_upload_reservations
+          WHERE owner_subject_hash = ?
+            AND EXISTS (SELECT 1 FROM account_deletion_fences
+              WHERE user_id = ? AND owner_subject_hash = ? AND lease_token = ?)
+            AND EXISTS (SELECT 1 FROM privacy_deletion_jobs
+              WHERE id = ? AND owner_subject_hash = ?)`)
+          .bind(ownerSubjectHash, user.id, ownerSubjectHash, fence.leaseToken, deletion.id, ownerSubjectHash),
+        db.prepare(`DELETE FROM site_discussion_posts
+          WHERE trip_id IN (SELECT id FROM trips WHERE user_id = ?)
+            AND EXISTS (SELECT 1 FROM account_deletion_fences
+              WHERE user_id = ? AND owner_subject_hash = ? AND lease_token = ?)
+            AND EXISTS (SELECT 1 FROM privacy_deletion_jobs
+              WHERE id = ? AND owner_subject_hash = ?)`)
+          .bind(user.id, user.id, ownerSubjectHash, fence.leaseToken, deletion.id, ownerSubjectHash),
+        db.prepare(`DELETE FROM trips WHERE user_id = ?
+          AND EXISTS (SELECT 1 FROM account_deletion_fences
+            WHERE user_id = ? AND owner_subject_hash = ? AND lease_token = ?)
+          AND EXISTS (SELECT 1 FROM privacy_deletion_jobs
+            WHERE id = ? AND owner_subject_hash = ?)`)
+          .bind(user.id, user.id, ownerSubjectHash, fence.leaseToken, deletion.id, ownerSubjectHash),
+        db.prepare(`DELETE FROM saved_sites WHERE user_id = ?
+          AND EXISTS (SELECT 1 FROM account_deletion_fences
+            WHERE user_id = ? AND owner_subject_hash = ? AND lease_token = ?)
+          AND EXISTS (SELECT 1 FROM privacy_deletion_jobs
+            WHERE id = ? AND owner_subject_hash = ?)`)
+          .bind(user.id, user.id, ownerSubjectHash, fence.leaseToken, deletion.id, ownerSubjectHash),
+        db.prepare(`DELETE FROM gear_profiles WHERE user_id = ?
+          AND EXISTS (SELECT 1 FROM account_deletion_fences
+            WHERE user_id = ? AND owner_subject_hash = ? AND lease_token = ?)
+          AND EXISTS (SELECT 1 FROM privacy_deletion_jobs
+            WHERE id = ? AND owner_subject_hash = ?)`)
+          .bind(user.id, user.id, ownerSubjectHash, fence.leaseToken, deletion.id, ownerSubjectHash),
+        db.prepare(`DELETE FROM auth_sessions WHERE user_id = ?
+          AND EXISTS (SELECT 1 FROM account_deletion_fences
+            WHERE user_id = ? AND owner_subject_hash = ? AND lease_token = ?)
+          AND EXISTS (SELECT 1 FROM privacy_deletion_jobs
+            WHERE id = ? AND owner_subject_hash = ?)`)
+          .bind(user.id, user.id, ownerSubjectHash, fence.leaseToken, deletion.id, ownerSubjectHash),
+        db.prepare(`DELETE FROM email_challenges WHERE (email = ? OR user_id = ?)
+          AND EXISTS (SELECT 1 FROM account_deletion_fences
+            WHERE user_id = ? AND owner_subject_hash = ? AND lease_token = ?)
+          AND EXISTS (SELECT 1 FROM privacy_deletion_jobs
+            WHERE id = ? AND owner_subject_hash = ?)`)
+          .bind(user.email, user.id, user.id, ownerSubjectHash, fence.leaseToken, deletion.id, ownerSubjectHash),
+        db.prepare(`DELETE FROM auth_attempts WHERE email_hash = ?
+          AND EXISTS (SELECT 1 FROM account_deletion_fences
+            WHERE user_id = ? AND owner_subject_hash = ? AND lease_token = ?)
+          AND EXISTS (SELECT 1 FROM privacy_deletion_jobs
+            WHERE id = ? AND owner_subject_hash = ?)`)
+          .bind(
+            emailHash,
+            user.id,
+            ownerSubjectHash,
+            fence.leaseToken,
+            deletion.id,
+            ownerSubjectHash,
+          ),
+        db.prepare(`DELETE FROM users WHERE id = ?
+          AND EXISTS (SELECT 1 FROM account_deletion_fences
+            WHERE user_id = ? AND owner_subject_hash = ? AND lease_token = ?)
+          AND EXISTS (SELECT 1 FROM privacy_deletion_jobs
+            WHERE id = ? AND owner_subject_hash = ?)`)
+          .bind(user.id, user.id, ownerSubjectHash, fence.leaseToken, deletion.id, ownerSubjectHash),
+        ]);
+      } catch {
+        // A D1 batch can commit and lose its response. Only the exact post-state below grants a receipt.
+        deletionBatchResponseLost = true;
+      }
+      let deletionCommit: PrivacyDeletionJobRow | null = null;
+      try {
+        deletionCommit = await exactAccountDeletionCommit(db, user.id, emailHash, deletion);
+      } catch {
+        // A failed confirmation read is ambiguous and must preserve the opaque status receipt.
+      }
+      if (!deletionCommit) {
+        let missingPhotoHashes: { count: number } | null = null;
+        try {
+          missingPhotoHashes = await db.prepare(`SELECT COUNT(*) AS count FROM trips
+            WHERE user_id = ? AND photo_key IS NOT NULL AND photo_key_hash IS NULL`)
+            .bind(user.id)
+            .first<{ count: number }>();
+        } catch {
+          // The opaque receipt below preserves read-only recovery when D1 remains unavailable.
+        }
+        if (Number(missingPhotoHashes?.count ?? 0) > 0) {
+          throw new AuthError(
+            503,
+            "account_deletion_inventory_incomplete",
+            "Account deletion is paused because a legacy private object needs protected migration. Contact support before retrying.",
+          );
+        }
+        let currentFence: { lease_token: string } | null = null;
+        try {
+          currentFence = await db.prepare(`SELECT lease_token FROM account_deletion_fences
+            WHERE user_id = ? AND owner_subject_hash = ? LIMIT 1`)
+            .bind(user.id, ownerSubjectHash)
+            .first<{ lease_token: string }>();
+        } catch {
+          // The opaque receipt below preserves read-only recovery when D1 remains unavailable.
+        }
+        if (currentFence && currentFence.lease_token !== fence.leaseToken) {
+          throw new AuthError(
+            409,
+            "account_deletion_lease_changed",
+            "Account deletion lost its bounded lease. Retry after the active request finishes.",
+          );
+        }
+        return errorResponse(
+          503,
+          "account_deletion_unconfirmed",
+          "Account deletion could not be confirmed. Check deletion status before retrying.",
+          deletionReceiptCookie(deletion.receipt),
+        );
+      }
+      deletion.objectsTotal = deletionCommit.objects_total;
+      const status = await deletionStatusAfterCommit(
+        env,
+        deletion,
+        deletionBatchResponseLost ? 1 : ACCOUNT_DELETION_INLINE_TASK_BATCH,
+      );
       return jsonResponse(
         { deleted: true, deletion: status },
         status.status === "completed" ? 200 : 202,
@@ -931,7 +1430,7 @@ export async function handleAccountRequest(
     if (url.pathname === "/api/profile/reviews/retry") {
       if (request.method !== "POST") return methodNotAllowed("POST");
       assertSameOrigin(request);
-      const rows = await db.prepare(`SELECT * FROM trips
+      const rows = await db.prepare(`SELECT * FROM trips INDEXED BY trips_user_history_idx
         WHERE user_id = ? AND status = 'completed'
           AND (ai_review_status IS NULL OR ai_review_status = 'retry')
         ORDER BY COALESCE(completed_at, ended_at, started_at) DESC
@@ -940,12 +1439,45 @@ export async function handleAccountRequest(
         .all<TripRow>();
       const trips = rows.results ?? [];
       if (trips.length) {
-        await db.batch(trips.map((trip) => db.prepare(
-          "UPDATE trips SET ai_review_status = 'queued' WHERE id = ? AND (ai_review_status IS NULL OR ai_review_status = 'retry')",
-        ).bind(trip.id)));
-        options.onTripsReviewRequested?.(trips);
+        try {
+          await db.batch(trips.map((trip) => db.prepare(
+            `UPDATE trips SET ai_review_status = 'queued', ai_review_json = NULL,
+                ai_review_model = NULL, ai_reviewed_at = NULL
+              WHERE id = ? AND user_id = ? AND status = 'completed'
+                AND ai_review_status IS ? AND ai_review_json IS ?
+                AND ai_review_model IS ? AND ai_reviewed_at IS ? AND updated_at = ?`,
+          ).bind(
+            trip.id,
+            user.id,
+            trip.ai_review_status,
+            trip.ai_review_json,
+            trip.ai_review_model,
+            trip.ai_reviewed_at,
+            trip.updated_at,
+          )));
+        } catch {
+          // Exact per-trip read-back below distinguishes rollback from a committed
+          // batch whose response was lost.
+        }
+        const receipts: ManualReviewRetryReceipt[] = [];
+        for (const trip of trips) receipts.push(await manualReviewRetryReceipt(db, trip, user.id));
+        const queuedTrips = trips.filter((_, index) => receipts[index] === "queued");
+        // The ten-row transaction is durable work admission, not permission to start ten
+        // independent background pipelines inside one Worker invocation. Dispatch one now and
+        // leave every other queued row to the bounded scheduled backlog.
+        if (queuedTrips.length) {
+          options.onTripReviewRequested?.(queuedTrips[0]);
+        }
+        if (receipts.includes("unconfirmed")) {
+          return errorResponse(
+            503,
+            "review_retry_unconfirmed",
+            "The review retry could not be confirmed. Its status will be checked without repeating the request.",
+          );
+        }
+        return jsonResponse({ queued: queuedTrips.length }, 202);
       }
-      return jsonResponse({ queued: trips.length }, 202);
+      return jsonResponse({ queued: 0 }, 202);
     }
 
     if (url.pathname === "/api/profile") {
@@ -961,8 +1493,10 @@ export async function handleAccountRequest(
           taxon_observations_json, outcome_class, target_encounter_count, any_fish_encounter_count,
           target_identification_confidence,
           opportunity_score, fishability_score, model_version, gear_profile_id, rod, reel,
-          bait_lure, rig, ai_review_status, ai_review_json, ai_review_model, ai_reviewed_at, completed_at
-          FROM trips
+          bait_lure, rig, ai_review_status,
+          CASE WHEN ai_review_status = 'processing' THEN NULL ELSE ai_review_json END AS ai_review_json,
+          ai_review_model, ai_reviewed_at, completed_at
+          FROM trips INDEXED BY trips_user_history_idx
           WHERE user_id = ? AND status = 'completed'
           ORDER BY COALESCE(completed_at, ended_at, started_at) DESC
           LIMIT 100`)
@@ -1015,16 +1549,34 @@ export async function handleAccountRequest(
         const id = `gear_${crypto.randomUUID()}`;
         const timestamp = new Date().toISOString();
         const gear = parseGearProfile(body);
-        const result = await db.prepare(`INSERT INTO gear_profiles
-          (id, user_id, name, rod, reel, bait_lure, rig, created_at, updated_at)
-          SELECT ?, ?, ?, ?, ?, ?, ?, ?, ?
-          WHERE (SELECT COUNT(*) FROM gear_profiles WHERE user_id = ?) < 100`)
-          .bind(id, user.id, gear.name, gear.rod, gear.reel, gear.baitLure, gear.rig, timestamp, timestamp, user.id)
-          .run();
-        if (result.meta?.changes === 0) {
-          throw new AuthError(409, "gear_profile_limit_reached", "Remove a gear preset before adding another.");
+        try {
+          await db.prepare(`INSERT INTO gear_profiles
+            (id, user_id, name, rod, reel, bait_lure, rig, created_at, updated_at)
+            SELECT ?, ?, ?, ?, ?, ?, ?, ?, ?
+            WHERE (SELECT COUNT(*) FROM gear_profiles WHERE user_id = ?) < 100`)
+            .bind(id, user.id, gear.name, gear.rod, gear.reel, gear.baitLure, gear.rig, timestamp, timestamp, user.id)
+            .run();
+        } catch {
+          // A storage response can be lost after commit. Only exact D1 post-state grants the receipt.
         }
-        if (result.meta?.changes !== 1) {
+        const receipt = await db.prepare(`SELECT id, user_id, name, rod, reel, bait_lure, rig, created_at, updated_at
+          FROM gear_profiles WHERE id = ? AND user_id = ? LIMIT 1`)
+          .bind(id, user.id)
+          .first<Record<string, unknown>>();
+        if (
+          !receipt || receipt.id !== id || receipt.user_id !== user.id || receipt.name !== gear.name ||
+          receipt.rod !== gear.rod || receipt.reel !== gear.reel || receipt.bait_lure !== gear.baitLure ||
+          receipt.rig !== gear.rig || receipt.created_at !== timestamp || receipt.updated_at !== timestamp
+        ) {
+          if (!receipt) {
+            const atLimit = await db.prepare(`SELECT 1 AS at_limit FROM gear_profiles
+              WHERE user_id = ? LIMIT 1 OFFSET 99`)
+              .bind(user.id)
+              .first<{ at_limit: number }>();
+            if (Number(atLimit?.at_limit ?? 0) === 1) {
+              throw new AuthError(409, "gear_profile_limit_reached", "Remove a gear preset before adding another.");
+            }
+          }
           throw new AuthError(503, "gear_profile_write_unconfirmed", "The gear preset could not be confirmed.");
         }
         return jsonResponse({ gearProfile: { id, ...gear, created_at: timestamp, updated_at: timestamp } }, 201);
@@ -1041,7 +1593,35 @@ export async function handleAccountRequest(
         .first();
       if (!existing) return errorResponse(404, "gear_profile_not_found", "That gear preset could not be found.");
       if (request.method === "DELETE") {
-        await db.prepare("DELETE FROM gear_profiles WHERE id = ? AND user_id = ?").bind(id, user.id).run();
+        try {
+          await db.prepare("DELETE FROM gear_profiles WHERE id = ? AND user_id = ?")
+            .bind(id, user.id)
+            .run();
+        } catch {
+          // A committed delete can lose its response. Only exact post-state grants the receipt.
+        }
+        let deletionState: { owner_count: number; any_count: number } | null = null;
+        try {
+          deletionState = await db.prepare(`SELECT
+              (SELECT COUNT(*) FROM gear_profiles WHERE id = ? AND user_id = ?) AS owner_count,
+              (SELECT COUNT(*) FROM gear_profiles WHERE id = ?) AS any_count`)
+            .bind(id, user.id, id)
+            .first<{ owner_count: number; any_count: number }>();
+        } catch {
+          // The write remains ambiguous until an owner-bound read can confirm its result.
+        }
+        const ownerCount = Number(deletionState?.owner_count);
+        const anyCount = Number(deletionState?.any_count);
+        if (!Number.isSafeInteger(ownerCount) || !Number.isSafeInteger(anyCount)
+          || ownerCount < 0 || ownerCount > 1 || anyCount < ownerCount || anyCount > 1) {
+          throw new AuthError(503, "gear_profile_write_unconfirmed", "The gear preset removal could not be confirmed.");
+        }
+        if (ownerCount === 1) {
+          throw new AuthError(503, "gear_profile_write_unconfirmed", "The gear preset removal could not be confirmed.");
+        }
+        if (anyCount === 1) {
+          return errorResponse(404, "gear_profile_not_found", "That gear preset could not be found.");
+        }
         return jsonResponse({ deleted: true, id });
       }
       if (request.method === "PATCH") {
@@ -1049,10 +1629,38 @@ export async function handleAccountRequest(
         assertOnlyFields(body, ["name", "rod", "reel", "baitLure", "rig"]);
         const gear = parseGearProfile(body);
         const timestamp = new Date().toISOString();
-        await db.prepare(`UPDATE gear_profiles SET name = ?, rod = ?, reel = ?, bait_lure = ?, rig = ?, updated_at = ?
-          WHERE id = ? AND user_id = ?`)
-          .bind(gear.name, gear.rod, gear.reel, gear.baitLure, gear.rig, timestamp, id, user.id)
-          .run();
+        try {
+          await db.prepare(`UPDATE gear_profiles SET name = ?, rod = ?, reel = ?, bait_lure = ?, rig = ?, updated_at = ?
+            WHERE id = ? AND user_id = ?`)
+            .bind(gear.name, gear.rod, gear.reel, gear.baitLure, gear.rig, timestamp, id, user.id)
+            .run();
+        } catch {
+          // A committed update can lose its response. Only exact post-state grants the receipt.
+        }
+        let receipt: GearProfileReceiptRow | null = null;
+        let receiptReadSucceeded = false;
+        try {
+          receipt = await db.prepare(`SELECT id, user_id, name, rod, reel, bait_lure, rig, created_at, updated_at
+            FROM gear_profiles WHERE id = ? AND user_id = ? LIMIT 1`)
+            .bind(id, user.id)
+            .first<GearProfileReceiptRow>();
+          receiptReadSucceeded = true;
+        } catch {
+          // The write remains ambiguous until an owner-bound read can confirm its result.
+        }
+        if (!receiptReadSucceeded) {
+          throw new AuthError(503, "gear_profile_write_unconfirmed", "The gear preset update could not be confirmed.");
+        }
+        if (!receipt) {
+          return errorResponse(404, "gear_profile_not_found", "That gear preset could not be found.");
+        }
+        if (
+          receipt.id !== id || receipt.user_id !== user.id || receipt.name !== gear.name ||
+          receipt.rod !== gear.rod || receipt.reel !== gear.reel || receipt.bait_lure !== gear.baitLure ||
+          receipt.rig !== gear.rig || receipt.updated_at !== timestamp
+        ) {
+          throw new AuthError(503, "gear_profile_write_unconfirmed", "The gear preset update could not be confirmed.");
+        }
         return jsonResponse({ updated: true, id });
       }
       return methodNotAllowed("PATCH, DELETE");
@@ -1088,17 +1696,43 @@ export async function handleAccountRequest(
           user.id,
           trip.photo_key ? [{ objectStore: "trip_photos", objectKey: trip.photo_key }] : [],
         );
-        const deletionResults = await db.batch([
-          deletion.jobStatementForPendingTrip(db, tripId, user.id),
-          ...deletion.taskStatementsForPendingTrip(db, tripId, user.id),
-          db.prepare(`DELETE FROM site_discussion_posts WHERE trip_id = ?
-            AND EXISTS (SELECT 1 FROM trips WHERE id = ? AND user_id = ? AND moderation_status = 'pending')`)
-            .bind(tripId, tripId, user.id),
-          db.prepare("DELETE FROM trips WHERE id = ? AND user_id = ? AND moderation_status = 'pending'")
-            .bind(tripId, user.id),
-        ]);
-        if (mutationChanges(deletionResults.at(-1)) !== 1) {
-          return errorResponse(409, "trip_reviewed", "Reviewed trip logs can no longer be changed.");
+        try {
+          await db.batch([
+            deletion.jobStatementForPendingTrip(db, tripId, user.id),
+            ...deletion.taskStatementsForPendingTrip(db, tripId, user.id),
+            db.prepare(`DELETE FROM site_discussion_posts WHERE trip_id = ?
+              AND EXISTS (SELECT 1 FROM trips WHERE id = ? AND user_id = ? AND moderation_status = 'pending')`)
+              .bind(tripId, tripId, user.id),
+            db.prepare("DELETE FROM trips WHERE id = ? AND user_id = ? AND moderation_status = 'pending'")
+              .bind(tripId, user.id),
+          ]);
+        } catch {
+          // A D1 batch can commit and lose its response. Only the exact ledger and absence proof below grant a receipt.
+        }
+        let deletionCommitted = false;
+        try {
+          deletionCommitted = await exactPendingTripDeletionCommit(db, tripId, user.id, deletion);
+        } catch {
+          // A failed confirmation read is ambiguous and must keep the opaque deletion receipt recoverable.
+        }
+        if (!deletionCommitted) {
+          let current: { moderation_status: string } | null = null;
+          try {
+            current = await db.prepare("SELECT moderation_status FROM trips WHERE id = ? AND user_id = ? LIMIT 1")
+              .bind(tripId, user.id)
+              .first<{ moderation_status: string }>();
+          } catch {
+            // Preserve the ambiguity response and receipt cookie below.
+          }
+          if (current && current.moderation_status !== "pending") {
+            return errorResponse(409, "trip_reviewed", "Reviewed trip logs can no longer be changed.");
+          }
+          return errorResponse(
+            503,
+            "trip_delete_unconfirmed",
+            "The trip deletion could not be confirmed.",
+            deletionReceiptCookie(deletion.receipt),
+          );
         }
         const status = await deletionStatusAfterCommit(env, deletion);
         return jsonResponse(
@@ -1119,16 +1753,31 @@ export async function handleAccountRequest(
               scoring_system_kind, scoring_system_version, scoring_system_sha256,
               opportunity_score, opportunity_window_id, snapshot_sha256,
               snapshot_suppression_sha256
-            FROM validation_feasibility_events
-            WHERE trip_id = ? AND event_type = 'started' LIMIT 1`)
-            .bind(tripId).first<StoredFeasibilityStart>(),
-          db.prepare(`SELECT activation_id, event_sha256 FROM validation_feasibility_events
-            WHERE trip_id = ? AND event_type = 'completed' LIMIT 1`)
-            .bind(tripId).first<{ activation_id: string; event_sha256: string }>(),
+            FROM validation_feasibility_events AS event
+            WHERE event.trip_id = ? AND event.event_type = 'started'
+              AND EXISTS (
+                SELECT 1 FROM trips AS owner_trip
+                WHERE owner_trip.id = event.trip_id AND owner_trip.user_id = ?
+              )
+            LIMIT 1`)
+            .bind(tripId, user.id).first<StoredFeasibilityStart>(),
+          db.prepare(`SELECT activation_id, event_sha256 FROM validation_feasibility_events AS event
+            WHERE event.trip_id = ? AND event.event_type = 'completed'
+              AND EXISTS (
+                SELECT 1 FROM trips AS owner_trip
+                WHERE owner_trip.id = event.trip_id AND owner_trip.user_id = ?
+              )
+            LIMIT 1`)
+            .bind(tripId, user.id).first<{ activation_id: string; event_sha256: string }>(),
           db.prepare(`SELECT root_completion_event_sha256, event_sha256
-            FROM validation_feasibility_corrections WHERE trip_id = ?
-            ORDER BY sequence DESC LIMIT 1`)
-            .bind(tripId).first<{ root_completion_event_sha256: string; event_sha256: string }>(),
+            FROM validation_feasibility_corrections AS correction
+            WHERE correction.trip_id = ?
+              AND EXISTS (
+                SELECT 1 FROM trips AS owner_trip
+                WHERE owner_trip.id = correction.trip_id AND owner_trip.user_id = ?
+              )
+            ORDER BY correction.sequence DESC LIMIT 1`)
+            .bind(tripId, user.id).first<{ root_completion_event_sha256: string; event_sha256: string }>(),
         ]);
         if (feasibilityStart && (
           !feasibilityCompletion || feasibilityCompletion.activation_id !== feasibilityStart.activation_id ||
@@ -1278,7 +1927,7 @@ export async function handleAccountRequest(
           observation_contract_version = ?, taxon_catalog_version = ?, target_taxon_id = ?, contract_status = ?,
           taxon_observations_json = ?, outcome_class = ?, target_encounter_count = ?, any_fish_encounter_count = ?,
           target_identification_confidence = ?,
-          ai_review_status = 'retry', ai_review_json = NULL, ai_reviewed_at = NULL
+          ai_review_status = 'retry', ai_review_json = NULL, ai_review_model = NULL, ai_reviewed_at = NULL
           WHERE id = ? AND user_id = ? AND moderation_status = 'pending'`)
           .bind(
             siteId,
@@ -1315,6 +1964,7 @@ export async function handleAccountRequest(
             tripId,
             user.id,
           );
+        const editReceiptId = `validation_${crypto.randomUUID()}`;
         const statements = [
           updateStatement,
           db.prepare(`INSERT INTO trip_validation_provenance (
@@ -1328,7 +1978,7 @@ export async function handleAccountRequest(
               'invalidated_after_edit', 'context_only', 'post_completion_profile_edit', ?
             FROM trips WHERE id = ? AND user_id = ? AND moderation_status = 'pending'`)
             .bind(
-              `validation_${crypto.randomUUID()}`,
+              editReceiptId,
               trip.mode,
               trip.score_influenced_choice,
               timestamp,
@@ -1344,14 +1994,95 @@ export async function handleAccountRequest(
             timestamp,
           ));
         }
-        const [updateResult] = await db.batch(statements);
-        if (mutationChanges(updateResult) !== 1) {
-          return errorResponse(409, "trip_reviewed", "Reviewed trip logs can no longer be changed.");
+        try {
+          await db.batch(statements);
+        } catch {
+          // A D1 batch can commit and lose its response. Only the exact post-state below grants a receipt.
         }
-        const updatedTrip = await db.prepare("SELECT * FROM trips WHERE id = ? AND user_id = ? LIMIT 1")
-          .bind(tripId, user.id)
-          .first<TripRow>();
-        if (updatedTrip) options.onTripUpdated?.(updatedTrip);
+        const updatedTrip = await db.prepare(`SELECT trip.*,
+            evidence.id AS edit_receipt_id,
+            correction.correction_id AS correction_receipt_id
+          FROM trips AS trip
+          INNER JOIN trip_validation_provenance AS evidence
+            ON evidence.id = ? AND evidence.trip_id = trip.id
+            AND evidence.event_type = 'evidence_exclusion'
+            AND evidence.attestation_status = 'invalidated_after_edit'
+            AND evidence.evidence_status = 'context_only'
+            AND evidence.exclusion_reason = 'post_completion_profile_edit'
+            AND evidence.created_at = ?
+          LEFT JOIN validation_feasibility_corrections AS correction
+            ON correction.correction_id = ? AND correction.trip_id = trip.id
+            AND correction.corrected_at = ?
+          WHERE trip.id = ? AND trip.user_id = ? LIMIT 1`)
+          .bind(
+            editReceiptId,
+            timestamp,
+            feasibilityCorrection?.correctionId ?? null,
+            timestamp,
+            tripId,
+            user.id,
+          )
+          .first<TripRow & { edit_receipt_id: string; correction_receipt_id: string | null }>();
+        const exactReceipt = updatedTrip
+          && updatedTrip.edit_receipt_id === editReceiptId
+          && updatedTrip.correction_receipt_id === (feasibilityCorrection?.correctionId ?? null)
+          && updatedTrip.status === "completed"
+          && updatedTrip.moderation_status === "pending"
+          && updatedTrip.site_id === siteId
+          && updatedTrip.started_at === startedAt
+          && updatedTrip.ended_at === endedAt
+          && updatedTrip.mode === mode
+          && updatedTrip.fishing_method === fishingMethod
+          && updatedTrip.angler_count === anglerCount
+          && updatedTrip.angler_hours === anglerHours
+          && updatedTrip.keeper_count === keeperCount
+          && updatedTrip.short_released_count === shortReleasedCount
+          && updatedTrip.halibut_encounters === keeperCount + shortReleasedCount
+          && updatedTrip.no_catch === Number(noCatch)
+          && updatedTrip.gear_profile_id === gearProfileId
+          && updatedTrip.rod === rod
+          && updatedTrip.reel === reel
+          && updatedTrip.bait_lure === baitLure
+          && updatedTrip.rig === rig
+          && updatedTrip.other_catch_count === otherCatchCount
+          && updatedTrip.other_species === otherSpecies
+          && updatedTrip.observations_json === observations
+          && updatedTrip.notes === notes
+          && updatedTrip.updated_at === timestamp
+          && updatedTrip.completed_at === endedAt
+          && updatedTrip.observation_contract_version === speciesObservation.observationContractVersion
+          && updatedTrip.taxon_catalog_version === speciesObservation.taxonCatalogVersion
+          && updatedTrip.target_taxon_id === speciesObservation.targetTaxonId
+          && updatedTrip.contract_status === speciesObservation.contractStatus
+          && updatedTrip.taxon_observations_json === speciesObservation.taxonObservationsJson
+          && updatedTrip.outcome_class === speciesObservation.outcomeClass
+          && updatedTrip.target_encounter_count === speciesObservation.targetEncounterCount
+          && updatedTrip.any_fish_encounter_count === speciesObservation.anyFishEncounterCount
+          && updatedTrip.target_identification_confidence === speciesObservation.targetIdentificationConfidence
+          && updatedTrip.ai_review_status === "retry"
+          && updatedTrip.ai_review_json === null
+          && updatedTrip.ai_review_model === null
+          && updatedTrip.ai_reviewed_at === null
+          && (!forecastAttributionChanged || (
+            updatedTrip.opportunity_window_id === null
+            && updatedTrip.opportunity_score === null
+            && updatedTrip.habitat_score === null
+            && updatedTrip.seasonality_score === null
+            && updatedTrip.conditions_score === null
+            && updatedTrip.fishability_score === null
+            && updatedTrip.model_version === null
+            && updatedTrip.prediction_metadata_json === null
+          ));
+        if (!updatedTrip || !exactReceipt) {
+          const current = await db.prepare("SELECT moderation_status FROM trips WHERE id = ? AND user_id = ? LIMIT 1")
+            .bind(tripId, user.id)
+            .first<{ moderation_status: string }>();
+          if (current && current.moderation_status !== "pending") {
+            return errorResponse(409, "trip_reviewed", "Reviewed trip logs can no longer be changed.");
+          }
+          return errorResponse(503, "trip_update_unconfirmed", "The trip update could not be confirmed.");
+        }
+        options.onTripUpdated?.(updatedTrip);
         return jsonResponse({
           updated: true,
           tripId,
@@ -1390,26 +2121,43 @@ export async function handleAccountRequest(
       return errorResponse(422, "invalid_site", "Choose a current CastingCompass location.");
     }
     if (request.method === "POST") {
-      const result = await db.prepare(`INSERT OR IGNORE INTO saved_sites (user_id, site_id, created_at)
-        SELECT ?, ?, ? WHERE (SELECT COUNT(*) FROM saved_sites WHERE user_id = ?) < 100`)
-        .bind(user.id, siteId, new Date().toISOString(), user.id)
-        .run();
-      if (result.meta?.changes === 0) {
-        const existing = await db.prepare(
-          "SELECT 1 AS present FROM saved_sites WHERE user_id = ? AND site_id = ? LIMIT 1",
-        ).bind(user.id, siteId).first<{ present: number }>();
-        if (!existing) {
+      try {
+        await db.prepare(`INSERT OR IGNORE INTO saved_sites (user_id, site_id, created_at)
+          SELECT ?, ?, ? WHERE (SELECT COUNT(*) FROM saved_sites WHERE user_id = ?) < 100`)
+          .bind(user.id, siteId, new Date().toISOString(), user.id)
+          .run();
+      } catch {
+        // A lost response after commit is resolved by the exact owner/site state below.
+      }
+      const present = await db.prepare(
+        "SELECT 1 AS present FROM saved_sites WHERE user_id = ? AND site_id = ? LIMIT 1",
+      ).bind(user.id, siteId).first<{ present: number }>();
+      if (Number(present?.present ?? 0) !== 1) {
+        const atLimit = await db.prepare(`SELECT 1 AS at_limit FROM saved_sites
+          WHERE user_id = ? LIMIT 1 OFFSET 99`)
+          .bind(user.id)
+          .first<{ at_limit: number }>();
+        if (Number(atLimit?.at_limit ?? 0) === 1) {
           throw new AuthError(409, "saved_site_limit_reached", "Remove a saved location before adding another.");
         }
-      } else if (result.meta?.changes !== 1) {
         throw new AuthError(503, "saved_site_write_unconfirmed", "The saved location could not be confirmed.");
       }
       return jsonResponse({ saved: true, siteId });
     }
     if (request.method === "DELETE") {
-      await db.prepare("DELETE FROM saved_sites WHERE user_id = ? AND site_id = ?")
-        .bind(user.id, siteId)
-        .run();
+      try {
+        await db.prepare("DELETE FROM saved_sites WHERE user_id = ? AND site_id = ?")
+          .bind(user.id, siteId)
+          .run();
+      } catch {
+        // Absence after a lost committed response is the exact idempotent removal receipt.
+      }
+      const present = await db.prepare(
+        "SELECT 1 AS present FROM saved_sites WHERE user_id = ? AND site_id = ? LIMIT 1",
+      ).bind(user.id, siteId).first<{ present: number }>();
+      if (Number(present?.present ?? 0) === 1) {
+        throw new AuthError(503, "saved_site_write_unconfirmed", "The saved location removal could not be confirmed.");
+      }
       return jsonResponse({ saved: false, siteId });
     }
     return methodNotAllowed("POST, DELETE");
@@ -1486,6 +2234,18 @@ function parseProfileTripText(value: unknown, label: string, maximum: number, re
   return value.trim() || null;
 }
 
+interface GearProfileReceiptRow {
+  id: string;
+  user_id: string;
+  name: string;
+  rod: string | null;
+  reel: string | null;
+  bait_lure: string | null;
+  rig: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
 function parseGearProfile(body: Record<string, unknown>) {
   return {
     name: parseProfileTripText(body.name, "preset name", 60, true) as string,
@@ -1527,6 +2287,14 @@ export function unauthorizedResponse() {
   return errorResponse(401, "authentication_required", "Sign in to submit a trip report or save a location.");
 }
 
+function accountDeletionInProgressResponse() {
+  return errorResponse(
+    409,
+    "account_deletion_in_progress",
+    "Account deletion is already in progress. Export or retry deletion from Profile.",
+  );
+}
+
 export function legalAcceptanceRequiredResponse(ageEligible = true) {
   return ageEligible
     ? errorResponse(428, "legal_acceptance_required", "Accept the current Terms and Privacy Policy to continue.")
@@ -1547,6 +2315,90 @@ type PrivacyObjectStore = "trip_photos" | "privacy_exports";
 interface PrivacyDeletionObject {
   objectStore: PrivacyObjectStore;
   objectKey: string;
+  availableAt?: string;
+}
+
+interface AccountDeletionFenceClaim {
+  leaseToken: string;
+  leaseExpiresAt: string;
+  requestedAt: string;
+}
+
+async function claimAccountDeletionFence(
+  db: D1DatabaseLike,
+  userId: string,
+  ownerSubjectHash: string,
+  now: Date,
+): Promise<AccountDeletionFenceClaim> {
+  const leaseToken = randomSecret(32);
+  const nowIso = now.toISOString();
+  const leaseExpiresAt = new Date(now.getTime() + ACCOUNT_DELETION_FENCE_LEASE_MS).toISOString();
+  try {
+    await db.prepare(`INSERT INTO account_deletion_fences (
+        user_id, owner_subject_hash, lease_token, lease_expires_at, requested_at, updated_at)
+      SELECT ?, ?, ?, ?, ?, ?
+      WHERE EXISTS (SELECT 1 FROM users WHERE id = ?)
+      ON CONFLICT(user_id) DO UPDATE SET
+        lease_token = excluded.lease_token,
+        lease_expires_at = excluded.lease_expires_at,
+        updated_at = excluded.updated_at
+      WHERE account_deletion_fences.owner_subject_hash = excluded.owner_subject_hash
+        AND account_deletion_fences.lease_expires_at <= ?`)
+      .bind(
+        userId,
+        ownerSubjectHash,
+        leaseToken,
+        leaseExpiresAt,
+        nowIso,
+        nowIso,
+        userId,
+        nowIso,
+      )
+      .run();
+  } catch {
+    // A D1 response can be lost after the fence commits. Exact read-back decides ownership.
+  }
+  const exact = await db.prepare(`SELECT requested_at FROM account_deletion_fences
+    WHERE user_id = ? AND owner_subject_hash = ? AND lease_token = ? AND lease_expires_at = ?
+    LIMIT 1`)
+    .bind(userId, ownerSubjectHash, leaseToken, leaseExpiresAt)
+    .first<{ requested_at: string }>();
+  if (exact) return { leaseToken, leaseExpiresAt, requestedAt: exact.requested_at };
+
+  const existing = await db.prepare(`SELECT lease_expires_at FROM account_deletion_fences
+    WHERE user_id = ? AND owner_subject_hash = ? LIMIT 1`)
+    .bind(userId, ownerSubjectHash)
+    .first<{ lease_expires_at: string }>();
+  if (existing) {
+    throw new AuthError(
+      409,
+      "account_deletion_in_progress",
+      "Another account-deletion request is in progress. Retry after its bounded lease expires.",
+    );
+  }
+  const userStillExists = await db.prepare("SELECT 1 AS present FROM users WHERE id = ? LIMIT 1")
+    .bind(userId)
+    .first<{ present: number }>();
+  if (!userStillExists) {
+    throw new AuthError(401, "authentication_required", "This account session has ended.");
+  }
+  throw new AuthError(
+    503,
+    "account_deletion_fence_unconfirmed",
+    "Account deletion could not establish its write fence. Retry before making other changes.",
+  );
+}
+
+function laterDeletionAvailableAt(
+  first: string | undefined,
+  second: string | undefined,
+  fallback: string,
+) {
+  let latest = fallback;
+  for (const candidate of [first, second]) {
+    if (candidate && Number.isFinite(Date.parse(candidate)) && candidate > latest) latest = candidate;
+  }
+  return latest;
 }
 
 async function prepareDeletionJob(
@@ -1554,19 +2406,26 @@ async function prepareDeletionJob(
   stableSubjectId: string,
   ownerStableId: string,
   objects: PrivacyDeletionObject[],
+  requestedAt?: string,
 ) {
   const id = `deletion_${crypto.randomUUID()}`;
   const receipt = randomSecret(32);
-  const timestamp = new Date().toISOString();
-  const uniqueObjects = [...new Map(objects.map((object) => [
-    `${object.objectStore}\u0000${object.objectKey}`,
-    object,
-  ])).values()];
-  const tasks = await Promise.all(uniqueObjects.map(async ({ objectStore, objectKey }) => ({
+  const timestamp = requestedAt ?? new Date().toISOString();
+  const uniqueObjects = [...objects.reduce((byLocator, object) => {
+    const identity = `${object.objectStore}\u0000${object.objectKey}`;
+    const existing = byLocator.get(identity);
+    byLocator.set(identity, {
+      ...object,
+      availableAt: laterDeletionAvailableAt(existing?.availableAt, object.availableAt, timestamp),
+    });
+    return byLocator;
+  }, new Map<string, PrivacyDeletionObject>()).values()];
+  const tasks = await Promise.all(uniqueObjects.map(async ({ objectStore, objectKey, availableAt }) => ({
     id: `deletion_task_${crypto.randomUUID()}`,
     objectStore,
     objectKey,
     objectKeyHash: await sha256(`${objectStore}\u0000${objectKey}`),
+    availableAt: availableAt ?? timestamp,
   })));
   const subjectHash = await sha256(`${scope}:${stableSubjectId}`);
   const ownerSubjectHash = await sha256(`account:${ownerStableId}`);
@@ -1576,8 +2435,11 @@ async function prepareDeletionJob(
     id,
     receipt,
     scope,
+    subjectHash,
+    ownerSubjectHash,
     requestedAt: timestamp,
     objectsTotal: tasks.length,
+    taskReceipts: tasks.map((task) => ({ ...task })),
     jobStatement: (db: D1DatabaseLike) => db.prepare(`INSERT INTO privacy_deletion_jobs
       (id, receipt_hash, scope, subject_hash, owner_subject_hash, state, objects_total, objects_deleted,
         last_error_code, requested_at, active_data_removed_at, completed_at, updated_at)
@@ -1594,6 +2456,35 @@ async function prepareDeletionJob(
         timestamp,
         completed ? timestamp : null,
         timestamp,
+      ),
+    jobStatementForAccountFence: (
+      db: D1DatabaseLike,
+      userId: string,
+      leaseToken: string,
+    ) => db.prepare(`INSERT INTO privacy_deletion_jobs
+      (id, receipt_hash, scope, subject_hash, owner_subject_hash, state, objects_total, objects_deleted,
+        last_error_code, requested_at, active_data_removed_at, completed_at, updated_at)
+      SELECT ?, ?, ?, ?, ?, ?, ?, 0, NULL, ?, ?, ?, ?
+      WHERE EXISTS (SELECT 1 FROM account_deletion_fences
+        WHERE user_id = ? AND owner_subject_hash = ? AND lease_token = ?)
+        AND NOT EXISTS (SELECT 1 FROM trips
+          WHERE user_id = ? AND photo_key IS NOT NULL AND photo_key_hash IS NULL)`)
+      .bind(
+        id,
+        receiptHash,
+        scope,
+        subjectHash,
+        ownerSubjectHash,
+        completed ? "completed" : "active_data_removed",
+        tasks.length,
+        timestamp,
+        timestamp,
+        completed ? timestamp : null,
+        timestamp,
+        userId,
+        ownerSubjectHash,
+        leaseToken,
+        userId,
       ),
     jobStatementForPendingTrip: (db: D1DatabaseLike, tripId: string, userId: string) => db.prepare(`INSERT INTO privacy_deletion_jobs
       (id, receipt_hash, scope, subject_hash, owner_subject_hash, state, objects_total, objects_deleted,
@@ -1619,21 +2510,459 @@ async function prepareDeletionJob(
       (id, job_id, object_key, object_key_hash, object_store, state, attempts, available_at, lease_expires_at,
         lease_token, last_error_code, created_at, updated_at, completed_at)
       VALUES (?, ?, ?, ?, ?, 'pending', 0, ?, NULL, NULL, NULL, ?, ?, NULL)`)
-      .bind(task.id, id, task.objectKey, task.objectKeyHash, task.objectStore, timestamp, timestamp, timestamp)),
+      .bind(task.id, id, task.objectKey, task.objectKeyHash, task.objectStore, task.availableAt, timestamp, timestamp)),
+    inventoryStatementsForAccountFence: (
+      db: D1DatabaseLike,
+      userId: string,
+      leaseToken: string,
+    ) => [
+      db.prepare(`INSERT INTO privacy_deletion_tasks
+        (id, job_id, object_key, object_key_hash, object_store, state, attempts, available_at,
+          lease_expires_at, lease_token, last_error_code, created_at, updated_at, completed_at)
+        SELECT ? || ':' || task.object_key_hash, ?, task.object_key, task.object_key_hash,
+          task.object_store, 'pending', 0, ?, NULL, NULL, NULL, ?, ?, NULL
+        FROM privacy_deletion_tasks AS task
+        JOIN privacy_deletion_jobs AS source_job ON source_job.id = task.job_id
+        WHERE source_job.owner_subject_hash = ? AND source_job.id != ?
+          AND task.state != 'completed' AND task.object_key IS NOT NULL
+          AND EXISTS (SELECT 1 FROM account_deletion_fences
+            WHERE user_id = ? AND owner_subject_hash = ? AND lease_token = ?)
+          AND EXISTS (SELECT 1 FROM privacy_deletion_jobs
+            WHERE id = ? AND owner_subject_hash = ?)
+        ON CONFLICT(job_id, object_key_hash) DO UPDATE SET
+          available_at = CASE
+            WHEN excluded.available_at > privacy_deletion_tasks.available_at THEN excluded.available_at
+            ELSE privacy_deletion_tasks.available_at
+          END`)
+        .bind(
+          id,
+          id,
+          timestamp,
+          timestamp,
+          timestamp,
+          ownerSubjectHash,
+          id,
+          userId,
+          ownerSubjectHash,
+          leaseToken,
+          id,
+          ownerSubjectHash,
+        ),
+      db.prepare(`INSERT INTO privacy_deletion_tasks
+        (id, job_id, object_key, object_key_hash, object_store, state, attempts, available_at,
+          lease_expires_at, lease_token, last_error_code, created_at, updated_at, completed_at)
+        SELECT ? || ':' || reservation.object_key_hash, ?, reservation.object_key,
+          reservation.object_key_hash, 'trip_photos', 'pending', 0, reservation.available_at,
+          NULL, NULL, NULL, ?, ?, NULL
+        FROM trip_photo_upload_reservations AS reservation
+        WHERE reservation.owner_subject_hash = ?
+          AND EXISTS (SELECT 1 FROM account_deletion_fences
+            WHERE user_id = ? AND owner_subject_hash = ? AND lease_token = ?)
+          AND EXISTS (SELECT 1 FROM privacy_deletion_jobs
+            WHERE id = ? AND owner_subject_hash = ?)
+        ON CONFLICT(job_id, object_key_hash) DO UPDATE SET
+          available_at = CASE
+            WHEN excluded.available_at > privacy_deletion_tasks.available_at THEN excluded.available_at
+            ELSE privacy_deletion_tasks.available_at
+          END`)
+        .bind(
+          id,
+          id,
+          timestamp,
+          timestamp,
+          ownerSubjectHash,
+          userId,
+          ownerSubjectHash,
+          leaseToken,
+          id,
+          ownerSubjectHash,
+        ),
+      db.prepare(`INSERT INTO privacy_deletion_tasks
+        (id, job_id, object_key, object_key_hash, object_store, state, attempts, available_at,
+          lease_expires_at, lease_token, last_error_code, created_at, updated_at, completed_at)
+        SELECT ? || ':' || export.object_key_hash, ?, export.object_key, export.object_key_hash,
+          'privacy_exports', 'pending', 0, ?, NULL, NULL, NULL, ?, ?, NULL
+        FROM privacy_export_jobs AS export
+        WHERE export.owner_subject_hash = ? AND export.object_key IS NOT NULL
+          AND export.object_key_hash IS NOT NULL
+          AND export.state IN ('pending', 'queued', 'processing', 'retry', 'completed', 'needs_attention')
+          AND EXISTS (SELECT 1 FROM account_deletion_fences
+            WHERE user_id = ? AND owner_subject_hash = ? AND lease_token = ?)
+          AND EXISTS (SELECT 1 FROM privacy_deletion_jobs
+            WHERE id = ? AND owner_subject_hash = ?)
+        ON CONFLICT(job_id, object_key_hash) DO UPDATE SET
+          available_at = CASE
+            WHEN excluded.available_at > privacy_deletion_tasks.available_at THEN excluded.available_at
+            ELSE privacy_deletion_tasks.available_at
+          END`)
+        .bind(
+          id,
+          id,
+          timestamp,
+          timestamp,
+          timestamp,
+          ownerSubjectHash,
+          userId,
+          ownerSubjectHash,
+          leaseToken,
+          id,
+          ownerSubjectHash,
+        ),
+      db.prepare(`INSERT INTO privacy_deletion_tasks
+        (id, job_id, object_key, object_key_hash, object_store, state, attempts, available_at,
+          lease_expires_at, lease_token, last_error_code, created_at, updated_at, completed_at)
+        SELECT ? || ':' || trip.photo_key_hash, ?, trip.photo_key, trip.photo_key_hash,
+          'trip_photos', 'pending', 0, ?, NULL, NULL, NULL, ?, ?, NULL
+        FROM trips AS trip
+        WHERE trip.user_id = ? AND trip.photo_key IS NOT NULL AND trip.photo_key_hash IS NOT NULL
+          AND EXISTS (SELECT 1 FROM account_deletion_fences
+            WHERE user_id = ? AND owner_subject_hash = ? AND lease_token = ?)
+          AND EXISTS (SELECT 1 FROM privacy_deletion_jobs
+            WHERE id = ? AND owner_subject_hash = ?)
+        ON CONFLICT(job_id, object_key_hash) DO UPDATE SET
+          available_at = CASE
+            WHEN excluded.available_at > privacy_deletion_tasks.available_at THEN excluded.available_at
+            ELSE privacy_deletion_tasks.available_at
+          END`)
+        .bind(
+          id,
+          id,
+          timestamp,
+          timestamp,
+          timestamp,
+          userId,
+          userId,
+          ownerSubjectHash,
+          leaseToken,
+          id,
+          ownerSubjectHash,
+        ),
+    ],
+    finalizeInventoryStatementForAccountFence: (
+      db: D1DatabaseLike,
+      userId: string,
+      leaseToken: string,
+    ) => db.prepare(`UPDATE privacy_deletion_jobs SET
+        objects_total = (SELECT COUNT(*) FROM privacy_deletion_tasks WHERE job_id = ?),
+        state = CASE
+          WHEN EXISTS (SELECT 1 FROM privacy_deletion_tasks WHERE job_id = ?)
+            THEN 'active_data_removed'
+          ELSE 'completed'
+        END,
+        completed_at = CASE
+          WHEN EXISTS (SELECT 1 FROM privacy_deletion_tasks WHERE job_id = ?)
+            THEN NULL
+          ELSE ?
+        END,
+        updated_at = ?
+      WHERE id = ? AND owner_subject_hash = ?
+        AND EXISTS (SELECT 1 FROM account_deletion_fences
+          WHERE user_id = ? AND owner_subject_hash = ? AND lease_token = ?)`)
+      .bind(
+        id,
+        id,
+        id,
+        timestamp,
+        timestamp,
+        id,
+        ownerSubjectHash,
+        userId,
+        ownerSubjectHash,
+        leaseToken,
+      ),
     taskStatementsForPendingTrip: (db: D1DatabaseLike, tripId: string, userId: string) => tasks.map((task) => db.prepare(`INSERT INTO privacy_deletion_tasks
       (id, job_id, object_key, object_key_hash, object_store, state, attempts, available_at, lease_expires_at,
         lease_token, last_error_code, created_at, updated_at, completed_at)
       SELECT ?, ?, ?, ?, ?, 'pending', 0, ?, NULL, NULL, NULL, ?, ?, NULL
       WHERE EXISTS (SELECT 1 FROM trips WHERE id = ? AND user_id = ? AND moderation_status = 'pending')`)
-      .bind(task.id, id, task.objectKey, task.objectKeyHash, task.objectStore, timestamp, timestamp, timestamp, tripId, userId)),
+      .bind(task.id, id, task.objectKey, task.objectKeyHash, task.objectStore, task.availableAt, timestamp, timestamp, tripId, userId)),
   };
 }
 
-function mutationChanges(result: unknown) {
-  if (!result || typeof result !== "object") return 0;
-  const meta = (result as { meta?: { changes?: unknown } }).meta;
-  const changes = Number(meta?.changes ?? 0);
-  return Number.isFinite(changes) ? changes : 0;
+type ManualReviewRetryReceipt = "queued" | "changed" | "unconfirmed";
+
+interface ManualReviewRetryReceiptRow {
+  queued_count: number;
+  prior_count: number;
+  owner_count: number;
+  any_count: number;
+}
+
+async function manualReviewRetryReceipt(
+  db: D1DatabaseLike,
+  trip: TripRow,
+  userId: string,
+): Promise<ManualReviewRetryReceipt> {
+  if (trip.user_id !== userId || trip.status !== "completed"
+    || (trip.ai_review_status !== null && trip.ai_review_status !== "retry")) {
+    return "unconfirmed";
+  }
+  try {
+    const receipt = await db.prepare(`SELECT
+        (SELECT COUNT(*) FROM trips
+          WHERE id = ? AND user_id = ? AND status = 'completed'
+            AND ai_review_status = 'queued' AND ai_review_json IS NULL
+            AND ai_review_model IS NULL AND ai_reviewed_at IS NULL AND updated_at = ?) AS queued_count,
+        (SELECT COUNT(*) FROM trips
+          WHERE id = ? AND user_id = ? AND status = 'completed'
+            AND ai_review_status IS ? AND ai_review_json IS ?
+            AND ai_review_model IS ? AND ai_reviewed_at IS ? AND updated_at = ?) AS prior_count,
+        (SELECT COUNT(*) FROM trips
+          WHERE id = ? AND user_id = ? AND status = 'completed') AS owner_count,
+        (SELECT COUNT(*) FROM trips WHERE id = ?) AS any_count`)
+      .bind(
+        trip.id,
+        userId,
+        trip.updated_at,
+        trip.id,
+        userId,
+        trip.ai_review_status,
+        trip.ai_review_json,
+        trip.ai_review_model,
+        trip.ai_reviewed_at,
+        trip.updated_at,
+        trip.id,
+        userId,
+        trip.id,
+      )
+      .first<ManualReviewRetryReceiptRow>();
+    if (!exactReceiptCounts(receipt, ["queued_count", "prior_count", "owner_count", "any_count"])) {
+      return "unconfirmed";
+    }
+    const queuedCount = Number(receipt?.queued_count);
+    const priorCount = Number(receipt?.prior_count);
+    const ownerCount = Number(receipt?.owner_count);
+    const anyCount = Number(receipt?.any_count);
+    if (queuedCount === 1 && priorCount === 0 && ownerCount === 1 && anyCount === 1) return "queued";
+    if (queuedCount === 0 && priorCount === 1 && ownerCount === 1 && anyCount === 1) return "unconfirmed";
+    if (queuedCount === 0 && priorCount === 0) return "changed";
+    return "unconfirmed";
+  } catch {
+    return "unconfirmed";
+  }
+}
+
+function exactReceiptCounts(receipt: unknown, fields: string[]) {
+  if (!receipt || typeof receipt !== "object") return false;
+  return fields.every((field) => {
+    const count = Number((receipt as Record<string, unknown>)[field]);
+    return Number.isSafeInteger(count) && count >= 0 && count <= 1;
+  });
+}
+
+type LegalAcceptanceReceipt = "accepted" | "authentication_missing" | "unconfirmed";
+
+interface LegalAcceptanceReceiptRow {
+  accepted_count: number;
+  prior_count: number;
+  account_count: number;
+  session_count: number;
+}
+
+function authenticatedAccountVersionBindings(version: AuthenticatedAccountVersion) {
+  return [
+    version.id,
+    version.email,
+    version.ageEligibilityConfirmedAt,
+    version.termsAcceptedAt,
+    version.termsVersion,
+    version.privacyAcceptedAt,
+    version.privacyVersion,
+    version.createdAt,
+    version.updatedAt,
+  ];
+}
+
+async function acceptCurrentLegalTerms(
+  db: D1DatabaseLike,
+  session: AuthenticatedSession,
+  acceptedAt: string,
+): Promise<LegalAcceptanceReceipt> {
+  const prior = session.accountVersion;
+  if (!prior.ageEligibilityConfirmedAt) return "unconfirmed";
+  try {
+    await db.prepare(`UPDATE users SET terms_accepted_at = ?, terms_version = ?,
+        privacy_accepted_at = ?, privacy_version = ?, updated_at = ?
+      WHERE id = ? AND email = ? AND age_eligibility_confirmed_at = ?
+        AND terms_accepted_at IS ? AND terms_version IS ?
+        AND privacy_accepted_at IS ? AND privacy_version IS ?
+        AND created_at = ? AND updated_at = ?
+        AND EXISTS (SELECT 1 FROM auth_sessions
+          WHERE token_hash = ? AND user_id = ? AND expires_at = ? AND expires_at > ?)`)
+      .bind(
+        acceptedAt,
+        LEGAL_VERSION,
+        acceptedAt,
+        LEGAL_VERSION,
+        acceptedAt,
+        ...authenticatedAccountVersionBindings(prior),
+        session.sessionTokenHash,
+        prior.id,
+        session.sessionExpiresAt,
+        acceptedAt,
+      )
+      .run();
+  } catch {
+    // A committed write can lose its response. The complete account and live-session
+    // receipt below is the only authority for a browser compliance response.
+  }
+
+  try {
+    const receipt = await db.prepare(`SELECT
+        (SELECT COUNT(*) FROM users
+          WHERE id = ? AND email = ? AND age_eligibility_confirmed_at = ?
+            AND terms_accepted_at = ? AND terms_version = ?
+            AND privacy_accepted_at = ? AND privacy_version = ?
+            AND created_at = ? AND updated_at = ?) AS accepted_count,
+        (SELECT COUNT(*) FROM users
+          WHERE id = ? AND email = ? AND age_eligibility_confirmed_at = ?
+            AND terms_accepted_at IS ? AND terms_version IS ?
+            AND privacy_accepted_at IS ? AND privacy_version IS ?
+            AND created_at = ? AND updated_at = ?) AS prior_count,
+        (SELECT COUNT(*) FROM users WHERE id = ?) AS account_count,
+        (SELECT COUNT(*) FROM auth_sessions
+          WHERE token_hash = ? AND user_id = ? AND expires_at = ? AND expires_at > ?) AS session_count`)
+      .bind(
+        prior.id,
+        prior.email,
+        prior.ageEligibilityConfirmedAt,
+        acceptedAt,
+        LEGAL_VERSION,
+        acceptedAt,
+        LEGAL_VERSION,
+        prior.createdAt,
+        acceptedAt,
+        ...authenticatedAccountVersionBindings(prior),
+        prior.id,
+        session.sessionTokenHash,
+        prior.id,
+        session.sessionExpiresAt,
+        acceptedAt,
+      )
+      .first<LegalAcceptanceReceiptRow>();
+    if (!exactReceiptCounts(receipt, ["accepted_count", "prior_count", "account_count", "session_count"])) {
+      return "unconfirmed";
+    }
+    const acceptedCount = Number(receipt?.accepted_count);
+    const priorCount = Number(receipt?.prior_count);
+    const accountCount = Number(receipt?.account_count);
+    const sessionCount = Number(receipt?.session_count);
+    if (acceptedCount === 1 && priorCount === 0 && accountCount === 1 && sessionCount === 1) {
+      return "accepted";
+    }
+    if (accountCount === 0 || sessionCount === 0) return "authentication_missing";
+    return "unconfirmed";
+  } catch {
+    return "unconfirmed";
+  }
+}
+
+type SignInAttemptClaim = "claimed" | "rate_limited" | "unconfirmed";
+
+interface SignInAttemptClaimReceiptRow {
+  pending_count: number;
+  any_count: number;
+  recent_failed_count: number;
+}
+
+async function claimSignInAttempt(
+  db: D1DatabaseLike,
+  attemptId: string,
+  emailHash: string,
+  attemptedAt: string,
+  cutoff: string,
+): Promise<SignInAttemptClaim> {
+  try {
+    await db.prepare(`INSERT INTO auth_attempts
+      (id, email_hash, attempted_at, successful)
+      SELECT ?, ?, ?, 0
+      WHERE (SELECT COUNT(*) FROM auth_attempts
+        WHERE email_hash = ? AND successful = 0 AND attempted_at >= ?) < 10`)
+      .bind(attemptId, emailHash, attemptedAt, emailHash, cutoff)
+      .run();
+  } catch {
+    // The insert can commit and lose its response. Only exact stored state decides.
+  }
+
+  let receipt: SignInAttemptClaimReceiptRow | null = null;
+  let receiptReadSucceeded = false;
+  try {
+    receipt = await db.prepare(`SELECT
+        (SELECT COUNT(*) FROM auth_attempts
+          WHERE id = ? AND email_hash = ? AND attempted_at = ? AND successful = 0) AS pending_count,
+        (SELECT COUNT(*) FROM auth_attempts WHERE id = ?) AS any_count,
+        (SELECT COUNT(*) FROM auth_attempts
+          WHERE email_hash = ? AND successful = 0 AND attempted_at >= ?) AS recent_failed_count`)
+      .bind(attemptId, emailHash, attemptedAt, attemptId, emailHash, cutoff)
+      .first<SignInAttemptClaimReceiptRow>();
+    receiptReadSucceeded = true;
+  } catch {
+    // Credential verification cannot follow an unreadable abuse-accounting claim.
+  }
+
+  const pendingCount = Number(receipt?.pending_count);
+  const anyCount = Number(receipt?.any_count);
+  const recentFailedCount = Number(receipt?.recent_failed_count);
+  const countsValid = [pendingCount, anyCount, recentFailedCount]
+    .every((count) => Number.isSafeInteger(count) && count >= 0)
+    && pendingCount <= 1
+    && anyCount <= 1
+    && pendingCount <= anyCount
+    && pendingCount <= recentFailedCount;
+  if (!receiptReadSucceeded || !countsValid) return "unconfirmed";
+  if (pendingCount === 1 && anyCount === 1 && recentFailedCount <= 10) return "claimed";
+  if (pendingCount === 0 && anyCount === 0 && recentFailedCount >= 10) return "rate_limited";
+  return "unconfirmed";
+}
+
+interface SignInAttemptClassificationReceiptRow {
+  classified_count: number;
+  pending_count: number;
+  any_count: number;
+}
+
+async function classifySignInAttemptSuccessful(
+  db: D1DatabaseLike,
+  attemptId: string,
+  emailHash: string,
+  attemptedAt: string,
+) {
+  try {
+    await db.prepare(`UPDATE auth_attempts SET successful = 1
+      WHERE id = ? AND email_hash = ? AND attempted_at = ? AND successful = 0`)
+      .bind(attemptId, emailHash, attemptedAt)
+      .run();
+  } catch {
+    // The update can commit and lose its response. Only exact stored state decides.
+  }
+
+  let receipt: SignInAttemptClassificationReceiptRow | null = null;
+  let receiptReadSucceeded = false;
+  try {
+    receipt = await db.prepare(`SELECT
+        (SELECT COUNT(*) FROM auth_attempts
+          WHERE id = ? AND email_hash = ? AND attempted_at = ? AND successful = 1) AS classified_count,
+        (SELECT COUNT(*) FROM auth_attempts
+          WHERE id = ? AND email_hash = ? AND attempted_at = ? AND successful = 0) AS pending_count,
+        (SELECT COUNT(*) FROM auth_attempts WHERE id = ?) AS any_count`)
+      .bind(attemptId, emailHash, attemptedAt, attemptId, emailHash, attemptedAt, attemptId)
+      .first<SignInAttemptClassificationReceiptRow>();
+    receiptReadSucceeded = true;
+  } catch {
+    // Session issuance cannot follow an unreadable success classification.
+  }
+
+  const classifiedCount = Number(receipt?.classified_count);
+  const pendingCount = Number(receipt?.pending_count);
+  const anyCount = Number(receipt?.any_count);
+  const countsValid = [classifiedCount, pendingCount, anyCount]
+    .every((count) => Number.isSafeInteger(count) && count >= 0 && count <= 1)
+    && classifiedCount + pendingCount <= anyCount;
+  return receiptReadSucceeded
+    && countsValid
+    && classifiedCount === 1
+    && pendingCount === 0
+    && anyCount === 1;
 }
 
 function prepareConditionalFeasibilityCorrectionInsert(
@@ -1692,6 +3021,7 @@ async function deletionStatusAfterCommit(
     requestedAt: string;
     objectsTotal: number;
   },
+  maximumTasks = ACCOUNT_DELETION_INLINE_TASK_BATCH,
 ) {
   const fallback = {
     status: deletion.objectsTotal === 0 ? "completed" as const : "processing" as const,
@@ -1702,13 +3032,12 @@ async function deletionStatusAfterCommit(
     objectsDeleted: 0,
   };
   try {
-    await processPrivacyDeletionTasks(env, deletion.id);
-    const job = env.DB ? await selectDeletionJobByReceipt(env.DB, deletion.receipt) : null;
-    return job ? publicDeletionStatus(job) : fallback;
+    await processPrivacyDeletionTasks(env, deletion.id, maximumTasks);
   } catch (error) {
     logEvent("error", "privacy.deletion.cleanup_deferred", safeErrorContext(error));
-    return fallback;
   }
+  const job = env.DB ? await selectDeletionJobByReceipt(env.DB, deletion.receipt) : null;
+  return job ? publicDeletionStatus(job) : fallback;
 }
 
 async function selectDeletionJobByReceipt(db: D1DatabaseLike, receipt: string) {
@@ -1716,6 +3045,210 @@ async function selectDeletionJobByReceipt(db: D1DatabaseLike, receipt: string) {
     FROM privacy_deletion_jobs WHERE receipt_hash = ? LIMIT 1`)
     .bind(await sha256(receipt))
     .first<PrivacyDeletionJobRow>();
+}
+
+async function exactAccountDeletionCommit(
+  db: D1DatabaseLike,
+  userId: string,
+  emailHash: string,
+  deletion: {
+    id: string;
+    receipt: string;
+    scope: PrivacyDeletionJobRow["scope"];
+    subjectHash: string;
+    ownerSubjectHash: string;
+    requestedAt: string;
+  },
+) {
+  if (deletion.scope !== "account") return null;
+  const row = await db.prepare(`SELECT job.id AS job_id, job.scope, job.subject_hash,
+      job.owner_subject_hash, job.state, job.objects_total, job.objects_deleted,
+      job.last_error_code, job.requested_at, job.active_data_removed_at,
+      job.completed_at, job.updated_at,
+      (SELECT COUNT(*) FROM privacy_deletion_tasks WHERE job_id = job.id) AS task_count,
+      (SELECT COUNT(*) FROM privacy_deletion_tasks AS task
+        WHERE task.job_id = job.id AND (
+          task.id != (job.id || ':' || task.object_key_hash)
+          OR task.object_key IS NULL
+          OR length(task.object_key_hash) != 64
+          OR task.object_key_hash GLOB '*[^a-f0-9]*'
+          OR task.object_store NOT IN ('trip_photos', 'privacy_exports')
+          OR task.state != 'pending' OR task.attempts != 0
+          OR task.lease_expires_at IS NOT NULL OR task.lease_token IS NOT NULL
+          OR task.last_error_code IS NOT NULL OR task.completed_at IS NOT NULL
+          OR task.created_at != job.requested_at OR task.updated_at != job.requested_at
+        )) AS invalid_task_count,
+      (SELECT COUNT(*) FROM users WHERE id = ?) AS user_count,
+      (SELECT COUNT(*) FROM trips WHERE user_id = ?) AS trip_count,
+      (SELECT COUNT(*) FROM account_deletion_fences
+        WHERE user_id = ? OR owner_subject_hash = ?) AS fence_count,
+      (SELECT COUNT(*) FROM trip_photo_upload_reservations
+        WHERE owner_subject_hash = ?) AS reservation_count,
+      (SELECT COUNT(*) FROM auth_attempts WHERE email_hash = ?) AS auth_attempt_count,
+      (SELECT COUNT(*) FROM privacy_export_jobs
+        WHERE user_id = ?
+          AND state IN ('pending', 'queued', 'processing', 'retry', 'completed', 'needs_attention'))
+        AS export_user_count,
+      (SELECT COUNT(*) FROM privacy_export_jobs
+        WHERE owner_subject_hash = ?
+          AND state IN ('pending', 'queued', 'processing', 'retry', 'completed', 'needs_attention'))
+        AS active_export_count
+    FROM privacy_deletion_jobs AS job
+    WHERE job.receipt_hash = ? LIMIT 1`)
+    .bind(
+      userId,
+      userId,
+      userId,
+      deletion.ownerSubjectHash,
+      deletion.ownerSubjectHash,
+      emailHash,
+      userId,
+      deletion.ownerSubjectHash,
+      await sha256(deletion.receipt),
+    )
+    .first<PrivacyDeletionJobRow & {
+      job_id: string;
+      subject_hash: string;
+      owner_subject_hash: string;
+      last_error_code: string | null;
+      active_data_removed_at: string | null;
+      updated_at: string;
+      task_count: number;
+      invalid_task_count: number;
+      user_count: number;
+      trip_count: number;
+      fence_count: number;
+      reservation_count: number;
+      auth_attempt_count: number;
+      export_user_count: number;
+      active_export_count: number;
+    }>();
+  if (!row) return null;
+  const expectedState = row.task_count === 0 ? "completed" : "active_data_removed";
+  const exact = row.job_id === deletion.id
+    && row.scope === deletion.scope
+    && row.subject_hash === deletion.subjectHash
+    && row.owner_subject_hash === deletion.ownerSubjectHash
+    && row.state === expectedState
+    && row.objects_total === row.task_count
+    && row.objects_deleted === 0
+    && row.last_error_code === null
+    && row.requested_at === deletion.requestedAt
+    && row.active_data_removed_at === deletion.requestedAt
+    && row.completed_at === (row.task_count === 0 ? deletion.requestedAt : null)
+    && row.updated_at === deletion.requestedAt
+    && row.invalid_task_count === 0
+    && row.user_count === 0
+    && row.trip_count === 0
+    && row.fence_count === 0
+    && row.reservation_count === 0
+    && row.auth_attempt_count === 0
+    && row.export_user_count === 0
+    && row.active_export_count === 0;
+  return exact ? row : null;
+}
+
+async function exactPendingTripDeletionCommit(
+  db: D1DatabaseLike,
+  tripId: string,
+  userId: string,
+  deletion: {
+    id: string;
+    receipt: string;
+    scope: PrivacyDeletionJobRow["scope"];
+    subjectHash: string;
+    ownerSubjectHash: string;
+    requestedAt: string;
+    objectsTotal: number;
+    taskReceipts: Array<{
+      id: string;
+      objectStore: PrivacyObjectStore;
+      objectKey: string;
+      objectKeyHash: string;
+      availableAt: string;
+    }>;
+  },
+) {
+  if (deletion.scope !== "trip"
+    || deletion.taskReceipts.length > 1
+    || deletion.objectsTotal !== deletion.taskReceipts.length) return false;
+  const row = await db.prepare(`SELECT job.id AS job_id, job.scope, job.subject_hash,
+      job.owner_subject_hash, job.state AS job_state, job.objects_total, job.objects_deleted,
+      job.last_error_code AS job_error, job.requested_at, job.active_data_removed_at,
+      job.completed_at AS job_completed_at, job.updated_at AS job_updated_at,
+      task.id AS task_id, task.object_key, task.object_key_hash, task.object_store,
+      task.state AS task_state, task.attempts AS task_attempts, task.available_at,
+      task.lease_expires_at, task.lease_token, task.last_error_code AS task_error,
+      task.created_at AS task_created_at, task.updated_at AS task_updated_at,
+      task.completed_at AS task_completed_at,
+      (SELECT COUNT(*) FROM privacy_deletion_tasks WHERE job_id = job.id) AS task_count,
+      (SELECT COUNT(*) FROM trips WHERE id = ? AND user_id = ?) AS trip_count,
+      (SELECT COUNT(*) FROM site_discussion_posts WHERE trip_id = ?) AS discussion_count
+    FROM privacy_deletion_jobs AS job
+    LEFT JOIN privacy_deletion_tasks AS task ON task.job_id = job.id
+    WHERE job.receipt_hash = ? LIMIT 1`)
+    .bind(tripId, userId, tripId, await sha256(deletion.receipt))
+    .first<{
+      job_id: string;
+      scope: string;
+      subject_hash: string;
+      owner_subject_hash: string;
+      job_state: string;
+      objects_total: number;
+      objects_deleted: number;
+      job_error: string | null;
+      requested_at: string;
+      active_data_removed_at: string;
+      job_completed_at: string | null;
+      job_updated_at: string;
+      task_id: string | null;
+      object_key: string | null;
+      object_key_hash: string | null;
+      object_store: string | null;
+      task_state: string | null;
+      task_attempts: number | null;
+      available_at: string | null;
+      lease_expires_at: string | null;
+      lease_token: string | null;
+      task_error: string | null;
+      task_created_at: string | null;
+      task_updated_at: string | null;
+      task_completed_at: string | null;
+      task_count: number;
+      trip_count: number;
+      discussion_count: number;
+    }>();
+  if (!row) return false;
+  const expectedTask = deletion.taskReceipts[0] ?? null;
+  const expectedState = deletion.objectsTotal === 0 ? "completed" : "active_data_removed";
+  return row.job_id === deletion.id
+    && row.scope === deletion.scope
+    && row.subject_hash === deletion.subjectHash
+    && row.owner_subject_hash === deletion.ownerSubjectHash
+    && row.job_state === expectedState
+    && row.objects_total === deletion.objectsTotal
+    && row.objects_deleted === 0
+    && row.job_error === null
+    && row.requested_at === deletion.requestedAt
+    && row.active_data_removed_at === deletion.requestedAt
+    && row.job_completed_at === (deletion.objectsTotal === 0 ? deletion.requestedAt : null)
+    && row.job_updated_at === deletion.requestedAt
+    && row.task_count === deletion.objectsTotal
+    && row.trip_count === 0
+    && row.discussion_count === 0
+    && row.task_id === (expectedTask?.id ?? null)
+    && row.object_key === (expectedTask?.objectKey ?? null)
+    && row.object_key_hash === (expectedTask?.objectKeyHash ?? null)
+    && row.object_store === (expectedTask?.objectStore ?? null)
+    && row.task_state === (expectedTask ? "pending" : null)
+    && row.task_attempts === (expectedTask ? 0 : null)
+    && row.available_at === (expectedTask?.availableAt ?? null)
+    && row.lease_expires_at === null
+    && row.lease_token === null
+    && row.task_error === null
+    && row.task_created_at === (expectedTask ? deletion.requestedAt : null)
+    && row.task_updated_at === (expectedTask ? deletion.requestedAt : null)
+    && row.task_completed_at === null;
 }
 
 function publicDeletionStatus(job: PrivacyDeletionJobRow) {
@@ -1738,30 +3271,43 @@ interface PrivacyDeletionTaskRow {
   object_key: string | null;
   object_key_hash: string;
   object_store: PrivacyObjectStore;
-  state: "pending" | "leased";
+  state: "pending" | "leased" | "completed";
   attempts: number;
+  available_at: string;
+  lease_expires_at: string | null;
+  lease_token: string | null;
+  completed_at: string | null;
 }
 
-export async function processPrivacyDeletionTasks(env: AuthApiEnv, onlyJobId?: string) {
+export async function processPrivacyDeletionTasks(
+  env: AuthApiEnv,
+  onlyJobId?: string,
+  maximumTasks = PRIVACY_DELETION_TASK_BATCH,
+) {
   if (!env.DB) return 0;
   const db = env.DB;
   await initialize(db);
   const now = new Date();
   const nowIso = now.toISOString();
   const query = onlyJobId
-    ? `SELECT id, job_id, object_key, object_key_hash, object_store, state, attempts FROM privacy_deletion_tasks
+    ? `SELECT id, job_id, object_key, object_key_hash, object_store, state, attempts,
+         available_at, lease_expires_at, lease_token, completed_at FROM privacy_deletion_tasks
        WHERE job_id = ?
          AND ((state = 'pending' AND available_at <= ?)
            OR (state = 'leased' AND (lease_expires_at IS NULL OR lease_expires_at <= ?)))
-       ORDER BY created_at LIMIT 50`
-    : `SELECT id, job_id, object_key, object_key_hash, object_store, state, attempts FROM privacy_deletion_tasks
+       ORDER BY created_at LIMIT ?`
+    : `SELECT id, job_id, object_key, object_key_hash, object_store, state, attempts,
+         available_at, lease_expires_at, lease_token, completed_at FROM privacy_deletion_tasks
        WHERE (state = 'pending' AND available_at <= ?)
          OR (state = 'leased' AND (lease_expires_at IS NULL OR lease_expires_at <= ?))
-       ORDER BY available_at, created_at LIMIT 50`;
+       ORDER BY available_at, created_at LIMIT ?`;
   const statement = db.prepare(query);
+  const taskLimit = Number.isSafeInteger(maximumTasks)
+    ? Math.max(1, Math.min(PRIVACY_DELETION_TASK_BATCH, maximumTasks))
+    : PRIVACY_DELETION_TASK_BATCH;
   const rows = onlyJobId
-    ? await statement.bind(onlyJobId, nowIso, nowIso).all<PrivacyDeletionTaskRow>()
-    : await statement.bind(nowIso, nowIso).all<PrivacyDeletionTaskRow>();
+    ? await statement.bind(onlyJobId, nowIso, nowIso, taskLimit).all<PrivacyDeletionTaskRow>()
+    : await statement.bind(nowIso, nowIso, taskLimit).all<PrivacyDeletionTaskRow>();
   const tasks = rows.results ?? [];
   if (!tasks.length) {
     await reconcileDeletionJobs(db);
@@ -1812,38 +3358,102 @@ export async function processPrivacyDeletionTasks(env: AuthApiEnv, onlyJobId?: s
     }
     const leaseExpiresAt = new Date(Date.now() + 5 * 60 * 1000).toISOString();
     const leaseToken = randomSecret(24);
-    const claimed = await db.prepare(`UPDATE privacy_deletion_tasks
-      SET state = 'leased', attempts = attempts + 1, lease_expires_at = ?, lease_token = ?, updated_at = ?
-      WHERE id = ?
-        AND ((state = 'pending' AND available_at <= ?)
-          OR (state = 'leased' AND (lease_expires_at IS NULL OR lease_expires_at <= ?)))`)
-      .bind(leaseExpiresAt, leaseToken, nowIso, task.id, nowIso, nowIso)
-      .run();
-    if (Number(claimed.meta?.changes ?? 0) !== 1) continue;
-    await db.prepare("UPDATE privacy_deletion_jobs SET state = 'purging', last_error_code = NULL, updated_at = ? WHERE id = ? AND state != 'completed'")
-      .bind(nowIso, task.job_id).run();
     try {
-      await bucket.delete(task.object_key as string);
-      const finishedAt = new Date().toISOString();
-      const finalized = await db.prepare(`UPDATE privacy_deletion_tasks SET state = 'completed', object_key = NULL,
-        lease_expires_at = NULL, lease_token = NULL, last_error_code = NULL,
-        completed_at = ?, updated_at = ?
+      await db.prepare(`UPDATE privacy_deletion_tasks
+        SET state = 'leased', attempts = attempts + 1, lease_expires_at = ?, lease_token = ?, updated_at = ?
+        WHERE id = ?
+          AND ((state = 'pending' AND available_at <= ?)
+            OR (state = 'leased' AND (lease_expires_at IS NULL OR lease_expires_at <= ?)))`)
+        .bind(leaseExpiresAt, leaseToken, nowIso, task.id, nowIso, nowIso)
+        .run();
+    } catch {
+      // A transport failure can arrive after D1 committed the claim. The exact receipt below is authoritative.
+    }
+    const claimReceipt = await db.prepare(`SELECT id, job_id, object_key, object_key_hash, object_store,
+        state, attempts, available_at, lease_expires_at, lease_token, completed_at
+      FROM privacy_deletion_tasks
+      WHERE id = ? AND job_id = ? AND state = 'leased' AND attempts = ?
+        AND object_key = ? AND object_key_hash = ? AND object_store = ?
+        AND lease_expires_at = ? AND lease_token = ? AND completed_at IS NULL
+      LIMIT 1`)
+      .bind(
+        task.id,
+        task.job_id,
+        Number(task.attempts) + 1,
+        task.object_key,
+        task.object_key_hash,
+        task.object_store,
+        leaseExpiresAt,
+        leaseToken,
+      )
+      .first<PrivacyDeletionTaskRow>();
+    if (!claimReceipt?.object_key) continue;
+    const objectKey = claimReceipt.object_key;
+    const expectedObjectKeyHash = await sha256(`${claimReceipt.object_store}\0${objectKey}`);
+    if (expectedObjectKeyHash !== claimReceipt.object_key_hash) {
+      await db.prepare(`UPDATE privacy_deletion_tasks
+        SET state = 'needs_attention', lease_expires_at = NULL, lease_token = NULL,
+          last_error_code = 'object_locator_hash_mismatch', updated_at = ?
         WHERE id = ? AND state = 'leased' AND lease_token = ?`)
-        .bind(finishedAt, finishedAt, task.id, leaseToken).run();
-      if (Number(finalized.meta?.changes ?? 0) === 1) {
-        completed += 1;
-        if (task.object_store === "privacy_exports") {
-          await db.prepare(`UPDATE privacy_export_jobs
+        .bind(nowIso, claimReceipt.id, leaseToken)
+        .run();
+      continue;
+    }
+    try {
+      await db.prepare("UPDATE privacy_deletion_jobs SET state = 'purging', last_error_code = NULL, updated_at = ? WHERE id = ? AND state != 'completed'")
+        .bind(nowIso, claimReceipt.job_id).run();
+      await bucket.delete(objectKey);
+      const finishedAt = new Date().toISOString();
+      const terminalStatements = [];
+      if (claimReceipt.object_store === "privacy_exports") {
+        terminalStatements.push(db.prepare(`UPDATE privacy_export_jobs
             SET state = 'expired', user_id = NULL, object_key = NULL, object_key_hash = NULL,
               content_sha256 = NULL, size_bytes = NULL, record_count = NULL,
               lease_expires_at = NULL, lease_token = NULL, last_error_code = NULL, updated_at = ?
-            WHERE object_key_hash = ? AND user_id IS NULL AND state != 'completed'`)
-            .bind(finishedAt, task.object_key_hash)
-            .run();
+            WHERE object_key = ? AND object_key_hash = ?
+              AND user_id IS NULL AND state != 'completed'`)
+          .bind(finishedAt, objectKey, claimReceipt.object_key_hash));
+      }
+      terminalStatements.push(db.prepare(`UPDATE privacy_deletion_tasks SET state = 'completed', object_key = NULL,
+          lease_expires_at = NULL, lease_token = NULL, last_error_code = NULL,
+          completed_at = ?, updated_at = ?
+        WHERE id = ? AND state = 'leased' AND lease_token = ?`)
+        .bind(finishedAt, finishedAt, claimReceipt.id, leaseToken));
+      try {
+        await db.batch(terminalStatements);
+      } catch {
+        // A transport failure can arrive after the atomic batch committed. Exact receipts decide the outcome.
+      }
+      const completionReceipt = await db.prepare(`SELECT id, job_id, object_key, object_key_hash, object_store,
+          state, attempts, available_at, lease_expires_at, lease_token, completed_at
+        FROM privacy_deletion_tasks
+        WHERE id = ? AND job_id = ? AND state = 'completed' AND attempts = ?
+          AND object_key IS NULL AND object_key_hash = ? AND object_store = ?
+          AND lease_expires_at IS NULL AND lease_token IS NULL AND completed_at = ?
+        LIMIT 1`)
+        .bind(
+          claimReceipt.id,
+          claimReceipt.job_id,
+          Number(claimReceipt.attempts),
+          claimReceipt.object_key_hash,
+          claimReceipt.object_store,
+          finishedAt,
+        )
+        .first<PrivacyDeletionTaskRow>();
+      if (!completionReceipt) throw new Error("privacy deletion completion receipt missing");
+      if (claimReceipt.object_store === "privacy_exports") {
+        const remainingLocator = await db.prepare(`SELECT COUNT(*) AS count FROM privacy_export_jobs
+          WHERE user_id IS NULL AND state != 'completed'
+            AND (object_key = ? OR object_key_hash = ?)`)
+          .bind(objectKey, claimReceipt.object_key_hash)
+          .first<{ count: number }>();
+        if (Number(remainingLocator?.count ?? 0) !== 0) {
+          throw new Error("privacy export deletion linkage receipt missing");
         }
       }
+      completed += 1;
     } catch {
-      const attempts = Number(task.attempts) + 1;
+      const attempts = Number(claimReceipt.attempts);
       const backoffSeconds = Math.min(6 * 60 * 60, 30 * (2 ** Math.min(attempts - 1, 10)));
       const retryAt = new Date(Date.now() + backoffSeconds * 1000).toISOString();
       await db.prepare(`UPDATE privacy_deletion_tasks
@@ -1851,7 +3461,7 @@ export async function processPrivacyDeletionTasks(env: AuthApiEnv, onlyJobId?: s
         available_at = ?, lease_expires_at = NULL,
         lease_token = NULL, last_error_code = 'object_delete_failed', updated_at = ?
         WHERE id = ? AND state = 'leased' AND lease_token = ?`)
-        .bind(MAX_DELETION_ATTEMPTS, retryAt, new Date().toISOString(), task.id, leaseToken).run();
+        .bind(MAX_DELETION_ATTEMPTS, retryAt, new Date().toISOString(), claimReceipt.id, leaseToken).run();
     }
   }
 
@@ -1902,20 +3512,55 @@ async function refreshDeletionJobStatus(db: D1DatabaseLike, jobId: string) {
     .run();
 }
 
-async function reconcileDeletionJobs(db: D1DatabaseLike, onlyJobId?: string) {
-  const rows = onlyJobId
-    ? await db.prepare("SELECT id FROM privacy_deletion_jobs WHERE id = ? AND state != 'completed' LIMIT 1")
-      .bind(onlyJobId).all<{ id: string }>()
-    : await db.prepare(`SELECT id FROM privacy_deletion_jobs
+async function reconcileDeletionJobs(db: D1DatabaseLike) {
+  const timestamp = new Date().toISOString();
+  await db.prepare(`UPDATE privacy_deletion_jobs SET
+      objects_deleted = (SELECT COUNT(*) FROM privacy_deletion_tasks
+        WHERE job_id = privacy_deletion_jobs.id AND state = 'completed'),
+      state = CASE
+        WHEN (SELECT COUNT(*) FROM privacy_deletion_tasks WHERE job_id = privacy_deletion_jobs.id) = objects_total
+          AND NOT EXISTS (SELECT 1 FROM privacy_deletion_tasks
+            WHERE job_id = privacy_deletion_jobs.id AND state != 'completed')
+          THEN 'completed'
+        WHEN (SELECT COUNT(*) FROM privacy_deletion_tasks WHERE job_id = privacy_deletion_jobs.id) != objects_total
+          THEN 'needs_attention'
+        WHEN EXISTS (SELECT 1 FROM privacy_deletion_tasks
+          WHERE job_id = privacy_deletion_jobs.id AND state = 'needs_attention')
+          THEN 'needs_attention'
+        ELSE 'active_data_removed'
+      END,
+      last_error_code = CASE
+        WHEN (SELECT COUNT(*) FROM privacy_deletion_tasks WHERE job_id = privacy_deletion_jobs.id) = objects_total
+          AND NOT EXISTS (SELECT 1 FROM privacy_deletion_tasks
+            WHERE job_id = privacy_deletion_jobs.id AND state != 'completed')
+          THEN NULL
+        WHEN (SELECT COUNT(*) FROM privacy_deletion_tasks WHERE job_id = privacy_deletion_jobs.id) != objects_total
+          THEN 'task_ledger_incomplete'
+        WHEN EXISTS (SELECT 1 FROM privacy_deletion_tasks
+          WHERE job_id = privacy_deletion_jobs.id AND state = 'needs_attention')
+          THEN 'photo_delete_incomplete'
+        ELSE NULL
+      END,
+      completed_at = CASE
+        WHEN (SELECT COUNT(*) FROM privacy_deletion_tasks WHERE job_id = privacy_deletion_jobs.id) = objects_total
+          AND NOT EXISTS (SELECT 1 FROM privacy_deletion_tasks
+            WHERE job_id = privacy_deletion_jobs.id AND state != 'completed')
+          THEN COALESCE(completed_at, ?)
+        ELSE NULL
+      END,
+      updated_at = ?
+    WHERE id IN (
+      SELECT id FROM privacy_deletion_jobs
       WHERE state != 'completed'
         OR objects_deleted != objects_total
         OR (SELECT COUNT(*) FROM privacy_deletion_tasks
           WHERE job_id = privacy_deletion_jobs.id) != objects_total
         OR EXISTS (SELECT 1 FROM privacy_deletion_tasks
           WHERE job_id = privacy_deletion_jobs.id AND state != 'completed')
-      ORDER BY updated_at LIMIT 100`)
-      .all<{ id: string }>();
-  for (const job of rows.results ?? []) await refreshDeletionJobStatus(db, job.id);
+      ORDER BY updated_at LIMIT 100
+    )`)
+    .bind(timestamp, timestamp)
+    .run();
 }
 
 function photoFileExtension(contentType: string) {
@@ -1931,7 +3576,7 @@ function safePhotoContentType(value: unknown) {
     : "application/octet-stream";
 }
 
-export async function cleanupAuthData(env: AuthApiEnv) {
+export async function cleanupAuthRetentionData(env: AuthApiEnv) {
   if (!env.DB) return;
   await initialize(env.DB);
   const now = new Date();
@@ -1939,7 +3584,53 @@ export async function cleanupAuthData(env: AuthApiEnv) {
   const attemptCutoff = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000).toISOString();
   const proofCutoff = new Date(now.getTime() - 24 * 60 * 60 * 1000).toISOString();
   const tombstoneCutoff = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000).toISOString();
-  await env.DB.batch([
+  const pruneCandidate = await env.DB.prepare(`SELECT
+      job.id, job.completed_at, job.objects_total, job.objects_deleted,
+      (SELECT COUNT(*) FROM (
+        SELECT task.id
+        FROM privacy_deletion_tasks AS task
+          INDEXED BY privacy_deletion_tasks_job_object_unique
+        WHERE task.job_id = job.id
+          AND task.state = 'completed'
+          AND task.object_key IS NULL
+        ORDER BY task.object_key_hash LIMIT ?
+      )) AS prune_count
+    FROM privacy_deletion_jobs AS job
+      INDEXED BY privacy_deletion_jobs_state_completed_idx
+    WHERE job.state = 'completed' AND job.completed_at < ?
+      AND job.objects_deleted = job.objects_total
+      AND job.objects_total > 0
+      AND job.last_error_code IS NULL
+      AND EXISTS (
+        SELECT 1
+        FROM privacy_deletion_tasks AS eligible_task
+          INDEXED BY privacy_deletion_tasks_job_object_unique
+        WHERE eligible_task.job_id = job.id
+          AND eligible_task.state = 'completed'
+          AND eligible_task.object_key IS NULL
+        LIMIT 1
+      )
+      AND job.objects_total >= (
+        SELECT COUNT(*) FROM (
+          SELECT bounded_task.id
+          FROM privacy_deletion_tasks AS bounded_task
+            INDEXED BY privacy_deletion_tasks_job_object_unique
+          WHERE bounded_task.job_id = job.id
+            AND bounded_task.state = 'completed'
+            AND bounded_task.object_key IS NULL
+          ORDER BY bounded_task.object_key_hash LIMIT ?
+        )
+      )
+    ORDER BY job.completed_at LIMIT 1`)
+    .bind(AUTH_RETENTION_DELETE_BATCH, tombstoneCutoff, AUTH_RETENTION_DELETE_BATCH)
+    .first<{
+      id: string;
+      completed_at: string;
+      objects_total: number;
+      objects_deleted: number;
+      prune_count: number;
+    }>();
+  const retentionStatements = [
     env.DB.prepare(`DELETE FROM auth_sessions WHERE token_hash IN (
       SELECT token_hash FROM auth_sessions WHERE expires_at <= ?
       ORDER BY expires_at, token_hash LIMIT ?
@@ -1957,23 +3648,101 @@ export async function cleanupAuthData(env: AuthApiEnv) {
       WHERE expires_at < ? OR (consumed_at IS NOT NULL AND consumed_at < ?)
       LIMIT ?
     )`).bind(proofCutoff, proofCutoff, AUTH_RETENTION_DELETE_BATCH),
+  ];
+  const pruneCount = Number(pruneCandidate?.prune_count ?? 0);
+  const objectsTotal = Number(pruneCandidate?.objects_total ?? 0);
+  const objectsDeleted = Number(pruneCandidate?.objects_deleted ?? 0);
+  if (pruneCandidate) {
+    if (!pruneCandidate.id || !pruneCandidate.completed_at
+      || !Number.isSafeInteger(pruneCount) || pruneCount < 1
+      || pruneCount > AUTH_RETENTION_DELETE_BATCH
+      || !Number.isSafeInteger(objectsTotal) || objectsTotal < pruneCount
+      || !Number.isSafeInteger(objectsDeleted) || objectsDeleted !== objectsTotal) {
+      throw new Error("privacy_retention_prune_candidate_invalid");
+    }
+    const retentionPruneClaim = `retention_prune_${randomSecret(16)}`;
+    const nextObjectsTotal = objectsTotal - pruneCount;
+    const nextObjectsDeleted = objectsDeleted - pruneCount;
+    retentionStatements.push(
+      env.DB.prepare(`UPDATE privacy_deletion_jobs
+        SET objects_total = ?, objects_deleted = ?, last_error_code = ?
+        WHERE id = ? AND state = 'completed' AND completed_at = ?
+          AND objects_total = ? AND objects_deleted = ? AND last_error_code IS NULL`).bind(
+        nextObjectsTotal,
+        nextObjectsDeleted,
+        retentionPruneClaim,
+        pruneCandidate.id,
+        pruneCandidate.completed_at,
+        objectsTotal,
+        objectsDeleted,
+      ),
+      env.DB.prepare(`DELETE FROM privacy_deletion_tasks WHERE id IN (
+        SELECT task.id
+        FROM privacy_deletion_tasks AS task
+          INDEXED BY privacy_deletion_tasks_job_object_unique
+        WHERE task.job_id = ?
+          AND task.state = 'completed'
+          AND task.object_key IS NULL
+          AND EXISTS (
+            SELECT 1 FROM privacy_deletion_jobs AS job
+            WHERE job.id = ? AND job.state = 'completed' AND job.completed_at = ?
+              AND job.objects_total = ? AND job.objects_deleted = ?
+              AND job.last_error_code = ?
+            LIMIT 1
+          )
+        ORDER BY task.object_key_hash LIMIT ?
+      )`).bind(
+        pruneCandidate.id,
+        pruneCandidate.id,
+        pruneCandidate.completed_at,
+        nextObjectsTotal,
+        nextObjectsDeleted,
+        retentionPruneClaim,
+        pruneCount,
+      ),
+      env.DB.prepare(`UPDATE privacy_deletion_jobs
+        SET last_error_code = NULL
+        WHERE id = ? AND state = 'completed' AND completed_at = ?
+          AND objects_total = ? AND objects_deleted = ? AND last_error_code = ?`).bind(
+        pruneCandidate.id,
+        pruneCandidate.completed_at,
+        nextObjectsTotal,
+        nextObjectsDeleted,
+        retentionPruneClaim,
+      ),
+    );
+  }
+  retentionStatements.push(
     env.DB.prepare(`DELETE FROM privacy_deletion_jobs
       WHERE id IN (
-        SELECT id FROM privacy_deletion_jobs
-        WHERE state = 'completed' AND completed_at < ?
-          AND objects_deleted = objects_total
-          AND (SELECT COUNT(*) FROM privacy_deletion_tasks
-            WHERE job_id = privacy_deletion_jobs.id) = objects_total
-          AND NOT EXISTS (SELECT 1 FROM privacy_deletion_tasks
-            WHERE job_id = privacy_deletion_jobs.id AND state != 'completed')
-        ORDER BY completed_at, id LIMIT ?
+        SELECT job.id
+        FROM privacy_deletion_jobs AS job
+          INDEXED BY privacy_deletion_jobs_state_completed_idx
+        WHERE job.state = 'completed' AND job.completed_at < ?
+          AND job.objects_deleted = job.objects_total
+          AND job.objects_total = 0
+          AND job.objects_deleted = 0
+          AND job.last_error_code IS NULL
+          AND NOT EXISTS (
+            SELECT 1
+            FROM privacy_deletion_tasks AS task
+              INDEXED BY privacy_deletion_tasks_job_object_unique
+            WHERE task.job_id = job.id
+            LIMIT 1
+          )
+        ORDER BY job.completed_at LIMIT ?
       )`).bind(tombstoneCutoff, AUTH_RETENTION_DELETE_BATCH),
     env.DB.prepare(`DELETE FROM privacy_export_jobs WHERE id IN (
       SELECT id FROM privacy_export_jobs
       WHERE state = 'expired' AND updated_at < ? AND object_key IS NULL
       ORDER BY updated_at, id LIMIT ?
     )`).bind(tombstoneCutoff, AUTH_RETENTION_DELETE_BATCH),
-  ]);
+  );
+  await env.DB.batch(retentionStatements);
+}
+
+export async function cleanupAuthData(env: AuthApiEnv) {
+  await cleanupAuthRetentionData(env);
   await processExpiredPrivacyExports(env);
   await processPrivacyDeletionTasks(env);
 }
@@ -1996,15 +3765,67 @@ async function selectUserForSession(db: D1DatabaseLike, userId: string) {
 
 async function createSessionResponse(db: D1DatabaseLike, request: Request, user: AuthUser, status = 200) {
   const token = randomSecret(32);
+  const tokenHash = await sha256(token);
   const createdAt = new Date();
   const expiresAt = new Date(createdAt.getTime() + SESSION_SECONDS * 1000);
   const priorSessionDeletes = await Promise.all(presentedSessionTokens(request).map(async (presented) =>
     db.prepare("DELETE FROM auth_sessions WHERE token_hash = ?").bind(await sha256(presented.token))));
-  await db.batch([
-    ...priorSessionDeletes,
-    db.prepare("INSERT INTO auth_sessions (token_hash, user_id, expires_at, created_at) VALUES (?, ?, ?, ?)")
-      .bind(await sha256(token), user.id, expiresAt.toISOString(), createdAt.toISOString()),
-  ]);
+  try {
+    await db.batch([
+      ...priorSessionDeletes,
+      db.prepare(`INSERT INTO auth_sessions (token_hash, user_id, expires_at, created_at)
+        SELECT ?, ?, ?, ?
+        WHERE EXISTS (SELECT 1 FROM users WHERE id = ?)
+          AND NOT EXISTS (SELECT 1 FROM account_deletion_fences WHERE user_id = ?)`)
+        .bind(
+          tokenHash,
+          user.id,
+          expiresAt.toISOString(),
+          createdAt.toISOString(),
+          user.id,
+          user.id,
+        ),
+    ]);
+  } catch {
+    // D1 can commit an atomic batch and lose its response. The random token hash is the receipt key.
+  }
+  let receipt: { token_hash: string; user_id: string; expires_at: string; created_at: string } | null = null;
+  let receiptReadSucceeded = false;
+  try {
+    receipt = await db.prepare(`SELECT token_hash, user_id, expires_at, created_at
+      FROM auth_sessions
+      WHERE token_hash = ? AND user_id = ? AND expires_at = ? AND created_at = ?
+        AND EXISTS (SELECT 1 FROM users WHERE id = ?)
+        AND NOT EXISTS (SELECT 1 FROM account_deletion_fences WHERE user_id = ?)
+      LIMIT 1`)
+      .bind(
+        tokenHash,
+        user.id,
+        expiresAt.toISOString(),
+        createdAt.toISOString(),
+        user.id,
+        user.id,
+      )
+      .first<{ token_hash: string; user_id: string; expires_at: string; created_at: string }>();
+    receiptReadSucceeded = true;
+  } catch {
+    // Never disclose a bearer token until its complete post-state is readable.
+  }
+  if (!receiptReadSucceeded || !receipt
+    || receipt.token_hash !== tokenHash || receipt.user_id !== user.id
+    || receipt.expires_at !== expiresAt.toISOString() || receipt.created_at !== createdAt.toISOString()) {
+    try {
+      await db.prepare("DELETE FROM auth_sessions WHERE token_hash = ?").bind(tokenHash).run();
+    } catch (error) {
+      logEvent("error", "auth.session.unconfirmed_cleanup_failed", safeErrorContext(error));
+    }
+    return errorResponse(
+      503,
+      "session_creation_unconfirmed",
+      "The new session could not be confirmed. Sign in again.",
+      clearSessionCookies(request),
+    );
+  }
   return jsonResponse({ user }, status, sessionCookie(request, token));
 }
 
@@ -2209,10 +4030,55 @@ function assertOnlyFields(body: Record<string, unknown>, allowed: string[]) {
   }
 }
 
-interface ValidSignupAgeProof {
+interface SignupAgeProofCandidate {
   tokenHash: string;
   confirmedAt: string;
+  gateVersion: string;
+  expiresAt: string;
+  createdAt: string;
 }
+
+interface SignupAgeProofCreationReceiptRow {
+  exact_count: number;
+  any_count: number;
+}
+
+async function createSignupAgeProof(db: D1DatabaseLike, proof: SignupAgeProofCandidate) {
+  try {
+    await db.prepare(`INSERT INTO signup_age_proofs
+      (token_hash, confirmed_at, gate_version, expires_at, consumed_at, created_at)
+      VALUES (?, ?, ?, ?, NULL, ?)`)
+      .bind(proof.tokenHash, proof.confirmedAt, proof.gateVersion, proof.expiresAt, proof.createdAt)
+      .run();
+  } catch {
+    // A committed insert can lose its response. Exact stored state below decides
+    // whether the random plaintext proof may leave the Worker.
+  }
+
+  try {
+    const receipt = await db.prepare(`SELECT
+        (SELECT COUNT(*) FROM signup_age_proofs
+          WHERE token_hash = ? AND confirmed_at = ? AND gate_version = ?
+            AND expires_at = ? AND consumed_at IS NULL AND created_at = ?) AS exact_count,
+        (SELECT COUNT(*) FROM signup_age_proofs WHERE token_hash = ?) AS any_count`)
+      .bind(
+        proof.tokenHash,
+        proof.confirmedAt,
+        proof.gateVersion,
+        proof.expiresAt,
+        proof.createdAt,
+        proof.tokenHash,
+      )
+      .first<SignupAgeProofCreationReceiptRow>();
+    return exactReceiptCounts(receipt, ["exact_count", "any_count"])
+      && Number(receipt?.exact_count) === 1
+      && Number(receipt?.any_count) === 1;
+  } catch {
+    return false;
+  }
+}
+
+type ValidSignupAgeProof = SignupAgeProofCandidate;
 
 async function validateSignupAgeProof(db: D1DatabaseLike, value: unknown): Promise<ValidSignupAgeProof> {
   const proof = typeof value === "string" ? value : "";
@@ -2221,27 +4087,100 @@ async function validateSignupAgeProof(db: D1DatabaseLike, value: unknown): Promi
   }
   const tokenHash = await sha256(proof);
   const checkedAt = new Date().toISOString();
-  const row = await db.prepare(`SELECT confirmed_at FROM signup_age_proofs
+  const row = await db.prepare(`SELECT confirmed_at, gate_version, expires_at, created_at FROM signup_age_proofs
     WHERE token_hash = ? AND consumed_at IS NULL AND expires_at > ? AND gate_version = ?
     LIMIT 1`)
     .bind(tokenHash, checkedAt, AGE_GATE_VERSION)
-    .first<{ confirmed_at: string }>();
+    .first<{ confirmed_at: string; gate_version: string; expires_at: string; created_at: string }>();
   if (!row?.confirmed_at) {
     throw new AuthError(410, "eligibility_proof_expired", "Age eligibility expired or was already used. Start the age step again.");
   }
-  return { tokenHash, confirmedAt: row.confirmed_at };
+  return {
+    tokenHash,
+    confirmedAt: row.confirmed_at,
+    gateVersion: row.gate_version,
+    expiresAt: row.expires_at,
+    createdAt: row.created_at,
+  };
+}
+
+interface SignupAgeProofConsumptionReceiptRow {
+  consumed_count: number;
+  prior_count: number;
+  any_count: number;
 }
 
 async function consumeSignupAgeProof(db: D1DatabaseLike, proof: ValidSignupAgeProof) {
   const consumedAt = new Date().toISOString();
-  const result = await db.prepare(`UPDATE signup_age_proofs SET consumed_at = ?
-    WHERE token_hash = ? AND consumed_at IS NULL AND expires_at > ? AND gate_version = ?`)
-    .bind(consumedAt, proof.tokenHash, consumedAt, AGE_GATE_VERSION)
-    .run();
-  if (Number(result.meta?.changes ?? 0) !== 1) {
+  try {
+    await db.prepare(`UPDATE signup_age_proofs SET consumed_at = ?
+      WHERE token_hash = ? AND confirmed_at = ? AND gate_version = ? AND expires_at = ?
+        AND consumed_at IS NULL AND created_at = ? AND expires_at > ?`)
+      .bind(
+        consumedAt,
+        proof.tokenHash,
+        proof.confirmedAt,
+        proof.gateVersion,
+        proof.expiresAt,
+        proof.createdAt,
+        consumedAt,
+      )
+      .run();
+  } catch {
+    // Exact read-back distinguishes a rolled-back use from a committed response loss.
+  }
+
+  let receipt: SignupAgeProofConsumptionReceiptRow | null = null;
+  let receiptReadSucceeded = false;
+  try {
+    receipt = await db.prepare(`SELECT
+        (SELECT COUNT(*) FROM signup_age_proofs
+          WHERE token_hash = ? AND confirmed_at = ? AND gate_version = ? AND expires_at = ?
+            AND consumed_at = ? AND created_at = ?) AS consumed_count,
+        (SELECT COUNT(*) FROM signup_age_proofs
+          WHERE token_hash = ? AND confirmed_at = ? AND gate_version = ? AND expires_at = ?
+            AND consumed_at IS NULL AND created_at = ? AND expires_at > ?) AS prior_count,
+        (SELECT COUNT(*) FROM signup_age_proofs WHERE token_hash = ?) AS any_count`)
+      .bind(
+        proof.tokenHash,
+        proof.confirmedAt,
+        proof.gateVersion,
+        proof.expiresAt,
+        consumedAt,
+        proof.createdAt,
+        proof.tokenHash,
+        proof.confirmedAt,
+        proof.gateVersion,
+        proof.expiresAt,
+        proof.createdAt,
+        consumedAt,
+        proof.tokenHash,
+      )
+      .first<SignupAgeProofConsumptionReceiptRow>();
+    receiptReadSucceeded = true;
+  } catch {
+    // Challenge creation cannot follow an unreadable one-use proof transition.
+  }
+
+  if (!receiptReadSucceeded || !exactReceiptCounts(receipt, ["consumed_count", "prior_count", "any_count"])) {
+    throw new AuthError(
+      503,
+      "eligibility_proof_consumption_unconfirmed",
+      "Age eligibility use could not be confirmed. Restart signup from the age step.",
+    );
+  }
+  const consumedCount = Number(receipt?.consumed_count);
+  const priorCount = Number(receipt?.prior_count);
+  const anyCount = Number(receipt?.any_count);
+  if (consumedCount === 1 && priorCount === 0 && anyCount === 1) return proof.confirmedAt;
+  if (priorCount === 0) {
     throw new AuthError(410, "eligibility_proof_expired", "Age eligibility expired or was already used. Start the age step again.");
   }
-  return proof.confirmedAt;
+  throw new AuthError(
+    503,
+    "eligibility_proof_consumption_unconfirmed",
+    "Age eligibility use could not be confirmed. Restart signup from the age step.",
+  );
 }
 
 export function evaluateAgeEligibility(value: unknown, now = new Date()) {
@@ -2327,6 +4266,185 @@ interface EmailChallengeRow {
   created_at: string;
 }
 
+type EmailChallengeCreation = "created" | "rate_limited" | "unconfirmed";
+
+interface EmailChallengeCreationReceiptRow {
+  exact_count: number;
+  any_count: number;
+  recent_count: number;
+}
+
+function emailChallengeSnapshotBindings(challenge: EmailChallengeRow) {
+  return [
+    challenge.id,
+    challenge.kind,
+    challenge.email,
+    challenge.user_id,
+    challenge.code_hash,
+    challenge.password_salt,
+    challenge.password_hash,
+    challenge.age_eligibility_confirmed_at,
+    challenge.terms_version,
+    challenge.privacy_version,
+    challenge.expires_at,
+    challenge.attempts,
+    challenge.resend_count,
+    challenge.created_at,
+  ];
+}
+
+async function createEmailChallenge(
+  db: D1DatabaseLike,
+  challenge: EmailChallengeRow,
+  challengeCutoff: string,
+): Promise<EmailChallengeCreation> {
+  try {
+    await db.prepare(`INSERT INTO email_challenges
+      (id, kind, email, user_id, code_hash, password_salt, password_hash,
+        age_eligibility_confirmed_at, terms_version, privacy_version, expires_at,
+        attempts, resend_count, created_at)
+      SELECT ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
+      WHERE (SELECT COUNT(*) FROM email_challenges WHERE email = ? AND created_at >= ?) < 5`)
+      .bind(...emailChallengeSnapshotBindings(challenge), challenge.email, challengeCutoff)
+      .run();
+  } catch {
+    // A committed insert can lose its response. Provider delivery requires the
+    // complete random challenge snapshot below, never mutation metadata.
+  }
+
+  try {
+    const receipt = await db.prepare(`SELECT
+        (SELECT COUNT(*) FROM email_challenges
+          WHERE id = ? AND kind = ? AND email = ? AND user_id IS ? AND code_hash = ?
+            AND password_salt IS ? AND password_hash IS ?
+            AND age_eligibility_confirmed_at IS ? AND terms_version IS ? AND privacy_version IS ?
+            AND expires_at = ? AND attempts = ? AND resend_count = ? AND created_at = ?) AS exact_count,
+        (SELECT COUNT(*) FROM email_challenges WHERE id = ?) AS any_count,
+        (SELECT COUNT(*) FROM email_challenges WHERE email = ? AND created_at >= ?) AS recent_count`)
+      .bind(
+        ...emailChallengeSnapshotBindings(challenge),
+        challenge.id,
+        challenge.email,
+        challengeCutoff,
+      )
+      .first<EmailChallengeCreationReceiptRow>();
+    const exactCount = Number(receipt?.exact_count);
+    const anyCount = Number(receipt?.any_count);
+    const recentCount = Number(receipt?.recent_count);
+    const countsValid = exactReceiptCounts(receipt, ["exact_count", "any_count"])
+      && Number.isSafeInteger(recentCount)
+      && recentCount >= 0
+      && exactCount <= anyCount
+      && exactCount <= recentCount;
+    if (!countsValid) return "unconfirmed";
+    if (exactCount === 1 && anyCount === 1 && recentCount >= 1 && recentCount <= 5) return "created";
+    if (exactCount === 0 && anyCount === 0 && recentCount >= 5) return "rate_limited";
+    return "unconfirmed";
+  } catch {
+    return "unconfirmed";
+  }
+}
+
+function resentEmailChallenge(challenge: EmailChallengeRow, codeHash: string, timestamp: Date): EmailChallengeRow {
+  return {
+    ...challenge,
+    code_hash: codeHash,
+    expires_at: new Date(timestamp.getTime() + 15 * 60 * 1000).toISOString(),
+    attempts: 0,
+    resend_count: Number(challenge.resend_count ?? 0) + 1,
+    created_at: timestamp.toISOString(),
+  };
+}
+
+type EmailChallengeTransition = "updated" | "changed" | "unconfirmed";
+
+interface EmailChallengeTransitionReceiptRow {
+  next_count: number;
+  prior_count: number;
+  any_count: number;
+}
+
+async function transitionEmailChallengeForResend(
+  db: D1DatabaseLike,
+  prior: EmailChallengeRow,
+  next: EmailChallengeRow,
+): Promise<EmailChallengeTransition> {
+  try {
+    await db.prepare(`UPDATE email_challenges
+      SET code_hash = ?, expires_at = ?, attempts = ?, resend_count = ?, created_at = ?
+      WHERE id = ? AND kind = ? AND email = ? AND user_id IS ? AND code_hash = ?
+        AND password_salt IS ? AND password_hash IS ? AND age_eligibility_confirmed_at IS ?
+        AND terms_version IS ? AND privacy_version IS ? AND expires_at = ?
+        AND attempts = ? AND resend_count = ? AND created_at = ?`)
+      .bind(
+        next.code_hash,
+        next.expires_at,
+        next.attempts,
+        next.resend_count,
+        next.created_at,
+        ...emailChallengeSnapshotBindings(prior),
+      )
+      .run();
+  } catch {
+    // Exact next/prior state distinguishes commit-response loss from rollback.
+  }
+
+  try {
+    const receipt = await db.prepare(`SELECT
+        (SELECT COUNT(*) FROM email_challenges
+          WHERE id = ? AND kind = ? AND email = ? AND user_id IS ? AND code_hash = ?
+            AND password_salt IS ? AND password_hash IS ?
+            AND age_eligibility_confirmed_at IS ? AND terms_version IS ? AND privacy_version IS ?
+            AND expires_at = ? AND attempts = ? AND resend_count = ? AND created_at = ?) AS next_count,
+        (SELECT COUNT(*) FROM email_challenges
+          WHERE id = ? AND kind = ? AND email = ? AND user_id IS ? AND code_hash = ?
+            AND password_salt IS ? AND password_hash IS ?
+            AND age_eligibility_confirmed_at IS ? AND terms_version IS ? AND privacy_version IS ?
+            AND expires_at = ? AND attempts = ? AND resend_count = ? AND created_at = ?) AS prior_count,
+        (SELECT COUNT(*) FROM email_challenges WHERE id = ?) AS any_count`)
+      .bind(
+        ...emailChallengeSnapshotBindings(next),
+        ...emailChallengeSnapshotBindings(prior),
+        prior.id,
+      )
+      .first<EmailChallengeTransitionReceiptRow>();
+    if (!exactReceiptCounts(receipt, ["next_count", "prior_count", "any_count"])) return "unconfirmed";
+    const nextCount = Number(receipt?.next_count);
+    const priorCount = Number(receipt?.prior_count);
+    const anyCount = Number(receipt?.any_count);
+    if (nextCount === 1 && priorCount === 0 && anyCount === 1) return "updated";
+    if (nextCount === 0 && priorCount === 0) return "changed";
+    return "unconfirmed";
+  } catch {
+    return "unconfirmed";
+  }
+}
+
+interface PasswordResetReceiptRow {
+  exact_user_count: number;
+  any_user_count: number;
+  session_count: number;
+  exact_challenge_count: number;
+  any_challenge_count: number;
+  fence_count: number;
+}
+
+interface AccountCreationReceiptRow {
+  exact_user_count: number;
+  any_user_count: number;
+  email_user_count: number;
+  session_count: number;
+  exact_challenge_count: number;
+  any_challenge_count: number;
+  fence_count: number;
+}
+
+interface ChallengeAttemptReceiptRow {
+  claimed_count: number;
+  prior_count: number;
+  any_count: number;
+}
+
 async function assertEmailChallengeAllowed(db: D1DatabaseLike, email: string) {
   const cutoff = new Date(Date.now() - 60 * 60 * 1000).toISOString();
   const row = await db.prepare("SELECT COUNT(*) AS count FROM email_challenges WHERE email = ? AND created_at >= ?")
@@ -2351,8 +4469,8 @@ async function verifyEmailChallenge(
   const row = await db.prepare("SELECT * FROM email_challenges WHERE id = ? AND kind = ? LIMIT 1")
     .bind(challengeId, kind)
     .first<EmailChallengeRow>();
-  if (!row || row.expires_at <= new Date().toISOString()) {
-    if (row) await db.prepare("DELETE FROM email_challenges WHERE id = ?").bind(challengeId).run();
+  const verifiedAt = new Date().toISOString();
+  if (!row || row.expires_at <= verifiedAt) {
     if (kind === "password_reset") {
       throw new AuthError(401, "invalid_code", "That code is invalid or expired. Request a new one.");
     }
@@ -2360,24 +4478,88 @@ async function verifyEmailChallenge(
   }
   if (Number(row.attempts) >= 6) {
     if (kind === "password_reset") {
-      await db.prepare("DELETE FROM email_challenges WHERE id = ?").bind(challengeId).run();
       throw new AuthError(401, "invalid_code", "That code is invalid or expired. Request a new one.");
     }
     throw new AuthError(429, "too_many_code_attempts", "Too many code attempts. Request a new code.");
   }
+  const claimedAttempts = Number(row.attempts) + 1;
+  const snapshotParameters = (attempts: number) => [
+    row.id,
+    row.kind,
+    row.email,
+    row.user_id,
+    row.code_hash,
+    row.password_salt,
+    row.password_hash,
+    row.age_eligibility_confirmed_at,
+    row.terms_version,
+    row.privacy_version,
+    row.created_at,
+    attempts,
+    Number(row.resend_count ?? 0),
+    row.expires_at,
+    verifiedAt,
+  ];
+  try {
+    await db.prepare(`UPDATE email_challenges SET attempts = ?
+      WHERE id = ? AND kind = ? AND email = ? AND user_id IS ? AND code_hash = ?
+        AND password_salt IS ? AND password_hash IS ? AND age_eligibility_confirmed_at IS ?
+        AND terms_version IS ? AND privacy_version IS ? AND created_at = ?
+        AND attempts = ? AND resend_count = ? AND expires_at = ? AND expires_at > ?`)
+      .bind(claimedAttempts, ...snapshotParameters(Number(row.attempts)))
+      .run();
+  } catch {
+    // The claim can commit and lose its response. Only the exact challenge version decides.
+  }
+  let receipt: ChallengeAttemptReceiptRow | null = null;
+  let receiptReadSucceeded = false;
+  try {
+    receipt = await db.prepare(`SELECT
+        (SELECT COUNT(*) FROM email_challenges
+          WHERE id = ? AND kind = ? AND email = ? AND user_id IS ? AND code_hash = ?
+            AND password_salt IS ? AND password_hash IS ? AND age_eligibility_confirmed_at IS ?
+            AND terms_version IS ? AND privacy_version IS ? AND created_at = ?
+            AND attempts = ? AND resend_count = ? AND expires_at = ? AND expires_at > ?) AS claimed_count,
+        (SELECT COUNT(*) FROM email_challenges
+          WHERE id = ? AND kind = ? AND email = ? AND user_id IS ? AND code_hash = ?
+            AND password_salt IS ? AND password_hash IS ? AND age_eligibility_confirmed_at IS ?
+            AND terms_version IS ? AND privacy_version IS ? AND created_at = ?
+            AND attempts = ? AND resend_count = ? AND expires_at = ? AND expires_at > ?) AS prior_count,
+        (SELECT COUNT(*) FROM email_challenges WHERE id = ? AND kind = ?) AS any_count`)
+      .bind(
+        ...snapshotParameters(claimedAttempts),
+        ...snapshotParameters(Number(row.attempts)),
+        row.id,
+        row.kind,
+      )
+      .first<ChallengeAttemptReceiptRow>();
+    receiptReadSucceeded = true;
+  } catch {
+    // Never let an unreadable claim authorize a credential transition.
+  }
+  const claimedCount = Number(receipt?.claimed_count);
+  const priorCount = Number(receipt?.prior_count);
+  const anyCount = Number(receipt?.any_count);
+  const countsValid = [claimedCount, priorCount, anyCount]
+    .every((count) => Number.isSafeInteger(count) && count >= 0 && count <= 1)
+    && claimedCount + priorCount <= anyCount;
+  if (!receiptReadSucceeded || !countsValid || claimedCount !== 1 || anyCount !== 1) {
+    if (kind === "password_reset") {
+      throw new AuthError(401, "invalid_code", "That code is invalid or expired. Request a new one.");
+    }
+    if (receiptReadSucceeded && countsValid && priorCount === 0) {
+      throw new AuthError(409, "challenge_changed", "That verification request changed. Use its latest code or start again.");
+    }
+    throw new AuthError(503, "challenge_attempt_unconfirmed", "That code attempt could not be confirmed. Try again.");
+  }
   const valid = (await sha256(`${challengeId}:${code}`)) === row.code_hash;
   if (!valid) {
-    if (kind === "password_reset" && Number(row.attempts) >= 5) {
-      await db.prepare("DELETE FROM email_challenges WHERE id = ?").bind(challengeId).run();
-    } else {
-      await db.prepare("UPDATE email_challenges SET attempts = attempts + 1 WHERE id = ?").bind(challengeId).run();
-    }
     if (kind === "password_reset") {
       throw new AuthError(401, "invalid_code", "That code is invalid or expired. Request a new one.");
     }
     throw new AuthError(401, "invalid_code", "That verification code is incorrect.");
   }
-  return row;
+  return { ...row, attempts: claimedAttempts };
 }
 
 async function sendVerificationEmail(
@@ -2523,6 +4705,39 @@ function presentedSessionTokens(request: Request) {
   return tokens;
 }
 
+function hasPresentedSessionCookie(request: Request) {
+  const cookies = parseCookies(request.headers.get("Cookie") ?? "");
+  return cookies.has(SESSION_COOKIE) || cookies.has(LEGACY_SESSION_COOKIE);
+}
+
+async function revokePresentedSessions(
+  db: D1DatabaseLike,
+  tokens: Array<{ cookieName: string; token: string }>,
+) {
+  if (tokens.length === 0) return true;
+  const tokenHashes = await Promise.all(tokens.map(({ token }) => sha256(token)));
+  try {
+    await db.batch(tokenHashes.map((tokenHash) =>
+      db.prepare("DELETE FROM auth_sessions WHERE token_hash = ?").bind(tokenHash)));
+  } catch {
+    // A transactional batch can commit and lose its response. Exact absence below
+    // is the only receipt that is allowed to clear the browser's session cookie.
+  }
+
+  try {
+    const receipts = await Promise.all(tokenHashes.map((tokenHash) =>
+      db.prepare("SELECT COUNT(*) AS count FROM auth_sessions WHERE token_hash = ?")
+        .bind(tokenHash)
+        .first<{ count: number }>()));
+    return receipts.every((receipt) => {
+      const count = Number(receipt?.count);
+      return receipt !== null && Number.isSafeInteger(count) && count === 0;
+    });
+  } catch {
+    return false;
+  }
+}
+
 function minimumDelay(milliseconds: number) {
   return new Promise<void>((resolve) => setTimeout(resolve, milliseconds));
 }
@@ -2538,19 +4753,44 @@ function passwordRecoveryResendResponse(challengeId: string) {
 function deferPasswordRecoveryEmail(
   options: AccountRequestOptions,
   db: D1DatabaseLike,
-  challengeId: string,
+  challenge: EmailChallengeRow,
   delivery: Promise<void>,
 ) {
   const guardedDelivery = delivery.catch(async (error) => {
-    try {
-      await db.prepare("DELETE FROM email_challenges WHERE id = ?").bind(challengeId).run();
-    } catch (cleanupError) {
-      logEvent("error", "password_recovery.challenge_cleanup_failed", safeErrorContext(cleanupError));
-    }
+    await cleanupEmailChallengeCandidate(db, challenge);
     logEvent("error", "password_recovery.email_delivery_deferred", safeErrorContext(error));
   });
   options.waitUntil?.(guardedDelivery);
   return guardedDelivery;
+}
+
+async function cleanupSignupAgeProofCandidate(db: D1DatabaseLike, proof: SignupAgeProofCandidate) {
+  try {
+    await db.prepare(`DELETE FROM signup_age_proofs
+      WHERE token_hash = ? AND confirmed_at = ? AND gate_version = ?
+        AND expires_at = ? AND consumed_at IS NULL AND created_at = ?`)
+      .bind(proof.tokenHash, proof.confirmedAt, proof.gateVersion, proof.expiresAt, proof.createdAt)
+      .run();
+  } catch (error) {
+    logEvent("error", "signup.age_proof_cleanup_failed", safeErrorContext(error));
+  }
+}
+
+async function cleanupEmailChallengeCandidate(
+  db: D1DatabaseLike,
+  challenge: EmailChallengeRow,
+) {
+  try {
+    await db.prepare(`DELETE FROM email_challenges
+      WHERE id = ? AND kind = ? AND email = ? AND user_id IS ? AND code_hash = ?
+        AND password_salt IS ? AND password_hash IS ? AND age_eligibility_confirmed_at IS ?
+        AND terms_version IS ? AND privacy_version IS ? AND expires_at = ?
+        AND attempts = ? AND resend_count = ? AND created_at = ?`)
+      .bind(...emailChallengeSnapshotBindings(challenge))
+      .run();
+  } catch (error) {
+    logEvent("error", "email.challenge_cleanup_failed", safeErrorContext(error));
+  }
 }
 
 function assertSameOrigin(request: Request) {
@@ -2580,7 +4820,7 @@ function methodNotAllowed(allow: string) {
   return errorResponse(405, "method_not_allowed", `Use ${allow} for this endpoint.`, undefined, { Allow: allow });
 }
 
-function errorResponse(status: number, code: string, message: string, cookie?: string, headers?: HeadersInit) {
+function errorResponse(status: number, code: string, message: string, cookie?: string | string[], headers?: HeadersInit) {
   return jsonResponse({ error: { code, message } }, status, cookie, headers);
 }
 

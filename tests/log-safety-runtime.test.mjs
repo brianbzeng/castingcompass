@@ -132,6 +132,17 @@ function authDatabase() {
       created_at TEXT NOT NULL, updated_at TEXT NOT NULL,
       FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
     );
+    CREATE TABLE signup_age_proofs (
+      token_hash TEXT PRIMARY KEY NOT NULL, confirmed_at TEXT NOT NULL,
+      gate_version TEXT NOT NULL, expires_at TEXT NOT NULL,
+      consumed_at TEXT, created_at TEXT NOT NULL
+    );
+    CREATE TABLE privacy_deletion_jobs (id TEXT PRIMARY KEY NOT NULL);
+    CREATE TABLE privacy_deletion_tasks (id TEXT PRIMARY KEY NOT NULL);
+    CREATE TABLE privacy_export_jobs (id TEXT PRIMARY KEY NOT NULL);
+    CREATE TABLE account_deletion_fences (user_id TEXT PRIMARY KEY NOT NULL);
+    CREATE TABLE trip_photo_upload_reservations (id TEXT PRIMARY KEY NOT NULL);
+    CREATE TABLE trips (id TEXT PRIMARY KEY NOT NULL, photo_key_hash TEXT);
   `);
   return { sqlite, d1: new D1Adapter(sqlite) };
 }

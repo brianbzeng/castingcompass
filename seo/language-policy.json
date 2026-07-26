@@ -84,21 +84,23 @@
       "route": "/",
       "canonical": "https://castingcompass.com/",
       "indexingIntent": "index",
-      "pagePurpose": "Help a Bay Area angler compare public California halibut fishing windows using a transparent heuristic relative ranking, its inputs, freshness, and limitations.",
+      "pagePurpose": "Help anglers compare public California halibut fishing windows across the Bay Area and Santa Barbara South Coast using a transparent heuristic relative ranking, its inputs, freshness, and limitations.",
       "audienceQuestions": [
-        "How can I compare public Bay Area halibut fishing windows?",
+        "How can I compare public Bay Area and Santa Barbara halibut fishing windows?",
         "Which public shore, beach, jetty, or pier options fit the available forecast inputs?",
         "Why is one available option ranked above another?"
       ],
       "candidateSearchPhrases": [
         "California halibut fishing planner",
         "Bay Area halibut shore fishing conditions",
+        "Santa Barbara halibut fishing planner",
+        "Goleta shore fishing conditions",
         "halibut fishing window comparison",
-        "Bay Area pier beach jetty fishing planner"
+        "California pier beach jetty fishing planner"
       ],
       "currentTitle": "CastingCompass — California halibut opportunity planner",
-      "currentDescription": "Compare public Bay Area shore, beach, jetty, and pier fishing windows using explainable relative rankings from habitat, seasonality, and current conditions.",
-      "desiredSnippet": "Compare public Bay Area shore, beach, jetty, and pier fishing windows using explainable relative rankings from habitat, seasonality, and current conditions.",
+      "currentDescription": "Compare public Bay Area and Santa Barbara South Coast fishing windows using explainable relative rankings from habitat, seasonality, and current conditions.",
+      "desiredSnippet": "Compare public Bay Area and Santa Barbara South Coast fishing windows using explainable relative rankings from habitat, seasonality, and current conditions.",
       "nextAction": "Review the ranking inputs and freshness before choosing a public fishing window."
     },
     {

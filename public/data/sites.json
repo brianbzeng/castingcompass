@@ -1809,5 +1809,595 @@
     "streetViewLatitude": 37.454771,
     "streetViewLongitude": -122.443682,
     "streetViewRoadDistanceMeters": 562
+  },
+  {
+    "id": "gaviota-state-park-beach",
+    "name": "Gaviota State Park Beach",
+    "latitude": 34.4708,
+    "longitude": -120.2292,
+    "region": "Gaviota Coast",
+    "type": "Beach",
+    "access": "Public state-park beach reached from the day-use area. The beach is open, but the storm-damaged Gaviota Pier remains closed; do not enter or cast from the pier.",
+    "regulationUrl": "https://wildlife.ca.gov/Fishing/Ocean/Regulations/Fishing-Map/Central",
+    "depthProfile": "Mixed sand-and-cobble beach with a moderate nearshore slope beside rocky structure and a creek mouth.",
+    "beachSlopeClass": "moderate",
+    "structureTags": [
+      "sand-trough",
+      "rock-sand-edge",
+      "creek-mouth"
+    ],
+    "parking": "Paid state-park day-use lot; posted hours and capacity apply.",
+    "transit": "No regular public transit; bicycle access is exposed along Highway 101.",
+    "amenities": [
+      "restrooms",
+      "picnic-tables",
+      "campground-nearby"
+    ],
+    "habitatPrior": 73,
+    "tideStation": "9411399",
+    "weatherAnchor": "gaviota-coast",
+    "castingZone": {
+      "radiusMeters": 420,
+      "bearingDegrees": 185,
+      "targetDepthMeters": [
+        1,
+        10
+      ],
+      "exposure": "open-coast"
+    },
+    "accessSourceUrl": "https://www.parks.ca.gov/?page_id=606",
+    "accessStatus": "open",
+    "accessStatusNote": "State Parks lists the beach and day-use area as open; the separate Gaviota Pier structure is closed after storm damage.",
+    "accessStatusUpdatedAt": "2026-07-19",
+    "streetViewLatitude": 34.47185,
+    "streetViewLongitude": -120.22863,
+    "streetViewRoadDistanceMeters": 122
+  },
+  {
+    "id": "refugio-state-beach",
+    "name": "Refugio State Beach",
+    "latitude": 34.4627,
+    "longitude": -120.0698,
+    "region": "Gaviota Coast",
+    "type": "Beach",
+    "access": "Public state beach from the day-use area; check posted hours, construction notices, and surf conditions before travel.",
+    "regulationUrl": "https://wildlife.ca.gov/Fishing/Ocean/Regulations/Fishing-Map/Central",
+    "depthProfile": "Small sandy cove with a gentle-to-moderate shelf, scattered rock edges, and seasonal kelp nearby.",
+    "beachSlopeClass": "moderate",
+    "structureTags": [
+      "sand-flat",
+      "cove",
+      "rock-sand-edge"
+    ],
+    "parking": "Paid state-park day-use lot; it can fill on warm weekends.",
+    "transit": "No regular public transit.",
+    "amenities": [
+      "restrooms",
+      "showers",
+      "picnic-tables"
+    ],
+    "habitatPrior": 72,
+    "tideStation": "9411399",
+    "weatherAnchor": "gaviota-coast",
+    "castingZone": {
+      "radiusMeters": 380,
+      "bearingDegrees": 180,
+      "targetDepthMeters": [
+        1,
+        9
+      ],
+      "exposure": "open-coast"
+    },
+    "accessSourceUrl": "https://www.parks.ca.gov/?page_id=603",
+    "accessStatus": "open",
+    "accessStatusNote": "State Parks lists Refugio State Beach as open; same-day park and surf notices still apply.",
+    "accessStatusUpdatedAt": "2026-07-19",
+    "streetViewLatitude": 34.46254,
+    "streetViewLongitude": -120.07117,
+    "streetViewRoadDistanceMeters": 133
+  },
+  {
+    "id": "el-capitan-state-beach",
+    "name": "El Capitán State Beach",
+    "latitude": 34.4599,
+    "longitude": -120.0262,
+    "region": "Gaviota Coast",
+    "type": "Beach",
+    "access": "The public day-use beach reopened in June 2026 with construction-related limits. Use the signed beach area east of the Naples marine protected area and confirm current park notices.",
+    "regulationUrl": "https://wildlife.ca.gov/Fishing/Ocean/Regulations/Fishing-Map/Central",
+    "depthProfile": "Sand-and-cobble cove with a moderate shelf, creek influence, and rocky edges.",
+    "beachSlopeClass": "moderate",
+    "structureTags": [
+      "sand-trough",
+      "creek-mouth",
+      "rock-sand-edge"
+    ],
+    "parking": "Paid state-park day-use parking; construction can alter available areas.",
+    "transit": "No regular public transit.",
+    "amenities": [
+      "restrooms-limited",
+      "picnic-tables"
+    ],
+    "habitatPrior": 71,
+    "tideStation": "9411399",
+    "weatherAnchor": "gaviota-coast",
+    "castingZone": {
+      "radiusMeters": 320,
+      "bearingDegrees": 165,
+      "targetDepthMeters": [
+        1,
+        9
+      ],
+      "exposure": "open-coast"
+    },
+    "accessSourceUrl": "https://www.parks.ca.gov/?page_id=601",
+    "accessStatus": "limited",
+    "accessStatusNote": "Day use reopened June 23, 2026, but construction and partial facility closures remain; check the park page before travel.",
+    "accessStatusUpdatedAt": "2026-07-19",
+    "streetViewLatitude": 34.46154,
+    "streetViewLongitude": -120.02458,
+    "streetViewRoadDistanceMeters": 235
+  },
+  {
+    "id": "haskells-beach",
+    "name": "Haskell's Beach",
+    "latitude": 34.4337,
+    "longitude": -119.9171,
+    "region": "Goleta",
+    "type": "Beach",
+    "access": "Public beach access from the Haskell's Beach parking area and coastal trail; remain on signed public routes and respect adjacent private property.",
+    "regulationUrl": "https://wildlife.ca.gov/Fishing/Ocean/Regulations/Fishing-Map/Southern",
+    "depthProfile": "Long sand-and-cobble shoreline with seasonal troughs, kelp edges, and a moderate nearshore slope.",
+    "beachSlopeClass": "moderate",
+    "structureTags": [
+      "sand-trough",
+      "cobble-edge",
+      "kelp-edge"
+    ],
+    "parking": "Free public coastal-access lot; spaces are limited.",
+    "transit": "Limited regional bus service; bicycle access is available from Goleta routes.",
+    "amenities": [
+      "restrooms-nearby",
+      "coastal-trail"
+    ],
+    "habitatPrior": 76,
+    "tideStation": "9411340",
+    "weatherAnchor": "goleta",
+    "castingZone": {
+      "radiusMeters": 520,
+      "bearingDegrees": 190,
+      "targetDepthMeters": [
+        1,
+        10
+      ],
+      "exposure": "open-coast"
+    },
+    "accessSourceUrl": "https://www.cityofgoleta.org/home/showpublisheddocument/24331/637394023523700000",
+    "accessStatus": "open",
+    "accessStatusNote": "The City of Goleta documents a public coastal-access route and parking area at Haskell's Beach.",
+    "accessStatusUpdatedAt": "2026-07-19",
+    "streetViewLatitude": 34.43469,
+    "streetViewLongitude": -119.91937,
+    "streetViewRoadDistanceMeters": 240
+  },
+  {
+    "id": "goleta-beach",
+    "name": "Goleta Beach",
+    "latitude": 34.4165,
+    "longitude": -119.8288,
+    "region": "Goleta",
+    "type": "Beach",
+    "access": "Public county beach on the ocean side of Goleta Beach Park. Do not fish inside Goleta Slough, which is a no-take marine conservation area; this listing does not assert that every portion of the pier is open.",
+    "regulationUrl": "https://wildlife.ca.gov/Fishing/Ocean/Regulations/Fishing-Map/Southern",
+    "depthProfile": "Protected sandy shelf influenced by the slough mouth, pier structure, and nearby eelgrass habitat.",
+    "beachSlopeClass": "gentle",
+    "structureTags": [
+      "sand-flat",
+      "estuary-edge",
+      "pier-edge"
+    ],
+    "parking": "Free county-park lots; capacity and construction closures can vary.",
+    "transit": "Santa Barbara MTD service and regional bicycle routes reach the park area.",
+    "amenities": [
+      "restrooms",
+      "picnic-tables",
+      "bike-path"
+    ],
+    "habitatPrior": 82,
+    "tideStation": "9411340",
+    "weatherAnchor": "goleta",
+    "castingZone": {
+      "radiusMeters": 420,
+      "bearingDegrees": 185,
+      "targetDepthMeters": [
+        1,
+        8
+      ],
+      "exposure": "open-coast"
+    },
+    "accessSourceUrl": "https://www.countyofsb.org/goleta-beach-park",
+    "accessStatus": "limited",
+    "accessStatusNote": "The ocean beach is public; anglers must remain outside the Goleta Slough no-take boundary and verify any pier restrictions separately.",
+    "accessStatusUpdatedAt": "2026-07-19",
+    "streetViewLatitude": 34.41758,
+    "streetViewLongitude": -119.83054,
+    "streetViewRoadDistanceMeters": 204
+  },
+  {
+    "id": "arroyo-burro-beach",
+    "name": "Arroyo Burro Beach",
+    "latitude": 34.4024,
+    "longitude": -119.7434,
+    "region": "Santa Barbara",
+    "type": "Beach",
+    "access": "Public county beach reached from Arroyo Burro Beach Park; fish away from swimmers, dogs, and the creek channel, and check water-quality advisories after rain.",
+    "regulationUrl": "https://wildlife.ca.gov/Fishing/Ocean/Regulations/Fishing-Map/Southern",
+    "depthProfile": "Sand-and-cobble beach with a creek mouth, seasonal troughs, and reef edges west of the main access.",
+    "beachSlopeClass": "moderate",
+    "structureTags": [
+      "creek-mouth",
+      "sand-trough",
+      "reef-edge"
+    ],
+    "parking": "Free county lot; it fills quickly on warm days.",
+    "transit": "Santa Barbara MTD serves Cliff Drive with a downhill walk.",
+    "amenities": [
+      "restrooms",
+      "showers",
+      "restaurant-nearby"
+    ],
+    "habitatPrior": 78,
+    "tideStation": "9411340",
+    "weatherAnchor": "santa-barbara",
+    "castingZone": {
+      "radiusMeters": 440,
+      "bearingDegrees": 190,
+      "targetDepthMeters": [
+        1,
+        10
+      ],
+      "exposure": "open-coast"
+    },
+    "accessSourceUrl": "https://www.countyofsb.org/arroyo-burro-beach",
+    "accessStatus": "open",
+    "accessStatusNote": "Santa Barbara County lists Arroyo Burro as a public beach park; same-day water-quality and surf advisories may apply.",
+    "accessStatusUpdatedAt": "2026-07-19",
+    "streetViewLatitude": 34.40287,
+    "streetViewLongitude": -119.74474,
+    "streetViewRoadDistanceMeters": 128
+  },
+  {
+    "id": "mesa-lane-beach",
+    "name": "Mesa Lane Steps Beach",
+    "latitude": 34.3968,
+    "longitude": -119.7221,
+    "region": "Santa Barbara",
+    "type": "Beach",
+    "access": "Public beach reached only by a long municipal stairway. High tide can remove usable beach against the bluff, so check the tide and never rely on an exposed return route.",
+    "regulationUrl": "https://wildlife.ca.gov/Fishing/Ocean/Regulations/Fishing-Map/Southern",
+    "depthProfile": "Narrow bluff-backed sand-and-cobble beach with reef edges and a moderate-to-steep nearshore slope.",
+    "beachSlopeClass": "steep",
+    "structureTags": [
+      "bluff-backed-beach",
+      "rock-sand-edge",
+      "reef-edge"
+    ],
+    "parking": "Limited neighborhood street parking; do not block driveways.",
+    "transit": "Santa Barbara MTD serves nearby Cliff Drive; the beach requires a stair descent.",
+    "amenities": [
+      "beach-access-stairs"
+    ],
+    "habitatPrior": 74,
+    "tideStation": "9411340",
+    "weatherAnchor": "santa-barbara",
+    "castingZone": {
+      "radiusMeters": 300,
+      "bearingDegrees": 190,
+      "targetDepthMeters": [
+        1,
+        10
+      ],
+      "exposure": "open-coast"
+    },
+    "accessSourceUrl": "https://sbparksandrec.santabarbaraca.gov/beaches/mesa-lane-steps-beach",
+    "accessStatus": "limited",
+    "accessStatusNote": "Municipal stairs provide public access, but the narrow bluff-backed beach can become impassable at high tide.",
+    "accessStatusUpdatedAt": "2026-07-19",
+    "streetViewLatitude": 34.39868,
+    "streetViewLongitude": -119.72074,
+    "streetViewRoadDistanceMeters": 238
+  },
+  {
+    "id": "leadbetter-beach",
+    "name": "Leadbetter Beach",
+    "latitude": 34.4015,
+    "longitude": -119.6977,
+    "region": "Santa Barbara",
+    "type": "Beach",
+    "access": "Public city beach west of Santa Barbara Harbor; fish outside guarded swim areas and give surfers, paddlers, and beach users generous room.",
+    "regulationUrl": "https://wildlife.ca.gov/Fishing/Ocean/Regulations/Fishing-Map/Southern",
+    "depthProfile": "Protected sandy beach with a gentle shelf, harbor influence, and structure toward the breakwater.",
+    "beachSlopeClass": "gentle",
+    "structureTags": [
+      "sand-flat",
+      "harbor-edge",
+      "breakwater-edge"
+    ],
+    "parking": "Paid waterfront lots and limited street parking.",
+    "transit": "Santa Barbara MTD and the waterfront bicycle path serve the beach.",
+    "amenities": [
+      "restrooms",
+      "showers",
+      "picnic-tables"
+    ],
+    "habitatPrior": 80,
+    "tideStation": "9411340",
+    "weatherAnchor": "santa-barbara",
+    "castingZone": {
+      "radiusMeters": 430,
+      "bearingDegrees": 175,
+      "targetDepthMeters": [
+        1,
+        8
+      ],
+      "exposure": "open-coast"
+    },
+    "accessSourceUrl": "https://sbparksandrec.santabarbaraca.gov/beaches/leadbetter-beach",
+    "accessStatus": "open",
+    "accessStatusNote": "The City lists Leadbetter as a public beach; seasonal lifeguard and swim-zone operations can constrain casting space.",
+    "accessStatusUpdatedAt": "2026-07-19",
+    "streetViewLatitude": 34.40251,
+    "streetViewLongitude": -119.69922,
+    "streetViewRoadDistanceMeters": 170
+  },
+  {
+    "id": "santa-barbara-harbor-breakwater",
+    "name": "Santa Barbara Harbor Breakwater",
+    "latitude": 34.4031,
+    "longitude": -119.6908,
+    "region": "Santa Barbara",
+    "type": "Jetty",
+    "access": "Public fishing access on the Santa Barbara Breakwater. Use only stable, dry surfaces; avoid wave-washed rocks and keep clear of vessels, harbor operations, and pedestrians.",
+    "regulationUrl": "https://wildlife.ca.gov/Fishing/Ocean/Regulations/Fishing-Map/Southern",
+    "depthProfile": "Rock breakwater beside a dredged harbor entrance, current seams, and a sand-to-rock transition.",
+    "structureTags": [
+      "breakwater",
+      "harbor-mouth",
+      "dredged-channel"
+    ],
+    "parking": "Paid harbor lots; posted waterfront restrictions apply.",
+    "transit": "Santa Barbara MTD and the waterfront bicycle path serve the harbor.",
+    "amenities": [
+      "restrooms-nearby",
+      "restaurants-nearby",
+      "bait-shop-nearby"
+    ],
+    "habitatPrior": 83,
+    "tideStation": "9411340",
+    "weatherAnchor": "santa-barbara",
+    "castingZone": {
+      "radiusMeters": 220,
+      "bearingDegrees": 155,
+      "targetDepthMeters": [
+        2,
+        14
+      ],
+      "exposure": "harbor-mouth"
+    },
+    "accessSourceUrl": "https://wildlife.ca.gov/fishing/ocean/beach-fishing",
+    "accessStatus": "limited",
+    "accessStatusNote": "CDFW identifies Santa Barbara Breakwater as public fishing access, but wave exposure and harbor operations constrain where it is safe to stand.",
+    "accessStatusUpdatedAt": "2026-07-19",
+    "streetViewLatitude": 34.40496,
+    "streetViewLongitude": -119.69176,
+    "streetViewRoadDistanceMeters": 226
+  },
+  {
+    "id": "stearns-wharf",
+    "name": "Stearns Wharf",
+    "latitude": 34.409,
+    "longitude": -119.6855,
+    "region": "Santa Barbara",
+    "type": "Pier",
+    "access": "Public historic wharf reached from the waterfront; obey posted fishing, fire-lane, vehicle, and business-area restrictions and keep walkways clear.",
+    "regulationUrl": "https://wildlife.ca.gov/Fishing/Ocean/Regulations/Fishing-Map/Southern",
+    "depthProfile": "Long wharf over a shallow sandy shelf with pilings, shade lines, and a gradual depth transition.",
+    "structureTags": [
+      "pier-pilings",
+      "sand-flat",
+      "shade-line"
+    ],
+    "parking": "Paid waterfront parking; limited short-term vehicle access exists on the wharf.",
+    "transit": "Santa Barbara MTD, Amtrak, and the waterfront bicycle path are nearby.",
+    "amenities": [
+      "restrooms",
+      "restaurants",
+      "lighting"
+    ],
+    "habitatPrior": 79,
+    "tideStation": "9411340",
+    "weatherAnchor": "santa-barbara",
+    "castingZone": {
+      "radiusMeters": 180,
+      "bearingDegrees": 175,
+      "targetDepthMeters": [
+        2,
+        11
+      ],
+      "exposure": "open-coast"
+    },
+    "accessSourceUrl": "https://santabarbaraca.gov/things-do/waterfront/about-stearns-wharf",
+    "accessStatus": "open",
+    "accessStatusNote": "The City operates Stearns Wharf as a public waterfront destination; posted wharf rules and temporary closures control access.",
+    "accessStatusUpdatedAt": "2026-07-19",
+    "streetViewLatitude": 34.41159,
+    "streetViewLongitude": -119.68489,
+    "streetViewRoadDistanceMeters": 293
+  },
+  {
+    "id": "east-beach-santa-barbara",
+    "name": "East Beach (Santa Barbara)",
+    "latitude": 34.4146,
+    "longitude": -119.6689,
+    "region": "Santa Barbara",
+    "type": "Beach",
+    "access": "Public city beach east of Stearns Wharf; fish outside guarded swim areas and give volleyball, swimming, paddling, and beach traffic generous space.",
+    "regulationUrl": "https://wildlife.ca.gov/Fishing/Ocean/Regulations/Fishing-Map/Southern",
+    "depthProfile": "Wide sandy beach with a gentle shelf, seasonal bars, and harbor-influenced sediment.",
+    "beachSlopeClass": "gentle",
+    "structureTags": [
+      "sand-flat",
+      "sand-bar",
+      "trough"
+    ],
+    "parking": "Paid waterfront lots and metered street parking.",
+    "transit": "Santa Barbara MTD and the waterfront bicycle path serve the beach.",
+    "amenities": [
+      "restrooms",
+      "showers",
+      "picnic-tables"
+    ],
+    "habitatPrior": 77,
+    "tideStation": "9411340",
+    "weatherAnchor": "santa-barbara",
+    "castingZone": {
+      "radiusMeters": 520,
+      "bearingDegrees": 180,
+      "targetDepthMeters": [
+        1,
+        8
+      ],
+      "exposure": "open-coast"
+    },
+    "accessSourceUrl": "https://sbparksandrec.santabarbaraca.gov/parks/east-beach-park",
+    "accessStatus": "open",
+    "accessStatusNote": "The City lists East Beach as public; seasonal lifeguard, swim, and recreation zones can limit practical casting space.",
+    "accessStatusUpdatedAt": "2026-07-19",
+    "streetViewLatitude": 34.41621,
+    "streetViewLongitude": -119.66909,
+    "streetViewRoadDistanceMeters": 180
+  },
+  {
+    "id": "summerland-beach-lookout-park",
+    "name": "Summerland Beach (Lookout Park)",
+    "latitude": 34.41993,
+    "longitude": -119.60136,
+    "region": "Summerland",
+    "type": "Beach",
+    "access": "Public pedestrian beach access from Lookout Park in Summerland. Use the signed route, observe posted park hours and restrictions, and do not depend on a tide-covered shoreline as a return path.",
+    "regulationUrl": "https://wildlife.ca.gov/Fishing/Ocean/Regulations/Fishing-Map/Southern",
+    "depthProfile": "General sandy shoreline; detailed source-bound shore-reachable depth and structure review remains queued.",
+    "beachSlopeClass": "gentle",
+    "structureTags": [
+      "bluff-backed-beach",
+      "sand-flat"
+    ],
+    "parking": "Small public park lot; obey posted hours and parking restrictions.",
+    "transit": "No transit availability is asserted; verify the current route before relying on it.",
+    "amenities": [],
+    "habitatPrior": 77,
+    "tideStation": "9411340",
+    "weatherAnchor": "summerland",
+    "castingZone": {
+      "radiusMeters": 480,
+      "bearingDegrees": 190,
+      "targetDepthMeters": [
+        1,
+        9
+      ],
+      "exposure": "open-coast"
+    },
+    "accessSourceUrl": "https://www.countyofsb.org/lookout-park",
+    "accessStatus": "limited",
+    "accessStatusNote": "County Parks lists Lookout Park, while the pedestrian route, park hours, bluff conditions, and tide-limited shoreline still require local confirmation before release.",
+    "accessStatusUpdatedAt": "2026-07-19",
+    "streetViewLatitude": 34.42055,
+    "streetViewLongitude": -119.60058,
+    "streetViewRoadDistanceMeters": 112
+  },
+  {
+    "id": "carpinteria-state-beach",
+    "name": "Carpinteria State Beach",
+    "latitude": 34.3924,
+    "longitude": -119.5217,
+    "region": "Carpinteria",
+    "type": "Beach",
+    "access": "Public state beach where State Parks lists surf fishing as an activity; fish away from swimmers, seals, tide pools, and posted wildlife protection areas.",
+    "regulationUrl": "https://wildlife.ca.gov/Fishing/Ocean/Regulations/Fishing-Map/Southern",
+    "depthProfile": "Broad sandy beach with a gentle shelf, creek influence, seasonal troughs, and reef transitions toward the park edges.",
+    "beachSlopeClass": "gentle",
+    "structureTags": [
+      "sand-flat",
+      "creek-mouth",
+      "reef-edge"
+    ],
+    "parking": "Paid state-park day-use parking and nearby street parking.",
+    "transit": "Amtrak and regional bus stops are within walking distance.",
+    "amenities": [
+      "restrooms",
+      "showers",
+      "campground"
+    ],
+    "habitatPrior": 81,
+    "tideStation": "9411270",
+    "weatherAnchor": "carpinteria",
+    "castingZone": {
+      "radiusMeters": 580,
+      "bearingDegrees": 190,
+      "targetDepthMeters": [
+        1,
+        9
+      ],
+      "exposure": "open-coast"
+    },
+    "accessSourceUrl": "https://www.parks.ca.gov/?lang=en&page_id=599",
+    "accessStatus": "open",
+    "accessStatusNote": "State Parks lists the beach and surf fishing as available activities; posted wildlife and tide-pool protections still govern use.",
+    "accessStatusUpdatedAt": "2026-07-19",
+    "streetViewLatitude": 34.39363,
+    "streetViewLongitude": -119.52351,
+    "streetViewRoadDistanceMeters": 209
+  },
+  {
+    "id": "rincon-beach-park",
+    "name": "Rincon Beach Park",
+    "latitude": 34.3734,
+    "longitude": -119.4787,
+    "region": "Carpinteria",
+    "type": "Beach",
+    "access": "Public county beach at the Santa Barbara–Ventura county line; heavy surfing use, cobble, and tide-limited sections require spacing and a same-day condition check.",
+    "regulationUrl": "https://wildlife.ca.gov/Fishing/Ocean/Regulations/Fishing-Map/Southern",
+    "depthProfile": "Mixed sand-and-cobble point with reef edges, current seams, and a moderate nearshore slope.",
+    "beachSlopeClass": "moderate",
+    "structureTags": [
+      "point",
+      "rock-sand-edge",
+      "current-seam"
+    ],
+    "parking": "Free county-park lot; it fills quickly during favorable surf.",
+    "transit": "No convenient regular transit; bicycle access requires care along the coast highway.",
+    "amenities": [
+      "restrooms-limited",
+      "picnic-tables"
+    ],
+    "habitatPrior": 75,
+    "tideStation": "9411270",
+    "weatherAnchor": "carpinteria",
+    "castingZone": {
+      "radiusMeters": 420,
+      "bearingDegrees": 205,
+      "targetDepthMeters": [
+        1,
+        11
+      ],
+      "exposure": "open-coast"
+    },
+    "accessSourceUrl": "https://www.countyofsb.org/rincon-beach-park",
+    "accessStatus": "open",
+    "accessStatusNote": "Santa Barbara County lists Rincon as a public beach park; wave, surf-crowding, and tide conditions can reduce usable shoreline.",
+    "accessStatusUpdatedAt": "2026-07-19",
+    "streetViewLatitude": 34.37416,
+    "streetViewLongitude": -119.47751,
+    "streetViewRoadDistanceMeters": 139
   }
 ]

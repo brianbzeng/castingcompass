@@ -3,11 +3,18 @@ import { handleImageOptimization, DEFAULT_DEVICE_SIZES, DEFAULT_IMAGE_SIZES } fr
 import handler from "vinext/server/app-router-entry";
 import sites from "../public/data/sites.json";
 import { handleTripRequest, type TripApiEnv } from "./trips";
-import { cleanupAuthData, getAuthenticatedUser, handleAccountRequest, legalAcceptanceRequiredResponse, unauthorizedResponse } from "./auth";
+import {
+  authorizeDeletionReceiptRequest,
+  authorizeOptionalSessionRequest,
+  authorizeOwnerRequest,
+  handleAccountRequest,
+  legalAcceptanceRequiredResponse,
+  unauthorizedResponse,
+  type AuthenticatedSession,
+} from "./auth";
 import {
   AI_REVIEW_QUEUE_MESSAGE_VERSION,
   consumeAiReviewQueue,
-  dispatchAiReviewBacklog,
   scheduleTripReview,
   type AiReviewQueueEnv,
   type QueueBatchLike,
@@ -16,7 +23,6 @@ import {
 import {
   PRIVACY_EXPORT_QUEUE_MESSAGE_VERSION,
   consumePrivacyExportQueue,
-  dispatchPrivacyExportBacklog,
   type PrivacyExportEnv,
 } from "./privacy-export.ts";
 import { handleDiscussionRequest } from "./discussions";
@@ -31,7 +37,15 @@ import {
 } from "./security";
 import { handleTurnstileConfigRequest, type TurnstileEnv } from "./turnstile";
 import { enforceRequestRateLimit, type RateLimitEnv } from "./rate-limit";
-import { apiRoutePolicyForRequest, isKnownApiPath } from "./route-policy";
+import {
+  apiRoutePolicyForRequest,
+  apiRouteRejectionForRequest,
+  isReviewedOptionalSessionApiRequest,
+  isReviewedOwnerApiRequest,
+  isReviewedPublicApiRequest,
+  isReviewedReceiptApiRequest,
+  type ApiRoutePolicy,
+} from "./route-policy";
 import { unsupportedApiVersionResponse } from "./api-version.ts";
 import {
   attachRequestId,
@@ -45,6 +59,7 @@ import {
   safeErrorFields,
   type ObservabilityEnv,
 } from "./observability";
+import { runScheduledLane, scheduledLaneFor } from "./scheduled.ts";
 
 interface AssetFetcher {
   fetch(request: Request): Promise<Response>;
@@ -52,11 +67,8 @@ interface AssetFetcher {
 
 interface Env extends TripApiEnv, TurnstileEnv, RateLimitEnv, ObservabilityEnv, AiReviewQueueEnv, PrivacyExportEnv {
   ASSETS: AssetFetcher;
-  MIMO_API_KEY?: string;
-  MIMO_MODEL?: string;
   PUBLIC_DISCUSSIONS_ENABLED?: string;
   RELEASE_MAINTENANCE_MODE?: string;
-  SECURITY_EXERCISE_ID?: string;
 }
 
 interface ExecutionContext {
@@ -88,11 +100,10 @@ const worker = {
     });
   },
 
-  async scheduled(_controller: unknown, env: Env, ctx: ExecutionContext) {
+  async scheduled(controller: unknown, env: Env, ctx: ExecutionContext) {
     if (releaseMaintenanceEnabled(env)) return;
-    ctx.waitUntil(observeScheduledTask(env, "trip_review_backlog", () => dispatchAiReviewBacklog(env, sites)));
-    ctx.waitUntil(observeScheduledTask(env, "privacy_export_backlog", () => dispatchPrivacyExportBacklog(env)));
-    ctx.waitUntil(observeScheduledTask(env, "auth_data_cleanup", () => cleanupAuthData(env)));
+    const lane = scheduledLaneFor(controller);
+    ctx.waitUntil(observeScheduledTask(env, lane, () => runScheduledLane(lane, env, sites)));
   },
 
   async queue(batch: QueueBatchLike, env: Env) {
@@ -137,57 +148,141 @@ async function handleFetchRequest(request: Request, env: Env, ctx: ExecutionCont
   const rateLimit = await enforceRequestRateLimit(request, env);
   if (rateLimit) return rateLimit;
 
+  const apiRejection = apiRouteRejectionForRequest(request);
+  if (apiRejection) {
+    return new Response(JSON.stringify({
+      error: { code: apiRejection.code, message: apiRejection.message },
+    }), {
+      status: apiRejection.status,
+      headers: {
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+        ...(apiRejection.status === 405 && !apiRejection.allowedMethods.includes("*")
+          ? { Allow: apiRejection.allowedMethods.join(", ") }
+          : {}),
+      },
+    });
+  }
+
+  const apiPolicy = apiRoutePolicyForRequest(request);
+  let authenticatedSession: AuthenticatedSession | null = null;
+  if (apiPolicy?.authorization === "public" && !isReviewedPublicApiRequest(request, apiPolicy)) {
+    return routePolicyUnavailableResponse();
+  }
+  if (apiPolicy?.authorization === "owner") {
+    if (!isReviewedOwnerApiRequest(request, apiPolicy)) {
+      return routePolicyUnavailableResponse();
+    }
+    const ownerAuthorization = await authorizeOwnerRequest(request, env, {
+      currentLegalAcceptanceRequired: apiPolicy.currentLegalAcceptanceRequired,
+      deletionFenceAccessAllowed: apiPolicy.deletionFenceAccessAllowed,
+    });
+    if (ownerAuthorization.response) return ownerAuthorization.response;
+    authenticatedSession = ownerAuthorization.session;
+  }
+  if (apiPolicy?.authorization === "receipt") {
+    if (!isReviewedReceiptApiRequest(request, apiPolicy)) {
+      return routePolicyUnavailableResponse();
+    }
+    const receiptAuthorization = await authorizeDeletionReceiptRequest(request, env);
+    if (receiptAuthorization.response) return receiptAuthorization.response;
+  }
+  if (apiPolicy?.authorization === "optional_session") {
+    if (!isReviewedOptionalSessionApiRequest(request, apiPolicy)) {
+      return routePolicyUnavailableResponse();
+    }
+    const optionalSessionAuthorization = await authorizeOptionalSessionRequest(request, env);
+    if (optionalSessionAuthorization.response) return optionalSessionAuthorization.response;
+  }
+
   const guarded = await guardRequestBody(request);
   if (guarded.response) return guarded.response;
 
   const routedRequest = guarded.request;
-  return routeRequest(routedRequest, env, ctx);
+  return routeRequest(routedRequest, env, ctx, apiPolicy, authenticatedSession);
 }
 
-async function routeRequest(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
-  const url = new URL(request.url);
-  const apiPolicy = apiRoutePolicyForRequest(request);
-  if (url.pathname.startsWith("/api/") && !apiPolicy && !isKnownApiPath(url.pathname)) {
-    return new Response(JSON.stringify({ error: { code: "not_found", message: "API route not found." } }), {
-      status: 404,
-      headers: { "Content-Type": "application/json; charset=utf-8", "Cache-Control": "no-store" },
-    });
-  }
-
-  const turnstileConfig = handleTurnstileConfigRequest(request, env);
-  if (turnstileConfig) return turnstileConfig;
-
-  const health = await healthResponse(request, env);
-  if (health) return health;
-
-  const discussionResponse = await handleDiscussionRequest(request, env, sites);
-  if (discussionResponse) return discussionResponse;
-
-  const accountResponse = await handleAccountRequest(request, env, sites, {
-    waitUntil: (promise) => ctx.waitUntil(promise),
-    onTripUpdated: (trip) => ctx.waitUntil(scheduleTripReview(env, trip.id, sites, { resetForNewInput: true })),
-    onTripsReviewRequested: (trips) => {
-      for (const trip of trips) {
-        ctx.waitUntil(scheduleTripReview(env, trip.id, sites, { expediteRetry: true }));
-      }
+function routePolicyUnavailableResponse(): Response {
+  return new Response(JSON.stringify({
+    error: {
+      code: "route_unavailable",
+      message: "This API route is temporarily unavailable.",
+    },
+  }), {
+    status: 503,
+    headers: {
+      "Content-Type": "application/json; charset=utf-8",
+      "Cache-Control": "no-store",
     },
   });
-  if (accountResponse) return accountResponse;
+}
 
-  const protectedTripMutation = apiPolicy?.handler === "trips" && apiPolicy.authorization === "owner";
-  const authenticatedUser = protectedTripMutation ? await getAuthenticatedUser(request, env) : null;
-  if (protectedTripMutation && !authenticatedUser) {
-    return unauthorizedResponse();
-  }
-  if (protectedTripMutation && !authenticatedUser?.legalAccepted) {
-    return legalAcceptanceRequiredResponse(authenticatedUser?.ageEligible ?? false);
-  }
+async function routeRequest(
+  request: Request,
+  env: Env,
+  ctx: ExecutionContext,
+  apiPolicy: ApiRoutePolicy | null,
+  authenticatedSession: AuthenticatedSession | null,
+): Promise<Response> {
+  const url = new URL(request.url);
 
-  const tripResponse = await handleTripRequest(request, env, sites, {
-    accountId: authenticatedUser?.id ?? null,
-    onTripCompleted: (trip) => ctx.waitUntil(scheduleTripReview(env, trip.id, sites)),
-  });
-  if (tripResponse) return tripResponse;
+  if (url.pathname.startsWith("/api/")) {
+    // The route registry is the sole API dispatcher. A handler that no longer
+    // claims its assigned route is policy drift, not permission to fall through
+    // to another handler or the static application.
+    if (!apiPolicy) return routePolicyUnavailableResponse();
+
+    let apiResponse: Response | null = null;
+    switch (apiPolicy.handler) {
+      case "turnstile":
+        apiResponse = handleTurnstileConfigRequest(request, env);
+        break;
+      case "health":
+        apiResponse = await healthResponse(request, env);
+        break;
+      case "discussions":
+        apiResponse = await handleDiscussionRequest(request, env, sites);
+        break;
+      case "account":
+        apiResponse = await handleAccountRequest(request, env, sites, {
+          waitUntil: (promise) => ctx.waitUntil(promise),
+          onTripUpdated: (trip) => ctx.waitUntil(
+            scheduleTripReview(env, trip.id, sites, { resetForNewInput: true }),
+          ),
+          onTripReviewRequested: (trip) => ctx.waitUntil(
+            scheduleTripReview(env, trip.id, sites, { expediteRetry: true }),
+          ),
+        });
+        break;
+      case "trips": {
+        const protectedTripMutation = apiPolicy.authorization === "owner";
+        let tripSession = authenticatedSession;
+        if (protectedTripMutation) {
+          const ownerAuthorization = await authorizeOwnerRequest(request, env, {
+            currentLegalAcceptanceRequired: apiPolicy.currentLegalAcceptanceRequired,
+            deletionFenceAccessAllowed: apiPolicy.deletionFenceAccessAllowed,
+          });
+          if (ownerAuthorization.response) return ownerAuthorization.response;
+          tripSession = ownerAuthorization.session;
+        }
+        const authenticatedUser = protectedTripMutation ? tripSession?.user ?? null : null;
+        if (protectedTripMutation && !authenticatedUser) {
+          return unauthorizedResponse();
+        }
+        if (apiPolicy.currentLegalAcceptanceRequired && !authenticatedUser?.legalAccepted) {
+          return legalAcceptanceRequiredResponse(authenticatedUser?.ageEligible ?? false);
+        }
+        apiResponse = await handleTripRequest(request, env, sites, {
+          accountId: authenticatedUser?.id ?? null,
+          onTripCompleted: (trip) => ctx.waitUntil(scheduleTripReview(env, trip.id, sites)),
+        });
+        break;
+      }
+      default:
+        return routePolicyUnavailableResponse();
+    }
+    return apiResponse ?? routePolicyUnavailableResponse();
+  }
 
   if (url.pathname === "/_vinext/image") {
     const images = env.IMAGES;

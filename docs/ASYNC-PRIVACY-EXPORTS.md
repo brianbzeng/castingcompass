@@ -21,28 +21,39 @@ packaged JSON contains only their manifest.
   opaque `pexj_…` job ID. No account ID, email, trip, note, object locator, or export content is
   placed on the Queue.
 - D1 `privacy_export_jobs` is authoritative for ownership, attempts, leases, completion,
-  expiry, content digest, and object cleanup. Queue delivery is only a wake-up signal.
+  expiry, content digest, and object cleanup. Queue delivery is only a wake-up signal. A producer
+  sends only after reading back its exact private dispatch token, and a consumer reads back its
+  exact processing token before any rights-data read.
 - The consumer packages the complete authenticated dataset off the request path, checks photo
   availability with concurrency four, reserves a unique lease-scoped locator in D1, writes JSON
   to the private `PRIVACY_EXPORTS` bucket, then conditionally commits completion only while it
-  still owns the same account/job lease. A stale attempt can never delete the newer attempt's
-  object; every failed uncommitted-object cleanup retains its own attention-ledger locator.
+  still owns the same account/job lease. The locator reservation is read back exactly before the
+  object write. Completion is accepted only after the full locator, digest, size, count,
+  timestamps, and cleared lease are read back; an unknown completion is never authorization to
+  delete the object. A stale attempt can never delete the newer attempt's object; every failed
+  uncommitted-object cleanup retains its own attention-ledger locator.
 - `GET /api/profile/exports/{jobId}` and `/download` bind both the authenticated account and the
   opaque job ID. Before streaming, the download fails closed unless the D1 locator hash and exact
   byte count match the private object and its immutable upload SHA-256 and contract metadata match
   the D1 completion record. Downloads are `private, no-store`, attachment-only JSON responses.
-- Completed files expire after 24 hours. Cleanup claims at most 50 objects per scheduled pass,
+- Completed files expire after 24 hours. Cleanup claims at most seven objects in its scheduled
+  lane, which runs once per deterministic four-lane rotation,
   removes the private object, clears its locator/digest/size/count, and retains only an expired
   tombstone until the ordinary 90-day ledger cleanup.
 - Account deletion cancels export jobs in the same D1 batch that removes active account access.
   Already committed export objects become typed tasks in the durable deletion ledger. If
   deletion wins between the consumer's object write and D1 completion, the consumer deletes the
   uncommitted object; a failed delete persists the locator in `needs_attention` for retry.
-- Application attempts stop at five. Provider delivery must additionally use the locked batch,
-  concurrency, retry, and dead-letter limits in
+- Application attempts stop at five, and an expired fifth lease without an object reaches
+  explicit `needs_attention` instead of being redispatched forever. Provider delivery must
+  additionally use the locked batch, concurrency, retry, and dead-letter limits in
   `security/privacy-export-queue-policy.json`.
 - Maintenance mode stops backlog dispatch and defers Queue work. An invalid feature flag or
   incomplete binding set fails closed.
+- Queue dispatch shares a sequential cron lane with advisory review and selects at most five
+  export jobs after at most one advisory job. Expiry cleanup runs in a separate lane. Each lane
+  has a saturated local D1 query budget below Cloudflare's 50-query Free invocation ceiling;
+  deployed cadence, throughput, latency, and provider behavior remain activation evidence.
 
 ## Activation gate
 

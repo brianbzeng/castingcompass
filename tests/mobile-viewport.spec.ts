@@ -1,4 +1,66 @@
+import { readFileSync } from "node:fs";
 import { expect, test, type Page, type Route } from "@playwright/test";
+import { resolve } from "node:path";
+
+const SITES_FIXTURE = readFileSync(resolve(process.cwd(), "public/data/sites.json"), "utf8");
+const OPPORTUNITIES_FIXTURE = readFileSync(
+  resolve(process.cwd(), "public/data/opportunities.json"),
+  "utf8",
+);
+const STRUCTURE_DEPTH_FIXTURE = readFileSync(
+  resolve(process.cwd(), "public/data/structure-depth.json"),
+  "utf8",
+);
+
+test.use({ serviceWorkers: "block" });
+
+const OPPORTUNITY_FIXTURE_VALID_FROM = JSON.parse(readFileSync(
+  new URL("../public/data/opportunities.json", import.meta.url),
+  "utf8",
+)).validFrom as string;
+
+const ACCOUNT_BROWSER_STORAGE_KEYS = [
+  "castingcompass.active-trip.v1",
+  "castingcompass.reporter-key.v1",
+  "contourcast.active-trip.v1",
+  "contourcast.reporter-key.v1",
+  "castingcompass.trip-draft.v1.past",
+  "castingcompass.profile-trip-draft.v1.trip_edit",
+  "castingcompass.trip-request.v1.past",
+  "castingcompass.trip-pending.v1.past",
+  "contourcast.trip-draft.v1.past",
+  "contourcast.profile-trip-draft.v1.trip_edit",
+] as const;
+
+async function seedAccountBrowserStorage(page: Page) {
+  await page.evaluate((keys) => {
+    for (const storage of [window.localStorage, window.sessionStorage]) {
+      for (const key of keys) storage.setItem(key, `private:${key}`);
+      storage.setItem("castingcompass.respect-water.v1", "dismissed");
+      storage.setItem("unrelated.site.preference", "preserve");
+    }
+  }, ACCOUNT_BROWSER_STORAGE_KEYS);
+}
+
+async function accountBrowserStorageSnapshot(page: Page) {
+  return page.evaluate((keys) => ({
+    localAccountValues: keys.map((key) => window.localStorage.getItem(key)),
+    sessionAccountValues: keys.map((key) => window.sessionStorage.getItem(key)),
+    localPreference: window.localStorage.getItem("castingcompass.respect-water.v1"),
+    sessionPreference: window.sessionStorage.getItem("castingcompass.respect-water.v1"),
+    localUnrelated: window.localStorage.getItem("unrelated.site.preference"),
+    sessionUnrelated: window.sessionStorage.getItem("unrelated.site.preference"),
+  }), ACCOUNT_BROWSER_STORAGE_KEYS);
+}
+
+function expectAccountBrowserStorageCleared(snapshot: Awaited<ReturnType<typeof accountBrowserStorageSnapshot>>) {
+  expect(snapshot.localAccountValues.every((value) => value === null)).toBe(true);
+  expect(snapshot.sessionAccountValues.every((value) => value === null)).toBe(true);
+  expect(snapshot.localPreference).toBe("dismissed");
+  expect(snapshot.sessionPreference).toBe("dismissed");
+  expect(snapshot.localUnrelated).toBe("preserve");
+  expect(snapshot.sessionUnrelated).toBe("preserve");
+}
 
 const TURNSTILE_MOCK_SCRIPT = `(() => {
   let sequence = 0;
@@ -49,7 +111,7 @@ function pastTripReceipt(route: Route) {
   const tripId = route.request().postData()?.match(/trip_[a-f0-9-]{36}/)?.[0];
   if (!tripId) throw new Error("Past-trip request did not include a client trip identity.");
   return {
-    trip: { id: tripId, status: "completed", source: "past_report" },
+    trip: { id: tripId, status: "completed", source: "past_report", hasPhoto: false },
     receipt: { operation: "past", tripId },
   };
 }
@@ -125,8 +187,51 @@ async function expectSelectorInsideViewport(page: Page, selector: string) {
   }
 }
 
+async function ensureInteractiveMap(page: Page) {
+  const centerButton = page.getByRole("button", { name: /fit sites/i });
+  const loadMap = page.getByRole("button", { name: /open interactive map/i });
+  const map = page.locator(".map-wrap");
+
+  await expect(async () => {
+    await expect(map).toBeVisible({ timeout: 1_000 });
+    await map.scrollIntoViewIfNeeded({ timeout: 1_000 });
+    if (await centerButton.isVisible()) return;
+    if (await loadMap.isVisible()) await loadMap.click({ timeout: 1_000 }).catch(() => undefined);
+    await expect(centerButton).toBeVisible({ timeout: 1_000 });
+  }).toPass({ intervals: [100, 250, 500], timeout: 15_000 });
+}
+
 test.beforeEach(async ({ page }, testInfo) => {
   const testTitle = testInfo.titlePath.join(" ");
+  const keyboardSkipNavigationTest = testTitle.includes(
+    "keyboard users can skip repeated navigation",
+  );
+  // The committed opportunity snapshot is a finite, reproducible browser fixture. Pin only the
+  // browser wall clock to the start of its validity window so this UI suite cannot expire at
+  // midnight or after the checked-in forecast horizon; Playwright keeps timers advancing normally.
+  // The skip-navigation case does not consume forecast windows and stays on the native clock so
+  // the clock shim cannot interfere with the browser's initial keyboard-focus boundary.
+  if (!keyboardSkipNavigationTest) {
+    await page.clock.setFixedTime(new Date(OPPORTUNITY_FIXTURE_VALID_FROM));
+  }
+  // These tests exercise responsive UI and recovery contracts, not the static server's stream
+  // implementation. Fulfill the committed catalog and forecast from memory so every project sees
+  // the same source data even when Vinext closes a large static-file stream under CI concurrency.
+  await page.route("**/data/sites.json", (route) => route.fulfill({
+    status: 200,
+    contentType: "application/json",
+    body: SITES_FIXTURE,
+  }));
+  await page.route("**/data/opportunities.json", (route) => route.fulfill({
+    status: 200,
+    contentType: "application/json",
+    body: OPPORTUNITIES_FIXTURE,
+  }));
+  await page.route("**/data/structure-depth.json", (route) => route.fulfill({
+    status: 200,
+    contentType: "application/json",
+    body: STRUCTURE_DEPTH_FIXTURE,
+  }));
   if (testTitle.includes("failed lazy route dependency")) {
     await page.route("**/assets/ContourMap-*.js", (route) => route.abort());
   }
@@ -135,6 +240,7 @@ test.beforeEach(async ({ page }, testInfo) => {
     testTitle.includes("slow trip save stays pending") ||
     testTitle.includes("failed trip save remains ambiguous");
   const accountDeletionRecoveryTest = testTitle.includes("account deletion pauses while offline") ||
+    testTitle.includes("confirmed account deletion clears only") ||
     testTitle.includes("slow account deletion stays unconfirmed") ||
     testTitle.includes("failed account deletion stays ambiguous");
   const tripDeletionRecoveryTest = testTitle.includes("trip deletion pauses while offline") ||
@@ -150,6 +256,8 @@ test.beforeEach(async ({ page }, testInfo) => {
     testTitle.includes("rejected gear creation remains correctable") ||
     testTitle.includes("failed gear removal stays ambiguous");
   const signOutRecoveryTest = testTitle.includes("sign-out pauses while offline") ||
+    testTitle.includes("exact sign-out receipt clears only") ||
+    testTitle.includes("sign-out warns when browser storage cleanup is blocked") ||
     testTitle.includes("slow sign-out stays unconfirmed") ||
     testTitle.includes("malformed sign-out receipt stays unresolved") ||
     testTitle.includes("session check confirms sign-out") ||
@@ -157,10 +265,178 @@ test.beforeEach(async ({ page }, testInfo) => {
   const savedSiteRecoveryTest = testTitle.includes("saved-location changes pause while offline") ||
     testTitle.includes("slow saved-location removal stays unconfirmed") ||
     testTitle.includes("malformed saved-location receipt stays unresolved");
-  if (savedSiteRecoveryTest) {
-    // Keep the committed forecast fixture inside its availability window so this mutation test
-    // exercises recovery behavior instead of expiring as wall-clock time advances.
-    await page.clock.setFixedTime(new Date("2026-07-17T12:00:00.000Z"));
+  const waterQualityAdvisoryTest = testTitle.includes("official water-quality");
+  const structureDepthEvidenceTest = testTitle.includes("source-bound Santa Barbara chart context")
+    || testTitle.includes("source-bound San Francisco chart context")
+    || testTitle.includes("source-bound San Mateo Coast")
+    || testTitle.includes("source-bound Marin Coast")
+    || testTitle.includes("source-bound North and East Bay")
+    || testTitle.includes("source-bound Oakland through South Bay");
+  if (structureDepthEvidenceTest) {
+    await page.route("**/api/discussions/*", (route) => route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({ posts: [] }),
+    }));
+  }
+  if (waterQualityAdvisoryTest) {
+    // Keep the advisory current relative to the suite-wide opportunity-fixture clock.
+    // Discussion data is unrelated to this source-bound advisory contract. Keep each deep-link
+    // navigation independent from a local D1 binding so database-less browser acceptance cannot
+    // spend its timeout retrying an optional panel.
+    await page.route("**/api/discussions/*", (route) => route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({ posts: [] }),
+    }));
+    const assessment = (overrides: Record<string, unknown>) => ({
+      status: "no-active-posting",
+      recommendationEffect: "neutral",
+      officialLabel: "No active posting reported",
+      detail: "Neutral context only. This does not mean the water or seafood is safe and does not improve the fishing score.",
+      sourceId: "sfpuc",
+      stationIds: ["4612"],
+      stationNames: ["Crissy Field Beach East"],
+      sampleDates: ["2026-07-13"],
+      actionStartDates: [],
+      actionEndDates: [],
+      checkedAt: "2026-07-17T12:00:00Z",
+      scoreDelta: null,
+      sourceUrl: "https://webapps.sfpuc.org/sapps/beachesandbay.html",
+      ...overrides,
+    });
+    await page.route("**/data/water-quality.json", (route) => route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        schemaVersion: "castingcompass.water-quality-advisory/2.0.0",
+        policyVersion: "test-policy",
+        generatedAt: "2026-07-17T12:00:00Z",
+        status: "partial",
+        freshness: { maximumSampleAgeDays: 10 },
+        scoreContribution: {
+          mode: "excluded-pending-frozen-baseline-validation",
+          positiveContributionAllowed: false,
+          activeAgencyStatusSuppressesRecommendation: true,
+        },
+        sources: {
+          sfpuc: {
+            agency: "San Francisco Public Utilities Commission",
+            programUrl: "https://www.sfpuc.gov/programs/ocean-and-beach-monitoring",
+            statusUrl: "https://webapps.sfpuc.org/sapps/beachesandbay.html",
+            machineUrl: "https://infrastructure.sfwater.org/lims.asmx/getBeaches",
+            absenceBehavior: "neutral-only-with-current-complete-samples",
+            errorCategory: null,
+          },
+          "california-beachwatch-santa-barbara": {
+            agency: "California State Water Resources Control Board",
+            programUrl: "https://www.waterboards.ca.gov/water_issues/programs/beaches/beach_surveys/index.html",
+            statusUrl: "https://beachwatch.waterboards.ca.gov/public/advisory.php",
+            machineUrl: "https://beachwatch.waterboards.ca.gov/public/advisory.php",
+            absenceBehavior: "unknown",
+            errorCategory: null,
+          },
+          "california-beachwatch-marin": {
+            agency: "California State Water Resources Control Board",
+            programUrl: "https://www.waterboards.ca.gov/water_issues/programs/beaches/beach_surveys/index.html",
+            statusUrl: "https://beachwatch.waterboards.ca.gov/public/advisory.php",
+            machineUrl: "https://beachwatch.waterboards.ca.gov/public/advisory.php",
+            absenceBehavior: "unknown",
+            errorCategory: null,
+          },
+          "california-beachwatch-east-bay-parks": {
+            agency: "California State Water Resources Control Board",
+            programUrl: "https://www.waterboards.ca.gov/water_issues/programs/beaches/beach_surveys/index.html",
+            statusUrl: "https://beachwatch.waterboards.ca.gov/public/advisory.php",
+            machineUrl: "https://beachwatch.waterboards.ca.gov/public/advisory.php",
+            absenceBehavior: "unknown",
+            errorCategory: null,
+          },
+          "san-mateo-county-health": {
+            agency: "San Mateo County Health",
+            programUrl: "https://www.smchealth.org/node/1201",
+            statusUrl: "https://www.smchealth.org/node/1201",
+            machineUrl: "https://www.smchealth.org/node/1201",
+            absenceBehavior: "unknown",
+            errorCategory: null,
+          },
+        },
+        sites: {
+          "baker-beach": assessment({
+            status: "posted",
+            recommendationEffect: "suppress",
+            officialLabel: "Official water-contact posting",
+            detail: "This active agency status suppresses the site from CastingCompass recommendations.",
+            stationIds: ["4608", "4609", "4610"],
+            stationNames: ["Baker Beach West", "Baker Beach East", "Baker Beach at Lobos Creek"],
+          }),
+          "crissy-field-east-beach": assessment({}),
+          "gaviota-state-park-beach": assessment({
+            status: "posted",
+            recommendationEffect: "suppress",
+            officialLabel: "Official water-contact posting",
+            detail: "A current county-submitted action in the official State Board table suppresses this site from recommendations.",
+            sourceId: "california-beachwatch-santa-barbara",
+            stationIds: ["WP0000079"],
+            stationNames: ["Gaviota State Beach"],
+            sampleDates: [],
+            actionStartDates: ["2026-06-15"],
+            actionEndDates: [],
+            sourceUrl: "https://beachwatch.waterboards.ca.gov/public/advisory.php",
+          }),
+          "pacifica-state-beach": assessment({
+            status: "posted",
+            recommendationEffect: "suppress",
+            officialLabel: "Official water-contact warning or closure",
+            detail: "The current County Health posting list names an exact reviewed station for this site, so the recommendation is suppressed.",
+            sourceId: "san-mateo-county-health",
+            stationIds: ["AB4116"],
+            stationNames: ["Linda Mar #5 (at San Pedro Creek)"],
+            sampleDates: ["2026-07-13"],
+            sourceUrl: "https://www.smchealth.org/node/1201",
+          }),
+          "bolinas-beach": assessment({
+            status: "posted",
+            recommendationEffect: "suppress",
+            officialLabel: "Official water-contact posting",
+            detail: "A current county-submitted action in the official State Board table suppresses this site from recommendations.",
+            sourceId: "california-beachwatch-marin",
+            stationIds: ["BOLINAS"],
+            stationNames: ["Bolinas Beach"],
+            sampleDates: [],
+            actionStartDates: ["2026-07-15"],
+            actionEndDates: [],
+            sourceUrl: "https://beachwatch.waterboards.ca.gov/public/advisory.php",
+          }),
+          "keller-beach": assessment({
+            status: "posted",
+            recommendationEffect: "suppress",
+            officialLabel: "Official water-contact posting",
+            detail: "A current district-submitted action in the official State Board table suppresses this site from recommendations.",
+            sourceId: "california-beachwatch-east-bay-parks",
+            stationIds: ["Keller North Beach"],
+            stationNames: ["North Beach"],
+            sampleDates: [],
+            actionStartDates: ["2026-05-05"],
+            actionEndDates: [],
+            sourceUrl: "https://beachwatch.waterboards.ca.gov/public/advisory.php",
+          }),
+          "crown-memorial-state-beach": assessment({
+            status: "posted",
+            recommendationEffect: "suppress",
+            officialLabel: "Official water-contact posting",
+            detail: "A current district-submitted action in the official State Board table suppresses this site from recommendations.",
+            sourceId: "california-beachwatch-east-bay-parks",
+            stationIds: ["Crown Crab Cove"],
+            stationNames: ["Crab Cove"],
+            sampleDates: [],
+            actionStartDates: ["2026-06-23"],
+            actionEndDates: [],
+            sourceUrl: "https://beachwatch.waterboards.ca.gov/public/advisory.php",
+          }),
+        },
+      }),
+    }));
   }
   let profileAttempts = 0;
   await page.route("**/api/auth/session", (route) => route.fulfill({
@@ -326,7 +602,9 @@ test.beforeEach(async ({ page }, testInfo) => {
     body: JSON.stringify({ completedTrips: 0, anglerHours: 0, halibutEncounters: 0, sitesCovered: 0, past24Hours: {} }),
   }));
   await page.addInitScript(() => {
-    window.localStorage.setItem("contourcast.respect-water.v1", "dismissed");
+    if (!new URL(window.location.href).searchParams.has("showRespectReminder")) {
+      window.localStorage.setItem("contourcast.respect-water.v1", "dismissed");
+    }
   });
   await page.goto("/");
   await expect(page.locator(".availability-filter")).toBeVisible();
@@ -339,6 +617,337 @@ test("primary controls stay inside common phone viewports", async ({ page }) => 
   for (const selector of [".topbar", ".topbar-actions", ".availability-filter", ".availability-filter input"]) {
     await expectSelectorInsideViewport(page, selector);
   }
+});
+
+test("keyboard users can skip repeated navigation to the main forecast", async ({ page }, testInfo) => {
+  const skipLink = page.getByRole("link", { name: "Skip to forecast content" });
+  if (testInfo.project.name.startsWith("webkit")) {
+    await skipLink.focus();
+  } else {
+    await page.keyboard.press("Tab");
+  }
+  await expect(skipLink).toBeFocused();
+  await expect(skipLink).toBeVisible();
+  await page.keyboard.press("Enter");
+
+  const main = page.locator("main#main-content");
+  await expect(main).toBeFocused();
+  await expect(page.locator("body > div header.topbar")).toHaveCount(1);
+  await expect(page.locator("main#main-content header.topbar")).toHaveCount(0);
+  await expect(page.locator("main#main-content footer")).toHaveCount(0);
+});
+
+test("forecast and presentation choices announce their selected state", async ({ page }) => {
+  const today = page.getByRole("button", { name: "Today", exact: true });
+  const tomorrow = page.getByRole("button", { name: "Tomorrow", exact: true });
+  await expect(today).toHaveAttribute("aria-pressed", "true");
+  await expect(tomorrow).toHaveAttribute("aria-pressed", "false");
+  await tomorrow.click();
+  await expect(today).toHaveAttribute("aria-pressed", "false");
+  await expect(tomorrow).toHaveAttribute("aria-pressed", "true");
+  await today.click();
+  await expect(today).toHaveAttribute("aria-pressed", "true");
+
+  const mapAndList = page.getByRole("button", { name: "Map and list view" });
+  const listOnly = page.getByRole("button", { name: "List-only view" });
+  await expect(mapAndList).toHaveAttribute("aria-pressed", "true");
+  await listOnly.click();
+  await expect(listOnly).toHaveAttribute("aria-pressed", "true");
+  await expect(mapAndList).toHaveAttribute("aria-pressed", "false");
+  await expect(page.locator(".map-wrap")).toBeHidden();
+  await expect(page.locator(".site-list .site-card").first()).toBeVisible();
+});
+
+test("modal focus is trapped and restored through a nested account surface", async ({ page }, testInfo) => {
+  const siteCard = page.locator(".site-card").first();
+  await siteCard.click();
+  const detail = page.locator(".detail-sheet");
+  await expect(detail).toBeFocused();
+
+  const saveLocation = detail.getByRole("button", { name: "Save location" });
+  await saveLocation.click();
+  const accountDialog = page.locator(".account-modal");
+  await expect(accountDialog).toBeFocused();
+
+  await page.evaluate(() => document.querySelector<HTMLElement>(".location-button")?.focus());
+  await expect(accountDialog).toBeFocused();
+  await page.keyboard.press("Escape");
+  await expect(accountDialog).toHaveCount(0);
+  await expect(detail).toBeVisible();
+  expect(await detail.evaluate((element) => element.contains(document.activeElement))).toBe(true);
+
+  await page.keyboard.press("Escape");
+  await expect(detail).toHaveCount(0);
+  if (testInfo.project.name.startsWith("webkit")) {
+    await expect(siteCard).toBeVisible();
+  } else {
+    await expect(siteCard).toBeFocused();
+  }
+});
+
+test("the required water reminder traps focus and cannot be dismissed with Escape", async ({ page }) => {
+  await page.evaluate(() => {
+    window.localStorage.removeItem("castingcompass.respect-water.v1");
+    window.localStorage.removeItem("contourcast.respect-water.v1");
+  });
+  await page.goto("/?showRespectReminder=1");
+
+  const reminder = page.getByRole("dialog", { name: "Respect the water." });
+  await expect(reminder).toBeFocused();
+  await page.keyboard.press("Escape");
+  await expect(reminder).toBeVisible();
+  await page.evaluate(() => document.querySelector<HTMLElement>(".account-button")?.focus());
+  await expect(reminder).toBeFocused();
+  await reminder.getByRole("button", { name: /continue to castingcompass/i }).click();
+  await expect(reminder).toHaveCount(0);
+});
+
+test("the complete forecast reflows without horizontal document scrolling at 320px", async ({ page }) => {
+  await page.setViewportSize({ width: 320, height: 700 });
+  await expect(page.locator(".availability-filter")).toBeVisible();
+  const geometry = await page.evaluate(() => ({
+    overflow: document.documentElement.scrollWidth - window.innerWidth,
+    viewportWidth: window.innerWidth,
+    main: (() => {
+      const box = document.querySelector<HTMLElement>("main#main-content")!.getBoundingClientRect();
+      return { left: box.left, right: box.right };
+    })(),
+  }));
+  expect(geometry.overflow).toBeLessThanOrEqual(1);
+  expect(geometry.main.left).toBeGreaterThanOrEqual(-1);
+  expect(geometry.main.right).toBeLessThanOrEqual(geometry.viewportWidth + 1);
+});
+
+test("official water-quality status suppresses recommendations and exposes the Santa Barbara action source", async ({ page }) => {
+  await expect(page.locator(".water-quality-suppression-notice")).toContainText(
+    "6 sites are excluded from recommendations",
+  );
+  await expect(page.locator(".site-card").filter({ hasText: "Baker Beach" })).toHaveCount(0);
+  await expect(page.locator(".site-card").filter({ hasText: "Gaviota State Park Beach" })).toHaveCount(0);
+  await expect(page.locator(".site-card").filter({ hasText: "Pacifica State Beach" })).toHaveCount(0);
+  await expect(page.locator(".site-card").filter({ hasText: "Bolinas Beach" })).toHaveCount(0);
+  await expect(page.locator(".site-card").filter({ hasText: "Keller Beach" })).toHaveCount(0);
+  await expect(page.locator(".site-card").filter({ hasText: "Crown Memorial State Beach" })).toHaveCount(0);
+  await page.goto("/?site=gaviota-state-park-beach");
+  const actionAdvisory = page.locator(".water-quality-advisory");
+  await expect(actionAdvisory).toBeVisible();
+  await expect(actionAdvisory).toContainText("Official water-contact posting");
+  await expect(actionAdvisory).toContainText("Agency action start date: 2026-06-15");
+  await expect(actionAdvisory).toContainText("No end date is reported");
+  await expect(actionAdvisory.getByRole("link", { name: /official agency status/i })).toHaveAttribute(
+    "href",
+    "https://beachwatch.waterboards.ca.gov/public/advisory.php",
+  );
+});
+
+test("official water-quality status exposes the San Mateo sample source", async ({ page }) => {
+  await page.goto("/?site=pacifica-state-beach");
+  const countyAdvisory = page.locator(".water-quality-advisory");
+  await expect(countyAdvisory).toBeVisible();
+  await expect(countyAdvisory).toContainText("Official water-contact warning or closure");
+  await expect(countyAdvisory).toContainText("Agency sample date: 2026-07-13");
+  await expect(countyAdvisory).toContainText("does not improve this fishing score");
+  await expect(countyAdvisory.getByRole("link", { name: /official agency status/i })).toHaveAttribute(
+    "href",
+    "https://www.smchealth.org/node/1201",
+  );
+});
+
+test("official water-quality status exposes the Marin action source", async ({ page }) => {
+  await page.goto("/?site=bolinas-beach");
+  const marinAdvisory = page.locator(".water-quality-advisory");
+  await expect(marinAdvisory).toBeVisible();
+  await expect(marinAdvisory).toContainText("Official water-contact posting");
+  await expect(marinAdvisory).toContainText("Agency action start date: 2026-07-15");
+  await expect(marinAdvisory).toContainText("does not improve this fishing score");
+  await expect(marinAdvisory.getByRole("link", { name: /official agency status/i })).toHaveAttribute(
+    "href",
+    "https://beachwatch.waterboards.ca.gov/public/advisory.php",
+  );
+});
+
+test("official water-quality status exposes the East Bay Parks action source", async ({ page }) => {
+  await page.goto("/?site=keller-beach");
+  const eastBayParksAdvisory = page.locator(".water-quality-advisory");
+  await expect(eastBayParksAdvisory).toBeVisible();
+  await expect(eastBayParksAdvisory).toContainText("Official water-contact posting");
+  await expect(eastBayParksAdvisory).toContainText("Agency action start date: 2026-05-05");
+  await expect(eastBayParksAdvisory).toContainText("does not improve this fishing score");
+  await expect(
+    eastBayParksAdvisory.getByRole("link", { name: /official agency status/i }),
+  ).toHaveAttribute("href", "https://beachwatch.waterboards.ca.gov/public/advisory.php");
+});
+
+test("official water-quality status keeps neutral status explicit", async ({ page }) => {
+  // Open the exact site through the product's stable deep-link contract. Its rank can move as
+  // regional sites are added, so the advisory test must not assume it appears in the first cards.
+  await page.goto("/?site=crissy-field-east-beach");
+  const advisory = page.locator(".water-quality-advisory");
+  await expect(advisory).toBeVisible();
+  await expect(advisory).toContainText("No active posting reported");
+  await expect(advisory).toContainText("does not improve this fishing score");
+  await expect(advisory.getByRole("link", { name: /official agency status/i })).toHaveAttribute(
+    "href",
+    "https://webapps.sfpuc.org/sapps/beachesandbay.html",
+  );
+  await expectSelectorInsideViewport(page, ".water-quality-advisory");
+});
+
+test("source-bound Santa Barbara chart context stays truthful and mobile-safe", async ({ page }) => {
+  await page.goto("/?site=goleta-beach");
+  const evidence = page.locator(".structure-depth-evidence");
+
+  await expect(evidence).toBeVisible();
+  await expect(evidence).toContainText("NOAA chart context for this location");
+  await expect(evidence).toContainText("0–9.1 m");
+  await expect(evidence).toContainText("2.4–5.4 m across 3 deduplicated records within 1,000 m");
+  await expect(evidence).toContainText("Charted shoreline construction");
+  await expect(evidence).toContainText("not an exact depth at the marker");
+  await expect(evidence).toContainText("no fixed grid resolution");
+  await expect(evidence).toContainText("does not change the fishing score");
+  await expect(evidence).toContainText("not for navigation, wading, or access decisions");
+  await expect(evidence.getByRole("link", { name: /NOAA source notes/i })).toHaveAttribute(
+    "href",
+    "https://nauticalcharts.noaa.gov/learn/encdirect/",
+  );
+  await expectSelectorInsideViewport(page, ".structure-depth-evidence");
+});
+
+test("source-bound San Francisco chart context preserves partial source-date precision", async ({ page }) => {
+  await page.goto("/?site=torpedo-wharf");
+  const evidence = page.locator(".structure-depth-evidence");
+
+  await expect(evidence).toBeVisible();
+  await expect(evidence).toContainText("0–1.8 m");
+  await expect(evidence).toContainText("some dates have year/month precision");
+  await expect(evidence).toContainText("some records have no source date");
+  await expect(evidence).toContainText("does not change the fishing score");
+  await expect(evidence).toContainText("not for navigation, wading, or access decisions");
+  await expectSelectorInsideViewport(page, ".structure-depth-evidence");
+});
+
+test("source-bound San Francisco chart context keeps a missing sector band explicitly partial", async ({ page }) => {
+  await page.goto("/?site=crane-cove-park");
+  const evidence = page.locator(".structure-depth-evidence");
+
+  await expect(evidence).toBeVisible();
+  await expect(evidence).toContainText("No reviewed NOAA depth-area band intersected this configured sector");
+  await expect(evidence).toContainText("4.9–12 m across 7 deduplicated records within 1,000 m");
+  await expect(evidence).toContainText("Charted wreck");
+  await expect(evidence).toContainText("the gap is not proof of shallow water, safe access, or castability");
+  await expectSelectorInsideViewport(page, ".structure-depth-evidence");
+});
+
+test("source-bound San Mateo Coast coverage preserves the closed-site recommendation boundary", async ({ page }) => {
+  await page.goto("/?site=pacifica-municipal-pier");
+  const closure = page.locator(".closure-notice").filter({ hasText: "temporarily closed access point" });
+
+  await expect(closure).toContainText("1 temporarily closed access point is excluded from ranking");
+  await expect(closure.getByRole("link", { name: /official status/i })).toHaveAttribute(
+    "href",
+    "https://www.cityofpacifica.org/departments/public-works/field-services/pacifica-pier",
+  );
+  await expect(page.locator(".site-card").filter({ hasText: "Pacifica Municipal Pier" })).toHaveCount(0);
+  await expect(page.locator(".detail-sheet")).toHaveCount(0);
+  await expect(page.locator(".fish-window-button")).toHaveCount(0);
+  await expectSelectorInsideViewport(page, ".closure-notice");
+});
+
+test("source-bound San Mateo Coast chart context preserves Half Moon Bay date precision", async ({ page }) => {
+  await page.goto("/?site=francis-state-beach");
+  const evidence = page.locator(".structure-depth-evidence");
+
+  await expect(evidence).toBeVisible();
+  await expect(evidence).toContainText("1.8–3.6 m");
+  await expect(evidence).toContainText("2.4–9.1 m across 9 deduplicated records within 1,000 m");
+  await expect(evidence).toContainText("Charted obstruction");
+  await expect(evidence).toContainText("some dates have year/month precision");
+  await expect(evidence).toContainText("some records have no source date");
+  await expect(evidence).toContainText("does not change the fishing score");
+  await expectSelectorInsideViewport(page, ".structure-depth-evidence");
+});
+
+test("source-bound Marin Coast chart context keeps a missing sector band explicitly partial", async ({ page }) => {
+  await page.goto("/?site=bolinas-beach");
+  const evidence = page.locator(".structure-depth-evidence");
+
+  await expect(evidence).toBeVisible();
+  await expect(evidence).toContainText("No reviewed NOAA depth-area band intersected this configured sector");
+  await expect(evidence).toContainText("0.3–4.2 m across 6 deduplicated records within 1,000 m");
+  await expect(evidence).toContainText("Charted seabed description");
+  await expect(evidence).toContainText("some dates have year/month precision");
+  await expect(evidence).toContainText("the gap is not proof of shallow water, safe access, or castability");
+  await expect(evidence).toContainText("does not change the fishing score");
+  await expectSelectorInsideViewport(page, ".structure-depth-evidence");
+});
+
+test("source-bound Marin Coast chart context preserves Point Reyes date precision", async ({ page }) => {
+  await page.goto("/?site=drakes-beach");
+  const evidence = page.locator(".structure-depth-evidence");
+
+  await expect(evidence).toBeVisible();
+  await expect(evidence).toContainText("0–3.6 m");
+  await expect(evidence).toContainText("0.4–9.6 m across 14 deduplicated records within 1,000 m");
+  await expect(evidence).toContainText("Charted seabed description");
+  await expect(evidence).toContainText("some dates have year/month precision");
+  await expect(evidence).toContainText("some records have no source date");
+  await expect(evidence).toContainText("does not change the fishing score");
+  await expectSelectorInsideViewport(page, ".structure-depth-evidence");
+});
+
+test("source-bound North and East Bay chart context keeps a missing sector band explicitly partial", async ({ page }) => {
+  await page.goto("/?site=mcnears-beach-pier");
+  const evidence = page.locator(".structure-depth-evidence");
+
+  await expect(evidence).toBeVisible();
+  await expect(evidence).toContainText("No reviewed NOAA depth-area band intersected this configured sector");
+  await expect(evidence).toContainText("0.6–2.4 m across 6 deduplicated records within 1,000 m");
+  await expect(evidence).toContainText("Charted shoreline construction");
+  await expect(evidence).toContainText("the gap is not proof of shallow water, safe access, or castability");
+  await expect(evidence).toContainText("does not change the fishing score");
+  await expectSelectorInsideViewport(page, ".structure-depth-evidence");
+});
+
+test("source-bound North and East Bay chart context preserves Berkeley date precision", async ({ page }) => {
+  await page.goto("/?site=berkeley-marina-north-basin");
+  const evidence = page.locator(".structure-depth-evidence");
+
+  await expect(evidence).toBeVisible();
+  await expect(evidence).toContainText("0–1.8 m");
+  await expect(evidence).toContainText("0.3–1.8 m across 8 deduplicated records within 1,000 m");
+  await expect(evidence).toContainText("Charted obstruction");
+  await expect(evidence).toContainText("some dates have year/month precision");
+  await expect(evidence).toContainText("some records have no source date");
+  await expect(evidence).toContainText("does not change the fishing score");
+  await expectSelectorInsideViewport(page, ".structure-depth-evidence");
+});
+
+test("source-bound Oakland through South Bay chart context preserves Port View depth and date limits", async ({ page }) => {
+  await page.goto("/?site=port-view-park-pier");
+  const evidence = page.locator(".structure-depth-evidence");
+
+  await expect(evidence).toBeVisible();
+  await expect(evidence).toContainText("5.4–9.1 m");
+  await expect(evidence).toContainText("2.1–13.1 m across 12 deduplicated records within 1,000 m");
+  await expect(evidence).toContainText("Charted dredged area");
+  await expect(evidence).toContainText("some dates have year/month precision");
+  await expect(evidence).toContainText("some records have no source date");
+  await expect(evidence).toContainText("does not change the fishing score");
+  await expectSelectorInsideViewport(page, ".structure-depth-evidence");
+});
+
+test("source-bound Oakland through South Bay chart context keeps Coyote Point display-only", async ({ page }) => {
+  await page.goto("/?site=coyote-point-jetty");
+  const evidence = page.locator(".structure-depth-evidence");
+
+  await expect(evidence).toBeVisible();
+  await expect(evidence).toContainText("0–1.8 m");
+  await expect(evidence).toContainText("0.6–2.1 m across 12 deduplicated records within 1,000 m");
+  await expect(evidence).toContainText("Charted pile or piling");
+  await expect(evidence).toContainText("some dates have year/month precision");
+  await expect(evidence).toContainText("some records have no source date");
+  await expect(evidence).toContainText("does not change the fishing score");
+  await expectSelectorInsideViewport(page, ".structure-depth-evidence");
 });
 
 test("safe-area contract keeps fixed controls inside simulated insets", async ({ page }) => {
@@ -410,7 +1019,7 @@ test("safe-area contract keeps fixed controls inside simulated insets", async ({
 });
 
 test("map overlays do not collide or clip", async ({ page }) => {
-  const centerButton = page.getByRole("button", { name: /center bay/i });
+  const centerButton = page.getByRole("button", { name: /fit sites/i });
   const loadMap = page.getByRole("button", { name: /open interactive map/i });
   await expect(async () => {
     const map = page.locator(".map-wrap");
@@ -428,6 +1037,64 @@ test("map overlays do not collide or clip", async ({ page }) => {
   expect(center).not.toBeNull();
   expect(label!.x + label!.width).toBeLessThanOrEqual(center!.x - 4);
   expect(center!.x + center!.width).toBeLessThanOrEqual(viewportWidth + 1);
+});
+
+test("map tile cleanup suppresses only the known MapLibre abort rejection", async ({ page }) => {
+  await ensureInteractiveMap(page);
+
+  const dispatchResults = await page.evaluate(() => {
+    const dispatchRejection = (reason: unknown) => {
+      const event = new Event("unhandledrejection", { cancelable: true });
+      Object.defineProperty(event, "reason", { value: reason });
+      return window.dispatchEvent(event);
+    };
+    const message = "signal is aborted without reason";
+
+    return {
+      expectedMapLibreAbortPropagated: dispatchRejection({
+        name: "AbortError",
+        message,
+        stack: `AbortError: ${message}\n    at q.abortTile (https://castingcompass.com/assets/maplibre-gl-2DjS9JS6.js:1:2)`,
+      }),
+      applicationAbortPropagated: dispatchRejection({
+        name: "AbortError",
+        message,
+        stack: `AbortError: ${message}\n    at loadForecast (https://castingcompass.com/assets/app.js:2:3)`,
+      }),
+      mapLibreFailurePropagated: dispatchRejection({
+        name: "TypeError",
+        message: "Raster source failed",
+        stack: "TypeError: Raster source failed\n    at q.abortTile (https://castingcompass.com/assets/maplibre-gl-2DjS9JS6.js:1:2)",
+      }),
+    };
+  });
+
+  expect(dispatchResults.expectedMapLibreAbortPropagated).toBe(false);
+  expect(dispatchResults.applicationAbortPropagated).toBe(true);
+  expect(dispatchResults.mapLibreFailurePropagated).toBe(true);
+});
+
+test("opening multiple location reports does not leak map tile aborts", async ({ page }) => {
+  const pageErrors: string[] = [];
+  page.on("pageerror", (error) => pageErrors.push(error.message));
+  await page.route("**/api/discussions/*", (route) => route.fulfill({
+    status: 200,
+    contentType: "application/json",
+    body: JSON.stringify({ posts: [] }),
+  }));
+
+  await ensureInteractiveMap(page);
+
+  const cards = page.locator(".site-card");
+  await expect(cards).not.toHaveCount(0);
+  for (let index = 0; index < Math.min(3, await cards.count()); index += 1) {
+    await cards.nth(index).click();
+    await expect(page.locator(".detail-sheet")).toBeVisible();
+    await page.getByRole("button", { name: "Close details" }).click();
+    await expect(page.locator(".detail-sheet")).toHaveCount(0);
+  }
+
+  expect(pageErrors.filter((message) => /signal is aborted without reason|AbortError/i.test(message))).toEqual([]);
 });
 
 test("the 404 recovery page stays truthful and usable on mobile", async ({ page }) => {
@@ -614,6 +1281,26 @@ test.describe("account deletion recovery", () => {
     await expect(deletion.getByRole("button", { name: "Permanently delete account" })).toBeEnabled();
     await page.waitForTimeout(100);
     expect(deletionAttempts).toBe(0);
+  });
+
+  test("confirmed account deletion clears only account-bound browser recovery state", async ({ page }) => {
+    await page.route("**/api/profile", (route) => {
+      if (route.request().method() === "GET") {
+        return route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ savedSites: [], trips: [], gearProfiles: [] }) });
+      }
+      return route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ deleted: true, deletion: { status: "completed", scope: "account", objectsTotal: 0, objectsDeleted: 0 } }),
+      });
+    });
+
+    const { modal, deletion } = await prepareAccountDeletion(page);
+    await seedAccountBrowserStorage(page);
+    page.once("dialog", (dialog) => dialog.accept());
+    await deletion.getByRole("button", { name: "Permanently delete account" }).click();
+    await expect(modal.getByRole("heading", { name: "Account access removed." })).toBeVisible();
+    expectAccountBrowserStorageCleared(await accountBrowserStorageSnapshot(page));
   });
 
   test("a slow account deletion stays unconfirmed until the receipt arrives", async ({ page }) => {
@@ -1020,6 +1707,46 @@ test.describe("sign-out recovery", () => {
     expect(signOutAttempts).toBe(0);
   });
 
+  test("an exact sign-out receipt clears only account-bound browser recovery state", async ({ page }) => {
+    await page.route("**/api/auth/logout", (route) => route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({ signedOut: true, user: null }),
+    }));
+
+    const { modal, controls } = await prepareSignOut(page);
+    await seedAccountBrowserStorage(page);
+    await controls.getByRole("button", { name: "Sign out" }).click();
+    await expect(modal.getByRole("heading", { name: "Welcome back." })).toBeVisible();
+    expectAccountBrowserStorageCleared(await accountBrowserStorageSnapshot(page));
+  });
+
+  test("confirmed sign-out warns when browser storage cleanup is blocked", async ({ page }) => {
+    await page.route("**/api/auth/logout", (route) => route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({ signedOut: true, user: null }),
+    }));
+
+    const { modal, controls } = await prepareSignOut(page);
+    await seedAccountBrowserStorage(page);
+    await page.evaluate(() => {
+      Object.defineProperty(Storage.prototype, "removeItem", {
+        configurable: true,
+        value() {
+          throw new DOMException("Storage access blocked", "SecurityError");
+        },
+      });
+    });
+    await controls.getByRole("button", { name: "Sign out" }).click();
+    await expect(modal.getByRole("heading", { name: "Welcome back." })).toBeVisible();
+    await expect(modal.getByText("Signed out. This browser blocked removal of locally stored trip recovery data.", { exact: false })).toBeVisible();
+    await expect(modal.getByText("Clear CastingCompass site data before sharing this device.", { exact: false })).toBeVisible();
+    const snapshot = await accountBrowserStorageSnapshot(page);
+    expect(snapshot.localAccountValues.every((value) => value !== null)).toBe(true);
+    expect(snapshot.sessionAccountValues.every((value) => value !== null)).toBe(true);
+  });
+
   test("slow sign-out stays unconfirmed until the exact receipt arrives", async ({ page }) => {
     await page.route("**/api/auth/logout", async (route) => {
       await new Promise((resolve) => setTimeout(resolve, 6_000));
@@ -1031,6 +1758,7 @@ test.describe("sign-out recovery", () => {
     });
 
     const { modal, controls } = await prepareSignOut(page);
+    await seedAccountBrowserStorage(page);
     await controls.getByRole("button", { name: "Sign out" }).click();
     const status = controls.getByRole("status");
     await expect(status).toContainText("sign-out is not confirmed yet", { timeout: 5_500 });
@@ -1038,6 +1766,7 @@ test.describe("sign-out recovery", () => {
     await expect(controls.getByRole("button", { name: "Signing out…" })).toBeDisabled();
     await expect(modal.getByRole("heading", { name: "Welcome back." })).toBeVisible({ timeout: 8_000 });
     await expect(controls).toBeHidden();
+    expectAccountBrowserStorageCleared(await accountBrowserStorageSnapshot(page));
   });
 
   test("malformed sign-out receipt stays unresolved and preserves local account state", async ({ page, context }) => {
@@ -1052,6 +1781,7 @@ test.describe("sign-out recovery", () => {
     });
 
     const { modal, controls } = await prepareSignOut(page);
+    await seedAccountBrowserStorage(page);
     await controls.getByRole("button", { name: "Sign out" }).click();
     const alert = controls.getByRole("alert");
     await expect(alert).toContainText("Your session may still be active");
@@ -1064,6 +1794,9 @@ test.describe("sign-out recovery", () => {
     await context.setOffline(false);
     await expect(controls.getByRole("button", { name: "Check sign-out status" })).toBeEnabled();
     expect(signOutAttempts).toBe(1);
+    const snapshot = await accountBrowserStorageSnapshot(page);
+    expect(snapshot.localAccountValues.every((value) => value !== null)).toBe(true);
+    expect(snapshot.sessionAccountValues.every((value) => value !== null)).toBe(true);
   });
 
   test("session check confirms sign-out after a dropped mutation response without replay", async ({ page }) => {
@@ -1074,6 +1807,7 @@ test.describe("sign-out recovery", () => {
     });
 
     const { modal, controls } = await prepareSignOut(page);
+    await seedAccountBrowserStorage(page);
     await controls.getByRole("button", { name: "Sign out" }).click();
     await expect(controls.getByRole("button", { name: "Check sign-out status" })).toBeEnabled();
     await page.route("**/api/auth/session", (route) => route.fulfill({
@@ -1085,6 +1819,7 @@ test.describe("sign-out recovery", () => {
     await expect(modal.getByRole("heading", { name: "Welcome back." })).toBeVisible();
     await expect(controls).toBeHidden();
     expect(signOutAttempts).toBe(1);
+    expectAccountBrowserStorageCleared(await accountBrowserStorageSnapshot(page));
   });
 
   test("session check permits a retry only when the server confirms the session is active", async ({ page }) => {

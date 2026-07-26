@@ -171,6 +171,7 @@ class MemoryTripStore {
   trips = new Map();
   validations = new Map();
   completionEvents = new Map();
+  photoReservations = new Map();
   rateLimited = false;
   initialized = false;
 
@@ -193,11 +194,31 @@ class MemoryTripStore {
     return row;
   }
 
-  async getTrip(id) {
-    return this.trips.get(id) ?? null;
+  async getTrip(id, accountId) {
+    const row = this.trips.get(id);
+    return row && (row.user_id ?? null) === accountId ? row : null;
   }
 
-  async getValidationEnrollment(id) {
+  async isTripIdentityReserved(id) {
+    return this.trips.has(id);
+  }
+
+  async reservePhotoUpload(reservation) {
+    if (this.photoReservations.has(reservation.objectKey)) return false;
+    this.photoReservations.set(reservation.objectKey, reservation);
+    return true;
+  }
+
+  async releasePhotoUploadReservation(tripId, objectKey, objectKeyHash) {
+    const reservation = this.photoReservations.get(objectKey);
+    if (reservation?.tripId === tripId && reservation.objectKeyHash === objectKeyHash) {
+      this.photoReservations.delete(objectKey);
+    }
+    return !this.photoReservations.has(objectKey);
+  }
+
+  async getValidationEnrollment(id, accountId) {
+    if (!await this.getTrip(id, accountId)) return null;
     const record = this.validations.get(id)?.provenance;
     if (!record || record.eventType !== "enrollment") return null;
     return {
@@ -236,9 +257,13 @@ class MemoryTripStore {
     };
   }
 
-  async getRecruitmentEvent(participantGroupId, activation) {
-    const records = [...this.validations.values()]
-      .map((validation) => validation.provenance)
+  async getRecruitmentEvent(participantGroupId, activation, accountId) {
+    const records = [...this.validations.entries()]
+      .filter(([tripId]) => {
+        const row = this.trips.get(tripId);
+        return row && (row.user_id ?? null) === accountId;
+      })
+      .map(([, validation]) => validation.provenance)
       .filter((record) => record.eventType === "enrollment"
         && record.sourceRole === "prospective_secondary"
         && record.participantGroupId === participantGroupId
@@ -261,7 +286,8 @@ class MemoryTripStore {
     };
   }
 
-  async getForecastImpression(id) {
+  async getForecastImpression(id, accountId) {
+    if (!await this.getTrip(id, accountId)) return null;
     const record = this.validations.get(id)?.impression;
     if (!record) return null;
     return {
@@ -272,9 +298,10 @@ class MemoryTripStore {
     };
   }
 
-  async completeTrip(id, tokenHash, completion, provenance) {
+  async completeTrip(id, tokenHash, accountId, completion, provenance) {
     const row = this.trips.get(id);
-    if (!row || row.status !== "active" || row.token_hash !== tokenHash) return null;
+    if (!row || row.status !== "active" || row.token_hash !== tokenHash
+      || (row.user_id ?? null) !== accountId) return null;
     const forecastAttributionCleared = row.mode !== completion.mode;
     Object.assign(row, {
       status: "completed",
@@ -1113,7 +1140,11 @@ test("required confirmations fail closed and pre-trip influence is immutable", a
     })),
     {},
     SITES,
-    { store, now: () => new Date("2026-07-11T18:00:00.000Z") },
+    {
+      store,
+      accountId: "user_photo_upload_test",
+      now: () => new Date("2026-07-11T18:00:00.000Z"),
+    },
   );
   assert.equal(start.status, 201);
   const started = await start.json();
@@ -1128,7 +1159,11 @@ test("required confirmations fail closed and pre-trip influence is immutable", a
     multipartRequest(`/api/trips/${started.trip.id}/complete`, missingConsent),
     {},
     SITES,
-    { store, now: () => new Date("2026-07-11T18:31:00.000Z") },
+    {
+      store,
+      accountId: "user_photo_upload_test",
+      now: () => new Date("2026-07-11T18:31:00.000Z"),
+    },
   );
   assert.equal(missingConsentResponse.status, 422);
   assert.equal((await missingConsentResponse.json()).error.code, "consent_required");
@@ -1142,7 +1177,11 @@ test("required confirmations fail closed and pre-trip influence is immutable", a
     multipartRequest(`/api/trips/${started.trip.id}/complete`, changedInfluence),
     {},
     SITES,
-    { store, now: () => new Date("2026-07-11T18:31:00.000Z") },
+    {
+      store,
+      accountId: "user_photo_upload_test",
+      now: () => new Date("2026-07-11T18:31:00.000Z"),
+    },
   );
   assert.equal(changedInfluenceResponse.status, 422);
   assert.equal((await changedInfluenceResponse.json()).error.code, "score_influence_immutable");
@@ -1332,7 +1371,11 @@ test("past reports re-encode photos and the summary exposes validation totals", 
     multipartRequest("/api/trips/report", form),
     env,
     SITES,
-    { store, now: () => new Date("2026-07-11T18:00:00.000Z") },
+    {
+      store,
+      accountId: "user_photo_upload_test",
+      now: () => new Date("2026-07-11T18:00:00.000Z"),
+    },
   );
   assert.equal(response.status, 201);
   const reported = (await response.json()).trip;
@@ -1344,6 +1387,7 @@ test("past reports re-encode photos and the summary exposes validation totals", 
   assert.equal(reported.hasPhoto, true);
   assert.equal(reported.scoreInfluencedChoice, false);
   assert.equal(storedObjects.size, 1);
+  assert.equal(store.photoReservations.size, 0);
   const storedPhoto = [...storedObjects.values()][0];
   assert.equal(storedPhoto.options.httpMetadata.contentType, "image/webp");
   assert.equal(storedPhoto.options.customMetadata.privacy, "exif-stripped");

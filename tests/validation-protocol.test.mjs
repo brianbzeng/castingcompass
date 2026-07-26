@@ -888,7 +888,7 @@ test("Python and Worker share the exact signed impression-attestation vector", a
 test("frozen protocol has exact site hash/coverage, contiguous dates, roles, metrics, and gates", async () => {
   const [protocol, siteCatalogBytes] = await Promise.all([
     JSON.parse(await readFile(new URL("validation/protocols/california-halibut-site-window-v1.json", root), "utf8")),
-    readFile(new URL("public/data/sites.json", root)),
+    readFile(new URL("validation/catalogs/california-halibut-bay-area-v1.json", root)),
   ]);
   assertProtocolSemantics(protocol, siteCatalogBytes, JSON.parse(siteCatalogBytes.toString("utf8")));
 

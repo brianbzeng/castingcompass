@@ -2,12 +2,13 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 
-const [authSource, workerSource, appSource, tripSource, accountSource, siteComboboxSource, gearFieldsSource, migration] = await Promise.all([
+const [authSource, workerSource, appSource, tripSource, accountSource, accountStorageSource, siteComboboxSource, gearFieldsSource, migration] = await Promise.all([
   readFile(new URL("../worker/auth.ts", import.meta.url), "utf8"),
   readFile(new URL("../worker/index.ts", import.meta.url), "utf8"),
   readFile(new URL("../app/components/OpportunityApp.tsx", import.meta.url), "utf8"),
   readFile(new URL("../app/components/TripReportFeature.tsx", import.meta.url), "utf8"),
   readFile(new URL("../app/components/AccountFeature.tsx", import.meta.url), "utf8"),
+  readFile(new URL("../app/lib/account-browser-storage.ts", import.meta.url), "utf8"),
   readFile(new URL("../app/components/SiteCombobox.tsx", import.meta.url), "utf8"),
   readFile(new URL("../app/components/GearCatalogFields.tsx", import.meta.url), "utf8"),
   readFile(new URL("../drizzle/0001_accounts_and_saved_sites.sql", import.meta.url), "utf8"),
@@ -21,7 +22,7 @@ test("uses hardened server-side sessions for beta accounts", () => {
   assert.match(authSource, /SameSite=Lax; Secure/);
   assert.match(authSource, /auth_sessions/);
   assert.doesNotMatch(accountSource, /localStorage[^\n]*cc_session|cc_session[^\n]*localStorage/);
-  assert.match(workerSource, /getAuthenticatedUser/);
+  assert.match(workerSource, /authorizeOwnerRequest/);
   assert.match(workerSource, /protectedTripMutation/);
 });
 
@@ -49,7 +50,8 @@ test("offers expandable reports and licensed structure examples", () => {
 });
 
 test("keeps unfinished trip entry recoverable and makes locations searchable", () => {
-  assert.match(tripSource, /castingcompass\.trip-draft\.v1/);
+  assert.match(tripSource, /TRIP_DRAFT_PREFIX/);
+  assert.match(accountStorageSource, /castingcompass\.trip-draft\.v1/);
   assert.match(tripSource, /Draft saved on this device as you type/);
   assert.match(tripSource, /SiteCombobox/);
   assert.match(siteComboboxSource, /role="combobox"/);
@@ -67,7 +69,8 @@ test("allows owners to edit or remove pending reports only", () => {
   assert.match(accountSource, /const tripDeletionButtonLabel =/);
   assert.match(accountSource, /: "Remove";/);
   assert.match(accountSource, />\{tripDeletionButtonLabel\}<\/button>/);
-  assert.match(accountSource, /castingcompass\.profile-trip-draft\.v1/);
+  assert.match(accountSource, /PROFILE_TRIP_DRAFT_PREFIX/);
+  assert.match(accountStorageSource, /castingcompass\.profile-trip-draft\.v1/);
   assert.match(accountSource, /not a structured v2 observation/);
   assert.match(accountSource, /does not silently convert older counts/);
   assert.match(accountSource, /valid observation contract means a report is internally structured, not that it has been admitted to model training/);

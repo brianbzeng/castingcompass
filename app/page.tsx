@@ -4,7 +4,7 @@ import { OpportunityApp } from "./components/OpportunityApp";
 const HOME_URL = "https://castingcompass.com/";
 const HOME_TITLE = "CastingCompass — California halibut opportunity planner";
 const HOME_DESCRIPTION =
-  "Compare public Bay Area shore, beach, jetty, and pier fishing windows using explainable relative rankings from habitat, seasonality, and current conditions.";
+  "Compare public Bay Area and Santa Barbara South Coast fishing windows using explainable relative rankings from habitat, seasonality, and current conditions.";
 
 export const metadata: Metadata = {
   title: { absolute: HOME_TITLE },

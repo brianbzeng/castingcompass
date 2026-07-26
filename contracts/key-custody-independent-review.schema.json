@@ -1,0 +1,114 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://castingcompass.com/contracts/key-custody-independent-review.schema.json",
+  "title": "CastingCompass key-custody independent review",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "review_id",
+    "source_commit",
+    "policy_sha256",
+    "reviewed_at",
+    "reviewer_role",
+    "reviewer_independent_of_operator",
+    "reviewer_competence_evidence_sha256",
+    "custody_evidence_sha256",
+    "review_evidence_sha256",
+    "secret_material_in_review_record",
+    "disposition",
+    "blocking_finding_count",
+    "review_checklist"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "castingcompass.key-custody-independent-review/1.0.0"
+    },
+    "review_id": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$"
+    },
+    "source_commit": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{40}$"
+    },
+    "policy_sha256": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "reviewed_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "reviewer_role": {
+      "const": "independent_cryptography_and_key_custody_reviewer"
+    },
+    "reviewer_independent_of_operator": {
+      "type": "boolean"
+    },
+    "reviewer_competence_evidence_sha256": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "custody_evidence_sha256": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "review_evidence_sha256": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "secret_material_in_review_record": {
+      "const": false
+    },
+    "disposition": {
+      "enum": [
+        "accepted_evidence_boundary",
+        "changes_required"
+      ]
+    },
+    "blocking_finding_count": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 100
+    },
+    "review_checklist": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "runtime_secret_inventory_complete",
+        "backup_key_role_inventory_complete",
+        "provider_environment_and_purpose_separation_verified",
+        "pseudonym_auth_validation_and_backup_key_separation_verified",
+        "named_custodians_and_emergency_recovery_path_reviewed",
+        "phishing_resistant_mfa_and_least_privilege_reviewed",
+        "stale_user_and_token_removal_reviewed",
+        "enabled_feature_missing_key_and_revocation_behavior_reviewed",
+        "validation_rotation_hazards_accepted",
+        "backup_retention_decryptability_verified",
+        "rotation_recovery_and_destruction_records_reviewed",
+        "production_shaped_restore_and_deletion_replay_evidence_reviewed",
+        "alerts_and_logs_secret_redaction_tested",
+        "no_secret_values_entered_repository_or_evidence",
+        "no_deployment_or_production_authority_granted"
+      ],
+      "properties": {
+        "runtime_secret_inventory_complete": { "type": "boolean" },
+        "backup_key_role_inventory_complete": { "type": "boolean" },
+        "provider_environment_and_purpose_separation_verified": { "type": "boolean" },
+        "pseudonym_auth_validation_and_backup_key_separation_verified": { "type": "boolean" },
+        "named_custodians_and_emergency_recovery_path_reviewed": { "type": "boolean" },
+        "phishing_resistant_mfa_and_least_privilege_reviewed": { "type": "boolean" },
+        "stale_user_and_token_removal_reviewed": { "type": "boolean" },
+        "enabled_feature_missing_key_and_revocation_behavior_reviewed": { "type": "boolean" },
+        "validation_rotation_hazards_accepted": { "type": "boolean" },
+        "backup_retention_decryptability_verified": { "type": "boolean" },
+        "rotation_recovery_and_destruction_records_reviewed": { "type": "boolean" },
+        "production_shaped_restore_and_deletion_replay_evidence_reviewed": { "type": "boolean" },
+        "alerts_and_logs_secret_redaction_tested": { "type": "boolean" },
+        "no_secret_values_entered_repository_or_evidence": { "type": "boolean" },
+        "no_deployment_or_production_authority_granted": { "type": "boolean" }
+      }
+    }
+  }
+}

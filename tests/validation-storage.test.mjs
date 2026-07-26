@@ -130,7 +130,7 @@ async function validationStorageFixture() {
     id: VALIDATION_ACTIVATION_ID,
     protocol_id: "california-halibut-collection-feasibility-v2",
     protocol_version: "2.0.0",
-    protocol_sha256: "8ff0d7bd009ed8eb10f328347d58d0b63d0b6c822b08351cc5c2760d41de13ed",
+    protocol_sha256: "4d034e303c841d05419cd1512abacad8c24080582edcfd4fc194d638ee5a7c3c",
     activation_commitment_sha256: "e".repeat(64),
     activation_manifest_sha256: "d".repeat(64),
     site_catalog_sha256: "b0378742f40cca598c57d845fb683ab9b36068cdd69de541aeb3e45d93c31860",

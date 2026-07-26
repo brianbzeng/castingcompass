@@ -1,0 +1,88 @@
+{
+  "schemaVersion": "castingcompass.npm-audit-policy/2.0.0",
+  "reviewedOn": "2026-07-26",
+  "owner": "dependency-release-owner",
+  "requiredAuditCounts": {
+    "complete": {
+      "info": 0,
+      "low": 0,
+      "moderate": 0,
+      "high": 0,
+      "critical": 0,
+      "total": 0
+    },
+    "production": {
+      "info": 0,
+      "low": 0,
+      "moderate": 0,
+      "high": 0,
+      "critical": 0,
+      "total": 0
+    }
+  },
+  "requiredLockPackages": {
+    "node_modules/@eslint-react/eslint-plugin": {
+      "version": "5.18.0",
+      "dev": true
+    },
+    "node_modules/@next/eslint-plugin-next": {
+      "version": "16.2.11",
+      "dev": true
+    },
+    "node_modules/brace-expansion": {
+      "version": "5.0.8",
+      "dev": true
+    },
+    "node_modules/eslint": {
+      "version": "10.8.0",
+      "dev": true
+    },
+    "node_modules/eslint-plugin-import-x": {
+      "version": "4.17.1",
+      "dev": true
+    },
+    "node_modules/eslint-plugin-jsx-a11y-x": {
+      "version": "0.2.0",
+      "dev": true
+    },
+    "node_modules/eslint-plugin-react-hooks": {
+      "version": "7.1.1",
+      "dev": true
+    },
+    "node_modules/globals": {
+      "version": "16.4.0",
+      "dev": true
+    },
+    "node_modules/minimatch": {
+      "version": "10.2.5",
+      "dev": true
+    },
+    "node_modules/postcss": {
+      "version": "8.5.18",
+      "dev": false
+    },
+    "node_modules/react": {
+      "version": "19.2.8",
+      "dev": false
+    },
+    "node_modules/react-dom": {
+      "version": "19.2.8",
+      "dev": false
+    },
+    "node_modules/react-server-dom-webpack": {
+      "version": "19.2.8",
+      "dev": true
+    },
+    "node_modules/typescript-eslint": {
+      "version": "8.65.0",
+      "dev": true
+    }
+  },
+  "forbiddenLockPackages": [
+    "node_modules/@eslint/eslintrc",
+    "node_modules/eslint-config-next",
+    "node_modules/eslint-plugin-import",
+    "node_modules/eslint-plugin-jsx-a11y",
+    "node_modules/eslint-plugin-react"
+  ]
+}

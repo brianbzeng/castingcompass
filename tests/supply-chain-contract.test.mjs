@@ -72,6 +72,8 @@ test("direct npm packages and build runtimes are exact reviewed versions", async
   assert.match(dependabot, /dependency-name: eslint[\s\S]+version-update:semver-major/);
 
   assert.equal(lock.packages["node_modules/@babel/core"].version, "7.29.7");
+  assert.equal(manifest.overrides["fast-uri"], "3.1.4");
+  assert.equal(manifest.overrides.sharp, "0.35.3");
   assert.equal(lock.packages["node_modules/eslint"].version, "10.8.0");
   assert.equal(lock.packages["node_modules/minimatch"].version, "10.2.5");
   assert.equal(lock.packages["node_modules/brace-expansion"].version, "5.0.8");
@@ -133,8 +135,17 @@ test("npm installs execute no dependency lifecycle scripts and fail on lock drif
 
 test("CI fixes runner versions and enforces dependency review, audits, and SBOM verification", async () => {
   const ci = await readFile(new URL(".github/workflows/ci.yml", root), "utf8");
+  const release = await readFile(new URL(".github/workflows/release-provenance.yml", root), "utf8");
   const refresh = await readFile(new URL(".github/workflows/refresh-snapshot.yml", root), "utf8");
   const optional = await readFile(new URL(".github/workflows/optional-python.yml", root), "utf8");
+  for (const workflow of [ci, release]) {
+    assert.match(workflow, /on:\n\s+push:\n\s+branches:\n\s+- main\n\s+pull_request:\n/u);
+    assert.match(workflow, /workflow_dispatch:/u);
+    assert.match(
+      workflow,
+      /concurrency:\n\s+group: \$\{\{ github\.workflow \}\}-\$\{\{ github\.event\.pull_request\.number \|\| github\.ref \}\}\n\s+cancel-in-progress: true/u,
+    );
+  }
   assert.doesNotMatch(`${ci}\n${refresh}\n${optional}`, /(?:ubuntu|macos)-latest|node-version:\s*22\s*$|python-version:\s*["']?3\.12["']?\s*$/m);
   assert.equal((`${ci}\n${refresh}`.match(/node-version:\s*22\.23\.1/g) ?? []).length, 3);
   assert.equal((`${ci}\n${refresh}\n${optional}`.match(/python-version:\s*["']3\.12\.13["']/g) ?? []).length, 4);
@@ -154,7 +165,10 @@ test("CI fixes runner versions and enforces dependency review, audits, and SBOM 
 
   const generator = await readFile(new URL("scripts/generate-sbom.mjs", root), "utf8");
   assert.equal((generator.match(/--package-lock-only/g) ?? []).length, 1);
-  assert.match(generator, /package_\?\.dev !== true[\s\S]+cdx:npm:package:path/);
+  assert.match(generator, /resolveProductionPackagePaths[\s\S]+rootPackage\.dependencies/);
+  assert.match(generator, /package_\.optionalDependencies/);
+  assert.match(generator, /package_\.peerDependencies/);
+  assert.match(generator, /cdx:npm:package:path[\s\S]+productionPaths\.has/);
 });
 
 test("Python API and pipeline installs use exact source-bound wheel hashes", async () => {
@@ -253,7 +267,7 @@ test("the deterministic production SBOM is bound to the lock and direct runtime 
   assert.equal(sbom.bomFormat, "CycloneDX");
   assert.equal(sbom.specVersion, "1.5");
   assert.match(sbom.serialNumber, /^urn:uuid:[0-9a-f]{8}-[0-9a-f]{4}-5[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/u);
-  assert.equal(sbom.serialNumber, "urn:uuid:74ee08f4-f019-54eb-9f69-fc6bc2f0d4b4");
+  assert.equal(sbom.serialNumber, "urn:uuid:1ccce08c-d062-54eb-9dbb-c27f72fbfb79");
   assert.equal("timestamp" in sbom.metadata, false);
   assert.equal(sbom.metadata.component.name, manifest.name);
   assert.deepEqual(sbom.metadata.properties, [{
@@ -265,6 +279,11 @@ test("the deterministic production SBOM is bound to the lock and direct runtime 
   for (const [name, version] of Object.entries(manifest.dependencies)) {
     assert.equal(components.get(name), version, `production SBOM is missing ${name}@${version}`);
   }
+  assert.equal(components.get("sharp"), "0.35.3");
+  assert.equal(components.get("@img/sharp-darwin-arm64"), "0.35.3");
+  assert.equal(components.get("@img/sharp-linux-x64"), "0.35.3");
+  assert.equal(components.has("@playwright/test"), false);
+  assert.equal(components.has("fast-uri"), false);
   const references = sbom.components.map((component) => component["bom-ref"]);
   assert.deepEqual(references, [...references].sort((left, right) => left.localeCompare(right)));
   assert.equal(new Set(references).size, references.length);
@@ -281,8 +300,11 @@ test("the deterministic production SBOM is bound to the lock and direct runtime 
 
 test("the supply-chain runbook scopes optional locks and keeps deployment provenance open", async () => {
   const policy = await readFile(new URL("docs/SECURITY-SUPPLY-CHAIN.md", root), "utf8");
-  assert.match(policy, /npm `10\.9\.8`[\s\S]+all eight exact[\s\S]+0 hooks executed/i);
-  assert.match(policy, /exact lockfile package paths[\s\S]+lock-derived UUIDv5[\s\S]+development-only package/i);
+  assert.match(policy, /npm `10\.9\.8`[\s\S]+all seven exact[\s\S]+0 hooks executed/i);
+  assert.match(
+    policy,
+    /resolves reachability from the lockfile root[\s\S]+development-only[\s\S]+lock-derived UUIDv5/i,
+  );
   assert.match(policy, /FastAPI runtime\/test and pipeline CI[\s\S]+exact transitive versions[\s\S]+SHA-256/i);
   assert.match(policy, /approved optional Geo\/PyTorch environments[\s\S]+macOS 15\+ ARM64[\s\S]+manylinux_2_28 x86-64 CPU/i);
   assert.match(policy, /CUDA, ROCm, Windows[\s\S]+remain open/i);
