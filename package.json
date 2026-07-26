@@ -138,7 +138,7 @@
     "react-dom": "19.2.8"
   },
   "devDependencies": {
-    "@cloudflare/vite-plugin": "1.45.1",
+    "@cloudflare/vite-plugin": "1.47.0",
     "@eslint-react/eslint-plugin": "5.18.0",
     "@next/eslint-plugin-next": "16.2.12",
     "@playwright/test": "1.61.1",
@@ -162,7 +162,7 @@
     "typescript-eslint": "8.65.0",
     "vinext": "0.0.50",
     "vite": "8.1.5",
-    "wrangler": "4.112.0"
+    "wrangler": "4.114.0"
   },
   "overrides": {
     "@babel/core": "7.29.7",
