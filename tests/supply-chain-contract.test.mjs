@@ -77,7 +77,21 @@ test("direct npm packages and build runtimes are exact reviewed versions", async
   assert.equal(manifest.overrides["js-yaml"], undefined);
   assert.equal(lock.packages["node_modules/js-yaml"], undefined);
   assert.equal(manifest.overrides.sharp, "0.35.3");
+  assert.equal(lock.packages["node_modules/eslint"].version, "10.8.0");
+  assert.equal(lock.packages["node_modules/minimatch"].version, "10.2.5");
+  assert.equal(lock.packages["node_modules/brace-expansion"].version, "5.0.8");
+  assert.equal(lock.packages["node_modules/fast-uri"].version, "3.1.4");
+  assert.equal(lock.packages["node_modules/postcss"].version, "8.5.18");
   assert.equal(lock.packages["node_modules/sharp"].version, "0.35.3");
+  for (const removedPackage of [
+    "@eslint/eslintrc",
+    "eslint-config-next",
+    "eslint-plugin-import",
+    "eslint-plugin-jsx-a11y",
+    "eslint-plugin-react",
+  ]) {
+    assert.equal(lock.packages[`node_modules/${removedPackage}`], undefined);
+  }
   assert.equal(
     lock.packages["node_modules/@esbuild-kit/core-utils/node_modules/esbuild"].version,
     "0.25.12",
