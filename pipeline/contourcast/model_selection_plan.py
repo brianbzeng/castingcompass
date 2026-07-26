@@ -175,15 +175,15 @@ CANDIDATE_FAMILIES = [
         "family": "deep-neural",
         "complexity_rank": 6,
         "required_in_future_comparison": True,
-        "implementation_status": (
-            "encoder-and-heads-implemented-site-window-adapter-open"
+        "implementation_status": "implemented",
+        "current_implementation": (
+            "pipeline.contourcast.deep_candidate:fit_predict_deep_candidate"
         ),
-        "current_implementation": "pipeline.contourcast.deep_model:CatchMultiTaskModel",
         "occurrence_head": (
-            "terrain-encoder occurrence logit with frozen site-window aggregation"
+            "terrain-encoder occurrence logit with synthetic masked-patch aggregation"
         ),
         "cpue_head": (
-            "terrain-encoder positive log1p cpue with frozen site-window aggregation"
+            "terrain-encoder positive log1p cpue with synthetic masked-patch aggregation"
         ),
         "explanation_boundary": (
             "ablations attribution stability and explicit missing-coverage abstention"

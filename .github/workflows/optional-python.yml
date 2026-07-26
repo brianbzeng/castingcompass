@@ -49,6 +49,7 @@ jobs:
       - run: python -m ruff check pipeline scripts
       - run: python -W error::FutureWarning -W error::DeprecationWarning -m unittest discover -s pipeline/tests -v
       - run: python -m pipeline.contourcast.cli deep-smoke
+      - run: python -m pipeline.contourcast.deep_candidate
       - run: >-
           python -W error::FutureWarning -W error::DeprecationWarning
           pipeline/scripts/check_geo_deep_environment.py
@@ -79,6 +80,7 @@ jobs:
       - run: .venv/bin/python -m ruff check pipeline scripts
       - run: .venv/bin/python -W error::FutureWarning -W error::DeprecationWarning -m unittest discover -s pipeline/tests -v
       - run: .venv/bin/python -m pipeline.contourcast.cli deep-smoke
+      - run: .venv/bin/python -m pipeline.contourcast.deep_candidate
       - run: >-
           .venv/bin/python -W error::FutureWarning -W error::DeprecationWarning
           pipeline/scripts/check_geo_deep_environment.py
