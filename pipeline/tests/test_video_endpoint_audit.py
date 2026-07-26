@@ -70,14 +70,17 @@ def _typed_dbf(rows, fields):
     records = []
     for row in rows:
         record = bytearray(b" ")
-        for value, (_, field_type, length, decimals) in zip(row, fields):
+        for value, (name, field_type, length, _decimals) in zip(row, fields):
             encoded = str(value).encode("ascii")
             if field_type in {"F", "N"}:
                 encoded = encoded.rjust(length, b" ")
             else:
                 encoded = encoded.ljust(length, b" ")
             if len(encoded) != length:
-                raise ValueError(f"fixture value does not fit declared DBF width: {decimals}")
+                raise ValueError(
+                    f"fixture value {value!r} does not fit declared DBF width "
+                    f"{length} for field {name!r}"
+                )
             record.extend(encoded)
         records.append(bytes(record))
     return bytes(header) + b"".join(records) + b"\x1a"
@@ -275,6 +278,17 @@ class VideoEndpointAuditTests(unittest.TestCase):
         )
         self.assertEqual(supported["eligible_partition_count"], 1)
         self.assertEqual(supported["group_definition"], "whole cruise")
+
+        too_many_groups = np.asarray(
+            [f"group-{index}" for index in range(15) for _ in range(3)],
+        )
+        too_many_labels = np.tile(np.arange(len(VIDEO_CLASS_NAMES)), 15)
+        with self.assertRaisesRegex(ValueError, "declared group cap"):
+            _whole_group_partition_audit(
+                too_many_labels,
+                too_many_groups,
+                min_rows_per_class=1,
+            )
 
     def test_end_to_end_audit_writes_no_training_decision(self):
         try:

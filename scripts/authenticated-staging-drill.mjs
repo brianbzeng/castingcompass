@@ -522,9 +522,9 @@ async function main() {
       options["configuration-receipt"],
       policy.limits.maximum_configuration_receipt_bytes,
     );
-    await verifyReleaseCheckout({ root: ROOT, expectedCommit: authorization.source_commit });
     const validated = validateAuthorization(authorization, policy, { expectedSourceCommit: authorization.source_commit });
-    validateConfigurationReceiptForAuthorization(configurationReceipt, authorization, policy);
+    await verifyReleaseCheckout({ root: ROOT, expectedCommit: validated.authorization.source_commit });
+    validateConfigurationReceiptForAuthorization(configurationReceipt, validated.authorization, policy);
     privateJsonWrite(options.output, buildPlan(validated, policy, configurationReceipt), policy.limits.maximum_plan_bytes);
     process.stdout.write(`${JSON.stringify({ planned: true, network_contacted: false, execution_supported: false })}\n`);
     return;

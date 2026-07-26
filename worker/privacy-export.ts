@@ -298,11 +298,17 @@ async function dispatchPrivacyExportJob(env: PrivacyExportEnv, job: PrivacyExpor
     await env.PRIVACY_EXPORT_QUEUE.send(body);
   } catch {
     const retryAt = new Date(Date.now() + RETRY_DELAYS_SECONDS[0] * 1000).toISOString();
-    await env.DB.prepare(`UPDATE privacy_export_jobs SET state = 'pending', available_at = ?,
-        lease_token = NULL, last_error_code = 'queue_publish_failed', updated_at = ?
-      WHERE id = ? AND state = 'queued' AND lease_token = ?`)
-      .bind(retryAt, new Date().toISOString(), job.id, dispatchToken)
-      .run();
+    try {
+      await env.DB.prepare(`UPDATE privacy_export_jobs SET state = 'pending', available_at = ?,
+          lease_token = NULL, last_error_code = 'queue_publish_failed', updated_at = ?
+        WHERE id = ? AND state = 'queued' AND lease_token = ?`)
+        .bind(retryAt, new Date().toISOString(), job.id, dispatchToken)
+        .run();
+    } catch {
+      logEvent("error", "privacy_export.queue.publish_recovery_failed", {
+        error_code: "queue_publish_recovery_failed",
+      });
+    }
     logEvent("error", "privacy_export.queue.publish_failed", { error_code: "queue_publish_failed" });
   }
 }
@@ -332,7 +338,14 @@ export async function consumePrivacyExportQueue(batch: QueueBatchLike, env: Priv
       message.ack();
       continue;
     }
-    await consumePrivacyExportMessage(env, message, body);
+    try {
+      await consumePrivacyExportMessage(env, message, body);
+    } catch {
+      logEvent("error", "privacy_export.queue.message_failed", {
+        error_code: "queue_message_failed",
+      });
+      message.retry({ delaySeconds: RETRY_DELAYS_SECONDS[0] });
+    }
   }
 }
 
@@ -645,6 +658,9 @@ async function removeUncommittedObject(
       .first<{ id: string }>();
     if (tracked) return;
   } catch {
+    logEvent("error", "privacy_export.object_cleanup_tracking_failed", {
+      error_code: "object_cleanup_tracking_failed",
+    });
     return;
   }
 
@@ -680,6 +696,9 @@ async function removeUncommittedObject(
       .first<{ id: string }>();
     if (tracked) return;
   } catch {
+    logEvent("error", "privacy_export.object_cleanup_tracking_failed", {
+      error_code: "object_cleanup_tracking_failed",
+    });
     return;
   }
   logEvent("error", "privacy_export.object_cleanup_tracking_failed", {
@@ -688,12 +707,19 @@ async function removeUncommittedObject(
 }
 
 async function settleUnclaimedMessage(db: D1DatabaseLike, message: QueueMessageLike, jobId: string) {
-  let row = await db.prepare(`SELECT id, user_id, state, attempts, available_at,
-      lease_expires_at, lease_token, object_key
-    FROM privacy_export_jobs WHERE id = ? LIMIT 1`)
-    .bind(jobId)
-    .first<Pick<PrivacyExportJobRow,
-      "id" | "user_id" | "state" | "attempts" | "available_at" | "lease_expires_at" | "lease_token" | "object_key">>();
+  let row: Pick<PrivacyExportJobRow,
+    "id" | "user_id" | "state" | "attempts" | "available_at" | "lease_expires_at" | "lease_token" | "object_key"> | null;
+  try {
+    row = await db.prepare(`SELECT id, user_id, state, attempts, available_at,
+        lease_expires_at, lease_token, object_key
+      FROM privacy_export_jobs WHERE id = ? LIMIT 1`)
+      .bind(jobId)
+      .first<Pick<PrivacyExportJobRow,
+        "id" | "user_id" | "state" | "attempts" | "available_at" | "lease_expires_at" | "lease_token" | "object_key">>();
+  } catch {
+    message.retry({ delaySeconds: RETRY_DELAYS_SECONDS[0] });
+    return;
+  }
   if (!row || row.state === "completed" || row.state === "canceled" || row.state === "expired" || row.state === "needs_attention") {
     message.ack();
     return;
@@ -706,12 +732,17 @@ async function settleUnclaimedMessage(db: D1DatabaseLike, message: QueueMessageL
   if (row.user_id && Number(row.attempts) >= MAX_ATTEMPTS
       && (row.state !== "processing" || !row.lease_expires_at || row.lease_expires_at <= nowIso)) {
     await settleAbandonedPrivacyExportJob(db, row.id, row.user_id, nowIso);
-    row = await db.prepare(`SELECT id, user_id, state, attempts, available_at,
-        lease_expires_at, lease_token, object_key
-      FROM privacy_export_jobs WHERE id = ? LIMIT 1`)
-      .bind(jobId)
-      .first<Pick<PrivacyExportJobRow,
-        "id" | "user_id" | "state" | "attempts" | "available_at" | "lease_expires_at" | "lease_token" | "object_key">>();
+    try {
+      row = await db.prepare(`SELECT id, user_id, state, attempts, available_at,
+          lease_expires_at, lease_token, object_key
+        FROM privacy_export_jobs WHERE id = ? LIMIT 1`)
+        .bind(jobId)
+        .first<Pick<PrivacyExportJobRow,
+          "id" | "user_id" | "state" | "attempts" | "available_at" | "lease_expires_at" | "lease_token" | "object_key">>();
+    } catch {
+      message.retry({ delaySeconds: RETRY_DELAYS_SECONDS[0] });
+      return;
+    }
     if (!row || row.state === "needs_attention") {
       message.ack();
       return;

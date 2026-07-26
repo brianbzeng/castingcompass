@@ -34,10 +34,12 @@ public receipt. The random UUID exists only to enforce separation and is not a p
 
 Both reviews bind to the exact consolidated draft integration receipt:
 
-- source commit: `377dec41c9fc1842c682b7556f2b0a8b1b83e87c`
+- source commit: `2fabec419ea2add8c341938827383c68f56c6008`
 - policy version: `castingcompass.water-quality-advisory/official-programs-0.5.0`
-- aggregate review-target SHA-256: `6cb921149782483338f602b5b3df09ae41243e6a05743ae1534a0fe6892d3346`
-- catalog outcomes: 61 total, 39 mapped, 22 `not-covered`
+- aggregate review-target SHA-256: `fd66070e2edc3828a4cbe394047800717ff1fff2e1a17dc083b1aa9dcd5e4ca9`
+- catalog outcomes: 61 total, 38 mapped, 23 `not-covered`
+- coverage evidence: 22 `not-covered` sites have source-bound negative evidence;
+  Dumbarton remains explicitly unknown because one relevant official registry was empty
 
 The aggregate digest binds the exact site catalog, water-quality policy, public advisory artifact,
 complete negative-evidence inventory, and the four source-specific audit receipts. Obtain the full
@@ -97,7 +99,7 @@ available for read-only inspection, but shell redirection is not the approved pr
 ```sh
 export WATER_QUALITY_MAPPING_REVIEW_FILE=/PRIVATE/PATH/mapping-review.json
 export WATER_QUALITY_PUBLIC_HEALTH_REVIEW_FILE=/PRIVATE/PATH/public-health-review.json
-export WATER_QUALITY_REVIEW_EXPECTED_SOURCE_COMMIT=377dec41c9fc1842c682b7556f2b0a8b1b83e87c
+export WATER_QUALITY_REVIEW_EXPECTED_SOURCE_COMMIT=2fabec419ea2add8c341938827383c68f56c6008
 npm run verify:water-quality-mapping-independent-review
 ```
 

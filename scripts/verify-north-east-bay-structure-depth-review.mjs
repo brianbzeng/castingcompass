@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 
+import { realpath } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
@@ -79,7 +80,10 @@ async function main() {
   );
 }
 
-if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1])).href) {
+const invokedEntrypoint = process.argv[1]
+  ? await realpath(process.argv[1]).catch(() => null)
+  : null;
+if (invokedEntrypoint && import.meta.url === pathToFileURL(invokedEntrypoint).href) {
   main().catch((error) => {
     process.stderr.write(`${error instanceof Error ? error.message : String(error)}\n`);
     process.exitCode = 1;

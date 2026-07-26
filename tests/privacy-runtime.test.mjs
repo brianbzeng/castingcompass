@@ -870,6 +870,34 @@ test("sign-in failure ceilings are claimed atomically under a concurrent tenth a
     WHERE email_hash = ? AND successful = 0`).get(emailHash).count, 10);
 });
 
+test("a concurrently inserted eleventh failed attempt remains rate limited", async () => {
+  const { sqlite, d1 } = await database();
+  const user = await addUser(sqlite, "login-ceiling-overflow-149");
+  const emailHash = await sha256(user.email);
+  const attemptedAt = new Date().toISOString();
+  const insertAttempt = sqlite.prepare(`INSERT INTO auth_attempts
+    (id, email_hash, attempted_at, successful) VALUES (?, ?, ?, 0)`);
+  for (let index = 0; index < 9; index += 1) {
+    insertAttempt.run(`overflow-seed-attempt-${index}`, emailHash, attemptedAt);
+  }
+  d1.beforeOnceQuerySubstring = "AS recent_failed_count";
+  d1.beforeOnceQuery = () => insertAttempt.run(
+    "concurrent-eleventh-attempt",
+    emailHash,
+    attemptedAt,
+  );
+
+  const response = await handleAccountRequest(request("/api/auth/login", {
+    method: "POST",
+    body: { email: user.email, password: user.password },
+  }), { DB: d1 }, []);
+
+  assert.equal(response?.status, 429);
+  assert.equal((await response.json()).error.code, "too_many_attempts");
+  assert.equal(sqlite.prepare(`SELECT COUNT(*) AS count FROM auth_attempts
+    WHERE email_hash = ? AND successful = 0`).get(emailHash).count, 11);
+});
+
 test("sign-in failure accounting includes the exact one-hour boundary and releases older rows", async () => {
   const now = new Date("2026-07-22T05:30:00.000Z");
   const exactBoundary = new Date(now.getTime() - 60 * 60_000).toISOString();
@@ -4344,8 +4372,8 @@ test("a stale authenticated photo request cannot cross an active deletion fence 
     now: () => new Date("2026-07-21T18:00:00.000Z"),
   });
 
-  assert.equal(response.status, 503);
-  assert.equal((await response.json()).error.code, "photo_storage_unavailable");
+  assert.equal(response.status, 403);
+  assert.equal((await response.json()).error.code, "account_write_forbidden");
   assert.equal(r2Puts, 0);
   assert.equal(sqlite.prepare("SELECT COUNT(*) AS count FROM trip_photo_upload_reservations").get().count, 0);
   assert.equal(sqlite.prepare("SELECT COUNT(*) AS count FROM trips WHERE user_id = ?").get(user.id).count, 0);

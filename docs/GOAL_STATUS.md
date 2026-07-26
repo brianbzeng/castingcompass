@@ -1,6 +1,6 @@
 # CastingCompass goal status
 
-Last reconciled: **2026-07-25 UTC**
+Last reconciled: **2026-07-26 UTC**
 
 This is the owner-facing dashboard for the complete goal list. The detailed acceptance
 criteria and immutable receipts remain in [PRODUCT_ROADMAP.md](PRODUCT_ROADMAP.md); provider
@@ -13,8 +13,84 @@ Current provider truth overrides historical “paused” language in completed r
 2026-07-19 read-only reconciliation found an active Worker; no production mutation is authorized
 by that discovery.
 
+## Active checkpoint — zero-exception npm and lint graph
+
+- [x] Eliminate the expiring `GHSA-mh99-v99m-4gvg` development exception without an
+      API-incompatible override. The legacy `eslint-config-next` and ESLint plugin bundle is
+      replaced by directly composed maintained Next, TypeScript, React Hooks, React, import,
+      JSX accessibility, and globals packages whose exact lock graph reaches patched
+      `brace-expansion` `5.0.8`.
+- [x] Replace the temporary exception contract with npm audit policy schema v2. Both the complete
+      and production graphs must report zero vulnerabilities and empty advisory inventories; the
+      verifier also rejects any temporary exception, exact-version or development-classification
+      drift, or restoration of the removed legacy lint packages. The daily read-only advisory
+      watch remains bound to that stricter verifier.
+- [x] Preserve lint coverage while resolving the maintained rules' actionable findings:
+      request retries now own and clean up their abort deadlines, gear loading has cancellation
+      cleanup, pending-trip identity uses a stable ref, set initialization is lazy, and the sole
+      raw-HTML use is narrowly documented and remains limited to escaped static JSON-LD.
+- [x] Refresh the reviewed install-hook inventory, Dependabot groups, deterministic CycloneDX
+      SBOMs, supply-chain runbook, and threat model. A fresh pinned npm install executes zero of
+      seven reviewed lifecycle hooks; the complete and production npm audits both report zero
+      vulnerabilities and the focused audit/supply-chain suite passes 15/15.
+- [x] Complete the full local acceptance under pinned Node `22.23.1` and npm `10.9.8`:
+      the complete security/SBOM/query-policy chain, production-off builds, feature-on build,
+      ESLint, TypeScript, all 747/747 Node tests, 8/8 Chromium/WebKit photo cases, and 244/244
+      mobile/offline/recovery/map cases pass.
+- [x] Obtain exact-head hosted CI evidence. At follow-up head
+      `11dfcaacf05996c41934c5accb152ee46db46046`, CI passed the complete web/security chain,
+      747/747 Node tests, 8/8 photo cases, both production-shaped builds, and the 244/244
+      mobile/offline/recovery/map matrix; API, pipeline, release-bundle, both native API-image
+      architectures, Linux CPU, and macOS ARM64 jobs also passed.
+- [ ] Obtain CodeQL evidence after the stacked follow-up is retargeted to protected `main`, then
+      obtain independent human review of the maintained lint-rule composition. GitHub default
+      setup does not scan a pull request whose base is the non-default integration branch. This
+      checkpoint changes no production configuration and authorizes no merge, deployment,
+      provider mutation, DNS change, migration, or production acceptance.
+
+## Active checkpoint — consolidated reviewed dependency and RecFIN follow-up
+
+- [x] Triage the open automated dependency queue against the accepted launch stack instead of
+      merging version numbers mechanically. The React framework and `fast-uri` proposals are
+      already superseded by the accepted stack; Python runtime, scientific, lint, RSC, Wrangler,
+      and MapLibre changes remain deferred to separate compatibility review.
+- [x] Advance only the two narrow compatible patches: pin every `actions/checkout` use and its
+      policy assertions to exact `v7.0.1` commit
+      `3d3c42e5aac5ba805825da76410c181273ba90b1`, and lock
+      `@vitejs/plugin-react` at `6.0.4`. The lockfile and deterministic CycloneDX SBOMs are
+      refreshed without changing runtime application behavior or production configuration.
+- [x] Verify the dependency slice under pinned Node `22.23.1` and npm `10.9.8`: the complete
+      security/SBOM/query-policy chain, production-off and feature-on builds, ESLint, TypeScript,
+      all 740/740 Node tests, 8/8 Chromium/WebKit photo cases, and 244/244 mobile/offline/
+      recovery/map cases pass.
+- [x] Consolidate the fail-closed RecFIN SD002 public-discovery boundary onto the same local
+      follow-up rather than creating another review fragment. On the combined exact tree, a
+      fresh Python `3.12.13` hash-only environment passes Ruff, all 129/129 pipeline tests with
+      eight declared optional-dependency skips, and deterministic smoke; the complete Node
+      security chain and 28 documentation/governance tests also pass.
+- [ ] Obtain exact-head hosted CI, CodeQL, and independent human review after this local
+      follow-up has an authorized review destination. No branch push, pull request, merge,
+      deployment, migration, provider mutation, DNS change, data request, raw-data acquisition,
+      model role, or production acceptance is authorized by this checkpoint.
+
 ## Active checkpoint — 2026-07-25 npm advisory response
 
+- [x] Close the time-trigger gap without changing the accepted PR `#146` head. A separate,
+      read-only daily workflow is configured to run the exact complete/production npm policy
+      verifier without installing dependencies, receiving secrets, holding write permission, or
+      gaining production authority. The verifier binds the immutable actions, exact Node version,
+      schedule, permissions, command, and disabled checkout credentials; the workflow is also
+      bound into the deterministic release inventory. This local source control does not claim
+      scheduled delivery before the reviewed workflow reaches the default branch.
+- [x] Verify the isolated source change under pinned Node `22.23.1` and npm `10.9.8`: a fresh
+      zero-script install, the complete security/SBOM/query-policy chain, production-off
+      Cloudflare build, ESLint, TypeScript, all 740/740 Node tests, and the focused advisory plus
+      release-inventory suite 11/11 pass. Production still audits with zero vulnerabilities; the
+      sole temporary root advisory remains confined to the exact development-only graph.
+- [ ] Obtain exact-head hosted CI and CodeQL evidence for the isolated follow-up. Pull-request
+      automation can verify the source boundary, but actual scheduled delivery cannot be claimed
+      until the independently reviewed workflow reaches protected `main` and a scheduled run is
+      observed.
 - [x] Patch every compatible edge surfaced by the fresh advisory database: PostCSS is locked at
       `8.5.18`; React, React DOM, and the development RSC package are locked at `19.2.8`; and the
       minimatch `10.2.5` development edge receives brace-expansion `5.0.8`. The production npm
@@ -4046,6 +4122,36 @@ supersedes this mutation-metadata authority while preserving its fail-closed beh
 - [ ] Refresh visual design, graphics, species art, empty states, social cards, and brand
       illustration. Artist collaboration remains deferred until higher-risk work is complete.
 
+## Active checkpoint — CodeRabbit launch-foundation follow-up
+
+- [x] Correct the unsupported Pacifica Municipal Pier water-quality alias. The pier now remains
+      `not-covered`, unknown, and null-score instead of inheriting Sharp Park station evidence;
+      the launch catalog now has 38 provisional mappings and 23 fail-closed gaps.
+- [x] Reject an empty official station registry as evidence of station absence. Twenty-two
+      `not-covered` sites retain source-bound negative evidence, while Dumbarton is explicitly
+      source-incomplete because the Water Boards option set is empty. No mapping, safety, or
+      score claim is inferred from that failed source.
+- [x] Apply the remaining repository-only review corrections across release concurrency,
+      policy/schema validation, provenance metadata, staging authorization, JSONC parsing,
+      privacy-export recovery, immutable download caching, schema readiness, database contract
+      tests, and deletion-fenced trip writes. Production and provider state remain unchanged.
+- [x] Complete exact-head local and hosted verification for the follow-up at
+      `11dfcaacf05996c41934c5accb152ee46db46046`. Local acceptance passed lint, TypeScript,
+      747/747 Node tests, the full zero-exception security chain, both production-shaped builds,
+      252/252 browser cases, 29/29 API tests, Ruff, 132/132 pipeline tests, the D1 plan contract,
+      and deterministic model smoke. Hosted CI, API, pipeline, release-bundle, both native
+      API-image architectures, Linux CPU, and macOS ARM64 checks passed for the same commit.
+- [x] Close the WebKit skip-navigation focus race exposed by the documentation-only hosted
+      revalidation. Skip-link activation now explicitly focuses the existing `main` target and
+      records the native fragment without removing the real anchor fallback. Lint, TypeScript,
+      the 747/747 Node suite, the production-off build, 40/40 parallel WebKit focus repetitions,
+      and the resource-bounded 244/244 mobile matrix pass; an unrelated four-worker fixture
+      timeout passed 5/5 alone before the complete two-worker matrix.
+- [ ] After independent review permits `#146` to merge, retarget `#171` to protected `main` and
+      obtain the otherwise inapplicable dependency-review, CodeQL, and focused CodeRabbit
+      evidence before any merge. This stacked checkpoint authorizes no merge, deployment,
+      provider mutation, DNS change, migration, feature activation, or production acceptance.
+
 ## Product-owner work that is safe while production changes remain on hold
 
 - [ ] Audit MFA/passkeys and recovery methods for GitHub, Cloudflare, the domain registrar,
@@ -4077,6 +4183,13 @@ supersedes this mutation-metadata authority while preserving its fail-closed beh
       not ingest private/social data. The register and exact ds3185/ds3186 receipts are in
       `docs/OFFICIAL-FISHERIES-DATA.md` and `pipeline/sources/receipts/`; neither aggregate is
       approved for training, validation, scoring, or point labels.
+      **Public complete-effort discovery locally complete:** official RecFIN SD002 exposes
+      Santa Barbara California-halibut-target sample rows, including blank-catch rows, and its
+      exact 71-field comprehensive-sample dictionary is hash-bound. Raw QueryBuilder/LDE access
+      is account-bound; blank-row zero-catch semantics, stable export identities, a California
+      effort unit, sampling fields, a saved query/export checksum, and written intended-use
+      permission remain open. A draft request is ready but was not sent, no raw corpus was
+      acquired, and normalization/training/validation/scoring remain denied.
 - [x] Draft five short user-interview scripts focused on whether people understand the
       heuristic ranking, freshness labels, limitations, and trip-report privacy. The fictional,
       machine-checked scripts in `docs/USER-INTERVIEWS.md` require no account or real trip,

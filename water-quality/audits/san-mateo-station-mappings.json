@@ -10,51 +10,20 @@
     "currentStatusUrl": "https://www.smchealth.org/node/1201",
     "registryUrl": "https://data.smcgov.org/Environment/Beach-and-Creek-Monitoring-Results/kpd9-xf4h/about",
     "registryMachineUrl": "https://datahub.smcgov.org/api/id/kpd9-xf4h.json",
-    "registryResponseSha256": "799f73522d11eb8e72ed07531c3fcfb09a9b3a9e9b072e2a41dd8def80164578",
+    "registryResponseSha256": "a760d76a97e4883eb158e65b7c99b5f7f5a0cfef80e6e435b07f015ec0406c04",
     "stationCount": 17,
     "latestRecordDate": "2023-06-29",
     "registryUse": "station identity and spatial context only; never current status"
   },
-  "policySha256": "13914b407929b98f804874e04ae4d474a4a6acd0f9d91ce4d25aa44927a65445",
-  "auditToolSha256": "53b1ef9f32394a3f8450c937c2059079dcaf6fb1259a2cd75ea1d01ec60e593c",
-  "siteCatalogSha256": "a7145a66368c6dd5dd13b6bec421d430d228a3082d2fa8ad31941fc84e14078d",
+  "policySha256": "fcd98a818934375b31843eb333bef25128ceefda5784dabe3e63050d63199d60",
+  "auditToolSha256": "280cbb411f19712590c81fff43c4971c1c76b4b4bb3e07822efbc7a574c4eb9c",
+  "siteCatalogSha256": "9b1b367852abb789584f7c8270388975b780fdc4e537a8e57a74aea857b60bac",
   "method": {
     "distance": "haversine",
     "earthRadiusMeters": 6371008.8,
     "decisionRule": "exact name/location plus coordinate distance may support preliminary review; proximity alone never creates a mapping"
   },
   "mappedSites": [
-    {
-      "siteId": "pacifica-municipal-pier",
-      "siteName": "Pacifica Municipal Pier",
-      "siteCoordinate": {
-        "latitude": 37.633,
-        "longitude": -122.4938
-      },
-      "policyMapped": true,
-      "reviewStatus": "local-preliminary-independent-review-required",
-      "automaticMappingAllowed": false,
-      "stationSupport": [
-        {
-          "stationId": "AB4111",
-          "stationName": "SHARP PARK 6",
-          "stationType": "BEACH",
-          "recordDate": "2021-12-02",
-          "latitude": 37.63416109039667,
-          "longitude": -122.49442451002967,
-          "distanceMeters": 140
-        },
-        {
-          "stationId": "AB4112",
-          "stationName": "SHARP PARK 3",
-          "stationType": "BEACH",
-          "recordDate": "2023-06-29",
-          "latitude": 37.631508411746786,
-          "longitude": -122.49445219226394,
-          "distanceMeters": 176
-        }
-      ]
-    },
     {
       "siteId": "sharp-park-beach",
       "siteName": "Sharp Park Beach",
@@ -340,6 +309,23 @@
     }
   ],
   "unmappedSites": [
+    {
+      "siteId": "pacifica-municipal-pier",
+      "siteName": "Pacifica Municipal Pier",
+      "policyMapped": false,
+      "reviewStatus": "local-preliminary-do-not-map",
+      "automaticMappingAllowed": false,
+      "nearestReviewedStation": {
+        "stationId": "AB4111",
+        "stationName": "SHARP PARK 6",
+        "stationType": "BEACH",
+        "recordDate": "2021-12-02",
+        "latitude": 37.63416109039667,
+        "longitude": -122.49442451002967,
+        "distanceMeters": 140
+      },
+      "reason": "No exact station identity or defensible local spatial support was established."
+    },
     {
       "siteId": "poplar-beach",
       "siteName": "Poplar Beach",

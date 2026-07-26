@@ -245,7 +245,7 @@ def _bounded_partition_audit(
     max_source_groups: int,
 ) -> Mapping[str, Any]:
     groups = tuple(sorted({str(row["dataset_key"]) for row in rows}, key=int))
-    candidate_count = (1 << (len(groups) - 1)) - 1 if groups else 0
+    candidate_count = (1 << len(groups)) - 2 if groups else 0
     if len(groups) > max_source_groups:
         return {
             "performed": False,

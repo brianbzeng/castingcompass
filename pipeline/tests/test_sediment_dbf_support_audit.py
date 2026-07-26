@@ -212,7 +212,7 @@ class SedimentDbfSupportAuditTests(unittest.TestCase):
             max_source_groups=2,
         )
         self.assertFalse(result["performed"])
-        self.assertEqual(result["candidate_partition_count"], 3)
+        self.assertEqual(result["candidate_partition_count"], 6)
         self.assertEqual(
             result["failure"], "source_group_count_exceeds_exhaustive_limit"
         )
@@ -361,7 +361,7 @@ class SedimentDbfSupportAuditTests(unittest.TestCase):
             metrics = json.loads(result["metrics"].read_text(encoding="utf-8"))
             run = json.loads(result["run_metadata"].read_text(encoding="utf-8"))
             self.assertTrue(metrics["decision"]["raw_endpoint_support_admissible"])
-            self.assertEqual(metrics["partition_audit"]["eligible_partition_count"], 3)
+            self.assertEqual(metrics["partition_audit"]["eligible_partition_count"], 4)
             self.assertFalse(metrics["official_inputs"]["reference_raster"]["pixels_read"])
             self.assertFalse(metrics["decision"]["confirmatory_claim_authorized"])
             self.assertFalse(metrics["decision"]["model_training_run"])

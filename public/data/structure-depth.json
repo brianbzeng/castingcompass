@@ -1,5 +1,5 @@
 {
-  "collectorSha256": "2d535c451e7ff00942f111fdfdc5f1bf01946806a0e4690741a851cea32cb744",
+  "collectorSha256": "cc2793b9996519e06e0f0df361c42733a646f82c8fb8d80cf00d81c64d3823a6",
   "generatedAt": "2026-07-21T12:10:36Z",
   "meaning": "source-bound planning context for nearby charted depths and selected chart features at reviewed California catalog locations; never a casting-depth guarantee, navigation product, safety claim, or catch-probability input",
   "policySha256": "f52d15d0cb21f6f9d2118769dd0a3eedf46b7d47b7fbcada210fd065cb648d56",
@@ -10,7 +10,7 @@
     "mode": "excluded-pending-site-review-and-validation",
     "numericContributionAllowed": false
   },
-  "siteCatalogSha256": "a7145a66368c6dd5dd13b6bec421d430d228a3082d2fa8ad31941fc84e14078d",
+  "siteCatalogSha256": "9b1b367852abb789584f7c8270388975b780fdc4e537a8e57a74aea857b60bac",
   "sites": {
     "alameda-south-shore-rockwall": {
       "coordinates": {

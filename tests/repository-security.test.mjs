@@ -208,7 +208,11 @@ test("scheduled snapshot refreshes require review instead of pushing the default
   assert.match(workflow, /gh pr list --head "\$BRANCH" --state open/);
   assert.match(workflow, /select\(\.isCrossRepository == false\)/);
   assert.match(workflow, /gh pr edit "\$OPEN_PR"/);
-  assert.match(workflow, /git push --force-with-lease origin "HEAD:refs\/heads\/\$BRANCH"/);
+  assert.match(
+    workflow,
+    /git push --force-with-lease\s+\\\s+"https:\/\/x-access-token:\$\{GH_TOKEN\}@github\.com\/\$\{GITHUB_REPOSITORY\}\.git"\s+\\\s+"HEAD:refs\/heads\/\$BRANCH"/u,
+  );
+  assert.doesNotMatch(workflow, /git remote set-url/u);
   assert.doesNotMatch(workflow, /^\s+git push\s*$/m);
 });
 
@@ -228,7 +232,7 @@ test("patched build-tool versions are exact and remain above the reviewed adviso
   const lock = JSON.parse(readFileSync("package-lock.json", "utf8"));
 
   assert.equal(packageJson.devDependencies["@cloudflare/vite-plugin"], "1.45.1");
-  assert.equal(packageJson.devDependencies["@vitejs/plugin-react"], "6.0.3");
+  assert.equal(packageJson.devDependencies["@vitejs/plugin-react"], "6.0.4");
   assert.equal(packageJson.devDependencies.vite, "8.1.5");
   assert.equal(packageJson.devDependencies.wrangler, "4.112.0");
   assert.equal(lock.packages["node_modules/miniflare"].version, "4.20260714.0");

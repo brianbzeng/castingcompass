@@ -109,6 +109,13 @@ PROSPECTIVE_PROTOCOL_KEYS = {
     "outcome_blind_decision_rules",
     "claim_boundary",
 }
+OUTCOME_BLIND_DECISION_RULE_KEYS = {
+    "no_label_read_before_activation",
+    "no_support_threshold_change_after_label_visibility",
+    "no_region_or_site_removal_after_label_visibility",
+    "no_source_group_subdivision_after_label_visibility",
+    "negative_and_inconclusive_results_required",
+}
 FROZEN_CLASSES = [
     "smooth_fine_medium_sediment",
     "mixed_or_rugose_rock",
@@ -345,9 +352,14 @@ def validate_prospective_collection_protocol(protocol: Mapping[str, Any]) -> Non
         raise ValueError("partition cannot be selected from outcome balance")
 
     decision_rules = protocol["outcome_blind_decision_rules"]
-    if not isinstance(decision_rules, dict) or any(
-        value is not True for value in decision_rules.values()
-    ):
+    if not isinstance(decision_rules, dict):
+        raise ValueError("outcome_blind_decision_rules must be an object")
+    _require_exact_keys(
+        decision_rules,
+        OUTCOME_BLIND_DECISION_RULE_KEYS,
+        "outcome_blind_decision_rules",
+    )
+    if any(value is not True for value in decision_rules.values()):
         raise ValueError("outcome-blind decision controls must all remain enabled")
     if not isinstance(protocol["claim_boundary"], str) or not protocol["claim_boundary"].strip():
         raise ValueError("claim_boundary must be a non-empty string")

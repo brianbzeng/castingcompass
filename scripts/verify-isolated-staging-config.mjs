@@ -59,6 +59,83 @@ export function sha256(value) {
   return createHash("sha256").update(value).digest("hex");
 }
 
+export function parseJsonc(text, name = "JSONC document") {
+  if (typeof text !== "string") refuse("file-json", `${name} is not valid JSONC`);
+  const source = text.replace(/^\uFEFF/u, "");
+  let uncommented = "";
+  let inString = false;
+  let escaped = false;
+  for (let index = 0; index < source.length; index += 1) {
+    const character = source[index];
+    const next = source[index + 1];
+    if (inString) {
+      uncommented += character;
+      if (escaped) escaped = false;
+      else if (character === "\\") escaped = true;
+      else if (character === "\"") inString = false;
+      continue;
+    }
+    if (character === "\"") {
+      inString = true;
+      uncommented += character;
+      continue;
+    }
+    if (character === "/" && next === "/") {
+      index += 2;
+      while (index < source.length && source[index] !== "\n" && source[index] !== "\r") index += 1;
+      if (index < source.length) uncommented += source[index];
+      continue;
+    }
+    if (character === "/" && next === "*") {
+      index += 2;
+      let closed = false;
+      while (index < source.length) {
+        if (source[index] === "\n" || source[index] === "\r") uncommented += source[index];
+        if (source[index] === "*" && source[index + 1] === "/") {
+          index += 1;
+          closed = true;
+          break;
+        }
+        index += 1;
+      }
+      if (!closed) refuse("file-json", `${name} is not valid JSONC`);
+      continue;
+    }
+    uncommented += character;
+  }
+  if (inString) refuse("file-json", `${name} is not valid JSONC`);
+
+  let normalized = "";
+  inString = false;
+  escaped = false;
+  for (let index = 0; index < uncommented.length; index += 1) {
+    const character = uncommented[index];
+    if (inString) {
+      normalized += character;
+      if (escaped) escaped = false;
+      else if (character === "\\") escaped = true;
+      else if (character === "\"") inString = false;
+      continue;
+    }
+    if (character === "\"") {
+      inString = true;
+      normalized += character;
+      continue;
+    }
+    if (character === ",") {
+      let nextIndex = index + 1;
+      while (/\s/u.test(uncommented[nextIndex] ?? "")) nextIndex += 1;
+      if (uncommented[nextIndex] === "}" || uncommented[nextIndex] === "]") continue;
+    }
+    normalized += character;
+  }
+  try {
+    return JSON.parse(normalized);
+  } catch {
+    refuse("file-json", `${name} is not valid JSONC`);
+  }
+}
+
 function exactKeys(value, expected, name, code = "policy-invalid") {
   if (!value || typeof value !== "object" || Array.isArray(value)) refuse(code, `${name} is invalid`);
   const actual = Object.keys(value).sort();
@@ -80,7 +157,10 @@ function productionIdentity(config) {
   };
 }
 
-export function validatePolicy(policy, productionConfig = JSON.parse(readFileSync(PRODUCTION_CONFIG_PATH, "utf8"))) {
+export function validatePolicy(
+  policy,
+  productionConfig = parseJsonc(readFileSync(PRODUCTION_CONFIG_PATH, "utf8"), "wrangler.jsonc"),
+) {
   exactKeys(policy, [
     "schema_version", "config_contract_version", "receipt_contract_version", "application",
     "production", "feature_flags", "rate_limits", "queue", "limits", "production_gates",

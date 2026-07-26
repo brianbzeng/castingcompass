@@ -243,7 +243,11 @@ def parse_registry(body: bytes) -> list[tuple[str, str]]:
     parser = StationOptionParser()
     parser.feed(text)
     parser.close()
-    if parser.option_value is not None or len(parser.stations) > MAX_STATION_COUNT:
+    if (
+        parser.option_value is not None
+        or not parser.stations
+        or len(parser.stations) > MAX_STATION_COUNT
+    ):
         raise WaterQualityError("invalid-station-registry")
     if len({station_id for station_id, _ in parser.stations}) != len(parser.stations):
         raise WaterQualityError("invalid-station-registry")
@@ -290,9 +294,15 @@ def build_audit(
     registry_bodies: dict[str, bytes],
 ) -> dict[str, Any]:
     programs = parse_directory(directory_body)
-    registries = {program_id: parse_registry(body) for program_id, body in registry_bodies.items()}
-    if set(registries) != set(RELEVANT_PROGRAM_IDS):
+    if set(registry_bodies) != set(RELEVANT_PROGRAM_IDS):
         raise WaterQualityError("invalid-relevant-program-set")
+    registries: dict[str, list[tuple[str, str]]] = {}
+    registry_errors: dict[str, str] = {}
+    for program_id, body in registry_bodies.items():
+        try:
+            registries[program_id] = parse_registry(body)
+        except WaterQualityError as exc:
+            registry_errors[program_id] = str(exc)
 
     dumbarton_matches = [
         {"programId": program_id, "stationId": station_id, "stationName": station_name}
@@ -359,24 +369,28 @@ def build_audit(
         for receipt in receipts
         for site_id in receipt["siteIds"]
     }
-    evidence_by_site[DUMBARTON_SITE_ID] = "this-receipt:official-directory-review"
+    coverage_complete = not registry_errors
+    if coverage_complete:
+        evidence_by_site[DUMBARTON_SITE_ID] = "this-receipt:official-directory-review"
     reviewed_sites = [
         {"siteId": site_id, "evidence": evidence_by_site[site_id]}
         for site_id in not_covered_site_ids
+        if site_id in evidence_by_site
     ]
 
     return {
         "schemaVersion": "castingcompass.water-quality-coverage-inventory/1.0.0",
         "generatedAt": isoformat(as_of),
-        "meaning": "negative station-mapping evidence for launch-catalog coverage; never current water quality, clean-water, seafood-safety, or fishing-score evidence",
+        "meaning": "station-mapping coverage evidence inventory; incomplete sources never prove station absence, current water quality, clean water, seafood safety, or fishing-score value",
         "automaticMappingAllowed": False,
         "independentReviewRequired": True,
+        "coverageComplete": coverage_complete,
         "counts": {
             "catalogSites": len(sites),
             "mappedSites": len(sites) - len(not_covered_site_ids),
             "notCoveredSites": len(not_covered_site_ids),
             "priorAuditedNotCoveredSites": len(prior_audited_ids),
-            "remainingAfterThisAudit": 0,
+            "remainingAfterThisAudit": 0 if coverage_complete else 1,
         },
         "officialDirectory": {
             "directoryUrl": DIRECTORY_URL,
@@ -396,7 +410,12 @@ def build_audit(
                     "programId": program_id,
                     "programName": dict(programs)[program_id],
                     "responseSha256": sha256(registry_bodies[program_id]),
-                    "stationCount": len(registries[program_id]),
+                    "stationCount": (
+                        len(registries[program_id])
+                        if program_id in registries
+                        else None
+                    ),
+                    "errorCategory": registry_errors.get(program_id),
                     "dumbartonMatches": [],
                 }
                 for program_id in RELEVANT_PROGRAM_IDS
@@ -410,10 +429,22 @@ def build_audit(
                 "longitude": dumbarton.get("longitude"),
             },
             "policyMapped": False,
-            "reviewStatus": "local-preliminary-do-not-map",
+            "reviewStatus": (
+                "local-preliminary-do-not-map"
+                if coverage_complete
+                else "source-incomplete-do-not-map"
+            ),
             "automaticMappingAllowed": False,
-            "result": "no-exact-official-station-identity-in-reviewed-directory-scope",
-            "reason": "The State directory exposes no Alameda County program, and neither the East Bay Parks District nor Water Boards option set contains a Dumbarton station identity.",
+            "result": (
+                "no-exact-official-station-identity-in-reviewed-directory-scope"
+                if coverage_complete
+                else "unknown-registry-source-unavailable"
+            ),
+            "reason": (
+                "The State directory exposes no Alameda County program, and neither the East Bay Parks District nor Water Boards option set contains a Dumbarton station identity."
+                if coverage_complete
+                else "At least one relevant official station registry was empty or invalid, so station absence cannot be concluded and this site remains not covered."
+            ),
         },
         "negativeEvidenceReceipts": receipts,
         "reviewedNotCoveredSites": reviewed_sites,

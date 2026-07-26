@@ -237,6 +237,15 @@ test("digest drift, extra identity, unsafe text, and duplicate response IDs are 
 test("San Francisco artifact authority and catalog clues cannot drift", async () => {
   const sources = await loadSources();
 
+  assert.equal(sources.artifact.sites["crane-cove-park"].status, "partial");
+  assert.deepEqual(sources.artifact.sites["crane-cove-park"].depth.chartedBandsMeters, []);
+  const promotedArtifact = structuredClone(sources.artifact);
+  promotedArtifact.sites["crane-cove-park"].status = "charted-context";
+  assert.throws(
+    () => validateSanFranciscoStructureDepthReview({ ...sources, artifact: promotedArtifact }),
+    /crane-cove-park evidence status drifted/u,
+  );
+
   const artifactDrift = structuredClone(sources.artifact);
   artifactDrift.sites["baker-beach"].scoreDelta = 1;
   assert.throws(

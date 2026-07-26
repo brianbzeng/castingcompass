@@ -632,6 +632,7 @@ test("keyboard users can skip repeated navigation to the main forecast", async (
 
   const main = page.locator("main#main-content");
   await expect(main).toBeFocused();
+  await expect(page).toHaveURL(/#main-content$/);
   await expect(page.locator("body > div header.topbar")).toHaveCount(1);
   await expect(page.locator("main#main-content header.topbar")).toHaveCount(0);
   await expect(page.locator("main#main-content footer")).toHaveCount(0);

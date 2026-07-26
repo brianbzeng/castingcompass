@@ -19,6 +19,7 @@ from pipeline.contourcast.sediment_endpoint_audit import (
     _parse_exact_csv,
     _point_shapefile_record_count,
     _read_exact_archive,
+    _whole_source_partition_audit,
     audit_usgs_ds182_sediment_endpoint_support,
 )
 
@@ -113,6 +114,33 @@ def _outcome_row(
 
 
 class SedimentEndpointAuditTests(unittest.TestCase):
+    def test_partition_audit_checks_both_directional_train_test_assignments(self):
+        rows = [
+            {
+                "dataset_key": str(group),
+                "site_key": f"site-{group}",
+                "anchors": {
+                    "gravel_bearing": True,
+                    "mud_bearing": True,
+                    "sand_dominant": True,
+                },
+            }
+            for group in (1, 2, 3)
+        ]
+        result = _whole_source_partition_audit(
+            rows,
+            min_rows=1,
+            min_sites=1,
+            min_anchor_rows=1,
+            min_anchor_sites=1,
+            min_train_sources=2,
+        )
+        self.assertEqual(result["candidate_partition_count"], 6)
+        self.assertEqual(result["eligible_partition_count"], 3)
+        self.assertTrue(
+            any(partition["test_groups"] == ["1"] for partition in result["eligible_partitions"])
+        )
+
     def test_receipt_binds_exact_fail_closed_result(self) -> None:
         receipt = json.loads(
             (
@@ -328,7 +356,7 @@ class SedimentEndpointAuditTests(unittest.TestCase):
             metrics = json.loads(result["metrics"].read_text(encoding="utf-8"))
             run = json.loads(result["run_metadata"].read_text(encoding="utf-8"))
             self.assertTrue(metrics["decision"]["raw_endpoint_support_admissible"])
-            self.assertEqual(metrics["partition_audit"]["eligible_partition_count"], 1)
+            self.assertEqual(metrics["partition_audit"]["eligible_partition_count"], 2)
             self.assertFalse(metrics["official_inputs"]["reference_raster"]["pixels_read"])
             self.assertFalse(metrics["decision"]["model_training_run"])
             self.assertEqual(run["dataset_kind"], "official_sediment_endpoint_support_audit")

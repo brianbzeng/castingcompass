@@ -16,6 +16,7 @@ import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { spawnSync } from "node:child_process";
 import test from "node:test";
+import { fileURLToPath } from "node:url";
 
 import {
   LOCKED_REVIEW_TARGET_SHA256,
@@ -32,7 +33,7 @@ import {
   writeReviewTemplate,
 } from "../scripts/verify-water-quality-mapping-independent-review.mjs";
 
-const root = new URL("../", import.meta.url).pathname;
+const root = fileURLToPath(new URL("../", import.meta.url));
 const target = await loadReviewTarget(root);
 
 function digest(label) {
@@ -75,8 +76,8 @@ async function privatePair(t, mapping, publicHealth) {
 test("locked target is exhaustive, mutually exclusive, and non-authorizing", async () => {
   assert.equal(target.targetSha256, LOCKED_REVIEW_TARGET_SHA256);
   assert.equal(target.sites.length, 61);
-  assert.equal(target.sites.filter(({ target_outcome: outcome }) => outcome === "mapped").length, 39);
-  assert.equal(target.sites.filter(({ target_outcome: outcome }) => outcome === "not_covered").length, 22);
+  assert.equal(target.sites.filter(({ target_outcome: outcome }) => outcome === "mapped").length, 38);
+  assert.equal(target.sites.filter(({ target_outcome: outcome }) => outcome === "not_covered").length, 23);
   assert.equal(new Set(target.sites.map(({ site_id: siteId }) => siteId)).size, 61);
   assert.deepEqual([...target.sites].sort((left, right) => left.site_id.localeCompare(right.site_id)), target.sites);
   for (const site of target.sites) {
@@ -91,8 +92,8 @@ test("locked target is exhaustive, mutually exclusive, and non-authorizing", asy
   }
   const receipt = await verifyPolicy(root);
   assert.equal(receipt.catalog_site_count, 61);
-  assert.equal(receipt.mapped_site_count, 39);
-  assert.equal(receipt.not_covered_site_count, 22);
+  assert.equal(receipt.mapped_site_count, 38);
+  assert.equal(receipt.not_covered_site_count, 23);
   assert.equal(receipt.mapping_change_authorized, false);
   assert.equal(receipt.runtime_activation_authorized, false);
   assert.equal(receipt.numeric_score_authorized, false);
@@ -134,8 +135,8 @@ test("two distinct accepted reviews emit only a minimized non-authorizing receip
   assert.equal(receipt.official_source_mapping_review_accepted, true);
   assert.equal(receipt.public_health_risk_communication_review_accepted, true);
   assert.equal(receipt.catalog_site_count, 61);
-  assert.equal(receipt.mapped_site_count, 39);
-  assert.equal(receipt.not_covered_site_count, 22);
+  assert.equal(receipt.mapped_site_count, 38);
+  assert.equal(receipt.not_covered_site_count, 23);
   for (const boundary of [
     "mapping_change_authorized",
     "runtime_activation_authorized",

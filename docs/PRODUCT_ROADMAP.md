@@ -944,9 +944,16 @@ after its acceptance checks pass in the intended environment.
     missing-value sentinel, and explicitly restrict both block/time-bin aggregates to
     descriptive context. The stale ds3185 convenience export was rejected rather than silently
     accepted as current data.
+  - [x] Verify the official public RecFIN SD002 technical boundary without acquiring a corpus:
+    bind the exact 71-field comprehensive-sample dictionary, confirm Santa Barbara
+    California-halibut-target rows and blank-catch rows are publicly represented, document that
+    raw QueryBuilder/LDE paths require an authorized account, and keep blank-row semantics,
+    California effort units, permissions, and every model role fail closed.
   - [ ] Obtain a permitted, reproducible complete-effort CRFS/RecFIN sample export and begin the
     prospective first-party cohort. The aggregate layers cannot substitute for complete
     attempts, species-specific target effort, exact support, or source-separated validation.
+    Send the drafted official request, retain stable record identities and confirmed zero-catch
+    semantics, and obtain written intended-use terms before normalization.
 - [ ] Treat Fishbrain as an optional written-license partnership and Facebook groups as
   admin-approved prospective recruitment—not scraped retrospective evidence. Licensed social
   data without complete attempts, no-catch, effort, coverage, and sampling propensity is for
@@ -1058,7 +1065,8 @@ after its acceptance checks pass in the intended environment.
     - [x] Complete a hash-bound negative-evidence inventory for the current 61-site launch catalog.
       All 22 sites without a provisional source mapping now bind to an explicit review receipt.
       Dumbarton Fishing Pier remains unmapped because the State directory exposes no Alameda
-      County program and neither relevant option set contains a Dumbarton identity; the audit
+      County program and one relevant registry is empty; the audit treats that response as
+      source-incomplete instead of proof that no Dumbarton identity exists, and
       fails closed if a candidate later appears instead of creating a mapping automatically.
     - [x] Freeze a machine-checked source and meaning boundary before considering any numeric
       pollution component. Water-contact actions, bacteria samples, consumption advisories,

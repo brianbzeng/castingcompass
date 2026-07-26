@@ -9,6 +9,9 @@ test("the forecast exposes a skip target and truthful grouped selection controls
 
   assert.match(source, /className="skip-link" href="#main-content"/);
   assert.match(source, /<main id="main-content" tabIndex=\{-1\}>/);
+  assert.match(source, /const skipToMainContent = useCallback/);
+  assert.match(source, /event\.preventDefault\(\);[\s\S]*target\.focus\(\);/);
+  assert.match(source, /window\.history\.pushState\(null, "", "#main-content"\)/);
   assert.match(source, /className="time-tabs" role="group" aria-label="Forecast period"/);
   assert.match(source, /aria-pressed=\{timeFilter === value\}/);
   assert.doesNotMatch(source, /role="tablist"|role="tab"/);
@@ -56,6 +59,6 @@ test("focus and skip-link styles remain visible while reduced motion stays globa
 
   assert.match(styles, /:where\(a, button, input, select, textarea, summary, \[tabindex\]\):focus-visible/);
   assert.match(styles, /\.skip-link:focus-visible[\s\S]*transform: translateY\(0\)/);
-  assert.match(styles, /\.sr-only[\s\S]*clip: rect\(0, 0, 0, 0\)/);
+  assert.match(styles, /\.sr-only[\s\S]*clip-path: inset\(50%\)/);
   assert.match(styles, /@media \(prefers-reduced-motion: reduce\)/);
 });

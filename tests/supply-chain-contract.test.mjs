@@ -36,7 +36,7 @@ test("direct npm packages and build runtimes are exact reviewed versions", async
   }
   const buildToolchain = {
     "@cloudflare/vite-plugin": "1.45.1",
-    "@vitejs/plugin-react": "6.0.3",
+    "@vitejs/plugin-react": "6.0.4",
     wrangler: "4.112.0",
   };
   for (const [name, version] of Object.entries(buildToolchain)) {
@@ -65,7 +65,7 @@ test("direct npm packages and build runtimes are exact reviewed versions", async
   );
   assert.match(
     dependabot,
-    /lint-toolchain:[\s\S]+@eslint-react\/eslint-plugin[\s\S]+eslint-plugin-import-x[\s\S]+eslint-plugin-jsx-a11y-x[\s\S]+typescript-eslint/,
+    /lint-toolchain:[\s\S]+@eslint-react\/eslint-plugin[\s\S]+eslint[\s\S]+eslint-plugin-import-x[\s\S]+eslint-plugin-jsx-a11y-x[\s\S]+eslint-plugin-react-hooks[\s\S]+globals[\s\S]+typescript-eslint/,
   );
   assert.match(dependabot, /cloudflare-toolchain:[\s\S]+@cloudflare\/vite-plugin[\s\S]+wrangler/);
   assert.match(dependabot, /tailwind-toolchain:[\s\S]+@tailwindcss\/postcss[\s\S]+tailwindcss/);
@@ -73,6 +73,9 @@ test("direct npm packages and build runtimes are exact reviewed versions", async
 
   assert.equal(lock.packages["node_modules/@babel/core"].version, "7.29.7");
   assert.equal(manifest.overrides["fast-uri"], "3.1.4");
+  assert.equal(lock.packages["node_modules/fast-uri"].version, "3.1.4");
+  assert.equal(manifest.overrides["js-yaml"], undefined);
+  assert.equal(lock.packages["node_modules/js-yaml"], undefined);
   assert.equal(manifest.overrides.sharp, "0.35.3");
   assert.equal(lock.packages["node_modules/eslint"].version, "10.8.0");
   assert.equal(lock.packages["node_modules/minimatch"].version, "10.2.5");
@@ -141,12 +144,23 @@ test("CI fixes runner versions and enforces dependency review, audits, and SBOM 
   for (const workflow of [ci, release]) {
     assert.match(workflow, /on:\n\s+push:\n\s+branches:\n\s+- main\n\s+pull_request:\n/u);
     assert.match(workflow, /workflow_dispatch:/u);
-    assert.match(
-      workflow,
-      /concurrency:\n\s+group: \$\{\{ github\.workflow \}\}-\$\{\{ github\.event\.pull_request\.number \|\| github\.ref \}\}\n\s+cancel-in-progress: true/u,
-    );
   }
+  assert.match(
+    ci,
+    /concurrency:\n\s+group: \$\{\{ github\.workflow \}\}-\$\{\{ github\.event\.pull_request\.number \|\| github\.ref \}\}\n\s+cancel-in-progress: true/u,
+  );
+  assert.match(
+    release,
+    /concurrency:\n\s+group: \$\{\{ github\.workflow \}\}-\$\{\{ github\.event\.pull_request\.number \|\| github\.ref \}\}\n\s+cancel-in-progress: \$\{\{ github\.event_name == 'pull_request' \}\}/u,
+  );
   assert.doesNotMatch(`${ci}\n${refresh}\n${optional}`, /(?:ubuntu|macos)-latest|node-version:\s*22\s*$|python-version:\s*["']?3\.12["']?\s*$/m);
+  for (const workflow of [ci, refresh, optional]) {
+    const checkoutCount = (workflow.match(/uses: actions\/checkout@/g) ?? []).length;
+    const hardenedCheckoutCount = (
+      workflow.match(/uses: actions\/checkout@[^\n]+\n\s+with:\n\s+persist-credentials: false/g) ?? []
+    ).length;
+    assert.equal(hardenedCheckoutCount, checkoutCount);
+  }
   assert.equal((`${ci}\n${refresh}`.match(/node-version:\s*22\.23\.1/g) ?? []).length, 3);
   assert.equal((`${ci}\n${refresh}\n${optional}`.match(/python-version:\s*["']3\.12\.13["']/g) ?? []).length, 4);
   assert.equal((ci.match(/python-version:\s*["']3\.13\.14["']/g) ?? []).length, 1);
@@ -267,7 +281,7 @@ test("the deterministic production SBOM is bound to the lock and direct runtime 
   assert.equal(sbom.bomFormat, "CycloneDX");
   assert.equal(sbom.specVersion, "1.5");
   assert.match(sbom.serialNumber, /^urn:uuid:[0-9a-f]{8}-[0-9a-f]{4}-5[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/u);
-  assert.equal(sbom.serialNumber, "urn:uuid:1ccce08c-d062-54eb-9dbb-c27f72fbfb79");
+  assert.equal(sbom.serialNumber, "urn:uuid:c2d3dd17-e58b-52de-bdf9-3394abcb7c57");
   assert.equal("timestamp" in sbom.metadata, false);
   assert.equal(sbom.metadata.component.name, manifest.name);
   assert.deepEqual(sbom.metadata.properties, [{

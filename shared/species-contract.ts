@@ -642,6 +642,10 @@ export function validateModelRunContract(value: unknown, options: ValidationOpti
     "official_unlabeled_bathymetry",
     "official_unlabeled_seafloor_remote_sensing",
     "official_seafloor_character_probe",
+    "official_video_endpoint_admissibility_audit",
+    "official_sediment_endpoint_support_audit",
+    "official_sediment_endpoint_exploratory_dbf_support_audit",
+    "official_sediment_endpoint_exploratory_south_coast_support_audit",
   ]);
   if (typeof value.dataset_kind === "string") {
     if (targetAgnosticKinds.has(value.dataset_kind)) {

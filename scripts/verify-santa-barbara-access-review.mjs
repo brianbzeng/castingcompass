@@ -738,7 +738,10 @@ async function main() {
   throw new Error("Usage: verify-santa-barbara-access-review.mjs verify-policy | print-template --expected-commit <sha> | write-template --output-file <absolute-path> --expected-commit <sha> | evaluate --evidence-file <absolute-path> --expected-commit <sha>");
 }
 
-if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1])).href) {
+const invokedEntrypoint = process.argv[1]
+  ? await realpath(process.argv[1]).catch(() => null)
+  : null;
+if (invokedEntrypoint && import.meta.url === pathToFileURL(invokedEntrypoint).href) {
   main().catch((error) => {
     process.stderr.write(`${error instanceof Error ? error.message : String(error)}\n`);
     process.exitCode = 1;

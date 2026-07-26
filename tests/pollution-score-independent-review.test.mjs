@@ -4,6 +4,7 @@ import { chmod, lstat, mkdir, mkdtemp, readFile, rm, symlink, writeFile } from "
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
+import { fileURLToPath } from "node:url";
 
 import {
   LOCKED_POLICY_SHA256,
@@ -17,7 +18,7 @@ import {
   writeReviewTemplate,
 } from "../scripts/verify-pollution-score-independent-review.mjs";
 
-const root = new URL("../", import.meta.url).pathname;
+const root = fileURLToPath(new URL("../", import.meta.url));
 
 function digest(label) {
   return createHash("sha256").update(label).digest("hex");

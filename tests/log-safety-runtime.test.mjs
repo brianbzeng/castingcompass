@@ -143,6 +143,10 @@ function authDatabase() {
     CREATE TABLE account_deletion_fences (user_id TEXT PRIMARY KEY NOT NULL);
     CREATE TABLE trip_photo_upload_reservations (id TEXT PRIMARY KEY NOT NULL);
     CREATE TABLE trips (id TEXT PRIMARY KEY NOT NULL, photo_key_hash TEXT);
+    CREATE TABLE site_discussion_posts (id TEXT PRIMARY KEY NOT NULL);
+    CREATE TABLE trip_validation_provenance (id TEXT PRIMARY KEY NOT NULL);
+    CREATE TABLE validation_feasibility_events (id TEXT PRIMARY KEY NOT NULL);
+    CREATE TABLE validation_feasibility_corrections (id TEXT PRIMARY KEY NOT NULL);
   `);
   return { sqlite, d1: new D1Adapter(sqlite) };
 }

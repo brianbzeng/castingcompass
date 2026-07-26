@@ -16,10 +16,10 @@
   },
   "currentRuntimeBoundary": {
     "meaning": "existing action-only advisory guardrail remains separate and unchanged",
-    "waterQualityPolicySha256": "13914b407929b98f804874e04ae4d474a4a6acd0f9d91ce4d25aa44927a65445",
-    "waterQualityOverlaySha256": "0cfa6842b353fbc42753f0cfe3a4923e35ae4484321102e69b7f148b8676e6c1",
+    "waterQualityPolicySha256": "fcd98a818934375b31843eb333bef25128ceefda5784dabe3e63050d63199d60",
+    "waterQualityOverlaySha256": "af6bc9538997e8a999f6f9cb9736d9f9bcc179e3adc5b5ba316ea3937375938c",
     "waterQualityCollectorSha256": "a8f08d80c09861dd0fa67d094e66da3ac649deb157e3fed4f98754a9c69cd23b",
-    "siteCatalogSha256": "a7145a66368c6dd5dd13b6bec421d430d228a3082d2fa8ad31941fc84e14078d"
+    "siteCatalogSha256": "9b1b367852abb789584f7c8270388975b780fdc4e537a8e57a74aea857b60bac"
   },
   "candidateSources": [
     {

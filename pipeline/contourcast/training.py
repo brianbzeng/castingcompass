@@ -49,6 +49,13 @@ HYBRID_PRETRAINING_MODALITIES = ("bathymetry", "backscatter", "fused")
 HYBRID_BACKSCATTER_PREFIX = "backscatter_intensity_"
 
 
+def _snapshot_state_dict(model: Any) -> Dict[str, Any]:
+    return {
+        key: value.detach().cpu().clone()
+        for key, value in model.state_dict().items()
+    }
+
+
 def build_pretraining_corpus(
     feature_stack_path: Path,
     output_path: Path,
@@ -310,11 +317,10 @@ def build_geotiff_pretraining_corpus(
             if aligned_datasets:
                 for name, source_layer in aligned_datasets.items():
                     layer_nodata = source_layer.nodata
-                    layer_fill = layer_nodata if layer_nodata is not None else 0
                     layer_values = np.full(
                         (int(window.height), int(window.width)),
-                        layer_fill,
-                        dtype=source_layer.dtypes[0],
+                        np.nan,
+                        dtype=np.float32,
                     )
                     reproject(
                         source=rasterio.band(source_layer, 1),
@@ -324,7 +330,7 @@ def build_geotiff_pretraining_corpus(
                         src_nodata=layer_nodata,
                         dst_transform=window_transform,
                         dst_crs=dataset.crs,
-                        dst_nodata=layer_fill,
+                        dst_nodata=np.nan,
                         resampling=Resampling.nearest,
                     )
                     valid = np.isfinite(layer_values)
@@ -1231,9 +1237,7 @@ def run_hybrid_seafloor_pretraining(
         )
         if validation_metrics["loss"] < best_validation:
             best_validation = validation_metrics["loss"]
-            best_state = {
-                key: value.detach().cpu() for key, value in model.state_dict().items()
-            }
+            best_state = _snapshot_state_dict(model)
     if best_state is None:
         raise RuntimeError("hybrid pretraining did not produce a checkpoint")
 

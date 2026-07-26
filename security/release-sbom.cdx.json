@@ -1,7 +1,7 @@
 {
   "bomFormat": "CycloneDX",
   "specVersion": "1.5",
-  "serialNumber": "urn:uuid:a82612f5-7332-54fe-ab7f-dc8d93129e82",
+  "serialNumber": "urn:uuid:4b80a263-5bd2-51d1-87a5-99a2edfcc03f",
   "version": 1,
   "metadata": {
     "component": {
@@ -37,7 +37,7 @@
         },
         {
           "name": "castingcompass:input-sha256",
-          "value": "contracts/authenticated-staging-drill-authorization.schema.json:d782521d247e5b0e82d8788f8559a0ff04df656f8ac10bcff641cc5f5c5a3ab8"
+          "value": "contracts/authenticated-staging-drill-authorization.schema.json:5d5749e6b12c333f0e61f2b95a5118f95d5303e7d496b30c4c62d1f7da570762"
         },
         {
           "name": "castingcompass:input-sha256",
@@ -49,7 +49,7 @@
         },
         {
           "name": "castingcompass:input-sha256",
-          "value": "contracts/key-custody-independent-review.schema.json:7540a3d823430355c8aea4e1f915abe54c6a7293f7ddb522e26e709fc8f4cc56"
+          "value": "contracts/key-custody-independent-review.schema.json:13cc7a8d1a0363eabfd8e9a7e2e5d0c2f71e08c1e291da080384b0c1e5315073"
         },
         {
           "name": "castingcompass:input-sha256",
@@ -65,7 +65,7 @@
         },
         {
           "name": "castingcompass:input-sha256",
-          "value": "data/sites.json:a7145a66368c6dd5dd13b6bec421d430d228a3082d2fa8ad31941fc84e14078d"
+          "value": "data/sites.json:9b1b367852abb789584f7c8270388975b780fdc4e537a8e57a74aea857b60bac"
         },
         {
           "name": "castingcompass:input-sha256",
@@ -89,7 +89,7 @@
         },
         {
           "name": "castingcompass:input-sha256",
-          "value": "field-review/santa-barbara-access-review-policy.json:123b115fdda8b0adf856e14d2cc7c5674737fca8a9c54fe3b638ce69a11c81e6"
+          "value": "field-review/santa-barbara-access-review-policy.json:8bd85b662a0fe8646c4677db127345396ac8d924dd702fa7fe6c295e300ab9f9"
         },
         {
           "name": "castingcompass:input-sha256",
@@ -97,11 +97,11 @@
         },
         {
           "name": "castingcompass:input-sha256",
-          "value": "package-lock.json:dcaf6d98eef894d7c0c97ee720cbbc29919337ce357c2b1440f0f4322db11ad0"
+          "value": "package-lock.json:d79592ca1d49be550878e0b175a41dbe6c4c87adf956ea5d3acf20f1d9d98370"
         },
         {
           "name": "castingcompass:input-sha256",
-          "value": "package.json:59e92a0ef9fe4586a2adbe6ae5f39fdf25898d59db5c38909452e46ce45a91b2"
+          "value": "package.json:fc0c77ddb6bf70129b942cc0a4882bfe5e69199e55332ecf9ea1ef1069f1a2c3"
         },
         {
           "name": "castingcompass:input-sha256",
@@ -113,7 +113,7 @@
         },
         {
           "name": "castingcompass:input-sha256",
-          "value": "public/data/water-quality.json:0cfa6842b353fbc42753f0cfe3a4923e35ae4484321102e69b7f148b8676e6c1"
+          "value": "public/data/water-quality.json:af6bc9538997e8a999f6f9cb9736d9f9bcc179e3adc5b5ba316ea3937375938c"
         },
         {
           "name": "castingcompass:input-sha256",
@@ -137,11 +137,11 @@
         },
         {
           "name": "castingcompass:input-sha256",
-          "value": "security/d1-query-inventory-policy.json:d7c257f31227ccce0b2b82b5f3788838d21668050485be07e8ae62f773d3ea37"
+          "value": "security/d1-query-inventory-policy.json:20c450b2ade6fbc538718b0ebea315af495b0a69c1fde76c55f36a8857e0459e"
         },
         {
           "name": "castingcompass:input-sha256",
-          "value": "security/d1-query-inventory.json:e3da5bde5458d434640f089bf0143541f16aa00dd7b1f9fac9ea839d2645e3e6"
+          "value": "security/d1-query-inventory.json:7a31a0c625a940a74e44831201badb6d719846b21396372d219aec62fa8f8ad5"
         },
         {
           "name": "castingcompass:input-sha256",
@@ -177,7 +177,7 @@
         },
         {
           "name": "castingcompass:input-sha256",
-          "value": "security/sbom.cdx.json:d014f7ea8dc1fcfd379804303ae684d4d0ccf52180630f1a61fa11beeaad6b86"
+          "value": "security/sbom.cdx.json:05fadf2b3aaad0fc252cb71dcda300a0215d2062d10292cdfad4c83a64cf87d3"
         },
         {
           "name": "castingcompass:input-sha256",
@@ -197,31 +197,31 @@
         },
         {
           "name": "castingcompass:input-sha256",
-          "value": "water-quality/audits/east-bay-parks-beachwatch-station-mappings.json:8e002941c5f757d78367b41c643e269b1841fb754caed6923a340c5638c0c3e9"
+          "value": "water-quality/audits/east-bay-parks-beachwatch-station-mappings.json:dac81e4b6ea9e7407871ad274d85ab7b46b56faa1608ee0cbe97bed6972fb849"
         },
         {
           "name": "castingcompass:input-sha256",
-          "value": "water-quality/audits/launch-catalog-coverage.json:759de44313ecf3e07c7d7827cd6c5eaf78f15ab6966fdffa99d21312d61fff2f"
+          "value": "water-quality/audits/launch-catalog-coverage.json:9c18ae3174afaf461a7e179880038ee2cba7ba6ca9e63cee236b6c1a2bb55f1f"
         },
         {
           "name": "castingcompass:input-sha256",
-          "value": "water-quality/audits/marin-beachwatch-station-mappings.json:c37c334e1753f1d2b894c20d7030e8c09214425ac59671088ce9794779c65800"
+          "value": "water-quality/audits/marin-beachwatch-station-mappings.json:20d1b6e8881bc87d3956d78cfe790028a859257d2e51af693ea3fb9f328ac141"
         },
         {
           "name": "castingcompass:input-sha256",
-          "value": "water-quality/audits/san-mateo-station-mappings.json:b435a55cc2ded36bbb3f80d520e72a6fb13d788f46221792e9216b27cac1a1c4"
+          "value": "water-quality/audits/san-mateo-station-mappings.json:f0d0fd9fc7226aaddf5f9643734cfe58cb92c68951020c0dc8d638168fb58c34"
         },
         {
           "name": "castingcompass:input-sha256",
-          "value": "water-quality/audits/sf-unmapped-station-candidates.json:86006d8bac5a91acfd7e42d61f8df6dcb16381c402df5a5a7a7f4285e816fa86"
+          "value": "water-quality/audits/sf-unmapped-station-candidates.json:f28761a7c6a564f92912293c11cd0b5ebc06248e6438c203bcb16fce13b95d2e"
         },
         {
           "name": "castingcompass:input-sha256",
-          "value": "water-quality/policy.json:13914b407929b98f804874e04ae4d474a4a6acd0f9d91ce4d25aa44927a65445"
+          "value": "water-quality/policy.json:fcd98a818934375b31843eb333bef25128ceefda5784dabe3e63050d63199d60"
         },
         {
           "name": "castingcompass:input-sha256",
-          "value": "water-quality/pollution-score-source-policy.json:1061fcffec8283bf48e333a20a58ac8ea77545f5537f1d68685dda267d89d250"
+          "value": "water-quality/pollution-score-source-policy.json:5901791c40b4cc85f2b2bea78722c88937e62d7c5cf932ea523342cf351214dd"
         },
         {
           "name": "castingcompass:input-sha256",

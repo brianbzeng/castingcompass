@@ -44,7 +44,7 @@
       "const": "independent_cryptography_and_key_custody_reviewer"
     },
     "reviewer_independent_of_operator": {
-      "type": "boolean"
+      "const": true
     },
     "reviewer_competence_evidence_sha256": {
       "type": "string",

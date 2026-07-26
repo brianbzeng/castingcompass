@@ -1,21 +1,22 @@
 {
   "schemaVersion": "castingcompass.water-quality-coverage-inventory/1.0.0",
-  "generatedAt": "2026-07-21T16:22:00Z",
-  "meaning": "negative station-mapping evidence for launch-catalog coverage; never current water quality, clean-water, seafood-safety, or fishing-score evidence",
+  "generatedAt": "2026-07-21T16:20:00Z",
+  "meaning": "station-mapping coverage evidence inventory; incomplete sources never prove station absence, current water quality, clean water, seafood safety, or fishing-score value",
   "automaticMappingAllowed": false,
   "independentReviewRequired": true,
+  "coverageComplete": false,
   "counts": {
     "catalogSites": 61,
-    "mappedSites": 39,
-    "notCoveredSites": 22,
-    "priorAuditedNotCoveredSites": 21,
-    "remainingAfterThisAudit": 0
+    "mappedSites": 38,
+    "notCoveredSites": 23,
+    "priorAuditedNotCoveredSites": 22,
+    "remainingAfterThisAudit": 1
   },
   "officialDirectory": {
     "directoryUrl": "https://beachwatch.waterboards.ca.gov/public/result.php",
     "stationRegistryMachineUrl": "https://beachwatch.waterboards.ca.gov/public/getstation.php",
     "alamedaCountyContextUrl": "https://deh.acgov.org/operations/recreational-health.page",
-    "directoryResponseSha256": "9120c660f2db9afb4b194f3a38012574735389e027ab19cc421a4aef05917658",
+    "directoryResponseSha256": "38159234a87bdf4bf016c9f131e1151eec21609050943fb847131523edd48057",
     "countyPrograms": [
       {
         "programId": "19",
@@ -92,15 +93,17 @@
       {
         "programId": "19",
         "programName": "East Bay Parks District",
-        "responseSha256": "7ec308a9604657c100f213c6853b4b0ef207b876ec362b0a70aff42fc3723acd",
+        "responseSha256": "1e5cd009fd7d6b010cd7dd5db58e1f26036516a45d54b95b42c1d9677833052e",
         "stationCount": 8,
+        "errorCategory": null,
         "dumbartonMatches": []
       },
       {
         "programId": "20",
         "programName": "Water Boards",
-        "responseSha256": "7522e683770d5fdea66f87a4121415c526bb6eee2555e965c353b56cdd997234",
-        "stationCount": 0,
+        "responseSha256": "d82f70bceb7f7ba5744da108ca8d991c39d090949ed35a64cd703b6282174c8e",
+        "stationCount": null,
+        "errorCategory": "invalid-station-registry",
         "dumbartonMatches": []
       }
     ]
@@ -113,15 +116,15 @@
       "longitude": -122.119
     },
     "policyMapped": false,
-    "reviewStatus": "local-preliminary-do-not-map",
+    "reviewStatus": "source-incomplete-do-not-map",
     "automaticMappingAllowed": false,
-    "result": "no-exact-official-station-identity-in-reviewed-directory-scope",
-    "reason": "The State directory exposes no Alameda County program, and neither the East Bay Parks District nor Water Boards option set contains a Dumbarton station identity."
+    "result": "unknown-registry-source-unavailable",
+    "reason": "At least one relevant official station registry was empty or invalid, so station absence cannot be concluded and this site remains not covered."
   },
   "negativeEvidenceReceipts": [
     {
       "path": "water-quality/audits/sf-unmapped-station-candidates.json",
-      "sha256": "86006d8bac5a91acfd7e42d61f8df6dcb16381c402df5a5a7a7f4285e816fa86",
+      "sha256": "f28761a7c6a564f92912293c11cd0b5ebc06248e6438c203bcb16fce13b95d2e",
       "siteIds": [
         "torpedo-wharf",
         "pier-7",
@@ -131,15 +134,16 @@
     },
     {
       "path": "water-quality/audits/san-mateo-station-mappings.json",
-      "sha256": "b435a55cc2ded36bbb3f80d520e72a6fb13d788f46221792e9216b27cac1a1c4",
+      "sha256": "f0d0fd9fc7226aaddf5f9643734cfe58cb92c68951020c0dc8d638168fb58c34",
       "siteIds": [
+        "pacifica-municipal-pier",
         "poplar-beach",
         "seal-point-park"
       ]
     },
     {
       "path": "water-quality/audits/marin-beachwatch-station-mappings.json",
-      "sha256": "c37c334e1753f1d2b894c20d7030e8c09214425ac59671088ce9794779c65800",
+      "sha256": "20d1b6e8881bc87d3956d78cfe790028a859257d2e51af693ea3fb9f328ac141",
       "siteIds": [
         "limantour-beach",
         "point-reyes-south-beach",
@@ -149,7 +153,7 @@
     },
     {
       "path": "water-quality/audits/east-bay-parks-beachwatch-station-mappings.json",
-      "sha256": "8e002941c5f757d78367b41c643e269b1841fb754caed6923a340c5638c0c3e9",
+      "sha256": "dac81e4b6ea9e7407871ad274d85ab7b46b56faa1608ee0cbe97bed6972fb849",
       "siteIds": [
         "ferry-point-pier",
         "point-isabel-shoreline",
@@ -183,10 +187,6 @@
       "evidence": "water-quality/audits/east-bay-parks-beachwatch-station-mappings.json"
     },
     {
-      "siteId": "dumbarton-pier",
-      "evidence": "this-receipt:official-directory-review"
-    },
-    {
       "siteId": "emeryville-marina-pier",
       "evidence": "water-quality/audits/east-bay-parks-beachwatch-station-mappings.json"
     },
@@ -213,6 +213,10 @@
     {
       "siteId": "oyster-bay-shoreline",
       "evidence": "water-quality/audits/east-bay-parks-beachwatch-station-mappings.json"
+    },
+    {
+      "siteId": "pacifica-municipal-pier",
+      "evidence": "water-quality/audits/san-mateo-station-mappings.json"
     },
     {
       "siteId": "paradise-beach-pier",
@@ -255,8 +259,8 @@
       "evidence": "water-quality/audits/sf-unmapped-station-candidates.json"
     }
   ],
-  "policySha256": "13914b407929b98f804874e04ae4d474a4a6acd0f9d91ce4d25aa44927a65445",
-  "siteCatalogSha256": "a7145a66368c6dd5dd13b6bec421d430d228a3082d2fa8ad31941fc84e14078d",
-  "overlaySha256": "0cfa6842b353fbc42753f0cfe3a4923e35ae4484321102e69b7f148b8676e6c1",
-  "auditToolSha256": "bea55a0d771ba393d93f63e9921f9ddd266a63f650b7268d1581bdc608652e39"
+  "policySha256": "fcd98a818934375b31843eb333bef25128ceefda5784dabe3e63050d63199d60",
+  "siteCatalogSha256": "9b1b367852abb789584f7c8270388975b780fdc4e537a8e57a74aea857b60bac",
+  "overlaySha256": "af6bc9538997e8a999f6f9cb9736d9f9bcc179e3adc5b5ba316ea3937375938c",
+  "auditToolSha256": "26a1fc3eab03d0ce23b7636ebadee498b1c18a222e7b27bca53e1beaad55cdf7"
 }

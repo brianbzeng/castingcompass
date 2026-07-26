@@ -14,7 +14,7 @@ const CONTRACT_PATH = "contracts/key-custody-independent-review.schema.json";
 const EVIDENCE_CONTRACT_PATH = "contracts/key-custody-evidence-manifest.schema.json";
 
 export const LOCKED_POLICY_SHA256 = "c96b82a4865f80dee96878a99582fcc2cd429aebd5f3ffed0d59449409404eda";
-export const LOCKED_CONTRACT_SHA256 = "7540a3d823430355c8aea4e1f915abe54c6a7293f7ddb522e26e709fc8f4cc56";
+export const LOCKED_CONTRACT_SHA256 = "13cc7a8d1a0363eabfd8e9a7e2e5d0c2f71e08c1e291da080384b0c1e5315073";
 export const LOCKED_EVIDENCE_CONTRACT_SHA256 = "cc626fb9b9d14bd76c5ebf34c6238ae6ccaa78c9b7c96a9e08b93fa719ca2273";
 
 const POLICY_SCHEMA_VERSION = "castingcompass.key-custody-review-policy/1.0.0";

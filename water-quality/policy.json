@@ -107,10 +107,6 @@
       "source_id": "sfpuc",
       "station_ids": ["4602"]
     },
-    "pacifica-municipal-pier": {
-      "source_id": "san-mateo-county-health",
-      "station_ids": ["AB4111", "AB4112"]
-    },
     "sharp-park-beach": {
       "source_id": "san-mateo-county-health",
       "station_ids": ["AB4111", "AB4112"]

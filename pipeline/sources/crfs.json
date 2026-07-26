@@ -6,25 +6,41 @@
   "official_landing_page": "https://wildlife.ca.gov/Conservation/Marine/CRFS/Additional-Information",
   "related_official_pages": [
     "https://www.recfin.org/",
+    "https://reports.psmfc.org/recfin/f?p=601:802::::::",
+    "https://www.recfin.org/contact-us/",
+    "https://www.recfin.org/resources/citing/",
     "https://www.lab.data.ca.gov/dataset/california-recreational-fisheries-survey-catch-per-unit-angler-for-all-species-and-all-effort-r",
     "https://www.lab.data.ca.gov/dataset/california-recreational-fisheries-survey-catch-per-unit-angler-for-rockfish-cabezon-greenling-a"
   ],
   "access": {
-    "mode": "manual_recfin_export",
-    "reason": "CDFW directs public users to RecFIN for CRFS sample data and estimates from 2004 onward; exports depend on the query selected in the interactive warehouse.",
+    "mode": "public_sd002_discovery_then_authorized_or_official_export",
+    "reason": "CDFW directs public users to RecFIN. RecFIN SD002 publicly exposes a queryable recreational sample report and a byte-bound comprehensive-sample dictionary, but the default report omits stable record identifiers and California effort duration, QueryBuilder raw exports require an authorized account, and no official commercial ML or redistribution permission has been recorded.",
+    "public_discovery": {
+      "report_id": "SD002",
+      "report_url": "https://reports.psmfc.org/recfin/f?p=601:802::::::",
+      "dictionary_url": "https://reports.psmfc.org/recfin/r/recfin/601/files/static/v206/comprehensive_rec_samp_table_column%20definitions_20201120.xlsx",
+      "dictionary_sha256": "b17ebe6ec617014a0a4c0e0b70f502f50554e41e85f234f6126f8d7c524e2139",
+      "discovery_receipt": "pipeline/sources/receipts/recfin-sd002-public-discovery-20260725.receipt.json",
+      "status": "technical-candidate-not-admitted"
+    },
     "instructions": [
-      "Record whether the export contains sample data or expanded estimates, the query filters, survey mode, area, species, time range, and retrieval date.",
-      "Retain effort, weights, strata, and uncertainty fields supplied by the export.",
+      "Use the public SD002 page only for source discovery; do not automate bulk collection or infer use rights from public visibility.",
+      "Obtain an official or authorized raw export that retains stable sample, angler, catch, and location identifiers plus legitimate blank-catch attempts.",
+      "Record whether the export contains sample data or expanded estimates, the saved query or SQL, filters, survey mode, area, target, species, time range, data-good-through value, refresh time, row count, dictionary version, and raw checksum.",
+      "Obtain written confirmation of the intended commercial ML, derived-product, retention, attribution, and redistribution boundaries before normalization.",
+      "Retain effort, weights, strata, selection, QA, and uncertainty fields supplied by the export; never fabricate California trip duration from fields documented for another state.",
       "Do not treat aggregate area labels or centroids as exact fishing locations.",
-      "Store the raw export unchanged and provide an explicit canonical-to-source column map."
+      "Store the raw export unchanged outside Git and create a reviewed source-specific transformer that groups species rows into one complete effort segment without converting missing catch to zero unless RecFIN confirms that semantic."
     ],
-    "ingestion_command": "python -m pipeline.contourcast.cli ingest-observations --input CRFS_EXPORT.csv --output DATA/crfs.csv --source-id cdfw_crfs --column-map column_map.json --expected-sha256 SHA256"
+    "ingestion_command": "python -m pipeline.contourcast.cli ingest-observations --input CANONICAL_CRFS_COMPLETE_EFFORT.jsonl --output DATA/crfs.csv --source-id cdfw_crfs --primary-target-taxon-id california-halibut --expected-sha256 SHA256"
   },
   "temporal_coverage": "2004-present, subject to release schedule",
   "citation": "California Department of Fish and Wildlife, California Recreational Fisheries Survey; data accessed through RecFIN. Include query and access date.",
   "limitations": [
     "CRFS is a probability survey designed for catch and effort estimation, not a census of all trips.",
     "Sample records and expanded estimates have different statistical meanings and must not be pooled without design-aware treatment.",
+    "Public SD002 blank-catch rows are technical evidence that non-catch samples may be represented, not proof of complete-attempt semantics or permission to use them.",
+    "The published dictionary documents NUMBER_HOURS_FISHED for Oregon only; California effort units require official clarification before observation-v2 transformation.",
     "Public spatial fields may be aggregated or withheld.",
     "Survey modes, coverage, regulations, and sampling intensity vary over time.",
     "Public ds3185/ds3186 CPUA layers are separately receipted aggregate context sources; they are not complete-effort observation-v2 rows."

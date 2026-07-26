@@ -123,7 +123,9 @@ const AUTH_SCHEMA_READY_SQL = `SELECT
     'users', 'auth_sessions', 'saved_sites', 'auth_attempts', 'email_challenges',
     'gear_profiles', 'signup_age_proofs', 'privacy_deletion_jobs',
     'privacy_deletion_tasks', 'privacy_export_jobs', 'account_deletion_fences',
-    'trip_photo_upload_reservations', 'trips'
+    'trip_photo_upload_reservations', 'trips', 'site_discussion_posts',
+    'trip_validation_provenance', 'validation_feasibility_events',
+    'validation_feasibility_corrections'
   )) AS required_tables,
   (SELECT COUNT(*) FROM pragma_table_info('trips') WHERE name = 'photo_key_hash') AS photo_hash_columns`;
 
@@ -133,7 +135,7 @@ async function initialize(db: D1DatabaseLike) {
     pending = (async () => {
       const readiness = await db.prepare(AUTH_SCHEMA_READY_SQL)
         .first<{ required_tables: number; photo_hash_columns: number }>();
-      if (Number(readiness?.required_tables ?? 0) !== 13
+      if (Number(readiness?.required_tables ?? 0) !== 17
         || Number(readiness?.photo_hash_columns ?? 0) !== 1) {
         throw new AuthError(
           503,
@@ -2911,6 +2913,7 @@ async function claimSignInAttempt(
     && pendingCount <= recentFailedCount;
   if (!receiptReadSucceeded || !countsValid) return "unconfirmed";
   if (pendingCount === 1 && anyCount === 1 && recentFailedCount <= 10) return "claimed";
+  if (pendingCount === 1 && anyCount === 1 && recentFailedCount > 10) return "rate_limited";
   if (pendingCount === 0 && anyCount === 0 && recentFailedCount >= 10) return "rate_limited";
   return "unconfirmed";
 }

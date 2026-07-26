@@ -24,6 +24,11 @@ class D1StatementAdapter {
   }
 
   async first() {
+    if (this.owner.throwOnceBeforeReadSubstring
+      && this.query.includes(this.owner.throwOnceBeforeReadSubstring)) {
+      this.owner.throwOnceBeforeReadSubstring = null;
+      throw new Error("injected transient read failure");
+    }
     return this.statement.get(...this.values) ?? null;
   }
 
@@ -52,6 +57,7 @@ class D1Adapter {
     this.sqlite = sqlite;
     this.omitOnceMutationMetadataSubstring = null;
     this.throwOnceAfterMutationSubstring = null;
+    this.throwOnceBeforeReadSubstring = null;
   }
 
   prepare(query) {
@@ -294,6 +300,41 @@ test("a committed consumer claim whose response is lost is proven before provide
     { ...sqlite.prepare("SELECT state, attempts, lease_token FROM ai_review_jobs").get() },
     { state: "completed", attempts: 1, lease_token: null },
   );
+});
+
+test("a transient consumer read retries only that message and continues the queue batch", async () => {
+  const { sqlite, d1 } = await database();
+  const { env, queue } = await scheduledJob(sqlite, d1);
+  const missing = queueMessage({
+    version: AI_REVIEW_QUEUE_MESSAGE_VERSION,
+    jobId: `airj_${"0".repeat(32)}`,
+  });
+  const valid = queueMessage(queue.sent[0].body);
+  d1.throwOnceBeforeReadSubstring = "WHERE id = ? AND state = 'processing'";
+  let providerCalls = 0;
+  const originalFetch = globalThis.fetch;
+  const originalError = console.error;
+  globalThis.fetch = async () => {
+    providerCalls += 1;
+    return strictProviderResponse();
+  };
+  console.error = () => undefined;
+  try {
+    await consumeAiReviewQueue(
+      { queue: "ai-review", messages: [missing, valid] },
+      env,
+      [{ id: "ocean-beach" }],
+    );
+  } finally {
+    globalThis.fetch = originalFetch;
+    console.error = originalError;
+  }
+  assert.equal(missing.acknowledgements, 0);
+  assert.deepEqual(missing.retries, [{ delaySeconds: 60 }]);
+  assert.equal(valid.acknowledgements, 1);
+  assert.deepEqual(valid.retries, []);
+  assert.equal(providerCalls, 1);
+  assert.equal(sqlite.prepare("SELECT state FROM ai_review_jobs").get().state, "completed");
 });
 
 test("missing producer configuration preserves pending D1 work without provider dispatch", async () => {
@@ -572,5 +613,50 @@ test("an abandoned fifth queue lease settles to attention instead of redispatchi
   assert.equal(
     sqlite.prepare("SELECT ai_review_status FROM trips WHERE id = 'trip_queue'").get().ai_review_status,
     "needs_attention",
+  );
+});
+
+test("abandoned queue settlement preserves an independently active trip claim", async () => {
+  const { sqlite, d1 } = await database();
+  const { env, queue, job } = await scheduledJob(sqlite, d1);
+  sqlite.prepare(`UPDATE ai_review_jobs SET state = 'processing', attempts = 5,
+      available_at = ?, lease_expires_at = ?, lease_token = ? WHERE id = ?`)
+    .run(
+      "2000-01-01T00:00:00.000Z",
+      "2000-01-01T00:01:00.000Z",
+      `airl_${"d".repeat(32)}`,
+      job.id,
+    );
+  const activeTripClaim = JSON.stringify({
+    version: "castingcompass.ai-review-claim/1.0.0",
+    token: `airc_${"e".repeat(32)}`,
+    leaseExpiresAt: "2099-01-01T00:00:00.000Z",
+  });
+  sqlite.prepare(`UPDATE trips SET ai_review_status = 'processing', ai_review_json = ?
+    WHERE id = 'trip_queue'`).run(activeTripClaim);
+
+  assert.equal(await dispatchAiReviewBacklog(env, []), 1);
+  assert.equal(queue.sent.length, 1);
+  assert.deepEqual(
+    {
+      ...sqlite.prepare(`SELECT state, attempts, lease_token, last_error_code
+        FROM ai_review_jobs WHERE id = ?`).get(job.id),
+    },
+    {
+      state: "needs_attention",
+      attempts: 5,
+      lease_token: null,
+      last_error_code: "review_lease_abandoned",
+    },
+  );
+  assert.deepEqual(
+    {
+      ...sqlite.prepare(`SELECT ai_review_status, ai_review_json
+        FROM trips WHERE id = 'trip_queue'`).get(),
+    },
+    {
+      ai_review_status: "processing",
+      ai_review_json: activeTripClaim,
+    },
   );
 });

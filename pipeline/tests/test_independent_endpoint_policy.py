@@ -137,6 +137,10 @@ class IndependentEndpointPolicyTests(unittest.TestCase):
         candidate["support_gate"]["minimum_retained_deployments_per_class_per_side"] = 16
         mutations.append(candidate)
 
+        candidate = copy.deepcopy(protocol)
+        candidate["outcome_blind_decision_rules"] = {}
+        mutations.append(candidate)
+
         for index, weakened in enumerate(mutations):
             with self.subTest(index=index):
                 with self.assertRaises(ValueError):

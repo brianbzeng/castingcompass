@@ -342,6 +342,7 @@ class MemoryTripStore {
         prediction_metadata_json: null,
       } : {}),
       photo_key: completion.photoKey,
+      photo_key_hash: completion.photoKeyHash,
       photo_content_type: completion.photoContentType,
       photo_size_bytes: completion.photoSizeBytes,
       updated_at: completion.updatedAt,

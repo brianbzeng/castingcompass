@@ -257,6 +257,7 @@ def build_audit(
             "countyId": source["county_id"],
             "countyName": source["county_name"],
             "stationCount": len(registry),
+            "globalStationIds": source["global_station_ids"],
             "registryUse": "exact public station identity only; never current advisory status",
             "responseSha256": hashlib.sha256(source_body).hexdigest(),
         },

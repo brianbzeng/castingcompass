@@ -29,6 +29,11 @@ class D1StatementAdapter {
   }
 
   async first() {
+    if (this.owner.throwOnceBeforeReadSubstring
+      && this.query.includes(this.owner.throwOnceBeforeReadSubstring)) {
+      this.owner.throwOnceBeforeReadSubstring = null;
+      throw new Error("injected transient read failure");
+    }
     return this.statement.get(...this.values) ?? null;
   }
 
@@ -51,6 +56,7 @@ class TransactionalD1Adapter {
   constructor(sqlite) {
     this.sqlite = sqlite;
     this.throwOnceAfterMutationSubstring = null;
+    this.throwOnceBeforeReadSubstring = null;
   }
 
   prepare(query) {
@@ -204,6 +210,32 @@ test("a committed dispatch whose response is lost is proven before one queue sen
   assert.match(job.lease_token, /^[a-f0-9]{48}$/);
 });
 
+test("publish-recovery response loss stays contained and leaves a durable retry", async () => {
+  const { sqlite, d1 } = await database();
+  const userId = addUser(sqlite, "publish-recovery");
+  d1.throwOnceAfterMutationSubstring = "SET state = 'pending', available_at = ?";
+  const logs = [];
+  const originalError = console.error;
+  console.error = (...values) => logs.push(values);
+  try {
+    const requested = await requestPrivacyExport({
+      DB: d1,
+      PRIVACY_EXPORT_QUEUE_ENABLED: "true",
+      PRIVACY_EXPORT_QUEUE: { async send() { throw new Error("private-provider-body"); } },
+      PRIVACY_EXPORTS: objectBucket(),
+    }, userId);
+    assert.equal(requested.configurationError, null);
+    assert.equal(requested.job.state, "pending");
+    assert.equal(requested.job.last_error_code, "queue_publish_failed");
+  } finally {
+    console.error = originalError;
+  }
+  const serialized = JSON.stringify(logs);
+  assert.match(serialized, /queue_publish_recovery_failed/);
+  assert.match(serialized, /queue_publish_failed/);
+  assert.doesNotMatch(serialized, /private-provider-body|publish-recovery@example\.test/);
+});
+
 test("lost committed claim and reservation responses do not duplicate packaging", async () => {
   for (const mutation of [
     "SET state = 'processing', attempts = attempts + 1",
@@ -220,6 +252,35 @@ test("lost committed claim and reservation responses do not duplicate packaging"
     assert.equal(bucket.objects.size, 1);
     assert.equal(sqlite.prepare("SELECT state FROM privacy_export_jobs WHERE id = ?").get(job.id).state, "completed");
   }
+});
+
+test("a transient consumer read retries only that message and continues the queue batch", async () => {
+  const { sqlite, d1 } = await database();
+  const userId = addUser(sqlite, "batch-read");
+  const { env, queue, bucket, job } = await scheduledExport(sqlite, d1, userId);
+  const missing = queueMessage({
+    version: PRIVACY_EXPORT_QUEUE_MESSAGE_VERSION,
+    jobId: `pexj_${"0".repeat(32)}`,
+  });
+  const valid = queueMessage(queue.sent[0].body);
+  d1.throwOnceBeforeReadSubstring =
+    "WHERE id = ? AND user_id IS NOT NULL AND state = 'processing'";
+  const originalError = console.error;
+  console.error = () => undefined;
+  try {
+    await consumePrivacyExportQueue(
+      { queue: "privacy-export", messages: [missing, valid] },
+      env,
+    );
+  } finally {
+    console.error = originalError;
+  }
+  assert.equal(missing.acknowledgements, 0);
+  assert.deepEqual(missing.retries, [{ delaySeconds: 60 }]);
+  assert.equal(valid.acknowledgements, 1);
+  assert.deepEqual(valid.retries, []);
+  assert.equal(bucket.objects.size, 1);
+  assert.equal(sqlite.prepare("SELECT state FROM privacy_export_jobs WHERE id = ?").get(job.id).state, "completed");
 });
 
 test("a lost committed completion response never deletes the valid export object", async () => {

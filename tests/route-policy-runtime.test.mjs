@@ -578,6 +578,8 @@ test("the Worker entry point centrally denies unknown paths and unclassified met
   const publicAuthorization = source.indexOf("isReviewedPublicApiRequest(request, apiPolicy)");
   const ownerPolicyReview = source.indexOf("isReviewedOwnerApiRequest(request, apiPolicy)");
   const ownerAuthorization = source.indexOf("authorizeOwnerRequest(request, env");
+  const ownerAuthorizations = [...source.matchAll(/authorizeOwnerRequest\(request, env/gu)]
+    .map((match) => match.index);
   const receiptPolicyReview = source.indexOf("isReviewedReceiptApiRequest(request, apiPolicy)");
   const receiptAuthorization = source.indexOf("authorizeDeletionReceiptRequest(request, env");
   const optionalSessionPolicyReview = source.indexOf("isReviewedOptionalSessionApiRequest(request, apiPolicy)");
@@ -587,6 +589,7 @@ test("the Worker entry point centrally denies unknown paths and unclassified met
   assert.ok(publicAuthorization > rejection, "public policy review must follow central route rejection");
   assert.ok(ownerPolicyReview > rejection, "owner policy review must follow central route rejection");
   assert.ok(ownerAuthorization > ownerPolicyReview, "owner authorization must follow owner policy review");
+  assert.equal(ownerAuthorizations.length, 2);
   assert.ok(ownerAuthorization > rejection, "owner authorization must follow central route rejection");
   assert.ok(receiptPolicyReview > rejection, "receipt policy review must follow central route rejection");
   assert.ok(
@@ -600,6 +603,10 @@ test("the Worker entry point centrally denies unknown paths and unclassified met
   );
   assert.ok(optionalSessionAuthorization > rejection, "optional-session preflight must follow central route rejection");
   assert.ok(bodyGuard > ownerAuthorization, "body reads must follow owner authorization");
+  assert.ok(
+    ownerAuthorizations[1] > bodyGuard,
+    "trip execution must repeat live owner authorization after body guarding",
+  );
   assert.ok(bodyGuard > publicAuthorization, "body reads must follow public policy review");
   assert.ok(bodyGuard > receiptPolicyReview, "body reads must follow receipt policy review");
   assert.ok(bodyGuard > receiptAuthorization, "body reads must follow receipt authorization");
