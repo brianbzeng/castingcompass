@@ -997,6 +997,12 @@ after its acceptance checks pass in the intended environment.
     locked-test authority, winner selection, and score/serving changes. Its metric-free receipt
     proves callable interface, shape, finiteness, bounds, and repeatability only; it is not a
     benchmark result.
+  - [x] Implement the matching synthetic-only bathymetric deep adapter without freezing the
+    future real input contract. It consumes masked bags of single- or multiscale fictional
+    patches, applies training-fold-only robust scaling, uses the existing terrain encoder and
+    attention pooling, and returns the same two heads. Real targets/datasets and every training,
+    benchmark, locked-test, winner, score, serving, and deployment authority remain rejected;
+    the metric-free receipt reports plumbing facts only.
   - [ ] After eligible data and a separate confirmatory design exist, freeze the actual input
     adapters, search spaces, final primary metrics, materiality thresholds, slice floors,
     calibration ceiling, and independent-reproduction procedure before any locked-test access.

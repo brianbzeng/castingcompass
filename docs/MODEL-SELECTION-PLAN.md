@@ -29,7 +29,7 @@ comparison:
 | 3 | Random-forest occurrence and CPUE heads | Synthetic-only shared adapter implemented |
 | 4 | Histogram-gradient-boosted occurrence and CPUE heads | Synthetic-only shared adapter implemented |
 | 5 | Spatial/hierarchical partial-pooling heads | Synthetic-only shared adapter implemented |
-| 6 | Bathymetric deep encoder and two heads | Encoder/heads implemented; site-window adapter and eligible target run are open |
+| 6 | Bathymetric deep encoder and two heads | Synthetic-only masked site-window adapter implemented; real input contract and eligible target run are open |
 | 7 | Predeclared hybrid or ensemble | Conditional only; it needs an outcome-blind complementary-error rationale |
 
 “Every model” means a representative, preregistered family set—not an
@@ -53,11 +53,21 @@ does not turn the completed target-agnostic terrain experiments into halibut
 accuracy evidence.
 
 The six classical families share a deterministic two-head capability adapter
-in `pipeline/contourcast/candidate_models.py`. That adapter accepts only a
-fictional synthetic target and refuses real labels, benchmark authority,
-locked-test access, winner selection, score changes, and serving changes. Its
-existence proves interface compatibility only; it supplies no comparative
-metric or evidence that any family is better.
+in `pipeline/contourcast/candidate_models.py`. The deep candidate has a
+separate capability adapter in `pipeline/contourcast/deep_candidate.py` that
+uses the existing terrain encoder and masked attention over fictional
+single- or multiscale patch bags. Both boundaries accept only a fictional
+synthetic target and refuse target-specific authority, real labels, benchmark
+authority, locked-test access, winner selection, score changes, serving
+changes, and deployment. Their existence proves interface compatibility only;
+they supply no comparative metric or evidence that any family is better.
+
+The deep capability adapter is not the future benchmark input contract. It
+does not decide real patch sources, physical radii, feature channels,
+normalization policy, training budget, checkpoint selection, abstention
+support, or missing-coverage rules. Those choices remain deliberately open
+until the separate confirmatory protocol can freeze them without access to
+eligible labels or locked-test outcomes.
 
 ## Shared future evidence
 
@@ -106,12 +116,16 @@ Run:
 ```bash
 python -m pipeline.contourcast.model_selection_plan audit
 python -m pipeline.contourcast.candidate_models
+python -m pipeline.contourcast.deep_candidate
 python -m unittest pipeline.tests.test_model_selection_plan \
-  pipeline.tests.test_candidate_models -v
+  pipeline.tests.test_candidate_models \
+  pipeline.tests.test_deep_candidate -v
 ```
 
 The audit emits only plan identity, implementation counts, open-gate count,
 closed authority flags, and a claim boundary. It reads no observation or model
 artifact and produces no performance result. The candidate capability command
 emits only deterministic shape, finiteness, and bounds checks over fictional
-rows; it deliberately emits no model metrics, comparison, or winner.
+rows; the deep command does the same over fictional masked patch bags and
+requires the optional pinned PyTorch stack. Neither emits model metrics,
+comparison, or a winner.

@@ -871,6 +871,38 @@ by that discovery.
       ceiling, and independent reproduction before locked-test access. No benchmark or
       target-specific training is authorized by this local template.
 
+## Active checkpoint — synthetic bathymetric candidate interface
+
+- [x] Implement the missing deep-candidate plumbing without pretending to freeze the future real
+      input contract. The adapter consumes fictional single- or multiscale masked patch bags,
+      derives robust channel scaling only from visible training patches, zeros every excluded
+      slot, uses the existing terrain encoder and attention pooling, and returns the same
+      occurrence-probability and positive-catch-CPUE interface as the classical candidates.
+- [x] Keep the adapter fail closed and operationally bounded. It rejects real targets or datasets,
+      target-specific training, benchmark execution, locked-test access, winner selection, score
+      or serving changes, deployment authority, malformed labels or masks, nonfinite or
+      nonnumeric tensors, incompatible shapes, and tensors above the synthetic row, patch, scale,
+      channel, spatial, or total-element ceilings. Tests also prove that masked padding values
+      cannot influence predictions and repeated fixed-seed calls are byte-identical.
+- [x] Complete the local acceptance boundary. A fresh exact hash-locked macOS ARM64 optional
+      environment passes dependency integrity, Ruff, all 149/149 pipeline tests, architecture
+      smoke, the metric-free deep receipt, and environment identity; the ordinary pipeline
+      environment passes the same 149 tests with 11 declared optional-dependency skips. Under
+      pinned Node `22.23.1` and npm `10.9.8`, the complete offline security and release-inventory
+      chain, both zero-vulnerability audits, production-off Cloudflare build, ESLint, TypeScript,
+      and all 749/749 Node tests pass. The compatible local API environment passes 29/29 tests
+      and all 20 migrations / 54 critical indexed D1 plans.
+- [x] Obtain exact implementation-head hosted automation and automated review evidence. At head
+      `5049ce5121a91f87eb3d32453d53086796057400`, CI run `30213865861` passed dependency
+      review, exact-runtime API, pipeline, the complete web/security chain, both
+      production-shaped builds, 749/749 Node tests, 8/8 photo cases, and the 244/244
+      Chromium/WebKit mobile, offline, recovery, and map matrix. CodeQL run `30213865271`,
+      optional-stack run `30213865865`, and release-provenance run `30213865872` passed;
+      CodeRabbit completed with no actionable comments.
+- [ ] Obtain independent human review. Local plumbing, automated review, and synthetic receipts
+      authorize no eligible target training, benchmark comparison, winner, score/serving change,
+      deployment, provider mutation, or production claim.
+
 ## Active checkpoint — deduplicated hosted validation
 
 - [x] Stop feature-branch pushes from running the complete CI and release-provenance matrices a

@@ -4,10 +4,10 @@
 backscatter, and fused self-supervised pretraining plus common-substrate and
 rare-structure transfer probes and a cross-survey shortcut diagnostic
 implemented; no encoder passed the frozen
-classical baselines, catch heads remain untrained, and no catch performance has
-been measured.
+classical baselines, catch heads have run only on fictional capability
+fixtures, and no eligible catch performance has been measured.
 
-**Version:** 0.7.0
+**Version:** 0.8.0
 
 ## Live regional-ranking boundary
 
@@ -38,9 +38,9 @@ fishing regulation, a stock assessment, a conservation decision, a safety
 warning, or a guarantee of catch. The product must expose uncertainty and data
 coverage instead of presenting predictions as live biological truth.
 
-## Implemented comparison models
+## Implemented candidate interfaces
 
-Six classical families now expose the same two-head callable interface:
+Six classical families expose the same two-head callable interface:
 
 - **Naive:** training-fold prevalence and mean positive-catch CPUE;
 - **Linear:** standardized class-weighted logistic regression plus Ridge
@@ -53,12 +53,22 @@ Six classical families now expose the same two-head callable interface:
   partial pooling and global fallback for unseen groups.
 
 The shared adapter currently accepts only a fictional synthetic target and
-grants no benchmark, locked-test, selection, score, or serving authority. This
-is interface plumbing, not California-halibut training or performance
-evidence. These families must eventually be reported alongside any neural
-model on the same eligible rows and geographic folds. A deep model is not
-considered useful merely because it has more capacity; it must improve the
-predeclared metrics under that shared protocol.
+grants no target-specific training, benchmark, locked-test, selection, score,
+serving, or deployment authority.
+
+The bathymetric candidate now exposes a separate synthetic-only adapter over
+masked bags of single- or multiscale terrain patches. It performs fold-local
+robust channel scaling, zeros excluded patch slots, pools visible patch
+embeddings with the existing attention model, and returns bounded occurrence
+and nonnegative positive-catch CPUE outputs. Its small fixed training loop is a
+deterministic capability smoke, not a proposed benchmark budget or checkpoint
+policy.
+
+These adapters are interface plumbing, not California-halibut training or
+performance evidence. All seven required families must eventually be compared
+on the same eligible rows and geographic folds. A deep model is not considered
+useful merely because it has more capacity; it must improve the predeclared
+metrics under that shared protocol.
 
 ## Deep-learning architecture
 

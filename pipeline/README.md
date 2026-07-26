@@ -24,6 +24,22 @@ python3 -m unittest discover -s pipeline/tests -v
 Any numbers under the smoke output are synthetic plumbing-test results, not
 habitat, fishing, or model-quality claims.
 
+## Synthetic candidate capability checks
+
+The classical and deep candidate adapters can be exercised only against
+fictional inputs under an explicit non-authorizing scope:
+
+```bash
+python3 -m pipeline.contourcast.candidate_models
+python3 -m pipeline.contourcast.deep_candidate
+```
+
+The deep command requires the pinned optional PyTorch environment. It uses
+masked multiscale patch bags only to prove deterministic interface shape,
+finiteness, and bounds. Neither command reads observations, computes
+comparative metrics, selects a model, changes the live score, serves a model,
+or authorizes deployment.
+
 ## Historical v1 site-window validation — do not activate
 
 The commands in this section are retained to reproduce and test the frozen v1

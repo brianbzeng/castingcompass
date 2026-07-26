@@ -34,7 +34,7 @@ from .model_selection_plan import (
 )
 
 
-CAPABILITY_SCHEMA_VERSION = "castingcompass.model-candidate-capability/1.0.0"
+CAPABILITY_SCHEMA_VERSION = "castingcompass.model-candidate-capability/1.1.0"
 CAPABILITY_STATUS = "synthetic-interface-smoke-only"
 CLASSICAL_CANDIDATE_IDS = (
     "naive-prevalence-mean-cpue",
@@ -49,7 +49,9 @@ HYBRID_CANDIDATE_ID = "predeclared-hybrid-or-ensemble"
 IMPLEMENTATION_ENTRYPOINT = (
     "pipeline.contourcast.candidate_models:fit_predict_classical_candidate"
 )
-DEEP_IMPLEMENTATION_ENTRYPOINT = "pipeline.contourcast.deep_model:CatchMultiTaskModel"
+DEEP_IMPLEMENTATION_ENTRYPOINT = (
+    "pipeline.contourcast.deep_candidate:fit_predict_deep_candidate"
+)
 MIN_SPLINE_POSITIVE_ROWS = 8
 
 
@@ -59,16 +61,18 @@ class CandidateCapabilityScope:
 
     dataset_kind: str
     target_taxon_id: str
+    target_specific_training_authorized: bool
     benchmark_execution_authorized: bool
     locked_test_access_authorized: bool
     winner_selection_authorized: bool
     score_change_authorized: bool
     serving_change_authorized: bool
+    deployment_authorized: bool
 
 
 @dataclass(frozen=True)
 class CandidatePredictions:
-    """Two-head predictions shared by every classical candidate."""
+    """Two-head predictions shared by every implemented candidate adapter."""
 
     occurrence_probability: np.ndarray
     positive_catch_cpue: np.ndarray
@@ -80,15 +84,17 @@ def synthetic_capability_scope() -> CandidateCapabilityScope:
     return CandidateCapabilityScope(
         dataset_kind="synthetic_fixture",
         target_taxon_id=SYNTHETIC_TARGET_TAXON_ID,
+        target_specific_training_authorized=False,
         benchmark_execution_authorized=False,
         locked_test_access_authorized=False,
         winner_selection_authorized=False,
         score_change_authorized=False,
         serving_change_authorized=False,
+        deployment_authorized=False,
     )
 
 
-def _validate_scope(scope: CandidateCapabilityScope) -> None:
+def validate_candidate_capability_scope(scope: CandidateCapabilityScope) -> None:
     """Refuse any scope that could be mistaken for model-selection authority."""
 
     if not isinstance(scope, CandidateCapabilityScope):
@@ -100,11 +106,13 @@ def _validate_scope(scope: CandidateCapabilityScope) -> None:
             "candidate adapters currently accept the synthetic target only"
         )
     authority = (
+        scope.target_specific_training_authorized,
         scope.benchmark_execution_authorized,
         scope.locked_test_access_authorized,
         scope.winner_selection_authorized,
         scope.score_change_authorized,
         scope.serving_change_authorized,
+        scope.deployment_authorized,
     )
     if any(authority):
         raise ValueError(
@@ -123,7 +131,7 @@ def _feature_matrix(value: Any, context: str) -> np.ndarray:
     return matrix
 
 
-def _labels(
+def validate_two_head_training_labels(
     occurrence: Any,
     cpue: Any,
     *,
@@ -173,7 +181,7 @@ def _group_ids(value: Any, context: str, expected_rows: int) -> np.ndarray:
     return np.asarray(normalized, dtype=str)
 
 
-def _random_seed(value: Any) -> int:
+def validate_candidate_random_state(value: Any) -> int:
     """Return a true integer seed without accepting lossy coercion."""
 
     if isinstance(value, (bool, np.bool_)) or not isinstance(value, (int, np.integer)):
@@ -383,7 +391,7 @@ def _fit_spatial_partial_pooling(
     )
 
 
-def _validate_predictions(
+def validate_candidate_predictions(
     predictions: CandidatePredictions,
     expected_rows: int,
 ) -> CandidatePredictions:
@@ -418,12 +426,12 @@ def fit_predict_classical_candidate(
 ) -> CandidatePredictions:
     """Fit one declared classical candidate under synthetic-only authority."""
 
-    _validate_scope(scope)
+    validate_candidate_capability_scope(scope)
     if candidate_id not in CLASSICAL_CANDIDATE_IDS:
         if candidate_id == DEEP_CANDIDATE_ID:
             _resolve_entrypoint(DEEP_IMPLEMENTATION_ENTRYPOINT)
             raise ValueError(
-                "the deep candidate requires patch tensors and a frozen site-window adapter"
+                "the deep candidate requires masked patch bags through its dedicated adapter"
             )
         if candidate_id == HYBRID_CANDIDATE_ID:
             raise ValueError(
@@ -435,7 +443,7 @@ def fit_predict_classical_candidate(
     test_x = _feature_matrix(test_features, "test features")
     if train_x.shape[1] != test_x.shape[1]:
         raise ValueError("training and test features must have identical columns")
-    occurrence, cpue = _labels(
+    occurrence, cpue = validate_two_head_training_labels(
         train_occurrence,
         train_cpue,
         expected_rows=len(train_x),
@@ -450,7 +458,7 @@ def fit_predict_classical_candidate(
         "test group IDs",
         len(test_x),
     )
-    seed = _random_seed(random_state)
+    seed = validate_candidate_random_state(random_state)
 
     baseline_names = {
         "naive-prevalence-mean-cpue": "naive",
@@ -498,7 +506,7 @@ def fit_predict_classical_candidate(
         )
     else:  # pragma: no cover - guarded by the exact membership check above
         raise ValueError(f"no adapter is wired for candidate {candidate_id!r}")
-    return _validate_predictions(predictions, len(test_x))
+    return validate_candidate_predictions(predictions, len(test_x))
 
 
 def validate_registry_against_plan(
@@ -527,8 +535,7 @@ def validate_registry_against_plan(
             raise ValueError(f"{candidate_id} implementation entrypoint changed")
     deep = candidates[DEEP_CANDIDATE_ID]
     if (
-        deep["implementation_status"]
-        != "encoder-and-heads-implemented-site-window-adapter-open"
+        deep["implementation_status"] != "implemented"
         or deep["current_implementation"] != DEEP_IMPLEMENTATION_ENTRYPOINT
     ):
         raise ValueError("deep implementation truth changed")
@@ -701,10 +708,12 @@ def audit_synthetic_candidate_capabilities(
         "feature_count": train_x.shape[1],
         "candidate_count": len(checks),
         "candidate_checks": checks,
+        "target_specific_training_authorized": False,
         "benchmark_execution_authorized": False,
         "locked_test_access_authorized": False,
         "winner_selection_authorized": False,
         "score_or_serving_change_authorized": False,
+        "deployment_authorized": False,
         "claim_boundary": (
             "Synthetic interface and determinism smoke only; no California-halibut "
             "labels, benchmark metrics, candidate comparison, winner, promotion, "

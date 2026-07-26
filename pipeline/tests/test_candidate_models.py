@@ -123,11 +123,13 @@ class CandidateModelTests(unittest.TestCase):
         rejected_scopes = [
             replace(self.scope, dataset_kind="eligible_observations"),
             replace(self.scope, target_taxon_id="174933"),
+            replace(self.scope, target_specific_training_authorized=True),
             replace(self.scope, benchmark_execution_authorized=True),
             replace(self.scope, locked_test_access_authorized=True),
             replace(self.scope, winner_selection_authorized=True),
             replace(self.scope, score_change_authorized=True),
             replace(self.scope, serving_change_authorized=True),
+            replace(self.scope, deployment_authorized=True),
         ]
         for scope in rejected_scopes:
             with self.subTest(scope=scope), self.assertRaises(ValueError):
@@ -284,10 +286,12 @@ class CandidateModelTests(unittest.TestCase):
         self.assertTrue(
             all(check["deterministic"] for check in receipt["candidate_checks"])
         )
+        self.assertFalse(receipt["target_specific_training_authorized"])
         self.assertFalse(receipt["benchmark_execution_authorized"])
         self.assertFalse(receipt["locked_test_access_authorized"])
         self.assertFalse(receipt["winner_selection_authorized"])
         self.assertFalse(receipt["score_or_serving_change_authorized"])
+        self.assertFalse(receipt["deployment_authorized"])
         self.assertNotIn("metrics", receipt)
         self.assertNotIn("winner", receipt)
         self.assertNotIn("scores", json.dumps(receipt).lower())

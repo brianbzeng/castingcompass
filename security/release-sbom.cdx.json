@@ -1,7 +1,7 @@
 {
   "bomFormat": "CycloneDX",
   "specVersion": "1.5",
-  "serialNumber": "urn:uuid:f20e300f-33e3-57e8-8343-4267f415df01",
+  "serialNumber": "urn:uuid:954f449a-562b-5f95-a380-e0befd6c98dd",
   "version": 1,
   "metadata": {
     "component": {
@@ -101,7 +101,7 @@
         },
         {
           "name": "castingcompass:input-sha256",
-          "value": "model/selection/california-halibut-v1.json:c58a560efca4cd2939c94bad0241e4a8b3894b1292b20b3f5e7779f79c94e3fe"
+          "value": "model/selection/california-halibut-v1.json:be764612e1deec8971fa858d2e3fb8e10863b088879ab46092742143558fb194"
         },
         {
           "name": "castingcompass:input-sha256",

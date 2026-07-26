@@ -124,8 +124,7 @@ class ModelSelectionPlanTests(unittest.TestCase):
             receipt["implementation_counts"],
             {
                 "conditional-plan-only": 1,
-                "encoder-and-heads-implemented-site-window-adapter-open": 1,
-                "implemented": 6,
+                "implemented": 7,
             },
         )
         self.assertEqual(receipt["open_data_gate_count"], 12)
