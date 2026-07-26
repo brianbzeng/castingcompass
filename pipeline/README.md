@@ -346,6 +346,55 @@ SimCLR views, excludes nearby overlapping terrain from the negative-pair set,
 and saves the best checkpoint plus hashes, configuration, and loss history.
 NT-Xent is an optimization diagnostic, not catch accuracy.
 
+The next frozen experiment adds measured acoustic backscatter without hiding
+coverage gaps. First ingest the official raster through `ingest-bathymetry`
+using its real source identity and checksum, then append it to the already
+derived structure stack. Alignment must match exactly; the value layer is
+paired with a binary availability channel before missing cells are filled.
+
+```bash
+python3 -m pipeline.contourcast.cli append-aligned-layer \
+  --feature-stack data/processed/structure.npz \
+  --feature-stack-sha256 REPLACE_WITH_REAL_SHA256 \
+  --layer data/processed/backscatter.npz \
+  --layer-sha256 REPLACE_WITH_REAL_SHA256 \
+  --layer-name backscatter_intensity_8101_2004 \
+  --output data/processed/structure-backscatter.npz
+
+python3 -m pipeline.contourcast.cli build-pretraining-corpus \
+  --feature-stack data/processed/structure-backscatter.npz \
+  --output data/processed/hybrid-pretraining-corpus.npz \
+  --radii-m 32 128 512 \
+  --output-size 33 \
+  --stride-m 64 \
+  --max-centers 4096
+```
+
+Run all three modalities with the same corpus, fold, architecture, optimizer,
+masking, and seed. Each run combines spatial NT-Xent with masked reconstruction;
+backscatter reconstruction is scored only where its source-availability mask
+is true.
+
+```bash
+for modality in bathymetry backscatter fused; do
+  python3 -m pipeline.contourcast.cli pretrain-hybrid-seafloor \
+    --corpus data/processed/hybrid-pretraining-corpus.npz \
+    --output-dir "artifacts/hybrid-seafloor-${modality}-v1" \
+    --modality "$modality" \
+    --epochs 20 \
+    --batch-size 64 \
+    --validation-fold 0 \
+    --split-regions 5 \
+    --seed 42
+done
+```
+
+These commands produce target-agnostic model-run receipts under dataset kind
+`official_unlabeled_seafloor_remote_sensing`. A lower hybrid loss is not fishing
+skill, habitat validation, or a promotion result. The three frozen encoders must
+still face the same independent seafloor/habitat probe and a dedicated
+rare-structure test.
+
 ## Reproducible USGS 2 m pilot
 
 The first official-data pilot uses the USGS Offshore of San Francisco 2 m
@@ -384,6 +433,163 @@ PYTHON_BIN=.venv-geo-deep/bin/python \
 The complete run uses five spatial regions, 20 epochs, nearby-negative
 exclusion, and a wider encoder. Its checkpoint remains research-only until it
 passes an independently labeled seafloor-character or habitat probe.
+
+The follow-up hybrid experiment has a separate reproducible runner. It verifies
+the bathymetry archive plus all four survey-specific backscatter archives and
+GeoTIFF hashes, streams a seeded geographic reservoir across the complete
+eligible footprint, reprojects masks onto the exact bathymetry grid, and runs
+the locked bathymetry/backscatter/fused comparison:
+
+```bash
+PYTHON_BIN=.venv-geo-deep/bin/python DEVICE=mps \
+  pipeline/scripts/run_usgs_sf_hybrid_pretraining.sh
+```
+
+The published backscatter values are 8-bit relative intensity, not calibrated
+dB. Overlapping survey pixels are retained as distinct value/mask channel pairs;
+the runner never averages them or invents a priority mosaic.
+
+Validation fold `3` is frozen for v1 because it is the first deterministic fold
+whose training geography contains measured pixels from all four surveys. That
+choice uses source availability only, before optimization, and does not consult
+habitat, catch, or probe labels.
+
+The clean-commit v1 executions and their content-equivalent pre-commit runs
+matched exactly at the training-history, learned-tensor, normalization, and
+corpus-binding levels. The minimized
+[`hybrid-seafloor-v1` receipt](evidence/hybrid-seafloor-v1.receipt.json) records
+the exact source commit, clean model identities, artifact hashes, parameter
+counts, and claim boundary. The differently targeted hybrid losses are not a
+representation leaderboard; use the frozen independent probes before drawing a
+modality conclusion.
+
+Run the frozen common downstream probe and the separately declared
+rare-structure probe with:
+
+```bash
+PYTHON_BIN=.venv-geo-deep/bin/python DEVICE=mps \
+  HYBRID_ROOT=work/usgs-sf-hybrid-v1 \
+  pipeline/scripts/run_usgs_sf_hybrid_probes.sh
+```
+
+The runner first rehashes the exact official pretraining corpus, all three
+checkpoints, bathymetry, four survey-specific backscatter rasters, and the USGS
+seafloor-character map. The common probe uses the exact pretraining holdout and
+compares every frozen encoder with its architecture-matched random encoder and
+input-matched classical summaries. Its row bootstrap is stratified by substrate
+class.
+
+The rare probe is intentionally separate. It samples mapped smooth and rugged
+anthropogenic codes plus nearby natural controls; requires a mapped center at
+least three native cells (approximately 6 m) across; holds out whole connected
+components in geographic regions; excludes training rows within 512 m of test
+rows; and resamples connected components rather than pixels for uncertainty.
+Its balanced case-control sample cannot estimate natural prevalence or
+population accuracy. Because the USGS target was interpreted using bathymetry,
+backscatter, and video, neither probe is independent of all source variables or
+evidence of fishing skill. Both are research-only and have no serving path.
+
+Before using another downstream target, run the frozen post-hoc source shortcut
+diagnostic:
+
+```bash
+PYTHON_BIN=.venv-geo-deep/bin/python DEVICE=mps \
+  HYBRID_ROOT=work/usgs-sf-hybrid-v1 \
+  pipeline/scripts/run_usgs_sf_hybrid_shortcut_diagnostic.sh
+```
+
+The diagnostic first audits whether the exact pretraining holdout contains more
+than one survey domain. It then tests availability-only, coordinate-only,
+bathymetry, and fused features on that same held-out geography; stratifies
+interior and source-seam rows; and evaluates every leave-one-survey-domain-out
+split that meets the predeclared row and three-class support requirements.
+Each eligible train and held-out side must contain at least 32 total rows and 16
+rows per class; lower-support seam slices remain explicitly descriptive.
+Overlap, missing-source, and unsupported domains are reported rather than
+silently pooled. This is post-hoc shortcut evidence only: even a clean result
+cannot promote an encoder or validate habitat, fishing, or live-score skill.
+
+Audit the official raw camera observations as a candidate direct endpoint with:
+
+```bash
+PYTHON_BIN=.venv-geo-deep/bin/python \
+  HYBRID_ROOT=work/usgs-sf-hybrid-v1 \
+  pipeline/scripts/run_usgs_sf_video_endpoint_audit.sh
+```
+
+The runner content-addresses both video ZIPs and every archive member, parses
+Point and dBASE bytes strictly, projects only classified observations with a
+valid bathymetry center, and applies the same three-scale hybrid patch contract.
+It enumerates whole cruise/line/tape bipartitions and requires at least 16 rows
+of every collapsed class on both sides. It never permits a random split of
+adjacent one-minute track observations. Passing the support gate would still
+require a separately reviewed training protocol; failing it writes an exact
+no-training receipt. The command has no serving or deployment path.
+
+Audit the independently locked Santa Barbara South Coast map blocks and video cruises with:
+
+```bash
+.venv/bin/python pipeline/scripts/run_usgs_south_coast_video_endpoint_audit.py
+```
+
+The runner downloads and hashes every official archive, extracts only manifest-declared GeoTIFFs,
+and applies region-specific bathymetry/backscatter coverage from Refugio through Carpinteria. Map
+overlaps use a label-blind west-to-east priority. The split unit is the entire cruise—never a line,
+tape, or adjacent one-minute row—and every class needs at least 16 rows in both train and test.
+The frozen audit found zero raw class-4 observations across all four cruises, so it stops without
+training. This evidence boundary does not include Gaviota and has no score, serving, or deployment
+path.
+
+Screen the six residual official DS781 video archives before acquiring any additional rasters:
+
+```bash
+.venv/bin/python pipeline/scripts/run_usgs_residual_statewide_video_support_screen.py
+```
+
+The runner downloads each archive with an identifying user agent, verifies the exact ZIP and
+member inventory, parses Point and DBF bytes directly, and enumerates only whole-cruise
+bipartitions. The frozen execution found 444 nonblank class-`0` rows and 26 nonblank rows without
+complete `LINE`/`TAPE` identity in `s2210mb`, so the source schema fails closed. Recognized-row
+support is reported only as a non-authoritative diagnostic: without the invalid archive, class 4
+occurs in one cruise and cannot be distributed across train and test. The command never downloads
+rasters, trains a model, or changes a score, serving path, provider, or deployment.
+
+Screen the preregistered direct sediment-composition endpoint with:
+
+```bash
+.venv/bin/python pipeline/scripts/run_usgs_ds182_sediment_endpoint_support_audit.py
+```
+
+The runner content-addresses the complete official USGS Data Series 182 EXT archive and source
+table, verifies the companion text/dBASE/Point record counts, and checks only the exact reference
+raster metadata. Under v1, `PAC_EXT.txt` fails before outcome aggregation because 14,950 of 16,485
+rows have 31 fields under its 32-field header. The command does not pad the missing field, switch
+to dBASE, read raster pixels, build patches, train, promote, score, serve, or deploy.
+
+Run the separately preregistered exploratory dBASE representation audit with:
+
+```bash
+.venv/bin/python pipeline/scripts/run_usgs_ds182_sediment_dbf_support_audit.py
+```
+
+This runner preserves the text-schema failure, verifies the exact fixed-width dBASE schema and
+same-position Point geometry, and applies the unchanged endpoint and whole-source support rules.
+The frozen result has zero endpoint-valid records inside the exact reference footprint, so it
+authorizes no source-quality review, raster alignment, patch corpus, training, score, serving, or
+deployment change. Because it is another representation of the same release, it is exploratory
+and cannot serve as independent confirmation even under a passing result.
+
+Screen the same frozen direct-sediment endpoint inside the four exact Santa Barbara South Coast
+metadata footprints with:
+
+```bash
+.venv/bin/python pipeline/scripts/run_usgs_south_coast_sediment_support_audit.py
+```
+
+The runner verifies both official source manifests, the full DS182 archive, same-position Point
+geometry, and each raster checksum/CRS/transform/shape/bound without reading pixels. The frozen
+result finds 26 valid rows/sites across three sources, zero gravel-bearing observations, and zero
+eligible whole-source partitions. It cannot build patches, train, promote, score, serve, or deploy.
 
 Run the strict substrate-component probe with:
 

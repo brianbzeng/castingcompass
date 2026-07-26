@@ -1,0 +1,70 @@
+{
+  "schema_version": "castingcompass.isolated-staging-config-policy/1.0.0",
+  "config_contract_version": "castingcompass.isolated-staging-wrangler/1.0.0",
+  "receipt_contract_version": "castingcompass.isolated-staging-config-receipt/1.0.0",
+  "application": {
+    "worker_name": "contourcast-halibut-isolated-staging",
+    "main": "dist/server/index.js",
+    "compatibility_date": "2026-05-15",
+    "compatibility_flags": ["nodejs_compat"],
+    "assets_binding": "ASSETS",
+    "assets_directory": "dist/client",
+    "version_metadata_binding": "CF_VERSION_METADATA",
+    "exercise_service_binding": "AI_REVIEW_EXERCISE_PROVIDER",
+    "exercise_service_name": "contourcast-ai-review-stub-isolated"
+  },
+  "production": {
+    "worker_name": "contourcast-halibut",
+    "database_name": "contourcast-trips",
+    "database_id": "c54c0284-9d41-416c-a550-3cecffb79990",
+    "hosts": [
+      "castingcompass.com",
+      "www.castingcompass.com",
+      "castcompass.brianbzeng.com",
+      "contourcast.brianbzeng.com"
+    ],
+    "rate_limit_namespace_ids": [
+      "2026071701",
+      "2026071702",
+      "2026071703",
+      "2026071704",
+      "2026071705",
+      "2026071706"
+    ]
+  },
+  "feature_flags": {
+    "PUBLIC_DISCUSSIONS_ENABLED": "false",
+    "TRIP_PHOTO_UPLOADS_ENABLED": "false",
+    "TURNSTILE_ENABLED": "false",
+    "RATE_LIMITING_ENABLED": "true",
+    "PRIVACY_EXPORT_QUEUE_ENABLED": "false",
+    "RELEASE_MAINTENANCE_MODE": "false"
+  },
+  "rate_limits": [
+    { "name": "AUTH_RATE_LIMITER", "limit": 20, "period": 60 },
+    { "name": "EMAIL_RATE_LIMITER", "limit": 5, "period": 60 },
+    { "name": "WRITE_RATE_LIMITER", "limit": 30, "period": 60 },
+    { "name": "SENSITIVE_RATE_LIMITER", "limit": 6, "period": 60 },
+    { "name": "READ_RATE_LIMITER", "limit": 120, "period": 60 },
+    { "name": "AI_PROVIDER_RATE_LIMITER", "limit": 20, "period": 60 }
+  ],
+  "queue": {
+    "binding": "AI_REVIEW_QUEUE",
+    "name": "contourcast-ai-review-isolated-staging",
+    "dead_letter_name": "contourcast-ai-review-isolated-staging-dlq",
+    "max_batch_size": 5,
+    "max_batch_timeout": 10,
+    "max_retries": 8,
+    "max_concurrency": 1
+  },
+  "limits": {
+    "maximum_config_bytes": 65536,
+    "maximum_receipt_bytes": 32768
+  },
+  "production_gates": {
+    "provider_resources_provisioned": false,
+    "configurations_verified": false,
+    "versions_deployed": false,
+    "production_authority": false
+  }
+}

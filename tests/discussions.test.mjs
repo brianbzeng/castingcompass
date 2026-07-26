@@ -2,11 +2,12 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 
-const [review, discussions, routePolicy, worker, app, migration] = await Promise.all([
+const [review, discussions, routePolicy, worker, scheduled, app, migration] = await Promise.all([
   readFile(new URL("../worker/trip-review.ts", import.meta.url), "utf8"),
   readFile(new URL("../worker/discussions.ts", import.meta.url), "utf8"),
   readFile(new URL("../worker/route-policy.ts", import.meta.url), "utf8"),
   readFile(new URL("../worker/index.ts", import.meta.url), "utf8"),
+  readFile(new URL("../worker/scheduled.ts", import.meta.url), "utf8"),
   readFile(new URL("../app/components/OpportunityApp.tsx", import.meta.url), "utf8"),
   readFile(new URL("../drizzle/0006_moderated_location_discussions.sql", import.meta.url), "utf8"),
 ]);
@@ -23,7 +24,8 @@ test("MiMo strictly validates gear and prepares a bounded human-gated discussion
   assert.doesNotMatch(review, /publishTripDiscussion|site_discussion_posts/);
   assert.match(review, /reviewTripBacklog/);
   assert.match(worker, /scheduled/);
-  assert.match(worker, /dispatchAiReviewBacklog/);
+  assert.match(worker, /runScheduledLane/);
+  assert.match(scheduled, /dispatchAiReviewBacklog/);
 });
 
 test("public location discussions expose summaries without raw notes or identity", () => {

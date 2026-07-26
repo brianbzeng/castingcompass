@@ -2,8 +2,9 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 
-const [account, privacy, terms, legalPage, compliance] = await Promise.all([
+const [account, accountBrowserStorage, privacy, terms, legalPage, compliance] = await Promise.all([
   readFile(new URL("../app/components/AccountFeature.tsx", import.meta.url), "utf8"),
+  readFile(new URL("../app/lib/account-browser-storage.ts", import.meta.url), "utf8"),
   readFile(new URL("../app/privacy/page.tsx", import.meta.url), "utf8"),
   readFile(new URL("../app/terms/page.tsx", import.meta.url), "utf8"),
   readFile(new URL("../app/components/LegalPage.tsx", import.meta.url), "utf8"),
@@ -56,12 +57,15 @@ test("accepted deletion clears only account-related browser state and reports du
   assert.match(account, /response\.status === 200/);
   assert.match(account, /response\.status === 202/);
   assert.match(account, /clearCastingCompassAccountStorage\(\)/);
-  assert.match(account, /castingcompass\.active-trip\.v1/);
-  assert.match(account, /castingcompass\.reporter-key\.v1/);
-  assert.match(account, /castingcompass\.trip-draft\.v1\./);
-  assert.match(account, /castingcompass\.profile-trip-draft\.v1\./);
-  assert.match(account, /"localStorage", "sessionStorage"/);
-  assert.doesNotMatch(account, /localStorage\.clear\(|sessionStorage\.clear\(/);
+  assert.match(accountBrowserStorage, /castingcompass\.active-trip\.v1/);
+  assert.match(accountBrowserStorage, /castingcompass\.reporter-key\.v1/);
+  assert.match(accountBrowserStorage, /castingcompass\.trip-draft\.v1\./);
+  assert.match(accountBrowserStorage, /castingcompass\.profile-trip-draft\.v1\./);
+  assert.match(accountBrowserStorage, /castingcompass\.trip-request\.v1\./);
+  assert.match(accountBrowserStorage, /castingcompass\.trip-pending\.v1\./);
+  assert.match(accountBrowserStorage, /"localStorage", "sessionStorage"/);
+  assert.match(accountBrowserStorage, /storageKeys\(storage\)\.some\(isAccountStorageKey\)/);
+  assert.doesNotMatch(accountBrowserStorage, /localStorage\.clear\(|sessionStorage\.clear\(/);
   assert.match(account, /\/api\/privacy\/deletion-status/);
   assert.match(account, /method: "DELETE"/);
   assert.match(account, /Dismiss status and continue/);
@@ -70,6 +74,7 @@ test("accepted deletion clears only account-related browser state and reports du
   assert.match(account, /flagged for operator attention/);
   assert.match(account, /Download my account records \(JSON\)/);
   assert.match(account, /photo files are separate downloads/);
+  assert.match(account, /recovery request tokens, pending-operation markers/);
 });
 
 test("trip deletion verifies 200 and 202 outcomes and does not hide photo cleanup", () => {

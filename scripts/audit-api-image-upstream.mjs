@@ -95,7 +95,7 @@ export function verifyApiImageUpstreamPolicy(policy, workflowText) {
       "API image upstream workflow is not scheduled daily and manually dispatchable");
     invariant(/permissions:\n\s+contents: read/u.test(workflowText),
       "API image upstream workflow lacks read-only contents permission");
-    invariant(/actions\/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0/u.test(workflowText),
+    invariant(/actions\/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1/u.test(workflowText),
       "API image upstream workflow checkout action is not pinned");
     invariant(/actions\/setup-node@820762786026740c76f36085b0efc47a31fe5020/u.test(workflowText),
       "API image upstream workflow Node action is not pinned");

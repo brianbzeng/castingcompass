@@ -27,6 +27,8 @@ import {
   validateTargetOrigin,
   validateZapReport,
 } from "../scripts/security-exercise.mjs";
+import { API_COMPATIBILITY_VERSION } from "../worker/api-version.ts";
+import { healthResponse } from "../worker/security.ts";
 
 const NOW = new Date("2026-07-18T12:00:00.000Z");
 const EXERCISE_ID = "sec_0123456789abcdef0123456789abcdef";
@@ -34,12 +36,13 @@ const TARGET = "https://isolated.example.test";
 
 function authorization(overrides = {}) {
   const base = {
-    schema_version: "castingcompass.security-exercise-authorization/1.0.0",
+    schema_version: "castingcompass.security-exercise-authorization/1.1.0",
     exercise_id: EXERCISE_ID,
     source_commit: "a".repeat(40),
     mode: "active-staging",
     environment: "isolated-staging",
     target_origin: TARGET,
+    expected_api_compatibility_version: API_COMPATIBILITY_VERSION,
     expected_worker_version_id: "version-123",
     window_start_at: "2026-07-18T11:00:00.000Z",
     window_end_at: "2026-07-18T13:00:00.000Z",
@@ -70,6 +73,7 @@ function acceptedHealth(overrides = {}) {
   return new Response(JSON.stringify({
     status: "ok",
     service: "castingcompass-web",
+    apiCompatibilityVersion: API_COMPATIBILITY_VERSION,
     workerVersionId: "version-123",
     releaseMaintenance: false,
     securityExerciseId: EXERCISE_ID,
@@ -92,6 +96,7 @@ function privateTemporaryParent() {
 test("the locked policy pins the scanner, production host inventory, limits, and open gates", () => {
   const policy = loadPolicy();
   assert.equal(policy.scanner.version, "2.17.0");
+  assert.equal(policy.api_compatibility_version, API_COMPATIBILITY_VERSION);
   assert.equal(
     policy.scanner.image_reference,
     "ghcr.io/zaproxy/zaproxy@sha256:8d387b1a63e3425beef4846e39719f5af2a787753af2d8b6558c6257d7a577a2",
@@ -174,6 +179,10 @@ test("authorization rejects extra fields, stale or oversized windows, and every 
     /contract rejected/u,
   );
   assert.throws(
+    () => validateAuthorization(authorization({ expected_api_compatibility_version: "2" }), policy, { now: NOW }),
+    /compatibility version/u,
+  );
+  assert.throws(
     () => validateAuthorization(authorization({ window_end_at: "2026-07-19T13:00:00.000Z" }), policy, { now: NOW }),
     /window/u,
   );
@@ -219,6 +228,7 @@ test("preflight binds the exact health marker and Worker version without followi
   for (const response of [
     new Response(null, { status: 302, headers: { Location: "https://castingcompass.com/api/health" } }),
     acceptedHealth({ workerVersionId: "wrong-worker" }),
+    acceptedHealth({ apiCompatibilityVersion: "2" }),
     acceptedHealth({ securityExerciseId: "sec_ffffffffffffffffffffffffffffffff" }),
     acceptedHealth({ releaseMaintenance: true }),
     new Response("{}", { status: 200, headers: { "Content-Type": "text/html", "Cache-Control": "no-store" } }),
@@ -227,6 +237,27 @@ test("preflight binds the exact health marker and Worker version without followi
       () => preflightTarget(validated, policy, { fetchImpl: async () => response }),
     );
   }
+});
+
+test("preflight accepts the exact current Worker health contract", async () => {
+  const policy = loadPolicy();
+  const validated = validateAuthorization(authorization(), policy, { now: NOW });
+  await preflightTarget(validated, policy, {
+    fetchImpl: async (input, init) => {
+      const response = await healthResponse(new Request(input, init), {
+        DB: {
+          prepare(query) {
+            assert.equal(query, "SELECT 1 AS ok");
+            return { first: async () => ({ ok: 1 }) };
+          },
+        },
+        CF_VERSION_METADATA: { id: "version-123" },
+        SECURITY_EXERCISE_ID: EXERCISE_ID,
+      });
+      assert.ok(response);
+      return response;
+    },
+  });
 });
 
 test("the generated ZAP plan stays on the public unauthenticated scope with fixed low-impact limits", () => {
@@ -296,6 +327,7 @@ test("aggregate evidence excludes target, exercise ID, raw URLs, request data, a
   });
   const serialized = JSON.stringify(receipt);
   assert.equal(receipt.production_ready, false);
+  assert.equal(receipt.api_compatibility_version, API_COMPATIBILITY_VERSION);
   assert.equal(receipt.acceptance_passed, false);
   assert.equal(receipt.authenticated_business_logic_exercised, false);
   assert.equal(receipt.multi_account_authorization_exercised, false);

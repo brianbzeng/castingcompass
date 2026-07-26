@@ -42,7 +42,7 @@ PACIFIC = ZoneInfo("America/Los_Angeles")
 
 SCORING_SYSTEM_KIND = "heuristic-configuration"
 SCORING_CONFIGURATION = {
-    "configuration_version": "castingcompass-hybrid-demo/0.6.0",
+    "configuration_version": "castingcompass-hybrid-demo/0.7.1",
     "target_taxon_id": PRODUCTION_TARGET_TAXON_ID,
     "components": {
         "habitat": 0.44,
@@ -78,6 +78,11 @@ WEATHER_ANCHORS = {
     "south-bay": (37.68, -122.14),
     "peninsula-bay": (37.61, -122.34),
     "half-moon-bay": (37.49, -122.47),
+    "gaviota-coast": (34.46, -120.08),
+    "goleta": (34.42, -119.84),
+    "santa-barbara": (34.405, -119.69),
+    "summerland": (34.42, -119.60),
+    "carpinteria": (34.39, -119.52),
 }
 
 BUOY_BY_ANCHOR = {
@@ -91,6 +96,11 @@ BUOY_BY_ANCHOR = {
     "south-bay": "46026",
     "peninsula-bay": "46026",
     "half-moon-bay": "46012",
+    "gaviota-coast": "46054",
+    "goleta": "46053",
+    "santa-barbara": "46053",
+    "summerland": "46053",
+    "carpinteria": "46053",
 }
 
 # Product-design seasonal prior. It remains explicitly a versioned fixture
@@ -110,13 +120,19 @@ SEASONALITY_BY_MONTH = {
     12: 38,
 }
 
-OPEN_COAST_REGIONS = {
-    "Point Reyes",
-    "Marin Coast",
-    "San Francisco Coast",
-    "San Mateo Coast",
-    "Half Moon Bay",
-}
+OPEN_COAST_EXPOSURES = {"open-coast", "harbor-mouth", "semi-protected"}
+
+
+def is_open_coast_site(site: dict[str, Any]) -> bool:
+    """Classify marine exposure from the casting zone, not a region name.
+
+    A region can contain both sheltered and exposed water. Binding wave logic to
+    the curated casting-zone exposure keeps regional expansion from accidentally
+    treating every site in a named area as having the same surf regime.
+    """
+
+    exposure = str(site.get("castingZone", {}).get("exposure", "")).lower()
+    return exposure in OPEN_COAST_EXPOSURES
 
 # Access pressure is a deliberately small, transparent planning modifier. Google
 # Maps does not expose Popular Times through the Places API, and its terms do not
@@ -134,6 +150,12 @@ HIGH_PRESSURE_SITES = {
     "pacifica-municipal-pier",
     "pillar-point-west-jetty",
     "pillar-point-east-jetty",
+    "goleta-beach",
+    "leadbetter-beach",
+    "santa-barbara-harbor-breakwater",
+    "stearns-wharf",
+    "east-beach-santa-barbara",
+    "carpinteria-state-beach",
 }
 
 LOW_PRESSURE_SITES = {
@@ -147,6 +169,9 @@ LOW_PRESSURE_SITES = {
     "dumbarton-pier",
     "seal-point-park",
     "poplar-beach",
+    "gaviota-state-park-beach",
+    "haskells-beach",
+    "rincon-beach-park",
 }
 
 
@@ -614,7 +639,7 @@ def compass_direction(degrees: float | None) -> str | None:
 
 def daylight_fallback(midpoint: datetime) -> bool:
     local = midpoint.astimezone(PACIFIC)
-    # Conservative Bay Area summer fallback used only when NWS is unavailable.
+    # Conservative California-coast summer fallback used only when NWS is unavailable.
     return (local.hour, local.minute) >= (6, 0) and (local.hour, local.minute) < (20, 30)
 
 
@@ -837,7 +862,7 @@ def fishability_score(
 
     score = 92.0
     reasons: list[str] = []
-    open_coast = site["region"] in OPEN_COAST_REGIONS
+    open_coast = is_open_coast_site(site)
     breaking_intensity: str | None = None
     breaking_wave_height_feet: float | None = None
 
@@ -1038,7 +1063,7 @@ def factor_text(
     if current_knots is not None:
         direction = f" toward {current_direction}" if current_direction else ""
         factors.append(f"Modeled current: {current_knots:.2f} kt{direction}.")
-    if site["region"] in OPEN_COAST_REGIONS:
+    if is_open_coast_site(site):
         if swell_feet is None:
             factors.append("Fresh swell reading unavailable.")
         else:
@@ -1112,7 +1137,7 @@ def main() -> None:
             cloud_cover_pct = round(weather["cloudCoverPct"], 1) if weather and weather["cloudCoverPct"] is not None else None
             daylight = weather["isDaytime"] if weather else daylight_fallback(midpoint)
             moon_phase, moon_illumination_pct, lunar_age_days = moon_details(midpoint)
-            open_coast = site["region"] in OPEN_COAST_REGIONS
+            open_coast = is_open_coast_site(site)
 
             swell_fresh = (
                 open_coast
@@ -1329,8 +1354,8 @@ def main() -> None:
         {
             "name": "NOAA NCEI bathymetry / curated habitat proxy",
             "observedAt": "2018-01-01T00:00:00Z",
-            "status": "demo proxy; trained raster model not yet integrated",
-            "url": "https://www.ncei.noaa.gov/access/metadata/landing-page/bin/iso?id=gov.noaa.ngdc.mgg.dem%3Asan_francisco_bay_P090_2018",
+            "status": "cross-region curated proxy only; trained raster model not integrated, and Santa Barbara habitat priors have no trip-log validation",
+            "url": "https://www.ncei.noaa.gov/products/bathymetry",
         },
         {
             "name": "CastingCompass expected access-pressure schedule",

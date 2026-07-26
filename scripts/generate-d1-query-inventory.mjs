@@ -79,7 +79,9 @@ function referencedTables(sql) {
   if (!sql) return [];
   const tables = new Set();
   const pattern = /\b(?:DELETE\s+FROM|FROM|INSERT(?:\s+OR\s+IGNORE)?\s+INTO|JOIN|UPDATE|TABLE(?:\s+IF\s+NOT\s+EXISTS)?)\s+[`"]?([A-Za-z_][A-Za-z0-9_]*)/giu;
-  for (const match of sql.matchAll(pattern)) tables.add(match[1]);
+  for (const match of sql.matchAll(pattern)) {
+    if (match[1].toUpperCase() !== "SET") tables.add(match[1]);
+  }
   return [...tables].sort();
 }
 

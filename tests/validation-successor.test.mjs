@@ -140,7 +140,7 @@ test("freezes a strict collection-feasibility protocol without model-performance
   const [schema, protocol, siteCatalogBytes] = await Promise.all([
     readJson("contracts/validation-feasibility-pilot.schema.json"),
     readJson("validation/protocols/california-halibut-collection-feasibility-v2.json"),
-    readFile(new URL("public/data/sites.json", root)),
+    readFile(new URL("validation/catalogs/california-halibut-bay-area-v1.json", root)),
   ]);
   assert.equal(schema.$id, PROTOCOL_SCHEMA_ID);
   const validate = validator(schema);
@@ -189,7 +189,7 @@ test("defines a strict, outcome-blind activation envelope and semantic chronolog
   const [schema, protocolBytes, siteCatalogBytes] = await Promise.all([
     readJson("contracts/validation-feasibility-activation.schema.json"),
     readFile(new URL("validation/protocols/california-halibut-collection-feasibility-v2.json", root)),
-    readFile(new URL("public/data/sites.json", root)),
+    readFile(new URL("validation/catalogs/california-halibut-bay-area-v1.json", root)),
   ]);
   const protocol = JSON.parse(protocolBytes.toString("utf8"));
   assert.equal(schema.$id, ACTIVATION_SCHEMA_ID);

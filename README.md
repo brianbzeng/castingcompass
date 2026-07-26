@@ -10,7 +10,7 @@ Security boundaries: [threat model and 13-layer security map](docs/THREAT_MODEL.
 [access-control matrix](docs/ACCESS_CONTROL_MATRIX.md) ·
 [key custody and encryption](docs/KEY-CUSTODY-AND-ENCRYPTION.md)
 
-CastingCompass is an installable, mobile-first California halibut opportunity planner for public shore, beach, jetty, and pier access from Point Reyes through San Francisco Bay to Half Moon Bay.
+CastingCompass is an installable, mobile-first California halibut opportunity planner for public shore, beach, jetty, and pier access across the Bay Area and Santa Barbara South Coast, from Gaviota through Goleta and Santa Barbara to Rincon.
 
 It compares reachable casting zones and two-hour windows using three separately visible components:
 
@@ -24,8 +24,8 @@ The final 0–100 **Opportunity Score is a relative percentile**, not a catch pr
 
 The checked-in demo includes:
 
-- 47 curated public access locations, with temporary closures retained in the catalog but excluded from ranking.
-- 1,656 two-hour windows over a 72-hour horizon when one catalog location is closed.
+- 61 curated public access locations, with temporary closures retained in the catalog but excluded from ranking.
+- 2,160 two-hour windows over a 72-hour horizon when one catalog location is closed.
 - Live public NOAA CO-OPS tide predictions, NWS hourly forecasts, NDBC observations, and Open-Meteo Marine modeled SST at snapshot generation time.
 - Visible freshness states and exclusion of missing/stale inputs.
 - A MapLibre map using ArcGIS World Ocean base and reference layers, clustered map-native site points, a ranked access list, preset/custom distance-radius filtering, score explanations, official CDFW links, responsive detail sheets, geolocation sorting, PWA installation, and offline access to the latest loaded forecast.
@@ -33,7 +33,7 @@ The checked-in demo includes:
 - FastAPI endpoints, PostgreSQL/PostGIS schema, Docker/Render configuration, and file-snapshot fallback.
 - A reproducible geospatial/ML pipeline with terrain derivation, blocked validation, baselines, ablations, a six-channel ResNet-style encoder, SimCLR-style pretraining, and two-task fine-tuning scaffolding.
 
-The live snapshot's habitat score and monthly seasonality are explicitly labeled **demo/provisional proxies**. No trained deep model contributes to the live score and no real-world performance claim is shipped yet. The repository contains the six-channel ResNet/SimCLR research pipeline and two prediction heads; that model can replace the habitat proxy only after official-data training and geographically blocked validation. See the [model card](docs/MODEL_CARD.md), [dataset card](docs/DATASET_CARD.md), [feasibility report](docs/FEASIBILITY_REPORT.md), and [community-integration policy](docs/COMMUNITY_INTEGRATIONS.md).
+The live snapshot's habitat score and monthly seasonality are explicitly labeled **demo/provisional proxies**. No trained deep model contributes to the live score and no real-world performance claim is shipped yet. The repository contains the six-channel ResNet/SimCLR research pipeline and two prediction heads; that model can replace the habitat proxy only after official-data training and geographically blocked validation. See the [model card](docs/MODEL_CARD.md), [dataset card](docs/DATASET_CARD.md), [Santa Barbara coverage boundary](docs/SANTA-BARBARA-COVERAGE.md), [feasibility report](docs/FEASIBILITY_REPORT.md), and [community-integration policy](docs/COMMUNITY_INTEGRATIONS.md).
 
 ## Architecture
 
@@ -86,7 +86,9 @@ Trip-report APIs are served by the PWA Worker itself. Local and hosted builds us
 npm run data:refresh
 ```
 
-The generator never substitutes invented ocean/weather values. Missing sources remain null and are marked excluded. Open-Meteo's public endpoint is non-commercial and requires attribution; switch to a commercial plan or another licensed provider before enabling subscriptions or ads.
+The refresh also publishes a separately versioned official water-quality advisory overlay. Exact current agency postings can suppress a site from recommendations, while no-posting, stale, missing, unmonitored, and unmapped states never improve the fishing score or imply that water or seafood is safe. See [docs/WATER-QUALITY-ADVISORY.md](docs/WATER-QUALITY-ADVISORY.md).
+
+The generators never substitute invented ocean, weather, or water-quality values. Missing sources remain null or explicitly unknown and are marked excluded. Open-Meteo's public endpoint is non-commercial and requires attribution; switch to a commercial plan or another licensed provider before enabling subscriptions or ads.
 
 ### FastAPI
 
@@ -183,7 +185,7 @@ and the PostHog decision boundary, see [Observability and operator diagnostics](
 
 ## Official source entry points
 
-- [NOAA San Francisco Bay bathymetry](https://www.ncei.noaa.gov/access/metadata/landing-page/bin/iso?id=gov.noaa.ngdc.mgg.dem%3Asan_francisco_bay_P090_2018)
+- [NOAA bathymetry products](https://www.ncei.noaa.gov/products/bathymetry)
 - [CDFW CRFS spatial catch and effort](https://test.lab.data.ca.gov/dataset?name=california-recreational-fisheries-survey-catch-per-unit-angler-for-all-species-and-all-effort-r)
 - [RecFIN](https://reports.psmfc.org/recfin/)
 - [NOAA CO-OPS API](https://api.tidesandcurrents.noaa.gov/api/dev)
@@ -193,6 +195,8 @@ and the PostHog decision boundary, see [Observability and operator diagnostics](
 - [ArcGIS World Ocean basemap](https://developers.arcgis.com/rest/basemap-styles/arcgis-oceans-base-webmap-get/)
 - [CDFW San Francisco Bay regulations](https://wildlife.ca.gov/Fishing/Ocean/Regulations/Fishing-Map/sf-bay)
 - [CDFW San Francisco coast regulations](https://wildlife.ca.gov/Fishing/Ocean/Regulations/Fishing-Map/San-Francisco)
+- [CDFW Central Coast regulations](https://wildlife.ca.gov/Fishing/Ocean/Regulations/Fishing-Map/Central)
+- [CDFW Southern California regulations](https://wildlife.ca.gov/Fishing/Ocean/Regulations/Fishing-Map/Southern)
 
 ## License
 

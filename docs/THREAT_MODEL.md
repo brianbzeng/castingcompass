@@ -68,7 +68,7 @@ that could become a privacy, integrity, or availability incident.
 | --- | --- | --- | --- |
 | L01 | Security-first prompts | partial | Prompts are advisory; high-risk changes still need accountable review and tests |
 | L02 | IDE and repository scanning | provider-evidenced | Unknown secret formats and material outside Git remain residual risks |
-| L03 | Dependency integrity | provider-evidenced | Scanner lag, zero-days, and time-bounded image exceptions remain |
+| L03 | Dependency integrity | provider-evidenced | Scanner lag, zero-days, and time-bounded npm/image exceptions remain |
 | L04 | Static application security testing | provider-evidenced | Business-logic and runtime-only flaws require other controls |
 | L05 | AI post-generation review | partial | No mandatory second-person reviewer exists for every change |
 | L06 | Managed authentication | partial | CastingCompass uses reviewed custom opaque sessions; live evidence remains open |
@@ -133,11 +133,14 @@ that could become a privacy, integrity, or availability incident.
 - **Recovery:** Block promotion, remove or upgrade the dependency, regenerate exact locks and
   SBOMs, rebuild from the reviewed commit, and verify provenance before restoring the feature.
 - **Residual risk:** Advisory and scanner databases lag new issues; a correctly named package
-  can still be compromised; the owner-bound CPython image exceptions require re-review when
-  Python 3.13.15 is scheduled on 2026-08-04 and expire 2026-08-08.
-- **Next gate:** Adopt and natively verify the first fixed stable official image, removing every
-  stale exception; if publication is delayed beyond the bounded grace, fail closed rather than
-  silently extending the date or freezing a vulnerable runtime.
+  can still be compromised. The minimatch 3 development edge and its August 1 exception were
+  removed, but the new exact lint composition must continue to prove equivalent-or-stronger rule
+  coverage. The owner-bound CPython image exceptions require re-review when Python 3.13.15 is
+  scheduled on 2026-08-04 and expire 2026-08-08.
+- **Next gate:** Keep both npm graphs at zero through the daily verifier, independently review
+  lint-toolchain updates for coverage as well as advisories, and adopt/natively verify the first
+  fixed stable official Python image. Fail closed at the image deadline rather than silently
+  extending an exception.
 
 ### L04 — Static application security testing
 
@@ -173,8 +176,10 @@ that could become a privacy, integrity, or availability incident.
 - **Residual risk:** The project currently has a solo product owner and no mandatory qualified
   second-person review for every security-sensitive change. Automated checks can share the same
   mistaken assumption as generated code.
-- **Next gate:** Assign an independent reviewer for cryptography/key custody and require targeted
-  review for future auth, access-control, privacy, and release-control changes.
+- **Next gate:** Use the locked private key-custody evidence/review handoff, assign the qualified
+  independent reviewer, and require targeted review for future auth, access-control, privacy,
+  and release-control changes. The repository handoff is ready; no reviewer or production
+  approval is implied.
 
 ### L06 — Managed authentication
 
@@ -184,8 +189,10 @@ that could become a privacy, integrity, or availability incident.
 - **State:** partial.
 - **Evidence:** CastingCompass deliberately uses server-side opaque sessions rather than JWTs:
   HTTPS `__Host-` cookies, `HttpOnly`, `Secure`, scoped `SameSite`, hashed 256-bit tokens,
-  rotation, expiry, revocation, fixation resistance, same-origin mutation checks, and generic
-  equal-work login/recovery behavior are covered by auth and password security tests.
+  rotation, expiry, revocation, fixation resistance, same-origin mutation checks, generic
+  equal-work login/recovery behavior, and database-atomic login/challenge attempt claims are
+  covered by auth and password security tests. Credential success also waits for authoritative
+  attempt-classification and exact challenge-version receipts before session issuance.
 - **Alert:** Authentication regression tests and structured auth outcomes locally; production
   anomaly alerts and email-delivery/revocation drills remain absent.
 - **Recovery:** Enter maintenance or disable signup/recovery, revoke affected sessions and
@@ -352,7 +359,7 @@ that could become a privacy, integrity, or availability incident.
 | SQL/XSS/multipart/parser/prompt injection | L01, L04, L08, L10 | Allowlists, bounds, parameter binding, contextual encoding, no-tools exact-schema AI boundary | Deployed-composition DAST and provider-edge evidence |
 | Secret, dependency, build, or release compromise | L02, L03, L04, L05, L09 | Secret scanning, exact locks, dependency/image gates, CodeQL, signed provenance, protected main | Production IAM/key custody, scanner lag, exception expiry |
 | Model output publishing or performing a privileged action | L01, L05, L07, L08 | Private bounded draft only; separate auditable human approval; no model tools or authority | Guarded production migration, legacy audit, live smoke evidence |
-| Privacy deletion, restore, migration, or backup failure | L05, L07, L09, L13 | Atomic deletion, tombstones/tasks, aggregate receipts, restore suppression, synthetic drill | Production migration/provider/custody and independent review |
+| Privacy deletion, wrong-object deletion, restore, migration, or backup failure | L05, L07, L09, L13 | Atomic active-data removal; exact lease/terminal receipts; store-bound locator-hash verification before R2; atomic export-locator/task finalization; tombstones, restore suppression, synthetic drill | Production migration/binding/alert/custody evidence and independent review |
 | Request flood, DDoS, cost exhaustion, or provider saturation | L03, L11, L12, L13 | Local endpoint ceilings, bounded retries/cost contracts, production-refusing harness | Active edge controls, isolated load/attack evidence, live alerts |
 | Monitoring, support, or operator access leaking private data | L07, L09, L13 | Structured redacted events, no raw URLs/content, no application admin route | Provider IAM/retention, named roles, delivered incident drill |
 | Duplicate, poisoned, exhausted, or privacy-stale AI queue work | L01, L05, L07, L11, L13 | Exact opaque message schema, D1 authority and unique trip job, atomic lease, deletion recheck/cascade, five-attempt attention state, batch/cost ceilings, maintenance/disable recovery, state-guarded replay plan | Apply migration; provision and verify Queue/DLQ/IAM/alerts; isolated failure/rollback drill; separate default-off activation review |

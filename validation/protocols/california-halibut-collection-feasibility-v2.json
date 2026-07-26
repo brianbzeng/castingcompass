@@ -59,7 +59,7 @@
       "pier",
       "jetty"
     ],
-    "curated_site_catalog_path": "public/data/sites.json",
+    "curated_site_catalog_path": "validation/catalogs/california-halibut-bay-area-v1.json",
     "curated_site_catalog_sha256": "b0378742f40cca598c57d845fb683ab9b36068cdd69de541aeb3e45d93c31860",
     "exact_coordinates_required": false,
     "photo_required": false,

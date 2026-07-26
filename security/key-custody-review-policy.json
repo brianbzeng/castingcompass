@@ -1,0 +1,63 @@
+{
+  "schema_version": "castingcompass.key-custody-review-policy/1.0.0",
+  "evidence_schema_version": "castingcompass.key-custody-evidence-manifest/1.0.0",
+  "review_schema_version": "castingcompass.key-custody-independent-review/1.0.0",
+  "receipt_schema_version": "castingcompass.key-custody-independent-review-receipt/1.0.0",
+  "scope": "production-key-custody-evidence",
+  "reviewer_role": "independent_cryptography_and_key_custody_reviewer",
+  "runtime_secret_names": [
+    "MIMO_API_KEY",
+    "OBSERVABILITY_PSEUDONYM_SECRET",
+    "RATE_LIMIT_KEY_SECRET",
+    "RESEND_API_KEY",
+    "TURNSTILE_SECRET_KEY",
+    "VALIDATION_PARTICIPANT_HMAC_SECRET",
+    "VALIDATION_RECRUITMENT_HMAC_SECRET"
+  ],
+  "backup_key_roles": [
+    "current-deletion-ledger",
+    "operational-d1-snapshot",
+    "validation-snapshot",
+    "validation-suppression-ledger"
+  ],
+  "required_review_checks": [
+    "runtime_secret_inventory_complete",
+    "backup_key_role_inventory_complete",
+    "provider_environment_and_purpose_separation_verified",
+    "pseudonym_auth_validation_and_backup_key_separation_verified",
+    "named_custodians_and_emergency_recovery_path_reviewed",
+    "phishing_resistant_mfa_and_least_privilege_reviewed",
+    "stale_user_and_token_removal_reviewed",
+    "enabled_feature_missing_key_and_revocation_behavior_reviewed",
+    "validation_rotation_hazards_accepted",
+    "backup_retention_decryptability_verified",
+    "rotation_recovery_and_destruction_records_reviewed",
+    "production_shaped_restore_and_deletion_replay_evidence_reviewed",
+    "alerts_and_logs_secret_redaction_tested",
+    "no_secret_values_entered_repository_or_evidence",
+    "no_deployment_or_production_authority_granted"
+  ],
+  "limits": {
+    "maximum_review_bytes": 65536,
+    "maximum_review_age_days": 30,
+    "maximum_future_skew_minutes": 5,
+    "maximum_blocking_findings": 100
+  },
+  "remaining_approvals_after_review": [
+    "production-provider-identity-and-binding-evidence",
+    "production-change-authorization",
+    "current-production-restore-and-deletion-ledger-evidence",
+    "deployment-and-live-smoke-evidence"
+  ],
+  "authority": {
+    "production_key_custody_approved": false,
+    "production_restore_gate_passed": false,
+    "production_release_authorized": false
+  },
+  "prohibited_public_receipt_fields": [
+    "custody_evidence_sha256",
+    "review_evidence_sha256",
+    "review_id",
+    "reviewer_competence_evidence_sha256"
+  ]
+}

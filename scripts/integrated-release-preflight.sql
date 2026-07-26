@@ -19,6 +19,9 @@ WITH expected_legal_columns(table_name, column_name) AS (
     ('signup_age_proofs'),
     ('privacy_deletion_jobs'),
     ('privacy_deletion_tasks'),
+    ('privacy_export_jobs'),
+    ('account_deletion_fences'),
+    ('trip_photo_upload_reservations'),
     ('ai_review_jobs'),
     ('forecast_impressions'),
     ('trip_validation_provenance'),
@@ -42,7 +45,8 @@ WITH expected_legal_columns(table_name, column_name) AS (
     ('target_encounter_count'),
     ('any_fish_encounter_count'),
     ('target_identification_confidence'),
-    ('idempotency_key_hash')
+    ('idempotency_key_hash'),
+    ('photo_key_hash')
 ), later_indexes(name) AS (
   VALUES
     ('auth_sessions_expires_idx'),
@@ -61,7 +65,18 @@ WITH expected_legal_columns(table_name, column_name) AS (
     ('validation_feasibility_recruitment_user_sequence_idx'),
     ('validation_feasibility_correction_activation_sequence_idx'),
     ('ai_review_jobs_trip_unique'),
-    ('ai_review_jobs_dispatch_idx')
+    ('ai_review_jobs_dispatch_idx'),
+    ('privacy_export_jobs_active_user_unique'),
+    ('privacy_export_jobs_object_key_unique'),
+    ('privacy_export_jobs_dispatch_idx'),
+    ('privacy_export_jobs_expiry_idx'),
+    ('privacy_export_jobs_owner_idx'),
+    ('account_deletion_fences_owner_unique'),
+    ('trip_photo_upload_reservations_object_key_unique'),
+    ('trip_photo_upload_reservations_object_key_hash_unique'),
+    ('trip_photo_upload_reservations_retry_idx'),
+    ('trip_photo_upload_reservations_trip_idx'),
+    ('trip_photo_upload_reservations_owner_idx')
 )
 SELECT
   COALESCE((

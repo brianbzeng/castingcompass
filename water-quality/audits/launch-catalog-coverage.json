@@ -1,0 +1,266 @@
+{
+  "schemaVersion": "castingcompass.water-quality-coverage-inventory/1.0.0",
+  "generatedAt": "2026-07-21T16:20:00Z",
+  "meaning": "station-mapping coverage evidence inventory; incomplete sources never prove station absence, current water quality, clean water, seafood safety, or fishing-score value",
+  "automaticMappingAllowed": false,
+  "independentReviewRequired": true,
+  "coverageComplete": false,
+  "counts": {
+    "catalogSites": 61,
+    "mappedSites": 38,
+    "notCoveredSites": 23,
+    "priorAuditedNotCoveredSites": 22,
+    "remainingAfterThisAudit": 1
+  },
+  "officialDirectory": {
+    "directoryUrl": "https://beachwatch.waterboards.ca.gov/public/result.php",
+    "stationRegistryMachineUrl": "https://beachwatch.waterboards.ca.gov/public/getstation.php",
+    "alamedaCountyContextUrl": "https://deh.acgov.org/operations/recreational-health.page",
+    "directoryResponseSha256": "38159234a87bdf4bf016c9f131e1151eec21609050943fb847131523edd48057",
+    "countyPrograms": [
+      {
+        "programId": "19",
+        "programName": "East Bay Parks District"
+      },
+      {
+        "programId": "3",
+        "programName": "Humboldt"
+      },
+      {
+        "programId": "4",
+        "programName": "Long Beach City"
+      },
+      {
+        "programId": "5",
+        "programName": "Los Angeles"
+      },
+      {
+        "programId": "6",
+        "programName": "Marin"
+      },
+      {
+        "programId": "7",
+        "programName": "Mendocino"
+      },
+      {
+        "programId": "8",
+        "programName": "Monterey"
+      },
+      {
+        "programId": "9",
+        "programName": "Orange"
+      },
+      {
+        "programId": "10",
+        "programName": "San Diego"
+      },
+      {
+        "programId": "11",
+        "programName": "San Francisco"
+      },
+      {
+        "programId": "12",
+        "programName": "San Luis Obispo"
+      },
+      {
+        "programId": "13",
+        "programName": "San Mateo"
+      },
+      {
+        "programId": "14",
+        "programName": "Santa Barbara"
+      },
+      {
+        "programId": "15",
+        "programName": "Santa Cruz"
+      },
+      {
+        "programId": "16",
+        "programName": "Sonoma"
+      },
+      {
+        "programId": "17",
+        "programName": "Ventura"
+      },
+      {
+        "programId": "20",
+        "programName": "Water Boards"
+      }
+    ],
+    "alamedaCountyProgramPresent": false,
+    "registryUse": "public station identity and directory scope only; never current status",
+    "relevantRegistries": [
+      {
+        "programId": "19",
+        "programName": "East Bay Parks District",
+        "responseSha256": "1e5cd009fd7d6b010cd7dd5db58e1f26036516a45d54b95b42c1d9677833052e",
+        "stationCount": 8,
+        "errorCategory": null,
+        "dumbartonMatches": []
+      },
+      {
+        "programId": "20",
+        "programName": "Water Boards",
+        "responseSha256": "d82f70bceb7f7ba5744da108ca8d991c39d090949ed35a64cd703b6282174c8e",
+        "stationCount": null,
+        "errorCategory": "invalid-station-registry",
+        "dumbartonMatches": []
+      }
+    ]
+  },
+  "dumbartonReview": {
+    "siteId": "dumbarton-pier",
+    "siteName": "Dumbarton Fishing Pier",
+    "siteCoordinate": {
+      "latitude": 37.5063,
+      "longitude": -122.119
+    },
+    "policyMapped": false,
+    "reviewStatus": "source-incomplete-do-not-map",
+    "automaticMappingAllowed": false,
+    "result": "unknown-registry-source-unavailable",
+    "reason": "At least one relevant official station registry was empty or invalid, so station absence cannot be concluded and this site remains not covered."
+  },
+  "negativeEvidenceReceipts": [
+    {
+      "path": "water-quality/audits/sf-unmapped-station-candidates.json",
+      "sha256": "f28761a7c6a564f92912293c11cd0b5ebc06248e6438c203bcb16fce13b95d2e",
+      "siteIds": [
+        "torpedo-wharf",
+        "pier-7",
+        "pier-14",
+        "herons-head-park-pier"
+      ]
+    },
+    {
+      "path": "water-quality/audits/san-mateo-station-mappings.json",
+      "sha256": "f0d0fd9fc7226aaddf5f9643734cfe58cb92c68951020c0dc8d638168fb58c34",
+      "siteIds": [
+        "pacifica-municipal-pier",
+        "poplar-beach",
+        "seal-point-park"
+      ]
+    },
+    {
+      "path": "water-quality/audits/marin-beachwatch-station-mappings.json",
+      "sha256": "20d1b6e8881bc87d3956d78cfe790028a859257d2e51af693ea3fb9f328ac141",
+      "siteIds": [
+        "limantour-beach",
+        "point-reyes-south-beach",
+        "paradise-beach-pier",
+        "fort-baker-pier"
+      ]
+    },
+    {
+      "path": "water-quality/audits/east-bay-parks-beachwatch-station-mappings.json",
+      "sha256": "dac81e4b6ea9e7407871ad274d85ab7b46b56faa1608ee0cbe97bed6972fb849",
+      "siteIds": [
+        "ferry-point-pier",
+        "point-isabel-shoreline",
+        "albany-bulb",
+        "berkeley-marina-north-basin",
+        "cesar-chavez-park",
+        "emeryville-marina-pier",
+        "port-view-park-pier",
+        "middle-harbor-shoreline",
+        "alameda-south-shore-rockwall",
+        "oyster-bay-shoreline",
+        "san-leandro-marina-shore"
+      ]
+    }
+  ],
+  "reviewedNotCoveredSites": [
+    {
+      "siteId": "alameda-south-shore-rockwall",
+      "evidence": "water-quality/audits/east-bay-parks-beachwatch-station-mappings.json"
+    },
+    {
+      "siteId": "albany-bulb",
+      "evidence": "water-quality/audits/east-bay-parks-beachwatch-station-mappings.json"
+    },
+    {
+      "siteId": "berkeley-marina-north-basin",
+      "evidence": "water-quality/audits/east-bay-parks-beachwatch-station-mappings.json"
+    },
+    {
+      "siteId": "cesar-chavez-park",
+      "evidence": "water-quality/audits/east-bay-parks-beachwatch-station-mappings.json"
+    },
+    {
+      "siteId": "emeryville-marina-pier",
+      "evidence": "water-quality/audits/east-bay-parks-beachwatch-station-mappings.json"
+    },
+    {
+      "siteId": "ferry-point-pier",
+      "evidence": "water-quality/audits/east-bay-parks-beachwatch-station-mappings.json"
+    },
+    {
+      "siteId": "fort-baker-pier",
+      "evidence": "water-quality/audits/marin-beachwatch-station-mappings.json"
+    },
+    {
+      "siteId": "herons-head-park-pier",
+      "evidence": "water-quality/audits/sf-unmapped-station-candidates.json"
+    },
+    {
+      "siteId": "limantour-beach",
+      "evidence": "water-quality/audits/marin-beachwatch-station-mappings.json"
+    },
+    {
+      "siteId": "middle-harbor-shoreline",
+      "evidence": "water-quality/audits/east-bay-parks-beachwatch-station-mappings.json"
+    },
+    {
+      "siteId": "oyster-bay-shoreline",
+      "evidence": "water-quality/audits/east-bay-parks-beachwatch-station-mappings.json"
+    },
+    {
+      "siteId": "pacifica-municipal-pier",
+      "evidence": "water-quality/audits/san-mateo-station-mappings.json"
+    },
+    {
+      "siteId": "paradise-beach-pier",
+      "evidence": "water-quality/audits/marin-beachwatch-station-mappings.json"
+    },
+    {
+      "siteId": "pier-14",
+      "evidence": "water-quality/audits/sf-unmapped-station-candidates.json"
+    },
+    {
+      "siteId": "pier-7",
+      "evidence": "water-quality/audits/sf-unmapped-station-candidates.json"
+    },
+    {
+      "siteId": "point-isabel-shoreline",
+      "evidence": "water-quality/audits/east-bay-parks-beachwatch-station-mappings.json"
+    },
+    {
+      "siteId": "point-reyes-south-beach",
+      "evidence": "water-quality/audits/marin-beachwatch-station-mappings.json"
+    },
+    {
+      "siteId": "poplar-beach",
+      "evidence": "water-quality/audits/san-mateo-station-mappings.json"
+    },
+    {
+      "siteId": "port-view-park-pier",
+      "evidence": "water-quality/audits/east-bay-parks-beachwatch-station-mappings.json"
+    },
+    {
+      "siteId": "san-leandro-marina-shore",
+      "evidence": "water-quality/audits/east-bay-parks-beachwatch-station-mappings.json"
+    },
+    {
+      "siteId": "seal-point-park",
+      "evidence": "water-quality/audits/san-mateo-station-mappings.json"
+    },
+    {
+      "siteId": "torpedo-wharf",
+      "evidence": "water-quality/audits/sf-unmapped-station-candidates.json"
+    }
+  ],
+  "policySha256": "fcd98a818934375b31843eb333bef25128ceefda5784dabe3e63050d63199d60",
+  "siteCatalogSha256": "9b1b367852abb789584f7c8270388975b780fdc4e537a8e57a74aea857b60bac",
+  "overlaySha256": "af6bc9538997e8a999f6f9cb9736d9f9bcc179e3adc5b5ba316ea3937375938c",
+  "auditToolSha256": "26a1fc3eab03d0ce23b7636ebadee498b1c18a222e7b27bca53e1beaad55cdf7"
+}

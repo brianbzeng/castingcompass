@@ -228,8 +228,15 @@ do not silently rewrite an already published aggregate result.
 
 ## Frozen geography
 
-The frozen input is `public/data/sites.json` with SHA-256
+The frozen protocol records its original input path as `public/data/sites.json`
+with SHA-256
 `b0378742f40cca598c57d845fb683ab9b36068cdd69de541aeb3e45d93c31860`.
+That exact original file is preserved at
+`validation/catalogs/california-halibut-bay-area-v1.json`; the v1 protocol bytes
+and historical path string remain unchanged. The evolving public catalog is not
+the frozen population. Santa Barbara South Coast sites added after this freeze are
+ineligible for this protocol and cannot be treated as confirmatory evidence
+without a new prospective design.
 `pacifica-municipal-pier` is excluded because it has no emitted opportunity
 windows. Each of the remaining 46 sites appears exactly once:
 

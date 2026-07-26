@@ -1,7 +1,7 @@
 {
   "bomFormat": "CycloneDX",
   "specVersion": "1.5",
-  "serialNumber": "urn:uuid:82c5e1d8-1a2b-54d1-9a9c-55a8f2f79add",
+  "serialNumber": "urn:uuid:4b80a263-5bd2-51d1-87a5-99a2edfcc03f",
   "version": 1,
   "metadata": {
     "component": {
@@ -14,6 +14,10 @@
         {
           "name": "castingcompass:claim-scope",
           "value": "source-bound release inventory; not Cloudflare deployment provenance"
+        },
+        {
+          "name": "castingcompass:input-sha256",
+          "value": ".github/workflows/npm-advisory-watch.yml:1e9a08bf6c21e8a49391cfaa57d8ef0f2108f1306d5727a0ff97b4301698c04a"
         },
         {
           "name": "castingcompass:input-sha256",
@@ -33,15 +37,71 @@
         },
         {
           "name": "castingcompass:input-sha256",
+          "value": "contracts/authenticated-staging-drill-authorization.schema.json:5d5749e6b12c333f0e61f2b95a5118f95d5303e7d496b30c4c62d1f7da570762"
+        },
+        {
+          "name": "castingcompass:input-sha256",
+          "value": "contracts/isolated-staging-wrangler.schema.json:3a2ede27362f54eaef447d1538464758efae884c585443816e3defd18afb05e4"
+        },
+        {
+          "name": "castingcompass:input-sha256",
+          "value": "contracts/key-custody-evidence-manifest.schema.json:cc626fb9b9d14bd76c5ebf34c6238ae6ccaa78c9b7c96a9e08b93fa719ca2273"
+        },
+        {
+          "name": "castingcompass:input-sha256",
+          "value": "contracts/key-custody-independent-review.schema.json:13cc7a8d1a0363eabfd8e9a7e2e5d0c2f71e08c1e291da080384b0c1e5315073"
+        },
+        {
+          "name": "castingcompass:input-sha256",
+          "value": "contracts/pollution-score-independent-review.schema.json:c3c67fdf02e39f20729c71ca3c5ceb3a0f734fe7a6d96de3590ead63065cd60e"
+        },
+        {
+          "name": "castingcompass:input-sha256",
           "value": "contracts/privacy-export-queue-message.schema.json:064bb98f847826df49f49a5ab3eab26521c858afcd17118049c59ff0bf47fcad"
         },
         {
           "name": "castingcompass:input-sha256",
-          "value": "package-lock.json:a2763f6fec24234790e46a5c8d6d551d075cee9df592d7ec70f998aff1e1eeb7"
+          "value": "contracts/water-quality-mapping-independent-review.schema.json:4124bd5652c58c15a26f727d72700f199e99a767b88f14ac83c1aea4cf848cff"
         },
         {
           "name": "castingcompass:input-sha256",
-          "value": "package.json:e6e00d9a5e2d18e357a5991b8897706c568480842470f950273b777272fdc965"
+          "value": "data/sites.json:9b1b367852abb789584f7c8270388975b780fdc4e537a8e57a74aea857b60bac"
+        },
+        {
+          "name": "castingcompass:input-sha256",
+          "value": "field-review/marin-structure-depth-review-policy.json:800e62a12f86abfeac7e6a53cda00ac37fd03777c36ef1f363f9d14dc5eb666b"
+        },
+        {
+          "name": "castingcompass:input-sha256",
+          "value": "field-review/north-east-bay-structure-depth-review-policy.json:098cfeea8d1e8fab1b0ac99bc78e519b01739ae374aed1e27dbed88cb80e21e1"
+        },
+        {
+          "name": "castingcompass:input-sha256",
+          "value": "field-review/oakland-south-bay-structure-depth-review-policy.json:069d3255865151efacff45e15cd2c411f9e69fd66783383b2ac5601314b08069"
+        },
+        {
+          "name": "castingcompass:input-sha256",
+          "value": "field-review/san-francisco-structure-depth-review-policy.json:e51dd09712bb5e6872a0dc402a726dc616fd55cff30892dcb32951d43d305080"
+        },
+        {
+          "name": "castingcompass:input-sha256",
+          "value": "field-review/san-mateo-structure-depth-review-policy.json:09c1269f22d6521b11dfc507e077ca0e9f62973c86471440b275197de62eeb7a"
+        },
+        {
+          "name": "castingcompass:input-sha256",
+          "value": "field-review/santa-barbara-access-review-policy.json:8bd85b662a0fe8646c4677db127345396ac8d924dd702fa7fe6c295e300ab9f9"
+        },
+        {
+          "name": "castingcompass:input-sha256",
+          "value": "field-review/santa-barbara-structure-depth-review-policy.json:0d795c3b2f764dfb2524bb6244903d1117e5b04d44d296e531f19009760ba11f"
+        },
+        {
+          "name": "castingcompass:input-sha256",
+          "value": "package-lock.json:d79592ca1d49be550878e0b175a41dbe6c4c87adf956ea5d3acf20f1d9d98370"
+        },
+        {
+          "name": "castingcompass:input-sha256",
+          "value": "package.json:fc0c77ddb6bf70129b942cc0a4882bfe5e69199e55332ecf9ea1ef1069f1a2c3"
         },
         {
           "name": "castingcompass:input-sha256",
@@ -53,6 +113,14 @@
         },
         {
           "name": "castingcompass:input-sha256",
+          "value": "public/data/water-quality.json:af6bc9538997e8a999f6f9cb9736d9f9bcc179e3adc5b5ba316ea3937375938c"
+        },
+        {
+          "name": "castingcompass:input-sha256",
+          "value": "scripts/verify-npm-audit-policy.mjs:c2e100fd33b096fc35b1b3e8c56abfea344df2d6c33f3fc4ec42b075742f49d2"
+        },
+        {
+          "name": "castingcompass:input-sha256",
           "value": "security/ai-review-queue-policy.json:18a707e1c8547fafd132fee66cf3e817c902f5980dbd687b7b5199fddea53671"
         },
         {
@@ -61,15 +129,31 @@
         },
         {
           "name": "castingcompass:input-sha256",
+          "value": "security/authenticated-staging-drill-policy.json:f55994ffc2541a593ebd6e78177725bb22f7a5995c606861f0df8889807c03d8"
+        },
+        {
+          "name": "castingcompass:input-sha256",
           "value": "security/cloudflare-provider-state-policy.json:d95530d8400909171a87d6d3d65bbbbd8b6fc4d1caf76a0554f95b809be9c26f"
         },
         {
           "name": "castingcompass:input-sha256",
-          "value": "security/d1-query-inventory-policy.json:a185a477113beb6c2fb9d137818f0b4db87ef687fa8d955aadb197ecd45e957e"
+          "value": "security/d1-query-inventory-policy.json:20c450b2ade6fbc538718b0ebea315af495b0a69c1fde76c55f36a8857e0459e"
         },
         {
           "name": "castingcompass:input-sha256",
-          "value": "security/d1-query-inventory.json:7bf58205132a3140c5b1437d2083b2137e8d7cc2ebd5a4d8953ae426d346039f"
+          "value": "security/d1-query-inventory.json:7a31a0c625a940a74e44831201badb6d719846b21396372d219aec62fa8f8ad5"
+        },
+        {
+          "name": "castingcompass:input-sha256",
+          "value": "security/isolated-staging-config-policy.json:81a14972236f39577595e6d3535aa6b6470cb49c9c7772a35dd21c51d23afcc0"
+        },
+        {
+          "name": "castingcompass:input-sha256",
+          "value": "security/key-custody-review-policy.json:c96b82a4865f80dee96878a99582fcc2cd429aebd5f3ffed0d59449409404eda"
+        },
+        {
+          "name": "castingcompass:input-sha256",
+          "value": "security/npm-audit-policy.json:0e2c48047404c9efc55c2a853ac5334f90556445bd62e1bc7cbd857cc10154ef"
         },
         {
           "name": "castingcompass:input-sha256",
@@ -89,11 +173,11 @@
         },
         {
           "name": "castingcompass:input-sha256",
-          "value": "security/production-change-authorization-policy.json:6e2a405435d519bc4d47d3078e9a142883e112dc7cf383d676780cd489141f57"
+          "value": "security/production-change-authorization-policy.json:b33af9d70a39a841459a1c453ebfe8916dfa28809ea2481c8af878f341746067"
         },
         {
           "name": "castingcompass:input-sha256",
-          "value": "security/sbom.cdx.json:2b01a9a57281dca6754c7421c507b3ff2b3f4a65f0f16a4147e3e0e241452f21"
+          "value": "security/sbom.cdx.json:05fadf2b3aaad0fc252cb71dcda300a0215d2062d10292cdfad4c83a64cf87d3"
         },
         {
           "name": "castingcompass:input-sha256",
@@ -109,6 +193,42 @@
         },
         {
           "name": "castingcompass:input-sha256",
+          "value": "staging/ai-review-exercise-stub.wrangler.jsonc:69803e6ce5f1936a87aed17a77f59f8b99caa3db8db0133dd5c0a097992c1dde"
+        },
+        {
+          "name": "castingcompass:input-sha256",
+          "value": "water-quality/audits/east-bay-parks-beachwatch-station-mappings.json:dac81e4b6ea9e7407871ad274d85ab7b46b56faa1608ee0cbe97bed6972fb849"
+        },
+        {
+          "name": "castingcompass:input-sha256",
+          "value": "water-quality/audits/launch-catalog-coverage.json:9c18ae3174afaf461a7e179880038ee2cba7ba6ca9e63cee236b6c1a2bb55f1f"
+        },
+        {
+          "name": "castingcompass:input-sha256",
+          "value": "water-quality/audits/marin-beachwatch-station-mappings.json:20d1b6e8881bc87d3956d78cfe790028a859257d2e51af693ea3fb9f328ac141"
+        },
+        {
+          "name": "castingcompass:input-sha256",
+          "value": "water-quality/audits/san-mateo-station-mappings.json:f0d0fd9fc7226aaddf5f9643734cfe58cb92c68951020c0dc8d638168fb58c34"
+        },
+        {
+          "name": "castingcompass:input-sha256",
+          "value": "water-quality/audits/sf-unmapped-station-candidates.json:f28761a7c6a564f92912293c11cd0b5ebc06248e6438c203bcb16fce13b95d2e"
+        },
+        {
+          "name": "castingcompass:input-sha256",
+          "value": "water-quality/policy.json:fcd98a818934375b31843eb333bef25128ceefda5784dabe3e63050d63199d60"
+        },
+        {
+          "name": "castingcompass:input-sha256",
+          "value": "water-quality/pollution-score-source-policy.json:5901791c40b4cc85f2b2bea78722c88937e62d7c5cf932ea523342cf351214dd"
+        },
+        {
+          "name": "castingcompass:input-sha256",
+          "value": "worker/ai-review-exercise-stub.ts:1d44976ec9656fc32b60648618ae772ad47626bcedda0d8c3adf5a81aa39b8c7"
+        },
+        {
+          "name": "castingcompass:input-sha256",
           "value": "wrangler.jsonc:eb055dbff42ca11f52b6c952faba602d3ee8fd7137a709ea980111f220d8bd35"
         }
       ],
@@ -116,6 +236,39 @@
     }
   },
   "components": [
+    {
+      "bom-ref": "@emnapi/runtime@1.11.1",
+      "type": "library",
+      "name": "@emnapi/runtime",
+      "version": "1.11.1",
+      "scope": "optional",
+      "purl": "pkg:npm/%40emnapi/runtime@1.11.1",
+      "properties": [
+        {
+          "name": "cdx:npm:package:path",
+          "value": "node_modules/@emnapi/runtime"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "https://registry.npmjs.org/@emnapi/runtime/-/runtime-1.11.1.tgz"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "be08fb477cb75a0c76e0841a18f03f47a6055cb1d530e674b951322103da5acfab7750337c43179400b6d856303b55e4291e8d3ecabb9946a7747f2821175917"
+        }
+      ],
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ]
+    },
     {
       "bom-ref": "@img/colour@1.1.0",
       "type": "library",
@@ -146,6 +299,856 @@
           "license": {
             "id": "MIT"
           }
+        }
+      ]
+    },
+    {
+      "bom-ref": "@img/sharp-darwin-arm64@0.35.3",
+      "type": "library",
+      "name": "@img/sharp-darwin-arm64",
+      "version": "0.35.3",
+      "scope": "optional",
+      "purl": "pkg:npm/%40img/sharp-darwin-arm64@0.35.3",
+      "properties": [
+        {
+          "name": "cdx:npm:package:path",
+          "value": "node_modules/@img/sharp-darwin-arm64"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "https://registry.npmjs.org/@img/sharp-darwin-arm64/-/sharp-darwin-arm64-0.35.3.tgz"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "44c9c55fb610b0ca21ee559f70ce0d1071f29815ffacbb8a34f54cf385c4f4e34f71a4820e013b087207a5280f70edb1711b61801cb51df34edf5f66c2120092"
+        }
+      ],
+      "licenses": [
+        {
+          "license": {
+            "id": "Apache-2.0"
+          }
+        }
+      ]
+    },
+    {
+      "bom-ref": "@img/sharp-darwin-x64@0.35.3",
+      "type": "library",
+      "name": "@img/sharp-darwin-x64",
+      "version": "0.35.3",
+      "scope": "optional",
+      "purl": "pkg:npm/%40img/sharp-darwin-x64@0.35.3",
+      "properties": [
+        {
+          "name": "cdx:npm:package:path",
+          "value": "node_modules/@img/sharp-darwin-x64"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "https://registry.npmjs.org/@img/sharp-darwin-x64/-/sharp-darwin-x64-0.35.3.tgz"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "5e8fb9b8506d2cdd012aa89e4f1885cc53d00149416db1f98812b2457ff3d49adb9d8b074df2899d47cbf3ea764cf5ebd695ea6a8e1e78be11975e38b83a4af7"
+        }
+      ],
+      "licenses": [
+        {
+          "license": {
+            "id": "Apache-2.0"
+          }
+        }
+      ]
+    },
+    {
+      "bom-ref": "@img/sharp-freebsd-wasm32@0.35.3",
+      "type": "library",
+      "name": "@img/sharp-freebsd-wasm32",
+      "version": "0.35.3",
+      "scope": "optional",
+      "purl": "pkg:npm/%40img/sharp-freebsd-wasm32@0.35.3",
+      "properties": [
+        {
+          "name": "cdx:npm:package:path",
+          "value": "node_modules/@img/sharp-freebsd-wasm32"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "https://registry.npmjs.org/@img/sharp-freebsd-wasm32/-/sharp-freebsd-wasm32-0.35.3.tgz"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "954c5ca96223db0310f41af03639e072bd60594af9c606864e1051a8f3da9480b69faec2aa3d6e3e1f0d9c0fd984083c8546ca97e9151cac20508c1ee9960fae"
+        }
+      ],
+      "licenses": [
+        {
+          "license": {
+            "id": "Apache-2.0"
+          }
+        }
+      ]
+    },
+    {
+      "bom-ref": "@img/sharp-libvips-darwin-arm64@1.3.2",
+      "type": "library",
+      "name": "@img/sharp-libvips-darwin-arm64",
+      "version": "1.3.2",
+      "scope": "optional",
+      "purl": "pkg:npm/%40img/sharp-libvips-darwin-arm64@1.3.2",
+      "properties": [
+        {
+          "name": "cdx:npm:package:path",
+          "value": "node_modules/@img/sharp-libvips-darwin-arm64"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "https://registry.npmjs.org/@img/sharp-libvips-darwin-arm64/-/sharp-libvips-darwin-arm64-1.3.2.tgz"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "f49eb2a591694018f862778f1a8abf4b7f30ea7cfebea8395992eb2c663862e49e99d32ae3b18c2c13cee36333c1d1b0a60fda819ef1cd97051dae3cc65cb07e"
+        }
+      ],
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-3.0-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "bom-ref": "@img/sharp-libvips-darwin-x64@1.3.2",
+      "type": "library",
+      "name": "@img/sharp-libvips-darwin-x64",
+      "version": "1.3.2",
+      "scope": "optional",
+      "purl": "pkg:npm/%40img/sharp-libvips-darwin-x64@1.3.2",
+      "properties": [
+        {
+          "name": "cdx:npm:package:path",
+          "value": "node_modules/@img/sharp-libvips-darwin-x64"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "https://registry.npmjs.org/@img/sharp-libvips-darwin-x64/-/sharp-libvips-darwin-x64-1.3.2.tgz"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "9b6a56d67e9c9ecf556ae6cdc2c67e737091623c4d416809e603e59cbd676c1729901bc59ba48214de68d29b051c8f30f67d7534a84591e1039ecf7cb62a9b13"
+        }
+      ],
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-3.0-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "bom-ref": "@img/sharp-libvips-linux-arm64@1.3.2",
+      "type": "library",
+      "name": "@img/sharp-libvips-linux-arm64",
+      "version": "1.3.2",
+      "scope": "optional",
+      "purl": "pkg:npm/%40img/sharp-libvips-linux-arm64@1.3.2",
+      "properties": [
+        {
+          "name": "cdx:npm:package:path",
+          "value": "node_modules/@img/sharp-libvips-linux-arm64"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "https://registry.npmjs.org/@img/sharp-libvips-linux-arm64/-/sharp-libvips-linux-arm64-1.3.2.tgz"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "76a5521729c2a31e02fc9f244f5e95ed2205027b3422380bc24bd84fba7c2d0566279392e5bead23d2067e5c537ae052fffcd77852146f0b79770c72675edc9c"
+        }
+      ],
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-3.0-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "bom-ref": "@img/sharp-libvips-linux-arm@1.3.2",
+      "type": "library",
+      "name": "@img/sharp-libvips-linux-arm",
+      "version": "1.3.2",
+      "scope": "optional",
+      "purl": "pkg:npm/%40img/sharp-libvips-linux-arm@1.3.2",
+      "properties": [
+        {
+          "name": "cdx:npm:package:path",
+          "value": "node_modules/@img/sharp-libvips-linux-arm"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "https://registry.npmjs.org/@img/sharp-libvips-linux-arm/-/sharp-libvips-linux-arm-1.3.2.tgz"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "d5e30bcf2f7623827aae68b89804fcc82dc7c4eb678b21842e5cc66cd30b2dea9ed39d9a84543487a2c5abe961e43b0321d6158880ecb74f1a6ef49b70474b5d"
+        }
+      ],
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-3.0-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "bom-ref": "@img/sharp-libvips-linux-ppc64@1.3.2",
+      "type": "library",
+      "name": "@img/sharp-libvips-linux-ppc64",
+      "version": "1.3.2",
+      "scope": "optional",
+      "purl": "pkg:npm/%40img/sharp-libvips-linux-ppc64@1.3.2",
+      "properties": [
+        {
+          "name": "cdx:npm:package:path",
+          "value": "node_modules/@img/sharp-libvips-linux-ppc64"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "https://registry.npmjs.org/@img/sharp-libvips-linux-ppc64/-/sharp-libvips-linux-ppc64-1.3.2.tgz"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "df3d0d1c3c43ea7e48f60734e54d5e5b5032466f86ce7ceade768caed84f36a13aa18ca4728816d25fe37e925d8d89ee365f11ef223da4d6c4d578947b2ab403"
+        }
+      ],
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-3.0-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "bom-ref": "@img/sharp-libvips-linux-riscv64@1.3.2",
+      "type": "library",
+      "name": "@img/sharp-libvips-linux-riscv64",
+      "version": "1.3.2",
+      "scope": "optional",
+      "purl": "pkg:npm/%40img/sharp-libvips-linux-riscv64@1.3.2",
+      "properties": [
+        {
+          "name": "cdx:npm:package:path",
+          "value": "node_modules/@img/sharp-libvips-linux-riscv64"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "https://registry.npmjs.org/@img/sharp-libvips-linux-riscv64/-/sharp-libvips-linux-riscv64-1.3.2.tgz"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "6ec6f8ac8f8d95d18eb17b9e8f6afc39d492f3ecd70d56825b1c96adcbfa9277933a58001ed640051cc1042c1db0f883f742789b2349b87a60ea4036d08996ff"
+        }
+      ],
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-3.0-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "bom-ref": "@img/sharp-libvips-linux-s390x@1.3.2",
+      "type": "library",
+      "name": "@img/sharp-libvips-linux-s390x",
+      "version": "1.3.2",
+      "scope": "optional",
+      "purl": "pkg:npm/%40img/sharp-libvips-linux-s390x@1.3.2",
+      "properties": [
+        {
+          "name": "cdx:npm:package:path",
+          "value": "node_modules/@img/sharp-libvips-linux-s390x"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "https://registry.npmjs.org/@img/sharp-libvips-linux-s390x/-/sharp-libvips-linux-s390x-1.3.2.tgz"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "fc006c8728fc802a7222b3579c79f82e8ac32741c79b55615cf065c59f3302d7d53c069269f5cf1a7fac5122118b0692072d269858d28e25c8e6691cc1d0a129"
+        }
+      ],
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-3.0-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "bom-ref": "@img/sharp-libvips-linux-x64@1.3.2",
+      "type": "library",
+      "name": "@img/sharp-libvips-linux-x64",
+      "version": "1.3.2",
+      "scope": "optional",
+      "purl": "pkg:npm/%40img/sharp-libvips-linux-x64@1.3.2",
+      "properties": [
+        {
+          "name": "cdx:npm:package:path",
+          "value": "node_modules/@img/sharp-libvips-linux-x64"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "https://registry.npmjs.org/@img/sharp-libvips-linux-x64/-/sharp-libvips-linux-x64-1.3.2.tgz"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "2133c4b607df189d12e86f5d472c3fdfaead250a8545c1d63c7842f92b6983767c00432b0eb4ebda585dcf87ff63f1cc6d187fffb679981cc4a55762eb639cdf"
+        }
+      ],
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-3.0-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "bom-ref": "@img/sharp-libvips-linuxmusl-arm64@1.3.2",
+      "type": "library",
+      "name": "@img/sharp-libvips-linuxmusl-arm64",
+      "version": "1.3.2",
+      "scope": "optional",
+      "purl": "pkg:npm/%40img/sharp-libvips-linuxmusl-arm64@1.3.2",
+      "properties": [
+        {
+          "name": "cdx:npm:package:path",
+          "value": "node_modules/@img/sharp-libvips-linuxmusl-arm64"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "https://registry.npmjs.org/@img/sharp-libvips-linuxmusl-arm64/-/sharp-libvips-linuxmusl-arm64-1.3.2.tgz"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "cc4f447625335268399834f96b5ae4e5f609e8658f9684f05816034b5e276aa1ec2fe11a3290e3d405a7a4b821deed1808e46fd93b79d30adcae962a90ff7b2b"
+        }
+      ],
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-3.0-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "bom-ref": "@img/sharp-libvips-linuxmusl-x64@1.3.2",
+      "type": "library",
+      "name": "@img/sharp-libvips-linuxmusl-x64",
+      "version": "1.3.2",
+      "scope": "optional",
+      "purl": "pkg:npm/%40img/sharp-libvips-linuxmusl-x64@1.3.2",
+      "properties": [
+        {
+          "name": "cdx:npm:package:path",
+          "value": "node_modules/@img/sharp-libvips-linuxmusl-x64"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "https://registry.npmjs.org/@img/sharp-libvips-linuxmusl-x64/-/sharp-libvips-linuxmusl-x64-1.3.2.tgz"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "9b496b2e252dfa50589c216bf2a57feb9c8c47813f73bff07fbf08e5e29376411a90502567d425cc433740886103055e5212c01cb702abb6bb56cceafe814d65"
+        }
+      ],
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-3.0-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "bom-ref": "@img/sharp-linux-arm64@0.35.3",
+      "type": "library",
+      "name": "@img/sharp-linux-arm64",
+      "version": "0.35.3",
+      "scope": "optional",
+      "purl": "pkg:npm/%40img/sharp-linux-arm64@0.35.3",
+      "properties": [
+        {
+          "name": "cdx:npm:package:path",
+          "value": "node_modules/@img/sharp-linux-arm64"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "https://registry.npmjs.org/@img/sharp-linux-arm64/-/sharp-linux-arm64-0.35.3.tgz"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "420283b291cf9eb53e190e795cf846c32842f1a70b54e392c80be8d6855f166ac85cb903366196cc07c3678c4af28480d6a050ac02dc1d7d06e546678bf4ae15"
+        }
+      ],
+      "licenses": [
+        {
+          "license": {
+            "id": "Apache-2.0"
+          }
+        }
+      ]
+    },
+    {
+      "bom-ref": "@img/sharp-linux-arm@0.35.3",
+      "type": "library",
+      "name": "@img/sharp-linux-arm",
+      "version": "0.35.3",
+      "scope": "optional",
+      "purl": "pkg:npm/%40img/sharp-linux-arm@0.35.3",
+      "properties": [
+        {
+          "name": "cdx:npm:package:path",
+          "value": "node_modules/@img/sharp-linux-arm"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "https://registry.npmjs.org/@img/sharp-linux-arm/-/sharp-linux-arm-0.35.3.tgz"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "69f7d55824cba28cbc4d2c5b0f1daa933b8379a58b355040f8ffff14d062ac7b17a4fd9fb81864e40b9ba18527ac39f3a177acf06163a53c7448114e09183e14"
+        }
+      ],
+      "licenses": [
+        {
+          "license": {
+            "id": "Apache-2.0"
+          }
+        }
+      ]
+    },
+    {
+      "bom-ref": "@img/sharp-linux-ppc64@0.35.3",
+      "type": "library",
+      "name": "@img/sharp-linux-ppc64",
+      "version": "0.35.3",
+      "scope": "optional",
+      "purl": "pkg:npm/%40img/sharp-linux-ppc64@0.35.3",
+      "properties": [
+        {
+          "name": "cdx:npm:package:path",
+          "value": "node_modules/@img/sharp-linux-ppc64"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "https://registry.npmjs.org/@img/sharp-linux-ppc64/-/sharp-linux-ppc64-0.35.3.tgz"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "b0c77cac3c66a4b3b0bffecde38925163383e4350eec52dd8e25c3234868c5869fec0af6eb6750204928b04f7c6e9b3ee473cbb69fc4bcda9ea90b4ec9c3ff20"
+        }
+      ],
+      "licenses": [
+        {
+          "license": {
+            "id": "Apache-2.0"
+          }
+        }
+      ]
+    },
+    {
+      "bom-ref": "@img/sharp-linux-riscv64@0.35.3",
+      "type": "library",
+      "name": "@img/sharp-linux-riscv64",
+      "version": "0.35.3",
+      "scope": "optional",
+      "purl": "pkg:npm/%40img/sharp-linux-riscv64@0.35.3",
+      "properties": [
+        {
+          "name": "cdx:npm:package:path",
+          "value": "node_modules/@img/sharp-linux-riscv64"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "https://registry.npmjs.org/@img/sharp-linux-riscv64/-/sharp-linux-riscv64-0.35.3.tgz"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "d04a1befcca39583df2f9bcc356016e7997747d63a0504bf80e7ded1970ff66133f68861292b788a6d616b28a49d781ff005ab16a32f25c2887662e611eef279"
+        }
+      ],
+      "licenses": [
+        {
+          "license": {
+            "id": "Apache-2.0"
+          }
+        }
+      ]
+    },
+    {
+      "bom-ref": "@img/sharp-linux-s390x@0.35.3",
+      "type": "library",
+      "name": "@img/sharp-linux-s390x",
+      "version": "0.35.3",
+      "scope": "optional",
+      "purl": "pkg:npm/%40img/sharp-linux-s390x@0.35.3",
+      "properties": [
+        {
+          "name": "cdx:npm:package:path",
+          "value": "node_modules/@img/sharp-linux-s390x"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "https://registry.npmjs.org/@img/sharp-linux-s390x/-/sharp-linux-s390x-0.35.3.tgz"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "2a00314340f1a4d3aad6b1b6b797204e04a1245192b94ed73b8e5ca82fb53553ae6673fab6581946e49839f36ea46907203d28ddc24eb30e0355e269328bdc1b"
+        }
+      ],
+      "licenses": [
+        {
+          "license": {
+            "id": "Apache-2.0"
+          }
+        }
+      ]
+    },
+    {
+      "bom-ref": "@img/sharp-linux-x64@0.35.3",
+      "type": "library",
+      "name": "@img/sharp-linux-x64",
+      "version": "0.35.3",
+      "scope": "optional",
+      "purl": "pkg:npm/%40img/sharp-linux-x64@0.35.3",
+      "properties": [
+        {
+          "name": "cdx:npm:package:path",
+          "value": "node_modules/@img/sharp-linux-x64"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "https://registry.npmjs.org/@img/sharp-linux-x64/-/sharp-linux-x64-0.35.3.tgz"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "f29aafc6e6cbd8f19d8653f2e862eacc360c523c9198a03028760a8b1a5d2580542bb3c9d02d36f5776c9e91487604591baf1f66219d1d559c28fbed88f07870"
+        }
+      ],
+      "licenses": [
+        {
+          "license": {
+            "id": "Apache-2.0"
+          }
+        }
+      ]
+    },
+    {
+      "bom-ref": "@img/sharp-linuxmusl-arm64@0.35.3",
+      "type": "library",
+      "name": "@img/sharp-linuxmusl-arm64",
+      "version": "0.35.3",
+      "scope": "optional",
+      "purl": "pkg:npm/%40img/sharp-linuxmusl-arm64@0.35.3",
+      "properties": [
+        {
+          "name": "cdx:npm:package:path",
+          "value": "node_modules/@img/sharp-linuxmusl-arm64"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "https://registry.npmjs.org/@img/sharp-linuxmusl-arm64/-/sharp-linuxmusl-arm64-0.35.3.tgz"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "573d22423cf37125f71c26dfc057c2486ffd48222ac8ed261f6b17ca21da0187c1934711b025974724185f4a2f08afcf01005b4f343476c3d01e1e4c0052f9f7"
+        }
+      ],
+      "licenses": [
+        {
+          "license": {
+            "id": "Apache-2.0"
+          }
+        }
+      ]
+    },
+    {
+      "bom-ref": "@img/sharp-linuxmusl-x64@0.35.3",
+      "type": "library",
+      "name": "@img/sharp-linuxmusl-x64",
+      "version": "0.35.3",
+      "scope": "optional",
+      "purl": "pkg:npm/%40img/sharp-linuxmusl-x64@0.35.3",
+      "properties": [
+        {
+          "name": "cdx:npm:package:path",
+          "value": "node_modules/@img/sharp-linuxmusl-x64"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "https://registry.npmjs.org/@img/sharp-linuxmusl-x64/-/sharp-linuxmusl-x64-0.35.3.tgz"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "e8ed4d3ca703563f5011d83b1f1e78f445fc534ae9eb25d0111aabbbac9137b7c6067df652f2112549569e4fbcc430a21bbea15d505b5fcd8d67f64aaf47ae22"
+        }
+      ],
+      "licenses": [
+        {
+          "license": {
+            "id": "Apache-2.0"
+          }
+        }
+      ]
+    },
+    {
+      "bom-ref": "@img/sharp-wasm32@0.35.3",
+      "type": "library",
+      "name": "@img/sharp-wasm32",
+      "version": "0.35.3",
+      "scope": "optional",
+      "purl": "pkg:npm/%40img/sharp-wasm32@0.35.3",
+      "properties": [
+        {
+          "name": "cdx:npm:package:path",
+          "value": "node_modules/@img/sharp-wasm32"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "https://registry.npmjs.org/@img/sharp-wasm32/-/sharp-wasm32-0.35.3.tgz"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "719d1791c606a47664a96ea20a4a93726502d020fd0e10f977fa9e6656647d1067e869c79e26572d4a39fbdc70f08bfbe9813a2d014df5834194a4447021bbeb"
+        }
+      ],
+      "licenses": [
+        {
+          "expression": "Apache-2.0 AND LGPL-3.0-or-later AND MIT"
+        }
+      ]
+    },
+    {
+      "bom-ref": "@img/sharp-webcontainers-wasm32@0.35.3",
+      "type": "library",
+      "name": "@img/sharp-webcontainers-wasm32",
+      "version": "0.35.3",
+      "scope": "optional",
+      "purl": "pkg:npm/%40img/sharp-webcontainers-wasm32@0.35.3",
+      "properties": [
+        {
+          "name": "cdx:npm:package:path",
+          "value": "node_modules/@img/sharp-webcontainers-wasm32"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "https://registry.npmjs.org/@img/sharp-webcontainers-wasm32/-/sharp-webcontainers-wasm32-0.35.3.tgz"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "dab9eaedb5f7373791d93e185a0cfcaa21b88774d274c7bebcdd62417a4995e489dd2339cd0f05cb64b2c9701695bc69119d98f99e2ed4178f8091186d2cbcd1"
+        }
+      ],
+      "licenses": [
+        {
+          "license": {
+            "id": "Apache-2.0"
+          }
+        }
+      ]
+    },
+    {
+      "bom-ref": "@img/sharp-win32-arm64@0.35.3",
+      "type": "library",
+      "name": "@img/sharp-win32-arm64",
+      "version": "0.35.3",
+      "scope": "optional",
+      "purl": "pkg:npm/%40img/sharp-win32-arm64@0.35.3",
+      "properties": [
+        {
+          "name": "cdx:npm:package:path",
+          "value": "node_modules/@img/sharp-win32-arm64"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "https://registry.npmjs.org/@img/sharp-win32-arm64/-/sharp-win32-arm64-0.35.3.tgz"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "e1b3f015d31b782e0943c2fc2cec96a7a9ec1dc6e83f97f1929ea23ce5f3d95838f51e364ee32cdb08642793803f8fd4974df9a8ecf2d0079c385f553ac727e3"
+        }
+      ],
+      "licenses": [
+        {
+          "expression": "Apache-2.0 AND LGPL-3.0-or-later"
+        }
+      ]
+    },
+    {
+      "bom-ref": "@img/sharp-win32-ia32@0.35.3",
+      "type": "library",
+      "name": "@img/sharp-win32-ia32",
+      "version": "0.35.3",
+      "scope": "optional",
+      "purl": "pkg:npm/%40img/sharp-win32-ia32@0.35.3",
+      "properties": [
+        {
+          "name": "cdx:npm:package:path",
+          "value": "node_modules/@img/sharp-win32-ia32"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "https://registry.npmjs.org/@img/sharp-win32-ia32/-/sharp-win32-ia32-0.35.3.tgz"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "af9de65ec04dea51540e2493efae12be0c1474702a338acf0220f30267f87cba01e97feb91fc93acb0a0ebe835ef0249882981dc96201ee5257425942111525f"
+        }
+      ],
+      "licenses": [
+        {
+          "expression": "Apache-2.0 AND LGPL-3.0-or-later"
+        }
+      ]
+    },
+    {
+      "bom-ref": "@img/sharp-win32-x64@0.35.3",
+      "type": "library",
+      "name": "@img/sharp-win32-x64",
+      "version": "0.35.3",
+      "scope": "optional",
+      "purl": "pkg:npm/%40img/sharp-win32-x64@0.35.3",
+      "properties": [
+        {
+          "name": "cdx:npm:package:path",
+          "value": "node_modules/@img/sharp-win32-x64"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "https://registry.npmjs.org/@img/sharp-win32-x64/-/sharp-win32-x64-0.35.3.tgz"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "0f8cb5bcd799ac820908dfae1da595b47f3a07e682add31862389ccbda571ef6c665e1982cb49ddf0755b82dfb171557954d4046c93ce1e2967d631719812abc"
+        }
+      ],
+      "licenses": [
+        {
+          "expression": "Apache-2.0 AND LGPL-3.0-or-later"
         }
       ]
     },
@@ -808,39 +1811,6 @@
       ]
     },
     {
-      "bom-ref": "@playwright/test@1.61.1",
-      "type": "library",
-      "name": "@playwright/test",
-      "version": "1.61.1",
-      "scope": "optional",
-      "purl": "pkg:npm/%40playwright/test@1.61.1",
-      "properties": [
-        {
-          "name": "cdx:npm:package:path",
-          "value": "node_modules/@playwright/test"
-        }
-      ],
-      "externalReferences": [
-        {
-          "type": "distribution",
-          "url": "https://registry.npmjs.org/@playwright/test/-/test-1.61.1.tgz"
-        }
-      ],
-      "hashes": [
-        {
-          "alg": "SHA-512",
-          "content": "f272afebed112522fd144e2360e1065e73de33f1e0d76a99a66ab3663461dea33463b737cf59ab3937c52e276cef6443418561f56a4b11f47959da4d5f87e48a"
-        }
-      ],
-      "licenses": [
-        {
-          "license": {
-            "id": "Apache-2.0"
-          }
-        }
-      ]
-    },
-    {
       "bom-ref": "@swc/helpers@0.5.15",
       "type": "library",
       "name": "@swc/helpers",
@@ -1190,39 +2160,6 @@
         {
           "license": {
             "id": "ISC"
-          }
-        }
-      ]
-    },
-    {
-      "bom-ref": "fsevents@2.3.2",
-      "type": "library",
-      "name": "fsevents",
-      "version": "2.3.2",
-      "scope": "optional",
-      "purl": "pkg:npm/fsevents@2.3.2",
-      "properties": [
-        {
-          "name": "cdx:npm:package:path",
-          "value": "node_modules/playwright/node_modules/fsevents"
-        }
-      ],
-      "externalReferences": [
-        {
-          "type": "distribution",
-          "url": "https://registry.npmjs.org/fsevents/-/fsevents-2.3.2.tgz"
-        }
-      ],
-      "hashes": [
-        {
-          "alg": "SHA-512",
-          "content": "c62a8c411e3101e1d3b81f6e5a6f9f1517083a02813223813fe7978b24fb8ec8150aad5b915ca0b74d28012a3007b11db6938769a3e02adf35d8ff5a6fe0c328"
-        }
-      ],
-      "licenses": [
-        {
-          "license": {
-            "id": "MIT"
           }
         }
       ]
@@ -1607,72 +2544,6 @@
         {
           "license": {
             "id": "ISC"
-          }
-        }
-      ]
-    },
-    {
-      "bom-ref": "playwright-core@1.61.1",
-      "type": "library",
-      "name": "playwright-core",
-      "version": "1.61.1",
-      "scope": "optional",
-      "purl": "pkg:npm/playwright-core@1.61.1",
-      "properties": [
-        {
-          "name": "cdx:npm:package:path",
-          "value": "node_modules/playwright-core"
-        }
-      ],
-      "externalReferences": [
-        {
-          "type": "distribution",
-          "url": "https://registry.npmjs.org/playwright-core/-/playwright-core-1.61.1.tgz"
-        }
-      ],
-      "hashes": [
-        {
-          "alg": "SHA-512",
-          "content": "87b425b7a9b8444a76e6abc876f6c3b55983e0ba955dfa51c61391bfd2f48f3113334e69e1fb8f27774acae4974310d26d79e64bbf470208bde7cf65192a4b92"
-        }
-      ],
-      "licenses": [
-        {
-          "license": {
-            "id": "Apache-2.0"
-          }
-        }
-      ]
-    },
-    {
-      "bom-ref": "playwright@1.61.1",
-      "type": "library",
-      "name": "playwright",
-      "version": "1.61.1",
-      "scope": "optional",
-      "purl": "pkg:npm/playwright@1.61.1",
-      "properties": [
-        {
-          "name": "cdx:npm:package:path",
-          "value": "node_modules/playwright"
-        }
-      ],
-      "externalReferences": [
-        {
-          "type": "distribution",
-          "url": "https://registry.npmjs.org/playwright/-/playwright-1.61.1.tgz"
-        }
-      ],
-      "hashes": [
-        {
-          "alg": "SHA-512",
-          "content": "0d69d8e68dd86cb58ae06a2fb80570a6a2fed55c0635d506ad1afefbc8fc3ed410cef01565420c8ca43dd1f63af3db042592416d9570d6b5da38a4938ad9333d"
-        }
-      ],
-      "licenses": [
-        {
-          "license": {
-            "id": "Apache-2.0"
           }
         }
       ]
@@ -6815,7 +7686,143 @@
   ],
   "dependencies": [
     {
+      "ref": "@emnapi/runtime@1.11.1",
+      "dependsOn": [
+        "tslib@2.8.1"
+      ]
+    },
+    {
       "ref": "@img/colour@1.1.0",
+      "dependsOn": []
+    },
+    {
+      "ref": "@img/sharp-darwin-arm64@0.35.3",
+      "dependsOn": [
+        "@img/sharp-libvips-darwin-arm64@1.3.2"
+      ]
+    },
+    {
+      "ref": "@img/sharp-darwin-x64@0.35.3",
+      "dependsOn": [
+        "@img/sharp-libvips-darwin-x64@1.3.2"
+      ]
+    },
+    {
+      "ref": "@img/sharp-freebsd-wasm32@0.35.3",
+      "dependsOn": [
+        "@img/sharp-wasm32@0.35.3"
+      ]
+    },
+    {
+      "ref": "@img/sharp-libvips-darwin-arm64@1.3.2",
+      "dependsOn": []
+    },
+    {
+      "ref": "@img/sharp-libvips-darwin-x64@1.3.2",
+      "dependsOn": []
+    },
+    {
+      "ref": "@img/sharp-libvips-linux-arm64@1.3.2",
+      "dependsOn": []
+    },
+    {
+      "ref": "@img/sharp-libvips-linux-arm@1.3.2",
+      "dependsOn": []
+    },
+    {
+      "ref": "@img/sharp-libvips-linux-ppc64@1.3.2",
+      "dependsOn": []
+    },
+    {
+      "ref": "@img/sharp-libvips-linux-riscv64@1.3.2",
+      "dependsOn": []
+    },
+    {
+      "ref": "@img/sharp-libvips-linux-s390x@1.3.2",
+      "dependsOn": []
+    },
+    {
+      "ref": "@img/sharp-libvips-linux-x64@1.3.2",
+      "dependsOn": []
+    },
+    {
+      "ref": "@img/sharp-libvips-linuxmusl-arm64@1.3.2",
+      "dependsOn": []
+    },
+    {
+      "ref": "@img/sharp-libvips-linuxmusl-x64@1.3.2",
+      "dependsOn": []
+    },
+    {
+      "ref": "@img/sharp-linux-arm64@0.35.3",
+      "dependsOn": [
+        "@img/sharp-libvips-linux-arm64@1.3.2"
+      ]
+    },
+    {
+      "ref": "@img/sharp-linux-arm@0.35.3",
+      "dependsOn": [
+        "@img/sharp-libvips-linux-arm@1.3.2"
+      ]
+    },
+    {
+      "ref": "@img/sharp-linux-ppc64@0.35.3",
+      "dependsOn": [
+        "@img/sharp-libvips-linux-ppc64@1.3.2"
+      ]
+    },
+    {
+      "ref": "@img/sharp-linux-riscv64@0.35.3",
+      "dependsOn": [
+        "@img/sharp-libvips-linux-riscv64@1.3.2"
+      ]
+    },
+    {
+      "ref": "@img/sharp-linux-s390x@0.35.3",
+      "dependsOn": [
+        "@img/sharp-libvips-linux-s390x@1.3.2"
+      ]
+    },
+    {
+      "ref": "@img/sharp-linux-x64@0.35.3",
+      "dependsOn": [
+        "@img/sharp-libvips-linux-x64@1.3.2"
+      ]
+    },
+    {
+      "ref": "@img/sharp-linuxmusl-arm64@0.35.3",
+      "dependsOn": [
+        "@img/sharp-libvips-linuxmusl-arm64@1.3.2"
+      ]
+    },
+    {
+      "ref": "@img/sharp-linuxmusl-x64@0.35.3",
+      "dependsOn": [
+        "@img/sharp-libvips-linuxmusl-x64@1.3.2"
+      ]
+    },
+    {
+      "ref": "@img/sharp-wasm32@0.35.3",
+      "dependsOn": [
+        "@emnapi/runtime@1.11.1"
+      ]
+    },
+    {
+      "ref": "@img/sharp-webcontainers-wasm32@0.35.3",
+      "dependsOn": [
+        "@img/sharp-wasm32@0.35.3"
+      ]
+    },
+    {
+      "ref": "@img/sharp-win32-arm64@0.35.3",
+      "dependsOn": []
+    },
+    {
+      "ref": "@img/sharp-win32-ia32@0.35.3",
+      "dependsOn": []
+    },
+    {
+      "ref": "@img/sharp-win32-x64@0.35.3",
       "dependsOn": []
     },
     {
@@ -6918,12 +7925,6 @@
       "dependsOn": []
     },
     {
-      "ref": "@playwright/test@1.61.1",
-      "dependsOn": [
-        "playwright@1.61.1"
-      ]
-    },
-    {
       "ref": "@swc/helpers@0.5.15",
       "dependsOn": [
         "tslib@2.8.1"
@@ -7009,7 +8010,6 @@
     {
       "ref": "castingcompass@0.1.0",
       "dependsOn": [
-        "@playwright/test@1.61.1",
         "drizzle-orm@0.45.2",
         "maplibre-gl@5.24.0",
         "next@16.2.11",
@@ -7040,10 +8040,6 @@
     },
     {
       "ref": "earcut@3.2.3",
-      "dependsOn": []
-    },
-    {
-      "ref": "fsevents@2.3.2",
       "dependsOn": []
     },
     {
@@ -7106,7 +8102,6 @@
         "@next/swc-linux-x64-musl@16.2.11",
         "@next/swc-win32-arm64-msvc@16.2.11",
         "@next/swc-win32-x64-msvc@16.2.11",
-        "@playwright/test@1.61.1",
         "@swc/helpers@0.5.15",
         "baseline-browser-mapping@2.10.30",
         "caniuse-lite@1.0.30001793",
@@ -7132,17 +8127,6 @@
     {
       "ref": "picocolors@1.1.1",
       "dependsOn": []
-    },
-    {
-      "ref": "playwright-core@1.61.1",
-      "dependsOn": []
-    },
-    {
-      "ref": "playwright@1.61.1",
-      "dependsOn": [
-        "fsevents@2.3.2",
-        "playwright-core@1.61.1"
-      ]
     },
     {
       "ref": "postcss@8.5.18",
@@ -7200,6 +8184,31 @@
       "ref": "sharp@0.35.3",
       "dependsOn": [
         "@img/colour@1.1.0",
+        "@img/sharp-darwin-arm64@0.35.3",
+        "@img/sharp-darwin-x64@0.35.3",
+        "@img/sharp-freebsd-wasm32@0.35.3",
+        "@img/sharp-libvips-darwin-arm64@1.3.2",
+        "@img/sharp-libvips-darwin-x64@1.3.2",
+        "@img/sharp-libvips-linux-arm64@1.3.2",
+        "@img/sharp-libvips-linux-arm@1.3.2",
+        "@img/sharp-libvips-linux-ppc64@1.3.2",
+        "@img/sharp-libvips-linux-riscv64@1.3.2",
+        "@img/sharp-libvips-linux-s390x@1.3.2",
+        "@img/sharp-libvips-linux-x64@1.3.2",
+        "@img/sharp-libvips-linuxmusl-arm64@1.3.2",
+        "@img/sharp-libvips-linuxmusl-x64@1.3.2",
+        "@img/sharp-linux-arm64@0.35.3",
+        "@img/sharp-linux-arm@0.35.3",
+        "@img/sharp-linux-ppc64@0.35.3",
+        "@img/sharp-linux-riscv64@0.35.3",
+        "@img/sharp-linux-s390x@0.35.3",
+        "@img/sharp-linux-x64@0.35.3",
+        "@img/sharp-linuxmusl-arm64@0.35.3",
+        "@img/sharp-linuxmusl-x64@0.35.3",
+        "@img/sharp-webcontainers-wasm32@0.35.3",
+        "@img/sharp-win32-arm64@0.35.3",
+        "@img/sharp-win32-ia32@0.35.3",
+        "@img/sharp-win32-x64@0.35.3",
         "detect-libc@2.1.2",
         "semver@7.8.5"
       ]
