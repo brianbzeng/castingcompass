@@ -42,7 +42,7 @@ test("Python dependency snapshot publishes exact versioned lock inventories", ()
     scope: "runtime",
   });
   assert.deepEqual(tests.resolved.httpx2, {
-    package_url: "pkg:pypi/httpx2@2.7.0",
+    package_url: "pkg:pypi/httpx2@2.9.1",
     relationship: "direct",
     scope: "development",
   });
