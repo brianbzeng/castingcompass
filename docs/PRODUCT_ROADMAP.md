@@ -1085,9 +1085,18 @@ after its acceptance checks pass in the intended environment.
       keys, preserves ambiguous writes as pending, and permits only an explicit identical-body
       retry. Local debug/release builds, the executable recovery check, all 774/774 Node tests,
       and the complete security chain pass; a path-scoped hosted macOS/Xcode workflow owns
-      XCTest. SwiftUI, native PKCE integration, deterministic request builders, protected record
-      storage, staging, signing, physical-device response-loss drills, independent review, and
+      XCTest. SwiftUI, native PKCE and ephemeral-session integration, staging, signing,
+      physical-device response-loss drills, independent review, and
       TestFlight/pilot/model/score authority remain open.
+    - [x] Implement deterministic request reconstruction and protected non-secret recovery
+      persistence. Typed plans admit only reviewed start/complete/cancel inputs; Keychain values
+      materialize exact sorted JSON or deterministic multipart bytes; protected atomic records
+      retain the plan, credential-slot references, hashes, and fail-closed state but no plaintext
+      request body or credential. Restoration rejects unknown fields, unsafe entries, oversized
+      or corrupt records, and any rebuilt body/route/content-type drift. No network scheduler,
+      automatic replay, SwiftUI, staging, device acceptance, or release authority is added.
+      Debug/release builds, the recovery/storage executable, lint, typecheck, all 775/775 Node
+      tests, and the complete security chain pass locally.
 
 ## P2 — Species and business expansion
 

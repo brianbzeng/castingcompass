@@ -91,10 +91,15 @@ server-attested.
 The reusable package at `native/ios/CastingCompassNativeCore` now implements this recovery
 boundary without a UI or network scheduler. It generates the frozen trip/token formats, keeps
 reporter and request material in `WhenUnlockedThisDeviceOnly` Keychain slots with synchronization
-disabled, persists only credential references plus the exact request-body hash, and binds a
-confirmed restored state to the exact receipt hash. Unknown or duplicate receipt keys, changed
-request bytes, mismatched receipts, conflicts, rejection, and unreadable responses fail closed.
-Ambiguous transport remains pending, and only an explicit identical-body retry is available.
+disabled, and persists only a typed non-secret plan, credential references, and exact request
+hashes. JSON encoding is sorted and byte-stable; no-photo multipart completion uses a deterministic
+boundary and fixed field order. Protected durable files are atomic, backup-excluded, bounded,
+owner-only on macOS, and `completeFileProtection` on iOS. Restoration
+rematerializes the exact request from Keychain and refuses a retry if its body, route, or content
+type differs. A confirmed restored state is bound to the exact receipt hash. Unknown or duplicate
+receipt keys, changed request bytes, mismatched receipts, conflicts, rejection, and unreadable
+responses fail closed. Ambiguous transport remains pending, and only an explicit identical-body
+retry is available.
 
 The package builds locally with Apple command-line tools and its dependency-free executable
 recovery check passes. Local XCTest is unavailable because full Xcode is not installed; the
@@ -103,10 +108,10 @@ Neither check is application, staging, signing, or physical-device evidence.
 
 ## Remaining release gates
 
-Before TestFlight, integrate the reviewed recovery/Keychain core into a SwiftUI application,
-connect it to the reviewed PKCE flow and deterministic JSON/multipart request builders, persist
-non-secret records with iOS file protection, configure a production-disjoint staging Worker and
-D1 database, and test start/completion/cancellation response loss on a physical device. Also prove
-logout, refresh-family loss, password reset, account deletion, app reinstall, accessibility,
-privacy metadata, monitoring, rate limits, rollback, and independent security review. Keep native
-OAuth disabled and all TestFlight/production authority false until those gates pass.
+Before TestFlight, integrate the reviewed recovery/Keychain/request/persistence core into a
+SwiftUI application, connect it to the reviewed PKCE flow and an ephemeral credential-free
+`URLSession`, configure a production-disjoint staging Worker and D1 database, and test
+start/completion/cancellation response loss on a physical device. Also prove logout,
+refresh-family loss, password reset, account deletion, app reinstall, accessibility, privacy
+metadata, monitoring, rate limits, rollback, and independent security review. Keep native OAuth
+disabled and all TestFlight/production authority false until those gates pass.

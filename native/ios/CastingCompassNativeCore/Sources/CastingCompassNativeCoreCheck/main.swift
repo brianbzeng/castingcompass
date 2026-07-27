@@ -69,4 +69,71 @@ try require(
     "durable records must not contain credential bytes"
 )
 
+let fixedRequestToken = String(repeating: "A", count: 43)
+let fixedReporterKey = String(repeating: "B", count: 43)
+let startPlan = try NativeTripStartPlan(
+    tripID: tripID,
+    requestTokenSlot: requestSlot,
+    reporterKeySlot: reporterSlot,
+    siteID: "goleta-beach",
+    startedAt: Date(timeIntervalSince1970: 1_786_291_200),
+    anglerCount: 1,
+    mode: .beach,
+    scoreInfluencedChoice: false,
+    primaryTargetConfirmed: true,
+    consent: true,
+    method: "drop shot"
+)
+let builder = try NativeTripRequestBuilder(
+    allowedSiteIDs: ["goleta-beach"]
+)
+let firstBuiltRequest = try builder.buildStart(
+    startPlan,
+    requestToken: fixedRequestToken,
+    reporterKey: fixedReporterKey
+)
+let secondBuiltRequest = try builder.buildStart(
+    startPlan,
+    requestToken: fixedRequestToken,
+    reporterKey: fixedReporterKey
+)
+try require(
+    firstBuiltRequest == secondBuiltRequest,
+    "the same plan and Keychain material must reproduce identical bytes"
+)
+var persistedSubmission = try NativeTripPersistedSubmission(
+    plan: .start(startPlan),
+    builtRequest: firstBuiltRequest
+)
+try persistedSubmission.beginSubmission(using: firstBuiltRequest)
+try persistedSubmission.apply(.ambiguousTransport)
+
+let temporaryRoot = FileManager.default.temporaryDirectory.appendingPathComponent(
+    "CastingCompassNativeCoreCheck-\(UUID().uuidString)",
+    isDirectory: true
+)
+defer {
+    try? FileManager.default.removeItem(at: temporaryRoot)
+}
+let store = try NativeTripDurableStore(rootDirectory: temporaryRoot)
+try await store.save(persistedSubmission)
+var restoredSubmission = try await store.load(
+    operation: .start,
+    tripID: tripID
+)
+try require(
+    restoredSubmission == persistedSubmission,
+    "protected durable storage must round-trip the exact pending state"
+)
+try restoredSubmission?.prepareExplicitRetry(using: secondBuiltRequest)
+let persistedURL = temporaryRoot.appendingPathComponent(
+    "start-\(tripID).json"
+)
+let persistedText = try String(contentsOf: persistedURL, encoding: .utf8)
+try require(
+    !persistedText.contains(fixedRequestToken) &&
+        !persistedText.contains(fixedReporterKey),
+    "durable files must contain no raw request or reporter credential"
+)
+
 print("CastingCompassNativeCore check passed")

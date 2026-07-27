@@ -87,8 +87,18 @@ by that discovery.
         retry. Debug/release builds, the dependency-free recovery check, all 774/774 Node tests,
         and the complete security chain pass locally; full XCTest is delegated to a path-scoped
         hosted macOS/Xcode workflow because this Mac has only command-line tools. SwiftUI, PKCE
-        integration, request builders, protected record storage, isolated staging, signing,
-        physical devices, and all TestFlight authority remain open.
+        and ephemeral-session integration, isolated staging, signing, physical devices, and all
+        TestFlight authority remain open.
+  - [x] Make native request reconstruction and local recovery durable without moving credentials
+        into files. Typed plans admit only reviewed start/complete/cancel fields; exact sorted JSON
+        and deterministic multipart bytes are materialized from Keychain slots; protected atomic
+        records retain only the non-secret plan, slot references, request/receipt hashes, and
+        fail-closed state. Unknown fields, unsafe filesystem entries, oversize/corrupt records, or
+        any rebuilt body/route/content-type drift are rejected. The package still has no network
+        scheduler or automatic replay. Debug/release builds, the recovery/storage executable,
+        lint, typecheck, all 775/775 Node tests, and the complete security chain pass locally.
+        SwiftUI, PKCE/session integration, hosted XCTest, staging, signing, physical-device
+        recovery drills, and all TestFlight authority remain open.
 - [ ] Complete the owner/device gates for TestFlight: active Apple Developer membership and App
       Store Connect access, full Xcode installation, final bundle/app identity, signing and
       provisioning, accurate privacy/export-compliance metadata, physical-device acceptance, and

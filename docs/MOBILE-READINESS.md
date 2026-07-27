@@ -88,10 +88,10 @@ CI browser installation, or offline/safe-area browser tests drift from the revie
 ## Still open
 
 - Isolated staging, production bindings, release rehearsal, and physical iOS/Android acceptance.
-- A signed SwiftUI client integrating the reusable Keychain/recovery core,
-  `ASWebAuthenticationSession` with the reviewed browser handoff, deterministic request
-  construction, protected non-secret persistence, exact callback handling, isolated-staging
-  configuration, and physical-device PKCE/rotation/revocation and response-loss acceptance.
+- A signed SwiftUI client integrating the reusable Keychain/request/recovery/persistence core,
+  `ASWebAuthenticationSession` with the reviewed browser handoff, an ephemeral credential-free
+  API session, exact callback handling, isolated-staging configuration, and physical-device
+  PKCE/rotation/revocation and response-loss acceptance.
 - Production performance, cache, queue, cost, rate-limit, and failure-mode evidence at approved
   scale; repository safeguards alone cannot establish provider capacity.
 - Provider configuration and deployment evidence. This repository change intentionally performs

@@ -26,6 +26,29 @@ public struct NativeTripCredentialSlot: Codable, Equatable, Hashable, Sendable {
         self.kind = kind
         self.account = account
     }
+
+    private enum CodingKeys: String, CodingKey {
+        case kind
+        case account
+    }
+
+    public init(from decoder: Decoder) throws {
+        try nativeTripRequireExactKeys(
+            decoder,
+            expected: ["kind", "account"]
+        )
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        try self.init(
+            kind: container.decode(NativeTripCredentialKind.self, forKey: .kind),
+            account: container.decode(String.self, forKey: .account)
+        )
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(kind, forKey: .kind)
+        try container.encode(account, forKey: .account)
+    }
 }
 
 public protocol NativeTripCredentialVault: Sendable {

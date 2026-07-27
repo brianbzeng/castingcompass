@@ -13,7 +13,9 @@ export async function verifyNativeIOSCollectionCore() {
     packageManifest,
     identity,
     vault,
+    requestBuilder,
     recovery,
+    durableStore,
     executableCheck,
     tests,
     readme,
@@ -28,7 +30,13 @@ export async function verifyNativeIOSCollectionCore() {
       "native/ios/CastingCompassNativeCore/Sources/CastingCompassNativeCore/NativeTripCredentialVault.swift",
     ),
     read(
+      "native/ios/CastingCompassNativeCore/Sources/CastingCompassNativeCore/NativeTripRequestBuilder.swift",
+    ),
+    read(
       "native/ios/CastingCompassNativeCore/Sources/CastingCompassNativeCore/NativeTripRecovery.swift",
+    ),
+    read(
+      "native/ios/CastingCompassNativeCore/Sources/CastingCompassNativeCore/NativeTripDurableStore.swift",
     ),
     read(
       "native/ios/CastingCompassNativeCore/Sources/CastingCompassNativeCoreCheck/main.swift",
@@ -59,6 +67,8 @@ export async function verifyNativeIOSCollectionCore() {
   assert.match(identity, /let byteCount = 32/u);
   assert.match(identity, /replacingOccurrences\(of: "=", with: ""\)/u);
   assert.match(identity, /\^trip_\[0-9a-f\]/u);
+  assert.match(identity, /validateRandomToken/u);
+  assert.match(identity, /value\.count == 43/u);
 
   assert.match(vault, /kSecClassGenericPassword/u);
   assert.match(vault, /kSecAttrAccessibleWhenUnlockedThisDeviceOnly/u);
@@ -66,6 +76,19 @@ export async function verifyNativeIOSCollectionCore() {
   assert.match(vault, /case reporterKey = "reporter-key"/u);
   assert.match(vault, /case requestToken = "request-token"/u);
   assert.doesNotMatch(vault, /UserDefaults|NSUbiquitous|kSecAttrSynchronizable.*true/u);
+
+  assert.match(requestBuilder, /struct NativeTripStartPlan/u);
+  assert.match(requestBuilder, /struct NativeTripCompletionPlan/u);
+  assert.match(requestBuilder, /struct NativeTripCancellationPlan/u);
+  assert.match(requestBuilder, /enum NativeTripRequestPlan/u);
+  assert.match(requestBuilder, /vault\.read\(from: plan\.requestTokenSlot\)/u);
+  assert.match(requestBuilder, /vault\.read\(from: start\.reporterKeySlot\)/u);
+  assert.match(requestBuilder, /options: \[\.sortedKeys, \.withoutEscapingSlashes\]/u);
+  assert.match(requestBuilder, /castingcompass\.native-trip-multipart\/1\.0\.0/u);
+  assert.match(requestBuilder, /multipart\/form-data; boundary=/u);
+  assert.match(requestBuilder, /completeAttempt", "true"/u);
+  assert.match(requestBuilder, /nonAuthorizationHeaders/u);
+  assert.doesNotMatch(requestBuilder, /URLRequest|URLSession|Cookie|Origin|UserDefaults/u);
 
   assert.match(recovery, /case pendingSubmission = "pending_submission"/u);
   assert.match(recovery, /case needsUserAttention = "needs_user_attention"/u);
@@ -80,21 +103,44 @@ export async function verifyNativeIOSCollectionCore() {
   assert.match(recovery, /Set\(receipt\.keys\) == \["operation", "tripId"\]/u);
   assert.match(recovery, /hasExactlyOneJSONKey\("operation", in: data\)/u);
   assert.match(recovery, /confirmationReceiptSHA256 = receipt\.responseSHA256/u);
+  assert.match(recovery, /struct NativeTripPersistedSubmission/u);
+  assert.match(recovery, /record\.descriptor\.matches\(builtRequest\)/u);
   assert.match(
     recovery,
     /guard \(state == \.confirmed\) == hasValidReceiptHash else/u,
   );
+
+  assert.match(durableStore, /actor NativeTripDurableStore/u);
+  assert.match(durableStore, /maximumRecordBytes = 65_536/u);
+  assert.match(durableStore, /\.completeFileProtection/u);
+  assert.match(durableStore, /\.protectionKey: FileProtectionType\.complete/u);
+  assert.match(durableStore, /\.posixPermissions: 0o600/u);
+  assert.match(durableStore, /values\.isExcludedFromBackup = true/u);
+  assert.match(durableStore, /options: \.atomic/u);
+  assert.match(durableStore, /isSymbolicLink != true/u);
+  assert.doesNotMatch(durableStore, /UserDefaults|URLSession|print\(|Logger\(/u);
+
   assert.doesNotMatch(
-    [identity, vault, recovery].join("\n"),
+    [identity, vault, requestBuilder, recovery, durableStore].join("\n"),
     /URLSession|Timer\.|BGTaskScheduler|UserDefaults|print\(|Logger\(/u,
   );
 
   assert.match(executableCheck, /ambiguous transport must never claim success/u);
   assert.match(executableCheck, /duplicate receipt keys must fail closed/u);
+  assert.match(
+    executableCheck,
+    /the same plan and Keychain material must reproduce identical bytes/u,
+  );
+  assert.match(executableCheck, /durable files must contain no raw request or reporter credential/u);
   assert.match(tests, /testAmbiguousWriteStaysPendingUntilExactReceipt/u);
   assert.match(tests, /testChangedRetryAndMismatchedReceiptFailClosed/u);
   assert.match(tests, /testDurableRecordContainsReferencesAndHashesButNoCredentialBytes/u);
   assert.match(tests, /testPersistedConfirmedStateRequiresReceiptEvidence/u);
+  assert.match(tests, /testTypedPlansMaterializeStableExactRequestsWithoutAmbientHeaders/u);
+  assert.match(tests, /testCompletionMultipartIsStableBoundedAndWholeAttemptOnly/u);
+  assert.match(tests, /testPersistedPlanRebuildsIdenticalBytesFromCredentialSlots/u);
+  assert.match(tests, /testChangedCredentialMaterialCannotReplayPendingPlan/u);
+  assert.match(tests, /testProtectedStoreRoundTripsAndRejectsUnknownPersistedFields/u);
   assert.match(readme, /does not prove application integration or physical-device behavior/u);
 
   assert.match(workflow, /runs-on: macos-15/u);

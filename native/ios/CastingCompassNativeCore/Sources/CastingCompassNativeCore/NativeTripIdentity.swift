@@ -40,6 +40,7 @@ public enum NativeTripOperation: String, Codable, CaseIterable, Sendable {
 
 public enum NativeTripIdentityError: Error, Equatable {
     case invalidTripID
+    case invalidRandomToken
     case randomGenerationFailed(OSStatus)
 }
 
@@ -73,5 +74,51 @@ public enum NativeTripIdentity {
             .replacingOccurrences(of: "+", with: "-")
             .replacingOccurrences(of: "/", with: "_")
             .replacingOccurrences(of: "=", with: "")
+    }
+
+    @discardableResult
+    public static func validateRandomToken(_ value: String) throws -> String {
+        guard
+            value.count == 43,
+            value.unicodeScalars.allSatisfy({
+                CharacterSet(
+                    charactersIn: "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789_-"
+                ).contains($0)
+            })
+        else {
+            throw NativeTripIdentityError.invalidRandomToken
+        }
+        return value
+    }
+}
+
+struct NativeTripAnyCodingKey: CodingKey, Hashable {
+    let stringValue: String
+    let intValue: Int?
+
+    init?(stringValue: String) {
+        self.stringValue = stringValue
+        self.intValue = nil
+    }
+
+    init?(intValue: Int) {
+        self.stringValue = String(intValue)
+        self.intValue = intValue
+    }
+}
+
+func nativeTripRequireExactKeys(
+    _ decoder: Decoder,
+    expected: Set<String>
+) throws {
+    let container = try decoder.container(keyedBy: NativeTripAnyCodingKey.self)
+    let actual = Set(container.allKeys.map(\.stringValue))
+    guard actual == expected else {
+        throw DecodingError.dataCorrupted(
+            DecodingError.Context(
+                codingPath: decoder.codingPath,
+                debugDescription: "native trip durable data has unknown or missing fields"
+            )
+        )
     }
 }
