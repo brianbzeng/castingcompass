@@ -13,8 +13,8 @@
     "https://www.lab.data.ca.gov/dataset/california-recreational-fisheries-survey-catch-per-unit-angler-for-rockfish-cabezon-greenling-a"
   ],
   "access": {
-    "mode": "public_sd002_discovery_then_authorized_or_official_export",
-    "reason": "CDFW directs public users to RecFIN. RecFIN SD002 publicly exposes a queryable recreational sample report and a byte-bound comprehensive-sample dictionary, but the default report omits stable record identifiers and California effort duration, QueryBuilder raw exports require an authorized account, and no official commercial ML or redistribution permission has been recorded.",
+    "mode": "public_sd002_discovery_then_nonconfidential_public_support_export",
+    "reason": "CDFW directs public users to RecFIN. RecFIN SD002 publicly exposes a queryable recreational sample report and a byte-bound comprehensive-sample dictionary, but the default report omits a public-release effort grouping key and California effort duration. CastingCompass will not request confidential or restricted raw records; it requires an existing public query or download, or a non-confidential public-support export, plus written intended-use terms.",
     "public_discovery": {
       "report_id": "SD002",
       "report_url": "https://reports.psmfc.org/recfin/f?p=601:802::::::",
@@ -25,12 +25,14 @@
     },
     "instructions": [
       "Use the public SD002 page only for source discovery; do not automate bulk collection or infer use rights from public visibility.",
-      "Obtain an official or authorized raw export that retains stable sample, angler, catch, and location identifiers plus legitimate blank-catch attempts.",
-      "Record whether the export contains sample data or expanded estimates, the saved query or SQL, filters, survey mode, area, target, species, time range, data-good-through value, refresh time, row count, dictionary version, and raw checksum.",
+      "Request only an existing public query or download, or a non-confidential public-support export, that retains legitimate blank-catch attempts.",
+      "Do not request or accept confidential records, respondent or angler identifiers, protected precise locations, or special access to restricted QueryBuilder data.",
+      "Require only an opaque non-identifying public-release effort key or official public grouping rule needed to join rows from one complete sampled effort.",
+      "Record whether the public release contains sample data or expanded estimates, its exact filters, survey mode, area, target, species, time range, data-good-through value, refresh time, row count, dictionary version, and raw checksum.",
       "Obtain written confirmation of the intended commercial ML, derived-product, retention, attribution, and redistribution boundaries before normalization.",
       "Retain effort, weights, strata, selection, QA, and uncertainty fields supplied by the export; never fabricate California trip duration from fields documented for another state.",
       "Do not treat aggregate area labels or centroids as exact fishing locations.",
-      "Store the raw export unchanged outside Git and create a reviewed source-specific transformer that groups species rows into one complete effort segment without converting missing catch to zero unless RecFIN confirms that semantic."
+      "Store the accepted public-release file unchanged outside Git and create a reviewed source-specific transformer that groups species rows into one complete effort segment without converting missing catch to zero unless RecFIN confirms that semantic."
     ],
     "ingestion_command": "python -m pipeline.contourcast.cli ingest-observations --input CANONICAL_CRFS_COMPLETE_EFFORT.jsonl --output DATA/crfs.csv --source-id cdfw_crfs --primary-target-taxon-id california-halibut --expected-sha256 SHA256"
   },
