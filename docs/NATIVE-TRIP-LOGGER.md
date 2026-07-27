@@ -3,7 +3,7 @@
 Status: server contract plus reusable Swift collection, auth-session, one-shot transport, and
 dispatch coordinator cores implemented locally; SwiftUI client, staging, device acceptance, and
 activation remain open.
-Last reviewed: **2026-07-26 UTC**
+Last reviewed: **2026-07-27 UTC**
 
 This document defines the smallest safe trip-collection surface for the first CastingCompass iOS
 client. It does not authorize TestFlight, staging, production, a validation pilot, model training,
@@ -136,6 +136,17 @@ recovery/dispatch check passes. The XCTest source parses locally, but execution 
 because full Xcode is not installed; the path-scoped hosted macOS workflow runs the release build,
 XCTest suite, and executable check after a pull request exposes the workflow on the default
 branch. Neither check is application, staging, signing, or physical-device evidence.
+
+## Automated review receipt
+
+Exact native-core code head `60a42d77652fd98500d4f0a56034deb8a00eac24` passed the complete
+local production-shaped build, 779/779 Node tests, security/SBOM/query-policy chain, Swift release
+build, and executable recovery/dispatch check. Hosted CI `30237100957`, CodeQL `30237099332`,
+release provenance `30237100962`, native API-image run `30237100974`, Swift/XCTest run
+`30237100993`, and CodeRabbit passed on that head. The follow-up binds the complete UUID identity
+pattern, HTTPS at both configuration and request validation, same-host HTTP rejection, and the
+full frozen API/auth/release-authority policy. It does not provide human, staging, signing,
+physical-device, TestFlight, pilot, model, score, provider, or deployment approval.
 
 ## Remaining release gates
 

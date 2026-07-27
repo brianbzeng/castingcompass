@@ -1,6 +1,6 @@
 # CastingCompass goal status
 
-Last reconciled: **2026-07-26 UTC**
+Last reconciled: **2026-07-27 UTC**
 
 This is the owner-facing dashboard for the complete goal list. The detailed acceptance
 criteria and immutable receipts remain in [PRODUCT_ROADMAP.md](PRODUCT_ROADMAP.md); provider
@@ -145,6 +145,22 @@ by that discovery.
         already-committed pilot start still recover after deactivation. The machine-contract
         verifier, TypeScript, ESLint, and 135 focused contract/Worker/D1 tests pass locally. This
         grants no TestFlight, pilot, model-training, score, provider, or deployment authority.
+  - [x] Close the automated native-core review follow-up on exact code head
+        `60a42d77652fd98500d4f0a56034deb8a00eac24`. The fixes preserve request-drift state before
+        returning an error, prevent confirmed receipt evidence from being downgraded, keep
+        Keychain update attributes legal, use absolute Swift regex boundaries, retain iOS 16
+        callback compatibility, bound the browser handoff, and make the release verifier require
+        one complete UUID-shaped trip pattern, HTTPS at configuration and request time, same-host
+        HTTP rejection, and every frozen API/auth/release-authority field. Under pinned Node
+        22.23.1/npm 10.9.8, the production-shaped build, ESLint, TypeScript, all 779/779 Node
+        tests, the complete security/SBOM/D1-query chain, the Swift release build, and the
+        executable recovery/dispatch check pass locally. Exact head passed CI `30237100957`,
+        CodeQL `30237099332`, release provenance `30237100962`, both native API-image
+        architectures `30237100974`, hosted Swift build/XCTest/runtime check `30237100993`, and
+        CodeRabbit. GitHub retains the addressed inline conversation as outdated rather than
+        manually resolved. This is automated review evidence only; independent human review,
+        SwiftUI integration, staging, signing, physical-device drills, and every TestFlight,
+        pilot, model, score, provider, and deployment gate remain open.
 - [ ] Complete the owner/device gates for TestFlight: active Apple Developer membership and App
       Store Connect access, full Xcode installation, final bundle/app identity, signing and
       provisioning, accurate privacy/export-compliance metadata, physical-device acceptance, and

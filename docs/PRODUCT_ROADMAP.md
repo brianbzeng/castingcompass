@@ -1140,6 +1140,20 @@ after its acceptance checks pass in the intended environment.
       remain recoverable after deactivation. The contract verifier, TypeScript, ESLint, and 135
       focused contract/Worker/D1 tests pass locally. No TestFlight, pilot, model-training, score,
       provider, or deployment authority is added.
+    - [x] Close the automated native-core review follow-up without widening authority. Exact code
+      head `60a42d77652fd98500d4f0a56034deb8a00eac24` preserves request-drift and confirmed-receipt
+      state, corrects the Keychain update boundary, uses absolute identity anchors, keeps the
+      browser handoff compatible and bounded, and strengthens the release verifier to bind the
+      full UUID pattern, HTTPS configuration and dispatch, same-host HTTP rejection, and every
+      frozen API/auth/release-authority field. The pinned production-shaped build, ESLint,
+      TypeScript, all 779/779 Node tests, the complete security/SBOM/D1-query chain, Swift release
+      build, and executable recovery/dispatch check pass locally. Exact head passed CI
+      `30237100957`, CodeQL `30237099332`, release provenance `30237100962`, both native API-image
+      architectures `30237100974`, hosted Swift build/XCTest/runtime check `30237100993`, and
+      CodeRabbit. The addressed inline discussion is GitHub-outdated rather than manually
+      resolved. Independent human review, SwiftUI/`ASWebAuthenticationSession`, isolated staging,
+      signing, physical-device drills, and every TestFlight/pilot/model/score/provider/deployment
+      authority remain open.
 
 ## P2 — Species and business expansion
 
