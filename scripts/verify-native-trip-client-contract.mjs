@@ -210,6 +210,18 @@ export function verifyRuntimeBindings(policy = validateNativeTripPolicy(JSON.par
     [...policy.operations[1].required_fields.slice(0, 8), "otherSpecies", ...policy.operations[1].required_fields.slice(8)],
   );
   assert.deepEqual(sourceArray(shared, "NATIVE_TRIP_CANCEL_FIELDS"), policy.operations[2].required_fields);
+  assert.deepEqual(
+    sourceArray(shared, "NATIVE_TRIP_START_ACCEPTED_FIELDS"),
+    [...policy.operations[0].required_fields, ...policy.operations[0].optional_fields],
+  );
+  assert.deepEqual(
+    sourceArray(shared, "NATIVE_TRIP_COMPLETE_ACCEPTED_FIELDS"),
+    [...policy.operations[1].required_fields, ...policy.operations[1].optional_fields],
+  );
+  assert.deepEqual(
+    sourceArray(shared, "NATIVE_TRIP_CANCEL_ACCEPTED_FIELDS"),
+    [...policy.operations[2].required_fields, ...policy.operations[2].optional_fields],
+  );
   assert.deepEqual(sourceArray(shared, "NATIVE_TRIP_RECOVERY_STATES"), policy.recovery.durable_states);
 
   const tripDetailFields = localArray(trips, "TRIP_DETAIL_FIELDS");
@@ -227,6 +239,20 @@ export function verifyRuntimeBindings(policy = validateNativeTripPolicy(JSON.par
     trips,
     /if \(options\.requestAuthority === "native_access_token"\) \{\s+return jsonResponse\(\{ receipt \}, status\);\s+\}/u,
   );
+  for (const acceptedFields of [
+    "NATIVE_TRIP_START_ACCEPTED_FIELDS",
+    "NATIVE_TRIP_COMPLETE_ACCEPTED_FIELDS",
+    "NATIVE_TRIP_CANCEL_ACCEPTED_FIELDS",
+  ]) {
+    assert.match(
+      trips,
+      new RegExp(
+        String.raw`options\.requestAuthority === "native_access_token"\s+\?\s+${acceptedFields}`,
+        "u",
+      ),
+      `The Worker does not enforce ${acceptedFields} for native bearer requests.`,
+    );
+  }
   assert.equal(
     trips.includes("const CLIENT_REQUEST_TOKEN_PATTERN = /^[A-Za-z0-9_-]{43}$/;"),
     true,

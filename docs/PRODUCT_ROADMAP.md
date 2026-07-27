@@ -1130,6 +1130,16 @@ after its acceptance checks pass in the intended environment.
       full hosted XCTest, SwiftUI/`ASWebAuthenticationSession`, staging, signing, physical-device
       response-loss drills, independent review, provider activation, and every
       TestFlight/pilot/model/score authority remain open.
+    - [x] Enforce the frozen collection/evidence boundary on every native bearer request. The
+      Worker now derives exact start/completion/cancellation allowlists from the shared native
+      contract and rejects browser-only free text, photo, gear, legacy forecast, and
+      study-enrollment fields before mutation, even from a modified client. Browser study intent
+      is always type- and consistency-checked: an explicit enrollment cannot silently downgrade
+      to an ordinary product observation while the pilot is disabled, and one request identity
+      cannot cross the ordinary/pilot boundary. Exact retries of already-committed pilot starts
+      remain recoverable after deactivation. The contract verifier, TypeScript, ESLint, and 135
+      focused contract/Worker/D1 tests pass locally. No TestFlight, pilot, model-training, score,
+      provider, or deployment authority is added.
 
 ## P2 — Species and business expansion
 

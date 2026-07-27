@@ -25,6 +25,15 @@ The Worker derives the observation contract and outcome class after validating t
 Before a separately reviewed pilot is activated, reports remain ordinary private product
 observations and cannot be promoted retroactively into pilot or confirmatory evidence.
 
+The Worker also enforces the native field set from the authenticated request authority, not only
+from the official Swift builder. A handcrafted native bearer request cannot add browser-only free
+text, photo, gear, legacy forecast, or study-enrollment fields. Browser study enrollment remains a
+separate contract: malformed consent is rejected, consent metadata without explicit study consent
+is rejected, and an explicit enrollment request receives `validation_pilot_unavailable` rather
+than silently becoming an ordinary product observation while the pilot is off. An already
+committed pilot start may still return its exact idempotent receipt after deactivation, but the
+same request identity cannot cross between ordinary-product and pilot enrollment.
+
 ## Request identity and authority
 
 Every request opts into `X-CastingCompass-API-Version: 1`, sends one native bearer access token,
@@ -74,6 +83,11 @@ exactly one top-level `receipt` field: start uses HTTP 201; complete and cancel 
 Browser-cookie callers retain their existing richer trip/token/cancellation response and
 Set-Cookie behavior. This split prevents a real committed native write from being misclassified
 as unreadable merely because browser-only fields accompanied its receipt.
+
+Native start, completion, and cancellation are independently checked against the exact required
+plus optional fields in the machine policy. Unknown or browser-only fields fail before any trip
+mutation. This server check is required even though the typed Swift plans cannot construct those
+fields, because a modified client must not be able to widen collection or opt into a study.
 
 ## Durable recovery
 

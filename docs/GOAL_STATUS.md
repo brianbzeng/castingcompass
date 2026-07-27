@@ -135,6 +135,16 @@ by that discovery.
         lets a signed-out durable draft resume after authorization. This remains non-UI local
         core evidence: `ASWebAuthenticationSession`, SwiftUI, hosted XCTest, staging, signing,
         physical devices, independent review, and all release/model authority remain open.
+  - [x] Enforce the native collection and study boundary at the Worker, not only in the official
+        Swift builder. Native bearer start/completion/cancellation now accept exactly the frozen
+        required plus optional fields and reject browser-only free text, photos, gear, legacy
+        forecast inputs, and study enrollment before mutation. Browser study intent is parsed
+        even while the pilot is off; malformed or inconsistent consent fails, explicit enrollment
+        returns unavailable instead of silently becoming an ordinary product row, and a request
+        identity cannot switch between ordinary and pilot enrollment. Exact retries of an
+        already-committed pilot start still recover after deactivation. The machine-contract
+        verifier, TypeScript, ESLint, and 135 focused contract/Worker/D1 tests pass locally. This
+        grants no TestFlight, pilot, model-training, score, provider, or deployment authority.
 - [ ] Complete the owner/device gates for TestFlight: active Apple Developer membership and App
       Store Connect access, full Xcode installation, final bundle/app identity, signing and
       provisioning, accurate privacy/export-compliance metadata, physical-device acceptance, and

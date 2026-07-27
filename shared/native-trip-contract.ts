@@ -54,6 +54,43 @@ export const NATIVE_TRIP_CANCEL_FIELDS = [
   "reason",
 ] as const;
 
+export const NATIVE_TRIP_START_ACCEPTED_FIELDS = [
+  "clientTripId",
+  "requestToken",
+  "reporterKey",
+  "siteId",
+  "startedAt",
+  "anglerCount",
+  "mode",
+  "scoreInfluencedChoice",
+  "primaryTargetConfirmed",
+  "consent",
+  "method",
+  "opportunityWindowId",
+  "referralCode",
+] as const;
+
+export const NATIVE_TRIP_COMPLETE_ACCEPTED_FIELDS = [
+  "token",
+  "reporterKey",
+  "anglerCount",
+  "mode",
+  "scoreInfluencedChoice",
+  "keeperCount",
+  "shortReleasedCount",
+  "otherCatchCount",
+  "consent",
+  "primaryTargetConfirmed",
+  "completeAttempt",
+  "otherSpecies",
+  "method",
+] as const;
+
+export const NATIVE_TRIP_CANCEL_ACCEPTED_FIELDS = [
+  "token",
+  "reason",
+] as const;
+
 export const NATIVE_TRIP_ROUTES = {
   start: {
     method: "POST",

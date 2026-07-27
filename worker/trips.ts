@@ -1,4 +1,9 @@
 import {
+  NATIVE_TRIP_CANCEL_ACCEPTED_FIELDS,
+  NATIVE_TRIP_COMPLETE_ACCEPTED_FIELDS,
+  NATIVE_TRIP_START_ACCEPTED_FIELDS,
+} from "../shared/native-trip-contract.ts";
+import {
   assertObservationContract,
   CALIFORNIA_HALIBUT_TAXON_ID,
   deriveObservationOutcomeClass,
@@ -2479,10 +2484,16 @@ export async function handleTripRequest(
       assertBodySize(request, 64 * 1024);
       const body = await readJsonObject(request);
       assertNoObservationContractOverride(body);
-      assertOnlyInputFields(body, LIVE_START_FIELDS);
+      assertOnlyInputFields(
+        body,
+        options.requestAuthority === "native_access_token"
+          ? NATIVE_TRIP_START_ACCEPTED_FIELDS
+          : LIVE_START_FIELDS,
+      );
       assertHoneypot(body.website);
       assertConsent(body.consent);
       assertPrimaryTargetConfirmed(body.primaryTargetConfirmed);
+      const feasibilityEnrollment = parseFeasibilityEnrollmentRequest(body);
 
       const reporter = await getOrCreateReporter(request, body.reporterKey);
       const id = parseClientTripId(body.clientTripId);
@@ -2491,6 +2502,23 @@ export async function handleTripRequest(
       const existingRequest = await store.getTrip(id, options.accountId ?? null);
       if (existingRequest) {
         if (isMatchingLiveStart(existingRequest, idempotencyKeyHash, reporter.hash, options.accountId)) {
+          const existingFeasibility = await (
+            store.getFeasibilityStart?.(id, options.accountId ?? null) ?? Promise.resolve(null)
+          );
+          if (
+            Boolean(feasibilityEnrollment) !== Boolean(existingFeasibility) ||
+            (
+              feasibilityEnrollment &&
+              existingFeasibility &&
+              feasibilityEnrollment.studyConsentVersion !== existingFeasibility.study_consent_version
+            )
+          ) {
+            throw new ApiError(
+              409,
+              "trip_request_conflict",
+              "This trip request identity cannot change its study-enrollment boundary.",
+            );
+          }
           return tripMutationSuccessResponse(
             options,
             "start",
@@ -2504,6 +2532,13 @@ export async function handleTripRequest(
       }
       if (await store.isTripIdentityReserved(id)) {
         throw new ApiError(409, "trip_request_conflict", "This trip request identity cannot be reused.");
+      }
+      if (feasibilityEnrollment && !feasibilityPilotEnabled(env)) {
+        throw new ApiError(
+          503,
+          "validation_pilot_unavailable",
+          "The validation pilot is not available right now.",
+        );
       }
       await store.assertSubmissionAllowed(reporter.hash, now);
       const site = getSite(siteMap, body.siteId);
@@ -2529,15 +2564,8 @@ export async function handleTripRequest(
       });
       let feasibilityStart: FeasibilityEventRecord | null = null;
       let feasibilityRecruitment: FeasibilityRecruitmentRecord | null = null;
-      if (feasibilityPilotEnabled(env) && optionalBoolean(body.studyConsent, "studyConsent") === true) {
-        const studyConsentVersion = optionalText(body.studyConsentVersion, "studyConsentVersion", 200);
-        if (!studyConsentVersion) {
-          throw new ApiError(
-            422,
-            "study_consent_version_required",
-            "The active study consent version is required for pilot participation.",
-          );
-        }
+      if (feasibilityEnrollment) {
+        const { studyConsentVersion, recruitmentToken } = feasibilityEnrollment;
         const activationId = env.VALIDATION_FEASIBILITY_ACTIVATION_ID?.trim();
         if (
           !activationId || !store.getFeasibilityActivation || !store.getFeasibilityRecruitment ||
@@ -2564,7 +2592,6 @@ export async function handleTripRequest(
           context.participantGroupId,
           options.accountId,
         );
-        const recruitmentToken = optionalText(body.recruitmentToken, "recruitmentToken", 2_048);
         const campaignReference = recruitmentToken && !existingRecruitment
           ? feasibilityRecruitmentCampaignReference(recruitmentToken)
           : null;
@@ -2722,7 +2749,12 @@ export async function handleTripRequest(
       assertContentType(request, "application/json");
       assertBodySize(request, 16 * 1024);
       const body = await readJsonObject(request);
-      assertOnlyInputFields(body, ["token", "reason"]);
+      assertOnlyInputFields(
+        body,
+        options.requestAuthority === "native_access_token"
+          ? NATIVE_TRIP_CANCEL_ACCEPTED_FIELDS
+          : ["token", "reason"],
+      );
       const id = cancellationMatch[1];
       if (!TRIP_ID_PATTERN.test(id)) {
         throw new ApiError(404, "trip_not_found", "The active trip could not be found.");
@@ -2768,7 +2800,12 @@ export async function handleTripRequest(
       assertBodySize(request, MAX_MULTIPART_BYTES);
       const form = await request.formData();
       assertNoObservationContractOverride(form);
-      assertOnlyInputFields(form, LIVE_COMPLETION_FIELDS);
+      assertOnlyInputFields(
+        form,
+        options.requestAuthority === "native_access_token"
+          ? NATIVE_TRIP_COMPLETE_ACCEPTED_FIELDS
+          : LIVE_COMPLETION_FIELDS,
+      );
       assertHoneypot(form.get("website"));
       assertConsent(form.get("consent"));
       assertCompleteAttempt(form.get("completeAttempt"));
@@ -3647,6 +3684,33 @@ function optionalBoolean(value: unknown, field: string): boolean | null {
   if (value === "true" || value === "1" || value === "on") return true;
   if (value === "false" || value === "0" || value === "off") return false;
   throw new ApiError(422, `invalid_${field}`, `${field} must be true or false.`);
+}
+
+function parseFeasibilityEnrollmentRequest(
+  body: Record<string, unknown>,
+): { studyConsentVersion: string; recruitmentToken: string | null } | null {
+  const studyConsent = optionalBoolean(body.studyConsent, "studyConsent");
+  const studyConsentVersion = optionalText(body.studyConsentVersion, "studyConsentVersion", 200);
+  const recruitmentToken = optionalText(body.recruitmentToken, "recruitmentToken", 2_048);
+
+  if (studyConsent !== true) {
+    if (studyConsentVersion || recruitmentToken) {
+      throw new ApiError(
+        422,
+        "study_enrollment_inconsistent",
+        "Study enrollment metadata requires explicit study consent.",
+      );
+    }
+    return null;
+  }
+  if (!studyConsentVersion) {
+    throw new ApiError(
+      422,
+      "study_consent_version_required",
+      "The active study consent version is required for pilot participation.",
+    );
+  }
+  return { studyConsentVersion, recruitmentToken };
 }
 
 function parseSafeCancellationReason(value: unknown): SafeCancellationReason {

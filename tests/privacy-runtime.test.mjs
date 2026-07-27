@@ -4035,7 +4035,7 @@ test("native trip writes require no browser ambient authority and return exact r
     requestAuthority: "native_access_token",
     now: () => new Date(startAt),
   };
-  const startRequest = (requestMaterial, startedAt) => new Request(
+  const startRequest = (requestMaterial, startedAt, extraFields = {}) => new Request(
     "https://castingcompass.com/api/trips/start", {
       method: "POST",
       headers: {
@@ -4052,10 +4052,27 @@ test("native trip writes require no browser ambient authority and return exact r
         scoreInfluencedChoice: false,
         primaryTargetConfirmed: true,
         consent: true,
+        ...extraFields,
       }),
     });
+  for (const extraFields of [
+    { studyConsent: true },
+    { notes: "native clients cannot widen the reviewed collection contract" },
+    { opportunityScore: 100 },
+  ]) {
+    const rejected = await handleTripRequest(
+      startRequest(tripRequestMaterial(), startAt, extraFields),
+      { DB: d1 },
+      sites,
+      nativeOptions,
+    );
+    assert.equal(rejected.status, 422);
+    assert.equal((await rejected.json()).error.code, "unexpected_fields");
+  }
+  assert.equal(sqlite.prepare("SELECT COUNT(*) AS count FROM trips").get().count, 0);
+
   const start = await handleTripRequest(
-    startRequest(material, startAt),
+    startRequest(material, startAt, { method: "bait" }),
     { DB: d1 },
     sites,
     nativeOptions,
@@ -4091,6 +4108,26 @@ test("native trip writes require no browser ambient authority and return exact r
     completion.set("completeAttempt", "true");
     return completion;
   };
+  const widenedCompletion = completionForm();
+  widenedCompletion.set("notes", "browser-only free text");
+  const rejectedCompletion = await handleTripRequest(new Request(
+    `https://castingcompass.com/api/trips/${material.clientTripId}/complete`,
+    {
+      method: "POST",
+      headers: bearerHeaders,
+      body: widenedCompletion,
+    },
+  ), { DB: d1 }, sites, {
+    ...nativeOptions,
+    now: () => new Date("2026-07-21T22:45:00.000Z"),
+  });
+  assert.equal(rejectedCompletion.status, 422);
+  assert.equal((await rejectedCompletion.json()).error.code, "unexpected_fields");
+  assert.equal(
+    sqlite.prepare("SELECT status FROM trips WHERE id = ?").get(material.clientTripId).status,
+    "active",
+  );
+
   const completed = await handleTripRequest(new Request(
     `https://castingcompass.com/api/trips/${material.clientTripId}/complete`,
     {
@@ -5792,12 +5829,19 @@ test("feasibility pilot start, completion, safe cancellation, export, and privac
     { id: "ocean-beach-south", type: "Beach" },
   ];
 
-  const startTrip = async (timestamp, suffix, account = user, recruitmentToken = null) => {
+  const startTrip = async (
+    timestamp,
+    suffix,
+    account = user,
+    recruitmentToken = null,
+    requestMaterial = tripRequestMaterial(),
+    runtimeEnv = env,
+  ) => {
     const response = await handleTripRequest(new Request("https://castingcompass.com/api/trips/start", {
       method: "POST",
       headers: { Origin: "https://castingcompass.com", "Content-Type": "application/json" },
       body: JSON.stringify({
-        ...tripRequestMaterial(),
+        ...requestMaterial,
         siteId,
         startedAt: timestamp,
         mode: "beach",
@@ -5812,9 +5856,10 @@ test("feasibility pilot start, completion, safe cancellation, export, and privac
         opportunityWindowId: windowId,
         website: "",
       }),
-    }), env, sites, { accountId: account.id, now: () => new Date(timestamp) });
+    }), runtimeEnv, sites, { accountId: account.id, now: () => new Date(timestamp) });
     assert.equal(response?.status, 201, JSON.stringify(await response?.clone().json()));
-    return response.json();
+    const payload = await response.json();
+    return { ...payload, requestMaterial };
   };
 
   const first = await startTrip(firstStartedAt, "complete");
@@ -5824,6 +5869,18 @@ test("feasibility pilot start, completion, safe cancellation, export, and privac
   assert.equal(events[0].event_type, "started");
   assert.match(events[0].participant_group_id, /^participant-[a-f0-9]{64}$/);
   assert.equal(events[0].study_consent_version, studyConsentVersion);
+  const retryAfterDeactivation = await startTrip(
+    firstStartedAt,
+    "complete",
+    user,
+    null,
+    first.requestMaterial,
+    { ...env, VALIDATION_FEASIBILITY_ENABLED: "false" },
+  );
+  assert.equal(retryAfterDeactivation.trip.id, first.trip.id);
+  events = sqlite.prepare(`SELECT * FROM validation_feasibility_events
+    WHERE trip_id = ? ORDER BY sequence`).all(first.trip.id);
+  assert.equal(events.length, 1);
 
   const completion = new FormData();
   completion.set("token", first.token);

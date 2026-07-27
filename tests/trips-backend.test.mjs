@@ -553,6 +553,98 @@ test("start validates origin and curated site IDs", async () => {
   assert.equal((await response.json()).error.code, "invalid_site");
 });
 
+test("study enrollment fails closed instead of becoming an ordinary product report", async () => {
+  const cases = [
+    {
+      body: {
+        studyConsent: true,
+        studyConsentVersion: "castingcompass.validation-feasibility-consent/2.0.0",
+      },
+      env: {},
+      status: 503,
+      code: "validation_pilot_unavailable",
+    },
+    {
+      body: { studyConsent: "sometimes" },
+      env: {},
+      status: 422,
+      code: "invalid_studyConsent",
+    },
+    {
+      body: {
+        studyConsent: false,
+        studyConsentVersion: "castingcompass.validation-feasibility-consent/2.0.0",
+      },
+      env: {},
+      status: 422,
+      code: "study_enrollment_inconsistent",
+    },
+    {
+      body: { recruitmentToken: "opaque-pilot-invitation" },
+      env: {},
+      status: 422,
+      code: "study_enrollment_inconsistent",
+    },
+    {
+      body: { studyConsent: true },
+      env: { VALIDATION_FEASIBILITY_ENABLED: "true" },
+      status: 422,
+      code: "study_consent_version_required",
+    },
+  ];
+
+  for (const item of cases) {
+    const store = new MemoryTripStore();
+    const response = await handleTripRequest(
+      jsonRequest("/api/trips/start", validStartBody(item.body)),
+      item.env,
+      SITES,
+      {
+        store,
+        accountId: "study-boundary-user",
+        now: () => new Date("2026-07-11T18:00:00.000Z"),
+      },
+    );
+    assert.equal(response.status, item.status);
+    assert.equal((await response.json()).error.code, item.code);
+    assert.equal(store.trips.size, 0);
+  }
+
+  const store = new MemoryTripStore();
+  const originalBody = validStartBody({
+    clientTripId: "trip_30000000-0000-4000-8000-000000000001",
+    requestToken: "S".repeat(43),
+  });
+  const original = await handleTripRequest(
+    jsonRequest("/api/trips/start", originalBody),
+    {},
+    SITES,
+    {
+      store,
+      accountId: "study-boundary-user",
+      now: () => new Date("2026-07-11T18:00:00.000Z"),
+    },
+  );
+  assert.equal(original.status, 201);
+  const changedBoundary = await handleTripRequest(
+    jsonRequest("/api/trips/start", {
+      ...originalBody,
+      studyConsent: true,
+      studyConsentVersion: "castingcompass.validation-feasibility-consent/2.0.0",
+    }),
+    {},
+    SITES,
+    {
+      store,
+      accountId: "study-boundary-user",
+      now: () => new Date("2026-07-11T18:00:00.000Z"),
+    },
+  );
+  assert.equal(changedBoundary.status, 409);
+  assert.equal((await changedBoundary.json()).error.code, "trip_request_conflict");
+  assert.equal(store.trips.size, 1);
+});
+
 test("client trip identities make start, completion, and past-report retries idempotent", async () => {
   const store = new MemoryTripStore();
   const reporterKey = "idempotent-device-key-123456789012";
