@@ -440,7 +440,16 @@ public actor NativeAuthSession {
         } catch NativeTripCredentialVaultError.notFound {
             tokenPair = nil
             status = .signedOut
+        } catch NativeAuthError.refreshTokenExpired {
+            throw NativeAuthError.refreshTokenExpired
         } catch let error as NativeAuthError {
+            tokenPair = nil
+            status = .requiresSignIn
+            do {
+                try writeMarker(.requiresSignIn)
+            } catch {
+                throw NativeAuthError.credentialStorageFailed
+            }
             throw error
         } catch {
             tokenPair = nil
