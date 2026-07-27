@@ -1,7 +1,7 @@
 {
-  "schema_version": "castingcompass.model-selection-plan/1.0.0",
+  "schema_version": "castingcompass.model-selection-plan/1.1.0",
   "plan_id": "california-halibut-model-selection-v1",
-  "plan_version": "1.0.0",
+  "plan_version": "1.1.0",
   "status": "frozen-local-template-not-preregistered",
   "target_taxon_id": "california-halibut",
   "contract_versions": {
@@ -35,6 +35,16 @@
     "encrypted-custody-restore-deletion-and-retention-evidence",
     "activation-manifest-sealed-before-first-eligible-row"
   ],
+  "locally_satisfied_data_gates": [
+    "candidate-feature-and-input-contract-frozen-before-label-access"
+  ],
+  "candidate_input_contract": {
+    "schema_version": "castingcompass.model-input-contract/1.0.0",
+    "contract_id": "california-halibut-model-input-v1",
+    "contract_version": "1.0.0",
+    "path": "model/selection/california-halibut-input-v1.json",
+    "sha256": "aeca877e3f08f9241684e6176681de500c0b3e5b82511bcc46c6a7494c77a5f8"
+  },
   "common_evaluation": {
     "unit": "one-complete-california-halibut-targeted-site-window-attempt",
     "required_outputs": [
@@ -42,7 +52,7 @@
       "positive-catch-cpue",
       "expected-opportunity-ranking"
     ],
-    "candidate_input_contract_frozen": false,
+    "candidate_input_contract_frozen": true,
     "same_rows_folds_and_features_for_every_compatible_candidate": true,
     "source_separated_development_and_locked_test": true,
     "geographic_and_temporal_outer_holdouts": true,
