@@ -286,7 +286,11 @@ export function verifyRuntimeBindings(policy = validateNativeTripPolicy(JSON.par
   ]) {
     const route = routeEntry(routes, routeId);
     assert.match(route, /nativeScopes: \["trips:write"\]/u);
-    assert.match(route, new RegExp(operation.path_template.replace(/[{}]/gu, "\\$&"), "u"));
+    const escapedPathTemplate = operation.path_template.replace(
+      /[.*+?^${}()|[\]\\]/gu,
+      "\\$&",
+    );
+    assert.match(route, new RegExp(escapedPathTemplate, "u"));
   }
 
   assert.equal(mobilePolicy.productionReadiness, false);
