@@ -151,9 +151,10 @@ physical-device, TestFlight, pilot, model, score, provider, or deployment approv
 ## Remaining release gates
 
 Before TestFlight, integrate the reviewed recovery/Keychain/request/persistence, PKCE/token,
-one-shot transport, and coordinator cores into a SwiftUI application; connect the browser handoff
-through `ASWebAuthenticationSession`; configure a production-disjoint staging Worker and D1
-database; and test start/completion/cancellation response loss on a physical device. Also prove logout,
-refresh-family loss, password reset, account deletion, app reinstall, accessibility, privacy
-metadata, monitoring, rate limits, rollback, and independent security review. Keep native OAuth
-disabled and all TestFlight/production authority false until those gates pass.
+system-browser authorizer, one-shot transport, and coordinator cores into a SwiftUI application.
+The reusable `ASWebAuthenticationSession` handoff now exists but has no signed application,
+approved bundle identity, or device evidence. Configure a production-disjoint staging Worker and
+D1 database; and test start/completion/cancellation response loss on a physical device. Also prove
+logout, refresh-family loss, password reset, account deletion, app reinstall, accessibility,
+privacy metadata, monitoring, rate limits, rollback, and independent security review. Keep native
+OAuth disabled and all TestFlight/production authority false until those gates pass.

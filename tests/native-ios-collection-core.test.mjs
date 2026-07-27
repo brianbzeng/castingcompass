@@ -160,3 +160,29 @@ test("native dispatch is one-shot, bounded, origin-pinned, and durable before se
     /URLSession|Timer\.|BGTaskScheduler|automaticRetry|retryAfter|while\s*\(|repeat\s*\{/u,
   );
 });
+
+test("native system-browser sign-in is ephemeral, single-flight, and fail-closed", async () => {
+  const source = await readFile(
+    new URL(
+      "../native/ios/CastingCompassNativeCore/Sources/CastingCompassNativeCore/NativeSystemBrowserAuthorization.swift",
+      import.meta.url,
+    ),
+    "utf8",
+  );
+  assert.match(source, /import AuthenticationServices/u);
+  assert.match(source, /actor NativeSystemBrowserAuthorizationFlow/u);
+  assert.match(source, /guard activeAttempt == nil else/u);
+  assert.match(source, /callbackURLScheme == "castingcompass"/u);
+  assert.match(source, /NativeSystemBrowserAuthorizationRequest\(redacted\)/u);
+  assert.match(source, /final class NativeSystemBrowserAuthorizer/u);
+  assert.match(source, /ASWebAuthenticationSession\(/u);
+  assert.match(source, /session\.presentationContextProvider = self/u);
+  assert.match(source, /session\.prefersEphemeralWebBrowserSession = true/u);
+  assert.match(source, /withTaskCancellationHandler/u);
+  assert.match(source, /guard \(callbackURL == nil\) != \(error == nil\) else/u);
+  assert.match(source, /authCoordinator\.exchangeAuthorizationCode\(/u);
+  assert.doesNotMatch(
+    source,
+    /URLSession|Cookie|Origin|UserDefaults|FileManager|UIPasteboard|NSPasteboard|Timer\.|BGTaskScheduler|print\(|Logger\(|automaticRetry/u,
+  );
+});

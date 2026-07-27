@@ -22,6 +22,7 @@ let package = Package(
         .target(
             name: "CastingCompassNativeCore",
             linkerSettings: [
+                .linkedFramework("AuthenticationServices"),
                 .linkedFramework("Security"),
             ]
         ),

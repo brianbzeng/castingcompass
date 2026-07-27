@@ -163,11 +163,13 @@ All of the following remain required:
    step invisibly.
 3. Install full Xcode, approve the final bundle/client/redirect identity, join the Apple
    Developer Program, and configure App Store Connect signing.
-4. Integrate the reviewed Swift core into a signed SwiftUI client with
-   `ASWebAuthenticationSession`, the provided one-shot coordinators, trip screens, and the exact
+4. Integrate the reviewed Swift core into a signed SwiftUI client with the provided
+   `NativeSystemBrowserAuthorizer`, one-shot coordinators, trip screens, and the exact
    no-success-only operation state machine in [Native trip logger
-   boundary](NATIVE-TRIP-LOGGER.md). Do not reimplement transport, token storage, or refresh in UI
-   state.
+   boundary](NATIVE-TRIP-LOGGER.md). The reusable authorizer owns the
+   `ASWebAuthenticationSession` callback/cancellation bridge and passes a verified callback
+   directly to the token coordinator; it is not yet embedded in an application. Do not
+   reimplement browser callback handling, transport, token storage, or refresh in UI state.
 5. Configure an isolated staging Worker/D1/database/client—not production—and run physical-device
    tests for state mismatch, callback replay, code expiry/replay, wrong verifier, lost refresh
    response, refresh reuse, password reset, account deletion, logout, offline recovery, and app
