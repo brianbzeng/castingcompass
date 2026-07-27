@@ -198,6 +198,8 @@ async function getAuthenticatedSession(
 ): Promise<AuthenticatedSession | null> {
   if (!env.DB) return null;
   await initialize(env.DB);
+  // Credential kinds never mix: any presented bearer must resolve only as a
+  // native session, and failure never falls back to an ambient browser cookie.
   if (request.headers.has("Authorization")) {
     const native = await getNativeAccessIdentity(request, env, nativeScopes, LEGAL_VERSION);
     if (!native) return null;

@@ -10,6 +10,7 @@ import type { FishingSite } from "../types";
 import { AccountModal, useAccount } from "./AccountFeature";
 
 type AuthorizationState = "idle" | "submitting" | "error";
+const NATIVE_AUTHORIZATION_TIMEOUT_MS = 15_000;
 
 export function NativeAuthorizationPage({ sites }: { sites: FishingSite[] }) {
   const account = useAccount();
@@ -34,12 +35,18 @@ export function NativeAuthorizationPage({ sites }: { sites: FishingSite[] }) {
     if (!request || !account.user?.legalAccepted || authorizationState === "submitting") return;
     setAuthorizationState("submitting");
     setMessage("Requesting a one-use sign-in code. Keep this browser open.");
+    const controller = new AbortController();
+    const timeout = window.setTimeout(
+      () => controller.abort(),
+      NATIVE_AUTHORIZATION_TIMEOUT_MS,
+    );
     try {
       const response = await fetch("/api/native/oauth/authorize", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(request),
         cache: "no-store",
+        signal: controller.signal,
       });
       const body = await response.json().catch(() => null) as unknown;
       if (!response.ok) {
@@ -55,7 +62,15 @@ export function NativeAuthorizationPage({ sites }: { sites: FishingSite[] }) {
       window.location.assign(callback);
     } catch (error) {
       setAuthorizationState("error");
-      setMessage(error instanceof Error ? error.message : "The app sign-in request failed.");
+      setMessage(
+        error instanceof DOMException && error.name === "AbortError"
+          ? "The sign-in service took too long to respond. Try again from the app."
+          : error instanceof Error
+            ? error.message
+            : "The app sign-in request failed.",
+      );
+    } finally {
+      window.clearTimeout(timeout);
     }
   };
 

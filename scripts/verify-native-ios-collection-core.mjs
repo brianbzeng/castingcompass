@@ -86,13 +86,18 @@ export async function verifyNativeIOSCollectionCore() {
   assert.match(identity, /SecRandomCopyBytes\(kSecRandomDefault, byteCount, &bytes\)/u);
   assert.match(identity, /let byteCount = 32/u);
   assert.match(identity, /replacingOccurrences\(of: "=", with: ""\)/u);
-  assert.match(identity, /\^trip_\[0-9a-f\]/u);
+  assert.match(identity, /\\Atrip_\[0-9a-f\]/u);
+  assert.match(identity, /\[0-9a-f\]\{12\}\\z/u);
   assert.match(identity, /validateRandomToken/u);
   assert.match(identity, /value\.count == 43/u);
 
   assert.match(vault, /kSecClassGenericPassword/u);
   assert.match(vault, /kSecAttrAccessibleWhenUnlockedThisDeviceOnly/u);
-  assert.equal((vault.match(/kSecAttrSynchronizable as String: false/gu) ?? []).length, 2);
+  assert.equal((vault.match(/kSecAttrSynchronizable as String: false/gu) ?? []).length, 1);
+  assert.doesNotMatch(
+    vault.match(/let updateAttributes:[\s\S]*?let updateStatus/u)?.[0] ?? "",
+    /kSecAttrSynchronizable/u,
+  );
   assert.match(vault, /case reporterKey = "reporter-key"/u);
   assert.match(vault, /case requestToken = "request-token"/u);
   assert.match(vault, /case oauthSession = "oauth-session"/u);

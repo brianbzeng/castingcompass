@@ -243,7 +243,9 @@ final class NativeAuthSessionTests: XCTestCase {
         let stored = try XCTUnwrap(
             vault.value(for: try sessionSlot())
         )
-        let text = String(decoding: stored, as: UTF8.self)
+        let text = try XCTUnwrap(
+            String(data: stored, encoding: .utf8)
+        )
         XCTAssertFalse(text.contains(accessToken))
         XCTAssertFalse(text.contains(refreshToken))
         XCTAssertTrue(text.contains("requires_sign_in"))
@@ -275,7 +277,9 @@ final class NativeAuthSessionTests: XCTestCase {
         let inFlight = try XCTUnwrap(
             vault.value(for: try sessionSlot())
         )
-        let inFlightText = String(decoding: inFlight, as: UTF8.self)
+        let inFlightText = try XCTUnwrap(
+            String(data: inFlight, encoding: .utf8)
+        )
         XCTAssertTrue(inFlightText.contains(#""state":"refreshing""#))
         XCTAssertFalse(inFlightText.contains(accessToken))
         XCTAssertFalse(inFlightText.contains(refreshToken))
@@ -326,7 +330,9 @@ final class NativeAuthSessionTests: XCTestCase {
         let stored = try XCTUnwrap(
             vault.value(for: try sessionSlot())
         )
-        let text = String(decoding: stored, as: UTF8.self)
+        let text = try XCTUnwrap(
+            String(data: stored, encoding: .utf8)
+        )
         XCTAssertFalse(text.contains(accessToken))
         XCTAssertFalse(text.contains(refreshToken))
         XCTAssertTrue(text.contains(nextAccessToken))
@@ -360,8 +366,10 @@ final class NativeAuthSessionTests: XCTestCase {
         let stored = try XCTUnwrap(
             vault.value(for: try sessionSlot())
         )
-        XCTAssertFalse(String(decoding: stored, as: UTF8.self)
-            .contains(nextRefreshToken))
+        let storedText = try XCTUnwrap(
+            String(data: stored, encoding: .utf8)
+        )
+        XCTAssertFalse(storedText.contains(nextRefreshToken))
     }
 
     func testSignOutNeedsExactReceiptAndNeverRetainsLocalTokens()
@@ -405,7 +413,9 @@ final class NativeAuthSessionTests: XCTestCase {
         _ = try await authorizedSession(vault: vault)
         let slot = try sessionSlot()
         let original = try XCTUnwrap(vault.value(for: slot))
-        let text = String(decoding: original, as: UTF8.self)
+        let text = try XCTUnwrap(
+            String(data: original, encoding: .utf8)
+        )
         let duplicate = Data(
             text.replacingOccurrences(
                 of: #""scope":"profile:read trips:write""#,
@@ -431,8 +441,10 @@ final class NativeAuthSessionTests: XCTestCase {
             .requiresSignIn
         )
         let marker = try XCTUnwrap(vault.value(for: slot))
-        XCTAssertFalse(String(decoding: marker, as: UTF8.self)
-            .contains(accessToken))
+        let markerText = try XCTUnwrap(
+            String(data: marker, encoding: .utf8)
+        )
+        XCTAssertFalse(markerText.contains(accessToken))
     }
 
     func testTokenParserRejectsUnknownDuplicateAndInvalidSemantics()

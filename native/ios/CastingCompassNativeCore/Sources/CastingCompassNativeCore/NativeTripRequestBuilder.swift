@@ -27,13 +27,13 @@ public enum NativeTripRequestBuilderError: Error, Equatable {
 
 private enum NativeTripPlanValidation {
     static let siteIDPattern = try! NSRegularExpression(
-        pattern: #"^[a-z0-9][a-z0-9-]{0,99}$"#
+        pattern: #"\A[a-z0-9][a-z0-9-]{0,99}\z"#
     )
     static let opaqueIDPattern = try! NSRegularExpression(
-        pattern: #"^[A-Za-z0-9][A-Za-z0-9._:-]{0,199}$"#
+        pattern: #"\A[A-Za-z0-9][A-Za-z0-9._:-]{0,199}\z"#
     )
     static let referralPattern = try! NSRegularExpression(
-        pattern: #"^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$"#
+        pattern: #"\A[A-Za-z0-9][A-Za-z0-9_-]{0,63}\z"#
     )
 
     static func regexMatches(_ expression: NSRegularExpression, _ value: String) -> Bool {

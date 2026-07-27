@@ -318,6 +318,53 @@ final class NativeDispatchCoordinatorTests: XCTestCase {
         )
     }
 
+    func testChangedRetryPersistsAttentionWithoutSecondDispatch()
+        async throws
+    {
+        let fixture = try await makeTripFixture(
+            steps: [.failure(.transportFailure)]
+        )
+        let first = try await fixture.coordinator.submitNew(
+            fixture.plan,
+            now: now
+        )
+        XCTAssertEqual(first.state, .pendingSubmission)
+
+        let requestSlot = try NativeTripCredentialSlot(
+            kind: .requestToken,
+            account: tripID
+        )
+        try fixture.vault.store(
+            Data(String(repeating: "Z", count: 43).utf8),
+            in: requestSlot
+        )
+
+        do {
+            _ = try await fixture.coordinator.retryPending(
+                operation: .start,
+                tripID: tripID,
+                now: now
+            )
+            XCTFail("changed request material must not dispatch")
+        } catch {
+            XCTAssertEqual(
+                error as? NativeTripRecoveryError,
+                .requestChanged
+            )
+        }
+
+        let persisted = try await fixture.store.load(
+            operation: .start,
+            tripID: tripID
+        )
+        XCTAssertEqual(
+            persisted?.record.state,
+            .needsUserAttention
+        )
+        let requests = await fixture.transport.capturedRequests()
+        XCTAssertEqual(requests.count, 1)
+    }
+
     func testSignedOutSubmissionRemainsDraftAndCanResumeAfterAuthorization()
         async throws
     {

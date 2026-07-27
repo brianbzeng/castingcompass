@@ -80,14 +80,13 @@ public final class KeychainNativeTripCredentialVault: NativeTripCredentialVault,
             throw NativeTripCredentialVaultError.emptyCredential
         }
         let query = baseQuery(slot)
-        let attributes: [String: Any] = [
+        let updateAttributes: [String: Any] = [
             kSecValueData as String: value,
             kSecAttrAccessible as String: kSecAttrAccessibleWhenUnlockedThisDeviceOnly,
-            kSecAttrSynchronizable as String: false,
         ]
         let updateStatus = SecItemUpdate(
             query as CFDictionary,
-            attributes as CFDictionary
+            updateAttributes as CFDictionary
         )
         if updateStatus == errSecSuccess {
             return
@@ -96,7 +95,7 @@ public final class KeychainNativeTripCredentialVault: NativeTripCredentialVault,
             throw NativeTripCredentialVaultError.unexpectedStatus(updateStatus)
         }
         var insertion = query
-        insertion.merge(attributes) { _, newValue in newValue }
+        insertion.merge(updateAttributes) { _, newValue in newValue }
         let addStatus = SecItemAdd(insertion as CFDictionary, nil)
         guard addStatus == errSecSuccess else {
             throw NativeTripCredentialVaultError.unexpectedStatus(addStatus)

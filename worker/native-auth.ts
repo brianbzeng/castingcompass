@@ -4,6 +4,7 @@ import {
   NATIVE_OAUTH_CODE_CHALLENGE_METHOD,
   NATIVE_OAUTH_REFRESH_TOKEN_SECONDS,
   NATIVE_OAUTH_SCOPE,
+  NATIVE_OAUTH_SCOPE_VALUES,
   NATIVE_OAUTH_TOKEN_TYPE,
   isSafeNativeRedirectUri,
   type NativeOAuthScope,
@@ -893,7 +894,15 @@ function parseOpaqueToken(value: unknown, label: string) {
 
 function parseStoredScopes(value: string): readonly NativeOAuthScope[] | null {
   if (value !== NATIVE_OAUTH_SCOPE) return null;
-  return ["profile:read", "trips:write"];
+  const scopes = value.split(" ");
+  if (
+    scopes.length !== NATIVE_OAUTH_SCOPE_VALUES.length
+    || new Set(scopes).size !== scopes.length
+    || !scopes.every((scope) => NATIVE_OAUTH_SCOPE_VALUES.includes(scope as NativeOAuthScope))
+  ) {
+    return null;
+  }
+  return scopes as NativeOAuthScope[];
 }
 
 function assertOnlyFields(body: Record<string, unknown>, allowed: readonly string[]) {

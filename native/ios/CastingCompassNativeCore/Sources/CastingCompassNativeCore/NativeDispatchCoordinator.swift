@@ -206,7 +206,12 @@ public actor NativeTripDispatchCoordinator {
             builtRequest,
             accessToken: accessToken
         )
-        try submission.beginSubmission(using: builtRequest)
+        do {
+            try submission.beginSubmission(using: builtRequest)
+        } catch NativeTripRecoveryError.requestChanged {
+            try await store.save(submission)
+            throw NativeTripRecoveryError.requestChanged
+        }
         try await store.save(submission)
         return try await dispatch(
             request,
@@ -226,6 +231,9 @@ public actor NativeTripDispatchCoordinator {
         ) else {
             throw NativeTripDispatchError.submissionNotFound
         }
+        guard submission.record.state == .pendingSubmission else {
+            throw NativeTripRecoveryError.invalidState
+        }
         let builtRequest = try builder.materialize(
             submission.plan,
             vault: vault
@@ -236,7 +244,12 @@ public actor NativeTripDispatchCoordinator {
             builtRequest,
             accessToken: accessToken
         )
-        try submission.prepareExplicitRetry(using: builtRequest)
+        do {
+            try submission.prepareExplicitRetry(using: builtRequest)
+        } catch NativeTripRecoveryError.requestChanged {
+            try await store.save(submission)
+            throw NativeTripRecoveryError.requestChanged
+        }
         try await store.save(submission)
         return try await dispatch(
             request,
@@ -269,7 +282,12 @@ public actor NativeTripDispatchCoordinator {
             builtRequest,
             accessToken: accessToken
         )
-        try submission.beginSubmission(using: builtRequest)
+        do {
+            try submission.beginSubmission(using: builtRequest)
+        } catch NativeTripRecoveryError.requestChanged {
+            try await store.save(submission)
+            throw NativeTripRecoveryError.requestChanged
+        }
         try await store.save(submission)
         return try await dispatch(
             request,

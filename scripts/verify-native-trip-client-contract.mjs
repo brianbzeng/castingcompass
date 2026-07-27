@@ -178,7 +178,7 @@ function localArray(source, name) {
   return [...match[1].matchAll(/"([^"]+)"/gu)].map((entry) => entry[1]);
 }
 
-function routeEntry(source, routeId) {
+export function routeEntry(source, routeId) {
   const marker = `"${routeId}",`;
   const idIndex = source.indexOf(marker);
   assert.notEqual(idIndex, -1, `Missing route policy ${routeId}.`);
@@ -205,10 +205,14 @@ export function verifyRuntimeBindings(policy = validateNativeTripPolicy(JSON.par
     policy.collection.cancellation_reasons,
   );
   assert.deepEqual(sourceArray(shared, "NATIVE_TRIP_START_FIELDS"), policy.operations[0].required_fields);
-  assert.deepEqual(
-    sourceArray(shared, "NATIVE_TRIP_COMPLETE_FIELDS"),
-    [...policy.operations[1].required_fields.slice(0, 8), "otherSpecies", ...policy.operations[1].required_fields.slice(8)],
-  );
+  const completeOperation = policy.operations[1];
+  const completeFields = [...completeOperation.required_fields];
+  const otherSpecies = completeOperation.optional_fields.find((field) => field === "otherSpecies");
+  assert.equal(otherSpecies, "otherSpecies");
+  const otherCatchIndex = completeFields.indexOf("otherCatchCount");
+  assert.notEqual(otherCatchIndex, -1);
+  completeFields.splice(otherCatchIndex + 1, 0, otherSpecies);
+  assert.deepEqual(sourceArray(shared, "NATIVE_TRIP_COMPLETE_FIELDS"), completeFields);
   assert.deepEqual(sourceArray(shared, "NATIVE_TRIP_CANCEL_FIELDS"), policy.operations[2].required_fields);
   assert.deepEqual(
     sourceArray(shared, "NATIVE_TRIP_START_ACCEPTED_FIELDS"),
@@ -281,18 +285,33 @@ export function verifyRuntimeBindings(policy = validateNativeTripPolicy(JSON.par
   assert.match(trips, /validateDuration\(existing\.started_at, endedAt, 36\)/u);
   assert.match(trips, /const site = getSite\(siteMap, body\.siteId\)/u);
 
-  const startBranch = trips.slice(
-    trips.indexOf('if (url.pathname === "/api/trips/start")'),
-    trips.indexOf("const cancellationMatch"),
+  const requiredMarkerIndex = (marker, label) => {
+    const index = trips.indexOf(marker);
+    assert.notEqual(index, -1, `Missing ${label} marker.`);
+    return index;
+  };
+  const startMarker = requiredMarkerIndex(
+    'if (url.pathname === "/api/trips/start")',
+    "trip start",
   );
-  const cancelBranch = trips.slice(
-    trips.indexOf("const cancellationMatch"),
-    trips.indexOf("const completionMatch"),
+  const cancellationMarker = requiredMarkerIndex(
+    "const cancellationMatch",
+    "trip cancellation",
   );
-  const completeBranch = trips.slice(
-    trips.indexOf("const completionMatch"),
-    trips.indexOf('if (url.pathname === "/api/trips/report")'),
+  const completionMarker = requiredMarkerIndex(
+    "const completionMatch",
+    "trip completion",
   );
+  const reportMarker = requiredMarkerIndex(
+    'if (url.pathname === "/api/trips/report")',
+    "legacy trip report",
+  );
+  assert.ok(startMarker < cancellationMarker);
+  assert.ok(cancellationMarker < completionMarker);
+  assert.ok(completionMarker < reportMarker);
+  const startBranch = trips.slice(startMarker, cancellationMarker);
+  const cancelBranch = trips.slice(cancellationMarker, completionMarker);
+  const completeBranch = trips.slice(completionMarker, reportMarker);
   for (const [branch, operation] of [
     [startBranch, policy.operations[0]],
     [completeBranch, policy.operations[1]],

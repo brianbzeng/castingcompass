@@ -28,6 +28,7 @@ final class NativeTripCoreTests: XCTestCase {
         let generatedTripID = NativeTripIdentity.makeTripID()
         XCTAssertNoThrow(try NativeTripIdentity.validateTripID(generatedTripID))
         XCTAssertThrowsError(try NativeTripIdentity.validateTripID("trip_not-a-uuid"))
+        XCTAssertThrowsError(try NativeTripIdentity.validateTripID("\(tripID)\n"))
 
         let token = try NativeTripIdentity.makeRandomToken()
         XCTAssertEqual(token.count, 43)
@@ -123,11 +124,11 @@ final class NativeTripCoreTests: XCTestCase {
     }
 
     func testDurableRecordContainsReferencesAndHashesButNoCredentialBytes() throws {
-        let marker = "never-persist-this-reporter-key"
         let record = try makeRecord(operation: .start)
         let encoded = try JSONEncoder().encode(record)
         let text = try XCTUnwrap(String(data: encoded, encoding: .utf8))
-        XCTAssertFalse(text.contains(marker))
+        let requestText = try XCTUnwrap(String(data: requestBody, encoding: .utf8))
+        XCTAssertFalse(text.contains(requestText))
         XCTAssertTrue(text.contains("reporter-key"))
         XCTAssertTrue(text.contains("request-token"))
         XCTAssertTrue(text.contains("exactBodySHA256"))
@@ -152,6 +153,63 @@ final class NativeTripCoreTests: XCTestCase {
         let tampered = try JSONSerialization.data(withJSONObject: object)
         XCTAssertThrowsError(
             try JSONDecoder().decode(NativeTripDurableRecord.self, from: tampered)
+        )
+    }
+
+    func testChangedPersistedRequestCannotDowngradeConfirmedReceipt() throws {
+        let requestSlot = try NativeTripCredentialSlot(
+            kind: .requestToken,
+            account: tripID
+        )
+        let reporterSlot = try NativeTripCredentialSlot(
+            kind: .reporterKey,
+            account: "device-install-1"
+        )
+        let plan = try NativeTripStartPlan(
+            tripID: tripID,
+            requestTokenSlot: requestSlot,
+            reporterKeySlot: reporterSlot,
+            siteID: "goleta-beach",
+            startedAt: Date(timeIntervalSince1970: 1_786_291_200),
+            anglerCount: 1,
+            mode: .beach,
+            scoreInfluencedChoice: false,
+            primaryTargetConfirmed: true,
+            consent: true
+        )
+        let builder = try NativeTripRequestBuilder(
+            allowedSiteIDs: ["goleta-beach"]
+        )
+        let original = try builder.buildStart(
+            plan,
+            requestToken: requestToken,
+            reporterKey: reporterKey
+        )
+        var persisted = try NativeTripPersistedSubmission(
+            plan: .start(plan),
+            builtRequest: original
+        )
+        try persisted.beginSubmission(using: original)
+        let receipt = try NativeTripReceipt.parseExact(Data(
+            #"{"receipt":{"operation":"start","tripId":"trip_123e4567-e89b-42d3-a456-426614174000"}}"#
+                .utf8
+        ))
+        try persisted.apply(.exactReceipt(receipt))
+        let changed = try builder.buildStart(
+            plan,
+            requestToken: String(repeating: "C", count: 43),
+            reporterKey: reporterKey
+        )
+
+        XCTAssertThrowsError(
+            try persisted.prepareExplicitRetry(using: changed)
+        ) { error in
+            XCTAssertEqual(error as? NativeTripRecoveryError, .requestChanged)
+        }
+        XCTAssertEqual(persisted.record.state, .confirmed)
+        XCTAssertEqual(
+            persisted.record.confirmationReceiptSHA256,
+            receipt.responseSHA256
         )
     }
 
@@ -504,12 +562,15 @@ final class NativeTripCoreTests: XCTestCase {
         return NativeTripDurableRecord(descriptor: descriptor)
     }
 
-    private func exactBody(for operation: NativeTripOperation) -> Data {
+    private func exactBody(for operation: NativeTripOperation) throws -> Data {
         guard operation == .complete else {
             return requestBody
         }
+        let requestText = try XCTUnwrap(
+            String(data: requestBody, encoding: .utf8)
+        )
         return Data((
-            "--castingcompass-test\r\n\(String(decoding: requestBody, as: UTF8.self))" +
+            "--castingcompass-test\r\n\(requestText)" +
                 "\r\n--castingcompass-test--\r\n"
         ).utf8)
     }

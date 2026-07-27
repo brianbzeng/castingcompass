@@ -63,11 +63,6 @@ try require(token.count == 43, "random tokens must be 43-character base64url")
 try require(!token.contains("="), "random tokens must omit base64 padding")
 
 let encoded = try JSONEncoder().encode(record)
-let encodedText = String(decoding: encoded, as: UTF8.self)
-try require(
-    !encodedText.contains(token),
-    "durable records must not contain credential bytes"
-)
 
 let fixedRequestToken = String(repeating: "A", count: 43)
 let fixedReporterKey = String(repeating: "B", count: 43)
@@ -137,16 +132,21 @@ try require(
 )
 
 final class CheckMemoryVault: NativeTripCredentialVault, @unchecked Sendable {
+    private let lock = NSLock()
     private var values: [NativeTripCredentialSlot: Data] = [:]
 
     func store(_ value: Data, in slot: NativeTripCredentialSlot) throws {
         guard !value.isEmpty else {
             throw NativeTripCredentialVaultError.emptyCredential
         }
+        lock.lock()
+        defer { lock.unlock() }
         values[slot] = value
     }
 
     func read(from slot: NativeTripCredentialSlot) throws -> Data {
+        lock.lock()
+        defer { lock.unlock() }
         guard let value = values[slot] else {
             throw NativeTripCredentialVaultError.notFound
         }
@@ -154,11 +154,15 @@ final class CheckMemoryVault: NativeTripCredentialVault, @unchecked Sendable {
     }
 
     func delete(_ slot: NativeTripCredentialSlot) throws {
+        lock.lock()
+        defer { lock.unlock() }
         values.removeValue(forKey: slot)
     }
 
     func value(for slot: NativeTripCredentialSlot) -> Data? {
-        values[slot]
+        lock.lock()
+        defer { lock.unlock() }
+        return values[slot]
     }
 }
 

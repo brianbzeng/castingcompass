@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
+import { routeEntry } from "./verify-native-trip-client-contract.mjs";
 
 const root = new URL("../", import.meta.url);
 const read = (path) => readFile(new URL(path, root), "utf8");
@@ -42,17 +43,8 @@ const [
   ]);
 
 const policy = JSON.parse(policySource);
-const routeEntry = (routeId) => {
-  const marker = `"${routeId}",`;
-  const idIndex = routePolicySource.indexOf(marker);
-  assert.notEqual(idIndex, -1, `Missing route policy ${routeId}.`);
-  const start = routePolicySource.lastIndexOf("route(", idIndex);
-  const next = routePolicySource.indexOf("\n  route(", idIndex + marker.length);
-  assert.notEqual(start, -1, `Missing route() boundary for ${routeId}.`);
-  return routePolicySource.slice(start, next === -1 ? routePolicySource.length : next);
-};
-const nativeAuthorizeRoute = routeEntry("native_oauth.authorize");
-const nativeTokenRoute = routeEntry("native_oauth.token");
+const nativeAuthorizeRoute = routeEntry(routePolicySource, "native_oauth.authorize");
+const nativeTokenRoute = routeEntry(routePolicySource, "native_oauth.token");
 
 assert.deepEqual(Object.keys(policy).sort(), [
   "api", "authentication", "coverage", "nativeTripClientPolicy", "productionReadiness",
@@ -120,6 +112,9 @@ assert.match(nativeBrowserContractSource, /params\.getAll\(field\)\.length !== 1
 assert.match(nativeBrowserContractSource, /isSafeNativeRedirectUri\(redirectUri\)/);
 assert.match(nativeBrowserContractSource, /actual\.searchParams\.get\("state"\) !== request\.state/);
 assert.match(nativeAuthorizationPageSource, /fetch\("\/api\/native\/oauth\/authorize"/);
+assert.match(nativeAuthorizationPageSource, /new AbortController\(\)/);
+assert.match(nativeAuthorizationPageSource, /signal: controller\.signal/);
+assert.match(nativeAuthorizationPageSource, /window\.clearTimeout\(timeout\)/);
 assert.match(nativeAuthorizationPageSource, /window\.location\.assign\(callback\)/);
 assert.match(nativeAuthorizationPageSource, /window\.history\.replaceState\(null, "", window\.location\.pathname\)/);
 assert.match(nativeAuthorizationPageSource, /AccountModal/);

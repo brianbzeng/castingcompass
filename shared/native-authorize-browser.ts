@@ -81,7 +81,7 @@ export function verifiedNativeAuthorizationCallback(
       || actual.host !== expected.host
       || actual.pathname !== expected.pathname
       || actual.hash
-      || actual.searchParams.size !== 2
+      || Array.from(actual.searchParams.keys()).length !== 2
       || actual.searchParams.getAll("code").length !== 1
       || actual.searchParams.getAll("state").length !== 1
       || !CALLBACK_CODE_PATTERN.test(actual.searchParams.get("code") ?? "")

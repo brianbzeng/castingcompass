@@ -2525,7 +2525,9 @@ export async function handleTripRequest(
             id,
             { trip: publicTrip(existingRequest), token },
             201,
-            reporter.setCookie,
+            options.requestAuthority === "browser_cookie"
+              ? reporter.setCookie
+              : undefined,
           );
         }
         throw new ApiError(409, "trip_request_conflict", "This trip request identity cannot be reused.");
@@ -2740,7 +2742,9 @@ export async function handleTripRequest(
         id,
         { trip: publicTrip(trip), token },
         201,
-        reporter.setCookie,
+        options.requestAuthority === "browser_cookie"
+          ? reporter.setCookie
+          : undefined,
       );
     }
 
@@ -2842,7 +2846,9 @@ export async function handleTripRequest(
               Boolean(originalForecastImpression) && existing.opportunity_window_id === null,
           },
           200,
-          reporter.setCookie,
+          options.requestAuthority === "browser_cookie"
+            ? reporter.setCookie
+            : undefined,
         );
       }
       if (!existing || existing.status !== "active" || !sameTripAccount(existing, options.accountId)) {
@@ -2979,7 +2985,9 @@ export async function handleTripRequest(
                 Boolean(originalForecastImpression) && racedTrip.opportunity_window_id === null,
             },
             200,
-            retryReporter.setCookie,
+            options.requestAuthority === "browser_cookie"
+              ? retryReporter.setCookie
+              : undefined,
           );
         }
         if (uploaded) await releaseAttachedPhotoReservation(uploaded, store);

@@ -46,7 +46,7 @@ public enum NativeTripIdentityError: Error, Equatable {
 
 public enum NativeTripIdentity {
     private static let tripIDPattern = try! NSRegularExpression(
-        pattern: #"^trip_[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"#
+        pattern: #"\Atrip_[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\z"#
     )
 
     public static func makeTripID(uuid: UUID = UUID()) -> String {

@@ -413,6 +413,9 @@ public struct NativeTripDurableRecord: Codable, Equatable, Sendable {
     }
 
     mutating func failChangedRequest() {
+        guard state != .confirmed else {
+            return
+        }
         state = .needsUserAttention
         confirmationReceiptSHA256 = nil
     }
