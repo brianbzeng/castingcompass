@@ -1,7 +1,7 @@
 # Native trip logger boundary
 
-Status: server contract and reusable Swift collection core implemented locally; SwiftUI client,
-staging, device acceptance, and activation remain open.
+Status: server contract and reusable Swift collection/auth-session cores implemented locally;
+SwiftUI client, staging, device acceptance, and activation remain open.
 Last reviewed: **2026-07-26 UTC**
 
 This document defines the smallest safe trip-collection surface for the first CastingCompass iOS
@@ -108,9 +108,10 @@ Neither check is application, staging, signing, or physical-device evidence.
 
 ## Remaining release gates
 
-Before TestFlight, integrate the reviewed recovery/Keychain/request/persistence core into a
-SwiftUI application, connect it to the reviewed PKCE flow and an ephemeral credential-free
-`URLSession`, configure a production-disjoint staging Worker and D1 database, and test
+Before TestFlight, integrate the reviewed recovery/Keychain/request/persistence and PKCE/token
+session cores into a SwiftUI application, connect the browser handoff through
+`ASWebAuthenticationSession`, dispatch through the provided ephemeral credential-free
+`URLSession` configuration, configure a production-disjoint staging Worker and D1 database, and test
 start/completion/cancellation response loss on a physical device. Also prove logout,
 refresh-family loss, password reset, account deletion, app reinstall, accessibility, privacy
 metadata, monitoring, rate limits, rollback, and independent security review. Keep native OAuth

@@ -1065,7 +1065,7 @@ after its acceptance checks pass in the intended environment.
       revocation, bounded retention, query-plan/index checks, guarded migration `0021`, a
       fail-closed mobile policy verifier, and a noindex first-party browser continue page with
       exact query/callback/state validation. This is local implementation evidence only; the
-      SwiftUI/Keychain client, isolated staging, Apple signing, physical-device
+      SwiftUI application integration, isolated staging, Apple signing, physical-device
       acceptance, independent review, and provider activation remain open.
     - [x] Freeze the first native trip-logger request, response, recovery, privacy, and local
       persistence contract. It supports a curated California-halibut attempt start, complete
@@ -1097,6 +1097,22 @@ after its acceptance checks pass in the intended environment.
       automatic replay, SwiftUI, staging, device acceptance, or release authority is added.
       Debug/release builds, the recovery/storage executable, lint, typecheck, all 775/775 Node
       tests, and the complete security chain pass locally.
+    - [x] Implement the reusable non-UI native authentication/session core. It creates memory-only
+      random PKCE verifier/state material and an exact `S256` browser envelope; consumes one exact
+      callback; emits strict token/refresh/revoke bodies without browser authority; provides an
+      ephemeral no-cookie/no-credential/no-cache session configuration; rejects oversized,
+      unknown, duplicate, malformed, wrong-lifetime, wrong-scope, or family-extending responses;
+      and rotates the access/refresh pair as one Keychain item. Refresh and revoke are
+      actor-serialized and persist a non-secret in-flight marker before returning a request, so a
+      crash or second actor cannot restore the predecessor. A dispatched refresh may never retry
+      that predecessor: any ambiguous or invalid outcome atomically removes both tokens and
+      requires a new sign-in. The package
+      dispatches no network request and does not integrate `ASWebAuthenticationSession`. Release
+      and executable Swift checks, 777/777 Node tests, the production-shaped build, ESLint,
+      TypeScript, and the complete security/SBOM/query/provenance chain pass locally; XCTest
+      remains hosted-only until full Xcode exists. SwiftUI, staging, signing, physical-device
+      acceptance, independent review, provider activation, and every
+      TestFlight/pilot/model/score authority remain open.
 
 ## P2 — Species and business expansion
 

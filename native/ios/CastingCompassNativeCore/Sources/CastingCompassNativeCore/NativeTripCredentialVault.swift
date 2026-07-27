@@ -3,6 +3,7 @@ import Security
 
 public enum NativeTripCredentialKind: String, Codable, Sendable {
     case accessToken = "access-token"
+    case oauthSession = "oauth-session"
     case refreshToken = "refresh-token"
     case reporterKey = "reporter-key"
     case requestToken = "request-token"

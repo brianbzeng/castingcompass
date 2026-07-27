@@ -66,7 +66,8 @@ by that discovery.
       `profile:read`/`trips:write` scopes, owner/legal/deletion fences, password-reset revocation,
       bounded cleanup, guarded migration `0021`, fail-closed policy/query-plan tests, and a
       noindex first-party browser continue page with exact query/callback/state validation. The
-      parent remains open for SwiftUI/Keychain integration with that system-browser page,
+      parent remains open for SwiftUI integration of the reusable Keychain/auth core with that
+      system-browser page,
       isolated staging, signing, physical-device acceptance, independent review, and activation.
   - [x] Freeze and locally verify the first native trip-logger contract against the existing
         Worker: curated California-halibut sites, explicit attempt start, complete zero/nonzero
@@ -97,8 +98,26 @@ by that discovery.
         any rebuilt body/route/content-type drift are rejected. The package still has no network
         scheduler or automatic replay. Debug/release builds, the recovery/storage executable,
         lint, typecheck, all 775/775 Node tests, and the complete security chain pass locally.
-        SwiftUI, PKCE/session integration, hosted XCTest, staging, signing, physical-device
-        recovery drills, and all TestFlight authority remain open.
+        SwiftUI/system-browser/network-dispatch integration, hosted XCTest, staging, signing,
+        physical-device recovery drills, and all TestFlight authority remain open.
+  - [x] Implement the reusable native PKCE/token session core without activating native auth.
+        Memory-only random verifier/state material produces the exact `S256` system-browser
+        request; callbacks are URI/state exact and single-use; token, refresh, and revoke
+        envelopes are strict and carry no Cookie, Origin, or ambient Authorization. An ephemeral
+        session configuration has no shared cookie, credential, or cache store. Exact bounded
+        responses atomically rotate both credentials in one non-synchronizing
+        `WhenUnlockedThisDeviceOnly` Keychain item. Refresh/revoke are actor-serialized and write
+        a non-secret in-flight marker before returning a request, so a crash or second actor
+        cannot restore the predecessor; cancellation before dispatch explicitly restores the
+        unchanged pair. Once dispatched, a lost, rejected, malformed, or family-extending outcome
+        overwrites the pair with `requires_sign_in`. Exact revoke evidence produces `signed_out`;
+        ambiguous revoke destroys local authority without claiming remote confirmation. The
+        package still contains no network scheduler. Release and executable Swift checks, the
+        777/777 Node suite, production-shaped build, ESLint, TypeScript, and the complete
+        security/SBOM/query/provenance chain pass locally. Local XCTest remains unavailable
+        without full Xcode. SwiftUI/`ASWebAuthenticationSession` integration, hosted XCTest,
+        isolated staging, signing, physical-device drills, independent review, and all TestFlight
+        authority remain open.
 - [ ] Complete the owner/device gates for TestFlight: active Apple Developer membership and App
       Store Connect access, full Xcode installation, final bundle/app identity, signing and
       provisioning, accurate privacy/export-compliance metadata, physical-device acceptance, and
@@ -4287,8 +4306,8 @@ supersedes this mutation-metadata authority while preserving its fail-closed beh
       `1`; opt-in incompatible clients fail before expensive work; current secure-cookie web
       clients remain compatible; shared schemas are inventoried; fixed surfaces consume all four
       safe-area insets; and hosted CI runs the mobile/offline suite on Chromium and WebKit. Native
-      PKCE/token work, isolated staging, physical-device acceptance, provider bindings, deployment,
-      and production-scale evidence remain open.
+      SwiftUI integration of the implemented PKCE/token core, isolated staging, physical-device
+      acceptance, provider bindings, deployment, and production-scale evidence remain open.
 
 ## P2 — Species and business expansion
 

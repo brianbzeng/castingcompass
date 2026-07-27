@@ -16,8 +16,10 @@ export async function verifyNativeIOSCollectionCore() {
     requestBuilder,
     recovery,
     durableStore,
+    authSession,
     executableCheck,
     tests,
+    authTests,
     readme,
     workflow,
     tripPolicy,
@@ -39,10 +41,16 @@ export async function verifyNativeIOSCollectionCore() {
       "native/ios/CastingCompassNativeCore/Sources/CastingCompassNativeCore/NativeTripDurableStore.swift",
     ),
     read(
+      "native/ios/CastingCompassNativeCore/Sources/CastingCompassNativeCore/NativeAuthSession.swift",
+    ),
+    read(
       "native/ios/CastingCompassNativeCore/Sources/CastingCompassNativeCoreCheck/main.swift",
     ),
     read(
       "native/ios/CastingCompassNativeCore/Tests/CastingCompassNativeCoreTests/NativeTripCoreTests.swift",
+    ),
+    read(
+      "native/ios/CastingCompassNativeCore/Tests/CastingCompassNativeCoreTests/NativeAuthSessionTests.swift",
     ),
     read("native/ios/CastingCompassNativeCore/README.md"),
     read(".github/workflows/native-ios-core.yml"),
@@ -75,6 +83,7 @@ export async function verifyNativeIOSCollectionCore() {
   assert.equal((vault.match(/kSecAttrSynchronizable as String: false/gu) ?? []).length, 2);
   assert.match(vault, /case reporterKey = "reporter-key"/u);
   assert.match(vault, /case requestToken = "request-token"/u);
+  assert.match(vault, /case oauthSession = "oauth-session"/u);
   assert.doesNotMatch(vault, /UserDefaults|NSUbiquitous|kSecAttrSynchronizable.*true/u);
 
   assert.match(requestBuilder, /struct NativeTripStartPlan/u);
@@ -125,6 +134,38 @@ export async function verifyNativeIOSCollectionCore() {
     /URLSession|Timer\.|BGTaskScheduler|UserDefaults|print\(|Logger\(/u,
   );
 
+  assert.match(authSession, /enum NativeAuthContract/u);
+  assert.match(authSession, /clientID = "com\.castingcompass\.app"/u);
+  assert.match(authSession, /redirectURI = "castingcompass:\/\/oauth\/callback"/u);
+  assert.match(authSession, /scope = "profile:read trips:write"/u);
+  assert.match(authSession, /codeChallengeMethod = "S256"/u);
+  assert.match(authSession, /actor NativeAuthorizationAttempt/u);
+  assert.match(authSession, /SHA256\.hash\(data: Data\(verifier\.utf8\)\)/u);
+  assert.match(authSession, /nativeAuthConstantTimeEqual\(stateValues\[0\], stateValue\)/u);
+  assert.match(authSession, /attemptState = \.invalidated/u);
+  assert.match(authSession, /actor NativeAuthSession/u);
+  assert.match(authSession, /case refreshing/u);
+  assert.match(authSession, /case revoking/u);
+  assert.match(authSession, /case requiresSignIn = "requires_sign_in"/u);
+  assert.match(authSession, /kind: \.oauthSession/u);
+  assert.match(authSession, /invalidateAfterRefreshWasDispatched/u);
+  assert.match(authSession, /try invalidateFamily\(\)/u);
+  assert.match(authSession, /try writeMarker\(\.refreshing\)/u);
+  assert.match(authSession, /try writeMarker\(\.revoking\)/u);
+  assert.match(authSession, /case \.interruptedSensitiveOperation:/u);
+  assert.match(authSession, /URLSessionConfiguration\.ephemeral/u);
+  assert.match(authSession, /configuration\.httpCookieStorage = nil/u);
+  assert.match(authSession, /configuration\.httpShouldSetCookies = false/u);
+  assert.match(authSession, /configuration\.urlCredentialStorage = nil/u);
+  assert.match(authSession, /configuration\.urlCache = nil/u);
+  assert.match(authSession, /\["authorization", "cookie", "origin"\]/u);
+  assert.match(authSession, /options: \[\.sortedKeys, \.withoutEscapingSlashes\]/u);
+  assert.match(authSession, /NativeAuthBackchannelRequest\(redacted\)/u);
+  assert.doesNotMatch(
+    authSession,
+    /FileManager|UserDefaults|SQLite|CoreData|UIPasteboard|NSPasteboard|print\(|Logger\(|URLSession\.shared|dataTask\(|\.resume\(\)|BGTaskScheduler|Timer\./u,
+  );
+
   assert.match(executableCheck, /ambiguous transport must never claim success/u);
   assert.match(executableCheck, /duplicate receipt keys must fail closed/u);
   assert.match(
@@ -132,6 +173,11 @@ export async function verifyNativeIOSCollectionCore() {
     /the same plan and Keychain material must reproduce identical bytes/u,
   );
   assert.match(executableCheck, /durable files must contain no raw request or reporter credential/u);
+  assert.match(executableCheck, /native callbacks must be single-use/u);
+  assert.match(
+    executableCheck,
+    /a lost refresh response must destroy the local token family/u,
+  );
   assert.match(tests, /testAmbiguousWriteStaysPendingUntilExactReceipt/u);
   assert.match(tests, /testChangedRetryAndMismatchedReceiptFailClosed/u);
   assert.match(tests, /testDurableRecordContainsReferencesAndHashesButNoCredentialBytes/u);
@@ -141,6 +187,30 @@ export async function verifyNativeIOSCollectionCore() {
   assert.match(tests, /testPersistedPlanRebuildsIdenticalBytesFromCredentialSlots/u);
   assert.match(tests, /testChangedCredentialMaterialCannotReplayPendingPlan/u);
   assert.match(tests, /testProtectedStoreRoundTripsAndRejectsUnknownPersistedFields/u);
+  assert.match(
+    authTests,
+    /testPKCEAuthorizationAndCallbackProduceExactBackchannelRequest/u,
+  );
+  assert.match(
+    authTests,
+    /testRefreshIsSingleFlightAndLostOutcomeDestroysFamily/u,
+  );
+  assert.match(
+    authTests,
+    /testExactRotationReplacesPairWithoutExtendingFamily/u,
+  );
+  assert.match(
+    authTests,
+    /testPersistedInFlightMarkerPreventsCrossInstanceReuse/u,
+  );
+  assert.match(
+    authTests,
+    /testRestoreRejectsTamperingAndDoesNotResurrectTokens/u,
+  );
+  assert.match(
+    authTests,
+    /testTokenParserRejectsUnknownDuplicateAndInvalidSemantics/u,
+  );
   assert.match(readme, /does not prove application integration or physical-device behavior/u);
 
   assert.match(workflow, /runs-on: macos-15/u);

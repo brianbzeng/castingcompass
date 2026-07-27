@@ -136,4 +136,123 @@ try require(
     "durable files must contain no raw request or reporter credential"
 )
 
+final class CheckMemoryVault: NativeTripCredentialVault, @unchecked Sendable {
+    private var values: [NativeTripCredentialSlot: Data] = [:]
+
+    func store(_ value: Data, in slot: NativeTripCredentialSlot) throws {
+        guard !value.isEmpty else {
+            throw NativeTripCredentialVaultError.emptyCredential
+        }
+        values[slot] = value
+    }
+
+    func read(from slot: NativeTripCredentialSlot) throws -> Data {
+        guard let value = values[slot] else {
+            throw NativeTripCredentialVaultError.notFound
+        }
+        return value
+    }
+
+    func delete(_ slot: NativeTripCredentialSlot) throws {
+        values.removeValue(forKey: slot)
+    }
+
+    func value(for slot: NativeTripCredentialSlot) -> Data? {
+        values[slot]
+    }
+}
+
+let authConfiguration = try NativeAuthConfiguration(
+    baseURL: URL(string: "https://staging.castingcompass.example")!
+)
+let authAttempt = try NativeAuthorizationAttempt(
+    configuration: authConfiguration
+)
+let authURL = await authAttempt.authorizationURL
+let authComponents = URLComponents(
+    url: authURL,
+    resolvingAgainstBaseURL: false
+)
+let authItems = authComponents?.queryItems ?? []
+try require(
+    authComponents?.path == "/native/authorize" &&
+        authItems.count == 6,
+    "native authorization must use the exact system-browser envelope"
+)
+let state = authItems.first(where: { $0.name == "state" })?.value ?? ""
+let code = String(repeating: "E", count: 43)
+let callback = URL(
+    string:
+        "castingcompass://oauth/callback?code=\(code)&state=\(state)"
+)!
+let exchangeRequest = try await authAttempt.consumeCallback(callback)
+try require(
+    exchangeRequest.url.path == "/api/native/oauth/token" &&
+        exchangeRequest.headers["Cookie"] == nil &&
+        exchangeRequest.headers["Origin"] == nil &&
+        exchangeRequest.headers["Authorization"] == nil,
+    "native token exchange must not carry ambient browser authority"
+)
+do {
+    _ = try await authAttempt.consumeCallback(callback)
+    throw CheckFailure.failed("native callbacks must be single-use")
+} catch NativeAuthError.callbackAlreadyConsumed {
+    // Expected.
+}
+
+let ephemeral = NativeAuthBackchannel.makeEphemeralSessionConfiguration()
+try require(
+    ephemeral.httpCookieStorage == nil &&
+        !ephemeral.httpShouldSetCookies &&
+        ephemeral.urlCredentialStorage == nil &&
+        ephemeral.urlCache == nil,
+    "native backchannel sessions must be isolated from shared credentials"
+)
+
+let authVault = CheckMemoryVault()
+let authSession = try NativeAuthSession(
+    configuration: authConfiguration,
+    vault: authVault
+)
+let authAccess = String(repeating: "A", count: 43)
+let authRefresh = String(repeating: "B", count: 43)
+let authResponse = Data(
+    #"{"accessToken":"\#(authAccess)","expiresIn":600,"refreshExpiresIn":2592000,"refreshToken":"\#(authRefresh)","scope":"profile:read trips:write","tokenType":"Bearer"}"#
+        .utf8
+)
+let authNow = Date(timeIntervalSince1970: 1_786_291_200)
+let authorized = try await authSession.acceptAuthorizationCodeExchange(
+    responseData: authResponse,
+    receivedAt: authNow
+)
+let restoredAccess = try await authSession.accessTokenForImmediateRequest(
+    now: authNow
+)
+try require(
+    authorized.status == .authorized &&
+        restoredAccess == authAccess,
+    "only an exact token response may create native authority"
+)
+_ = try await authSession.makeRefreshRequest(now: authNow)
+let invalidated = try await authSession
+    .invalidateAfterRefreshWasDispatched()
+try require(
+    invalidated.status == .requiresSignIn,
+    "a lost refresh response must destroy the local token family"
+)
+let authSlot = try NativeTripCredentialSlot(
+    kind: .oauthSession,
+    account: "primary"
+)
+let authMarker = String(
+    decoding: authVault.value(for: authSlot) ?? Data(),
+    as: UTF8.self
+)
+try require(
+    !authMarker.contains(authAccess) &&
+        !authMarker.contains(authRefresh) &&
+        authMarker.contains("requires_sign_in"),
+    "lost refresh handling must atomically overwrite raw Keychain tokens"
+)
+
 print("CastingCompassNativeCore check passed")

@@ -67,3 +67,54 @@ test("native requests are deterministic, typed, and cannot add ambient browser a
   assert.match(source, /nonAuthorizationHeaders/u);
   assert.doesNotMatch(source, /URLRequest|URLSession|Cookie|Origin|UserDefaults/u);
 });
+
+test("native auth core keeps browser authority out of token operations", async () => {
+  const source = await readFile(
+    new URL(
+      "../native/ios/CastingCompassNativeCore/Sources/CastingCompassNativeCore/NativeAuthSession.swift",
+      import.meta.url,
+    ),
+    "utf8",
+  );
+  assert.match(source, /URLSessionConfiguration\.ephemeral/u);
+  assert.match(source, /configuration\.httpCookieStorage = nil/u);
+  assert.match(source, /configuration\.httpShouldSetCookies = false/u);
+  assert.match(source, /configuration\.urlCredentialStorage = nil/u);
+  assert.match(source, /configuration\.urlCache = nil/u);
+  assert.match(source, /\["authorization", "cookie", "origin"\]/u);
+  assert.match(source, /NativeAuthBackchannelRequest\(redacted\)/u);
+  assert.doesNotMatch(
+    source,
+    /URLSession\.shared|dataTask\(|\.resume\(\)|UserDefaults|FileManager|print\(|Logger\(/u,
+  );
+});
+
+test("native auth rotation is single-flight and response loss fails closed", async () => {
+  const [source, vault] = await Promise.all([
+    readFile(
+      new URL(
+        "../native/ios/CastingCompassNativeCore/Sources/CastingCompassNativeCore/NativeAuthSession.swift",
+        import.meta.url,
+      ),
+      "utf8",
+    ),
+    readFile(
+      new URL(
+        "../native/ios/CastingCompassNativeCore/Sources/CastingCompassNativeCore/NativeTripCredentialVault.swift",
+        import.meta.url,
+      ),
+      "utf8",
+    ),
+  ]);
+  assert.match(source, /actor NativeAuthSession/u);
+  assert.match(source, /guard status == \.authorized, let pair = tokenPair/u);
+  assert.match(source, /status = \.refreshing/u);
+  assert.match(source, /try writeMarker\(\.refreshing\)/u);
+  assert.match(source, /try writeMarker\(\.revoking\)/u);
+  assert.match(source, /case \.interruptedSensitiveOperation:/u);
+  assert.match(source, /invalidateAfterRefreshWasDispatched/u);
+  assert.match(source, /try clearLocalCredentials\(marker: \.requiresSignIn\)/u);
+  assert.match(source, /kind: \.oauthSession/u);
+  assert.match(vault, /case oauthSession = "oauth-session"/u);
+  assert.doesNotMatch(source, /automaticRetry|retryRefresh|Codable/u);
+});

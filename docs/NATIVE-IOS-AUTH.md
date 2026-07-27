@@ -1,6 +1,7 @@
 # Native iOS authentication boundary
 
-Status: server contract implemented locally; client, staging, signing, and activation remain open
+Status: server and reusable Swift auth/session cores implemented locally; SwiftUI browser
+integration, staging, signing, physical-device acceptance, and activation remain open
 Last reviewed: **2026-07-26 UTC**
 
 This document defines the narrow authentication boundary for a future CastingCompass iOS trip
@@ -108,6 +109,36 @@ retention revoke or remove native authority. Logs may contain only redacted outc
 request IDs—never raw codes, verifiers, state, tokens, redirects containing codes, or account
 identity.
 
+## Implemented Swift core
+
+`native/ios/CastingCompassNativeCore` now implements the reusable non-UI client boundary. It
+creates a random 43-character verifier and independent state in memory, derives the SHA-256
+base64url `S256` challenge, constructs the exact first-party browser URL, and consumes at most one
+callback after exact scheme/host/path/query/state validation. A mismatch invalidates the attempt;
+the verifier, state, and code are not `Codable` and are never written by the package.
+
+Token, refresh, and revoke builders emit only the reviewed sorted JSON fields plus
+`X-CastingCompass-API-Version: 1` and `Content-Type: application/json`. Their public request
+description is redacted. The provided ephemeral session configuration has no cookie store,
+credential store, URL cache, or ambient headers. The package contains no network scheduler, so a
+SwiftUI integration must explicitly create and dispatch each request.
+
+An actor serializes refresh and sign-out state. A successful exact token response is checked for
+the fixed bearer type, ten-minute access lifetime, bounded remaining refresh lifetime, exact
+scope, distinct 43-character credentials, and no unknown or duplicate keys. The pair and its
+expiries are stored in one non-synchronizing `WhenUnlockedThisDeviceOnly` Keychain item, so a
+rotation cannot expose a mixed old/new pair. Before a refresh or revoke request is returned for
+dispatch, that item becomes a non-secret in-flight marker; a crash or second actor therefore
+cannot restore and reuse the predecessor. Cancellation is allowed only before dispatch and
+explicitly restores the unchanged pair. Once dispatched, any lost, rejected, malformed, or
+family-extending result overwrites the Keychain item with a non-secret `requires_sign_in` marker
+and makes both prior credentials unusable locally.
+Sign-out accepts only exact `{"revoked":true}` evidence; an ambiguous result still destroys local
+authority but remains explicitly unconfirmed remotely.
+
+This core is not an app and does not call `ASWebAuthenticationSession`, dispatch network traffic,
+configure a provider, sign a build, or establish physical-device behavior.
+
 ## Activation gates
 
 All of the following remain required:
@@ -122,9 +153,10 @@ All of the following remain required:
    step invisibly.
 3. Install full Xcode, approve the final bundle/client/redirect identity, join the Apple
    Developer Program, and configure App Store Connect signing.
-4. Implement the SwiftUI client with `ASWebAuthenticationSession`, Keychain storage, single-flight
-   refresh, logout/revocation, and the exact no-success-only operation state machine in
-   [Native trip logger boundary](NATIVE-TRIP-LOGGER.md).
+4. Integrate the reviewed Swift core into a signed SwiftUI client with
+   `ASWebAuthenticationSession`, explicit ephemeral backchannel dispatch, trip screens, and the
+   exact no-success-only operation state machine in [Native trip logger
+   boundary](NATIVE-TRIP-LOGGER.md). Do not reimplement token storage or refresh in UI state.
 5. Configure an isolated staging Worker/D1/database/client—not production—and run physical-device
    tests for state mismatch, callback replay, code expiry/replay, wrong verifier, lost refresh
    response, refresh reuse, password reset, account deletion, logout, offline recovery, and app
