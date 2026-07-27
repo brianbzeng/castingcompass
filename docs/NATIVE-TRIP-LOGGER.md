@@ -148,6 +148,16 @@ pattern, HTTPS at both configuration and request validation, same-host HTTP reje
 full frozen API/auth/release-authority policy. It does not provide human, staging, signing,
 physical-device, TestFlight, pilot, model, score, provider, or deployment approval.
 
+The follow-on system-browser head `ef3d2b762d19bbaa589347cf80867d0e180ff2bc` passed local release
+and strict-concurrency Swift builds, the executable native check, production-shaped build, ESLint,
+TypeScript, all 780/780 Node tests, and the complete security chain. Hosted Swift run
+`30239104891` passed 44/44 XCTest cases, including 7/7 browser lifecycle/failure cases; CI
+`30239104920` and release provenance `30239104916` passed. PR `#187` remains stacked on `#186`;
+dependency review and release attestation were event-skipped, and CodeRabbit skipped the
+non-`main` base. Retargeting plus independent review remain open, and this receipt creates no
+SwiftUI, staging, signing, device, TestFlight, pilot, model, score, provider, or deployment
+authority.
+
 ## Remaining release gates
 
 Before TestFlight, integrate the reviewed recovery/Keychain/request/persistence, PKCE/token,
