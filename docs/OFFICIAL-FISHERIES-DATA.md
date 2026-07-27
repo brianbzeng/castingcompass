@@ -71,9 +71,11 @@ fields. The exact observed 62,835-byte workbook is bound by SHA-256
 `b17ebe6ec617014a0a4c0e0b70f502f50554e41e85f234f6126f8d7c524e2139`. It documents
 `NUMBER_HOURS_FISHED` as Oregon-only, so no California effort duration may be inferred.
 
-The public report's default output omits those stable identifiers. RecFIN's own QueryBuilder
-manual states that raw-data queries require an active authorized account, and the large-export
-manual binds large exports to a user profile. No official automated-bulk, commercial-ML,
+The public report's default output omits a public-release effort grouping key. RecFIN's own
+QueryBuilder manual states that raw-data queries require an active authorized account, and the
+large-export manual binds large exports to a user profile. CastingCompass will not seek
+confidential or restricted records, respondent identifiers, protected precise locations, or
+special access to those restricted paths. No official automated-bulk, commercial-ML,
 derived-product, retention, or redistribution permission was found. Public visibility is not a
 license. The source therefore remains unadmitted for normalization or any model role.
 
@@ -133,11 +135,13 @@ source evidence; it is not legal advice or a substitute for counsel.
 
 ## Next acceptance gates
 
-- Send the drafted request or obtain an authorized QueryBuilder account, then obtain a
-  reproducible, permitted complete-effort CRFS/RecFIN sample export with stable identities,
-  confirmed zero-catch semantics, a valid California effort unit, query and dictionary receipts,
-  and written intended-use terms; do not substitute these aggregate layers or scrape the public
-  report.
+- Send the drafted request for an existing public query/download or a non-confidential
+  public-support export, then obtain a reproducible, permitted complete-effort CRFS/RecFIN sample
+  release with an opaque non-identifying public effort key, confirmed zero-catch semantics, a
+  valid California effort unit, public filters and dictionary receipts, and written intended-use
+  terms. Do not request confidential or restricted records, respondent identifiers, protected
+  precise locations, or special raw-query access; do not substitute these aggregate layers or
+  scrape the public report.
 - Define a source-specific transformation that preserves survey design and missingness and
   cannot create point labels from blocks.
 - Begin the consented prospective first-party cohort under the still-closed validation gate.
