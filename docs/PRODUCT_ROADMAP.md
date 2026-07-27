@@ -923,6 +923,13 @@ after its acceptance checks pass in the intended environment.
     frozen-hash verification, deletion replay, and aggregate-only evidence. The drill computes
     no candidate performance and deliberately records governance approval and the overall
     activation storage gate as false.
+  - [x] Freeze and machine-check a narrower Santa Barbara/Goleta native-logger collection plan
+    before accepting invited-friend data. It binds eight current curated sites, requires every
+    prospective start and terminal outcome including skunks, uses site IDs instead of exact
+    private GPS, preserves offline idempotency and deletion lineage, and permits only
+    instrumentation/completeness/privacy diagnostics. It cannot activate itself, train or compare
+    models, change scores, or retroactively promote ordinary product reports; a separate
+    confirmatory protocol and untouched locked test remain mandatory.
   - [ ] Approve the 730-day validation-only snapshot and deletion-suppression policy; configure
     production key custody, least-privilege storage, daily schedules/alerts, retention deletion,
     and operator evidence; complete a witnessed production-shaped restore/deletion-replay drill;

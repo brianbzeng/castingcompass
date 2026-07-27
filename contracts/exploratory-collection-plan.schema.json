@@ -1,0 +1,582 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "castingcompass.exploratory-collection-plan/1.0.0",
+  "title": "CastingCompass exploratory collection plan 1.0.0",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "plan_id",
+    "plan_version",
+    "status",
+    "purpose_and_claim_boundary",
+    "activation",
+    "population",
+    "attempt_contract",
+    "privacy",
+    "feasibility_outputs",
+    "confirmatory_handoff",
+    "authority"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "castingcompass.exploratory-collection-plan/1.0.0"
+    },
+    "plan_id": {
+      "const": "california-halibut-santa-barbara-goleta-exploratory-v1"
+    },
+    "plan_version": {
+      "const": "1.0.0"
+    },
+    "status": {
+      "const": "frozen-local-not-activated"
+    },
+    "purpose_and_claim_boundary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "study_type",
+        "question",
+        "supported_output",
+        "candidate_performance_evaluation_allowed",
+        "model_training_allowed",
+        "model_selection_allowed",
+        "score_change_allowed",
+        "causal_claim_allowed",
+        "retroactive_promotion_allowed",
+        "public_catch_claim_allowed"
+      ],
+      "properties": {
+        "study_type": {
+          "const": "prospective-product-collection-feasibility"
+        },
+        "question": {
+          "const": "Can invited Santa Barbara and Goleta anglers reliably log every complete California-halibut-targeted attempt through the private product workflow, including non-encounters, without collecting unnecessary location or identity data?"
+        },
+        "supported_output": {
+          "const": "instrumentation-completeness-privacy-and-bias-diagnostics-only"
+        },
+        "candidate_performance_evaluation_allowed": {
+          "const": false
+        },
+        "model_training_allowed": {
+          "const": false
+        },
+        "model_selection_allowed": {
+          "const": false
+        },
+        "score_change_allowed": {
+          "const": false
+        },
+        "causal_claim_allowed": {
+          "const": false
+        },
+        "retroactive_promotion_allowed": {
+          "const": false
+        },
+        "public_catch_claim_allowed": {
+          "const": false
+        }
+      }
+    },
+    "activation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "must_precede_first_designated_row",
+        "backdating_prohibited",
+        "preactivation_rows_role",
+        "activation_record_required",
+        "activation_record_present",
+        "isolated_staging_required",
+        "native_auth_required",
+        "privacy_legal_and_data_steward_review_required",
+        "restore_and_deletion_replay_required",
+        "physical_device_acceptance_required",
+        "missing_gate_action"
+      ],
+      "properties": {
+        "must_precede_first_designated_row": {
+          "const": true
+        },
+        "backdating_prohibited": {
+          "const": true
+        },
+        "preactivation_rows_role": {
+          "const": "ordinary-product-observation-only"
+        },
+        "activation_record_required": {
+          "const": true
+        },
+        "activation_record_present": {
+          "const": false
+        },
+        "isolated_staging_required": {
+          "const": true
+        },
+        "native_auth_required": {
+          "const": "authorization-code-pkce-with-os-protected-token-storage"
+        },
+        "privacy_legal_and_data_steward_review_required": {
+          "const": true
+        },
+        "restore_and_deletion_replay_required": {
+          "const": true
+        },
+        "physical_device_acceptance_required": {
+          "const": true
+        },
+        "missing_gate_action": {
+          "const": "do-not-activate-and-keep-reports-ordinary-product-observations"
+        }
+      }
+    },
+    "population": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "target_taxon_id",
+        "regions",
+        "site_catalog_path",
+        "site_catalog_sha256",
+        "site_ids",
+        "allowed_modes",
+        "invited_participant_target_minimum",
+        "invited_participant_target_maximum",
+        "sample_size_is_performance_evidence"
+      ],
+      "properties": {
+        "target_taxon_id": {
+          "const": "california-halibut"
+        },
+        "regions": {
+          "type": "array",
+          "prefixItems": [
+            {
+              "const": "Goleta"
+            },
+            {
+              "const": "Santa Barbara"
+            }
+          ],
+          "items": false,
+          "minItems": 2,
+          "maxItems": 2
+        },
+        "site_catalog_path": {
+          "const": "data/sites.json"
+        },
+        "site_catalog_sha256": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "site_ids": {
+          "type": "array",
+          "prefixItems": [
+            {
+              "const": "haskells-beach"
+            },
+            {
+              "const": "goleta-beach"
+            },
+            {
+              "const": "arroyo-burro-beach"
+            },
+            {
+              "const": "mesa-lane-beach"
+            },
+            {
+              "const": "leadbetter-beach"
+            },
+            {
+              "const": "santa-barbara-harbor-breakwater"
+            },
+            {
+              "const": "stearns-wharf"
+            },
+            {
+              "const": "east-beach-santa-barbara"
+            }
+          ],
+          "items": false,
+          "minItems": 8,
+          "maxItems": 8
+        },
+        "allowed_modes": {
+          "type": "array",
+          "prefixItems": [
+            {
+              "const": "shore"
+            },
+            {
+              "const": "beach"
+            },
+            {
+              "const": "pier"
+            },
+            {
+              "const": "jetty"
+            }
+          ],
+          "items": false,
+          "minItems": 4,
+          "maxItems": 4
+        },
+        "invited_participant_target_minimum": {
+          "const": 5
+        },
+        "invited_participant_target_maximum": {
+          "const": 15
+        },
+        "sample_size_is_performance_evidence": {
+          "const": false
+        }
+      }
+    },
+    "attempt_contract": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "observation_contract_version",
+        "source_id",
+        "unit",
+        "server_start_required",
+        "server_terminal_event_required",
+        "all_started_attempts_reconciled",
+        "past_reports_designated_rows_allowed",
+        "complete_attempt_required",
+        "primary_target_confirmation_required",
+        "explicit_non_encounter_required",
+        "cancellation_encoded_as_non_encounter",
+        "required_start_fields",
+        "required_completion_fields",
+        "terminal_dispositions",
+        "outcome_classes",
+        "offline_idempotency_required",
+        "ambiguous_write_recovery"
+      ],
+      "properties": {
+        "observation_contract_version": {
+          "const": "castingcompass.observation/2.0.0"
+        },
+        "source_id": {
+          "const": "castingcompass-trip-log"
+        },
+        "unit": {
+          "const": "one-complete-unexpanded-targeted-effort-segment-at-one-curated-site"
+        },
+        "server_start_required": {
+          "const": true
+        },
+        "server_terminal_event_required": {
+          "const": true
+        },
+        "all_started_attempts_reconciled": {
+          "const": true
+        },
+        "past_reports_designated_rows_allowed": {
+          "const": false
+        },
+        "complete_attempt_required": {
+          "const": true
+        },
+        "primary_target_confirmation_required": {
+          "const": true
+        },
+        "explicit_non_encounter_required": {
+          "const": true
+        },
+        "cancellation_encoded_as_non_encounter": {
+          "const": false
+        },
+        "required_start_fields": {
+          "type": "array",
+          "prefixItems": [
+            {
+              "const": "client_trip_id"
+            },
+            {
+              "const": "idempotency_key"
+            },
+            {
+              "const": "site_id"
+            },
+            {
+              "const": "started_at"
+            },
+            {
+              "const": "angler_count"
+            },
+            {
+              "const": "mode"
+            },
+            {
+              "const": "primary_target_confirmed"
+            },
+            {
+              "const": "score_influenced_choice"
+            },
+            {
+              "const": "consent_version"
+            }
+          ],
+          "items": false,
+          "minItems": 9,
+          "maxItems": 9
+        },
+        "required_completion_fields": {
+          "type": "array",
+          "prefixItems": [
+            {
+              "const": "trip_token"
+            },
+            {
+              "const": "ended_at"
+            },
+            {
+              "const": "complete_attempt"
+            },
+            {
+              "const": "primary_target_confirmed"
+            },
+            {
+              "const": "target_encounter_count"
+            },
+            {
+              "const": "target_retained_count"
+            },
+            {
+              "const": "target_released_count"
+            },
+            {
+              "const": "other_fish_encounter_count"
+            },
+            {
+              "const": "identification_confidence"
+            }
+          ],
+          "items": false,
+          "minItems": 9,
+          "maxItems": 9
+        },
+        "terminal_dispositions": {
+          "type": "array",
+          "prefixItems": [
+            {
+              "const": "completed"
+            },
+            {
+              "const": "safe-canceled"
+            },
+            {
+              "const": "withdrawn-or-deleted"
+            }
+          ],
+          "items": false,
+          "minItems": 3,
+          "maxItems": 3
+        },
+        "outcome_classes": {
+          "type": "array",
+          "prefixItems": [
+            {
+              "const": "target_encountered"
+            },
+            {
+              "const": "non_target_only"
+            },
+            {
+              "const": "no_fish"
+            }
+          ],
+          "items": false,
+          "minItems": 3,
+          "maxItems": 3
+        },
+        "offline_idempotency_required": {
+          "const": true
+        },
+        "ambiguous_write_recovery": {
+          "const": "read-authoritative-state-before-any-explicit-retry"
+        }
+      }
+    },
+    "privacy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "exact_private_gps_collected",
+        "curated_site_id_used",
+        "photo_required",
+        "free_text_required",
+        "credentials_in_local_storage_allowed",
+        "direct_identity_in_analysis_export_allowed",
+        "notes_photos_and_identity_in_model_input_allowed",
+        "deletion_lineage_required",
+        "private_by_default"
+      ],
+      "properties": {
+        "exact_private_gps_collected": {
+          "const": false
+        },
+        "curated_site_id_used": {
+          "const": true
+        },
+        "photo_required": {
+          "const": false
+        },
+        "free_text_required": {
+          "const": false
+        },
+        "credentials_in_local_storage_allowed": {
+          "const": false
+        },
+        "direct_identity_in_analysis_export_allowed": {
+          "const": false
+        },
+        "notes_photos_and_identity_in_model_input_allowed": {
+          "const": false
+        },
+        "deletion_lineage_required": {
+          "const": true
+        },
+        "private_by_default": {
+          "const": true
+        }
+      }
+    },
+    "feasibility_outputs": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "permitted",
+        "prohibited"
+      ],
+      "properties": {
+        "permitted": {
+          "type": "array",
+          "prefixItems": [
+            {
+              "const": "started-attempt-reconciliation-rate"
+            },
+            {
+              "const": "complete-attempt-rate"
+            },
+            {
+              "const": "required-field-missingness"
+            },
+            {
+              "const": "duplicate-and-ambiguous-write-rate"
+            },
+            {
+              "const": "participant-support-and-concentration"
+            },
+            {
+              "const": "outcome-class-balance-without-score-stratification"
+            },
+            {
+              "const": "geography-mode-and-time-support"
+            },
+            {
+              "const": "withdrawal-and-deletion-reconciliation"
+            }
+          ],
+          "items": false,
+          "minItems": 8,
+          "maxItems": 8
+        },
+        "prohibited": {
+          "type": "array",
+          "prefixItems": [
+            {
+              "const": "candidate-score-outcome-association"
+            },
+            {
+              "const": "model-or-baseline-performance-comparison"
+            },
+            {
+              "const": "probability-calibration"
+            },
+            {
+              "const": "site-quality-ranking-from-reports"
+            },
+            {
+              "const": "public-individual-or-trip-level-reporting"
+            }
+          ],
+          "items": false,
+          "minItems": 5,
+          "maxItems": 5
+        }
+      }
+    },
+    "confirmatory_handoff": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "separate_protocol_and_activation_required",
+        "exploratory_rows_in_locked_test_allowed",
+        "candidate_inputs_and_folds_frozen_before_confirmatory_labels",
+        "participant_clustered_uncertainty_required",
+        "negative_and_inconclusive_reporting_required",
+        "promotion_before_confirmatory_pass_allowed"
+      ],
+      "properties": {
+        "separate_protocol_and_activation_required": {
+          "const": true
+        },
+        "exploratory_rows_in_locked_test_allowed": {
+          "const": false
+        },
+        "candidate_inputs_and_folds_frozen_before_confirmatory_labels": {
+          "const": true
+        },
+        "participant_clustered_uncertainty_required": {
+          "const": true
+        },
+        "negative_and_inconclusive_reporting_required": {
+          "const": true
+        },
+        "promotion_before_confirmatory_pass_allowed": {
+          "const": false
+        }
+      }
+    },
+    "authority": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "collection_activation_authorized",
+        "staging_deployment_authorized",
+        "production_deployment_authorized",
+        "model_training_authorized",
+        "model_selection_authorized",
+        "score_change_authorized",
+        "testflight_distribution_authorized"
+      ],
+      "properties": {
+        "collection_activation_authorized": {
+          "const": false
+        },
+        "staging_deployment_authorized": {
+          "const": false
+        },
+        "production_deployment_authorized": {
+          "const": false
+        },
+        "model_training_authorized": {
+          "const": false
+        },
+        "model_selection_authorized": {
+          "const": false
+        },
+        "score_change_authorized": {
+          "const": false
+        },
+        "testflight_distribution_authorized": {
+          "const": false
+        }
+      }
+    }
+  }
+}

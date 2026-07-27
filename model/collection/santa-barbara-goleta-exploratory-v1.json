@@ -1,0 +1,153 @@
+{
+  "schema_version": "castingcompass.exploratory-collection-plan/1.0.0",
+  "plan_id": "california-halibut-santa-barbara-goleta-exploratory-v1",
+  "plan_version": "1.0.0",
+  "status": "frozen-local-not-activated",
+  "purpose_and_claim_boundary": {
+    "study_type": "prospective-product-collection-feasibility",
+    "question": "Can invited Santa Barbara and Goleta anglers reliably log every complete California-halibut-targeted attempt through the private product workflow, including non-encounters, without collecting unnecessary location or identity data?",
+    "supported_output": "instrumentation-completeness-privacy-and-bias-diagnostics-only",
+    "candidate_performance_evaluation_allowed": false,
+    "model_training_allowed": false,
+    "model_selection_allowed": false,
+    "score_change_allowed": false,
+    "causal_claim_allowed": false,
+    "retroactive_promotion_allowed": false,
+    "public_catch_claim_allowed": false
+  },
+  "activation": {
+    "must_precede_first_designated_row": true,
+    "backdating_prohibited": true,
+    "preactivation_rows_role": "ordinary-product-observation-only",
+    "activation_record_required": true,
+    "activation_record_present": false,
+    "isolated_staging_required": true,
+    "native_auth_required": "authorization-code-pkce-with-os-protected-token-storage",
+    "privacy_legal_and_data_steward_review_required": true,
+    "restore_and_deletion_replay_required": true,
+    "physical_device_acceptance_required": true,
+    "missing_gate_action": "do-not-activate-and-keep-reports-ordinary-product-observations"
+  },
+  "population": {
+    "target_taxon_id": "california-halibut",
+    "regions": [
+      "Goleta",
+      "Santa Barbara"
+    ],
+    "site_catalog_path": "data/sites.json",
+    "site_catalog_sha256": "9b1b367852abb789584f7c8270388975b780fdc4e537a8e57a74aea857b60bac",
+    "site_ids": [
+      "haskells-beach",
+      "goleta-beach",
+      "arroyo-burro-beach",
+      "mesa-lane-beach",
+      "leadbetter-beach",
+      "santa-barbara-harbor-breakwater",
+      "stearns-wharf",
+      "east-beach-santa-barbara"
+    ],
+    "allowed_modes": [
+      "shore",
+      "beach",
+      "pier",
+      "jetty"
+    ],
+    "invited_participant_target_minimum": 5,
+    "invited_participant_target_maximum": 15,
+    "sample_size_is_performance_evidence": false
+  },
+  "attempt_contract": {
+    "observation_contract_version": "castingcompass.observation/2.0.0",
+    "source_id": "castingcompass-trip-log",
+    "unit": "one-complete-unexpanded-targeted-effort-segment-at-one-curated-site",
+    "server_start_required": true,
+    "server_terminal_event_required": true,
+    "all_started_attempts_reconciled": true,
+    "past_reports_designated_rows_allowed": false,
+    "complete_attempt_required": true,
+    "primary_target_confirmation_required": true,
+    "explicit_non_encounter_required": true,
+    "cancellation_encoded_as_non_encounter": false,
+    "required_start_fields": [
+      "client_trip_id",
+      "idempotency_key",
+      "site_id",
+      "started_at",
+      "angler_count",
+      "mode",
+      "primary_target_confirmed",
+      "score_influenced_choice",
+      "consent_version"
+    ],
+    "required_completion_fields": [
+      "trip_token",
+      "ended_at",
+      "complete_attempt",
+      "primary_target_confirmed",
+      "target_encounter_count",
+      "target_retained_count",
+      "target_released_count",
+      "other_fish_encounter_count",
+      "identification_confidence"
+    ],
+    "terminal_dispositions": [
+      "completed",
+      "safe-canceled",
+      "withdrawn-or-deleted"
+    ],
+    "outcome_classes": [
+      "target_encountered",
+      "non_target_only",
+      "no_fish"
+    ],
+    "offline_idempotency_required": true,
+    "ambiguous_write_recovery": "read-authoritative-state-before-any-explicit-retry"
+  },
+  "privacy": {
+    "exact_private_gps_collected": false,
+    "curated_site_id_used": true,
+    "photo_required": false,
+    "free_text_required": false,
+    "credentials_in_local_storage_allowed": false,
+    "direct_identity_in_analysis_export_allowed": false,
+    "notes_photos_and_identity_in_model_input_allowed": false,
+    "deletion_lineage_required": true,
+    "private_by_default": true
+  },
+  "feasibility_outputs": {
+    "permitted": [
+      "started-attempt-reconciliation-rate",
+      "complete-attempt-rate",
+      "required-field-missingness",
+      "duplicate-and-ambiguous-write-rate",
+      "participant-support-and-concentration",
+      "outcome-class-balance-without-score-stratification",
+      "geography-mode-and-time-support",
+      "withdrawal-and-deletion-reconciliation"
+    ],
+    "prohibited": [
+      "candidate-score-outcome-association",
+      "model-or-baseline-performance-comparison",
+      "probability-calibration",
+      "site-quality-ranking-from-reports",
+      "public-individual-or-trip-level-reporting"
+    ]
+  },
+  "confirmatory_handoff": {
+    "separate_protocol_and_activation_required": true,
+    "exploratory_rows_in_locked_test_allowed": false,
+    "candidate_inputs_and_folds_frozen_before_confirmatory_labels": true,
+    "participant_clustered_uncertainty_required": true,
+    "negative_and_inconclusive_reporting_required": true,
+    "promotion_before_confirmatory_pass_allowed": false
+  },
+  "authority": {
+    "collection_activation_authorized": false,
+    "staging_deployment_authorized": false,
+    "production_deployment_authorized": false,
+    "model_training_authorized": false,
+    "model_selection_authorized": false,
+    "score_change_authorized": false,
+    "testflight_distribution_authorized": false
+  }
+}

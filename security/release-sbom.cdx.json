@@ -1,7 +1,7 @@
 {
   "bomFormat": "CycloneDX",
   "specVersion": "1.5",
-  "serialNumber": "urn:uuid:351227d4-eb65-5f5e-9efd-aeb28b08acec",
+  "serialNumber": "urn:uuid:f06451b5-0162-5bba-97aa-c2edb098ec3e",
   "version": 1,
   "metadata": {
     "component": {
@@ -38,6 +38,10 @@
         {
           "name": "castingcompass:input-sha256",
           "value": "contracts/authenticated-staging-drill-authorization.schema.json:5d5749e6b12c333f0e61f2b95a5118f95d5303e7d496b30c4c62d1f7da570762"
+        },
+        {
+          "name": "castingcompass:input-sha256",
+          "value": "contracts/exploratory-collection-plan.schema.json:8887395fe0ced16dd6db4ab539cd4c0ebf994331f15a53e945b1d0016e87ccad"
         },
         {
           "name": "castingcompass:input-sha256",
@@ -105,6 +109,10 @@
         },
         {
           "name": "castingcompass:input-sha256",
+          "value": "model/collection/santa-barbara-goleta-exploratory-v1.json:5732ac7f39e3d45bc91e21c5e0338f6e93aaf1a0f8f2db030a624d3ab22f2468"
+        },
+        {
+          "name": "castingcompass:input-sha256",
           "value": "model/selection/california-halibut-input-v1.json:b4736ac0e34c2485d3cd83c60d610cfad408b40ab89436a5fea920347de1dc40"
         },
         {
@@ -117,7 +125,7 @@
         },
         {
           "name": "castingcompass:input-sha256",
-          "value": "package.json:11efbe4d258b4d0ea6549fece8b4d3101d03cb7f1d2875221e2d89de6507168b"
+          "value": "package.json:db270fd9009aec67a334ca8bb810cb3642cdc1811f5ac75b146683669303bc30"
         },
         {
           "name": "castingcompass:input-sha256",

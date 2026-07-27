@@ -61,6 +61,13 @@ by that discovery.
       pollution/access/regulation actions remain separate pre-ranking safety gates that cannot
       improve catch opportunity. The hash-bound local contract opens no labels or execution
       authority.
+- [x] Freeze the Santa Barbara/Goleta friend-collection boundary before building the native
+      logger. The exact eight-site plan requires prospective starts, every terminal outcome
+      including non-encounters, explicit safe cancellation, offline idempotency, curated site IDs
+      instead of exact private GPS, private-by-default records, and deletion lineage. It permits
+      only instrumentation/completeness/privacy diagnostics, cannot activate itself, and cannot
+      train, compare, select, calibrate, or promote a model; preactivation reports remain ordinary
+      product observations and can never be promoted retroactively.
 - [ ] Obtain eligible complete-attempt evidence. Recruit consented participants who report every
       targeted attempt, including non-encounters, and send the drafted RecFIN/CRFS request for a
       permitted reproducible complete-effort export with confirmed zero-catch semantics and
