@@ -15,6 +15,10 @@ from pipeline.contourcast.deep_candidate import (
     fit_predict_deep_candidate,
 )
 from pipeline.contourcast.candidate_models import synthetic_capability_scope
+from pipeline.contourcast.model_input_contract import (
+    deep_context_feature_order,
+    deep_context_feature_order_sha256,
+)
 
 
 class DeepCandidateTests(unittest.TestCase):
@@ -26,6 +30,13 @@ class DeepCandidateTests(unittest.TestCase):
         generator = np.random.default_rng(20260726)
         self.train_bags = generator.normal(size=(16, 3, 4, 7, 7)).astype(np.float32)
         self.test_bags = generator.normal(size=(5, 3, 4, 7, 7)).astype(np.float32)
+        context_columns = len(deep_context_feature_order())
+        self.train_context = generator.normal(
+            size=(16, context_columns)
+        ).astype(np.float32)
+        self.test_context = generator.normal(
+            size=(5, context_columns)
+        ).astype(np.float32)
         self.train_mask = np.ones((16, 3), dtype=bool)
         self.test_mask = np.ones((5, 3), dtype=bool)
         self.train_mask[::3, -1] = False
@@ -53,9 +64,11 @@ class DeepCandidateTests(unittest.TestCase):
 
         values = {
             "train_patch_bags": self.train_bags,
+            "train_context_features": self.train_context,
             "train_occurrence": self.occurrence,
             "train_cpue": self.cpue,
             "test_patch_bags": self.test_bags,
+            "test_context_features": self.test_context,
             "train_patch_mask": self.train_mask,
             "test_patch_mask": self.test_mask,
             "scope": self.scope,
@@ -162,6 +175,18 @@ class DeepCandidateTests(unittest.TestCase):
                 "train_patch_mask": self.train_mask.astype(np.int8),
             },
             {
+                "train_context_features": self.train_context[:, :-1],
+            },
+            {
+                "test_context_features": self.test_context[:-1],
+            },
+            {
+                "test_context_features": np.full(
+                    self.test_context.shape,
+                    np.nan,
+                ),
+            },
+            {
                 "test_patch_mask": self.test_mask[:, :-1],
             },
             {
@@ -216,6 +241,16 @@ class DeepCandidateTests(unittest.TestCase):
         )
         self.assertTrue(np.all(first.positive_catch_cpue >= 0))
 
+        changed_context = self.fit(
+            test_context_features=self.test_context + np.float32(3.0),
+        )
+        self.assertFalse(
+            np.array_equal(
+                first.occurrence_probability,
+                changed_context.occurrence_probability,
+            )
+        )
+
     @unittest.skipIf(deep_model.torch is None, "PyTorch is optional")
     def test_metric_free_multiscale_audit_and_cli(self):
         """Emit deterministic multiscale capability facts without metrics."""
@@ -235,7 +270,23 @@ class DeepCandidateTests(unittest.TestCase):
 
         receipt = audit_synthetic_deep_candidate_capability()
         self.assertEqual(receipt["status"], DEEP_CAPABILITY_STATUS)
-        self.assertEqual(receipt["scales"], 2)
+        self.assertEqual(receipt["train_rows"], 16)
+        self.assertEqual(receipt["test_rows"], 4)
+        self.assertEqual(receipt["scales"], 3)
+        self.assertEqual(receipt["channels"], 6)
+        self.assertEqual(receipt["patch_size"], [33, 33])
+        self.assertEqual(
+            receipt["shared_context_feature_count"],
+            len(deep_context_feature_order()),
+        )
+        self.assertEqual(
+            receipt["shared_context_feature_order_sha256"],
+            deep_context_feature_order_sha256(),
+        )
+        self.assertEqual(
+            receipt["context_normalization"],
+            "training-fold-only-standardization",
+        )
         self.assertTrue(receipt["deterministic"])
         self.assertTrue(receipt["finite"])
         self.assertTrue(receipt["probability_bounded"])

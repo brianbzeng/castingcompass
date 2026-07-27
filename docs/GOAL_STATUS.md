@@ -61,6 +61,13 @@ by that discovery.
       pollution/access/regulation actions remain separate pre-ranking safety gates that cannot
       improve catch opportunity. The hash-bound local contract opens no labels or execution
       authority.
+- [x] Close the deep-candidate context parity gap. The synthetic-only adapter now consumes the
+      exact ordered 39-field shared pre-trip context view, fits its normalization from the
+      synthetic training fold only, and fuses it with attention-pooled 64 m/256 m/1,024 m
+      six-channel terrain bags. Determinism, masked-padding invariance, and a context-perturbation
+      test prove interface behavior; the metric-free receipt binds the frozen input-contract
+      identity and feature-order hash. This opens no real labels, benchmark, winner, score,
+      serving, provider, or deployment authority.
 - [ ] Obtain eligible complete-attempt evidence. Recruit consented participants who report every
       targeted attempt, including non-encounters, and send the drafted RecFIN/CRFS request for a
       permitted reproducible complete-effort export with confirmed zero-catch semantics and

@@ -294,6 +294,91 @@ if nn is not None:
                 "patch_attention": weights,
             }
 
+
+    class ContextualAreaBagCatchModel(nn.Module):
+        """Fuse point-in-time context with an attention-pooled terrain bag.
+
+        Context is a separate pre-trip view supplied by the caller after
+        training-fold-only transformation. It is never inferred from catch
+        labels or substituted for missing terrain. The terrain attention
+        remains inspectable, while both prediction heads consume the same
+        fused representation.
+        """
+
+        def __init__(
+            self,
+            encoder: Any,
+            *,
+            context_dim: int,
+            context_width: int = 32,
+            dropout: float = 0.2,
+        ) -> None:
+            super().__init__()
+            if context_dim < 1 or context_width < 1:
+                raise ValueError("context_dim and context_width must be positive")
+            self.encoder = encoder
+            self.context_dim = context_dim
+            self.attention = nn.Sequential(
+                nn.Linear(encoder.output_dim, max(8, encoder.output_dim // 2)),
+                nn.Tanh(),
+                nn.Linear(max(8, encoder.output_dim // 2), 1),
+            )
+            self.context_encoder = nn.Sequential(
+                nn.Linear(context_dim, context_width),
+                nn.ReLU(inplace=True),
+                nn.Linear(context_width, context_width),
+                nn.ReLU(inplace=True),
+            )
+            fused_dim = encoder.output_dim + context_width
+            self.dropout = nn.Dropout(dropout)
+            self.occurrence_head = nn.Linear(fused_dim, 1)
+            self.log_cpue_head = nn.Linear(fused_dim, 1)
+
+        def forward(
+            self,
+            inputs: Any,
+            context: Any,
+            patch_mask: Any | None = None,
+        ) -> Dict[str, Any]:
+            if inputs.ndim not in {5, 6}:
+                raise ValueError(
+                    "area bags must be (N,patches,C,H,W) or "
+                    "(N,patches,scales,C,H,W)"
+                )
+            batch, patches_per_bag = inputs.shape[:2]
+            if (
+                context.ndim != 2
+                or context.shape[0] != batch
+                or context.shape[1] != self.context_dim
+            ):
+                raise ValueError(
+                    f"context must be shaped (N, {self.context_dim})"
+                )
+            flattened = inputs.reshape(batch * patches_per_bag, *inputs.shape[2:])
+            embeddings = self.encoder(flattened).reshape(batch, patches_per_bag, -1)
+            logits = self.attention(embeddings).squeeze(-1)
+            if patch_mask is not None:
+                if patch_mask.shape != logits.shape:
+                    raise ValueError("patch_mask must be shaped (N, patches_per_bag)")
+                logits = logits.masked_fill(~patch_mask.bool(), -1e9)
+            weights = torch.softmax(logits, dim=1)
+            terrain_embedding = torch.sum(
+                embeddings * weights[:, :, None],
+                dim=1,
+            )
+            context_embedding = self.context_encoder(context)
+            fused = self.dropout(
+                torch.cat((terrain_embedding, context_embedding), dim=1)
+            )
+            return {
+                "occurrence_logit": self.occurrence_head(fused).squeeze(1),
+                "log_cpue": self.log_cpue_head(fused).squeeze(1),
+                "embedding": fused,
+                "terrain_embedding": terrain_embedding,
+                "context_embedding": context_embedding,
+                "patch_attention": weights,
+            }
+
 else:
 
     class ResidualBlock:  # type: ignore[no-redef]
@@ -325,6 +410,10 @@ else:
             require_torch()
 
     class AreaBagCatchModel:  # type: ignore[no-redef]
+        def __init__(self, *_: Any, **__: Any) -> None:
+            require_torch()
+
+    class ContextualAreaBagCatchModel:  # type: ignore[no-redef]
         def __init__(self, *_: Any, **__: Any) -> None:
             require_torch()
 

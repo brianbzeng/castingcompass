@@ -57,12 +57,13 @@ grants no target-specific training, benchmark, locked-test, selection, score,
 serving, or deployment authority.
 
 The bathymetric candidate now exposes a separate synthetic-only adapter over
-masked bags of single- or multiscale terrain patches. It performs fold-local
-robust channel scaling, zeros excluded patch slots, pools visible patch
-embeddings with the existing attention model, and returns bounded occurrence
-and nonnegative positive-catch CPUE outputs. Its small fixed training loop is a
-deterministic capability smoke, not a proposed benchmark budget or checkpoint
-policy.
+masked bags of single- or multiscale terrain patches plus the exact 39-field
+shared pre-trip context view. It performs fold-local robust channel scaling,
+zeros excluded patch slots, pools visible patch embeddings with the existing
+attention model, standardizes context from the synthetic training fold only,
+fuses the two representations, and returns bounded occurrence and nonnegative
+positive-catch CPUE outputs. Its small fixed training loop is a deterministic
+capability smoke, not a proposed benchmark budget or checkpoint policy.
 
 These adapters are interface plumbing, not California-halibut training or
 performance evidence. All seven required families must eventually be compared

@@ -56,11 +56,14 @@ The six classical families share a deterministic two-head capability adapter
 in `pipeline/contourcast/candidate_models.py`. The deep candidate has a
 separate capability adapter in `pipeline/contourcast/deep_candidate.py` that
 uses the existing terrain encoder and masked attention over fictional
-single- or multiscale patch bags. Both boundaries accept only a fictional
-synthetic target and refuse target-specific authority, real labels, benchmark
-authority, locked-test access, winner selection, score changes, serving
-changes, and deployment. Their existence proves interface compatibility only;
-they supply no comparative metric or evidence that any family is better.
+single- or multiscale patch bags, then fuses that terrain representation with
+the exact 39-field shared pre-trip context view. The adapter fits context
+normalization on the synthetic training fold only. Both boundaries accept only
+a fictional synthetic target and refuse target-specific authority, real
+labels, benchmark authority, locked-test access, winner selection, score
+changes, serving changes, and deployment. Their existence proves interface
+compatibility only; they supply no comparative metric or evidence that any
+family is better.
 
 The versioned `california-halibut-model-input-v1` contract now freezes the
 pre-label information boundary without opening any labels or running a

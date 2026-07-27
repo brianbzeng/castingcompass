@@ -34,9 +34,11 @@ python3 -m pipeline.contourcast.candidate_models
 python3 -m pipeline.contourcast.deep_candidate
 ```
 
-The deep command requires the pinned optional PyTorch environment. It uses
-masked multiscale patch bags only to prove deterministic interface shape,
-finiteness, and bounds. Neither command reads observations, computes
+The deep command requires the pinned optional PyTorch environment. It fuses the
+exact 39-field shared pre-trip context view with masked 64 m, 256 m, and
+1,024 m six-channel terrain patch bags to prove deterministic interface shape,
+finiteness, bounds, and actual context use. Context normalization is fitted on
+the synthetic training fold only. Neither command reads observations, computes
 comparative metrics, selects a model, changes the live score, serves a model,
 or authorizes deployment.
 

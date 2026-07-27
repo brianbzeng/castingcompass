@@ -193,10 +193,12 @@ CANDIDATE_FAMILIES = [
             "pipeline.contourcast.deep_candidate:fit_predict_deep_candidate"
         ),
         "occurrence_head": (
-            "terrain-encoder occurrence logit with synthetic masked-patch aggregation"
+            "shared-context plus terrain-encoder occurrence logit with synthetic "
+            "masked-patch aggregation"
         ),
         "cpue_head": (
-            "terrain-encoder positive log1p cpue with synthetic masked-patch aggregation"
+            "shared-context plus terrain-encoder positive log1p cpue with "
+            "synthetic masked-patch aggregation"
         ),
         "explanation_boundary": (
             "ablations attribution stability and explicit missing-coverage abstention"

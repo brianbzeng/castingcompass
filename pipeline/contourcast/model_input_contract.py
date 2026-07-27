@@ -175,15 +175,32 @@ def classical_terrain_feature_order() -> tuple[str, ...]:
     )
 
 
-def classical_candidate_feature_order() -> tuple[str, ...]:
-    """Return the exact raw context plus terrain-summary feature order."""
+def deep_context_feature_order() -> tuple[str, ...]:
+    """Return the shared pre-trip context order required by the deep candidate."""
 
     return tuple(
         NUMERIC_CONTEXT_FEATURES
         + CATEGORICAL_CONTEXT_FEATURES
         + BINARY_CONTEXT_FEATURES
         + AVAILABILITY_MASKS
-    ) + classical_terrain_feature_order()
+    )
+
+
+def deep_context_feature_order_sha256() -> str:
+    """Hash the ordered deep-candidate context names independently of weights."""
+
+    payload = json.dumps(
+        deep_context_feature_order(),
+        separators=(",", ":"),
+        ensure_ascii=False,
+    ).encode("utf-8")
+    return hashlib.sha256(payload).hexdigest()
+
+
+def classical_candidate_feature_order() -> tuple[str, ...]:
+    """Return the exact raw context plus terrain-summary feature order."""
+
+    return deep_context_feature_order() + classical_terrain_feature_order()
 
 
 def classical_candidate_feature_order_sha256() -> str:
@@ -479,6 +496,8 @@ def audit_model_input_contract(
         "classical_candidate_feature_order_sha256": (
             classical_candidate_feature_order_sha256()
         ),
+        "deep_context_feature_count": len(deep_context_feature_order()),
+        "deep_context_feature_order_sha256": deep_context_feature_order_sha256(),
         "required_candidate_count": len(REQUIRED_CANDIDATE_IDS),
         "safety_gate_count": len(SAFETY_GATES),
         "prohibited_input_count": len(PROHIBITED_INPUTS),

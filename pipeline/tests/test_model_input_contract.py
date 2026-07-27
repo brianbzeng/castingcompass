@@ -12,6 +12,8 @@ from pipeline.contourcast.model_input_contract import (
     canonical_input_contract_sha256,
     classical_candidate_feature_order,
     classical_candidate_feature_order_sha256,
+    deep_context_feature_order,
+    deep_context_feature_order_sha256,
     load_model_input_contract,
     validate_model_input_contract,
 )
@@ -132,12 +134,22 @@ class ModelInputContractTests(unittest.TestCase):
         self.assertEqual(receipt["classical_terrain_feature_count"], 90)
         self.assertEqual(receipt["classical_candidate_feature_count"], 129)
         self.assertEqual(len(classical_candidate_feature_order()), 129)
+        self.assertEqual(receipt["deep_context_feature_count"], 39)
+        self.assertEqual(len(deep_context_feature_order()), 39)
         self.assertEqual(
             receipt["classical_candidate_feature_order_sha256"],
             classical_candidate_feature_order_sha256(),
         )
         self.assertRegex(
             receipt["classical_candidate_feature_order_sha256"],
+            r"^[a-f0-9]{64}$",
+        )
+        self.assertEqual(
+            receipt["deep_context_feature_order_sha256"],
+            deep_context_feature_order_sha256(),
+        )
+        self.assertRegex(
+            receipt["deep_context_feature_order_sha256"],
             r"^[a-f0-9]{64}$",
         )
         self.assertEqual(receipt["required_candidate_count"], 7)

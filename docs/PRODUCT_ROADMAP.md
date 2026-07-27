@@ -1011,6 +1011,13 @@ after its acceptance checks pass in the intended environment.
     stays explicit, unsupported terrain abstains, and pollution/access/regulation remain separate
     pre-ranking safety actions that cannot increase catch opportunity. The hash-bound contract
     grants no label, training, benchmark, selection, score, serving, or deployment authority.
+  - [x] Close the deep-candidate context parity gap without opening labels. The synthetic-only
+    adapter consumes the exact ordered 39-field shared pre-trip context view, applies
+    training-fold-only context normalization, and fuses that representation with
+    attention-pooled 64 m/256 m/1,024 m six-channel terrain bags. Determinism,
+    masked-padding invariance, context-use perturbation, and a receipt bound to the frozen input
+    contract prove interface behavior only; real training, comparison, selection, score,
+    serving, provider, and deployment authority remain closed.
   - [ ] After eligible data and a separate confirmatory design exist, implement the frozen input
     adapters and freeze search spaces, final primary metrics, materiality thresholds, slice floors,
     calibration ceiling, and independent-reproduction procedure before any locked-test access.
