@@ -154,6 +154,7 @@ class CdfwOfficialSourceTests(unittest.TestCase):
         register = (ROOT / "docs" / "OFFICIAL-FISHERIES-DATA.md").read_text(encoding="utf-8")
         roadmap = (ROOT / "docs" / "PRODUCT_ROADMAP.md").read_text(encoding="utf-8")
         dashboard = (ROOT / "docs" / "GOAL_STATUS.md").read_text(encoding="utf-8")
+        request = (ROOT / "docs" / "RECFIN_COMPLETE_EFFORT_REQUEST.md").read_text(encoding="utf-8")
         normalized_register = " ".join(register.split())
         self.assertIn("The stale export was rejected", normalized_register)
         self.assertIn(
@@ -162,8 +163,14 @@ class CdfwOfficialSourceTests(unittest.TestCase):
         )
         self.assertIn("- [x] Acquire and twice reproduce exact current ds3186 and ds3185", roadmap)
         self.assertIn("- [x] Verify the official public RecFIN SD002 technical boundary", roadmap)
-        self.assertIn("- [ ] Obtain a permitted, reproducible complete-effort CRFS/RecFIN", roadmap)
-        self.assertIn("a complete-effort RecFIN export and the prospective cohort remain open", dashboard)
+        self.assertIn("non-confidential public-release complete-effort", roadmap)
+        self.assertIn(
+            "a non-confidential public-release complete-effort RecFIN export and the prospective cohort remain open",
+            " ".join(dashboard.split()),
+        )
+        self.assertIn("I am **not** requesting confidential records", request)
+        self.assertIn("please do not prepare or send a confidential", request)
+        self.assertNotIn("authorize a QueryBuilder raw query", request)
 
     def test_public_sd002_discovery_is_byte_bound_but_not_admitted(self):
         manifests = load_source_manifests()
@@ -217,10 +224,14 @@ class CdfwOfficialSourceTests(unittest.TestCase):
             access = manifest["access"]
             self.assertEqual(
                 access["mode"],
-                "public_sd002_discovery_then_authorized_or_official_export",
+                "public_sd002_discovery_then_nonconfidential_public_support_export",
             )
             self.assertEqual(access["public_discovery"]["dictionary_sha256"], expected_dictionary_sha)
             self.assertEqual(access["public_discovery"]["status"], "technical-candidate-not-admitted")
+            instructions = " ".join(access["instructions"])
+            self.assertIn("Do not request or accept confidential records", instructions)
+            self.assertIn("opaque non-identifying public-release effort key", instructions)
+            self.assertNotIn("authorized QueryBuilder raw query", instructions)
             command = access["ingestion_command"]
             self.assertIn("CANONICAL_", command)
             self.assertIn("--primary-target-taxon-id california-halibut", command)

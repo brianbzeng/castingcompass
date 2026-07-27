@@ -11,8 +11,8 @@
     "https://www.recfin.org/resources/citing/"
   ],
   "access": {
-    "mode": "public_sd002_discovery_then_authorized_or_official_export",
-    "reason": "The public SD002 report establishes a technical path to recreational sample records and blank-catch rows, but its default output is not a complete canonical effort export. Raw QueryBuilder exports require an authorized account, and reproducibility and permission require an official saved query or supplied export, dictionary, checksum, and written intended-use boundary.",
+    "mode": "public_sd002_discovery_then_nonconfidential_public_support_export",
+    "reason": "The public SD002 report establishes a technical path to recreational sample records and blank-catch rows, but its default output is not a complete canonical effort export. CastingCompass will not request confidential or restricted raw records; reproducibility and permission require an existing public query or download, or a non-confidential public-support export, with public filters, a dictionary, checksum, and written intended-use boundary.",
     "public_discovery": {
       "report_id": "SD002",
       "report_url": "https://reports.psmfc.org/recfin/f?p=601:802::::::",
@@ -23,11 +23,13 @@
     },
     "instructions": [
       "Use public SD002 only for discovery; do not automate bulk collection or treat visibility as a license.",
-      "Request an official export or authorized QueryBuilder raw query for California CRFS complete sample records, retaining stable sample, angler, catch, and location identifiers and legitimate blank-catch attempts.",
-      "Save the query or SQL, filters, export timestamp, data-good-through and refresh values, row count, dictionary version, and raw checksum alongside the unchanged private raw file.",
+      "Request only an existing public query or download, or a non-confidential public-support export, for California CRFS complete sample records with legitimate blank-catch attempts.",
+      "Do not request or accept confidential records, respondent or angler identifiers, protected precise locations, or special access to restricted QueryBuilder data.",
+      "Require only an opaque non-identifying public-release effort key or official public grouping rule needed to join rows from one complete sampled effort.",
+      "Save the public filters, export timestamp, data-good-through and refresh values, row count, dictionary version, and raw checksum alongside the unchanged access-controlled public-release file.",
       "Obtain written confirmation of commercial ML, derived-product, retention, attribution, and redistribution boundaries before normalization.",
       "Preserve state, survey, mode, area, target, species, time, effort, sampling, selection, expansion, QA, missingness, and precision fields.",
-      "Only rows with legitimately released point coordinates may enter point-level terrain models."
+      "Use only the legitimately released public spatial support; never infer or request a protected point location."
     ],
     "ingestion_command": "python -m pipeline.contourcast.cli ingest-observations --input CANONICAL_RECFIN_COMPLETE_EFFORT.jsonl --output DATA/recfin.csv --source-id psmfc_recfin --primary-target-taxon-id california-halibut --expected-sha256 SHA256"
   },
