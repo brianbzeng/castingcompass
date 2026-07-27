@@ -383,10 +383,6 @@ final class NativeTripCoreTests: XCTestCase {
             kind: .requestToken,
             account: tripID
         )
-        let reporterSlot = try NativeTripCredentialSlot(
-            kind: .reporterKey,
-            account: "device-install-1"
-        )
         let plan = try NativeTripCancellationPlan(
             tripID: tripID,
             requestTokenSlot: requestSlot,

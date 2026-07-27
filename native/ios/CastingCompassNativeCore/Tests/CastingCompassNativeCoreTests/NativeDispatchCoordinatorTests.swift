@@ -153,10 +153,12 @@ final class NativeDispatchCoordinatorTests: XCTestCase {
             now: now.addingTimeInterval(1_000)
         )
         XCTAssertEqual(refreshed.status, .authorized)
-        XCTAssertEqual(
-            try await session.accessTokenForImmediateRequest(
+        let rotatedAccessToken = try await session
+            .accessTokenForImmediateRequest(
                 now: now.addingTimeInterval(1_000)
-            ),
+            )
+        XCTAssertEqual(
+            rotatedAccessToken,
             nextAccessToken
         )
         let requests = await transport.capturedRequests()
@@ -192,12 +194,14 @@ final class NativeDispatchCoordinatorTests: XCTestCase {
                 .refreshDispatchFailed
             )
         }
+        let failedRefreshSnapshot = await session.snapshot()
+        let failedRefreshRequests = await transport.capturedRequests()
         XCTAssertEqual(
-            await session.snapshot().status,
+            failedRefreshSnapshot.status,
             .requiresSignIn
         )
         XCTAssertEqual(
-            await transport.capturedRequests().count,
+            failedRefreshRequests.count,
             1
         )
     }
@@ -213,16 +217,19 @@ final class NativeDispatchCoordinatorTests: XCTestCase {
             session: session,
             transport: transport
         )
+        let signOutResult = try await coordinator.signOut()
         XCTAssertEqual(
-            try await coordinator.signOut(),
+            signOutResult,
             .localCredentialsClearedRemoteUnconfirmed
         )
+        let signedOutSnapshot = await session.snapshot()
+        let signOutRequests = await transport.capturedRequests()
         XCTAssertEqual(
-            await session.snapshot().status,
+            signedOutSnapshot.status,
             .requiresSignIn
         )
         XCTAssertEqual(
-            await transport.capturedRequests().count,
+            signOutRequests.count,
             1
         )
     }
@@ -335,15 +342,18 @@ final class NativeDispatchCoordinatorTests: XCTestCase {
                 .invalidSessionState
             )
         }
+        let savedDraft = try await fixture.store.load(
+            operation: .start,
+            tripID: tripID
+        )
+        let requestsBeforeAuthorization =
+            await fixture.transport.capturedRequests()
         XCTAssertEqual(
-            try await fixture.store.load(
-                operation: .start,
-                tripID: tripID
-            )?.record.state,
+            savedDraft?.record.state,
             .draft
         )
         XCTAssertEqual(
-            await fixture.transport.capturedRequests().count,
+            requestsBeforeAuthorization.count,
             0
         )
 
@@ -358,8 +368,10 @@ final class NativeDispatchCoordinatorTests: XCTestCase {
             now: now
         )
         XCTAssertEqual(resumed.state, .confirmed)
+        let requestsAfterResume =
+            await fixture.transport.capturedRequests()
         XCTAssertEqual(
-            await fixture.transport.capturedRequests().count,
+            requestsAfterResume.count,
             1
         )
     }
@@ -390,11 +402,12 @@ final class NativeDispatchCoordinatorTests: XCTestCase {
                 .invalidReceipt
             )
         }
+        let malformedSaved = try await malformed.store.load(
+            operation: .start,
+            tripID: tripID
+        )
         XCTAssertEqual(
-            try await malformed.store.load(
-                operation: .start,
-                tripID: tripID
-            )?.record.state,
+            malformedSaved?.record.state,
             .needsUserAttention
         )
 

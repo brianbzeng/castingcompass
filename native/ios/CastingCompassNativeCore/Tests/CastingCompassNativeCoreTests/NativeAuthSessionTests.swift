@@ -182,10 +182,12 @@ final class NativeAuthSessionTests: XCTestCase {
             receivedAt: receivedAt
         )
         XCTAssertEqual(snapshot.status, .authorized)
-        XCTAssertEqual(
-            try await session.accessTokenForImmediateRequest(
+        let immediateAccessToken = try await session
+            .accessTokenForImmediateRequest(
                 now: receivedAt
-            ),
+            )
+        XCTAssertEqual(
+            immediateAccessToken,
             accessToken
         )
         XCTAssertEqual(vault.allSlots().count, 1)
@@ -254,10 +256,12 @@ final class NativeAuthSessionTests: XCTestCase {
         _ = try await session.makeRefreshRequest(now: receivedAt)
         let snapshot = try await session.cancelRefreshBeforeDispatch()
         XCTAssertEqual(snapshot.status, .authorized)
-        XCTAssertEqual(
-            try await session.accessTokenForImmediateRequest(
+        let preservedAccessToken = try await session
+            .accessTokenForImmediateRequest(
                 now: receivedAt
-            ),
+            )
+        XCTAssertEqual(
+            preservedAccessToken,
             accessToken
         )
     }
@@ -313,8 +317,10 @@ final class NativeAuthSessionTests: XCTestCase {
             snapshot.refreshExpiresAt,
             receivedAt.addingTimeInterval(2_592_000)
         )
+        let rotatedAccessToken = try await session
+            .accessTokenForImmediateRequest(now: rotatedAt)
         XCTAssertEqual(
-            try await session.accessTokenForImmediateRequest(now: rotatedAt),
+            rotatedAccessToken,
             nextAccessToken
         )
         let stored = try XCTUnwrap(
@@ -346,8 +352,9 @@ final class NativeAuthSessionTests: XCTestCase {
         } catch {
             XCTAssertEqual(error as? NativeAuthError, .invalidResponse)
         }
+        let failedRotationSnapshot = await session.snapshot()
         XCTAssertEqual(
-            await session.snapshot().status,
+            failedRotationSnapshot.status,
             .requiresSignIn
         )
         let stored = try XCTUnwrap(
@@ -384,8 +391,9 @@ final class NativeAuthSessionTests: XCTestCase {
         } catch {
             XCTAssertEqual(error as? NativeAuthError, .invalidResponse)
         }
+        let secondSnapshot = await second.snapshot()
         XCTAssertEqual(
-            await second.snapshot().status,
+            secondSnapshot.status,
             .requiresSignIn
         )
     }
@@ -417,8 +425,9 @@ final class NativeAuthSessionTests: XCTestCase {
         } catch {
             XCTAssertEqual(error as? NativeAuthError, .invalidResponse)
         }
+        let restoredSnapshot = await restored.snapshot()
         XCTAssertEqual(
-            await restored.snapshot().status,
+            restoredSnapshot.status,
             .requiresSignIn
         )
         let marker = try XCTUnwrap(vault.value(for: slot))
