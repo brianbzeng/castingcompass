@@ -39,9 +39,26 @@
     "safety_gate_boundary": { "$ref": "#/$defs/safetyGateBoundary" },
     "prohibited_inputs": {
       "type": "array",
-      "minItems": 10,
-      "uniqueItems": true,
-      "items": { "type": "string", "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$" }
+      "minItems": 15,
+      "maxItems": 15,
+      "prefixItems": [
+        { "const": "target-outcome" },
+        { "const": "catch-counts" },
+        { "const": "post-trip-observations" },
+        { "const": "trip-notes" },
+        { "const": "trip-photo" },
+        { "const": "bait-lure-rig-or-gear-selected-after-score-exposure" },
+        { "const": "participant-account-or-reporter-identity" },
+        { "const": "participant-personal-history" },
+        { "const": "exact-private-gps" },
+        { "const": "score-influenced-choice" },
+        { "const": "current-or-prior-opportunity-score" },
+        { "const": "current-or-prior-component-scores" },
+        { "const": "future-weather-or-revised-source-values" },
+        { "const": "moderation-output" },
+        { "const": "protected-or-scraped-platform-content" }
+      ],
+      "items": false
     },
     "source_binding": { "$ref": "#/$defs/sourceBinding" },
     "authority": { "$ref": "#/$defs/authority" }
@@ -88,18 +105,16 @@
           "type": "array",
           "minItems": 7,
           "maxItems": 7,
-          "uniqueItems": true,
-          "items": {
-            "enum": [
-              "naive-prevalence-mean-cpue",
-              "regularized-linear-two-head",
-              "spline-gam-two-head",
-              "random-forest-two-head",
-              "hist-gradient-boosted-two-head",
-              "spatial-hierarchical-two-head",
-              "bathymetric-deep-two-head"
-            ]
-          }
+          "prefixItems": [
+            { "const": "naive-prevalence-mean-cpue" },
+            { "const": "regularized-linear-two-head" },
+            { "const": "spline-gam-two-head" },
+            { "const": "random-forest-two-head" },
+            { "const": "hist-gradient-boosted-two-head" },
+            { "const": "spatial-hierarchical-two-head" },
+            { "const": "bathymetric-deep-two-head" }
+          ],
+          "items": false
         },
         "same_eligible_rows": { "const": true },
         "same_outer_and_inner_folds": { "const": true },
@@ -121,29 +136,72 @@
           "type": "array",
           "minItems": 28,
           "maxItems": 28,
-          "uniqueItems": true,
-          "items": { "type": "string", "pattern": "^[a-z][a-z0-9_]*$" }
+          "prefixItems": [
+            { "const": "month_sin" },
+            { "const": "month_cos" },
+            { "const": "local_hour_sin" },
+            { "const": "local_hour_cos" },
+            { "const": "tide_level_midpoint_ft" },
+            { "const": "tide_change_m" },
+            { "const": "current_knots" },
+            { "const": "current_direction_sin" },
+            { "const": "current_direction_cos" },
+            { "const": "wind_mph" },
+            { "const": "swell_feet" },
+            { "const": "swell_period_seconds" },
+            { "const": "swell_direction_sin" },
+            { "const": "swell_direction_cos" },
+            { "const": "wave_power_kw_m" },
+            { "const": "water_temp_f" },
+            { "const": "cloud_cover_fraction" },
+            { "const": "pressure_hpa" },
+            { "const": "pressure_trend_hpa_3h" },
+            { "const": "moon_illumination_fraction" },
+            { "const": "expected_access_pressure_fraction" },
+            { "const": "casting_bearing_sin" },
+            { "const": "casting_bearing_cos" },
+            { "const": "forecast_lead_hours" },
+            { "const": "tide_source_age_hours" },
+            { "const": "weather_source_age_hours" },
+            { "const": "buoy_source_age_hours" },
+            { "const": "marine_source_age_hours" }
+          ],
+          "items": false
         },
         "categorical": {
           "type": "array",
           "minItems": 5,
           "maxItems": 5,
-          "uniqueItems": true,
-          "items": { "type": "string", "pattern": "^[a-z][a-z0-9_]*$" }
+          "prefixItems": [
+            { "const": "fishing_mode" },
+            { "const": "region_panel" },
+            { "const": "tide_stage" },
+            { "const": "casting_exposure" },
+            { "const": "beach_slope_class" }
+          ],
+          "items": false
         },
         "binary": {
           "type": "array",
           "minItems": 1,
           "maxItems": 1,
-          "uniqueItems": true,
-          "items": { "type": "string", "pattern": "^[a-z][a-z0-9_]*$" }
+          "prefixItems": [
+            { "const": "daylight" }
+          ],
+          "items": false
         },
         "availability_masks": {
           "type": "array",
           "minItems": 5,
           "maxItems": 5,
-          "uniqueItems": true,
-          "items": { "type": "string", "pattern": "^[a-z][a-z0-9_]*$" }
+          "prefixItems": [
+            { "const": "tide_available" },
+            { "const": "weather_available" },
+            { "const": "buoy_available" },
+            { "const": "marine_forecast_available" },
+            { "const": "terrain_available" }
+          ],
+          "items": false
         }
       }
     },
@@ -164,17 +222,15 @@
           "type": "array",
           "minItems": 6,
           "maxItems": 6,
-          "uniqueItems": true,
-          "items": {
-            "enum": [
-              "depth_m",
-              "slope_deg",
-              "roughness_m",
-              "curvature",
-              "tpi_local_m",
-              "tpi_broad_m"
-            ]
-          }
+          "prefixItems": [
+            { "const": "depth_m" },
+            { "const": "slope_deg" },
+            { "const": "roughness_m" },
+            { "const": "curvature" },
+            { "const": "tpi_local_m" },
+            { "const": "tpi_broad_m" }
+          ],
+          "items": false
         },
         "radii_m": {
           "type": "array",
@@ -193,8 +249,14 @@
           "type": "array",
           "minItems": 5,
           "maxItems": 5,
-          "uniqueItems": true,
-          "items": { "enum": ["center", "mean", "std", "min", "max"] }
+          "prefixItems": [
+            { "const": "center" },
+            { "const": "mean" },
+            { "const": "std" },
+            { "const": "min" },
+            { "const": "max" }
+          ],
+          "items": false
         },
         "deep_patch_bag": {
           "type": "object",
@@ -218,16 +280,14 @@
           "type": "array",
           "minItems": 5,
           "maxItems": 5,
-          "uniqueItems": true,
-          "items": {
-            "enum": [
-              "imputation",
-              "normalization",
-              "categorical-encoding",
-              "feature-selection",
-              "calibration"
-            ]
-          }
+          "prefixItems": [
+            { "const": "imputation" },
+            { "const": "normalization" },
+            { "const": "categorical-encoding" },
+            { "const": "feature-selection" },
+            { "const": "calibration" }
+          ],
+          "items": false
         }
       }
     },

@@ -50,6 +50,30 @@ test("the model input schema rejects leakage, safety inversion, and authority ex
   extra.context_features.outcome = ["target-encounter"];
   cases.push(extra);
 
+  const renamedFeature = structuredClone(contract);
+  renamedFeature.context_features.numeric[0] = "replacement_feature";
+  cases.push(renamedFeature);
+
+  const reorderedCandidates = structuredClone(contract);
+  [
+    reorderedCandidates.candidate_parity.required_candidate_ids[0],
+    reorderedCandidates.candidate_parity.required_candidate_ids[1],
+  ] = [
+    reorderedCandidates.candidate_parity.required_candidate_ids[1],
+    reorderedCandidates.candidate_parity.required_candidate_ids[0],
+  ];
+  cases.push(reorderedCandidates);
+
+  const reorderedTerrain = structuredClone(contract);
+  [
+    reorderedTerrain.terrain_view.source_channels[0],
+    reorderedTerrain.terrain_view.source_channels[1],
+  ] = [
+    reorderedTerrain.terrain_view.source_channels[1],
+    reorderedTerrain.terrain_view.source_channels[0],
+  ];
+  cases.push(reorderedTerrain);
+
   for (const candidate of cases) {
     assert.equal(validate(candidate), false);
   }
