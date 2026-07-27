@@ -71,7 +71,7 @@ by that discovery.
   - [x] Freeze and locally verify the first native trip-logger contract against the existing
         Worker: curated California-halibut sites, explicit attempt start, complete zero/nonzero
         outcomes, multi-angler effort, bounded other catch, cancellation, private defaults,
-        Keychain-only reporter/request credentials, exact server receipts, four durable client
+        Keychain-only access/reporter credentials, exact server receipts, four durable client
         states, and explicit identical-envelope recovery without silent replay. Cancellation is
         idempotent without duplicating terminal feasibility events, and delayed offline
         completions remain excluded from duration-sensitive or confirmatory use. This is a
