@@ -161,6 +161,22 @@ by that discovery.
         manually resolved. This is automated review evidence only; independent human review,
         SwiftUI integration, staging, signing, physical-device drills, and every TestFlight,
         pilot, model, score, provider, and deployment gate remain open.
+  - [x] Implement and verify the reusable system-browser authorization handoff without creating
+        an application or activating native OAuth. Exact code head
+        `ef3d2b762d19bbaa589347cf80867d0e180ff2bc` owns one ephemeral
+        `ASWebAuthenticationSession`, accepts only the frozen callback URI and state, invalidates
+        cancelled or failed attempts, and sends a verified callback directly to the one-shot token
+        coordinator without exposing the authorization code, verifier, state, token, or browser
+        cookie to SwiftUI. Local release and strict-concurrency Swift builds, the executable
+        native check, production-shaped build, ESLint, TypeScript, all 780/780 Node tests, and the
+        complete security/SBOM/D1-query chain passed. Hosted Swift run `30239104891` passed all
+        44/44 XCTest cases, including 7/7 browser lifecycle/failure cases; CI `30239104920` and
+        release provenance `30239104916` also passed. PR `#187` remains stacked on `#186`;
+        dependency review and release attestation were event-skipped, and CodeRabbit skipped
+        review because the base is not `main`. Retargeting to `main` plus independent review
+        remain required after `#186` merges. No SwiftUI app, bundle identity, staging, signing,
+        physical-device, TestFlight, pilot, model, score, provider, or deployment authority is
+        created.
 - [ ] Complete the owner/device gates for TestFlight: active Apple Developer membership and App
       Store Connect access, full Xcode installation, final bundle/app identity, signing and
       provisioning, accurate privacy/export-compliance metadata, physical-device acceptance, and

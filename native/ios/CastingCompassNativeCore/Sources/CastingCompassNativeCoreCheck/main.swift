@@ -232,6 +232,46 @@ do {
     // Expected.
 }
 
+let browserFlow = NativeSystemBrowserAuthorizationFlow(
+    configuration: authConfiguration
+)
+let browserRequest = try await browserFlow.begin()
+try require(
+    browserRequest.authorizationURL.path == "/native/authorize" &&
+        browserRequest.callbackURLScheme == "castingcompass",
+    "the system-browser bridge must use the exact authorization and callback envelope"
+)
+do {
+    _ = try await browserFlow.begin()
+    throw CheckFailure.failed(
+        "the system-browser bridge must allow only one active attempt"
+    )
+} catch NativeSystemBrowserAuthorizationError.signInAlreadyActive {
+    // Expected.
+}
+await browserFlow.cancel()
+let browserItems = URLComponents(
+    url: browserRequest.authorizationURL,
+    resolvingAgainstBaseURL: false
+)?.queryItems ?? []
+let browserState = browserItems
+    .first(where: { $0.name == "state" })?
+    .value ?? ""
+let cancelledBrowserCallback = URL(
+    string:
+        "castingcompass://oauth/callback?code=\(code)&state=\(browserState)"
+)!
+do {
+    _ = try await browserFlow.consumeCallback(
+        cancelledBrowserCallback
+    )
+    throw CheckFailure.failed(
+        "a cancelled system-browser attempt must not return"
+    )
+} catch NativeAuthError.invalidSessionState {
+    // Expected.
+}
+
 let ephemeral = NativeAuthBackchannel.makeEphemeralSessionConfiguration()
 try require(
     ephemeral.httpCookieStorage == nil &&

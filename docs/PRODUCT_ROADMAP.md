@@ -1154,6 +1154,20 @@ after its acceptance checks pass in the intended environment.
       resolved. Independent human review, SwiftUI/`ASWebAuthenticationSession`, isolated staging,
       signing, physical-device drills, and every TestFlight/pilot/model/score/provider/deployment
       authority remain open.
+    - [x] Implement the reusable `ASWebAuthenticationSession` callback and cancellation bridge
+      without creating an application or changing authority. Exact code head
+      `ef3d2b762d19bbaa589347cf80867d0e180ff2bc` owns one ephemeral browser attempt, requires the
+      frozen callback URI plus state, invalidates every cancelled or failed attempt, and passes a
+      verified callback directly to the one-shot token coordinator without putting authorization
+      material in SwiftUI state. Local release and strict-concurrency Swift builds, the executable
+      native check, production-shaped build, ESLint, TypeScript, all 780/780 Node tests, and the
+      complete security/SBOM/D1-query chain passed. Hosted Swift run `30239104891` passed 44/44
+      XCTest cases, including 7/7 browser lifecycle/failure cases; CI `30239104920` and release
+      provenance `30239104916` passed. PR `#187` is intentionally stacked on `#186`, so dependency
+      review and release attestation were event-skipped and CodeRabbit did not review the
+      non-`main` base. Retargeting plus independent review remain open after `#186` merges. No
+      SwiftUI app, bundle identity, staging, signing, device, TestFlight, pilot, model, score,
+      provider, or deployment authority is added.
 
 ## P2 — Species and business expansion
 

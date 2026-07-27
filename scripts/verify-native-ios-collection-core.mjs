@@ -19,10 +19,12 @@ export async function verifyNativeIOSCollectionCore() {
     authSession,
     httpTransport,
     dispatchCoordinator,
+    browserAuthorization,
     executableCheck,
     tests,
     authTests,
     dispatchTests,
+    browserTests,
     readme,
     workflow,
     tripPolicy,
@@ -53,6 +55,9 @@ export async function verifyNativeIOSCollectionCore() {
       "native/ios/CastingCompassNativeCore/Sources/CastingCompassNativeCore/NativeDispatchCoordinator.swift",
     ),
     read(
+      "native/ios/CastingCompassNativeCore/Sources/CastingCompassNativeCore/NativeSystemBrowserAuthorization.swift",
+    ),
+    read(
       "native/ios/CastingCompassNativeCore/Sources/CastingCompassNativeCoreCheck/main.swift",
     ),
     read(
@@ -64,6 +69,9 @@ export async function verifyNativeIOSCollectionCore() {
     read(
       "native/ios/CastingCompassNativeCore/Tests/CastingCompassNativeCoreTests/NativeDispatchCoordinatorTests.swift",
     ),
+    read(
+      "native/ios/CastingCompassNativeCore/Tests/CastingCompassNativeCoreTests/NativeSystemBrowserAuthorizationTests.swift",
+    ),
     read("native/ios/CastingCompassNativeCore/README.md"),
     read(".github/workflows/native-ios-core.yml"),
     read("security/native-trip-client-policy.json"),
@@ -71,6 +79,7 @@ export async function verifyNativeIOSCollectionCore() {
 
   assert.match(packageManifest, /swift-tools-version: 5\.10/u);
   assert.match(packageManifest, /\.iOS\(\.v16\)/u);
+  assert.match(packageManifest, /\.linkedFramework\("AuthenticationServices"\)/u);
   assert.match(packageManifest, /\.linkedFramework\("Security"\)/u);
   assert.match(packageManifest, /name: "CastingCompassNativeCoreCheck"/u);
   assert.match(packageManifest, /\.testTarget\(/u);
@@ -244,6 +253,64 @@ export async function verifyNativeIOSCollectionCore() {
     /URLSession|Timer\.|BGTaskScheduler|UserDefaults|print\(|Logger\(|automaticRetry|retryAfter|while\s*\(|repeat\s*\{/u,
   );
 
+  assert.match(browserAuthorization, /import AuthenticationServices/u);
+  assert.match(
+    browserAuthorization,
+    /actor NativeSystemBrowserAuthorizationFlow/u,
+  );
+  assert.match(
+    browserAuthorization,
+    /guard activeAttempt == nil else/u,
+  );
+  assert.match(
+    browserAuthorization,
+    /callbackURLScheme == "castingcompass"/u,
+  );
+  assert.match(
+    browserAuthorization,
+    /NativeSystemBrowserAuthorizationRequest\(redacted\)/u,
+  );
+  assert.match(
+    browserAuthorization,
+    /activeAttempt = nil\s+return try await attempt\.consumeCallback\(callbackURL\)/u,
+  );
+  assert.match(
+    browserAuthorization,
+    /final class NativeSystemBrowserAuthorizer/u,
+  );
+  assert.match(
+    browserAuthorization,
+    /ASWebAuthenticationSession\(\s+url: authorizationURL,\s+callbackURLScheme: callbackURLScheme,/u,
+  );
+  assert.match(
+    browserAuthorization,
+    /session\.presentationContextProvider = self\s+session\.prefersEphemeralWebBrowserSession = true/u,
+  );
+  assert.match(
+    browserAuthorization,
+    /guard session\.start\(\) else/u,
+  );
+  assert.match(
+    browserAuthorization,
+    /withTaskCancellationHandler/u,
+  );
+  assert.match(
+    browserAuthorization,
+    /guard \(callbackURL == nil\) != \(error == nil\) else/u,
+  );
+  assert.match(
+    browserAuthorization,
+    /active\.session\.presentationContextProvider = nil/u,
+  );
+  assert.match(
+    browserAuthorization,
+    /authCoordinator\.exchangeAuthorizationCode\(/u,
+  );
+  assert.doesNotMatch(
+    browserAuthorization,
+    /URLSession|Cookie|Origin|UserDefaults|FileManager|UIPasteboard|NSPasteboard|Timer\.|BGTaskScheduler|print\(|Logger\(|automaticRetry|retryAfter|while\s*\(|repeat\s*\{/u,
+  );
+
   assert.match(executableCheck, /ambiguous transport must never claim success/u);
   assert.match(executableCheck, /duplicate receipt keys must fail closed/u);
   assert.match(
@@ -312,6 +379,34 @@ export async function verifyNativeIOSCollectionCore() {
   assert.match(
     dispatchTests,
     /testMalformedSuccessAndConflictNeedAttention/u,
+  );
+  assert.match(
+    browserTests,
+    /testFlowIsSingleFlightAndCancelledAttemptCannotReturn/u,
+  );
+  assert.match(
+    browserTests,
+    /testEphemeralBrowserCallbackExchangesInsideCoordinator/u,
+  );
+  assert.match(
+    browserTests,
+    /testTaskCancellationCancelsBrowserWithoutDispatch/u,
+  );
+  assert.match(
+    browserTests,
+    /testBrowserCancellationDoesNotDispatchAndAllowsRetry/u,
+  );
+  assert.match(
+    browserTests,
+    /testInvalidCallbackCannotExchangeOrReturnLate/u,
+  );
+  assert.match(
+    browserTests,
+    /testSecondSignInAndInvalidCompletionFailClosed/u,
+  );
+  assert.match(
+    browserTests,
+    /testFailedPresentationClearsAttemptForExplicitRetry/u,
   );
   assert.match(readme, /does not prove application integration or physical-device behavior/u);
 

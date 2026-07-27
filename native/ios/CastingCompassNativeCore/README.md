@@ -1,8 +1,8 @@
 # CastingCompass native collection core
 
-Status: reusable collection, authentication/session, one-shot HTTPS transport, and dispatch
-coordinator cores implemented; SwiftUI application integration, staging, signing, device
-acceptance, and TestFlight release remain open.
+Status: reusable collection, authentication/session, system-browser handoff, one-shot HTTPS
+transport, and dispatch coordinator cores implemented; SwiftUI application integration, staging,
+signing, device acceptance, and TestFlight release remain open.
 
 This Swift package implements the security- and evidence-sensitive pieces of the first iOS trip
 logger before any interface is built:
@@ -46,12 +46,20 @@ transport/5xx ambiguity as pending, and requires a separate explicit byte-identi
 Refresh ambiguity invalidates the family; ambiguous sign-out clears local authority without
 claiming remote revocation.
 
+The package includes a MainActor-bound `ASWebAuthenticationSession` bridge that requests an
+ephemeral browser session, obtains its presentation anchor from the host application, and permits
+only one authorization attempt at a time. It rejects a callback/error ambiguity, invalidates the
+PKCE attempt on browser or task cancellation, removes its presentation delegate at every terminal
+edge, and passes a verified callback directly to the one-shot token coordinator. The SwiftUI layer
+never needs to receive or persist an authorization code, verifier, state value, token response, or
+browser cookie. Ephemeral mode is requested before `start()`; only the operating system/browser
+can enforce that request.
+
 The package contains no timer, background task, connectivity watcher, or network scheduler and
 cannot silently replay a write. After restoration, it rematerializes the body from the non-secret
 plan and Keychain values; any byte, route, or content-type drift moves the submission to
-`needs_user_attention`. A future SwiftUI application must invoke these one-shot coordinators only
-in response to explicit user actions and must use `ASWebAuthenticationSession` for the browser
-handoff.
+`needs_user_attention`. A future SwiftUI application must invoke the provided system-browser
+authorizer and one-shot coordinators only in response to explicit user actions.
 
 ## Local verification
 

@@ -1,9 +1,9 @@
 # Native iOS authentication boundary
 
-Status: server plus reusable Swift auth/session and one-shot dispatch cores implemented locally;
-SwiftUI browser integration, staging, signing, physical-device acceptance, and activation remain
-open
-Last reviewed: **2026-07-26 UTC**
+Status: server plus reusable Swift auth/session, system-browser authorization, and one-shot
+dispatch cores implemented locally; SwiftUI application integration, staging, signing,
+physical-device acceptance, and activation remain open
+Last reviewed: **2026-07-27 UTC**
 
 This document defines the narrow authentication boundary for a future CastingCompass iOS trip
 logger. It does not authorize TestFlight, production configuration, or a deployment. The Worker
@@ -145,9 +145,12 @@ and remains explicitly unconfirmed. The ephemeral transport pins one canonical H
 rejects redirects and ambient Cookie/Origin credentials, bounds streamed response bytes, and has
 no retry, timer, connectivity watcher, or background scheduler.
 
-This core is not an app and does not call `ASWebAuthenticationSession`, configure a provider,
-sign a build, or establish physical-device behavior. A SwiftUI integration must invoke each
-one-shot method only from an explicit app action.
+This core is not an app. Its reusable `NativeSystemBrowserAuthorizer` owns one ephemeral
+`ASWebAuthenticationSession`, consumes the exact callback internally, and passes verified
+authorization material directly to the one-shot token coordinator. It does not configure a
+provider, sign a build, establish physical-device behavior, or place authorization material in
+SwiftUI state. A SwiftUI application must invoke each one-shot method only from an explicit app
+action and must not reimplement callback, transport, token-storage, or refresh behavior.
 
 ## Activation gates
 
@@ -163,11 +166,13 @@ All of the following remain required:
    step invisibly.
 3. Install full Xcode, approve the final bundle/client/redirect identity, join the Apple
    Developer Program, and configure App Store Connect signing.
-4. Integrate the reviewed Swift core into a signed SwiftUI client with
-   `ASWebAuthenticationSession`, the provided one-shot coordinators, trip screens, and the exact
+4. Integrate the reviewed Swift core into a signed SwiftUI client with the provided
+   `NativeSystemBrowserAuthorizer`, one-shot coordinators, trip screens, and the exact
    no-success-only operation state machine in [Native trip logger
-   boundary](NATIVE-TRIP-LOGGER.md). Do not reimplement transport, token storage, or refresh in UI
-   state.
+   boundary](NATIVE-TRIP-LOGGER.md). The reusable authorizer owns the
+   `ASWebAuthenticationSession` callback/cancellation bridge and passes a verified callback
+   directly to the token coordinator; it is not yet embedded in an application. Do not
+   reimplement browser callback handling, transport, token storage, or refresh in UI state.
 5. Configure an isolated staging Worker/D1/database/client—not production—and run physical-device
    tests for state mismatch, callback replay, code expiry/replay, wrong verifier, lost refresh
    response, refresh reuse, password reset, account deletion, logout, offline recovery, and app
