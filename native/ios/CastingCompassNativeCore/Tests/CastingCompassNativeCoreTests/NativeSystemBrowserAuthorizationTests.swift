@@ -156,6 +156,107 @@ final class NativeSystemBrowserAuthorizationTests: XCTestCase {
     }
 
     @MainActor
+    func testBrowserCancellationDoesNotDispatchAndAllowsRetry()
+        async throws
+    {
+        let fixture = try makeFixture(
+            startResults: [true, true],
+            tokenResponse: tokenResponse()
+        )
+        let first = Task { @MainActor in
+            try await fixture.authorizer.signIn(
+                receivedAt: receivedAt
+            )
+        }
+        let cancelledBrowser = try await fixture.factory
+            .nextSession()
+        cancelledBrowser.complete(
+            callbackURL: nil,
+            error: NSError(
+                domain:
+                    ASWebAuthenticationSessionError
+                        .errorDomain,
+                code:
+                    ASWebAuthenticationSessionError.Code
+                        .canceledLogin.rawValue
+            )
+        )
+        do {
+            _ = try await first.value
+            XCTFail("browser cancellation must not authorize")
+        } catch {
+            XCTAssertEqual(
+                error as? NativeSystemBrowserAuthorizationError,
+                .cancelled
+            )
+        }
+        let requestsAfterCancellation =
+            await fixture.transport.capturedRequests()
+        XCTAssertEqual(requestsAfterCancellation.count, 0)
+
+        let retry = Task { @MainActor in
+            try await fixture.authorizer.signIn(
+                receivedAt: receivedAt
+            )
+        }
+        let retryBrowser = try await fixture.factory.nextSession(
+            after: 1
+        )
+        retryBrowser.complete(
+            callbackURL: try callbackURL(
+                for: retryBrowser.authorizationURL
+            ),
+            error: nil
+        )
+        let snapshot = try await retry.value
+        XCTAssertEqual(snapshot.status, .authorized)
+    }
+
+    @MainActor
+    func testInvalidCallbackCannotExchangeOrReturnLate()
+        async throws
+    {
+        let fixture = try makeFixture(
+            tokenResponse: tokenResponse()
+        )
+        let task = Task { @MainActor in
+            try await fixture.authorizer.signIn(
+                receivedAt: receivedAt
+            )
+        }
+        let browser = try await fixture.factory.nextSession()
+        let mismatchedCallback = try XCTUnwrap(
+            URL(
+                string:
+                    "castingcompass://oauth/callback?code=\(String(repeating: "E", count: 43))&state=\(String(repeating: "x", count: 43))"
+            )
+        )
+        browser.complete(
+            callbackURL: mismatchedCallback,
+            error: nil
+        )
+        do {
+            _ = try await task.value
+            XCTFail("a state mismatch must fail closed")
+        } catch {
+            XCTAssertEqual(
+                error as? NativeAuthError,
+                .invalidCallback
+            )
+        }
+        browser.complete(
+            callbackURL: try callbackURL(
+                for: browser.authorizationURL
+            ),
+            error: nil
+        )
+        await Task.yield()
+        let requests = await fixture.transport
+            .capturedRequests()
+        XCTAssertEqual(requests.count, 0)
+    }
+
+    @MainActor
     func testSecondSignInAndInvalidCompletionFailClosed()
         async throws
     {

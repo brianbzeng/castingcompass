@@ -394,6 +394,14 @@ export async function verifyNativeIOSCollectionCore() {
   );
   assert.match(
     browserTests,
+    /testBrowserCancellationDoesNotDispatchAndAllowsRetry/u,
+  );
+  assert.match(
+    browserTests,
+    /testInvalidCallbackCannotExchangeOrReturnLate/u,
+  );
+  assert.match(
+    browserTests,
     /testSecondSignInAndInvalidCompletionFailClosed/u,
   );
   assert.match(
