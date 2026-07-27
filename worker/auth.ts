@@ -21,6 +21,12 @@ import {
 } from "./turnstile.ts";
 import { logEvent } from "./observability.ts";
 import { API_ROUTE_PATTERNS } from "./route-policy.ts";
+import type { NativeOAuthScope } from "../shared/native-auth-contract.ts";
+import {
+  cleanupNativeOAuthData,
+  getNativeAccessIdentity,
+  type NativeOAuthEnv,
+} from "./native-auth.ts";
 import {
   buildPrivacyExportPayload,
   downloadPrivacyExport,
@@ -58,7 +64,7 @@ const DUMMY_PASSWORD_SALT = "Y2FzdGluZ2NvbXBhc3MtdGltaW5n";
 const PRIVACY_DELETION_TASK_BATCH = 5;
 const ACCOUNT_DELETION_INLINE_TASK_BATCH = 3;
 
-export interface AuthApiEnv extends TurnstileEnv, PrivacyExportEnv {
+export interface AuthApiEnv extends TurnstileEnv, PrivacyExportEnv, NativeOAuthEnv {
   DB?: D1DatabaseLike;
   RESEND_API_KEY?: string;
   AUTH_EMAIL_FROM?: string;
@@ -76,6 +82,7 @@ interface AccountRequestOptions {
   onTripReviewRequested?(trip: TripRow): void;
   waitUntil?(promise: Promise<unknown>): void;
   now?(): Date;
+  nativeScopes?: readonly NativeOAuthScope[];
 }
 
 const initializedDatabases = new WeakMap<object, Promise<void>>();
@@ -131,7 +138,9 @@ const AUTH_SCHEMA_READY_SQL = `SELECT
     'privacy_deletion_tasks', 'privacy_export_jobs', 'account_deletion_fences',
     'trip_photo_upload_reservations', 'trips', 'site_discussion_posts',
     'trip_validation_provenance', 'validation_feasibility_events',
-    'validation_feasibility_corrections'
+    'validation_feasibility_corrections', 'native_oauth_authorization_codes',
+    'native_oauth_refresh_families', 'native_oauth_refresh_tokens',
+    'native_oauth_access_tokens'
   )) AS required_tables,
   (SELECT COUNT(*) FROM pragma_table_info('trips') WHERE name = 'photo_key_hash') AS photo_hash_columns`;
 
@@ -141,7 +150,7 @@ async function initialize(db: D1DatabaseLike) {
     pending = (async () => {
       const readiness = await db.prepare(AUTH_SCHEMA_READY_SQL)
         .first<{ required_tables: number; photo_hash_columns: number }>();
-      if (Number(readiness?.required_tables ?? 0) !== 17
+      if (Number(readiness?.required_tables ?? 0) !== 21
         || Number(readiness?.photo_hash_columns ?? 0) !== 1) {
         throw new AuthError(
           503,
@@ -161,10 +170,13 @@ async function initialize(db: D1DatabaseLike) {
 export interface AuthenticatedSession {
   user: AuthUser;
   accountVersion: AuthenticatedAccountVersion;
-  sessionTokenHash: string;
+  credentialKind: "browser_cookie" | "native_access_token";
+  sessionTokenHash?: string;
   sessionExpiresAt: string;
   deletionFenced: boolean;
-  cookieName: typeof SESSION_COOKIE | typeof LEGACY_SESSION_COOKIE;
+  cookieName?: typeof SESSION_COOKIE | typeof LEGACY_SESSION_COOKIE;
+  nativeClientId?: string;
+  nativeScopes?: readonly NativeOAuthScope[];
 }
 
 interface AuthenticatedAccountVersion {
@@ -179,9 +191,28 @@ interface AuthenticatedAccountVersion {
   updatedAt: string;
 }
 
-async function getAuthenticatedSession(request: Request, env: AuthApiEnv): Promise<AuthenticatedSession | null> {
+async function getAuthenticatedSession(
+  request: Request,
+  env: AuthApiEnv,
+  nativeScopes: readonly NativeOAuthScope[] = [],
+): Promise<AuthenticatedSession | null> {
   if (!env.DB) return null;
   await initialize(env.DB);
+  // Credential kinds never mix: any presented bearer must resolve only as a
+  // native session, and failure never falls back to an ambient browser cookie.
+  if (request.headers.has("Authorization")) {
+    const native = await getNativeAccessIdentity(request, env, nativeScopes, LEGAL_VERSION);
+    if (!native) return null;
+    return {
+      accountVersion: native.accountVersion,
+      credentialKind: "native_access_token",
+      sessionExpiresAt: native.accessTokenExpiresAt,
+      deletionFenced: native.deletionFenced,
+      nativeClientId: native.clientId,
+      nativeScopes: native.scopes,
+      user: native.user,
+    };
+  }
   const now = new Date().toISOString();
   for (const presented of presentedSessionTokens(request)) {
     const tokenHash = await sha256(presented.token);
@@ -233,6 +264,7 @@ async function getAuthenticatedSession(request: Request, env: AuthApiEnv): Promi
         sessionTokenHash: tokenHash,
         sessionExpiresAt: row.session_expires_at,
         cookieName: presented.cookieName,
+        credentialKind: "browser_cookie",
         deletionFenced: Boolean(row.deletion_fenced),
         user: {
           id: row.id,
@@ -254,6 +286,7 @@ export async function getAuthenticatedUser(request: Request, env: AuthApiEnv): P
 export interface OwnerAuthorizationOptions {
   currentLegalAcceptanceRequired: boolean;
   deletionFenceAccessAllowed: boolean;
+  nativeScopes?: readonly NativeOAuthScope[];
 }
 
 export type OwnerAuthorizationResult =
@@ -285,7 +318,7 @@ export async function authorizeOwnerRequest(
     };
   }
   try {
-    const session = await getAuthenticatedSession(request, env);
+    const session = await getAuthenticatedSession(request, env, options.nativeScopes ?? []);
     if (!session) return { session: null, response: unauthorizedResponse() };
     if (session.deletionFenced && !options.deletionFenceAccessAllowed) {
       return { session: null, response: accountDeletionInProgressResponse() };
@@ -952,6 +985,49 @@ export async function handleAccountRequest(
               Number(challenge.attempts),
               timestamp,
             ),
+          db.prepare(`DELETE FROM native_oauth_authorization_codes WHERE user_id = ?
+            AND EXISTS (SELECT 1 FROM email_challenges
+              WHERE id = ? AND kind = 'password_reset' AND user_id = ? AND code_hash = ?
+                AND created_at = ? AND attempts = ? AND expires_at > ?)`)
+            .bind(
+              challenge.user_id,
+              challenge.id,
+              challenge.user_id,
+              challenge.code_hash,
+              challenge.created_at,
+              Number(challenge.attempts),
+              timestamp,
+            ),
+          db.prepare(`UPDATE native_oauth_refresh_families
+            SET revoked_at = COALESCE(revoked_at, ?)
+            WHERE user_id = ? AND EXISTS (SELECT 1 FROM email_challenges
+              WHERE id = ? AND kind = 'password_reset' AND user_id = ? AND code_hash = ?
+                AND created_at = ? AND attempts = ? AND expires_at > ?)`)
+            .bind(
+              timestamp,
+              challenge.user_id,
+              challenge.id,
+              challenge.user_id,
+              challenge.code_hash,
+              challenge.created_at,
+              Number(challenge.attempts),
+              timestamp,
+            ),
+          db.prepare(`UPDATE native_oauth_access_tokens
+            SET revoked_at = COALESCE(revoked_at, ?)
+            WHERE user_id = ? AND EXISTS (SELECT 1 FROM email_challenges
+              WHERE id = ? AND kind = 'password_reset' AND user_id = ? AND code_hash = ?
+                AND created_at = ? AND attempts = ? AND expires_at > ?)`)
+            .bind(
+              timestamp,
+              challenge.user_id,
+              challenge.id,
+              challenge.user_id,
+              challenge.code_hash,
+              challenge.created_at,
+              Number(challenge.attempts),
+              timestamp,
+            ),
           db.prepare(`DELETE FROM email_challenges
             WHERE id = ? AND kind = 'password_reset' AND user_id = ? AND code_hash = ?
               AND created_at = ? AND attempts = ? AND expires_at > ?`)
@@ -976,6 +1052,12 @@ export async function handleAccountRequest(
                 AND updated_at = ?) AS exact_user_count,
             (SELECT COUNT(*) FROM users WHERE id = ?) AS any_user_count,
             (SELECT COUNT(*) FROM auth_sessions WHERE user_id = ?) AS session_count,
+            (SELECT COUNT(*) FROM native_oauth_authorization_codes
+              WHERE user_id = ?) AS native_code_count,
+            (SELECT COUNT(*) FROM native_oauth_refresh_families
+              WHERE user_id = ? AND revoked_at IS NULL) AS native_family_count,
+            (SELECT COUNT(*) FROM native_oauth_access_tokens
+              WHERE user_id = ? AND revoked_at IS NULL) AS native_access_count,
             (SELECT COUNT(*) FROM email_challenges
               WHERE id = ? AND kind = 'password_reset' AND user_id = ? AND code_hash = ?
                 AND created_at = ? AND attempts = ? AND expires_at > ?) AS exact_challenge_count,
@@ -987,6 +1069,9 @@ export async function handleAccountRequest(
             salt,
             passwordHash,
             timestamp,
+            challenge.user_id,
+            challenge.user_id,
+            challenge.user_id,
             challenge.user_id,
             challenge.user_id,
             challenge.id,
@@ -1006,6 +1091,9 @@ export async function handleAccountRequest(
       const exactUserCount = Number(receipt?.exact_user_count);
       const anyUserCount = Number(receipt?.any_user_count);
       const sessionCount = Number(receipt?.session_count);
+      const nativeCodeCount = Number(receipt?.native_code_count);
+      const nativeFamilyCount = Number(receipt?.native_family_count);
+      const nativeAccessCount = Number(receipt?.native_access_count);
       const exactChallengeCount = Number(receipt?.exact_challenge_count);
       const anyChallengeCount = Number(receipt?.any_challenge_count);
       const fenceCount = Number(receipt?.fence_count);
@@ -1013,6 +1101,9 @@ export async function handleAccountRequest(
         exactUserCount,
         anyUserCount,
         sessionCount,
+        nativeCodeCount,
+        nativeFamilyCount,
+        nativeAccessCount,
         exactChallengeCount,
         anyChallengeCount,
         fenceCount,
@@ -1036,7 +1127,9 @@ export async function handleAccountRequest(
           clearSessionCookies(request),
         );
       }
-      if (exactUserCount !== 1 || sessionCount !== 0 || anyChallengeCount !== 0 || fenceCount !== 0) {
+      if (exactUserCount !== 1 || sessionCount !== 0
+        || nativeCodeCount !== 0 || nativeFamilyCount !== 0 || nativeAccessCount !== 0
+        || anyChallengeCount !== 0 || fenceCount !== 0) {
         if (anyChallengeCount === 1 && exactChallengeCount === 0) {
           return errorResponse(
             409,
@@ -1128,7 +1221,7 @@ export async function handleAccountRequest(
       return jsonResponse({ signedOut: true, user: null }, 200, clearSessionCookies(request));
     }
 
-    const authenticatedSession = await getAuthenticatedSession(request, env);
+    const authenticatedSession = await getAuthenticatedSession(request, env, options.nativeScopes ?? []);
     if (!authenticatedSession) return unauthorizedResponse();
     const user = authenticatedSession.user;
     if (authenticatedSession.deletionFenced && !accountRequestAllowedWhileDeletionFenced(request)) {
@@ -1684,7 +1777,7 @@ export async function handleAccountRequest(
 
     const profileTripMatch = url.pathname.match(API_ROUTE_PATTERNS.profileTrip);
     if (profileTripMatch) {
-      assertSameOrigin(request);
+      assertSameOriginOrNative(request, authenticatedSession, "trips:write");
       const tripId = profileTripMatch[1];
       const trip = await db.prepare(`SELECT id, user_id, site_id, started_at, ended_at, mode, moderation_status, photo_key,
           observation_contract_version, taxon_catalog_version,
@@ -3760,6 +3853,7 @@ export async function cleanupAuthRetentionData(env: AuthApiEnv) {
 
 export async function cleanupAuthData(env: AuthApiEnv) {
   await cleanupAuthRetentionData(env);
+  await cleanupNativeOAuthData(env);
   await processExpiredPrivacyExports(env);
   await processPrivacyDeletionTasks(env);
 }
@@ -4441,6 +4535,9 @@ interface PasswordResetReceiptRow {
   exact_user_count: number;
   any_user_count: number;
   session_count: number;
+  native_code_count: number;
+  native_family_count: number;
+  native_access_count: number;
   exact_challenge_count: number;
   any_challenge_count: number;
   fence_count: number;
@@ -4824,6 +4921,18 @@ function assertSameOrigin(request: Request) {
   if (!origin || new URL(origin).origin !== new URL(request.url).origin) {
     throw new AuthError(403, "invalid_origin", "Account changes must come from CastingCompass.");
   }
+}
+
+function assertSameOriginOrNative(
+  request: Request,
+  session: AuthenticatedSession,
+  requiredScope: NativeOAuthScope,
+) {
+  if (
+    session.credentialKind === "native_access_token" &&
+    session.nativeScopes?.includes(requiredScope)
+  ) return;
+  assertSameOrigin(request);
 }
 
 async function readJson(request: Request) {

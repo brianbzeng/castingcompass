@@ -169,6 +169,28 @@ are complete:
 Raw notes and photos have no public read endpoint. Trip summaries expose totals
 only, and new reports remain pending review.
 
+## Enabling native authentication later
+
+The native public-client boundary is also fail-closed. Do not add its variables to production
+while building or testing the iOS app.
+
+1. Apply `0021_native_oauth.sql` through the integrated release wrapper and prove four empty
+   credential tables, eight named indexes, zero rows, and no foreign-key violations. Applying the
+   migration does not enable native sign-in.
+2. Create a separate staging Worker and D1 database. Configure exactly one non-secret
+   `NATIVE_OAUTH_CLIENT_ID`, one exact `NATIVE_OAUTH_REDIRECT_URI`, and
+   `NATIVE_OAUTH_ENABLED=true` only there. An app client secret is forbidden.
+3. Use the signed app's `ASWebAuthenticationSession` to open the staging
+   `/native/authorize` page. Store access/refresh tokens only in iOS Keychain and use an
+   ephemeral networking/session configuration that sends no browser cookie to token or revoke
+   endpoints.
+4. Pass the physical-device PKCE, state/callback, replay, expiry, rotation/reuse, password-reset,
+   account-deletion, logout, offline-recovery, monitoring, rollback, and independent-review gates
+   in [Native iOS authentication](NATIVE-IOS-AUTH.md).
+5. Production activation, if later approved, is a separate immutable configuration release after
+   the guarded migration and staging evidence. Missing, malformed, or disabled configuration
+   intentionally returns a no-store `503` and grants no bearer authority.
+
 ## Turnstile account protection
 
 Turnstile is implemented for the seven public account-abuse flows: age-proof

@@ -138,6 +138,30 @@ SELECT
     WHERE name = 'owner_subject_hash' AND lower(type) = 'text' AND "notnull" = 1
   ) AS trip_photo_reservation_owner_columns,
   (SELECT COUNT(*) FROM trip_photo_upload_reservations) AS trip_photo_reservation_rows,
+  (SELECT COUNT(*) FROM sqlite_master
+    WHERE type = 'table' AND name IN (
+      'native_oauth_authorization_codes',
+      'native_oauth_refresh_families',
+      'native_oauth_refresh_tokens',
+      'native_oauth_access_tokens'
+    )
+  ) AS native_oauth_tables,
+  (SELECT COUNT(*) FROM sqlite_master
+    WHERE type = 'index' AND name IN (
+      'native_oauth_authorization_codes_expiry_idx',
+      'native_oauth_authorization_codes_user_client_expiry_idx',
+      'native_oauth_refresh_families_user_idx',
+      'native_oauth_refresh_families_expiry_idx',
+      'native_oauth_refresh_tokens_expiry_idx',
+      'native_oauth_access_tokens_user_idx',
+      'native_oauth_access_tokens_family_idx',
+      'native_oauth_access_tokens_expiry_idx'
+    )
+  ) AS native_oauth_indexes,
+  (SELECT COUNT(*) FROM native_oauth_authorization_codes)
+    + (SELECT COUNT(*) FROM native_oauth_refresh_families)
+    + (SELECT COUNT(*) FROM native_oauth_refresh_tokens)
+    + (SELECT COUNT(*) FROM native_oauth_access_tokens) AS native_oauth_rows,
   (SELECT COUNT(*) FROM users) AS users,
   (SELECT COUNT(*) FROM users WHERE age_eligibility_confirmed_at IS NULL) AS users_missing_age_eligibility,
   (SELECT COUNT(*) FROM users

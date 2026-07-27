@@ -780,6 +780,28 @@ test("the complete forecast reflows without horizontal document scrolling at 320
   expect(geometry.main.right).toBeLessThanOrEqual(geometry.viewportWidth + 1);
 });
 
+test("native system-browser handoff strips its request query and reflows at 320px", async ({ page }) => {
+  await page.setViewportSize({ width: 320, height: 700 });
+  const query = new URLSearchParams({
+    client_id: "com.castingcompass.app",
+    redirect_uri: "castingcompass://oauth/callback",
+    code_challenge: "A".repeat(43),
+    code_challenge_method: "S256",
+    state: "B".repeat(32),
+    scope: "profile:read trips:write",
+  });
+
+  await page.goto(`/native/authorize?${query.toString()}`);
+
+  await expect(page.getByRole("heading", { name: "Continue to CastingCompass." })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Sign in" })).toBeVisible();
+  await expect.poll(() => new URL(page.url()).search).toBe("");
+  const geometry = await page.evaluate(() => ({
+    overflow: document.documentElement.scrollWidth - window.innerWidth,
+  }));
+  expect(geometry.overflow).toBeLessThanOrEqual(1);
+});
+
 test("official water-quality status suppresses recommendations and exposes the Santa Barbara action source", async ({ page }) => {
   await expect(page.locator(".water-quality-suppression-notice")).toContainText(
     "6 sites are excluded from recommendations",

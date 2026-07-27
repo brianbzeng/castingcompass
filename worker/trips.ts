@@ -1,4 +1,9 @@
 import {
+  NATIVE_TRIP_CANCEL_ACCEPTED_FIELDS,
+  NATIVE_TRIP_COMPLETE_ACCEPTED_FIELDS,
+  NATIVE_TRIP_START_ACCEPTED_FIELDS,
+} from "../shared/native-trip-contract.ts";
+import {
   assertObservationContract,
   CALIFORNIA_HALIBUT_TAXON_ID,
   deriveObservationOutcomeClass,
@@ -631,7 +636,25 @@ export interface TripHandlerOptions {
   store?: TripStore;
   now?: () => Date;
   accountId?: string | null;
+  requestAuthority?: "browser_cookie" | "native_access_token";
   onTripCompleted?: (trip: TripRow) => void;
+}
+
+type TripMutationOperation = "start" | "complete" | "cancel";
+
+function tripMutationSuccessResponse(
+  options: TripHandlerOptions,
+  operation: TripMutationOperation,
+  tripId: string,
+  browserPayload: Record<string, unknown>,
+  status = 200,
+  setCookie?: string,
+): Response {
+  const receipt = { operation, tripId };
+  if (options.requestAuthority === "native_access_token") {
+    return jsonResponse({ receipt }, status);
+  }
+  return jsonResponse({ ...browserPayload, receipt }, status, setCookie);
 }
 
 const INSERT_TRIP_SQL = `INSERT INTO trips (
@@ -2454,17 +2477,23 @@ export async function handleTripRequest(
     }
 
     if (request.method !== "POST") return methodNotAllowed("POST");
-    assertSameOrigin(request);
+    if (options.requestAuthority !== "native_access_token") assertSameOrigin(request);
 
     if (url.pathname === "/api/trips/start") {
       assertContentType(request, "application/json");
       assertBodySize(request, 64 * 1024);
       const body = await readJsonObject(request);
       assertNoObservationContractOverride(body);
-      assertOnlyInputFields(body, LIVE_START_FIELDS);
+      assertOnlyInputFields(
+        body,
+        options.requestAuthority === "native_access_token"
+          ? NATIVE_TRIP_START_ACCEPTED_FIELDS
+          : LIVE_START_FIELDS,
+      );
       assertHoneypot(body.website);
       assertConsent(body.consent);
       assertPrimaryTargetConfirmed(body.primaryTargetConfirmed);
+      const feasibilityEnrollment = parseFeasibilityEnrollmentRequest(body);
 
       const reporter = await getOrCreateReporter(request, body.reporterKey);
       const id = parseClientTripId(body.clientTripId);
@@ -2473,16 +2502,45 @@ export async function handleTripRequest(
       const existingRequest = await store.getTrip(id, options.accountId ?? null);
       if (existingRequest) {
         if (isMatchingLiveStart(existingRequest, idempotencyKeyHash, reporter.hash, options.accountId)) {
-          return jsonResponse({
-            trip: publicTrip(existingRequest),
-            token,
-            receipt: { operation: "start", tripId: id },
-          }, 201, reporter.setCookie);
+          const existingFeasibility = await (
+            store.getFeasibilityStart?.(id, options.accountId ?? null) ?? Promise.resolve(null)
+          );
+          if (
+            Boolean(feasibilityEnrollment) !== Boolean(existingFeasibility) ||
+            (
+              feasibilityEnrollment &&
+              existingFeasibility &&
+              feasibilityEnrollment.studyConsentVersion !== existingFeasibility.study_consent_version
+            )
+          ) {
+            throw new ApiError(
+              409,
+              "trip_request_conflict",
+              "This trip request identity cannot change its study-enrollment boundary.",
+            );
+          }
+          return tripMutationSuccessResponse(
+            options,
+            "start",
+            id,
+            { trip: publicTrip(existingRequest), token },
+            201,
+            options.requestAuthority === "browser_cookie"
+              ? reporter.setCookie
+              : undefined,
+          );
         }
         throw new ApiError(409, "trip_request_conflict", "This trip request identity cannot be reused.");
       }
       if (await store.isTripIdentityReserved(id)) {
         throw new ApiError(409, "trip_request_conflict", "This trip request identity cannot be reused.");
+      }
+      if (feasibilityEnrollment && !feasibilityPilotEnabled(env)) {
+        throw new ApiError(
+          503,
+          "validation_pilot_unavailable",
+          "The validation pilot is not available right now.",
+        );
       }
       await store.assertSubmissionAllowed(reporter.hash, now);
       const site = getSite(siteMap, body.siteId);
@@ -2508,15 +2566,8 @@ export async function handleTripRequest(
       });
       let feasibilityStart: FeasibilityEventRecord | null = null;
       let feasibilityRecruitment: FeasibilityRecruitmentRecord | null = null;
-      if (feasibilityPilotEnabled(env) && optionalBoolean(body.studyConsent, "studyConsent") === true) {
-        const studyConsentVersion = optionalText(body.studyConsentVersion, "studyConsentVersion", 200);
-        if (!studyConsentVersion) {
-          throw new ApiError(
-            422,
-            "study_consent_version_required",
-            "The active study consent version is required for pilot participation.",
-          );
-        }
+      if (feasibilityEnrollment) {
+        const { studyConsentVersion, recruitmentToken } = feasibilityEnrollment;
         const activationId = env.VALIDATION_FEASIBILITY_ACTIVATION_ID?.trim();
         if (
           !activationId || !store.getFeasibilityActivation || !store.getFeasibilityRecruitment ||
@@ -2543,7 +2594,6 @@ export async function handleTripRequest(
           context.participantGroupId,
           options.accountId,
         );
-        const recruitmentToken = optionalText(body.recruitmentToken, "recruitmentToken", 2_048);
         const campaignReference = recruitmentToken && !existingRecruitment
           ? feasibilityRecruitmentCampaignReference(recruitmentToken)
           : null;
@@ -2686,11 +2736,16 @@ export async function handleTripRequest(
         trip = racedTrip;
       }
 
-      return jsonResponse({
-        trip: publicTrip(trip),
-        token,
-        receipt: { operation: "start", tripId: id },
-      }, 201, reporter.setCookie);
+      return tripMutationSuccessResponse(
+        options,
+        "start",
+        id,
+        { trip: publicTrip(trip), token },
+        201,
+        options.requestAuthority === "browser_cookie"
+          ? reporter.setCookie
+          : undefined,
+      );
     }
 
     const cancellationMatch = url.pathname.match(API_ROUTE_PATTERNS.tripCancel);
@@ -2698,7 +2753,12 @@ export async function handleTripRequest(
       assertContentType(request, "application/json");
       assertBodySize(request, 16 * 1024);
       const body = await readJsonObject(request);
-      assertOnlyInputFields(body, ["token", "reason"]);
+      assertOnlyInputFields(
+        body,
+        options.requestAuthority === "native_access_token"
+          ? NATIVE_TRIP_CANCEL_ACCEPTED_FIELDS
+          : ["token", "reason"],
+      );
       const id = cancellationMatch[1];
       if (!TRIP_ID_PATTERN.test(id)) {
         throw new ApiError(404, "trip_not_found", "The active trip could not be found.");
@@ -2708,10 +2768,14 @@ export async function handleTripRequest(
         throw new ApiError(404, "trip_not_found", "The active trip could not be found.");
       }
       const reason = parseSafeCancellationReason(body.reason);
+      const tokenHash = await sha256(token);
       const existing = await store.getTrip(id, options.accountId ?? null);
       if (!existing || existing.status !== "active"
         || !sameTripAccount(existing, options.accountId) || !store.cancelTrip) {
         throw new ApiError(404, "trip_not_found", "The active trip could not be found.");
+      }
+      if (existing.token_hash === null && existing.idempotency_key_hash === tokenHash) {
+        return tripMutationSuccessResponse(options, "cancel", id, { canceled: true, id });
       }
       const timestamp = now.toISOString();
       const feasibilityStart = await (
@@ -2725,13 +2789,13 @@ export async function handleTripRequest(
       }
       const canceled = await store.cancelTrip(
         id,
-        await sha256(token),
+        tokenHash,
         options.accountId ?? null,
         timestamp,
         feasibilityTerminal,
       );
       if (!canceled) throw new ApiError(404, "trip_not_found", "The active trip could not be found.");
-      return jsonResponse({ canceled: true, id, reason });
+      return tripMutationSuccessResponse(options, "cancel", id, { canceled: true, id });
     }
 
     const completionMatch = url.pathname.match(API_ROUTE_PATTERNS.tripComplete);
@@ -2740,7 +2804,12 @@ export async function handleTripRequest(
       assertBodySize(request, MAX_MULTIPART_BYTES);
       const form = await request.formData();
       assertNoObservationContractOverride(form);
-      assertOnlyInputFields(form, LIVE_COMPLETION_FIELDS);
+      assertOnlyInputFields(
+        form,
+        options.requestAuthority === "native_access_token"
+          ? NATIVE_TRIP_COMPLETE_ACCEPTED_FIELDS
+          : LIVE_COMPLETION_FIELDS,
+      );
       assertHoneypot(form.get("website"));
       assertConsent(form.get("consent"));
       assertCompleteAttempt(form.get("completeAttempt"));
@@ -2767,11 +2836,20 @@ export async function handleTripRequest(
         const originalForecastImpression = await (
           store.getForecastImpression?.(id, options.accountId ?? null) ?? Promise.resolve(null)
         );
-        return jsonResponse({
-          trip: publicTrip(existing),
-          forecastAttributionCleared: Boolean(originalForecastImpression) && existing.opportunity_window_id === null,
-          receipt: { operation: "complete", tripId: id },
-        }, 200, reporter.setCookie);
+        return tripMutationSuccessResponse(
+          options,
+          "complete",
+          id,
+          {
+            trip: publicTrip(existing),
+            forecastAttributionCleared:
+              Boolean(originalForecastImpression) && existing.opportunity_window_id === null,
+          },
+          200,
+          options.requestAuthority === "browser_cookie"
+            ? reporter.setCookie
+            : undefined,
+        );
       }
       if (!existing || existing.status !== "active" || !sameTripAccount(existing, options.accountId)) {
         throw new ApiError(404, "trip_not_found", "The active trip could not be found.");
@@ -2897,19 +2975,29 @@ export async function handleTripRequest(
           const originalForecastImpression = await (
             store.getForecastImpression?.(id, options.accountId ?? null) ?? Promise.resolve(null)
           );
-          return jsonResponse({
-            trip: publicTrip(racedTrip),
-            forecastAttributionCleared: Boolean(originalForecastImpression) && racedTrip.opportunity_window_id === null,
-            receipt: { operation: "complete", tripId: id },
-          }, 200, retryReporter.setCookie);
+          return tripMutationSuccessResponse(
+            options,
+            "complete",
+            id,
+            {
+              trip: publicTrip(racedTrip),
+              forecastAttributionCleared:
+                Boolean(originalForecastImpression) && racedTrip.opportunity_window_id === null,
+            },
+            200,
+            options.requestAuthority === "browser_cookie"
+              ? retryReporter.setCookie
+              : undefined,
+          );
         }
         if (uploaded) await releaseAttachedPhotoReservation(uploaded, store);
         options.onTripCompleted?.(completed);
-        return jsonResponse({
-          trip: publicTrip(completed),
-          forecastAttributionCleared,
-          receipt: { operation: "complete", tripId: id },
-        });
+        return tripMutationSuccessResponse(
+          options,
+          "complete",
+          id,
+          { trip: publicTrip(completed), forecastAttributionCleared },
+        );
       } catch (error) {
         let committedTrip: TripRow | null = null;
         if (uploaded) {
@@ -3604,6 +3692,33 @@ function optionalBoolean(value: unknown, field: string): boolean | null {
   if (value === "true" || value === "1" || value === "on") return true;
   if (value === "false" || value === "0" || value === "off") return false;
   throw new ApiError(422, `invalid_${field}`, `${field} must be true or false.`);
+}
+
+function parseFeasibilityEnrollmentRequest(
+  body: Record<string, unknown>,
+): { studyConsentVersion: string; recruitmentToken: string | null } | null {
+  const studyConsent = optionalBoolean(body.studyConsent, "studyConsent");
+  const studyConsentVersion = optionalText(body.studyConsentVersion, "studyConsentVersion", 200);
+  const recruitmentToken = optionalText(body.recruitmentToken, "recruitmentToken", 2_048);
+
+  if (studyConsent !== true) {
+    if (studyConsentVersion || recruitmentToken) {
+      throw new ApiError(
+        422,
+        "study_enrollment_inconsistent",
+        "Study enrollment metadata requires explicit study consent.",
+      );
+    }
+    return null;
+  }
+  if (!studyConsentVersion) {
+    throw new ApiError(
+      422,
+      "study_consent_version_required",
+      "The active study consent version is required for pilot participation.",
+    );
+  }
+  return { studyConsentVersion, recruitmentToken };
 }
 
 function parseSafeCancellationReason(value: unknown): SafeCancellationReason {

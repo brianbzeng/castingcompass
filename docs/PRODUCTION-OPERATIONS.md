@@ -293,6 +293,10 @@ provider evidence.
       locators without that hash. The preflight proved zero existing trip photo locators before
       the column was added. Alert on active/expired fences, aged reservations, and every
       `needs_attention` row before the upload gate can be enabled, without logging identities or locators.
+- [ ] Migration `0021_native_oauth.sql` completed before native authentication is
+      activated; postflight verified its four empty hash-only credential tables and eight indexes.
+      `NATIVE_OAUTH_ENABLED` remains unset or `false`, with no client or redirect configured,
+      until the separate isolated-staging and physical-device activation gates pass.
 - [ ] Privacy pre/postflight counts match; the missing-age and legal-reacceptance cohorts have
       an explicit support decision, while export and account deletion remain available.
 - [ ] Canonical, redirect-alias, and `workers.dev` smoke checks passed.

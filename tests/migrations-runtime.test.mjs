@@ -212,6 +212,7 @@ test("the complete migration chain applies atomically and produces the runtime s
     "0018_ai_review_queue.sql",
     "0019_async_privacy_exports.sql",
     "0020_trip_photo_upload_reservations.sql",
+    "0021_native_oauth.sql",
   ]);
 
   const sqlite = new DatabaseSync(":memory:");
@@ -221,7 +222,7 @@ test("the complete migration chain applies atomically and produces the runtime s
   assert.deepEqual(
     sqlite.prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%' ORDER BY name").all()
       .map((row) => row.name),
-    ["account_deletion_fences", "ai_review_jobs", "auth_attempts", "auth_sessions", "email_challenges", "forecast_impressions", "gear_profiles", "privacy_deletion_jobs", "privacy_deletion_tasks", "privacy_export_jobs", "saved_sites", "signup_age_proofs", "site_discussion_posts", "trip_photo_upload_reservations", "trip_validation_provenance", "trips", "users", "validation_feasibility_activations", "validation_feasibility_correction_removals", "validation_feasibility_corrections", "validation_feasibility_events", "validation_feasibility_privacy_removals", "validation_feasibility_recruitment_campaigns", "validation_feasibility_recruitment_events", "validation_feasibility_recruitment_removals", "validation_feasibility_snapshot_suppressions"],
+    ["account_deletion_fences", "ai_review_jobs", "auth_attempts", "auth_sessions", "email_challenges", "forecast_impressions", "gear_profiles", "native_oauth_access_tokens", "native_oauth_authorization_codes", "native_oauth_refresh_families", "native_oauth_refresh_tokens", "privacy_deletion_jobs", "privacy_deletion_tasks", "privacy_export_jobs", "saved_sites", "signup_age_proofs", "site_discussion_posts", "trip_photo_upload_reservations", "trip_validation_provenance", "trips", "users", "validation_feasibility_activations", "validation_feasibility_correction_removals", "validation_feasibility_corrections", "validation_feasibility_events", "validation_feasibility_privacy_removals", "validation_feasibility_recruitment_campaigns", "validation_feasibility_recruitment_events", "validation_feasibility_recruitment_removals", "validation_feasibility_snapshot_suppressions"],
   );
   assert.ok(columns(sqlite, "trips").includes("user_id"));
   assert.ok(columns(sqlite, "trips").includes("ai_reviewed_at"));
@@ -239,6 +240,9 @@ test("the complete migration chain applies atomically and produces the runtime s
   assert.ok(columns(sqlite, "privacy_export_jobs").includes("lease_token"));
   assert.ok(columns(sqlite, "trip_photo_upload_reservations").includes("object_key_hash"));
   assert.ok(columns(sqlite, "trip_photo_upload_reservations").includes("owner_subject_hash"));
+  assert.ok(columns(sqlite, "native_oauth_authorization_codes").includes("consumed_by"));
+  assert.ok(columns(sqlite, "native_oauth_refresh_tokens").includes("successor_token_hash"));
+  assert.ok(columns(sqlite, "native_oauth_access_tokens").includes("revoked_at"));
   assert.ok(columns(sqlite, "account_deletion_fences").includes("lease_token"));
   assert.ok(columns(sqlite, "trips").includes("photo_key_hash"));
   assert.ok(columns(sqlite, "trips").includes("observation_contract_version"));

@@ -1,0 +1,377 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "castingcompass.native-trip-client/1.0.0",
+  "title": "CastingCompass native trip client contract",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "status",
+    "api",
+    "authorization",
+    "identity",
+    "collection",
+    "operations",
+    "recovery",
+    "offline",
+    "privacy",
+    "authority"
+  ],
+  "properties": {
+    "schema_version": { "const": "castingcompass.native-trip-client/1.0.0" },
+    "status": { "const": "server-contract-implemented-client-not-built" },
+    "api": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["compatibility_version", "version_header", "base_url_source"],
+      "properties": {
+        "compatibility_version": { "const": "1" },
+        "version_header": { "const": "X-CastingCompass-API-Version" },
+        "base_url_source": { "const": "signed-build-configuration" }
+      }
+    },
+    "authorization": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "mode",
+        "required_scope",
+        "cookie_allowed",
+        "origin_allowed",
+        "access_token_storage",
+        "reporter_key_storage"
+      ],
+      "properties": {
+        "mode": { "const": "native-bearer" },
+        "required_scope": { "const": "trips:write" },
+        "cookie_allowed": { "const": false },
+        "origin_allowed": { "const": false },
+        "access_token_storage": { "const": "ios-keychain-only" },
+        "reporter_key_storage": { "const": "ios-keychain-only" }
+      }
+    },
+    "identity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "trip_id_format",
+        "request_token_format",
+        "reporter_key_format",
+        "reuse_rule"
+      ],
+      "properties": {
+        "trip_id_format": { "const": "trip_<uuid-v4-lowercase>" },
+        "request_token_format": { "const": "43-character-base64url-random" },
+        "reporter_key_format": { "const": "43-character-base64url-random" },
+        "reuse_rule": { "const": "same-operation-envelope-only" }
+      }
+    },
+    "collection": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "target_taxon_id",
+        "curated_site_id_only",
+        "modes",
+        "cancellation_reasons",
+        "angler_count_minimum",
+        "angler_count_maximum",
+        "keeper_count_maximum",
+        "short_released_count_maximum",
+        "combined_halibut_count_maximum",
+        "other_catch_count_maximum",
+        "live_start_clock_skew_seconds",
+        "live_duration_maximum_hours"
+      ],
+      "properties": {
+        "target_taxon_id": { "const": "california-halibut" },
+        "curated_site_id_only": { "const": true },
+        "modes": { "const": ["shore", "beach", "pier", "jetty"] },
+        "cancellation_reasons": {
+          "const": ["weather", "water_safety", "access", "health", "personal", "other"]
+        },
+        "angler_count_minimum": { "const": 1 },
+        "angler_count_maximum": { "const": 12 },
+        "keeper_count_maximum": { "const": 25 },
+        "short_released_count_maximum": { "const": 25 },
+        "combined_halibut_count_maximum": { "const": 40 },
+        "other_catch_count_maximum": { "const": 100 },
+        "live_start_clock_skew_seconds": { "const": 90 },
+        "live_duration_maximum_hours": { "const": 36 }
+      }
+    },
+    "operations": {
+      "type": "array",
+      "prefixItems": [
+        { "$ref": "#/$defs/startOperation" },
+        { "$ref": "#/$defs/completeOperation" },
+        { "$ref": "#/$defs/cancelOperation" }
+      ],
+      "items": false,
+      "minItems": 3,
+      "maxItems": 3
+    },
+    "recovery": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "durable_states",
+        "success_requires",
+        "transport_failure_action",
+        "retry_rule",
+        "conflict_action",
+        "automatic_replay_allowed",
+        "refresh_ambiguity_action"
+      ],
+      "properties": {
+        "durable_states": {
+          "const": ["draft", "pending_submission", "confirmed", "needs_user_attention"]
+        },
+        "success_requires": { "const": "exact-server-receipt" },
+        "transport_failure_action": {
+          "const": "preserve-exact-envelope-and-do-not-claim-success"
+        },
+        "retry_rule": { "const": "explicit-same-envelope-idempotent-retry" },
+        "conflict_action": { "const": "stop-and-require-user-attention" },
+        "automatic_replay_allowed": { "const": false },
+        "refresh_ambiguity_action": { "const": "discard-family-and-sign-in-again" }
+      }
+    },
+    "offline": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "live_start_requires_online_receipt",
+        "terminal_draft_may_be_preserved",
+        "terminal_write_may_claim_success_offline",
+        "offline_completion_time_semantics",
+        "offline_completion_model_use"
+      ],
+      "properties": {
+        "live_start_requires_online_receipt": { "const": true },
+        "terminal_draft_may_be_preserved": { "const": true },
+        "terminal_write_may_claim_success_offline": { "const": false },
+        "offline_completion_time_semantics": {
+          "const": "server-receipt-time-remains-authoritative"
+        },
+        "offline_completion_model_use": {
+          "const": "exclude-from-duration-sensitive-or-confirmatory-analysis-until-separately-reviewed"
+        }
+      }
+    },
+    "privacy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "exact_gps_collected",
+        "photo_required",
+        "notes_required",
+        "credentials_in_logs_allowed",
+        "free_text_in_logs_allowed",
+        "private_by_default"
+      ],
+      "properties": {
+        "exact_gps_collected": { "const": false },
+        "photo_required": { "const": false },
+        "notes_required": { "const": false },
+        "credentials_in_logs_allowed": { "const": false },
+        "free_text_in_logs_allowed": { "const": false },
+        "private_by_default": { "const": true }
+      }
+    },
+    "authority": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "testflight_release",
+        "staging_activation",
+        "production_deployment",
+        "pilot_activation",
+        "model_training",
+        "model_selection",
+        "score_change"
+      ],
+      "properties": {
+        "testflight_release": { "const": false },
+        "staging_activation": { "const": false },
+        "production_deployment": { "const": false },
+        "pilot_activation": { "const": false },
+        "model_training": { "const": false },
+        "model_selection": { "const": false },
+        "score_change": { "const": false }
+      }
+    }
+  },
+  "$defs": {
+    "receipt": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["operation", "required_fields", "success_status", "exact_top_level_fields"],
+      "properties": {
+        "operation": { "enum": ["start", "complete", "cancel"] },
+        "required_fields": {
+          "type": "array",
+          "prefixItems": [
+            { "const": "receipt.operation" },
+            { "const": "receipt.tripId" }
+          ],
+          "items": false,
+          "minItems": 2,
+          "maxItems": 2
+        },
+        "success_status": { "enum": [200, 201] },
+        "exact_top_level_fields": { "const": ["receipt"] }
+      }
+    },
+    "baseOperation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "method",
+        "path_template",
+        "content_type",
+        "required_scope",
+        "required_fields",
+        "optional_fields",
+        "receipt",
+        "idempotency"
+      ],
+      "properties": {
+        "id": { "enum": ["start", "complete", "cancel"] },
+        "method": { "const": "POST" },
+        "path_template": { "type": "string" },
+        "content_type": { "enum": ["application/json", "multipart/form-data"] },
+        "required_scope": { "const": "trips:write" },
+        "required_fields": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "type": "string" }
+        },
+        "optional_fields": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "type": "string" }
+        },
+        "receipt": { "$ref": "#/$defs/receipt" },
+        "idempotency": {
+          "const": "server-keyed-by-trip-id-token-and-principal-client-reuses-exact-envelope"
+        }
+      }
+    },
+    "startOperation": {
+      "allOf": [
+        { "$ref": "#/$defs/baseOperation" },
+        {
+          "type": "object",
+          "properties": {
+            "id": { "const": "start" },
+            "path_template": { "const": "/api/trips/start" },
+            "content_type": { "const": "application/json" },
+            "required_fields": {
+              "const": [
+                "clientTripId",
+                "requestToken",
+                "reporterKey",
+                "siteId",
+                "startedAt",
+                "anglerCount",
+                "mode",
+                "scoreInfluencedChoice",
+                "primaryTargetConfirmed",
+                "consent"
+              ]
+            },
+            "optional_fields": { "const": ["method", "opportunityWindowId", "referralCode"] },
+            "receipt": {
+              "allOf": [
+                { "$ref": "#/$defs/receipt" },
+                {
+                  "type": "object",
+                  "properties": {
+                    "operation": { "const": "start" },
+                    "required_fields": { "const": ["receipt.operation", "receipt.tripId"] },
+                    "success_status": { "const": 201 },
+                    "exact_top_level_fields": { "const": ["receipt"] }
+                  }
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    "completeOperation": {
+      "allOf": [
+        { "$ref": "#/$defs/baseOperation" },
+        {
+          "type": "object",
+          "properties": {
+            "id": { "const": "complete" },
+            "path_template": { "const": "/api/trips/{tripId}/complete" },
+            "content_type": { "const": "multipart/form-data" },
+            "required_fields": {
+              "const": [
+                "token",
+                "reporterKey",
+                "anglerCount",
+                "mode",
+                "scoreInfluencedChoice",
+                "keeperCount",
+                "shortReleasedCount",
+                "otherCatchCount",
+                "consent",
+                "primaryTargetConfirmed",
+                "completeAttempt"
+              ]
+            },
+            "optional_fields": { "const": ["otherSpecies", "method"] },
+            "receipt": {
+              "allOf": [
+                { "$ref": "#/$defs/receipt" },
+                {
+                  "type": "object",
+                  "properties": {
+                    "operation": { "const": "complete" },
+                    "required_fields": { "const": ["receipt.operation", "receipt.tripId"] },
+                    "success_status": { "const": 200 },
+                    "exact_top_level_fields": { "const": ["receipt"] }
+                  }
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    "cancelOperation": {
+      "allOf": [
+        { "$ref": "#/$defs/baseOperation" },
+        {
+          "type": "object",
+          "properties": {
+            "id": { "const": "cancel" },
+            "path_template": { "const": "/api/trips/{tripId}/cancel" },
+            "content_type": { "const": "application/json" },
+            "required_fields": { "const": ["token", "reason"] },
+            "optional_fields": { "const": [] },
+            "receipt": {
+              "allOf": [
+                { "$ref": "#/$defs/receipt" },
+                {
+                  "type": "object",
+                  "properties": {
+                    "operation": { "const": "cancel" },
+                    "required_fields": { "const": ["receipt.operation", "receipt.tripId"] },
+                    "success_status": { "const": 200 },
+                    "exact_top_level_fields": { "const": ["receipt"] }
+                  }
+                }
+              ]
+            }
+          }
+        }
+      ]
+    }
+  }
+}

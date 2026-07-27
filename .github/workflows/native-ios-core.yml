@@ -1,0 +1,39 @@
+name: Native iOS core
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/native-ios-core.yml"
+      - "native/ios/CastingCompassNativeCore/**"
+      - "scripts/verify-native-ios-collection-core.mjs"
+      - "tests/native-ios-collection-core.test.mjs"
+      - "security/native-trip-client-policy.json"
+  pull_request:
+    paths:
+      - ".github/workflows/native-ios-core.yml"
+      - "native/ios/CastingCompassNativeCore/**"
+      - "scripts/verify-native-ios-collection-core.mjs"
+      - "tests/native-ios-collection-core.test.mjs"
+      - "security/native-trip-client-policy.json"
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  swift:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - run: swift --version
+      - run: swift build --package-path native/ios/CastingCompassNativeCore -c release
+      - run: swift test --package-path native/ios/CastingCompassNativeCore
+      - run: swift run --package-path native/ios/CastingCompassNativeCore CastingCompassNativeCoreCheck

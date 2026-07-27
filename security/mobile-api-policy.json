@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "api": {
     "compatibilityVersion": "1",
     "header": "X-CastingCompass-API-Version",
@@ -10,7 +10,35 @@
   "authentication": {
     "currentWebMode": "secure_host_cookie",
     "credentialsInLocalStorageAllowed": false,
-    "nativeReleaseMode": "authorization_code_pkce_required_before_native_release"
+    "native": {
+      "serverBoundary": "implemented_disabled_by_default",
+      "releaseMode": "authorization_code_pkce",
+      "publicClient": true,
+      "clientSecretAllowed": false,
+      "exactClientAndRedirectRequired": true,
+      "allowedRedirectProtocols": [
+        "https:",
+        "castingcompass:"
+      ],
+      "authorizationBrowser": "system_browser_required",
+      "codeChallengeMethod": "S256",
+      "authorizationCodeSeconds": 300,
+      "accessTokenSeconds": 600,
+      "refreshTokenSeconds": 2592000,
+      "refreshTokenRotationRequired": true,
+      "refreshTokenReuseAction": "revoke_family",
+      "serverRevocationRequired": true,
+      "tokenStorage": "ios_keychain_only",
+      "scopes": [
+        "profile:read",
+        "trips:write"
+      ],
+      "environment": {
+        "enabled": "NATIVE_OAUTH_ENABLED",
+        "clientId": "NATIVE_OAUTH_CLIENT_ID",
+        "redirectUri": "NATIVE_OAUTH_REDIRECT_URI"
+      }
+    }
   },
   "coverage": {
     "chromiumProjects": [
@@ -33,10 +61,12 @@
     ]
   },
   "sharedContracts": [
+    "contracts/native-trip-client.schema.json",
     "contracts/model-run.schema.json",
     "contracts/observation.schema.json",
     "contracts/opportunity.schema.json",
     "contracts/taxa.schema.json"
   ],
+  "nativeTripClientPolicy": "security/native-trip-client-policy.json",
   "productionReadiness": false
 }

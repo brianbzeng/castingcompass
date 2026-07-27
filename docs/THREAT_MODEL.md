@@ -191,18 +191,25 @@ that could become a privacy, integrity, or availability incident.
   HTTPS `__Host-` cookies, `HttpOnly`, `Secure`, scoped `SameSite`, hashed 256-bit tokens,
   rotation, expiry, revocation, fixation resistance, same-origin mutation checks, generic
   equal-work login/recovery behavior, and database-atomic login/challenge attempt claims are
-  covered by auth and password security tests. Credential success also waits for authoritative
-  attempt-classification and exact challenge-version receipts before session issuance.
+  covered by auth and password security tests. The default-off native public-client boundary is
+  separately scoped: exact client/redirect, system-browser authorization, PKCE `S256`, one-use
+  five-minute codes, ten-minute hash-only access tokens, 30-day rotating refresh families,
+  reuse-family revocation, no client secret, strict no-cookie bearer parsing, and server-derived
+  owner/legal/deletion state. Credential success also waits for authoritative
+  attempt-classification and exact challenge/version/token receipts before authority escapes.
 - **Alert:** Authentication regression tests and structured auth outcomes locally; production
   anomaly alerts and email-delivery/revocation drills remain absent.
 - **Recovery:** Enter maintenance or disable signup/recovery, revoke affected sessions and
   provider credentials, restore only the reviewed auth path, and require reauthentication.
-- **Residual risk:** Maintaining custom auth carries ongoing implementation burden; live cookie,
+- **Residual risk:** Maintaining custom auth carries ongoing implementation burden; the native
+  system-browser page and SwiftUI/Keychain client are not yet built, and live cookie, PKCE,
   expiry, email, revocation, abuse, and account-recovery evidence remains open. Adding Auth0,
   Clerk, or Supabase Auth would add a processor, migration, deletion, availability, and lock-in
   boundary and is not automatically safer without a reviewed decision.
-- **Next gate:** Capture live non-sensitive auth evidence after the guarded deployment and
-  reassess managed identity if role complexity or assurance requirements grow.
+- **Next gate:** Keep native auth disabled while building the system-browser client handoff and
+  signed Keychain client; then capture isolated-staging and physical-device evidence before any
+  TestFlight activation. Capture live non-sensitive web-auth evidence after the guarded
+  deployment and reassess managed identity if role complexity or assurance requirements grow.
 
 ### L07 — Strict access controls / RBAC / ABAC
 

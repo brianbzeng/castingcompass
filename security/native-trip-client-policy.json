@@ -1,0 +1,143 @@
+{
+  "schema_version": "castingcompass.native-trip-client/1.0.0",
+  "status": "server-contract-implemented-client-not-built",
+  "api": {
+    "compatibility_version": "1",
+    "version_header": "X-CastingCompass-API-Version",
+    "base_url_source": "signed-build-configuration"
+  },
+  "authorization": {
+    "mode": "native-bearer",
+    "required_scope": "trips:write",
+    "cookie_allowed": false,
+    "origin_allowed": false,
+    "access_token_storage": "ios-keychain-only",
+    "reporter_key_storage": "ios-keychain-only"
+  },
+  "identity": {
+    "trip_id_format": "trip_<uuid-v4-lowercase>",
+    "request_token_format": "43-character-base64url-random",
+    "reporter_key_format": "43-character-base64url-random",
+    "reuse_rule": "same-operation-envelope-only"
+  },
+  "collection": {
+    "target_taxon_id": "california-halibut",
+    "curated_site_id_only": true,
+    "modes": ["shore", "beach", "pier", "jetty"],
+    "cancellation_reasons": ["weather", "water_safety", "access", "health", "personal", "other"],
+    "angler_count_minimum": 1,
+    "angler_count_maximum": 12,
+    "keeper_count_maximum": 25,
+    "short_released_count_maximum": 25,
+    "combined_halibut_count_maximum": 40,
+    "other_catch_count_maximum": 100,
+    "live_start_clock_skew_seconds": 90,
+    "live_duration_maximum_hours": 36
+  },
+  "operations": [
+    {
+      "id": "start",
+      "method": "POST",
+      "path_template": "/api/trips/start",
+      "content_type": "application/json",
+      "required_scope": "trips:write",
+      "required_fields": [
+        "clientTripId",
+        "requestToken",
+        "reporterKey",
+        "siteId",
+        "startedAt",
+        "anglerCount",
+        "mode",
+        "scoreInfluencedChoice",
+        "primaryTargetConfirmed",
+        "consent"
+      ],
+      "optional_fields": ["method", "opportunityWindowId", "referralCode"],
+      "receipt": {
+        "operation": "start",
+        "required_fields": ["receipt.operation", "receipt.tripId"],
+        "success_status": 201,
+        "exact_top_level_fields": ["receipt"]
+      },
+      "idempotency": "server-keyed-by-trip-id-token-and-principal-client-reuses-exact-envelope"
+    },
+    {
+      "id": "complete",
+      "method": "POST",
+      "path_template": "/api/trips/{tripId}/complete",
+      "content_type": "multipart/form-data",
+      "required_scope": "trips:write",
+      "required_fields": [
+        "token",
+        "reporterKey",
+        "anglerCount",
+        "mode",
+        "scoreInfluencedChoice",
+        "keeperCount",
+        "shortReleasedCount",
+        "otherCatchCount",
+        "consent",
+        "primaryTargetConfirmed",
+        "completeAttempt"
+      ],
+      "optional_fields": ["otherSpecies", "method"],
+      "receipt": {
+        "operation": "complete",
+        "required_fields": ["receipt.operation", "receipt.tripId"],
+        "success_status": 200,
+        "exact_top_level_fields": ["receipt"]
+      },
+      "idempotency": "server-keyed-by-trip-id-token-and-principal-client-reuses-exact-envelope"
+    },
+    {
+      "id": "cancel",
+      "method": "POST",
+      "path_template": "/api/trips/{tripId}/cancel",
+      "content_type": "application/json",
+      "required_scope": "trips:write",
+      "required_fields": ["token", "reason"],
+      "optional_fields": [],
+      "receipt": {
+        "operation": "cancel",
+        "required_fields": ["receipt.operation", "receipt.tripId"],
+        "success_status": 200,
+        "exact_top_level_fields": ["receipt"]
+      },
+      "idempotency": "server-keyed-by-trip-id-token-and-principal-client-reuses-exact-envelope"
+    }
+  ],
+  "recovery": {
+    "durable_states": ["draft", "pending_submission", "confirmed", "needs_user_attention"],
+    "success_requires": "exact-server-receipt",
+    "transport_failure_action": "preserve-exact-envelope-and-do-not-claim-success",
+    "retry_rule": "explicit-same-envelope-idempotent-retry",
+    "conflict_action": "stop-and-require-user-attention",
+    "automatic_replay_allowed": false,
+    "refresh_ambiguity_action": "discard-family-and-sign-in-again"
+  },
+  "offline": {
+    "live_start_requires_online_receipt": true,
+    "terminal_draft_may_be_preserved": true,
+    "terminal_write_may_claim_success_offline": false,
+    "offline_completion_time_semantics": "server-receipt-time-remains-authoritative",
+    "offline_completion_model_use": "exclude-from-duration-sensitive-or-confirmatory-analysis-until-separately-reviewed"
+  },
+  "privacy": {
+    "exact_gps_collected": false,
+    "photo_required": false,
+    "notes_required": false,
+    "credentials_in_logs_allowed": false,
+    "free_text_in_logs_allowed": false,
+    "private_by_default": true
+  },
+  "authority": {
+    "testflight_release": false,
+    "staging_activation": false,
+    "production_deployment": false,
+    "pilot_activation": false,
+    "model_training": false,
+    "model_selection": false,
+    "score_change": false
+  }
+}

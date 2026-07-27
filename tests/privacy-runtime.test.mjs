@@ -45,6 +45,7 @@ const MIGRATIONS = [
   "0018_ai_review_queue.sql",
   "0019_async_privacy_exports.sql",
   "0020_trip_photo_upload_reservations.sql",
+  "0021_native_oauth.sql",
 ];
 
 let tripRequestSequence = 0;
@@ -280,6 +281,35 @@ async function addPasswordResetChallenge(sqlite, user, code, now = new Date()) {
       now.toISOString(),
     );
   return id;
+}
+
+async function addNativeCredentials(sqlite, user, suffix) {
+  const createdAt = new Date().toISOString();
+  const codeExpiresAt = new Date(Date.now() + 5 * 60_000).toISOString();
+  const accessExpiresAt = new Date(Date.now() + 10 * 60_000).toISOString();
+  const refreshExpiresAt = new Date(Date.now() + 30 * 24 * 60 * 60_000).toISOString();
+  const familyId = `native_family_${suffix}`;
+  const codeHash = await sha256(`native-code-${suffix}`);
+  const refreshHash = await sha256(`native-refresh-${suffix}`);
+  const accessHash = await sha256(`native-access-${suffix}`);
+  sqlite.prepare(`INSERT INTO native_oauth_authorization_codes
+      (code_hash, user_id, client_id, redirect_uri, code_challenge, scope, issued_at, expires_at)
+    VALUES (?, ?, 'com.castingcompass.app', 'castingcompass://oauth/callback', ?, ?, ?, ?)`)
+    .run(codeHash, user.id, await sha256(`native-verifier-${suffix}`),
+      "profile:read trips:write", createdAt, codeExpiresAt);
+  sqlite.prepare(`INSERT INTO native_oauth_refresh_families
+      (id, user_id, client_id, scope, created_at, expires_at)
+    VALUES (?, ?, 'com.castingcompass.app', ?, ?, ?)`)
+    .run(familyId, user.id, "profile:read trips:write", createdAt, refreshExpiresAt);
+  sqlite.prepare(`INSERT INTO native_oauth_refresh_tokens
+      (token_hash, family_id, generation, created_at, expires_at)
+    VALUES (?, ?, 0, ?, ?)`)
+    .run(refreshHash, familyId, createdAt, refreshExpiresAt);
+  sqlite.prepare(`INSERT INTO native_oauth_access_tokens
+      (token_hash, family_id, user_id, client_id, scope, created_at, expires_at)
+    VALUES (?, ?, ?, 'com.castingcompass.app', ?, ?, ?)`)
+    .run(accessHash, familyId, user.id, "profile:read trips:write", createdAt, accessExpiresAt);
+  return { familyId, codeHash, refreshHash, accessHash };
 }
 
 async function addSignupChallenge(sqlite, suffix, code, now = new Date()) {
@@ -1557,6 +1587,7 @@ test("password recovery remains enumeration-resistant through request, resend, a
 test("password reset revokes every prior session before issuing a fresh one", async () => {
   const { sqlite, d1 } = await database();
   const user = await addUser(sqlite, "44");
+  const native = await addNativeCredentials(sqlite, user, "password-reset-44");
   const secondToken = Buffer.alloc(32, 45).toString("base64url");
   const now = new Date();
   sqlite.prepare("INSERT INTO auth_sessions (token_hash, user_id, expires_at, created_at) VALUES (?, ?, ?, ?)")
@@ -1592,6 +1623,12 @@ test("password reset revokes every prior session before issuing a fresh one", as
     assert.equal(sqlite.prepare("SELECT COUNT(*) AS count FROM auth_sessions WHERE token_hash = ?").get(await sha256(secondToken)).count, 0);
     assert.equal(sqlite.prepare("SELECT COUNT(*) AS count FROM auth_sessions WHERE token_hash = ?").get(await sha256(freshToken)).count, 1);
     assert.equal(sqlite.prepare("SELECT COUNT(*) AS count FROM email_challenges WHERE id = ?").get(challengeId).count, 0);
+    assert.equal(sqlite.prepare("SELECT COUNT(*) AS count FROM native_oauth_authorization_codes WHERE code_hash = ?")
+      .get(native.codeHash).count, 0);
+    assert.notEqual(sqlite.prepare("SELECT revoked_at FROM native_oauth_refresh_families WHERE id = ?")
+      .get(native.familyId).revoked_at, null);
+    assert.notEqual(sqlite.prepare("SELECT revoked_at FROM native_oauth_access_tokens WHERE token_hash = ?")
+      .get(native.accessHash).revoked_at, null);
   } finally {
     globalThis.fetch = originalFetch;
   }
@@ -3952,11 +3989,214 @@ test("live-trip terminal responses follow exact D1 state after mutation response
     now: () => new Date("2026-07-21T21:30:00.000Z"),
   });
   assert.equal(canceled.status, 200, JSON.stringify(await canceled.clone().json()));
-  assert.deepEqual(await canceled.json(), { canceled: true, id: canceling.trip.id, reason: "weather" });
+  const cancellationReceipt = {
+    canceled: true,
+    id: canceling.trip.id,
+    receipt: { operation: "cancel", tripId: canceling.trip.id },
+  };
+  assert.deepEqual(await canceled.json(), cancellationReceipt);
   assert.deepEqual(
     { ...sqlite.prepare("SELECT status, token_hash, updated_at FROM trips WHERE id = ?").get(canceling.trip.id) },
     { status: "active", token_hash: null, updated_at: "2026-07-21T21:30:00.000Z" },
   );
+
+  const retriedCancellation = await handleTripRequest(new Request(
+    `https://castingcompass.com/api/trips/${canceling.trip.id}/cancel`,
+    {
+      method: "POST",
+      headers: { Origin: "https://castingcompass.com", "Content-Type": "application/json" },
+      body: JSON.stringify({ token: canceling.token, reason: "weather" }),
+    },
+  ), { DB: d1 }, sites, {
+    accountId: owner.id,
+    now: () => new Date("2026-07-21T21:45:00.000Z"),
+  });
+  assert.equal(retriedCancellation.status, 200);
+  assert.deepEqual(await retriedCancellation.json(), cancellationReceipt);
+  assert.deepEqual(
+    { ...sqlite.prepare("SELECT status, token_hash, updated_at FROM trips WHERE id = ?").get(canceling.trip.id) },
+    { status: "active", token_hash: null, updated_at: "2026-07-21T21:30:00.000Z" },
+  );
+});
+
+test("native trip writes require no browser ambient authority and return exact receipts", async () => {
+  const { sqlite, d1 } = await database();
+  const owner = await addUser(sqlite, "native-trip-receipts");
+  const sites = [{ id: "goleta-beach", type: "Beach" }];
+  const reporterKey = "native-reporter-key-00000000000000000000001";
+  const material = tripRequestMaterial();
+  const startAt = "2026-07-21T22:00:00.000Z";
+  const bearerHeaders = {
+    Authorization: `Bearer ${"a".repeat(43)}`,
+    "X-CastingCompass-API-Version": "1",
+  };
+  const nativeOptions = {
+    accountId: owner.id,
+    requestAuthority: "native_access_token",
+    now: () => new Date(startAt),
+  };
+  const startRequest = (requestMaterial, startedAt, extraFields = {}) => new Request(
+    "https://castingcompass.com/api/trips/start", {
+      method: "POST",
+      headers: {
+        ...bearerHeaders,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        ...requestMaterial,
+        reporterKey,
+        siteId: "goleta-beach",
+        startedAt,
+        anglerCount: 2,
+        mode: "beach",
+        scoreInfluencedChoice: false,
+        primaryTargetConfirmed: true,
+        consent: true,
+        ...extraFields,
+      }),
+    });
+  for (const extraFields of [
+    { studyConsent: true },
+    { notes: "native clients cannot widen the reviewed collection contract" },
+    { opportunityScore: 100 },
+  ]) {
+    const rejected = await handleTripRequest(
+      startRequest(tripRequestMaterial(), startAt, extraFields),
+      { DB: d1 },
+      sites,
+      nativeOptions,
+    );
+    assert.equal(rejected.status, 422);
+    assert.equal((await rejected.json()).error.code, "unexpected_fields");
+  }
+  assert.equal(sqlite.prepare("SELECT COUNT(*) AS count FROM trips").get().count, 0);
+
+  const start = await handleTripRequest(
+    startRequest(material, startAt, { method: "bait" }),
+    { DB: d1 },
+    sites,
+    nativeOptions,
+  );
+  assert.equal(start.status, 201, JSON.stringify(await start.clone().json()));
+  assert.equal(start.headers.has("Set-Cookie"), false);
+  const started = await start.json();
+  const startReceipt = { receipt: { operation: "start", tripId: material.clientTripId } };
+  assert.deepEqual(started, startReceipt);
+
+  const retriedStart = await handleTripRequest(
+    startRequest(material, startAt),
+    { DB: d1 },
+    sites,
+    nativeOptions,
+  );
+  assert.equal(retriedStart.status, 201);
+  assert.equal(retriedStart.headers.has("Set-Cookie"), false);
+  assert.deepEqual(await retriedStart.json(), startReceipt);
+
+  const completionForm = () => {
+    const completion = new FormData();
+    completion.set("token", material.requestToken);
+    completion.set("reporterKey", reporterKey);
+    completion.set("anglerCount", "2");
+    completion.set("mode", "beach");
+    completion.set("scoreInfluencedChoice", "false");
+    completion.set("keeperCount", "0");
+    completion.set("shortReleasedCount", "0");
+    completion.set("otherCatchCount", "0");
+    completion.set("consent", "true");
+    completion.set("primaryTargetConfirmed", "true");
+    completion.set("completeAttempt", "true");
+    return completion;
+  };
+  const widenedCompletion = completionForm();
+  widenedCompletion.set("notes", "browser-only free text");
+  const rejectedCompletion = await handleTripRequest(new Request(
+    `https://castingcompass.com/api/trips/${material.clientTripId}/complete`,
+    {
+      method: "POST",
+      headers: bearerHeaders,
+      body: widenedCompletion,
+    },
+  ), { DB: d1 }, sites, {
+    ...nativeOptions,
+    now: () => new Date("2026-07-21T22:45:00.000Z"),
+  });
+  assert.equal(rejectedCompletion.status, 422);
+  assert.equal((await rejectedCompletion.json()).error.code, "unexpected_fields");
+  assert.equal(
+    sqlite.prepare("SELECT status FROM trips WHERE id = ?").get(material.clientTripId).status,
+    "active",
+  );
+
+  const completed = await handleTripRequest(new Request(
+    `https://castingcompass.com/api/trips/${material.clientTripId}/complete`,
+    {
+      method: "POST",
+      headers: bearerHeaders,
+      body: completionForm(),
+    },
+  ), { DB: d1 }, sites, {
+    ...nativeOptions,
+    now: () => new Date("2026-07-21T23:00:00.000Z"),
+  });
+  assert.equal(completed.status, 200, JSON.stringify(await completed.clone().json()));
+  assert.equal(completed.headers.has("Set-Cookie"), false);
+  const completedBody = await completed.json();
+  const completionReceipt = { receipt: { operation: "complete", tripId: material.clientTripId } };
+  assert.deepEqual(completedBody, completionReceipt);
+
+  const retriedCompletion = await handleTripRequest(new Request(
+    `https://castingcompass.com/api/trips/${material.clientTripId}/complete`,
+    { method: "POST", headers: bearerHeaders, body: completionForm() },
+  ), { DB: d1 }, sites, {
+    ...nativeOptions,
+    now: () => new Date("2026-07-21T23:10:00.000Z"),
+  });
+  assert.equal(retriedCompletion.status, 200);
+  assert.equal(retriedCompletion.headers.has("Set-Cookie"), false);
+  assert.deepEqual(await retriedCompletion.json(), completionReceipt);
+
+  const cancelMaterial = tripRequestMaterial();
+  const cancelStartedAt = "2026-07-21T23:20:00.000Z";
+  const cancelStart = await handleTripRequest(
+    startRequest(cancelMaterial, cancelStartedAt),
+    { DB: d1 },
+    sites,
+    { ...nativeOptions, now: () => new Date(cancelStartedAt) },
+  );
+  assert.equal(cancelStart.status, 201);
+  assert.deepEqual(await cancelStart.json(), {
+    receipt: { operation: "start", tripId: cancelMaterial.clientTripId },
+  });
+
+  const cancelRequest = () => new Request(
+    `https://castingcompass.com/api/trips/${cancelMaterial.clientTripId}/cancel`,
+    {
+      method: "POST",
+      headers: { ...bearerHeaders, "Content-Type": "application/json" },
+      body: JSON.stringify({ token: cancelMaterial.requestToken, reason: "weather" }),
+    },
+  );
+  const canceled = await handleTripRequest(
+    cancelRequest(),
+    { DB: d1 },
+    sites,
+    { ...nativeOptions, now: () => new Date("2026-07-21T23:30:00.000Z") },
+  );
+  assert.equal(canceled.status, 200);
+  assert.equal(canceled.headers.has("Set-Cookie"), false);
+  const cancelReceipt = { receipt: { operation: "cancel", tripId: cancelMaterial.clientTripId } };
+  assert.deepEqual(await canceled.json(), cancelReceipt);
+
+  const retriedCancel = await handleTripRequest(
+    cancelRequest(),
+    { DB: d1 },
+    sites,
+    { ...nativeOptions, now: () => new Date("2026-07-21T23:40:00.000Z") },
+  );
+  assert.equal(retriedCancel.status, 200);
+  assert.equal(retriedCancel.headers.has("Set-Cookie"), false);
+  assert.deepEqual(await retriedCancel.json(), cancelReceipt);
 });
 
 test("saved-location and gear-preset reads and writes enforce exact account ceilings", async () => {
@@ -4124,6 +4364,7 @@ test("owner mutations reject undeclared gear and profile fields", async () => {
 test("account deletion transaction removes public/account rows and completes successful object purge", async () => {
   const { sqlite, d1 } = await database();
   const user = await addUser(sqlite);
+  await addNativeCredentials(sqlite, user, "account-deletion");
   const tripId = addTrip(sqlite, user, { photoKey: "private/photo.jpg" });
   addDiscussion(sqlite, tripId);
   sqlite.prepare("INSERT INTO saved_sites (user_id, site_id, created_at) VALUES (?, 'ocean-beach', '2026-07-01')").run(user.id);
@@ -4144,6 +4385,10 @@ test("account deletion transaction removes public/account rows and completes suc
   assert.equal(sqlite.prepare("SELECT COUNT(*) AS count FROM trips").get().count, 0);
   assert.equal(sqlite.prepare("SELECT COUNT(*) AS count FROM site_discussion_posts").get().count, 0);
   assert.equal(sqlite.prepare("SELECT COUNT(*) AS count FROM saved_sites").get().count, 0);
+  assert.equal(sqlite.prepare("SELECT COUNT(*) AS count FROM native_oauth_authorization_codes").get().count, 0);
+  assert.equal(sqlite.prepare("SELECT COUNT(*) AS count FROM native_oauth_refresh_families").get().count, 0);
+  assert.equal(sqlite.prepare("SELECT COUNT(*) AS count FROM native_oauth_refresh_tokens").get().count, 0);
+  assert.equal(sqlite.prepare("SELECT COUNT(*) AS count FROM native_oauth_access_tokens").get().count, 0);
   const task = sqlite.prepare("SELECT state, object_key, object_key_hash FROM privacy_deletion_tasks").get();
   assert.equal(task.state, "completed");
   assert.equal(task.object_key, null);
@@ -5584,12 +5829,19 @@ test("feasibility pilot start, completion, safe cancellation, export, and privac
     { id: "ocean-beach-south", type: "Beach" },
   ];
 
-  const startTrip = async (timestamp, suffix, account = user, recruitmentToken = null) => {
+  const startTrip = async (
+    timestamp,
+    suffix,
+    account = user,
+    recruitmentToken = null,
+    requestMaterial = tripRequestMaterial(),
+    runtimeEnv = env,
+  ) => {
     const response = await handleTripRequest(new Request("https://castingcompass.com/api/trips/start", {
       method: "POST",
       headers: { Origin: "https://castingcompass.com", "Content-Type": "application/json" },
       body: JSON.stringify({
-        ...tripRequestMaterial(),
+        ...requestMaterial,
         siteId,
         startedAt: timestamp,
         mode: "beach",
@@ -5604,9 +5856,10 @@ test("feasibility pilot start, completion, safe cancellation, export, and privac
         opportunityWindowId: windowId,
         website: "",
       }),
-    }), env, sites, { accountId: account.id, now: () => new Date(timestamp) });
+    }), runtimeEnv, sites, { accountId: account.id, now: () => new Date(timestamp) });
     assert.equal(response?.status, 201, JSON.stringify(await response?.clone().json()));
-    return response.json();
+    const payload = await response.json();
+    return { ...payload, requestMaterial };
   };
 
   const first = await startTrip(firstStartedAt, "complete");
@@ -5616,6 +5869,18 @@ test("feasibility pilot start, completion, safe cancellation, export, and privac
   assert.equal(events[0].event_type, "started");
   assert.match(events[0].participant_group_id, /^participant-[a-f0-9]{64}$/);
   assert.equal(events[0].study_consent_version, studyConsentVersion);
+  const retryAfterDeactivation = await startTrip(
+    firstStartedAt,
+    "complete",
+    user,
+    null,
+    first.requestMaterial,
+    { ...env, VALIDATION_FEASIBILITY_ENABLED: "false" },
+  );
+  assert.equal(retryAfterDeactivation.trip.id, first.trip.id);
+  events = sqlite.prepare(`SELECT * FROM validation_feasibility_events
+    WHERE trip_id = ? ORDER BY sequence`).all(first.trip.id);
+  assert.equal(events.length, 1);
 
   const completion = new FormData();
   completion.set("token", first.token);
@@ -5807,6 +6072,10 @@ test("feasibility pilot start, completion, safe cancellation, export, and privac
     },
   ), env, sites, { accountId: user.id, now: () => new Date(canceledAt) });
   assert.equal(canceledResponse?.status, 200, JSON.stringify(await canceledResponse?.clone().json()));
+  assert.deepEqual((await canceledResponse?.json()).receipt, {
+    operation: "cancel",
+    tripId: second.trip.id,
+  });
   const canceledEvents = sqlite.prepare(`SELECT * FROM validation_feasibility_events
     WHERE trip_id = ? ORDER BY sequence`).all(second.trip.id);
   assert.deepEqual(canceledEvents.map((event) => event.event_type), ["started", "safe_canceled"]);
@@ -5822,7 +6091,11 @@ test("feasibility pilot start, completion, safe cancellation, export, and privac
       body: JSON.stringify({ token: second.token, reason: "water_safety" }),
     },
   ), env, sites, { accountId: user.id, now: () => new Date(replayedAt) });
-  assert.equal(replay?.status, 404);
+  assert.equal(replay?.status, 200);
+  assert.deepEqual((await replay?.json()).receipt, {
+    operation: "cancel",
+    tripId: second.trip.id,
+  });
   assert.equal(sqlite.prepare(`SELECT COUNT(*) AS count FROM validation_feasibility_events
     WHERE trip_id = ?`).get(second.trip.id).count, 2);
 

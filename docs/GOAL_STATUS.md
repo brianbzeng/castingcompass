@@ -1,6 +1,6 @@
 # CastingCompass goal status
 
-Last reconciled: **2026-07-26 UTC**
+Last reconciled: **2026-07-27 UTC**
 
 This is the owner-facing dashboard for the complete goal list. The detailed acceptance
 criteria and immutable receipts remain in [PRODUCT_ROADMAP.md](PRODUCT_ROADMAP.md); provider
@@ -59,10 +59,108 @@ by that discovery.
 - [ ] Keep ordinary friend reports truthful. Until the separately reviewed feasibility protocol
       is activated, new reports are privacy-minimized product observations only and cannot be
       retroactively relabeled as pilot or confirmatory rows.
-- [ ] Build the narrow native collection path before TestFlight: a reviewed versioned client
-      contract, system-browser authorization code with PKCE, short-lived access tokens,
-      OS-protected token storage, rotated refresh tokens with server revocation, and no embedded
-      secret or browser-cookie reinterpretation.
+- [ ] Build the narrow native collection path before TestFlight. The local default-off server
+      boundary is implemented: exact public client/redirect, PKCE `S256`, five-minute one-use
+      codes, ten-minute access tokens, 30-day rotating refresh families, hash-only storage,
+      reuse-family revocation, idempotent revoke, strict Cookie/Bearer separation, narrow
+      `profile:read`/`trips:write` scopes, owner/legal/deletion fences, password-reset revocation,
+      bounded cleanup, guarded migration `0021`, fail-closed policy/query-plan tests, and a
+      noindex first-party browser continue page with exact query/callback/state validation. The
+      parent remains open for SwiftUI integration of the reusable Keychain/auth core with that
+      system-browser page,
+      isolated staging, signing, physical-device acceptance, independent review, and activation.
+  - [x] Freeze and locally verify the first native trip-logger contract against the existing
+        Worker: curated California-halibut sites, explicit attempt start, complete zero/nonzero
+        outcomes, multi-angler effort, bounded other catch, cancellation, private defaults,
+        Keychain-only access/reporter credentials, exact server receipts, four durable client
+        states, and explicit identical-envelope recovery without silent replay. Cancellation is
+        idempotent without duplicating terminal feasibility events, and delayed offline
+        completions remain excluded from duration-sensitive or confirmatory use. This is a
+        server/API contract only—not a SwiftUI client, TestFlight build, activated pilot, model
+        training permission, score change, staging approval, or production release. Under pinned
+        Node 22.23.1/npm 10.9.8, the production-shaped build, lint, typecheck, all 771/771 Node
+        tests, and the complete security/SBOM/D1-query chain pass locally.
+  - [x] Implement the reusable iOS collection core without claiming application readiness.
+        The Swift package generates frozen trip/token identities, stores reporter/request material
+        in non-synchronizing `WhenUnlockedThisDeviceOnly` Keychain slots, persists only credential
+        references and exact request hashes, requires an exact receipt and receipt hash for
+        confirmation, keeps ambiguous transport pending, and offers only explicit identical-body
+        retry. Debug/release builds, the dependency-free recovery check, all 774/774 Node tests,
+        and the complete security chain pass locally; full XCTest is delegated to a path-scoped
+        hosted macOS/Xcode workflow because this Mac has only command-line tools. SwiftUI, PKCE
+        and ephemeral-session integration, isolated staging, signing, physical devices, and all
+        TestFlight authority remain open.
+  - [x] Make native request reconstruction and local recovery durable without moving credentials
+        into files. Typed plans admit only reviewed start/complete/cancel fields; exact sorted JSON
+        and deterministic multipart bytes are materialized from Keychain slots; protected atomic
+        records retain only the non-secret plan, slot references, request/receipt hashes, and
+        fail-closed state. Unknown fields, unsafe filesystem entries, oversize/corrupt records, or
+        any rebuilt body/route/content-type drift are rejected. The package still has no network
+        scheduler or automatic replay. Debug/release builds, the recovery/storage executable,
+        lint, typecheck, all 775/775 Node tests, and the complete security chain pass locally.
+        SwiftUI/system-browser/network-dispatch integration, hosted XCTest, staging, signing,
+        physical-device recovery drills, and all TestFlight authority remain open.
+  - [x] Implement the reusable native PKCE/token session core without activating native auth.
+        Memory-only random verifier/state material produces the exact `S256` system-browser
+        request; callbacks are URI/state exact and single-use; token, refresh, and revoke
+        envelopes are strict and carry no Cookie, Origin, or ambient Authorization. An ephemeral
+        session configuration has no shared cookie, credential, or cache store. Exact bounded
+        responses atomically rotate both credentials in one non-synchronizing
+        `WhenUnlockedThisDeviceOnly` Keychain item. Refresh/revoke are actor-serialized and write
+        a non-secret in-flight marker before returning a request, so a crash or second actor
+        cannot restore the predecessor; cancellation before dispatch explicitly restores the
+        unchanged pair. Once dispatched, a lost, rejected, malformed, or family-extending outcome
+        overwrites the pair with `requires_sign_in`. Exact revoke evidence produces `signed_out`;
+        ambiguous revoke destroys local authority without claiming remote confirmation. The
+        package still contains no network scheduler. Release and executable Swift checks, the
+        777/777 Node suite, production-shaped build, ESLint, TypeScript, and the complete
+        security/SBOM/query/provenance chain pass locally. Local XCTest remains unavailable
+        without full Xcode. SwiftUI/`ASWebAuthenticationSession` integration, hosted XCTest,
+        isolated staging, signing, physical-device drills, independent review, and all TestFlight
+        authority remain open.
+  - [x] Close the first real-dispatch ambiguity without changing browser behavior. Native bearer
+        start, complete, cancel, and their idempotent retry paths now return only the frozen
+        receipt envelope at operation-specific HTTP status; cookie-authenticated web callers
+        retain their trip/token/cancellation bodies and Set-Cookie behavior. The machine policy,
+        schema, runtime verifier, D1-backed integration test, and strict Swift parser now agree on
+        the exact top-level response.
+  - [x] Implement the reusable one-shot native HTTPS and dispatch layer without adding a
+        scheduler. The origin-pinned ephemeral transport owns no cookie, credential, or cache
+        store; rejects redirects, ambient authority, invalid origins, and oversized streamed
+        responses; and has a fixed timeout with no retry. Auth dispatch accepts one exact token
+        response, invalidates a refresh family after any dispatched ambiguity, and distinguishes
+        confirmed from locally cleared/unconfirmed sign-out. Trip dispatch persists draft and
+        pending state before the first send, accepts only the operation-specific status plus
+        receipt, preserves transport/5xx ambiguity, requires explicit byte-identical retry, and
+        lets a signed-out durable draft resume after authorization. This remains non-UI local
+        core evidence: `ASWebAuthenticationSession`, SwiftUI, hosted XCTest, staging, signing,
+        physical devices, independent review, and all release/model authority remain open.
+  - [x] Enforce the native collection and study boundary at the Worker, not only in the official
+        Swift builder. Native bearer start/completion/cancellation now accept exactly the frozen
+        required plus optional fields and reject browser-only free text, photos, gear, legacy
+        forecast inputs, and study enrollment before mutation. Browser study intent is parsed
+        even while the pilot is off; malformed or inconsistent consent fails, explicit enrollment
+        returns unavailable instead of silently becoming an ordinary product row, and a request
+        identity cannot switch between ordinary and pilot enrollment. Exact retries of an
+        already-committed pilot start still recover after deactivation. The machine-contract
+        verifier, TypeScript, ESLint, and 135 focused contract/Worker/D1 tests pass locally. This
+        grants no TestFlight, pilot, model-training, score, provider, or deployment authority.
+  - [x] Close the automated native-core review follow-up on exact code head
+        `60a42d77652fd98500d4f0a56034deb8a00eac24`. The fixes preserve request-drift state before
+        returning an error, prevent confirmed receipt evidence from being downgraded, keep
+        Keychain update attributes legal, use absolute Swift regex boundaries, retain iOS 16
+        callback compatibility, bound the browser handoff, and make the release verifier require
+        one complete UUID-shaped trip pattern, HTTPS at configuration and request time, same-host
+        HTTP rejection, and every frozen API/auth/release-authority field. Under pinned Node
+        22.23.1/npm 10.9.8, the production-shaped build, ESLint, TypeScript, all 779/779 Node
+        tests, the complete security/SBOM/D1-query chain, the Swift release build, and the
+        executable recovery/dispatch check pass locally. Exact head passed CI `30237100957`,
+        CodeQL `30237099332`, release provenance `30237100962`, both native API-image
+        architectures `30237100974`, hosted Swift build/XCTest/runtime check `30237100993`, and
+        CodeRabbit. GitHub retains the addressed inline conversation as outdated rather than
+        manually resolved. This is automated review evidence only; independent human review,
+        SwiftUI integration, staging, signing, physical-device drills, and every TestFlight,
+        pilot, model, score, provider, and deployment gate remain open.
 - [ ] Complete the owner/device gates for TestFlight: active Apple Developer membership and App
       Store Connect access, full Xcode installation, final bundle/app identity, signing and
       provisioning, accurate privacy/export-compliance metadata, physical-device acceptance, and
@@ -4251,8 +4349,8 @@ supersedes this mutation-metadata authority while preserving its fail-closed beh
       `1`; opt-in incompatible clients fail before expensive work; current secure-cookie web
       clients remain compatible; shared schemas are inventoried; fixed surfaces consume all four
       safe-area insets; and hosted CI runs the mobile/offline suite on Chromium and WebKit. Native
-      PKCE/token work, isolated staging, physical-device acceptance, provider bindings, deployment,
-      and production-scale evidence remain open.
+      SwiftUI integration of the implemented PKCE/token core, isolated staging, physical-device
+      acceptance, provider bindings, deployment, and production-scale evidence remain open.
 
 ## P2 — Species and business expansion
 
