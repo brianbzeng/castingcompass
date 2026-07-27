@@ -147,8 +147,10 @@ final class NativeSystemBrowserAuthorizationTests: XCTestCase {
         }
         XCTAssertTrue(browser.cancelWasCalled)
         XCTAssertNil(browser.presentationContextProvider)
+        let requests = await fixture.transport
+            .capturedRequests()
         XCTAssertEqual(
-            await fixture.transport.capturedRequests().count,
+            requests.count,
             0
         )
     }
@@ -197,8 +199,10 @@ final class NativeSystemBrowserAuthorizationTests: XCTestCase {
                 .invalidCompletion
             )
         }
+        let requests = await fixture.transport
+            .capturedRequests()
         XCTAssertEqual(
-            await fixture.transport.capturedRequests().count,
+            requests.count,
             0
         )
     }
@@ -238,7 +242,8 @@ final class NativeSystemBrowserAuthorizationTests: XCTestCase {
             ),
             error: nil
         )
-        XCTAssertEqual(try await task.value.status, .authorized)
+        let snapshot = try await task.value
+        XCTAssertEqual(snapshot.status, .authorized)
     }
 
     private func callbackURL(
