@@ -3989,11 +3989,106 @@ test("live-trip terminal responses follow exact D1 state after mutation response
     now: () => new Date("2026-07-21T21:30:00.000Z"),
   });
   assert.equal(canceled.status, 200, JSON.stringify(await canceled.clone().json()));
-  assert.deepEqual(await canceled.json(), { canceled: true, id: canceling.trip.id, reason: "weather" });
+  const cancellationReceipt = {
+    canceled: true,
+    id: canceling.trip.id,
+    receipt: { operation: "cancel", tripId: canceling.trip.id },
+  };
+  assert.deepEqual(await canceled.json(), cancellationReceipt);
   assert.deepEqual(
     { ...sqlite.prepare("SELECT status, token_hash, updated_at FROM trips WHERE id = ?").get(canceling.trip.id) },
     { status: "active", token_hash: null, updated_at: "2026-07-21T21:30:00.000Z" },
   );
+
+  const retriedCancellation = await handleTripRequest(new Request(
+    `https://castingcompass.com/api/trips/${canceling.trip.id}/cancel`,
+    {
+      method: "POST",
+      headers: { Origin: "https://castingcompass.com", "Content-Type": "application/json" },
+      body: JSON.stringify({ token: canceling.token, reason: "weather" }),
+    },
+  ), { DB: d1 }, sites, {
+    accountId: owner.id,
+    now: () => new Date("2026-07-21T21:45:00.000Z"),
+  });
+  assert.equal(retriedCancellation.status, 200);
+  assert.deepEqual(await retriedCancellation.json(), cancellationReceipt);
+  assert.deepEqual(
+    { ...sqlite.prepare("SELECT status, token_hash, updated_at FROM trips WHERE id = ?").get(canceling.trip.id) },
+    { status: "active", token_hash: null, updated_at: "2026-07-21T21:30:00.000Z" },
+  );
+});
+
+test("native trip writes require no browser ambient authority and return exact receipts", async () => {
+  const { sqlite, d1 } = await database();
+  const owner = await addUser(sqlite, "native-trip-receipts");
+  const sites = [{ id: "goleta-beach", type: "Beach" }];
+  const reporterKey = "native-reporter-key-00000000000000000000001";
+  const material = tripRequestMaterial();
+  const startAt = "2026-07-21T22:00:00.000Z";
+  const nativeOptions = {
+    accountId: owner.id,
+    requestAuthority: "native_access_token",
+    now: () => new Date(startAt),
+  };
+  const start = await handleTripRequest(new Request(
+    "https://castingcompass.com/api/trips/start",
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${"a".repeat(43)}`,
+        "Content-Type": "application/json",
+        "X-CastingCompass-API-Version": "1",
+      },
+      body: JSON.stringify({
+        ...material,
+        reporterKey,
+        siteId: "goleta-beach",
+        startedAt: startAt,
+        anglerCount: 2,
+        mode: "beach",
+        scoreInfluencedChoice: false,
+        primaryTargetConfirmed: true,
+        consent: true,
+      }),
+    },
+  ), { DB: d1 }, sites, nativeOptions);
+  assert.equal(start.status, 201, JSON.stringify(await start.clone().json()));
+  assert.equal(start.headers.has("Set-Cookie"), false);
+  const started = await start.json();
+  assert.deepEqual(started.receipt, { operation: "start", tripId: material.clientTripId });
+
+  const completion = new FormData();
+  completion.set("token", material.requestToken);
+  completion.set("reporterKey", reporterKey);
+  completion.set("anglerCount", "2");
+  completion.set("mode", "beach");
+  completion.set("scoreInfluencedChoice", "false");
+  completion.set("keeperCount", "0");
+  completion.set("shortReleasedCount", "0");
+  completion.set("otherCatchCount", "0");
+  completion.set("consent", "true");
+  completion.set("primaryTargetConfirmed", "true");
+  completion.set("completeAttempt", "true");
+  const completed = await handleTripRequest(new Request(
+    `https://castingcompass.com/api/trips/${material.clientTripId}/complete`,
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${"a".repeat(43)}`,
+        "X-CastingCompass-API-Version": "1",
+      },
+      body: completion,
+    },
+  ), { DB: d1 }, sites, {
+    ...nativeOptions,
+    now: () => new Date("2026-07-21T23:00:00.000Z"),
+  });
+  assert.equal(completed.status, 200, JSON.stringify(await completed.clone().json()));
+  const completedBody = await completed.json();
+  assert.deepEqual(completedBody.receipt, { operation: "complete", tripId: material.clientTripId });
+  assert.equal(completedBody.trip.outcomeClass, "no_fish");
+  assert.equal(completedBody.trip.anglerHours, 2);
 });
 
 test("saved-location and gear-preset reads and writes enforce exact account ceilings", async () => {
@@ -5849,6 +5944,10 @@ test("feasibility pilot start, completion, safe cancellation, export, and privac
     },
   ), env, sites, { accountId: user.id, now: () => new Date(canceledAt) });
   assert.equal(canceledResponse?.status, 200, JSON.stringify(await canceledResponse?.clone().json()));
+  assert.deepEqual((await canceledResponse?.json()).receipt, {
+    operation: "cancel",
+    tripId: second.trip.id,
+  });
   const canceledEvents = sqlite.prepare(`SELECT * FROM validation_feasibility_events
     WHERE trip_id = ? ORDER BY sequence`).all(second.trip.id);
   assert.deepEqual(canceledEvents.map((event) => event.event_type), ["started", "safe_canceled"]);
@@ -5864,7 +5963,11 @@ test("feasibility pilot start, completion, safe cancellation, export, and privac
       body: JSON.stringify({ token: second.token, reason: "water_safety" }),
     },
   ), env, sites, { accountId: user.id, now: () => new Date(replayedAt) });
-  assert.equal(replay?.status, 404);
+  assert.equal(replay?.status, 200);
+  assert.deepEqual((await replay?.json()).receipt, {
+    operation: "cancel",
+    tripId: second.trip.id,
+  });
   assert.equal(sqlite.prepare(`SELECT COUNT(*) AS count FROM validation_feasibility_events
     WHERE trip_id = ?`).get(second.trip.id).count, 2);
 

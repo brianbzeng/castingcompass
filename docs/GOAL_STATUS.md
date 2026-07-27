@@ -68,6 +68,17 @@ by that discovery.
       noindex first-party browser continue page with exact query/callback/state validation. The
       parent remains open for SwiftUI/Keychain integration with that system-browser page,
       isolated staging, signing, physical-device acceptance, independent review, and activation.
+  - [x] Freeze and locally verify the first native trip-logger contract against the existing
+        Worker: curated California-halibut sites, explicit attempt start, complete zero/nonzero
+        outcomes, multi-angler effort, bounded other catch, cancellation, private defaults,
+        Keychain-only reporter/request credentials, exact server receipts, four durable client
+        states, and explicit identical-envelope recovery without silent replay. Cancellation is
+        idempotent without duplicating terminal feasibility events, and delayed offline
+        completions remain excluded from duration-sensitive or confirmatory use. This is a
+        server/API contract only—not a SwiftUI client, TestFlight build, activated pilot, model
+        training permission, score change, staging approval, or production release. Under pinned
+        Node 22.23.1/npm 10.9.8, the production-shaped build, lint, typecheck, all 771/771 Node
+        tests, and the complete security/SBOM/D1-query chain pass locally.
 - [ ] Complete the owner/device gates for TestFlight: active Apple Developer membership and App
       Store Connect access, full Xcode installation, final bundle/app identity, signing and
       provisioning, accurate privacy/export-compliance metadata, physical-device acceptance, and

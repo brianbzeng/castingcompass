@@ -1067,6 +1067,17 @@ after its acceptance checks pass in the intended environment.
       exact query/callback/state validation. This is local implementation evidence only; the
       SwiftUI/Keychain client, isolated staging, Apple signing, physical-device
       acceptance, independent review, and provider activation remain open.
+    - [x] Freeze the first native trip-logger request, response, recovery, privacy, and local
+      persistence contract. It supports a curated California-halibut attempt start, complete
+      zero/nonzero outcomes, bounded multi-angler effort and other catch, and cancellation;
+      requires Keychain-only bearer/reporter material, exact typed server receipts, and explicit
+      identical-envelope retries; and prevents silent replay or false success. Runtime
+      cancellation is idempotent without duplicating terminal feasibility events, while delayed
+      offline completion remains ineligible for duration-sensitive or confirmatory use pending
+      separate review. Under pinned Node 22.23.1/npm 10.9.8, the production-shaped build, lint,
+      typecheck, all 771/771 Node tests, and the complete security/SBOM/D1-query chain pass
+      locally. This does not implement SwiftUI, authorize TestFlight/pilot/model/score use, or
+      satisfy staging, signing, device, independent-review, provider, or production gates.
 
 ## P2 — Species and business expansion
 

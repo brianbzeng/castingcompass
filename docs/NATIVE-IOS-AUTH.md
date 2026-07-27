@@ -123,7 +123,8 @@ All of the following remain required:
 3. Install full Xcode, approve the final bundle/client/redirect identity, join the Apple
    Developer Program, and configure App Store Connect signing.
 4. Implement the SwiftUI client with `ASWebAuthenticationSession`, Keychain storage, single-flight
-   refresh, logout/revocation, offline-safe idempotent trip writes, and no success-only reporting.
+   refresh, logout/revocation, and the exact no-success-only operation state machine in
+   [Native trip logger boundary](NATIVE-TRIP-LOGGER.md).
 5. Configure an isolated staging Worker/D1/database/client—not production—and run physical-device
    tests for state mismatch, callback replay, code expiry/replay, wrong verifier, lost refresh
    response, refresh reuse, password reset, account deletion, logout, offline recovery, and app

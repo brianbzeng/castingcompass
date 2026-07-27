@@ -55,7 +55,8 @@ const nativeAuthorizeRoute = routeEntry("native_oauth.authorize");
 const nativeTokenRoute = routeEntry("native_oauth.token");
 
 assert.deepEqual(Object.keys(policy).sort(), [
-  "api", "authentication", "coverage", "productionReadiness", "schemaVersion", "sharedContracts",
+  "api", "authentication", "coverage", "nativeTripClientPolicy", "productionReadiness",
+  "schemaVersion", "sharedContracts",
 ]);
 assert.equal(policy.schemaVersion, 2);
 assert.equal(policy.api.compatibilityVersion, "1");
@@ -89,6 +90,8 @@ assert.deepEqual(policy.authentication.native, {
   },
 });
 assert.equal(policy.productionReadiness, false);
+assert.equal(policy.nativeTripClientPolicy, "security/native-trip-client-policy.json");
+assert.equal(policy.sharedContracts.includes("contracts/native-trip-client.schema.json"), true);
 
 assert.match(nativeContractSource, /NATIVE_OAUTH_AUTHORIZATION_CODE_SECONDS = 5 \* 60/);
 assert.match(nativeContractSource, /NATIVE_OAUTH_ACCESS_TOKEN_SECONDS = 10 \* 60/);
@@ -155,5 +158,6 @@ assert.match(mobileSpec, /context\.setOffline\(true\)/);
 assert.match(mobileSpec, /safe-area contract keeps fixed controls inside simulated insets/);
 
 for (const path of policy.sharedContracts) await read(path);
+await read(policy.nativeTripClientPolicy);
 
 process.stdout.write("Mobile/API readiness policy verified.\n");

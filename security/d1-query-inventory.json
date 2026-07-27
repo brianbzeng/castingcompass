@@ -40,7 +40,7 @@
     },
     {
       "file": "worker/trips.ts",
-      "sha256": "f8fbb81d62012273818e496707babc0534a7c5bcc2660d8be65a936fc64ec88c",
+      "sha256": "0455da9c02999b4bc5d79966c207c327bf178230dbea2b8aad0c2e6a5951ca74",
       "prepareCallCount": 41
     },
     {

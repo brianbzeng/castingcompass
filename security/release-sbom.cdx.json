@@ -1,7 +1,7 @@
 {
   "bomFormat": "CycloneDX",
   "specVersion": "1.5",
-  "serialNumber": "urn:uuid:4124a084-04cf-5874-895c-488e9b38f9b8",
+  "serialNumber": "urn:uuid:de6cb768-d1de-5c8a-a176-92baba4a76ea",
   "version": 1,
   "metadata": {
     "component": {
@@ -57,6 +57,10 @@
         },
         {
           "name": "castingcompass:input-sha256",
+          "value": "contracts/native-trip-client.schema.json:b9659e50916eaf668ca30e9731779aa5ec61ed63c7dbbb82e6ece0061a6c7f65"
+        },
+        {
+          "name": "castingcompass:input-sha256",
           "value": "contracts/pollution-score-independent-review.schema.json:c3c67fdf02e39f20729c71ca3c5ceb3a0f734fe7a6d96de3590ead63065cd60e"
         },
         {
@@ -109,7 +113,7 @@
         },
         {
           "name": "castingcompass:input-sha256",
-          "value": "package.json:11efbe4d258b4d0ea6549fece8b4d3101d03cb7f1d2875221e2d89de6507168b"
+          "value": "package.json:3f479d7292ed05be368ad774070c20c958e598dfdceaed896f0bc9d6d7bb7a71"
         },
         {
           "name": "castingcompass:input-sha256",
@@ -149,7 +153,7 @@
         },
         {
           "name": "castingcompass:input-sha256",
-          "value": "security/d1-query-inventory.json:bd18c1494efbc43a773d5109f775dee6865969da972585e822791ba66f3bad5d"
+          "value": "security/d1-query-inventory.json:e5bf50688e30f9485a90b381ffb92f687f9736e07b3e7fb21a0a750a97513be0"
         },
         {
           "name": "castingcompass:input-sha256",
@@ -158,6 +162,10 @@
         {
           "name": "castingcompass:input-sha256",
           "value": "security/key-custody-review-policy.json:c96b82a4865f80dee96878a99582fcc2cd429aebd5f3ffed0d59449409404eda"
+        },
+        {
+          "name": "castingcompass:input-sha256",
+          "value": "security/native-trip-client-policy.json:d18c93b43a348100ab726bb828af8fbb473757eb4e1c4d0aabcdb399c513d28d"
         },
         {
           "name": "castingcompass:input-sha256",

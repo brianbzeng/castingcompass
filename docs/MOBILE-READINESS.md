@@ -25,6 +25,9 @@ The machine-readable source of truth is
 [`security/mobile-api-policy.json`](../security/mobile-api-policy.json). The shared data contracts
 currently include the model-run, observation, opportunity, and taxon schemas in `contracts/`.
 Those schemas do not imply that every Worker response is already suitable for a native SDK.
+The first narrow native write surface is separately frozen in
+[`security/native-trip-client-policy.json`](../security/native-trip-client-policy.json) and
+[Native trip logger boundary](NATIVE-TRIP-LOGGER.md).
 
 ## Authentication boundary
 
@@ -66,6 +69,7 @@ activation contract is in [Native iOS authentication](NATIVE-IOS-AUTH.md).
 ## Verification
 
 ```sh
+npm run security:native-trip-client
 npm run security:mobile-readiness
 npm run typecheck
 npm run lint

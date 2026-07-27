@@ -2709,10 +2709,18 @@ export async function handleTripRequest(
         throw new ApiError(404, "trip_not_found", "The active trip could not be found.");
       }
       const reason = parseSafeCancellationReason(body.reason);
+      const tokenHash = await sha256(token);
       const existing = await store.getTrip(id, options.accountId ?? null);
       if (!existing || existing.status !== "active"
         || !sameTripAccount(existing, options.accountId) || !store.cancelTrip) {
         throw new ApiError(404, "trip_not_found", "The active trip could not be found.");
+      }
+      if (existing.token_hash === null && existing.idempotency_key_hash === tokenHash) {
+        return jsonResponse({
+          canceled: true,
+          id,
+          receipt: { operation: "cancel", tripId: id },
+        });
       }
       const timestamp = now.toISOString();
       const feasibilityStart = await (
@@ -2726,13 +2734,17 @@ export async function handleTripRequest(
       }
       const canceled = await store.cancelTrip(
         id,
-        await sha256(token),
+        tokenHash,
         options.accountId ?? null,
         timestamp,
         feasibilityTerminal,
       );
       if (!canceled) throw new ApiError(404, "trip_not_found", "The active trip could not be found.");
-      return jsonResponse({ canceled: true, id, reason });
+      return jsonResponse({
+        canceled: true,
+        id,
+        receipt: { operation: "cancel", tripId: id },
+      });
     }
 
     const completionMatch = url.pathname.match(API_ROUTE_PATTERNS.tripComplete);

@@ -61,10 +61,12 @@
     ]
   },
   "sharedContracts": [
+    "contracts/native-trip-client.schema.json",
     "contracts/model-run.schema.json",
     "contracts/observation.schema.json",
     "contracts/opportunity.schema.json",
     "contracts/taxa.schema.json"
   ],
+  "nativeTripClientPolicy": "security/native-trip-client-policy.json",
   "productionReadiness": false
 }
