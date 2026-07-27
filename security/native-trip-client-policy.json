@@ -56,7 +56,9 @@
       "optional_fields": ["method", "opportunityWindowId", "referralCode"],
       "receipt": {
         "operation": "start",
-        "required_fields": ["receipt.operation", "receipt.tripId"]
+        "required_fields": ["receipt.operation", "receipt.tripId"],
+        "success_status": 201,
+        "exact_top_level_fields": ["receipt"]
       },
       "idempotency": "server-keyed-by-trip-id-token-and-principal-client-reuses-exact-envelope"
     },
@@ -82,7 +84,9 @@
       "optional_fields": ["otherSpecies", "method"],
       "receipt": {
         "operation": "complete",
-        "required_fields": ["receipt.operation", "receipt.tripId"]
+        "required_fields": ["receipt.operation", "receipt.tripId"],
+        "success_status": 200,
+        "exact_top_level_fields": ["receipt"]
       },
       "idempotency": "server-keyed-by-trip-id-token-and-principal-client-reuses-exact-envelope"
     },
@@ -96,7 +100,9 @@
       "optional_fields": [],
       "receipt": {
         "operation": "cancel",
-        "required_fields": ["receipt.operation", "receipt.tripId"]
+        "required_fields": ["receipt.operation", "receipt.tripId"],
+        "success_status": 200,
+        "exact_top_level_fields": ["receipt"]
       },
       "idempotency": "server-keyed-by-trip-id-token-and-principal-client-reuses-exact-envelope"
     }

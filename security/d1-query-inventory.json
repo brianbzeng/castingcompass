@@ -40,7 +40,7 @@
     },
     {
       "file": "worker/trips.ts",
-      "sha256": "0455da9c02999b4bc5d79966c207c327bf178230dbea2b8aad0c2e6a5951ca74",
+      "sha256": "de8b40cd28d5196ca0c2e5d5504c2d43db48c453ce233fcd65d298eccc8ca18e",
       "prepareCallCount": 41
     },
     {
@@ -5509,7 +5509,7 @@
     {
       "callSiteId": "5a24e2fa70e7ca680852a10f",
       "file": "worker/trips.ts",
-      "line": 961,
+      "line": 978,
       "containingFunction": "initialize",
       "occurrence": 1,
       "executionMode": "first",
@@ -5518,7 +5518,7 @@
       "expressionSha256": "d0f0eb7b9a51d189a6cdcaaa7bfc7a4d212296854f13071dcef6d226e0315692",
       "declarationReference": {
         "name": "TRIP_SCHEMA_READY_SQL",
-        "declarationLine": 727,
+        "declarationLine": 744,
         "initializerSha256": "8781022ce66cbe3392cff0059220ac6beaf38f2517ec906c8d4a8ffa98748e62"
       },
       "statementClass": "UNRESOLVED",
@@ -5533,7 +5533,7 @@
     {
       "callSiteId": "ea6c9fe604f6a8ca10914cdc",
       "file": "worker/trips.ts",
-      "line": 988,
+      "line": 1005,
       "containingFunction": "getTrip",
       "occurrence": 2,
       "executionMode": "first",
@@ -5555,7 +5555,7 @@
     {
       "callSiteId": "e14238ed81ca9db0c0a1375d",
       "file": "worker/trips.ts",
-      "line": 993,
+      "line": 1010,
       "containingFunction": "assertAccountWriteAllowed",
       "occurrence": 3,
       "executionMode": "first",
@@ -5578,7 +5578,7 @@
     {
       "callSiteId": "15ef69a31966fdc39e400f7b",
       "file": "worker/trips.ts",
-      "line": 1015,
+      "line": 1032,
       "containingFunction": "assertSubmissionAllowed",
       "occurrence": 4,
       "executionMode": "first",
@@ -5600,7 +5600,7 @@
     {
       "callSiteId": "6e0e009ede40b73a24abf840",
       "file": "worker/trips.ts",
-      "line": 1019,
+      "line": 1036,
       "containingFunction": "assertSubmissionAllowed",
       "occurrence": 5,
       "executionMode": "first",
@@ -5622,7 +5622,7 @@
     {
       "callSiteId": "f27d9dfadc7f0f7c8b1f7abf",
       "file": "worker/trips.ts",
-      "line": 1023,
+      "line": 1040,
       "containingFunction": "assertSubmissionAllowed",
       "occurrence": 6,
       "executionMode": "first",
@@ -5644,7 +5644,7 @@
     {
       "callSiteId": "16b5a06db7fe90a38c9db76b",
       "file": "worker/trips.ts",
-      "line": 1037,
+      "line": 1054,
       "containingFunction": "insertTrip",
       "occurrence": 7,
       "executionMode": "prepared-statement",
@@ -5653,7 +5653,7 @@
       "expressionSha256": "19036a22fb241a794a5512e92b28132551cb2192ef0f0537c35f9f05b278e833",
       "declarationReference": {
         "name": "INSERT_TRIP_SQL",
-        "declarationLine": 638,
+        "declarationLine": 655,
         "initializerSha256": "10c60a5c500fa33a1a28183bb76f0f3874732f3d05bf05867767443082f0f022"
       },
       "statementClass": "UNRESOLVED",
@@ -5668,7 +5668,7 @@
     {
       "callSiteId": "5203b352fa7a0fe9b2dbf73f",
       "file": "worker/trips.ts",
-      "line": 1104,
+      "line": 1121,
       "containingFunction": "insertTrip",
       "occurrence": 8,
       "executionMode": "prepared-statement",
@@ -5691,7 +5691,7 @@
     {
       "callSiteId": "31abd8444e6367aab95cf64e",
       "file": "worker/trips.ts",
-      "line": 1139,
+      "line": 1156,
       "containingFunction": "isTripIdentityReserved",
       "occurrence": 9,
       "executionMode": "first",
@@ -5713,7 +5713,7 @@
     {
       "callSiteId": "2bbd5643d948280ddb8f5604",
       "file": "worker/trips.ts",
-      "line": 1147,
+      "line": 1164,
       "containingFunction": "reservePhotoUpload",
       "occurrence": 10,
       "executionMode": "run",
@@ -5737,7 +5737,7 @@
     {
       "callSiteId": "89d9a3dff5ef60e455534dc8",
       "file": "worker/trips.ts",
-      "line": 1169,
+      "line": 1186,
       "containingFunction": "reservePhotoUpload",
       "occurrence": 11,
       "executionMode": "first",
@@ -5759,7 +5759,7 @@
     {
       "callSiteId": "66d2c91916d31c8844b9fc5c",
       "file": "worker/trips.ts",
-      "line": 1194,
+      "line": 1211,
       "containingFunction": "releasePhotoUploadReservation",
       "occurrence": 12,
       "executionMode": "run",
@@ -5781,7 +5781,7 @@
     {
       "callSiteId": "7961bde9ad82b0ee5ae205ad",
       "file": "worker/trips.ts",
-      "line": 1201,
+      "line": 1218,
       "containingFunction": "releasePhotoUploadReservation",
       "occurrence": 13,
       "executionMode": "first",
@@ -5803,7 +5803,7 @@
     {
       "callSiteId": "4fe431493a9a89dc64aec9b5",
       "file": "worker/trips.ts",
-      "line": 1209,
+      "line": 1226,
       "containingFunction": "getFeasibilityActivation",
       "occurrence": 14,
       "executionMode": "first",
@@ -5825,7 +5825,7 @@
     {
       "callSiteId": "db2e22314aa0ed1aae25061d",
       "file": "worker/trips.ts",
-      "line": 1220,
+      "line": 1237,
       "containingFunction": "getFeasibilityRecruitment",
       "occurrence": 15,
       "executionMode": "first",
@@ -5847,7 +5847,7 @@
     {
       "callSiteId": "42d981064ad2772bc895ebfe",
       "file": "worker/trips.ts",
-      "line": 1231,
+      "line": 1248,
       "containingFunction": "getFeasibilityRecruitmentCampaign",
       "occurrence": 16,
       "executionMode": "first",
@@ -5869,7 +5869,7 @@
     {
       "callSiteId": "c756be704bf0a221d6ce45ba",
       "file": "worker/trips.ts",
-      "line": 1241,
+      "line": 1258,
       "containingFunction": "getFeasibilityStart",
       "occurrence": 17,
       "executionMode": "first",
@@ -5892,7 +5892,7 @@
     {
       "callSiteId": "ac58e1b9750f314d11117a29",
       "file": "worker/trips.ts",
-      "line": 1259,
+      "line": 1276,
       "containingFunction": "getValidationEnrollment",
       "occurrence": 18,
       "executionMode": "first",
@@ -5915,7 +5915,7 @@
     {
       "callSiteId": "5f862aec08b80b9774141522",
       "file": "worker/trips.ts",
-      "line": 1282,
+      "line": 1299,
       "containingFunction": "getRecruitmentEvent",
       "occurrence": 19,
       "executionMode": "first",
@@ -5938,7 +5938,7 @@
     {
       "callSiteId": "afd18da2baaaba108b609f57",
       "file": "worker/trips.ts",
-      "line": 1313,
+      "line": 1330,
       "containingFunction": "getForecastImpression",
       "occurrence": 20,
       "executionMode": "first",
@@ -5961,7 +5961,7 @@
     {
       "callSiteId": "2b1bce43523786f7ea6ca2b2",
       "file": "worker/trips.ts",
-      "line": 1326,
+      "line": 1343,
       "containingFunction": "completeTrip",
       "occurrence": 21,
       "executionMode": "prepared-statement",
@@ -5986,7 +5986,7 @@
     {
       "callSiteId": "36bc243f7c8e9ee9be258c34",
       "file": "worker/trips.ts",
-      "line": 1413,
+      "line": 1430,
       "containingFunction": "completeTrip",
       "occurrence": 22,
       "executionMode": "prepared-statement",
@@ -6009,7 +6009,7 @@
     {
       "callSiteId": "5df0dd01a14c49f9983431bd",
       "file": "worker/trips.ts",
-      "line": 1467,
+      "line": 1484,
       "containingFunction": "cancelTrip",
       "occurrence": 23,
       "executionMode": "prepared-statement",
@@ -6031,7 +6031,7 @@
     {
       "callSiteId": "32839eee94ba6738046ecf4f",
       "file": "worker/trips.ts",
-      "line": 1482,
+      "line": 1499,
       "containingFunction": "cancelTrip",
       "occurrence": 24,
       "executionMode": "first",
@@ -6053,7 +6053,7 @@
     {
       "callSiteId": "cbc4d141ba64120d8550f2fd",
       "file": "worker/trips.ts",
-      "line": 1493,
+      "line": 1510,
       "containingFunction": "getSummary",
       "occurrence": 25,
       "executionMode": "first",
@@ -6075,7 +6075,7 @@
     {
       "callSiteId": "1d6db13efd553e4895ec5189",
       "file": "worker/trips.ts",
-      "line": 1575,
+      "line": 1592,
       "containingFunction": "processTripPhotoUploadReservations",
       "occurrence": 26,
       "executionMode": "all",
@@ -6097,7 +6097,7 @@
     {
       "callSiteId": "c8625b4270d95ef7ef0b12bf",
       "file": "worker/trips.ts",
-      "line": 1593,
+      "line": 1610,
       "containingFunction": "processTripPhotoUploadReservations",
       "occurrence": 27,
       "executionMode": "run",
@@ -6119,7 +6119,7 @@
     {
       "callSiteId": "00f032247ade8923accd9d9e",
       "file": "worker/trips.ts",
-      "line": 1606,
+      "line": 1623,
       "containingFunction": "processTripPhotoUploadReservations",
       "occurrence": 28,
       "executionMode": "run",
@@ -6141,7 +6141,7 @@
     {
       "callSiteId": "66e151ca8345eaad206f42ff",
       "file": "worker/trips.ts",
-      "line": 1625,
+      "line": 1642,
       "containingFunction": "processTripPhotoUploadReservations",
       "occurrence": 29,
       "executionMode": "first",
@@ -6163,7 +6163,7 @@
     {
       "callSiteId": "72b3a3f19eb8858f475273b5",
       "file": "worker/trips.ts",
-      "line": 1646,
+      "line": 1663,
       "containingFunction": "processTripPhotoUploadReservations",
       "occurrence": 30,
       "executionMode": "run",
@@ -6185,7 +6185,7 @@
     {
       "callSiteId": "22e78615e05ec8457d13106c",
       "file": "worker/trips.ts",
-      "line": 1655,
+      "line": 1672,
       "containingFunction": "processTripPhotoUploadReservations",
       "occurrence": 31,
       "executionMode": "first",
@@ -6207,7 +6207,7 @@
     {
       "callSiteId": "6dfa2fa29e8c19b9d50cada0",
       "file": "worker/trips.ts",
-      "line": 1661,
+      "line": 1678,
       "containingFunction": "processTripPhotoUploadReservations",
       "occurrence": 32,
       "executionMode": "run",
@@ -6229,7 +6229,7 @@
     {
       "callSiteId": "c98cc9eb89590d48a4151664",
       "file": "worker/trips.ts",
-      "line": 1673,
+      "line": 1690,
       "containingFunction": "processTripPhotoUploadReservations",
       "occurrence": 33,
       "executionMode": "run",
@@ -6251,7 +6251,7 @@
     {
       "callSiteId": "d030578a4aa588ec608bbd08",
       "file": "worker/trips.ts",
-      "line": 1689,
+      "line": 1706,
       "containingFunction": "processTripPhotoUploadReservations",
       "occurrence": 34,
       "executionMode": "first",
@@ -6273,7 +6273,7 @@
     {
       "callSiteId": "bcec5c2865129bede92f7ab0",
       "file": "worker/trips.ts",
-      "line": 1700,
+      "line": 1717,
       "containingFunction": "processTripPhotoUploadReservations",
       "occurrence": 35,
       "executionMode": "run",
@@ -6295,7 +6295,7 @@
     {
       "callSiteId": "1aaf781fe796173ea34a1f22",
       "file": "worker/trips.ts",
-      "line": 1713,
+      "line": 1730,
       "containingFunction": "prepareForecastImpressionInsert",
       "occurrence": 36,
       "executionMode": "returned-statement",
@@ -6304,7 +6304,7 @@
       "expressionSha256": "6a41d4d7c954377901e9fdca7500c2a3f4f86cf5dd3c001467a54098aae4264e",
       "declarationReference": {
         "name": "INSERT_FORECAST_IMPRESSION_SQL",
-        "declarationLine": 666,
+        "declarationLine": 683,
         "initializerSha256": "a3fe715a5989a64a0462ad049204c82ab28758a04c2308661e79266b08034716"
       },
       "statementClass": "UNRESOLVED",
@@ -6319,7 +6319,7 @@
     {
       "callSiteId": "927c4df351eb3a6ec9a60433",
       "file": "worker/trips.ts",
-      "line": 1801,
+      "line": 1818,
       "containingFunction": "prepareValidationProvenanceInsert",
       "occurrence": 37,
       "executionMode": "returned-statement",
@@ -6328,7 +6328,7 @@
       "expressionSha256": "f3104c843d944b95799af1a8c17b1898764478361956507abd1b6f5d09830162",
       "declarationReference": {
         "name": "INSERT_VALIDATION_PROVENANCE_SQL",
-        "declarationLine": 693,
+        "declarationLine": 710,
         "initializerSha256": "adefb9aaf915ce64a3884e057ae34fa209bd1f672c9a858582b03eb98cb93b84"
       },
       "statementClass": "UNRESOLVED",
@@ -6343,7 +6343,7 @@
     {
       "callSiteId": "61a5a70cb2942ca42ba2c3a3",
       "file": "worker/trips.ts",
-      "line": 1847,
+      "line": 1864,
       "containingFunction": "prepareFeasibilityEventInsert",
       "occurrence": 38,
       "executionMode": "returned-statement",
@@ -6352,7 +6352,7 @@
       "expressionSha256": "9fc9d0e4184ac21095ecef76483c6b724485615bd624ed0bf9499811a03316a5",
       "declarationReference": {
         "name": "INSERT_FEASIBILITY_EVENT_SQL",
-        "declarationLine": 710,
+        "declarationLine": 727,
         "initializerSha256": "996c8c189db04bfec574b19433a9a5f75cb9fbe53d6af6ed91e31af7192aabce"
       },
       "statementClass": "UNRESOLVED",
@@ -6367,7 +6367,7 @@
     {
       "callSiteId": "7a4df77392edbb7d313636f9",
       "file": "worker/trips.ts",
-      "line": 1854,
+      "line": 1871,
       "containingFunction": "prepareFeasibilityRecruitmentInsert",
       "occurrence": 39,
       "executionMode": "returned-statement",
@@ -6376,7 +6376,7 @@
       "expressionSha256": "1f8b71cbc1d3dd64fabcedc99fb6d2089a62bc9346314ebb8b6fd356425e175a",
       "declarationReference": {
         "name": "INSERT_FEASIBILITY_RECRUITMENT_SQL",
-        "declarationLine": 721,
+        "declarationLine": 738,
         "initializerSha256": "baebc33411d1e71fde44c4e25b4fb900bc4d11c4336f3ecdb0ff2201633eeae0"
       },
       "statementClass": "UNRESOLVED",
@@ -6391,7 +6391,7 @@
     {
       "callSiteId": "a94b413e922ca5ee0c1d6130",
       "file": "worker/trips.ts",
-      "line": 1884,
+      "line": 1901,
       "containingFunction": "prepareConditionalFeasibilityEventInsert",
       "occurrence": 40,
       "executionMode": "returned-statement",
@@ -6411,7 +6411,7 @@
     {
       "callSiteId": "8787f66c783f95fda1d022cd",
       "file": "worker/trips.ts",
-      "line": 1898,
+      "line": 1915,
       "containingFunction": "prepareConditionalCompletionProvenanceInsert",
       "occurrence": 41,
       "executionMode": "returned-statement",

@@ -1,7 +1,8 @@
 # Native trip logger boundary
 
-Status: server contract and reusable Swift collection/auth-session cores implemented locally;
-SwiftUI client, staging, device acceptance, and activation remain open.
+Status: server contract plus reusable Swift collection, auth-session, one-shot transport, and
+dispatch coordinator cores implemented locally; SwiftUI client, staging, device acceptance, and
+activation remain open.
 Last reviewed: **2026-07-26 UTC**
 
 This document defines the smallest safe trip-collection surface for the first CastingCompass iOS
@@ -68,6 +69,12 @@ derives all observation fields and returns an exact `complete` receipt.
 The same request may be retried after a lost response and returns an exact `cancel` receipt without
 mutating the already-terminal row again.
 
+For native bearer requests, all three successful operations and their idempotent retries return
+exactly one top-level `receipt` field: start uses HTTP 201; complete and cancel use HTTP 200.
+Browser-cookie callers retain their existing richer trip/token/cancellation response and
+Set-Cookie behavior. This split prevents a real committed native write from being misclassified
+as unreadable merely because browser-only fields accompanied its receipt.
+
 ## Durable recovery
 
 Each operation is one immutable local envelope with four possible states: `draft`,
@@ -101,18 +108,27 @@ receipt keys, changed request bytes, mismatched receipts, conflicts, rejection, 
 responses fail closed. Ambiguous transport remains pending, and only an explicit identical-body
 retry is available.
 
+The package also implements the one-shot trip dispatcher. It materializes the exact request and
+Bearer header only in memory, saves the draft and `pending_submission` record before dispatch,
+uses an origin-pinned ephemeral session with no cookie/credential/cache stores, rejects redirects,
+bounds the response while streaming, and sends once. Exact operation-specific status and receipt
+confirm; transport/5xx ambiguity remains pending; conflict, definite 4xx rejection, malformed
+success, or mismatched receipt needs attention. A signed-out draft remains durable and can resume
+after authorization. There is no automatic replay, retry loop, timer, reachability callback, or
+background scheduler.
+
 The package builds locally with Apple command-line tools and its dependency-free executable
-recovery check passes. Local XCTest is unavailable because full Xcode is not installed; the
-path-scoped hosted macOS workflow runs the release build, XCTest suite, and executable check.
-Neither check is application, staging, signing, or physical-device evidence.
+recovery/dispatch check passes. The XCTest source parses locally, but execution is unavailable
+because full Xcode is not installed; the path-scoped hosted macOS workflow runs the release build,
+XCTest suite, and executable check after a pull request exposes the workflow on the default
+branch. Neither check is application, staging, signing, or physical-device evidence.
 
 ## Remaining release gates
 
-Before TestFlight, integrate the reviewed recovery/Keychain/request/persistence and PKCE/token
-session cores into a SwiftUI application, connect the browser handoff through
-`ASWebAuthenticationSession`, dispatch through the provided ephemeral credential-free
-`URLSession` configuration, configure a production-disjoint staging Worker and D1 database, and test
-start/completion/cancellation response loss on a physical device. Also prove logout,
+Before TestFlight, integrate the reviewed recovery/Keychain/request/persistence, PKCE/token,
+one-shot transport, and coordinator cores into a SwiftUI application; connect the browser handoff
+through `ASWebAuthenticationSession`; configure a production-disjoint staging Worker and D1
+database; and test start/completion/cancellation response loss on a physical device. Also prove logout,
 refresh-family loss, password reset, account deletion, app reinstall, accessibility, privacy
 metadata, monitoring, rate limits, rollback, and independent security review. Keep native OAuth
 disabled and all TestFlight/production authority false until those gates pass.

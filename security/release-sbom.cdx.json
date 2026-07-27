@@ -1,7 +1,7 @@
 {
   "bomFormat": "CycloneDX",
   "specVersion": "1.5",
-  "serialNumber": "urn:uuid:f422b075-47e2-5850-a4f3-63bcacf21862",
+  "serialNumber": "urn:uuid:503dae1b-c2cb-5590-816c-535bb07683a4",
   "version": 1,
   "metadata": {
     "component": {
@@ -57,7 +57,7 @@
         },
         {
           "name": "castingcompass:input-sha256",
-          "value": "contracts/native-trip-client.schema.json:b9659e50916eaf668ca30e9731779aa5ec61ed63c7dbbb82e6ece0061a6c7f65"
+          "value": "contracts/native-trip-client.schema.json:7f05b219d9c7bb5281e97a8aafbbfc0213cc2d5c30ab0a1e510fc9f1b95955ac"
         },
         {
           "name": "castingcompass:input-sha256",
@@ -153,7 +153,7 @@
         },
         {
           "name": "castingcompass:input-sha256",
-          "value": "security/d1-query-inventory.json:e5bf50688e30f9485a90b381ffb92f687f9736e07b3e7fb21a0a750a97513be0"
+          "value": "security/d1-query-inventory.json:5dc7d93f878c15da5865ae4243a3f03dc07c58c64848817df15bd0227c651ea2"
         },
         {
           "name": "castingcompass:input-sha256",
@@ -165,7 +165,7 @@
         },
         {
           "name": "castingcompass:input-sha256",
-          "value": "security/native-trip-client-policy.json:d18c93b43a348100ab726bb828af8fbb473757eb4e1c4d0aabcdb399c513d28d"
+          "value": "security/native-trip-client-policy.json:0597a5b747b445eb0eabd337e9e5b7c700a44a80d517786c84c26e099647ad35"
         },
         {
           "name": "castingcompass:input-sha256",

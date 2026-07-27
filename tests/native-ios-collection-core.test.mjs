@@ -118,3 +118,42 @@ test("native auth rotation is single-flight and response loss fails closed", asy
   assert.match(vault, /case oauthSession = "oauth-session"/u);
   assert.doesNotMatch(source, /automaticRetry|retryRefresh|Codable/u);
 });
+
+test("native dispatch is one-shot, bounded, origin-pinned, and durable before send", async () => {
+  const [transport, coordinator] = await Promise.all([
+    readFile(
+      new URL(
+        "../native/ios/CastingCompassNativeCore/Sources/CastingCompassNativeCore/NativeHTTPTransport.swift",
+        import.meta.url,
+      ),
+      "utf8",
+    ),
+    readFile(
+      new URL(
+        "../native/ios/CastingCompassNativeCore/Sources/CastingCompassNativeCore/NativeDispatchCoordinator.swift",
+        import.meta.url,
+      ),
+      "utf8",
+    ),
+  ]);
+  assert.match(transport, /URLSessionConfiguration\.ephemeral/u);
+  assert.match(transport, /httpCookieAcceptPolicy = \.never/u);
+  assert.match(transport, /completionHandler\(nil\)/u);
+  assert.match(transport, /redirectRejected/u);
+  assert.match(transport, /maximumResponseBytes - responseBody\.count/u);
+  assert.doesNotMatch(
+    transport,
+    /URLSession\.shared|Timer\.|BGTaskScheduler|automaticRetry|while\s*\(|repeat\s*\{/u,
+  );
+  assert.match(
+    coordinator,
+    /try await store\.save\(submission\)[\s\S]*transport\.send\(/u,
+  );
+  assert.match(coordinator, /func retryPending\(/u);
+  assert.match(coordinator, /func resumeDraft\(/u);
+  assert.match(coordinator, /invalidateAfterRefreshWasDispatched/u);
+  assert.doesNotMatch(
+    coordinator,
+    /URLSession|Timer\.|BGTaskScheduler|automaticRetry|retryAfter|while\s*\(|repeat\s*\{/u,
+  );
+});

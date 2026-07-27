@@ -17,9 +17,12 @@ export async function verifyNativeIOSCollectionCore() {
     recovery,
     durableStore,
     authSession,
+    httpTransport,
+    dispatchCoordinator,
     executableCheck,
     tests,
     authTests,
+    dispatchTests,
     readme,
     workflow,
     tripPolicy,
@@ -44,6 +47,12 @@ export async function verifyNativeIOSCollectionCore() {
       "native/ios/CastingCompassNativeCore/Sources/CastingCompassNativeCore/NativeAuthSession.swift",
     ),
     read(
+      "native/ios/CastingCompassNativeCore/Sources/CastingCompassNativeCore/NativeHTTPTransport.swift",
+    ),
+    read(
+      "native/ios/CastingCompassNativeCore/Sources/CastingCompassNativeCore/NativeDispatchCoordinator.swift",
+    ),
+    read(
       "native/ios/CastingCompassNativeCore/Sources/CastingCompassNativeCoreCheck/main.swift",
     ),
     read(
@@ -51,6 +60,9 @@ export async function verifyNativeIOSCollectionCore() {
     ),
     read(
       "native/ios/CastingCompassNativeCore/Tests/CastingCompassNativeCoreTests/NativeAuthSessionTests.swift",
+    ),
+    read(
+      "native/ios/CastingCompassNativeCore/Tests/CastingCompassNativeCoreTests/NativeDispatchCoordinatorTests.swift",
     ),
     read("native/ios/CastingCompassNativeCore/README.md"),
     read(".github/workflows/native-ios-core.yml"),
@@ -166,6 +178,62 @@ export async function verifyNativeIOSCollectionCore() {
     /FileManager|UserDefaults|SQLite|CoreData|UIPasteboard|NSPasteboard|print\(|Logger\(|URLSession\.shared|dataTask\(|\.resume\(\)|BGTaskScheduler|Timer\./u,
   );
 
+  assert.match(httpTransport, /protocol NativeHTTPTransport: Sendable/u);
+  assert.match(httpTransport, /struct NativeEphemeralHTTPTransport/u);
+  assert.match(httpTransport, /URLSessionConfiguration\.ephemeral/u);
+  assert.match(httpTransport, /configuration\.httpCookieStorage = nil/u);
+  assert.match(httpTransport, /configuration\.httpCookieAcceptPolicy = \.never/u);
+  assert.match(httpTransport, /configuration\.httpShouldSetCookies = false/u);
+  assert.match(httpTransport, /configuration\.urlCredentialStorage = nil/u);
+  assert.match(httpTransport, /configuration\.urlCache = nil/u);
+  assert.match(httpTransport, /configuration\.waitsForConnectivity = false/u);
+  assert.match(httpTransport, /completionHandler\(nil\)\s+finish\(\.failure\(NativeHTTPTransportError\.redirectRejected\)\)/u);
+  assert.match(httpTransport, /data\.count > maximumResponseBytes - responseBody\.count/u);
+  assert.match(httpTransport, /NativeHTTPTransportError\.responseTooLarge/u);
+  assert.match(httpTransport, /components\.host\?\.lowercased\(\) == allowedHost/u);
+  assert.match(httpTransport, /"cookie",\s+"origin",\s+"proxy-authorization"/u);
+  assert.doesNotMatch(
+    httpTransport,
+    /URLSession\.shared|Timer\.|BGTaskScheduler|UserDefaults|print\(|Logger\(|retry|while\s*\(|repeat\s*\{/u,
+  );
+
+  assert.match(dispatchCoordinator, /actor NativeAuthCoordinator/u);
+  assert.match(dispatchCoordinator, /actor NativeTripDispatchCoordinator/u);
+  assert.match(
+    dispatchCoordinator,
+    /invalidateAfterRefreshWasDispatched/u,
+  );
+  assert.match(
+    dispatchCoordinator,
+    /finishSignOutWithUnconfirmedRemoteResult/u,
+  );
+  assert.match(dispatchCoordinator, /func retryPending\(/u);
+  assert.match(dispatchCoordinator, /func resumeDraft\(/u);
+  assert.match(
+    dispatchCoordinator,
+    /try await store\.save\(submission\)[\s\S]*transport\.send\(/u,
+  );
+  assert.match(
+    dispatchCoordinator,
+    /catch \{\s+try submission\.apply\(\.ambiguousTransport\)\s+try await store\.save\(submission\)/u,
+  );
+  assert.match(
+    dispatchCoordinator,
+    /request\.setValue\(\s+"Bearer \\\(accessToken\)"/u,
+  );
+  assert.match(
+    dispatchCoordinator,
+    /case 500\.\.\.599:\s+try submission\.apply\(\.ambiguousTransport\)/u,
+  );
+  assert.match(
+    dispatchCoordinator,
+    /case 409:\s+try submission\.apply\(\.conflict\)/u,
+  );
+  assert.doesNotMatch(
+    dispatchCoordinator,
+    /URLSession|Timer\.|BGTaskScheduler|UserDefaults|print\(|Logger\(|automaticRetry|retryAfter|while\s*\(|repeat\s*\{/u,
+  );
+
   assert.match(executableCheck, /ambiguous transport must never claim success/u);
   assert.match(executableCheck, /duplicate receipt keys must fail closed/u);
   assert.match(
@@ -210,6 +278,30 @@ export async function verifyNativeIOSCollectionCore() {
   assert.match(
     authTests,
     /testTokenParserRejectsUnknownDuplicateAndInvalidSemantics/u,
+  );
+  assert.match(
+    dispatchTests,
+    /testTransportRejectsInvalidRequestsBeforeDispatch/u,
+  );
+  assert.match(
+    dispatchTests,
+    /testLostRefreshInvalidatesFamilyWithoutRetry/u,
+  );
+  assert.match(
+    dispatchTests,
+    /testTripCoordinatorPersistsBeforeOneShotConfirmation/u,
+  );
+  assert.match(
+    dispatchTests,
+    /testAmbiguousTripRequiresExplicitByteIdenticalRetry/u,
+  );
+  assert.match(
+    dispatchTests,
+    /testSignedOutSubmissionRemainsDraftAndCanResumeAfterAuthorization/u,
+  );
+  assert.match(
+    dispatchTests,
+    /testMalformedSuccessAndConflictNeedAttention/u,
   );
   assert.match(readme, /does not prove application integration or physical-device behavior/u);
 

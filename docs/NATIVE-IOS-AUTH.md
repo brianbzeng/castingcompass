@@ -1,7 +1,8 @@
 # Native iOS authentication boundary
 
-Status: server and reusable Swift auth/session cores implemented locally; SwiftUI browser
-integration, staging, signing, physical-device acceptance, and activation remain open
+Status: server plus reusable Swift auth/session and one-shot dispatch cores implemented locally;
+SwiftUI browser integration, staging, signing, physical-device acceptance, and activation remain
+open
 Last reviewed: **2026-07-26 UTC**
 
 This document defines the narrow authentication boundary for a future CastingCompass iOS trip
@@ -120,8 +121,7 @@ the verifier, state, and code are not `Codable` and are never written by the pac
 Token, refresh, and revoke builders emit only the reviewed sorted JSON fields plus
 `X-CastingCompass-API-Version: 1` and `Content-Type: application/json`. Their public request
 description is redacted. The provided ephemeral session configuration has no cookie store,
-credential store, URL cache, or ambient headers. The package contains no network scheduler, so a
-SwiftUI integration must explicitly create and dispatch each request.
+credential store, URL cache, or ambient headers.
 
 An actor serializes refresh and sign-out state. A successful exact token response is checked for
 the fixed bearer type, ten-minute access lifetime, bounded remaining refresh lifetime, exact
@@ -136,8 +136,18 @@ and makes both prior credentials unusable locally.
 Sign-out accepts only exact `{"revoked":true}` evidence; an ambiguous result still destroys local
 authority but remains explicitly unconfirmed remotely.
 
-This core is not an app and does not call `ASWebAuthenticationSession`, dispatch network traffic,
-configure a provider, sign a build, or establish physical-device behavior.
+The package now supplies the matching one-shot coordinator and transport. Authorization-code
+exchange accepts only bounded HTTP 200 token evidence. Refresh writes its in-flight marker before
+one explicit dispatch; transport loss, a non-200 response, or malformed rotation invalidates the
+family without retrying the predecessor. Sign-out dispatches once; only HTTP 200 plus exact
+`{"revoked":true}` is remote confirmation, while every ambiguous result removes local authority
+and remains explicitly unconfirmed. The ephemeral transport pins one canonical HTTPS origin,
+rejects redirects and ambient Cookie/Origin credentials, bounds streamed response bytes, and has
+no retry, timer, connectivity watcher, or background scheduler.
+
+This core is not an app and does not call `ASWebAuthenticationSession`, configure a provider,
+sign a build, or establish physical-device behavior. A SwiftUI integration must invoke each
+one-shot method only from an explicit app action.
 
 ## Activation gates
 
@@ -154,9 +164,10 @@ All of the following remain required:
 3. Install full Xcode, approve the final bundle/client/redirect identity, join the Apple
    Developer Program, and configure App Store Connect signing.
 4. Integrate the reviewed Swift core into a signed SwiftUI client with
-   `ASWebAuthenticationSession`, explicit ephemeral backchannel dispatch, trip screens, and the
-   exact no-success-only operation state machine in [Native trip logger
-   boundary](NATIVE-TRIP-LOGGER.md). Do not reimplement token storage or refresh in UI state.
+   `ASWebAuthenticationSession`, the provided one-shot coordinators, trip screens, and the exact
+   no-success-only operation state machine in [Native trip logger
+   boundary](NATIVE-TRIP-LOGGER.md). Do not reimplement transport, token storage, or refresh in UI
+   state.
 5. Configure an isolated staging Worker/D1/database/client—not production—and run physical-device
    tests for state mismatch, callback replay, code expiry/replay, wrong verifier, lost refresh
    response, refresh reuse, password reset, account deletion, logout, offline recovery, and app

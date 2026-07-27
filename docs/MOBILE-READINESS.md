@@ -47,11 +47,14 @@ no client secret because an installed app cannot keep one.
 The first-party `/native/authorize` page now validates one exact query envelope, reuses the
 existing browser sign-in/legal flow, describes the narrow scopes, calls only the same-origin
 authorization endpoint, verifies the exact callback base/code/state receipt, and is `noindex`.
-This implementation is still not native-release authorization. The native client must use
-`ASWebAuthenticationSession` (not an embedded web view), bind high-entropy state to its PKCE
-verifier, store refresh/access credentials only in the iOS Keychain, recover from a lost refresh
-response by signing in again, and prove revocation on physical devices. The exact endpoint and
-activation contract is in [Native iOS authentication](NATIVE-IOS-AUTH.md).
+The reusable Swift core now binds high-entropy state to its memory-only PKCE verifier, stores the
+pair in one non-synchronizing Keychain item, and exposes one-shot ephemeral auth/trip coordinators.
+Those coordinators reject redirects, ambient Cookie/Origin authority, oversized responses, and
+automatic retry; a lost refresh requires sign-in again and a lost trip result stays durably
+pending. This implementation is still not native-release authorization. The signed client must
+use `ASWebAuthenticationSession` (not an embedded web view) and prove callback, rotation,
+revocation, and response-loss behavior on physical devices. The exact endpoint and activation
+contract is in [Native iOS authentication](NATIVE-IOS-AUTH.md).
 
 ## Mobile web coverage
 
@@ -89,10 +92,9 @@ CI browser installation, or offline/safe-area browser tests drift from the revie
 
 - Isolated staging, production bindings, release rehearsal, and physical iOS/Android acceptance.
 - A signed SwiftUI client integrating the reusable Keychain/request/recovery/persistence core,
-  the reusable PKCE/token/session core, `ASWebAuthenticationSession` with the reviewed browser
-  handoff, explicit dispatch through the provided ephemeral credential-free API configuration,
-  isolated-staging configuration, and physical-device PKCE/rotation/revocation and response-loss
-  acceptance.
+  the reusable PKCE/token/session and one-shot dispatch cores, `ASWebAuthenticationSession` with
+  the reviewed browser handoff, isolated-staging configuration, and physical-device
+  PKCE/rotation/revocation and response-loss acceptance.
 - Production performance, cache, queue, cost, rate-limit, and failure-mode evidence at approved
   scale; repository safeguards alone cannot establish provider capacity.
 - Provider configuration and deployment evidence. This repository change intentionally performs

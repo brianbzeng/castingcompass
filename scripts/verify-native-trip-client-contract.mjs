@@ -67,7 +67,12 @@ const EXPECTED = {
         "consent",
       ],
       optional_fields: ["method", "opportunityWindowId", "referralCode"],
-      receipt: { operation: "start", required_fields: ["receipt.operation", "receipt.tripId"] },
+      receipt: {
+        operation: "start",
+        required_fields: ["receipt.operation", "receipt.tripId"],
+        success_status: 201,
+        exact_top_level_fields: ["receipt"],
+      },
       idempotency: "server-keyed-by-trip-id-token-and-principal-client-reuses-exact-envelope",
     },
     {
@@ -90,7 +95,12 @@ const EXPECTED = {
         "completeAttempt",
       ],
       optional_fields: ["otherSpecies", "method"],
-      receipt: { operation: "complete", required_fields: ["receipt.operation", "receipt.tripId"] },
+      receipt: {
+        operation: "complete",
+        required_fields: ["receipt.operation", "receipt.tripId"],
+        success_status: 200,
+        exact_top_level_fields: ["receipt"],
+      },
       idempotency: "server-keyed-by-trip-id-token-and-principal-client-reuses-exact-envelope",
     },
     {
@@ -101,7 +111,12 @@ const EXPECTED = {
       required_scope: "trips:write",
       required_fields: ["token", "reason"],
       optional_fields: [],
-      receipt: { operation: "cancel", required_fields: ["receipt.operation", "receipt.tripId"] },
+      receipt: {
+        operation: "cancel",
+        required_fields: ["receipt.operation", "receipt.tripId"],
+        success_status: 200,
+        exact_top_level_fields: ["receipt"],
+      },
       idempotency: "server-keyed-by-trip-id-token-and-principal-client-reuses-exact-envelope",
     },
   ],
@@ -208,6 +223,10 @@ export function verifyRuntimeBindings(policy = validateNativeTripPolicy(JSON.par
   }
 
   assert.match(trips, /options\.requestAuthority !== "native_access_token"\) assertSameOrigin\(request\)/u);
+  assert.match(
+    trips,
+    /if \(options\.requestAuthority === "native_access_token"\) \{\s+return jsonResponse\(\{ receipt \}, status\);\s+\}/u,
+  );
   assert.equal(
     trips.includes("const CLIENT_REQUEST_TOKEN_PATTERN = /^[A-Za-z0-9_-]{43}$/;"),
     true,
@@ -249,14 +268,14 @@ export function verifyRuntimeBindings(policy = validateNativeTripPolicy(JSON.par
     trips.indexOf('if (url.pathname === "/api/trips/report")'),
   );
   for (const [branch, operation] of [
-    [startBranch, policy.operations[0].receipt.operation],
-    [completeBranch, policy.operations[1].receipt.operation],
-    [cancelBranch, policy.operations[2].receipt.operation],
+    [startBranch, policy.operations[0]],
+    [completeBranch, policy.operations[1]],
+    [cancelBranch, policy.operations[2]],
   ]) {
     assert.equal(
-      branch.includes(`receipt: { operation: "${operation}", tripId: id }`),
+      branch.includes(`tripMutationSuccessResponse(`) && branch.includes(`"${operation.id}"`),
       true,
-      `The ${operation} route is missing its exact receipt.`,
+      `The ${operation.id} route is missing its native receipt-only response.`,
     );
   }
 

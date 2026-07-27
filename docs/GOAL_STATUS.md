@@ -118,6 +118,23 @@ by that discovery.
         without full Xcode. SwiftUI/`ASWebAuthenticationSession` integration, hosted XCTest,
         isolated staging, signing, physical-device drills, independent review, and all TestFlight
         authority remain open.
+  - [x] Close the first real-dispatch ambiguity without changing browser behavior. Native bearer
+        start, complete, cancel, and their idempotent retry paths now return only the frozen
+        receipt envelope at operation-specific HTTP status; cookie-authenticated web callers
+        retain their trip/token/cancellation bodies and Set-Cookie behavior. The machine policy,
+        schema, runtime verifier, D1-backed integration test, and strict Swift parser now agree on
+        the exact top-level response.
+  - [x] Implement the reusable one-shot native HTTPS and dispatch layer without adding a
+        scheduler. The origin-pinned ephemeral transport owns no cookie, credential, or cache
+        store; rejects redirects, ambient authority, invalid origins, and oversized streamed
+        responses; and has a fixed timeout with no retry. Auth dispatch accepts one exact token
+        response, invalidates a refresh family after any dispatched ambiguity, and distinguishes
+        confirmed from locally cleared/unconfirmed sign-out. Trip dispatch persists draft and
+        pending state before the first send, accepts only the operation-specific status plus
+        receipt, preserves transport/5xx ambiguity, requires explicit byte-identical retry, and
+        lets a signed-out durable draft resume after authorization. This remains non-UI local
+        core evidence: `ASWebAuthenticationSession`, SwiftUI, hosted XCTest, staging, signing,
+        physical devices, independent review, and all release/model authority remain open.
 - [ ] Complete the owner/device gates for TestFlight: active Apple Developer membership and App
       Store Connect access, full Xcode installation, final bundle/app identity, signing and
       provisioning, accurate privacy/export-compliance metadata, physical-device acceptance, and

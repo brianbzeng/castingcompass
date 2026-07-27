@@ -162,6 +162,34 @@ final class CheckMemoryVault: NativeTripCredentialVault, @unchecked Sendable {
     }
 }
 
+actor CheckScriptedTransport: NativeHTTPTransport {
+    private var responses: [NativeHTTPResponse]
+    private var requests: [URLRequest] = []
+
+    init(responses: [NativeHTTPResponse]) {
+        self.responses = responses
+    }
+
+    func send(
+        _ request: URLRequest,
+        maximumResponseBytes: Int
+    ) async throws -> NativeHTTPResponse {
+        requests.append(request)
+        guard !responses.isEmpty else {
+            throw NativeHTTPTransportError.transportFailure
+        }
+        let response = responses.removeFirst()
+        guard response.body.count <= maximumResponseBytes else {
+            throw NativeHTTPTransportError.responseTooLarge
+        }
+        return response
+    }
+
+    func capturedRequests() -> [URLRequest] {
+        requests
+    }
+}
+
 let authConfiguration = try NativeAuthConfiguration(
     baseURL: URL(string: "https://staging.castingcompass.example")!
 )
@@ -253,6 +281,95 @@ try require(
         !authMarker.contains(authRefresh) &&
         authMarker.contains("requires_sign_in"),
     "lost refresh handling must atomically overwrite raw Keychain tokens"
+)
+
+let productionEphemeral =
+    NativeEphemeralHTTPTransport.makeSessionConfiguration()
+try require(
+    productionEphemeral.httpCookieStorage == nil &&
+        productionEphemeral.httpCookieAcceptPolicy == .never &&
+        !productionEphemeral.httpShouldSetCookies &&
+        productionEphemeral.urlCredentialStorage == nil &&
+        productionEphemeral.urlCache == nil &&
+        !productionEphemeral.waitsForConnectivity,
+    "native one-shot transport must have no ambient credential stores"
+)
+
+let dispatchVault = CheckMemoryVault()
+try dispatchVault.store(
+    Data(fixedRequestToken.utf8),
+    in: requestSlot
+)
+try dispatchVault.store(
+    Data(fixedReporterKey.utf8),
+    in: reporterSlot
+)
+let dispatchAuthSession = try NativeAuthSession(
+    configuration: authConfiguration,
+    vault: dispatchVault
+)
+let dispatchTransport = CheckScriptedTransport(
+    responses: [
+        NativeHTTPResponse(statusCode: 200, body: authResponse),
+        NativeHTTPResponse(statusCode: 201, body: receiptData),
+    ]
+)
+let dispatchAuthCoordinator = NativeAuthCoordinator(
+    session: dispatchAuthSession,
+    transport: dispatchTransport
+)
+let dispatchAuthorized = try await dispatchAuthCoordinator
+    .exchangeAuthorizationCode(
+        exchangeRequest,
+        receivedAt: authNow
+    )
+try require(
+    dispatchAuthorized.status == .authorized,
+    "the auth coordinator must accept exactly one bounded token response"
+)
+let dispatchRoot = FileManager.default.temporaryDirectory
+    .appendingPathComponent(
+        "CastingCompassNativeDispatchCheck-\(UUID().uuidString)",
+        isDirectory: true
+    )
+defer {
+    try? FileManager.default.removeItem(at: dispatchRoot)
+}
+let dispatchStore = try NativeTripDurableStore(
+    rootDirectory: dispatchRoot
+)
+let tripCoordinator = try NativeTripDispatchCoordinator(
+    baseURL: authConfiguration.baseURL,
+    builder: builder,
+    vault: dispatchVault,
+    store: dispatchStore,
+    authSession: dispatchAuthSession,
+    transport: dispatchTransport
+)
+let dispatchResult = try await tripCoordinator.submitNew(
+    .start(startPlan),
+    now: authNow
+)
+try require(
+    dispatchResult.state == .confirmed &&
+        dispatchResult.responseStatusCode == 201,
+    "only the exact native receipt may confirm a dispatched trip"
+)
+let dispatchedRequests = await dispatchTransport.capturedRequests()
+try require(
+    dispatchedRequests.count == 2 &&
+        dispatchedRequests[0].url?.path == "/api/native/oauth/token" &&
+        dispatchedRequests[1].url?.path == "/api/trips/start" &&
+        dispatchedRequests[1].value(
+            forHTTPHeaderField: "Authorization"
+        ) == "Bearer \(authAccess)" &&
+        dispatchedRequests[1].value(
+            forHTTPHeaderField: "Cookie"
+        ) == nil &&
+        dispatchedRequests[1].value(
+            forHTTPHeaderField: "Origin"
+        ) == nil,
+    "native coordinators must dispatch once without browser authority"
 )
 
 print("CastingCompassNativeCore check passed")

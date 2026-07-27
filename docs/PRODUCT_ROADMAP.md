@@ -1107,11 +1107,28 @@ after its acceptance checks pass in the intended environment.
       crash or second actor cannot restore the predecessor. A dispatched refresh may never retry
       that predecessor: any ambiguous or invalid outcome atomically removes both tokens and
       requires a new sign-in. The package
-      dispatches no network request and does not integrate `ASWebAuthenticationSession`. Release
-      and executable Swift checks, 777/777 Node tests, the production-shaped build, ESLint,
+      session actor dispatches no network request and does not integrate
+      `ASWebAuthenticationSession`. Release and executable Swift checks, 777/777 Node tests, the production-shaped build, ESLint,
       TypeScript, and the complete security/SBOM/query/provenance chain pass locally; XCTest
       remains hosted-only until full Xcode exists. SwiftUI, staging, signing, physical-device
       acceptance, independent review, provider activation, and every
+      TestFlight/pilot/model/score authority remain open.
+    - [x] Align the actual native success boundary and implement explicit one-shot dispatch.
+      Native bearer start, complete, cancel, and every idempotent retry now return only the exact
+      frozen receipt at HTTP 201/200/200, while browser-cookie response bodies and Set-Cookie
+      behavior remain unchanged. The policy/schema/verifier and D1-backed integration path reject
+      added top-level native fields. The reusable Swift transport pins one canonical HTTPS origin,
+      uses a new ephemeral no-cookie/no-credential/no-cache session per call, rejects redirects
+      and ambient authority, bounds response bytes while streaming, and contains no retry,
+      connectivity watcher, timer, or background scheduler. Non-UI auth dispatch accepts one
+      exact token response, destroys a refresh family after any dispatched ambiguity, and keeps
+      remote sign-out confirmation distinct from local credential destruction. Non-UI trip
+      dispatch persists draft and pending state before sending, accepts only the expected status
+      and receipt, keeps transport/5xx ambiguity pending, requires explicit byte-identical retry,
+      and can resume an undispatched signed-out draft after authorization. Local release build,
+      executable dispatch check, focused Node/runtime tests, TypeScript, and source parsing pass;
+      full hosted XCTest, SwiftUI/`ASWebAuthenticationSession`, staging, signing, physical-device
+      response-loss drills, independent review, provider activation, and every
       TestFlight/pilot/model/score authority remain open.
 
 ## P2 — Species and business expansion

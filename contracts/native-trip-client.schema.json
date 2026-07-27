@@ -206,7 +206,7 @@
     "receipt": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["operation", "required_fields"],
+      "required": ["operation", "required_fields", "success_status", "exact_top_level_fields"],
       "properties": {
         "operation": { "enum": ["start", "complete", "cancel"] },
         "required_fields": {
@@ -218,7 +218,9 @@
           "items": false,
           "minItems": 2,
           "maxItems": 2
-        }
+        },
+        "success_status": { "enum": [200, 201] },
+        "exact_top_level_fields": { "const": ["receipt"] }
       }
     },
     "baseOperation": {
@@ -288,7 +290,9 @@
                   "type": "object",
                   "properties": {
                     "operation": { "const": "start" },
-                    "required_fields": { "const": ["receipt.operation", "receipt.tripId"] }
+                    "required_fields": { "const": ["receipt.operation", "receipt.tripId"] },
+                    "success_status": { "const": 201 },
+                    "exact_top_level_fields": { "const": ["receipt"] }
                   }
                 }
               ]
@@ -329,7 +333,9 @@
                   "type": "object",
                   "properties": {
                     "operation": { "const": "complete" },
-                    "required_fields": { "const": ["receipt.operation", "receipt.tripId"] }
+                    "required_fields": { "const": ["receipt.operation", "receipt.tripId"] },
+                    "success_status": { "const": 200 },
+                    "exact_top_level_fields": { "const": ["receipt"] }
                   }
                 }
               ]
@@ -356,7 +362,9 @@
                   "type": "object",
                   "properties": {
                     "operation": { "const": "cancel" },
-                    "required_fields": { "const": ["receipt.operation", "receipt.tripId"] }
+                    "required_fields": { "const": ["receipt.operation", "receipt.tripId"] },
+                    "success_status": { "const": 200 },
+                    "exact_top_level_fields": { "const": ["receipt"] }
                   }
                 }
               ]

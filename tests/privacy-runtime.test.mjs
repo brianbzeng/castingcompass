@@ -4026,69 +4026,140 @@ test("native trip writes require no browser ambient authority and return exact r
   const reporterKey = "native-reporter-key-00000000000000000000001";
   const material = tripRequestMaterial();
   const startAt = "2026-07-21T22:00:00.000Z";
+  const bearerHeaders = {
+    Authorization: `Bearer ${"a".repeat(43)}`,
+    "X-CastingCompass-API-Version": "1",
+  };
   const nativeOptions = {
     accountId: owner.id,
     requestAuthority: "native_access_token",
     now: () => new Date(startAt),
   };
-  const start = await handleTripRequest(new Request(
-    "https://castingcompass.com/api/trips/start",
-    {
+  const startRequest = (requestMaterial, startedAt) => new Request(
+    "https://castingcompass.com/api/trips/start", {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${"a".repeat(43)}`,
+        ...bearerHeaders,
         "Content-Type": "application/json",
-        "X-CastingCompass-API-Version": "1",
       },
       body: JSON.stringify({
-        ...material,
+        ...requestMaterial,
         reporterKey,
         siteId: "goleta-beach",
-        startedAt: startAt,
+        startedAt,
         anglerCount: 2,
         mode: "beach",
         scoreInfluencedChoice: false,
         primaryTargetConfirmed: true,
         consent: true,
       }),
-    },
-  ), { DB: d1 }, sites, nativeOptions);
+    });
+  const start = await handleTripRequest(
+    startRequest(material, startAt),
+    { DB: d1 },
+    sites,
+    nativeOptions,
+  );
   assert.equal(start.status, 201, JSON.stringify(await start.clone().json()));
   assert.equal(start.headers.has("Set-Cookie"), false);
   const started = await start.json();
-  assert.deepEqual(started.receipt, { operation: "start", tripId: material.clientTripId });
+  const startReceipt = { receipt: { operation: "start", tripId: material.clientTripId } };
+  assert.deepEqual(started, startReceipt);
 
-  const completion = new FormData();
-  completion.set("token", material.requestToken);
-  completion.set("reporterKey", reporterKey);
-  completion.set("anglerCount", "2");
-  completion.set("mode", "beach");
-  completion.set("scoreInfluencedChoice", "false");
-  completion.set("keeperCount", "0");
-  completion.set("shortReleasedCount", "0");
-  completion.set("otherCatchCount", "0");
-  completion.set("consent", "true");
-  completion.set("primaryTargetConfirmed", "true");
-  completion.set("completeAttempt", "true");
+  const retriedStart = await handleTripRequest(
+    startRequest(material, startAt),
+    { DB: d1 },
+    sites,
+    nativeOptions,
+  );
+  assert.equal(retriedStart.status, 201);
+  assert.equal(retriedStart.headers.has("Set-Cookie"), false);
+  assert.deepEqual(await retriedStart.json(), startReceipt);
+
+  const completionForm = () => {
+    const completion = new FormData();
+    completion.set("token", material.requestToken);
+    completion.set("reporterKey", reporterKey);
+    completion.set("anglerCount", "2");
+    completion.set("mode", "beach");
+    completion.set("scoreInfluencedChoice", "false");
+    completion.set("keeperCount", "0");
+    completion.set("shortReleasedCount", "0");
+    completion.set("otherCatchCount", "0");
+    completion.set("consent", "true");
+    completion.set("primaryTargetConfirmed", "true");
+    completion.set("completeAttempt", "true");
+    return completion;
+  };
   const completed = await handleTripRequest(new Request(
     `https://castingcompass.com/api/trips/${material.clientTripId}/complete`,
     {
       method: "POST",
-      headers: {
-        Authorization: `Bearer ${"a".repeat(43)}`,
-        "X-CastingCompass-API-Version": "1",
-      },
-      body: completion,
+      headers: bearerHeaders,
+      body: completionForm(),
     },
   ), { DB: d1 }, sites, {
     ...nativeOptions,
     now: () => new Date("2026-07-21T23:00:00.000Z"),
   });
   assert.equal(completed.status, 200, JSON.stringify(await completed.clone().json()));
+  assert.equal(completed.headers.has("Set-Cookie"), false);
   const completedBody = await completed.json();
-  assert.deepEqual(completedBody.receipt, { operation: "complete", tripId: material.clientTripId });
-  assert.equal(completedBody.trip.outcomeClass, "no_fish");
-  assert.equal(completedBody.trip.anglerHours, 2);
+  const completionReceipt = { receipt: { operation: "complete", tripId: material.clientTripId } };
+  assert.deepEqual(completedBody, completionReceipt);
+
+  const retriedCompletion = await handleTripRequest(new Request(
+    `https://castingcompass.com/api/trips/${material.clientTripId}/complete`,
+    { method: "POST", headers: bearerHeaders, body: completionForm() },
+  ), { DB: d1 }, sites, {
+    ...nativeOptions,
+    now: () => new Date("2026-07-21T23:10:00.000Z"),
+  });
+  assert.equal(retriedCompletion.status, 200);
+  assert.equal(retriedCompletion.headers.has("Set-Cookie"), false);
+  assert.deepEqual(await retriedCompletion.json(), completionReceipt);
+
+  const cancelMaterial = tripRequestMaterial();
+  const cancelStartedAt = "2026-07-21T23:20:00.000Z";
+  const cancelStart = await handleTripRequest(
+    startRequest(cancelMaterial, cancelStartedAt),
+    { DB: d1 },
+    sites,
+    { ...nativeOptions, now: () => new Date(cancelStartedAt) },
+  );
+  assert.equal(cancelStart.status, 201);
+  assert.deepEqual(await cancelStart.json(), {
+    receipt: { operation: "start", tripId: cancelMaterial.clientTripId },
+  });
+
+  const cancelRequest = () => new Request(
+    `https://castingcompass.com/api/trips/${cancelMaterial.clientTripId}/cancel`,
+    {
+      method: "POST",
+      headers: { ...bearerHeaders, "Content-Type": "application/json" },
+      body: JSON.stringify({ token: cancelMaterial.requestToken, reason: "weather" }),
+    },
+  );
+  const canceled = await handleTripRequest(
+    cancelRequest(),
+    { DB: d1 },
+    sites,
+    { ...nativeOptions, now: () => new Date("2026-07-21T23:30:00.000Z") },
+  );
+  assert.equal(canceled.status, 200);
+  assert.equal(canceled.headers.has("Set-Cookie"), false);
+  const cancelReceipt = { receipt: { operation: "cancel", tripId: cancelMaterial.clientTripId } };
+  assert.deepEqual(await canceled.json(), cancelReceipt);
+
+  const retriedCancel = await handleTripRequest(
+    cancelRequest(),
+    { DB: d1 },
+    sites,
+    { ...nativeOptions, now: () => new Date("2026-07-21T23:40:00.000Z") },
+  );
+  assert.equal(retriedCancel.status, 200);
+  assert.equal(retriedCancel.headers.has("Set-Cookie"), false);
+  assert.deepEqual(await retriedCancel.json(), cancelReceipt);
 });
 
 test("saved-location and gear-preset reads and writes enforce exact account ceilings", async () => {

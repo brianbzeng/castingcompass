@@ -635,6 +635,23 @@ export interface TripHandlerOptions {
   onTripCompleted?: (trip: TripRow) => void;
 }
 
+type TripMutationOperation = "start" | "complete" | "cancel";
+
+function tripMutationSuccessResponse(
+  options: TripHandlerOptions,
+  operation: TripMutationOperation,
+  tripId: string,
+  browserPayload: Record<string, unknown>,
+  status = 200,
+  setCookie?: string,
+): Response {
+  const receipt = { operation, tripId };
+  if (options.requestAuthority === "native_access_token") {
+    return jsonResponse({ receipt }, status);
+  }
+  return jsonResponse({ ...browserPayload, receipt }, status, setCookie);
+}
+
 const INSERT_TRIP_SQL = `INSERT INTO trips (
   id, user_id, status, source, site_id, started_at, ended_at, mode, fishing_method, gear,
   gear_profile_id, rod, reel, bait_lure, rig,
@@ -2474,11 +2491,14 @@ export async function handleTripRequest(
       const existingRequest = await store.getTrip(id, options.accountId ?? null);
       if (existingRequest) {
         if (isMatchingLiveStart(existingRequest, idempotencyKeyHash, reporter.hash, options.accountId)) {
-          return jsonResponse({
-            trip: publicTrip(existingRequest),
-            token,
-            receipt: { operation: "start", tripId: id },
-          }, 201, reporter.setCookie);
+          return tripMutationSuccessResponse(
+            options,
+            "start",
+            id,
+            { trip: publicTrip(existingRequest), token },
+            201,
+            reporter.setCookie,
+          );
         }
         throw new ApiError(409, "trip_request_conflict", "This trip request identity cannot be reused.");
       }
@@ -2687,11 +2707,14 @@ export async function handleTripRequest(
         trip = racedTrip;
       }
 
-      return jsonResponse({
-        trip: publicTrip(trip),
-        token,
-        receipt: { operation: "start", tripId: id },
-      }, 201, reporter.setCookie);
+      return tripMutationSuccessResponse(
+        options,
+        "start",
+        id,
+        { trip: publicTrip(trip), token },
+        201,
+        reporter.setCookie,
+      );
     }
 
     const cancellationMatch = url.pathname.match(API_ROUTE_PATTERNS.tripCancel);
@@ -2716,11 +2739,7 @@ export async function handleTripRequest(
         throw new ApiError(404, "trip_not_found", "The active trip could not be found.");
       }
       if (existing.token_hash === null && existing.idempotency_key_hash === tokenHash) {
-        return jsonResponse({
-          canceled: true,
-          id,
-          receipt: { operation: "cancel", tripId: id },
-        });
+        return tripMutationSuccessResponse(options, "cancel", id, { canceled: true, id });
       }
       const timestamp = now.toISOString();
       const feasibilityStart = await (
@@ -2740,11 +2759,7 @@ export async function handleTripRequest(
         feasibilityTerminal,
       );
       if (!canceled) throw new ApiError(404, "trip_not_found", "The active trip could not be found.");
-      return jsonResponse({
-        canceled: true,
-        id,
-        receipt: { operation: "cancel", tripId: id },
-      });
+      return tripMutationSuccessResponse(options, "cancel", id, { canceled: true, id });
     }
 
     const completionMatch = url.pathname.match(API_ROUTE_PATTERNS.tripComplete);
@@ -2780,11 +2795,18 @@ export async function handleTripRequest(
         const originalForecastImpression = await (
           store.getForecastImpression?.(id, options.accountId ?? null) ?? Promise.resolve(null)
         );
-        return jsonResponse({
-          trip: publicTrip(existing),
-          forecastAttributionCleared: Boolean(originalForecastImpression) && existing.opportunity_window_id === null,
-          receipt: { operation: "complete", tripId: id },
-        }, 200, reporter.setCookie);
+        return tripMutationSuccessResponse(
+          options,
+          "complete",
+          id,
+          {
+            trip: publicTrip(existing),
+            forecastAttributionCleared:
+              Boolean(originalForecastImpression) && existing.opportunity_window_id === null,
+          },
+          200,
+          reporter.setCookie,
+        );
       }
       if (!existing || existing.status !== "active" || !sameTripAccount(existing, options.accountId)) {
         throw new ApiError(404, "trip_not_found", "The active trip could not be found.");
@@ -2910,19 +2932,27 @@ export async function handleTripRequest(
           const originalForecastImpression = await (
             store.getForecastImpression?.(id, options.accountId ?? null) ?? Promise.resolve(null)
           );
-          return jsonResponse({
-            trip: publicTrip(racedTrip),
-            forecastAttributionCleared: Boolean(originalForecastImpression) && racedTrip.opportunity_window_id === null,
-            receipt: { operation: "complete", tripId: id },
-          }, 200, retryReporter.setCookie);
+          return tripMutationSuccessResponse(
+            options,
+            "complete",
+            id,
+            {
+              trip: publicTrip(racedTrip),
+              forecastAttributionCleared:
+                Boolean(originalForecastImpression) && racedTrip.opportunity_window_id === null,
+            },
+            200,
+            retryReporter.setCookie,
+          );
         }
         if (uploaded) await releaseAttachedPhotoReservation(uploaded, store);
         options.onTripCompleted?.(completed);
-        return jsonResponse({
-          trip: publicTrip(completed),
-          forecastAttributionCleared,
-          receipt: { operation: "complete", tripId: id },
-        });
+        return tripMutationSuccessResponse(
+          options,
+          "complete",
+          id,
+          { trip: publicTrip(completed), forecastAttributionCleared },
+        );
       } catch (error) {
         let committedTrip: TripRow | null = null;
         if (uploaded) {
