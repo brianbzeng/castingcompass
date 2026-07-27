@@ -1,7 +1,7 @@
 # Native trip logger boundary
 
-Status: server contract implemented locally; SwiftUI client, staging, device acceptance, and
-activation remain open.
+Status: server contract and reusable Swift collection core implemented locally; SwiftUI client,
+staging, device acceptance, and activation remain open.
 Last reviewed: **2026-07-26 UTC**
 
 This document defines the smallest safe trip-collection surface for the first CastingCompass iOS
@@ -88,11 +88,25 @@ duration-sensitive or confirmatory analysis until a separately reviewed temporal
 exists. The UI must disclose the pending state and may not imply that the original finish time was
 server-attested.
 
+The reusable package at `native/ios/CastingCompassNativeCore` now implements this recovery
+boundary without a UI or network scheduler. It generates the frozen trip/token formats, keeps
+reporter and request material in `WhenUnlockedThisDeviceOnly` Keychain slots with synchronization
+disabled, persists only credential references plus the exact request-body hash, and binds a
+confirmed restored state to the exact receipt hash. Unknown or duplicate receipt keys, changed
+request bytes, mismatched receipts, conflicts, rejection, and unreadable responses fail closed.
+Ambiguous transport remains pending, and only an explicit identical-body retry is available.
+
+The package builds locally with Apple command-line tools and its dependency-free executable
+recovery check passes. Local XCTest is unavailable because full Xcode is not installed; the
+path-scoped hosted macOS workflow runs the release build, XCTest suite, and executable check.
+Neither check is application, staging, signing, or physical-device evidence.
+
 ## Remaining release gates
 
-Before TestFlight, implement the SwiftUI state machine and Keychain storage from this contract,
-connect it to the reviewed PKCE flow, configure a production-disjoint staging Worker and D1
-database, and test start/completion/cancellation response loss on a physical device. Also prove
+Before TestFlight, integrate the reviewed recovery/Keychain core into a SwiftUI application,
+connect it to the reviewed PKCE flow and deterministic JSON/multipart request builders, persist
+non-secret records with iOS file protection, configure a production-disjoint staging Worker and
+D1 database, and test start/completion/cancellation response loss on a physical device. Also prove
 logout, refresh-family loss, password reset, account deletion, app reinstall, accessibility,
 privacy metadata, monitoring, rate limits, rollback, and independent security review. Keep native
 OAuth disabled and all TestFlight/production authority false until those gates pass.

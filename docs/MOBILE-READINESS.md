@@ -70,12 +70,15 @@ activation contract is in [Native iOS authentication](NATIVE-IOS-AUTH.md).
 
 ```sh
 npm run security:native-trip-client
+npm run security:native-ios-core
 npm run security:mobile-readiness
 npm run typecheck
 npm run lint
 npm test
 npx playwright install --with-deps chromium webkit
 npm run test:mobile
+swift build --package-path native/ios/CastingCompassNativeCore -c release
+swift run --package-path native/ios/CastingCompassNativeCore CastingCompassNativeCoreCheck
 ```
 
 The policy verifier fails closed if the runtime order, version/header constants, native
@@ -85,9 +88,10 @@ CI browser installation, or offline/safe-area browser tests drift from the revie
 ## Still open
 
 - Isolated staging, production bindings, release rehearsal, and physical iOS/Android acceptance.
-- A signed SwiftUI client, Keychain implementation, `ASWebAuthenticationSession` integration
-  with the reviewed browser handoff, exact callback handling, isolated-staging configuration,
-  and physical-device PKCE/rotation/revocation acceptance.
+- A signed SwiftUI client integrating the reusable Keychain/recovery core,
+  `ASWebAuthenticationSession` with the reviewed browser handoff, deterministic request
+  construction, protected non-secret persistence, exact callback handling, isolated-staging
+  configuration, and physical-device PKCE/rotation/revocation and response-loss acceptance.
 - Production performance, cache, queue, cost, rate-limit, and failure-mode evidence at approved
   scale; repository safeguards alone cannot establish provider capacity.
 - Provider configuration and deployment evidence. This repository change intentionally performs

@@ -1078,6 +1078,16 @@ after its acceptance checks pass in the intended environment.
       typecheck, all 771/771 Node tests, and the complete security/SBOM/D1-query chain pass
       locally. This does not implement SwiftUI, authorize TestFlight/pilot/model/score use, or
       satisfy staging, signing, device, independent-review, provider, or production gates.
+    - [x] Implement the reusable Swift iOS collection core behind that frozen contract. It
+      generates exact trip and random-token identities, keeps reporter/request material in
+      non-synchronizing `WhenUnlockedThisDeviceOnly` Keychain slots, persists only credential
+      references plus request and confirmation-receipt hashes, rejects unknown/duplicate receipt
+      keys, preserves ambiguous writes as pending, and permits only an explicit identical-body
+      retry. Local debug/release builds, the executable recovery check, all 774/774 Node tests,
+      and the complete security chain pass; a path-scoped hosted macOS/Xcode workflow owns
+      XCTest. SwiftUI, native PKCE integration, deterministic request builders, protected record
+      storage, staging, signing, physical-device response-loss drills, independent review, and
+      TestFlight/pilot/model/score authority remain open.
 
 ## P2 — Species and business expansion
 

@@ -79,6 +79,16 @@ by that discovery.
         training permission, score change, staging approval, or production release. Under pinned
         Node 22.23.1/npm 10.9.8, the production-shaped build, lint, typecheck, all 771/771 Node
         tests, and the complete security/SBOM/D1-query chain pass locally.
+  - [x] Implement the reusable iOS collection core without claiming application readiness.
+        The Swift package generates frozen trip/token identities, stores reporter/request material
+        in non-synchronizing `WhenUnlockedThisDeviceOnly` Keychain slots, persists only credential
+        references and exact request hashes, requires an exact receipt and receipt hash for
+        confirmation, keeps ambiguous transport pending, and offers only explicit identical-body
+        retry. Debug/release builds, the dependency-free recovery check, all 774/774 Node tests,
+        and the complete security chain pass locally; full XCTest is delegated to a path-scoped
+        hosted macOS/Xcode workflow because this Mac has only command-line tools. SwiftUI, PKCE
+        integration, request builders, protected record storage, isolated staging, signing,
+        physical devices, and all TestFlight authority remain open.
 - [ ] Complete the owner/device gates for TestFlight: active Apple Developer membership and App
       Store Connect access, full Xcode installation, final bundle/app identity, signing and
       provisioning, accurate privacy/export-compliance metadata, physical-device acceptance, and

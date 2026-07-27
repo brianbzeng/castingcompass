@@ -65,6 +65,7 @@ jobs:
       - run: npm run security:north-east-bay-structure-depth-review
       - run: npm run security:oakland-south-bay-structure-depth-review
       - run: npm run security:native-trip-client
+      - run: npm run security:native-ios-core
       - run: npm run lint
       - run: npm run typecheck
       - run: npm test
