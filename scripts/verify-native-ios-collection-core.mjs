@@ -86,8 +86,10 @@ export async function verifyNativeIOSCollectionCore() {
   assert.match(identity, /SecRandomCopyBytes\(kSecRandomDefault, byteCount, &bytes\)/u);
   assert.match(identity, /let byteCount = 32/u);
   assert.match(identity, /replacingOccurrences\(of: "=", with: ""\)/u);
-  assert.match(identity, /\\Atrip_\[0-9a-f\]/u);
-  assert.match(identity, /\[0-9a-f\]\{12\}\\z/u);
+  assert.match(
+    identity,
+    /pattern: #"\\Atrip_\[0-9a-f\]\{8\}-\[0-9a-f\]\{4\}-4\[0-9a-f\]\{3\}-\[89ab\]\[0-9a-f\]\{3\}-\[0-9a-f\]\{12\}\\z"#/u,
+  );
   assert.match(identity, /validateRandomToken/u);
   assert.match(identity, /value\.count == 43/u);
 
@@ -195,6 +197,9 @@ export async function verifyNativeIOSCollectionCore() {
   assert.match(httpTransport, /completionHandler\(nil\)\s+finish\(\.failure\(NativeHTTPTransportError\.redirectRejected\)\)/u);
   assert.match(httpTransport, /data\.count > maximumResponseBytes - responseBody\.count/u);
   assert.match(httpTransport, /NativeHTTPTransportError\.responseTooLarge/u);
+  assert.match(httpTransport, /components\.scheme == "https"/u);
+  assert.match(httpTransport, /self\.allowedScheme = "https"/u);
+  assert.match(httpTransport, /components\.scheme == allowedScheme/u);
   assert.match(httpTransport, /components\.host\?\.lowercased\(\) == allowedHost/u);
   assert.match(httpTransport, /"cookie",\s+"origin",\s+"proxy-authorization"/u);
   assert.doesNotMatch(
@@ -330,9 +335,29 @@ export async function verifyNativeIOSCollectionCore() {
 
   const policy = JSON.parse(tripPolicy);
   assert.equal(policy.status, "server-contract-implemented-client-not-built");
+  assert.deepEqual(policy.api, {
+    compatibility_version: "1",
+    version_header: "X-CastingCompass-API-Version",
+    base_url_source: "signed-build-configuration",
+  });
+  assert.deepEqual(policy.authorization, {
+    mode: "native-bearer",
+    required_scope: "trips:write",
+    cookie_allowed: false,
+    origin_allowed: false,
+    access_token_storage: "ios-keychain-only",
+    reporter_key_storage: "ios-keychain-only",
+  });
   assert.equal(policy.recovery.automatic_replay_allowed, false);
-  assert.equal(policy.authorization.reporter_key_storage, "ios-keychain-only");
-  assert.equal(policy.authority.testflight_release, false);
+  assert.deepEqual(policy.authority, {
+    testflight_release: false,
+    staging_activation: false,
+    production_deployment: false,
+    pilot_activation: false,
+    model_training: false,
+    model_selection: false,
+    score_change: false,
+  });
   return true;
 }
 

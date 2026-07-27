@@ -141,6 +141,9 @@ test("native dispatch is one-shot, bounded, origin-pinned, and durable before se
   assert.match(transport, /completionHandler\(nil\)/u);
   assert.match(transport, /redirectRejected/u);
   assert.match(transport, /maximumResponseBytes - responseBody\.count/u);
+  assert.match(transport, /components\.scheme == "https"/u);
+  assert.match(transport, /self\.allowedScheme = "https"/u);
+  assert.match(transport, /components\.scheme == allowedScheme/u);
   assert.doesNotMatch(
     transport,
     /URLSession\.shared|Timer\.|BGTaskScheduler|automaticRetry|while\s*\(|repeat\s*\{/u,

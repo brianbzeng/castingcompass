@@ -117,6 +117,23 @@ final class NativeDispatchCoordinatorTests: XCTestCase {
                 .invalidRequest
             )
         }
+
+        request.url = URL(
+            string:
+                "http://staging.castingcompass.example/api/trips/start"
+        )
+        do {
+            _ = try await transport.send(
+                request,
+                maximumResponseBytes: 4_096
+            )
+            XCTFail("same-host HTTP requests must be rejected")
+        } catch {
+            XCTAssertEqual(
+                error as? NativeHTTPTransportError,
+                .invalidRequest
+            )
+        }
     }
 
     func testAuthCoordinatorExchangesAndRotatesExactlyOnce()
