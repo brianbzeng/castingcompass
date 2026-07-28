@@ -7,7 +7,7 @@ implemented. The production
 species migration and any supervised catch-training dataset remain unapproved.
 Official rasters, probe corpora, and weights are not bundled.
 
-**Version:** 0.7.0
+**Version:** 0.8.0
 
 ## Intended dataset
 
@@ -91,11 +91,17 @@ confidence/basis compatibility, temporal ordering, environment eligibility,
 and derived outcomes are exercised from one shared adversarial fixture corpus
 through both the TypeScript validator and the actual Python ingestion path.
 
-The closed launch catalog contains `california-halibut` as the only production
-model target, `unresolved-fish` as an observation-only bucket, and
+The closed structured-observation catalog contains `california-halibut` as the
+only production observation/model-training target, `unresolved-fish` as an observation-only bucket, and
 `synthetic-target` for tests only. `rockfish`, `unknown`, and other generic terms
 are not production targets. A future rockfish release must add defensible named
 species or an explicitly reviewed complex in a new catalog version.
+
+The public planning product separately offers expert-configured profiles for
+California halibut, striped bass, surfperch, and jacksmelt. Those profiles do not
+expand observation eligibility, relabel legacy reports, create supervised rows, or
+claim training maturity. Surfperch is disclosed as a family-level planning
+profile; rockfish remains deferred.
 
 Every v2 record includes:
 

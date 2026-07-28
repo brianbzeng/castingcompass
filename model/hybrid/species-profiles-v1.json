@@ -1,0 +1,271 @@
+{
+  "schema_version": "castingcompass.hybrid-species-profiles/1.0.0",
+  "model_family": "shared-explainable-hybrid-ranking",
+  "configuration_version": "castingcompass-shared-hybrid/1.0.0",
+  "score_semantics": "relative-planning-rank-not-catch-probability",
+  "training_status": "expert-configured-untrained",
+  "rockfish_status": "deferred-behaviorally-heterogeneous",
+  "shared_features": [
+    "curated-public-site-habitat",
+    "calendar-month",
+    "forecast-tide-and-current",
+    "forecast-wind-and-swell",
+    "forecast-water-temperature",
+    "daylight-and-sky",
+    "expected-access-pressure",
+    "presentation-fishability"
+  ],
+  "profiles": {
+    "california-halibut": {
+      "display_name": "California halibut",
+      "short_name": "Halibut",
+      "scientific_name": "Paralichthys californicus",
+      "target_kind": "species",
+      "configuration_version": "california-halibut-hybrid/1.0.0",
+      "component_weights": {
+        "habitat": 0.44,
+        "seasonality": 0.16,
+        "dynamic": 0.2,
+        "fishability": 0.2
+      },
+      "access_adjustment_scale": 0.25,
+      "habitat": {
+        "baseline": 50,
+        "site_prior_weight": 0.55,
+        "tag_adjustments": {
+          "sand-flat": 12,
+          "sand-mud-flat": 10,
+          "mud-sand-flat": 8,
+          "sand-trough": 9,
+          "trough": 7,
+          "estuary-mouth": 10,
+          "estuary-edge": 8,
+          "channel-edge": 5,
+          "eelgrass-edge": 5,
+          "rock-sand-edge": 4,
+          "reef-edge": -5,
+          "kelp-edge": -3
+        },
+        "type_adjustments": {
+          "Beach": 5,
+          "Shore": 2,
+          "Pier": 1,
+          "Jetty": -1
+        },
+        "exposure_adjustments": {
+          "bay": 4,
+          "protected-bay": 4,
+          "open-coast": 1,
+          "harbor": 1,
+          "harbor-mouth": 2,
+          "semi-protected": 3,
+          "channel": 2
+        }
+      },
+      "seasonality_by_month": [34, 37, 44, 57, 70, 82, 88, 86, 79, 66, 49, 38],
+      "tide_stage_adjustments": {
+        "rising": 3,
+        "near high slack": 1,
+        "falling": 1,
+        "near low slack": -2,
+        "slack": -1
+      },
+      "source_notes": [
+        {
+          "url": "https://wildlife.ca.gov/Conservation/Marine/Nearshore/1000",
+          "supports": "nearshore soft-bottom and estuarine-inner-shelf habitat; adults move into shallow coastal waters and bays"
+        },
+        {
+          "url": "https://wildlife.ca.gov/fishing/ocean/beach-fishing",
+          "supports": "California halibut beach-fishing seasonality is presented as a broad June-October peak in the CDFW guide"
+        }
+      ]
+    },
+    "striped-bass": {
+      "display_name": "Striped bass",
+      "short_name": "Striped bass",
+      "scientific_name": "Morone saxatilis",
+      "target_kind": "species",
+      "configuration_version": "striped-bass-hybrid/1.0.0",
+      "component_weights": {
+        "habitat": 0.34,
+        "seasonality": 0.22,
+        "dynamic": 0.26,
+        "fishability": 0.18
+      },
+      "access_adjustment_scale": 0.2,
+      "habitat": {
+        "baseline": 50,
+        "site_prior_weight": 0.25,
+        "tag_adjustments": {
+          "current-seam": 12,
+          "channel-edge": 10,
+          "channel-shoulder": 9,
+          "tidal-channel": 9,
+          "tidal-drain": 8,
+          "estuary-mouth": 9,
+          "estuary-edge": 8,
+          "creek-mouth": 7,
+          "reef-edge": 6,
+          "pier-pilings": 4,
+          "sand-trough": 4,
+          "trough": 4
+        },
+        "type_adjustments": {
+          "Beach": 3,
+          "Shore": 5,
+          "Pier": 2,
+          "Jetty": 4
+        },
+        "exposure_adjustments": {
+          "bay": 7,
+          "protected-bay": 5,
+          "open-coast": 3,
+          "harbor": 2,
+          "harbor-mouth": 5,
+          "semi-protected": 4,
+          "channel": 8
+        }
+      },
+      "seasonality_by_month": [36, 38, 50, 57, 64, 76, 86, 90, 88, 77, 56, 42],
+      "tide_stage_adjustments": {
+        "rising": 3,
+        "near high slack": -1,
+        "falling": 3,
+        "near low slack": -2,
+        "slack": -2
+      },
+      "source_notes": [
+        {
+          "url": "https://wildlife.ca.gov/Fishing/Inland/Striped-Bass",
+          "supports": "Bay/Delta migration, current-oriented fishing grounds, and summer-fall San Francisco Bay peak"
+        }
+      ]
+    },
+    "surfperch": {
+      "display_name": "Surfperch",
+      "short_name": "Surfperch",
+      "scientific_name": "Embiotocidae",
+      "target_kind": "family-profile",
+      "configuration_version": "surfperch-group-hybrid/1.0.0",
+      "component_weights": {
+        "habitat": 0.32,
+        "seasonality": 0.2,
+        "dynamic": 0.18,
+        "fishability": 0.3
+      },
+      "access_adjustment_scale": 0.15,
+      "habitat": {
+        "baseline": 50,
+        "site_prior_weight": 0.15,
+        "tag_adjustments": {
+          "sand-trough": 14,
+          "trough": 12,
+          "sand-bar": 11,
+          "sand-flat": 8,
+          "rip-channel": 10,
+          "creek-mouth": 7,
+          "lagoon-mouth": 7,
+          "open-coast": 7,
+          "bluff-backed-beach": 5,
+          "pier-pilings": -4,
+          "dredged-channel": -7,
+          "marina-mouth": -5
+        },
+        "type_adjustments": {
+          "Beach": 12,
+          "Shore": 1,
+          "Pier": -6,
+          "Jetty": -3
+        },
+        "exposure_adjustments": {
+          "bay": -5,
+          "protected-bay": -6,
+          "open-coast": 10,
+          "harbor": -8,
+          "harbor-mouth": -2,
+          "semi-protected": 1,
+          "channel": -8
+        }
+      },
+      "seasonality_by_month": [82, 84, 83, 80, 72, 54, 48, 55, 72, 82, 86, 84],
+      "tide_stage_adjustments": {
+        "rising": 5,
+        "near high slack": 2,
+        "falling": -3,
+        "near low slack": -4,
+        "slack": -1
+      },
+      "source_notes": [
+        {
+          "url": "https://wildlife.ca.gov/Conservation/Marine/Surf",
+          "supports": "surfperch is a family-level product profile; true surfperch occupy sandy beach surf zones and species differ materially"
+        },
+        {
+          "url": "https://wildlife.ca.gov/fishing/ocean/beach-fishing",
+          "supports": "broad September-May surfperch peak plus mild-to-moderate surf and incoming-tide planning guidance"
+        }
+      ]
+    },
+    "jacksmelt": {
+      "display_name": "Jacksmelt",
+      "short_name": "Jacksmelt",
+      "scientific_name": "Atherinopsis californiensis",
+      "target_kind": "species",
+      "configuration_version": "jacksmelt-hybrid/1.0.0",
+      "component_weights": {
+        "habitat": 0.27,
+        "seasonality": 0.15,
+        "dynamic": 0.3,
+        "fishability": 0.28
+      },
+      "access_adjustment_scale": 0.15,
+      "habitat": {
+        "baseline": 52,
+        "site_prior_weight": 0.05,
+        "tag_adjustments": {
+          "pier-pilings": 12,
+          "pilings": 10,
+          "pier-edge": 10,
+          "marina-mouth": 9,
+          "harbor-mouth": 8,
+          "harbor-edge": 8,
+          "breakwater": 5,
+          "breakwater-edge": 5,
+          "current-seam": 4,
+          "sand-trough": 2,
+          "trough": 2
+        },
+        "type_adjustments": {
+          "Beach": 2,
+          "Shore": 5,
+          "Pier": 12,
+          "Jetty": 5
+        },
+        "exposure_adjustments": {
+          "bay": 8,
+          "protected-bay": 7,
+          "open-coast": 1,
+          "harbor": 10,
+          "harbor-mouth": 8,
+          "semi-protected": 5,
+          "channel": 3
+        }
+      },
+      "seasonality_by_month": [60, 60, 60, 60, 60, 60, 60, 60, 60, 60, 60, 60],
+      "tide_stage_adjustments": {
+        "rising": 2,
+        "near high slack": 1,
+        "falling": 1,
+        "near low slack": -1,
+        "slack": 0
+      },
+      "source_notes": [
+        {
+          "url": "https://wildlife.ca.gov/Fishing/Ocean/Fish-ID/Quiz",
+          "supports": "inshore surf, pier, skiff, bay, and harbor occurrence; no defensible seasonal curve was found, so month stays neutral"
+        }
+      ]
+    }
+  }
+}

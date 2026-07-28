@@ -14,6 +14,7 @@ export interface FishingSite {
   regulationUrl: string;
   depthProfile?: string;
   structureTags: string[];
+  habitatPrior?: number;
   parking?: string;
   transit?: string;
   amenities?: string[];
@@ -126,6 +127,7 @@ export interface OpportunityWindow {
   explanationFactors: string[];
   conditions: Conditions;
   modelVersion?: string;
+  targetTaxonId?: "california-halibut" | "striped-bass" | "surfperch" | "jacksmelt";
   sources?: SourceFreshness[];
 }
 
@@ -133,6 +135,7 @@ export interface OpportunitySnapshot {
   generatedAt: string;
   modelVersion: string;
   methodology?: string;
+  targetTaxonId?: "california-halibut" | "striped-bass" | "surfperch" | "jacksmelt";
   sources: SourceFreshness[];
   windows: OpportunityWindow[];
 }

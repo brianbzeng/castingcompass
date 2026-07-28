@@ -4,7 +4,7 @@ import type { Metadata } from "next";
 import { OpportunityApp } from "./components/OpportunityApp";
 
 const HOME_URL = "https://castingcompass.com/";
-const HOME_TITLE = "CastingCompass — California halibut opportunity planner";
+const HOME_TITLE = "CastingCompass — California coastal fishing planner";
 const HOME_DESCRIPTION =
   "Compare public Bay Area and Santa Barbara South Coast fishing windows using explainable relative rankings from habitat, seasonality, and current conditions.";
 
@@ -22,7 +22,7 @@ export const metadata: Metadata = {
       url: "/og.png",
       width: 1200,
       height: 630,
-      alt: "CastingCompass — California Halibut Opportunity Planner",
+      alt: "CastingCompass — California coastal fishing planner",
     }],
   },
   twitter: {
@@ -31,7 +31,7 @@ export const metadata: Metadata = {
     description: HOME_DESCRIPTION,
     images: [{
       url: "/og.png",
-      alt: "CastingCompass — California Halibut Opportunity Planner",
+      alt: "CastingCompass — California coastal fishing planner",
     }],
   },
 };

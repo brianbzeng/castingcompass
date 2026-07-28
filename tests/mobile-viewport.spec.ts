@@ -4,7 +4,7 @@ import { resolve } from "node:path";
 
 const SITES_FIXTURE = readFileSync(resolve(process.cwd(), "public/data/sites.json"), "utf8");
 const OPPORTUNITIES_FIXTURE = readFileSync(
-  resolve(process.cwd(), "public/data/opportunities.json"),
+  resolve(process.cwd(), "public/data/opportunities-browser.json"),
   "utf8",
 );
 const STRUCTURE_DEPTH_FIXTURE = readFileSync(
@@ -236,7 +236,7 @@ test.beforeEach(async ({ page }, testInfo) => {
     body: SITES_FIXTURE,
   }));
   let opportunitySnapshotAttempts = 0;
-  await page.route("**/data/opportunities.json", (route) => {
+  await page.route("**/data/opportunities-browser.json", (route) => {
     opportunitySnapshotAttempts += 1;
     if (forecastRecoveryTest && opportunitySnapshotAttempts === 1) {
       return route.abort("failed");
@@ -718,6 +718,31 @@ test("forecast and presentation choices announce their selected state", async ({
   await expect(mapAndList).toHaveAttribute("aria-pressed", "false");
   await expect(page.locator(".map-wrap")).toBeHidden();
   await expect(page.locator(".site-list .site-card").first()).toBeVisible();
+});
+
+test("target selection is visible, fast-swappable, URL-bound, and persisted", async ({ page }) => {
+  const targets = ["Halibut", "Striped bass", "Surfperch", "Jacksmelt"];
+  for (const target of targets) {
+    const button = page.getByRole("button", { name: target, exact: true });
+    await expect(button).toBeVisible();
+    await expectSelectorInsideViewport(page, `.species-switcher button:has-text("${target}")`);
+  }
+
+  const surfperch = page.getByRole("button", { name: "Surfperch", exact: true });
+  await surfperch.click();
+  await expect(surfperch).toHaveAttribute("aria-pressed", "true");
+  await expect(page.locator(".forecast-intro .eyebrow").first()).toContainText("Surfperch planning");
+  await expect(page).toHaveURL(/[?&]species=surfperch(?:&|$)/);
+  await expect.poll(() => page.evaluate(
+    () => window.localStorage.getItem("castingcompass.target-species.v1"),
+  )).toBe("surfperch");
+
+  await page.reload();
+  await expect(page.getByRole("button", { name: "Surfperch", exact: true }))
+    .toHaveAttribute("aria-pressed", "true");
+  await page.getByRole("button", { name: "Jacksmelt", exact: true }).click();
+  await expect(page.locator(".forecast-intro .eyebrow").first()).toContainText("Jacksmelt planning");
+  await expect(page).toHaveURL(/[?&]species=jacksmelt(?:&|$)/);
 });
 
 test("modal focus is trapped and restored through a nested account surface", async ({ page }, testInfo) => {

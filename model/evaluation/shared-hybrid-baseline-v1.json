@@ -1,0 +1,126 @@
+{
+  "available_evidence": {
+    "eligible_supervised_observation_rows": 0,
+    "first_party_validation_gate_open": false,
+    "public_aggregate_context_is_training_label": false,
+    "region_count": 22,
+    "site_count": 61,
+    "snapshot_window_count": 2160
+  },
+  "baseline_version": "castingcompass-shared-hybrid/1.0.0",
+  "claim_boundary": "Determinism, score bounds, target differentiation, and feature coverage are evaluated. Catch-prediction and ranking-skill metrics are null because no admissible complete-effort label corpus is available.",
+  "evaluation_status": "implementation-evaluated-predictive-skill-not-estimable",
+  "leakage_controls": [
+    "planning-time features only",
+    "no outcomes, post-trip observations, user history, prior score, or moderation output",
+    "fold-local preprocessing required once labels exist",
+    "source-separated development and locked-test data required",
+    "participant groups cannot cross folds"
+  ],
+  "predeclared_holdouts": {
+    "geographic": {
+      "groups": [
+        "Alameda",
+        "Carpinteria",
+        "East Bay",
+        "Gaviota Coast",
+        "Golden Gate",
+        "Goleta",
+        "Half Moon Bay",
+        "Marin Coast",
+        "North Bay",
+        "Oakland",
+        "Peninsula Bay",
+        "Point Reyes",
+        "Richmond",
+        "San Francisco",
+        "San Francisco Coast",
+        "San Francisco Waterfront",
+        "San Leandro",
+        "San Mateo Coast",
+        "San Pablo Bay",
+        "Santa Barbara",
+        "South Bay",
+        "Summerland"
+      ],
+      "method": "leave-one-coastal-region-group-out",
+      "minimum_sites_per_group": 1
+    },
+    "temporal": {
+      "folds": [
+        "Q1->Q2",
+        "Q1-Q2->Q3",
+        "Q1-Q3->Q4"
+      ],
+      "method": "forward-chaining-calendar-quarter",
+      "planning_time_cutoff_required": true
+    }
+  },
+  "profile_sha256": "a2362c65d9b9d750b17c00cd459d16d7bfac8e4e2f66e35b1ff5c9917666fbba",
+  "ranking_metrics_when_identifiable": {
+    "ndcg_at_10": null,
+    "pairwise_concordance": null,
+    "reason": "No eligible complete-effort labels; null is required rather than a fabricated result.",
+    "spearman_rank_correlation": null,
+    "top_decile_target_encounter_rate": null
+  },
+  "ranking_smoke": {
+    "california-halibut": {
+      "distinct_score_count": 101,
+      "maximum_score": 100,
+      "minimum_score": 0,
+      "top_site_ids": [
+        "goleta-beach",
+        "crown-memorial-state-beach",
+        "crissy-field-east-beach",
+        "east-beach-santa-barbara",
+        "alameda-south-shore-rockwall"
+      ],
+      "window_count": 2160
+    },
+    "jacksmelt": {
+      "distinct_score_count": 101,
+      "maximum_score": 100,
+      "minimum_score": 0,
+      "top_site_ids": [
+        "oyster-point-fishing-pier",
+        "pier-14",
+        "pier-7",
+        "port-view-park-pier",
+        "herons-head-park-pier"
+      ],
+      "window_count": 2160
+    },
+    "striped-bass": {
+      "distinct_score_count": 101,
+      "maximum_score": 100,
+      "minimum_score": 0,
+      "top_site_ids": [
+        "torpedo-wharf",
+        "crissy-field-east-beach",
+        "pier-14",
+        "pier-7",
+        "ferry-point-pier"
+      ],
+      "window_count": 2160
+    },
+    "surfperch": {
+      "distinct_score_count": 101,
+      "maximum_score": 100,
+      "minimum_score": 0,
+      "top_site_ids": [
+        "east-beach-santa-barbara",
+        "arroyo-burro-beach",
+        "goleta-beach",
+        "summerland-beach-lookout-park",
+        "carpinteria-state-beach"
+      ],
+      "window_count": 2160
+    }
+  },
+  "rockfish": {
+    "reason": "The generic category is behaviorally heterogeneous and outside this phase.",
+    "status": "deferred"
+  },
+  "schema_version": "castingcompass.hybrid-ranking-evaluation/1.0.0"
+}

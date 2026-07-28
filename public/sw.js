@@ -1,6 +1,6 @@
 const CACHE_PREFIXES = ["castingcompass-", "castcompass-", "contourcast-"];
-const CACHE_NAME = "castingcompass-v13";
-const PUBLIC_NAVIGATION_PATHS = new Set(["/", "/privacy", "/terms", "/ai-disclosure"]);
+const CACHE_NAME = "castingcompass-v14";
+const PUBLIC_NAVIGATION_PATHS = new Set(["/", "/community", "/privacy", "/terms", "/ai-disclosure"]);
 const APP_SHELL = [
   "/",
   "/privacy",
@@ -11,7 +11,7 @@ const APP_SHELL = [
   "/icons/icon-512.png",
   "/topography-contours-v2.webp",
   "/data/sites.json",
-  "/data/opportunities.json",
+  "/data/opportunities-browser.json",
   "/data/community-pulse.json",
 ];
 

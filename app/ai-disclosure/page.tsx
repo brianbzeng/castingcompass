@@ -17,13 +17,13 @@ export const metadata: Metadata = {
     type: "website",
     url: PAGE_URL,
     siteName: "CastingCompass",
-    images: [{ url: "/og.png", width: 1200, height: 630, alt: "CastingCompass — California Halibut Opportunity Planner" }],
+    images: [{ url: "/og.png", width: 1200, height: 630, alt: "CastingCompass — California coastal fishing planner" }],
   },
   twitter: {
     card: "summary_large_image",
     title: PAGE_TITLE,
     description: PAGE_DESCRIPTION,
-    images: [{ url: "/og.png", alt: "CastingCompass — California Halibut Opportunity Planner" }],
+    images: [{ url: "/og.png", alt: "CastingCompass — California coastal fishing planner" }],
   },
 };
 
@@ -36,7 +36,7 @@ export default function AiDisclosurePage() {
     >
       <LegalSection title="The live Opportunity Score">
         <p>The live Opportunity Score is produced by a hybrid planning and relative-ranking system. It combines curated habitat and access information, public seasonal data, tides, weather and marine conditions, daylight and moon context, and practical fishability adjustments. The result is expressed as a percentile among the locations and time windows currently being compared.</p>
-        <p>The score is not a catch probability, a statement that halibut are present, or a representation that a location is safe, lawful, accessible, or practical to fish. Public inputs may be delayed, incomplete, unavailable, or inaccurate. Trip reports may inform product review, but they do not validate or train the current live score.</p>
+        <p>The score is not a catch probability, a statement that the selected target is present, or a representation that a location is safe, lawful, accessible, or practical to fish. Public inputs may be delayed, incomplete, unavailable, or inaccurate. The four target profiles are expert-configured and untrained. Trip reports may inform product review, but they do not validate or train the current live score.</p>
         <p>A separately versioned water-quality advisory overlay can remove an exactly mapped site from recommendations when the official agency reports an active water-contact status. A no-posting result never increases the Opportunity Score. Missing, stale, unmonitored, unavailable, and unmapped status stays unknown, and neither the overlay nor the score establishes water-contact or seafood safety.</p>
       </LegalSection>
 
