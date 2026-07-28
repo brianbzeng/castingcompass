@@ -3,8 +3,9 @@
 Live app: [castingcompass.com](https://castingcompass.com) · Source:
 [github.com/brianbzeng/castingcompass](https://github.com/brianbzeng/castingcompass)
 
-Owner launch tracking: [goal-status dashboard](docs/GOAL_STATUS.md) · Detailed acceptance
-criteria: [product roadmap](docs/PRODUCT_ROADMAP.md)
+Owner launch tracking: [web release readiness](docs/WEB-RELEASE-READINESS.md) ·
+[goal-status dashboard](docs/GOAL_STATUS.md) · Detailed acceptance criteria:
+[product roadmap](docs/PRODUCT_ROADMAP.md)
 
 Security boundaries: [threat model and 13-layer security map](docs/THREAT_MODEL.md) ·
 [access-control matrix](docs/ACCESS_CONTROL_MATRIX.md) ·
