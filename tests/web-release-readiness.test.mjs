@@ -9,7 +9,7 @@ test("web release checklist preserves the independent-review and production stop
   assert.match(readiness, /blocked before independent review/i);
   assert.match(readiness, /Every item below is \*\*review-gated\*\* and unexecuted/);
   assert.match(readiness, /Nothing in this document authorizes a[\s\S]*schema-changing production migration/);
-  assert.match(readiness, /no isolated application Worker/);
+  assert.match(readiness, /No application Worker/);
   assert.match(readiness, /Previously completed setup does\s+not need to be repeated/);
 });
 

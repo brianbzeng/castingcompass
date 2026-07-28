@@ -13,6 +13,7 @@ import {
 import Image from "next/image";
 import Link from "next/link";
 import { AccountModal, SavedSiteControls, useAccount } from "./AccountFeature";
+import { LEGAL_SUPPORT_EMAIL } from "./LegalPage";
 import { TripReportFeature } from "./TripReportFeature";
 import {
   ArrowIcon,
@@ -1816,11 +1817,8 @@ export function OpportunityApp() {
         <a className="brand footer-brand" href="#top"><span className="brand-icon" aria-hidden="true" /><span>CastingCompass</span></a>
         <div className="footer-center">
           <p>Planning aid only. Not navigational data, legal advice, or a guarantee of catch.</p>
-          <div className="contact-bar" aria-label="Contact Brian Zeng">
-            <a href="https://brianzeng.com" target="_blank" rel="noreferrer">Portfolio ↗</a>
-            <a href="mailto:bzeng0000@gmail.com">Email ↗</a>
-            <a href="https://github.com/brianbzeng" target="_blank" rel="noreferrer">GitHub ↗</a>
-            <a href="https://www.linkedin.com/in/brianbzeng" target="_blank" rel="noreferrer">LinkedIn ↗</a>
+          <div className="contact-bar" aria-label="Contact CastingCompass">
+            <a href={`mailto:${LEGAL_SUPPORT_EMAIL}`}>Support ↗</a>
           </div>
           <div className="footer-legal" aria-label="Legal and privacy">
             <Link href="/terms">Terms</Link>

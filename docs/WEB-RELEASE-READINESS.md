@@ -1,6 +1,7 @@
 # CastingCompass web release readiness
 
-Status: **blocked before independent review by absent isolated staging resources and evidence**
+Status: **blocked before independent review by absent isolated staging Workers, private access
+boundary, and exercise evidence**
 
 Evidence reconciled: **2026-07-28 UTC**
 
@@ -33,9 +34,9 @@ or production-control activation.
 | Local release path | complete | The production-shaped Vinext build and the complete Node test suite passed; lint, typecheck, and the repository security chain passed |
 | Development runtime | partial | The earlier duplicate-React `useContext` failure was not reproduced in a fresh dev run; a browser extension caused a separate hydration warning. The earlier failure is not declared fixed, and the production build remains the release path |
 | Live Worker configuration | blocked | Read-only provider evidence found one active version at full traffic with maintenance off, missing release variables, missing all six rate-limit bindings, and no source-commit binding |
-| Isolated staging | blocked | Read-only inventory found no isolated application Worker, internal AI stub Worker, isolated D1 database, expected Queue/DLQ, or isolated R2 bucket |
+| Isolated staging | partial | One empty isolated-staging D1 database and the expected Queue/DLQ were later provisioned and privately evidenced. No application Worker, internal AI stub Worker, private hostname, access policy, secret, R2 bucket, deployment, route, synthetic account, or staging exercise exists |
 | Production D1 | partial | Read-only primary preflight found ledger entries `0000`–`0006`, the expected `0007` columns, and five empty tables from incomplete pre-ledger `0010`/`0012` shapes. Guarded fingerprint-and-empty-table reconciliation is local-ready but unexecuted |
-| Legal pages | blocked | Engineering consistency and model-truthfulness checks are local-ready. Personal proofreading and review by an appropriately qualified person remain open; this repository does not provide legal advice |
+| Legal pages | blocked | The public copy was professionally revised as version `2026-07-27.1`, uses a role-based support address and category-based external-service disclosures, and passed engineering consistency/model-truthfulness checks. Proofreading and review by an appropriately qualified person remain open; this repository does not provide legal advice |
 | Independent reviewer | blocked | An experienced independent reviewer has not yet been selected |
 
 ## A. Freeze and verify the candidate
@@ -60,10 +61,11 @@ or production-control activation.
 
 ## B. Production-shaped isolated staging
 
-- [ ] **blocked:** Provision separate application/stub Workers, D1, Queue/DLQ, R2 where needed,
-  six rate-limit namespaces, secrets, access controls, synthetic accounts, and a private
-  non-production hostname. Do not reuse a production identity or any real user data, and do not
-  route public traffic.
+- [ ] **partial:** The empty isolated D1 and Queue/DLQ exist and have private identity evidence.
+  Provision the separate application/stub Workers, R2 only where needed, six rate-limit
+  namespaces, secrets, access controls, synthetic accounts, and a private non-production
+  hostname only after the review gate. Do not reuse a production identity or any real user data,
+  and do not route public traffic.
 - [ ] **blocked:** Verify both resolved staging manifests and bind their hashes to exact deployed
   staging Worker versions using
   [Isolated staging configuration](ISOLATED-STAGING-CONFIGURATION.md).
@@ -154,8 +156,8 @@ appropriate human review. Nothing in the release packet is legal advice.
 ## Exact external unblock request
 
 Before this candidate can be called ready for independent review, the owner or authorized
-infrastructure operator must provide the isolated staging resources and private resolved
-configuration evidence required by
+infrastructure operator must provide the remaining isolated staging Workers, private hostname and
+access boundary, secrets, synthetic accounts, and resolved configuration evidence required by
 [Isolated staging configuration](ISOLATED-STAGING-CONFIGURATION.md), without sending secrets or
 resource identifiers through source control. The owner must also identify an experienced
 independent reviewer and arrange appropriate legal-page review. Previously completed setup does
