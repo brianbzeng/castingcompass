@@ -61,7 +61,28 @@ WHERE COALESCE((
     WHERE name IN ('approved_at', 'approved_by', 'source_ai_reviewed_at')
   ) = 0
   AND (SELECT COUNT(*) FROM sqlite_master
-    WHERE type = 'table' AND name IN (SELECT name FROM later_tables)) = 0
+    WHERE type = 'table' AND name IN (SELECT name FROM later_tables)) IN (0, 5)
+  AND (SELECT COUNT(*) FROM sqlite_master
+    WHERE type = 'table' AND name IN (
+      'signup_age_proofs',
+      'privacy_deletion_jobs',
+      'privacy_deletion_tasks',
+      'forecast_impressions',
+      'trip_validation_provenance'
+    )) IN (0, 5)
+  AND (
+    (SELECT COUNT(*) FROM sqlite_master
+      WHERE type = 'table' AND name IN (SELECT name FROM later_tables))
+    =
+    (SELECT COUNT(*) FROM sqlite_master
+      WHERE type = 'table' AND name IN (
+        'signup_age_proofs',
+        'privacy_deletion_jobs',
+        'privacy_deletion_tasks',
+        'forecast_impressions',
+        'trip_validation_provenance'
+      ))
+  )
   AND (SELECT COUNT(*) FROM pragma_table_info('trips')
     WHERE name IN (SELECT name FROM later_trip_columns)) = 0
   AND (SELECT COUNT(*) FROM sqlite_master

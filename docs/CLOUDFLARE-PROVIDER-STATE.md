@@ -61,3 +61,24 @@ DNS, D1, secret, route, traffic, or deployment mutation was performed.
 This is a release blocker, not authorization to repair production. The integrated release order,
 migrations, maintenance bridge, private identity evidence, and live verification in
 [`INTEGRATED-RELEASE.md`](INTEGRATED-RELEASE.md) remain mandatory.
+
+## 2026-07-28 read-only recheck
+
+A fresh audit again found one active version receiving all traffic, maintenance mode off,
+the three newer checked-in feature variables and all six rate-limit bindings missing, and no
+reviewed source commit bound by provider metadata. The sanitized receipt reported only blocker
+classes and binding names; no provider identifier, secret, account identity, or raw payload was
+committed. No provider mutation occurred.
+
+The same read-only session found no isolated-staging application Worker, internal stub Worker,
+staging D1 database, expected Queue/DLQ, or staging R2 bucket. Production-shaped staging,
+authenticated workflows, load/failure/security exercises, and log-redaction evidence therefore
+remain external blockers rather than documentation-complete controls.
+
+The guarded production D1 preflight also disproved the older `0007`-only schema assumption:
+five empty pre-ledger tables from incomplete `0010`/`0012` shapes exist while the ledger remains
+at `0000`–`0006`. Only schema names, normalized DDL hashes, zero aggregate row counts, ledger
+names, and the zero foreign-key result were retained in private evidence. Follow the updated
+maintenance-only reconciliation sequence in
+[`INTEGRATED-RELEASE.md`](INTEGRATED-RELEASE.md); do not insert ledger rows or apply the current
+`IF NOT EXISTS` migrations over those tables.

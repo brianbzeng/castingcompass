@@ -42,6 +42,55 @@ export const ALL_RELEASE_MIGRATIONS = Object.freeze([
   ...STAGED_MIGRATIONS,
 ]);
 
+export const KNOWN_PRELEDGER_DRIFT_PROFILES = Object.freeze({
+  "0010_privacy_durability.sql": Object.freeze({
+    action: "migrate:reconcile-preledger-0010",
+    tables: Object.freeze([
+      "signup_age_proofs",
+      "privacy_deletion_jobs",
+      "privacy_deletion_tasks",
+    ]),
+    dropOrder: Object.freeze([
+      "privacy_deletion_tasks",
+      "privacy_deletion_jobs",
+      "signup_age_proofs",
+    ]),
+    objectSha256: Object.freeze({
+      "index:privacy_deletion_jobs_owner_state_idx:privacy_deletion_jobs":
+        "e17e4160326a8f412cc836cfbf2ebabb5000b0a595b6426ecb8b99b58c262ffa",
+      "index:privacy_deletion_jobs_state_updated_idx:privacy_deletion_jobs":
+        "297d407c4ddfb837154b19969002d1214acedbd71f1fb5094be607a419793f82",
+      "index:privacy_deletion_tasks_retry_idx:privacy_deletion_tasks":
+        "8d47a442fad006ba47a70c175993b94d695222d117ac6f5c8fd4889949718e44",
+      "index:signup_age_proofs_expiry_idx:signup_age_proofs":
+        "b7de17c4ebad4a30e9b1cdc85942caee22f4ba6c7bc7ca367a2c21bcca404d75",
+      "table:privacy_deletion_jobs:privacy_deletion_jobs":
+        "2e81a419ce7804c97841c9a1c1743f50a25ba028fef14ed40f90ff21a9fbbea8",
+      "table:privacy_deletion_tasks:privacy_deletion_tasks":
+        "572e2d136c230452506845a68f23372ef3e0c1a29f9085642a5680f507e8654f",
+      "table:signup_age_proofs:signup_age_proofs":
+        "63bc4f1dbf084facfd336d3745a0cd53ecaec558eba7cf94d6b76f1274d8d7d3",
+    }),
+  }),
+  "0012_validation_protocol.sql": Object.freeze({
+    action: "migrate:reconcile-preledger-0012",
+    tables: Object.freeze([
+      "forecast_impressions",
+      "trip_validation_provenance",
+    ]),
+    dropOrder: Object.freeze([
+      "trip_validation_provenance",
+      "forecast_impressions",
+    ]),
+    objectSha256: Object.freeze({
+      "table:forecast_impressions:forecast_impressions":
+        "4eab9d6d7e6e02af59b777b1cecd20168209169e01bb696d44bd4c52e4727d96",
+      "table:trip_validation_provenance:trip_validation_provenance":
+        "9fe8a55168143979515f461a1052a25a05d2a12f02ece08acb819e3e79989970",
+    }),
+  }),
+});
+
 const LEDGER_QUERY = `SELECT COALESCE((
   SELECT json_group_array(name) FROM (SELECT name FROM d1_migrations ORDER BY id)
 ), '[]') AS applied_migrations_json,
@@ -212,12 +261,14 @@ export function verifyInitialPreflight(payload, expectedMigrations = BASE_APPLIE
   const row = entry.results[0];
   const appliedMigrations = parseMigrationArray(row.applied_migrations_json);
   requireMigrationArray("remote migration ledger", appliedMigrations, expectedMigrations);
+  if (![0, 5].includes(row.later_tables_found)) {
+    fail("later_tables_found", [0, 5], row.later_tables_found);
+  }
   for (const [field, expected] of Object.entries({
     legal_columns_expected: 8,
     legal_columns_present: 8,
     legal_columns_exact: 8,
     approval_columns_found: 0,
-    later_tables_found: 0,
     later_trip_columns_found: 0,
     later_indexes_found: 0,
     later_triggers_found: 0,
@@ -235,6 +286,9 @@ export function verifyInitialPreflight(payload, expectedMigrations = BASE_APPLIE
   if (row.users_missing_legal_acceptance > row.users) throw new Error("Legal-acceptance aggregate exceeds the user count.");
   return {
     appliedMigrations,
+    schemaProfile: row.later_tables_found === 0
+      ? "0007-only"
+      : "known-empty-preledger-drift-pending-fingerprint",
     aggregates: {
       users: row.users,
       usersMissingAgeEligibility: row.users_missing_age_eligibility,
@@ -276,6 +330,185 @@ export function verifyStageBoundaryPayload(payload) {
   requireEqual("stage-boundary row count", entry.results.length, 1);
   requireEqual("target_artifacts_found", entry.results[0]?.target_artifacts_found, 0);
   return { targetArtifactsFound: 0 };
+}
+
+export function normalizedSchemaSqlSha256(source) {
+  const normalized = String(source ?? "")
+    .replace(/\bif\s+not\s+exists\b/giu, "")
+    .replace(/[`"]+/gu, "")
+    .replace(/\s+/gu, " ")
+    .replace(/\s*([(),])\s*/gu, "$1")
+    .replace(/;$/u, "")
+    .trim();
+  return createHash("sha256").update(normalized).digest("hex");
+}
+
+function parseSchemaObjects(value) {
+  let objects;
+  try {
+    objects = JSON.parse(value);
+  } catch {
+    throw new Error("objects_json must be a JSON array.");
+  }
+  if (!Array.isArray(objects)) throw new Error("objects_json must be a JSON array.");
+  return objects;
+}
+
+function parseSchemaTableNames(value, requiredTables) {
+  let names;
+  try {
+    names = JSON.parse(value);
+  } catch {
+    throw new Error("table_names_json must be a JSON array.");
+  }
+  if (!Array.isArray(names) || names.length === 0 || names.length > 128) {
+    throw new Error("table_names_json must be a bounded non-empty JSON array.");
+  }
+  const sorted = [...names].sort();
+  if (JSON.stringify(names) !== JSON.stringify(sorted)
+    || new Set(names).size !== names.length
+    || names.some((name) => typeof name !== "string" || !/^[A-Za-z_][A-Za-z0-9_]*$/u.test(name))) {
+    throw new Error("Production schema table names are invalid, duplicated, or unordered.");
+  }
+  for (const table of requiredTables) {
+    if (!names.includes(table)) {
+      throw new Error(`Required pre-ledger table ${table} is absent.`);
+    }
+  }
+  return names;
+}
+
+function parseSchemaTableObjects(value, requiredTables) {
+  let objects;
+  try {
+    objects = JSON.parse(value);
+  } catch {
+    throw new Error("table_objects_json must be a JSON array.");
+  }
+  if (!Array.isArray(objects) || objects.length === 0 || objects.length > 128) {
+    throw new Error("table_objects_json must be a bounded non-empty JSON array.");
+  }
+  const names = [];
+  for (const object of objects) {
+    if (!object || typeof object !== "object" || Array.isArray(object)
+      || JSON.stringify(Object.keys(object)) !== JSON.stringify(["name", "sql"])
+      || typeof object.name !== "string"
+      || typeof object.sql !== "string") {
+      throw new Error("Production schema table object is invalid.");
+    }
+    names.push(object.name);
+  }
+  parseSchemaTableNames(JSON.stringify(names), requiredTables);
+  return objects;
+}
+
+function ddlReferencesTable(sql, targetTable) {
+  const escaped = targetTable.replace(/[.*+?^${}()|[\]\\]/gu, "\\$&");
+  const backtick = String.fromCharCode(96);
+  const identifier = [
+    `"${escaped}"`,
+    `${backtick}${escaped}${backtick}`,
+    `\\[${escaped}\\]`,
+    escaped,
+  ].join("|");
+  return new RegExp(
+    `\\breferences\\s+(?:${identifier})(?=[\\s(,);]|$)`,
+    "iu",
+  ).test(sql);
+}
+
+export function verifyKnownPreledgerDrift(
+  payload,
+  targetMigration,
+  expectedMigrations,
+  profile = KNOWN_PRELEDGER_DRIFT_PROFILES[targetMigration],
+) {
+  if (!profile) throw new Error("Known pre-ledger drift target is invalid.");
+  const entry = resultEnvelope(payload);
+  requireEqual("pre-ledger drift row count", entry.results.length, 1);
+  const row = entry.results[0];
+  const appliedMigrations = parseMigrationArray(row.applied_migrations_json);
+  requireMigrationArray("remote migration ledger", appliedMigrations, expectedMigrations);
+  requireEqual("foreign_key_violations", row.foreign_key_violations, 0);
+  const tableObjects = parseSchemaTableObjects(row.table_objects_json, profile.tables);
+  const tableNames = tableObjects.map((object) => object.name);
+  const inboundSourceTableNames = tableNames.filter((table) => !profile.tables.includes(table));
+  for (const object of tableObjects) {
+    if (!profile.tables.includes(object.name)
+      && profile.tables.some((targetTable) => ddlReferencesTable(object.sql, targetTable))) {
+      throw new Error("Inbound foreign-key reference targets a pre-ledger table.");
+    }
+  }
+
+  const rowCounts = {};
+  for (const table of profile.tables) {
+    const field = `${table}_rows`;
+    requireEqual(field, row[field], 0);
+    rowCounts[table] = 0;
+  }
+
+  const observedObjectSha256 = {};
+  for (const object of parseSchemaObjects(row.objects_json)) {
+    if (!object || typeof object !== "object" || Array.isArray(object)) {
+      throw new Error("Pre-ledger schema object must be an object.");
+    }
+    const keys = Object.keys(object);
+    if (JSON.stringify(keys) !== JSON.stringify(["type", "name", "table_name", "sql"])) {
+      throw new Error("Pre-ledger schema object fields are invalid.");
+    }
+    for (const field of ["type", "name", "table_name", "sql"]) {
+      if (typeof object[field] !== "string") {
+        throw new Error(`Pre-ledger schema object ${field} is invalid.`);
+      }
+    }
+    if (!["table", "index", "trigger"].includes(object.type)
+      || !/^[a-z0-9_]+$/u.test(object.name)
+      || !profile.tables.includes(object.table_name)) {
+      throw new Error("Pre-ledger schema object identity is invalid.");
+    }
+    const key = `${object.type}:${object.name}:${object.table_name}`;
+    if (Object.hasOwn(observedObjectSha256, key)) {
+      throw new Error("Pre-ledger schema object identity is duplicated.");
+    }
+    observedObjectSha256[key] = normalizedSchemaSqlSha256(object.sql);
+  }
+  const observedKeys = Object.keys(observedObjectSha256).sort();
+  const expectedKeys = Object.keys(profile.objectSha256).sort();
+  if (JSON.stringify(observedKeys) !== JSON.stringify(expectedKeys)) {
+    fail("pre-ledger schema objects", expectedKeys, observedKeys);
+  }
+  for (const key of expectedKeys) {
+    requireEqual(`${key} normalized DDL SHA-256`, observedObjectSha256[key], profile.objectSha256[key]);
+  }
+  return {
+    targetMigration,
+    appliedMigrations,
+    rowCounts,
+    schemaTableNamesSha256: createHash("sha256").update(tableNames.join("\n")).digest("hex"),
+    schemaTableDdlSha256: createHash("sha256").update(tableObjects
+      .map((object) => `${object.name}:${normalizedSchemaSqlSha256(object.sql)}`)
+      .join("\n")).digest("hex"),
+    inboundSourceTableNamesSha256:
+      createHash("sha256").update(inboundSourceTableNames.join("\n")).digest("hex"),
+    inboundForeignKeys: 0,
+    objectSha256: Object.fromEntries(expectedKeys.map((key) => [key, observedObjectSha256[key]])),
+  };
+}
+
+export function verifyPreledgerDropPayload(payload, expectedStatementCount) {
+  if (!Array.isArray(payload) || payload.length !== expectedStatementCount) {
+    throw new Error("Pre-ledger reconciliation returned an unexpected statement count.");
+  }
+  for (const entry of payload) {
+    requireEqual("Wrangler success", entry?.success, true);
+    requireEqual("primary D1 execution", entry?.meta?.served_by_primary, true);
+    requireEqual("changed_db", entry?.meta?.changed_db, true);
+    requireEqual("rows_written", entry?.meta?.rows_written, 0);
+    if (!Array.isArray(entry?.results) || entry.results.length !== 0) {
+      throw new Error("Pre-ledger reconciliation must not return database rows.");
+    }
+  }
+  return { droppedStatements: expectedStatementCount };
 }
 
 export function verifyFinalPostflight(payload) {
@@ -444,6 +677,53 @@ async function queryStageBoundary(root, runner, migration) {
   return parseJsonOutput(output, `${migration} schema-boundary query`);
 }
 
+function knownPreledgerDriftQuery(targetMigration) {
+  const profile = KNOWN_PRELEDGER_DRIFT_PROFILES[targetMigration];
+  if (!profile) throw new Error("Known pre-ledger drift target is invalid.");
+  const tableList = profile.tables.map((table) => `'${table}'`).join(", ");
+  const rowCounts = profile.tables
+    .map((table) => `(SELECT COUNT(*) FROM "${table}") AS "${table}_rows"`)
+    .join(",\n");
+  return `SELECT
+COALESCE((
+  SELECT json_group_array(json_object(
+    'type', type,
+    'name', name,
+    'table_name', tbl_name,
+    'sql', sql
+  ))
+  FROM (
+    SELECT type, name, tbl_name, sql
+    FROM sqlite_master
+    WHERE sql IS NOT NULL AND tbl_name IN (${tableList})
+    ORDER BY type, name
+  )
+), '[]') AS objects_json,
+COALESCE((
+  SELECT json_group_array(json_object('name', name, 'sql', sql))
+  FROM (
+    SELECT name, sql
+    FROM sqlite_master
+    WHERE type = 'table' AND name NOT LIKE 'sqlite_%' AND sql IS NOT NULL
+    ORDER BY name
+  )
+), '[]') AS table_objects_json,
+COALESCE((
+  SELECT json_group_array(name)
+  FROM (SELECT name FROM d1_migrations ORDER BY id)
+), '[]') AS applied_migrations_json,
+${rowCounts},
+(SELECT COUNT(*) FROM pragma_foreign_key_check) AS foreign_key_violations`;
+}
+
+async function queryKnownPreledgerDrift(root, runner, targetMigration) {
+  const output = await runner(root, [
+    "d1", "execute", PRIMARY_DATABASE, "--remote", "--config", "wrangler.jsonc",
+    "--command", knownPreledgerDriftQuery(targetMigration), "--json",
+  ]);
+  return parseJsonOutput(output, `${targetMigration} known pre-ledger drift query`);
+}
+
 function assertMutationConfirmation(options) {
   requireEqual("--confirm-primary", options.confirmPrimary, PRIMARY_DATABASE);
   if (!options.confirmBookmarkRecorded) {
@@ -453,6 +733,11 @@ function assertMutationConfirmation(options) {
 
 export function productionMutationAction(options) {
   if (options.command === "reconcile-0007") return "migrate:reconcile-0007";
+  if (options.command === "reconcile-preledger") {
+    const profile = KNOWN_PRELEDGER_DRIFT_PROFILES[options.driftTarget];
+    if (!profile) throw new Error("--drift-target must name the exact reviewed pre-ledger migration.");
+    return profile.action;
+  }
   if (options.command === "apply") {
     expectedMigrationsBefore(options.migration);
     return `migrate:${options.migration}`;
@@ -482,10 +767,26 @@ async function verifyImmutableCheckout(root) {
   await verifyLocalMigrationSet(root);
 }
 
-async function runPreflight(root, runner, expectedMigrations = BASE_APPLIED_MIGRATIONS) {
+export async function runPreflight(root, runner, expectedMigrations = BASE_APPLIED_MIGRATIONS) {
   const payload = await executeReadOnlySqlFile(root, runner, "scripts/integrated-release-preflight.sql");
   const result = verifyInitialPreflight(payload, expectedMigrations);
-  return { ...result, evidenceSha256: evidenceDigest(result) };
+  if (result.schemaProfile === "0007-only") {
+    return { ...result, evidenceSha256: evidenceDigest(result) };
+  }
+  const drift = {};
+  for (const targetMigration of Object.keys(KNOWN_PRELEDGER_DRIFT_PROFILES)) {
+    drift[targetMigration] = verifyKnownPreledgerDrift(
+      await queryKnownPreledgerDrift(root, runner, targetMigration),
+      targetMigration,
+      expectedMigrations,
+    );
+  }
+  const verified = {
+    ...result,
+    schemaProfile: "known-empty-preledger-drift",
+    knownPreledgerDrift: drift,
+  };
+  return { ...verified, evidenceSha256: evidenceDigest(verified) };
 }
 
 async function withStagedConfig(root, targetMigration, callback) {
@@ -529,14 +830,60 @@ async function applyOneMigration(
   return { ...result, appliedMigration: options.migration, evidenceSha256: evidenceDigest(result) };
 }
 
+async function reconcileKnownPreledgerDrift(
+  root,
+  runner,
+  options,
+  reauthorize = authorizeProductionMutation,
+) {
+  assertMutationConfirmation(options);
+  const profile = KNOWN_PRELEDGER_DRIFT_PROFILES[options.driftTarget];
+  if (!profile) throw new Error("--drift-target must name the exact reviewed pre-ledger migration.");
+  const expectedLedger = expectedMigrationsBefore(options.driftTarget);
+  const before = verifyKnownPreledgerDrift(
+    await queryKnownPreledgerDrift(root, runner, options.driftTarget),
+    options.driftTarget,
+    expectedLedger,
+  );
+  await reauthorize(root, options);
+  const statement = profile.dropOrder.map((table) => `DROP TABLE "${table}"`).join(";\n");
+  const output = await runner(root, [
+    "d1", "execute", PRIMARY_DATABASE, "--remote", "--config", "wrangler.jsonc",
+    "--command", `${statement};`, "--json",
+  ]);
+  verifyPreledgerDropPayload(
+    parseJsonOutput(output, `${options.driftTarget} pre-ledger reconciliation`),
+    profile.dropOrder.length,
+  );
+  const ledger = verifyLedgerPayload(await queryLedger(root, runner), expectedLedger);
+  const boundary = verifyStageBoundaryPayload(await queryStageBoundary(root, runner, options.driftTarget));
+  const verified = {
+    targetMigration: options.driftTarget,
+    before,
+    ledger,
+    boundary,
+  };
+  return { ...verified, evidenceSha256: evidenceDigest(verified) };
+}
+
 function parseArguments(args) {
   const [command, ...rest] = args;
-  const options = { command, migration: undefined, confirmPrimary: undefined, confirmBookmarkRecorded: false };
+  const options = {
+    command,
+    migration: undefined,
+    driftTarget: undefined,
+    confirmPrimary: undefined,
+    confirmBookmarkRecorded: false,
+  };
   for (let index = 0; index < rest.length; index += 1) {
     const value = rest[index];
     if (value === "--migration") {
       options.migration = rest[index + 1];
       if (!options.migration) throw new Error("--migration requires an exact filename.");
+      index += 1;
+    } else if (value === "--drift-target") {
+      options.driftTarget = rest[index + 1];
+      if (!options.driftTarget) throw new Error("--drift-target requires an exact migration filename.");
       index += 1;
     } else if (value === "--confirm-primary") {
       options.confirmPrimary = rest[index + 1];
@@ -560,6 +907,7 @@ async function main({ root = DEFAULT_ROOT, runner = defaultWranglerRunner } = {}
       "Usage:\n" +
       "  node scripts/integrated-release.mjs preflight\n" +
       "  RELEASE_AUTHORIZATION_FILE=/PRIVATE/PATH.json node scripts/integrated-release.mjs reconcile-0007 --confirm-primary contourcast-trips --confirm-bookmark-recorded\n" +
+      "  RELEASE_AUTHORIZATION_FILE=/PRIVATE/PATH.json node scripts/integrated-release.mjs reconcile-preledger --drift-target FILE --confirm-primary contourcast-trips --confirm-bookmark-recorded\n" +
       "  RELEASE_AUTHORIZATION_FILE=/PRIVATE/PATH.json node scripts/integrated-release.mjs apply --migration FILE --confirm-primary contourcast-trips --confirm-bookmark-recorded\n" +
       "  node scripts/integrated-release.mjs postflight\n",
     );
@@ -578,6 +926,8 @@ async function main({ root = DEFAULT_ROOT, runner = defaultWranglerRunner } = {}
     verifyReconciliationResult(payload);
     const after = await runPreflight(root, runner, [...BASE_APPLIED_MIGRATIONS, RECONCILED_LEGAL_MIGRATION]);
     result = { reconciledMigration: RECONCILED_LEGAL_MIGRATION, before, after };
+  } else if (options.command === "reconcile-preledger") {
+    result = await reconcileKnownPreledgerDrift(root, runner, options);
   } else if (options.command === "apply") {
     result = await applyOneMigration(root, runner, options);
   } else if (options.command === "postflight") {
