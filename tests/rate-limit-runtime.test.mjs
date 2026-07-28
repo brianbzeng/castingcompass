@@ -53,6 +53,16 @@ test("rate-limit route policy covers auth, email, writes, reads, sensitive work,
   assert.deepEqual(requestLimitClasses(request("/api/profile", { method: "DELETE" })), ["sensitive", "write"]);
   assert.deepEqual(requestLimitClasses(request("/api/profile/export")), ["read", "sensitive"]);
   assert.deepEqual(requestLimitClasses(request("/api/discussions/ocean-beach")), ["read"]);
+  assert.deepEqual(requestLimitClasses(request("/api/community/ocean-beach/preview")), ["read"]);
+  assert.deepEqual(requestLimitClasses(request("/api/community/ocean-beach", { method: "POST" })), ["write"]);
+  assert.deepEqual(
+    requestLimitClasses(request("/api/community/reports", { method: "POST" })),
+    ["sensitive", "write"],
+  );
+  assert.deepEqual(
+    requestLimitClasses(request("/api/community/blocks/coast_reader", { method: "PUT" })),
+    ["sensitive", "write"],
+  );
   assert.deepEqual(requestLimitClasses(request("/api/health")), []);
   assert.deepEqual(requestLimitClasses(request("/privacy")), []);
 });

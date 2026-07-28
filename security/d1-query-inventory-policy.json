@@ -2,6 +2,7 @@
   "schemaVersion": "castingcompass.d1-query-inventory-policy/1.0.0",
   "sourceFiles": [
     "worker/auth.ts",
+    "worker/community.ts",
     "worker/discussions.ts",
     "worker/privacy-export.ts",
     "worker/security.ts",
@@ -11,10 +12,10 @@
     "worker/validation-feasibility-export.ts"
   ],
   "expectedSummary": {
-    "prepareCallCount": 255,
-    "literalCallCount": 241,
-    "nonLiteralCallCount": 14,
-    "multiRowLiteralWithoutLimitCount": 9
+    "prepareCallCount": 287,
+    "literalCallCount": 271,
+    "nonLiteralCallCount": 16,
+    "multiRowLiteralWithoutLimitCount": 14
   },
   "allowedNonLiteralExpressions": [
     {
@@ -37,6 +38,20 @@
       "staticAuthority": "two fixed privacy-task SELECT literals chosen only by the optional operator job id",
       "executionContract": "internal cleanup claim of at most 5 rows",
       "rationale": "The branch changes only the bound predicate and ordering; the job id remains a parameter."
+    },
+    {
+      "file": "worker/community.ts",
+      "expressionSha256": "265443680d477ebab1a1e1573321e40700c2954e3318d47259b54d92d5c5c9aa",
+      "staticAuthority": "module-level feedSelectSql projection plus a fixed public-preview predicate and four-row limit",
+      "executionContract": "one public place feed preview returning at most four reviewed rows so the fourth row carries only a has-more signal",
+      "rationale": "The helper selects a fixed public projection; site identity remains a D1 binding and no request value becomes SQL syntax."
+    },
+    {
+      "file": "worker/community.ts",
+      "expressionSha256": "0301675a90f5019baab9e42729ccd7df8b9e7b4939ff83b3d1027f4153700a33",
+      "staticAuthority": "module-level feedSelectSql owner projection plus fixed moderation, block, pagination, and eleven-row limit clauses",
+      "executionContract": "one authenticated place feed page returning at most eleven owner-authorized rows",
+      "rationale": "The helper selects a fixed owner-aware projection; site, account, and offset values remain D1 bindings."
     },
     {
       "file": "worker/discussions.ts",
@@ -145,7 +160,7 @@
       "rationale": "Trips are intentionally complete for authenticated portability; the default-off asynchronous packager moves this complete read off the request path when activated."
     },
     {
-      "callSiteId": "9bf9d6adc110e191fba10ef6",
+      "callSiteId": "96d88739ae36c6c5761018f7",
       "file": "worker/privacy-export.ts",
       "sqlSha256": "11fbf502919e8f90a231c9fc165aadc763fd37634d1a5409303e525a1fa9db35",
       "scope": "complete owner export",
@@ -154,7 +169,7 @@
       "rationale": "Only public-copy rows derived from the authenticated owner's trips enter the portability export."
     },
     {
-      "callSiteId": "2454dbee231d6661c9ee1457",
+      "callSiteId": "26c49456e03431584e40857b",
       "file": "worker/privacy-export.ts",
       "sqlSha256": "96f4c5994edaa17f2eeb06fd6bb271aca1e8a75febdf311d97cae4cc82c40924",
       "scope": "complete owner export",
@@ -163,7 +178,7 @@
       "rationale": "Forecast impression records are required for the authenticated owner's complete export."
     },
     {
-      "callSiteId": "c71e30fc533941d004a3012f",
+      "callSiteId": "3c8b573809f9687723396d12",
       "file": "worker/privacy-export.ts",
       "sqlSha256": "ff670cba408cd096752e58b52a419fe1469ba49a1c74f2f9358ae96b979869f9",
       "scope": "complete owner export",
@@ -172,7 +187,7 @@
       "rationale": "Validation provenance is required for the authenticated owner's complete export."
     },
     {
-      "callSiteId": "782cdcc18fa9050a41592350",
+      "callSiteId": "4aaa2b329fe7a9fdf843efff",
       "file": "worker/privacy-export.ts",
       "sqlSha256": "a204c81a56022f6509ba5550c4c519898862d6413f44f5e1955d7dec340aba33",
       "scope": "complete owner export",
@@ -181,7 +196,7 @@
       "rationale": "Pilot events remain owner-bound and complete for authenticated portability."
     },
     {
-      "callSiteId": "fda2eec1e4180b3b7aa43e67",
+      "callSiteId": "f54c567e1bad04dd541dc16c",
       "file": "worker/privacy-export.ts",
       "sqlSha256": "b677d5535e6ccdeab73a8511868b7de7e9b55c750efdf28aefe34db68dc0c890",
       "scope": "complete owner export",
@@ -190,13 +205,58 @@
       "rationale": "Recruitment records remain owner-bound and complete for authenticated portability."
     },
     {
-      "callSiteId": "247fb5e7599e7beb97b0b827",
+      "callSiteId": "e5f40af24193bbe4523a452d",
       "file": "worker/privacy-export.ts",
       "sqlSha256": "cf733f072a900b16b9d702fa4ff27fe43c899d8b488397490bd742267f31f0c9",
       "scope": "complete owner export",
       "boundPredicate": "trips.user_id = ?",
       "rowBoundStatus": "complete-rights-export",
       "rationale": "Corrections remain owner-bound and complete for authenticated portability."
+    },
+    {
+      "callSiteId": "64cda7600b9661f680c273a6",
+      "file": "worker/privacy-export.ts",
+      "sqlSha256": "f986c906785496f5b636359298235bd8d9d8d5d9153e589ce20c8c0e976145de",
+      "scope": "complete owner export",
+      "boundPredicate": "user_id = ?",
+      "rowBoundStatus": "complete-rights-export",
+      "rationale": "The authenticated portability export includes the owner's complete pseudonymous community profile."
+    },
+    {
+      "callSiteId": "f8b9d49f6e2a06e7e6a54a55",
+      "file": "worker/privacy-export.ts",
+      "sqlSha256": "fe1e28140f0e6a8ae6394ac986dccee71ec3c13ece3d602a18df7ba7f3742afb",
+      "scope": "complete owner export",
+      "boundPredicate": "user_id = ?",
+      "rowBoundStatus": "complete-rights-export",
+      "rationale": "Community posts are included completely for the authenticated owner's portability rights."
+    },
+    {
+      "callSiteId": "4ffe130db3ef007c249abb0c",
+      "file": "worker/privacy-export.ts",
+      "sqlSha256": "62602f7f112622fde1bbbb6a2528104e243af37404f3c9600d86f056f0ad155e",
+      "scope": "complete owner export",
+      "boundPredicate": "user_id = ?",
+      "rowBoundStatus": "complete-rights-export",
+      "rationale": "Community comments are included completely for the authenticated owner's portability rights."
+    },
+    {
+      "callSiteId": "79402f7be67897ed9b8702b1",
+      "file": "worker/privacy-export.ts",
+      "sqlSha256": "6e21ce869dfccf459f5eb485acab89a29f676c00abd3232d394d3e7889cbce0b",
+      "scope": "complete owner export",
+      "boundPredicate": "reporter_user_id = ?",
+      "rowBoundStatus": "complete-rights-export",
+      "rationale": "Community reports submitted by the authenticated owner are included in the private export and never in a public projection."
+    },
+    {
+      "callSiteId": "1732bb84c945b57c114717c0",
+      "file": "worker/privacy-export.ts",
+      "sqlSha256": "019464260f65cbe61c76e75afccd0902c4bdef95913ad76387c80517f56f7594",
+      "scope": "complete owner export",
+      "boundPredicate": "block.blocker_user_id = ?",
+      "rowBoundStatus": "complete-rights-export",
+      "rationale": "The owner's complete block list is included by pseudonymous handle without exposing another account identifier."
     }
   ]
 }

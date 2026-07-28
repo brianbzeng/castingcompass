@@ -56,16 +56,16 @@ test("the committed inventory covers every Worker prepare site and its reviewed 
   validatePolicy(policy, inventory);
   assert.deepEqual(JSON.parse(committed), inventory);
   assert.deepEqual(inventory.summary, {
-    prepareCallCount: 255,
-    literalCallCount: 241,
-    nonLiteralCallCount: 14,
-    multiRowLiteralWithoutLimitCount: 9,
+    prepareCallCount: 287,
+    literalCallCount: 271,
+    nonLiteralCallCount: 16,
+    multiRowLiteralWithoutLimitCount: 14,
   });
-  assert.equal(inventory.sourceFiles.length, 8);
-  assert.equal(new Set(inventory.queries.map(({ callSiteId }) => callSiteId)).size, 255);
+  assert.equal(inventory.sourceFiles.length, 9);
+  assert.equal(new Set(inventory.queries.map(({ callSiteId }) => callSiteId)).size, 287);
   assert.ok(inventory.queries.every(({ tables }) => !tables.includes("SET")));
   assert.equal(policy.multiRowReadContracts.filter(({ rowBoundStatus }) => rowBoundStatus === "open-account-cardinality").length, 0);
-  assert.equal(policy.multiRowReadContracts.filter(({ rowBoundStatus }) => rowBoundStatus === "complete-rights-export").length, 9);
+  assert.equal(policy.multiRowReadContracts.filter(({ rowBoundStatus }) => rowBoundStatus === "complete-rights-export").length, 14);
   assert.equal(policy.multiRowReadContracts.filter(({ rowBoundStatus }) => rowBoundStatus === "owner-lifecycle-cleanup").length, 0);
 
   const setBasedDeletionInventory = inventory.queries.filter(({ file, statementClass, sql }) =>

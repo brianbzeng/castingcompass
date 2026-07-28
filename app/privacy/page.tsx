@@ -15,13 +15,13 @@ export const metadata: Metadata = {
     type: "website",
     url: PAGE_URL,
     siteName: "CastingCompass",
-    images: [{ url: "/og.png", width: 1200, height: 630, alt: "CastingCompass — California Halibut Opportunity Planner" }],
+    images: [{ url: "/og.png", width: 1200, height: 630, alt: "CastingCompass — California coastal fishing planner" }],
   },
   twitter: {
     card: "summary_large_image",
     title: PAGE_TITLE,
     description: PAGE_DESCRIPTION,
-    images: [{ url: "/og.png", alt: "CastingCompass — California Halibut Opportunity Planner" }],
+    images: [{ url: "/og.png", alt: "CastingCompass — California coastal fishing planner" }],
   },
 };
 
@@ -30,7 +30,7 @@ export default function PrivacyPage() {
     <LegalPage
       eyebrow="Legal · Privacy"
       title="Privacy Policy"
-      summary="This Privacy Policy describes how CastingCompass collects, uses, discloses, retains, and protects information when you use the website, account features, and trip-reporting tools."
+      summary="This Privacy Policy describes how CastingCompass collects, uses, discloses, retains, and protects information when you use the website, account, community, and trip-reporting tools."
     >
       <LegalSection title="1. Information we collect">
         <ul>
@@ -38,6 +38,7 @@ export default function PrivacyPage() {
           <li><strong>Age-eligibility information:</strong> during signup, a birth date is evaluated separately to determine whether account creation is available under the applicable California calendar date. The entered birth date is not retained. We keep a short-lived, one-use eligibility proof or ineligibility marker that does not contain the birth date, age, email address, or account details. After account creation, we retain the time of the successful eligibility check.</li>
           <li><strong>Preferences:</strong> saved fishing locations and optional gear presets.</li>
           <li><strong>Trip-report information:</strong> a curated fishing location, date and time, effort, method, catch or no-catch outcome, gear, fishability observations, notes, forecast context, model version, and an optional photo.</li>
+          <li><strong>Community information:</strong> your pseudonymous handle and optional bio; posts, comments, edits, reports, blocks, moderation status, and the supported public place connected to a discussion. Your account email is not displayed as your community identity.</li>
           <li><strong>Technical and security information:</strong> secure session identifiers, pseudonymous identifiers used for rate limiting and abuse prevention, credential-security signals, request and error records, and limited network, device, and browser information processed in connection with operating and securing the service.</li>
         </ul>
       </LegalSection>
@@ -73,7 +74,7 @@ export default function PrivacyPage() {
 
       <LegalSection title="6. Retention">
         <ul>
-          <li>Accounts, saved locations, gear presets, and trip reports are retained until deleted, unless a shorter period is required.</li>
+          <li>Accounts, saved locations, gear presets, trip reports, and community content are retained until deleted, removed, or no longer reasonably needed for moderation, safety, or legal obligations. Reports and moderation records may be retained after content removal when reasonably necessary to address abuse.</li>
           <li>Signup eligibility proofs can be used for 10 minutes and are removed after a short operational buffer of about 24 hours. A browser that receives an ineligibility result may keep a first-party marker for up to 24 hours so returning to the prior screen does not restart collection; neither artifact contains the entered birth date, age, email address, or account details.</li>
           <li>Sessions expire after 30 days and expired session records are periodically removed.</li>
           <li>Email challenges expire after 15 minutes and are removed after a short operational buffer.</li>
@@ -87,7 +88,7 @@ export default function PrivacyPage() {
 
       <LegalSection title="7. Your choices and privacy rights">
         <p>From Profile, you can view saved locations and reports, edit or remove pending reports, download a machine-readable JSON copy of account records, and permanently delete the account. When background packaging is enabled, the private JSON file is available only to the signed-in owner and expires after 24 hours; otherwise the authenticated response is generated directly. When stored photos exist, the export includes a manifest with authenticated links for downloading those photo files separately; the photos are not embedded in the JSON file. You can also deny or revoke browser location permission and use the public forecast without an account.</p>
-        <p>After an accepted deletion request, sign-in access, saved locations, gear presets, linked trip reports, and linked public discussion summaries are removed from the active database. CastingCompass also clears its account-related trip drafts and anonymous reporting identifier from the current browser when browser storage is available, and reports when the browser blocks that cleanup. If photo-object cleanup continues in the background, Profile displays that limited status using a secure receipt that cannot restore account access.</p>
+        <p>After an accepted deletion request, sign-in access, saved locations, gear presets, linked trip reports, community profile and content, and linked public discussion summaries are removed from the active database. CastingCompass also clears its account-related trip drafts and anonymous reporting identifier from the current browser when browser storage is available, and reports when the browser blocks that cleanup. If photo-object cleanup continues in the background, Profile displays that limited status using a secure receipt that cannot restore account access.</p>
         <p>Depending on where you live and the law that applies, you may have rights to know, access, correct, delete, or receive a copy of personal information; to opt out of certain sale, sharing, or targeted-advertising practices; to limit certain uses of sensitive personal information; and to receive non-discriminatory treatment. CastingCompass currently provides access and deletion tools even where not legally required. To submit a request that the product controls do not cover, email <a href={`mailto:${LEGAL_SUPPORT_EMAIL}`}>{LEGAL_SUPPORT_EMAIL}</a>. We may need to verify your identity or authority before completing a request.</p>
       </LegalSection>
 

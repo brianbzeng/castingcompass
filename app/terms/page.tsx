@@ -15,13 +15,13 @@ export const metadata: Metadata = {
     type: "website",
     url: PAGE_URL,
     siteName: "CastingCompass",
-    images: [{ url: "/og.png", width: 1200, height: 630, alt: "CastingCompass — California Halibut Opportunity Planner" }],
+    images: [{ url: "/og.png", width: 1200, height: 630, alt: "CastingCompass — California coastal fishing planner" }],
   },
   twitter: {
     card: "summary_large_image",
     title: PAGE_TITLE,
     description: PAGE_DESCRIPTION,
-    images: [{ url: "/og.png", alt: "CastingCompass — California Halibut Opportunity Planner" }],
+    images: [{ url: "/og.png", alt: "CastingCompass — California coastal fishing planner" }],
   },
 };
 
@@ -38,7 +38,7 @@ export default function TermsPage() {
       </LegalSection>
 
       <LegalSection title="2. What the forecast means">
-        <p>CastingCompass ranks currently evaluated locations and time windows for California halibut. An Opportunity Score is a relative percentile within the current comparison set. A score of 80 means the option ranks ahead of about 80% of the options being compared. It does not mean an 80% chance of catching a fish.</p>
+        <p>CastingCompass ranks currently evaluated locations and time windows for one selected planning target: California halibut, striped bass, surfperch, or jacksmelt. Surfperch is a family-level planning profile rather than a claim about every member species. An Opportunity Score is a relative percentile within the current comparison set. A score of 80 means the option ranks ahead of about 80% of the options being compared. It does not mean an 80% chance of catching a fish.</p>
         <p>Scores combine public environmental data, site and habitat information, seasonality, practical fishability adjustments, and experimental model outputs. Inputs can be missing, delayed, estimated, stale, imprecise, or wrong. Fish behavior and fishing results are uncertain. No score, explanation, map, chart, message, or discussion post guarantees that fish are present or that a location is accessible, safe, legal, or fishable.</p>
         <p>A separate official water-quality advisory overlay may suppress an exactly mapped site from recommendations. A no-posting result does not improve its score or mean water contact or seafood consumption is safe. Missing, stale, unmonitored, unavailable, or unmapped status remains unknown.</p>
       </LegalSection>
@@ -46,7 +46,7 @@ export default function TermsPage() {
       <LegalSection title="3. Safety, navigation, access, and regulations">
         <p>CastingCompass is for informational and recreational planning only. It is not navigational data, a chart, a weather warning service, legal advice, medical advice, emergency guidance, or a substitute for your judgment. Do not use it to make decisions where an error could cause injury, death, property damage, trespass, or a regulatory violation.</p>
         <p>Before and during every trip, you are responsible for checking official weather and marine forecasts, tides, swell, surf, currents, water quality, closures, access rules, property boundaries, licensing requirements, species identification, size limits, bag limits, gear restrictions, and all other current regulations. Conditions can change faster than the service updates. Leave or do not enter when conditions are unsafe. Call 911 or the appropriate emergency authority in an emergency.</p>
-        <p>Respect wildlife, habitat, other anglers, private property, and posted rules. Pack out line and trash. California halibut rules can change; always confirm the current California Department of Fish and Wildlife rules rather than relying on a number displayed by CastingCompass.</p>
+        <p>Respect wildlife, habitat, other anglers, private property, and posted rules. Pack out line and trash. Species rules can change; always confirm current California Department of Fish and Wildlife rules rather than relying on a number displayed by CastingCompass.</p>
       </LegalSection>
 
       <LegalSection title="4. Accounts and security">
@@ -55,10 +55,12 @@ export default function TermsPage() {
         <p>We may restrict, suspend, or terminate an account when reasonably necessary to protect the service or its users, investigate suspected misconduct, comply with law, or enforce these Terms.</p>
       </LegalSection>
 
-      <LegalSection title="5. Trip reports, photos, and community summaries">
+      <LegalSection title="5. Trip reports, photos, and community content">
         <p>You retain ownership of content you submit. You grant CastingCompass a worldwide, non-exclusive, royalty-free license to host, store, reproduce, transform, analyze, and use that content as reasonably necessary to operate, secure, evaluate, research, and improve the service and its forecasting systems. This license continues while the content is retained and includes creating de-identified or aggregated information and, after human approval, pseudonymous public summaries.</p>
         <p>You represent that you have all rights and permissions necessary to submit the content and that it does not violate any law or another person&apos;s privacy, intellectual-property, publicity, safety, or other rights. Do not submit private contact information, exact sensitive habitat locations, images of people without permission, unlawful material, abusive content, or intentionally false or misleading reports.</p>
         <p>Trip notes may be automatically reviewed for privacy, safety, relevance, and usefulness. Automated review may prepare a shortened pseudonymous draft, but it cannot publish or approve that draft. A human moderator must approve a draft before it can appear on a location discussion page. Automated and human review can make mistakes, and we may edit, withhold, or remove content.</p>
+        <p>Place communities are publicly readable only through a limited preview; signing in is required to continue or participate. Community members use pseudonymous handles and may edit or delete their own submissions, report content, and block another handle. Posts and comments enter a moderation queue before public publication. Do not attempt to identify another user, evade a block or rate limit, manipulate moderation, or publish coordinates, addresses, access codes, or other details that could expose a private or sensitive location.</p>
+        <p>Community content is user-generated and may be inaccurate, outdated, unsafe, or objectionable. CastingCompass may review, reject, limit, remove, or preserve content and related records when reasonably necessary to operate moderation, protect users, investigate abuse, or comply with law. These product terms and controls still require independent legal and UGC-policy review before launch; they are not legal advice.</p>
       </LegalSection>
 
       <LegalSection title="6. Automated systems and acceptable use">

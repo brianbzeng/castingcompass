@@ -28,9 +28,9 @@ test("account creation enforces age eligibility and versioned legal acceptance",
   assert.match(account, /Privacy Policy/);
   assert.match(account, /submitLegalAcceptance/);
   assert.match(account, /Account features<br \/>paused/);
-  assert.match(auth, /LEGAL_VERSION = "2026-07-27\.1"/);
-  assert.match(legalPage, /LEGAL_EFFECTIVE_DATE = "July 27, 2026"/);
-  assert.match(legalPage, /LEGAL_DOCUMENT_VERSION = "2026-07-27\.1"/);
+  assert.match(auth, /LEGAL_VERSION = "2026-07-28\.1"/);
+  assert.match(legalPage, /LEGAL_EFFECTIVE_DATE = "July 28, 2026"/);
+  assert.match(legalPage, /LEGAL_DOCUMENT_VERSION = "2026-07-28\.1"/);
   assert.match(legalPage, /LEGAL_SUPPORT_EMAIL = "support@castingcompass\.com"/);
 });
 

@@ -127,8 +127,8 @@ test("privacy exports start fast, poll owner-bound progress, and retain the disa
 });
 
 test("versioned legal revision describes age artifacts and deletion limits without claiming production rollout", () => {
-  assert.match(legalPage, /LEGAL_EFFECTIVE_DATE = "July 27, 2026"/);
-  assert.match(legalPage, /LEGAL_DOCUMENT_VERSION = "2026-07-27\.1"/);
+  assert.match(legalPage, /LEGAL_EFFECTIVE_DATE = "July 28, 2026"/);
+  assert.match(legalPage, /LEGAL_DOCUMENT_VERSION = "2026-07-28\.1"/);
   assert.match(legalPage, /LEGAL_SUPPORT_EMAIL = "support@castingcompass\.com"/);
   assert.match(privacy, /one-use eligibility proof or ineligibility marker/);
   assert.match(privacy, /California calendar/);

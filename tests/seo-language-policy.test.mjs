@@ -20,8 +20,14 @@ const expectedPages = [
   {
     route: "/",
     canonical: "https://castingcompass.com/",
-    title: "CastingCompass — California halibut opportunity planner",
+    title: "CastingCompass — California coastal fishing planner",
     description: "Compare public Bay Area and Santa Barbara South Coast fishing windows using explainable relative rankings from habitat, seasonality, and current conditions.",
+  },
+  {
+    route: "/community",
+    canonical: "https://castingcompass.com/community",
+    title: "Place communities · CastingCompass",
+    description: "Public previews and account-gated discussions for every supported CastingCompass fishing place.",
   },
   {
     route: "/privacy",
@@ -39,11 +45,11 @@ const expectedPages = [
     route: "/ai-disclosure",
     canonical: "https://castingcompass.com/ai-disclosure",
     title: "AI and Forecast Disclosure · CastingCompass",
-    description: "How CastingCompass uses a heuristic relative ranker, public forecast inputs, model research, and human-gated AI review.",
+    description: "How CastingCompass uses automated ranking, public forecast inputs, model research, and human-reviewed AI assistance.",
   },
 ];
 
-test("SEO language policy is exact, four-page, and bound to current metadata", async () => {
+test("SEO language policy is exact, five-page, and bound to current metadata", async () => {
   const value = await policy();
   assert.deepEqual(keys(value), [
     "evidenceContract",

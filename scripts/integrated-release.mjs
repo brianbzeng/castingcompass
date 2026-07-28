@@ -35,6 +35,7 @@ export const STAGED_MIGRATIONS = Object.freeze([
   "0018_ai_review_queue.sql",
   "0019_async_privacy_exports.sql",
   "0020_trip_photo_upload_reservations.sql",
+  "0021_place_community.sql",
 ]);
 export const ALL_RELEASE_MIGRATIONS = Object.freeze([
   ...BASE_APPLIED_MIGRATIONS,
@@ -206,6 +207,19 @@ const STAGE_ABSENCE_QUERIES = Object.freeze({
         ))
       + (SELECT COUNT(*) FROM pragma_table_info('trips')
         WHERE name = 'photo_key_hash') AS target_artifacts_found`,
+  "0021_place_community.sql": `
+    SELECT
+      (SELECT COUNT(*) FROM sqlite_master
+        WHERE type = 'table' AND name IN (
+          'community_profiles', 'community_posts', 'community_comments',
+          'community_blocks', 'community_reports', 'community_moderation_queue'
+        ))
+      + (SELECT COUNT(*) FROM sqlite_master
+        WHERE type = 'index' AND name IN (
+          'community_profiles_handle_unique', 'community_posts_site_feed_idx',
+          'community_comments_post_feed_idx', 'community_reports_queue_idx',
+          'community_moderation_queue_work_idx'
+        )) AS target_artifacts_found`,
 });
 
 function fail(label, expected, actual) {

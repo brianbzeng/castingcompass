@@ -1,8 +1,8 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 
-export const LEGAL_EFFECTIVE_DATE = "July 27, 2026";
-export const LEGAL_DOCUMENT_VERSION = "2026-07-27.1";
+export const LEGAL_EFFECTIVE_DATE = "July 28, 2026";
+export const LEGAL_DOCUMENT_VERSION = "2026-07-28.1";
 export const LEGAL_SUPPORT_EMAIL = "support@castingcompass.com";
 
 export function LegalPage({
@@ -36,7 +36,7 @@ export function LegalPage({
         <p className="legal-summary">{summary}</p>
         <p className="legal-date">Effective and last updated: {updatedDate} · Document version {documentVersion}</p>
         <div className="legal-callout">
-          Plain-language notice: CastingCompass is a work in progress and a planning aid for California halibut anglers. It is not a catch guarantee, navigation system, emergency service, legal guide, or substitute for checking real conditions.
+          Plain-language notice: CastingCompass is a work in progress and a coastal fishing planning aid. It is not a catch guarantee, navigation system, emergency service, legal guide, or substitute for checking real conditions.
         </div>
         {children}
       </article>

@@ -1,7 +1,7 @@
 # Integrated production release
 
 This runbook is the authoritative path for the first release containing migrations
-`0009` through `0020`. A read-only primary-D1 audit on 2026-07-28 superseded the earlier
+`0009` through `0021`. A read-only primary-D1 audit on 2026-07-28 superseded the earlier
 `0007`-only assumption. The migration ledger still records only `0000` through `0006`, and
 the eight nullable `0007_legal_acceptance.sql` columns are present, but production also has
 five empty pre-ledger tables from incomplete, older shapes of `0010` and `0012`. The current
@@ -51,8 +51,8 @@ Checkout verification, static confirmation flags, or a previous phase's packet c
 | Phase | Worker serving traffic | Permitted schema state | Safe recovery |
 | --- | --- | --- | --- |
 | A | pinned discussion safety floor | `0000`–`0007` ledger only | route back to the recorded safety version |
-| B | reviewed full release with maintenance on | reconciliation plus `0009` through `0020` | remain on the recorded maintenance version and fix forward |
-| C | reviewed full release with maintenance off | exactly through `0020` | re-enable the same release's maintenance version while investigating |
+| B | reviewed full release with maintenance on | reconciliation plus `0009` through `0021` | remain on the recorded maintenance version and fix forward |
+| C | reviewed full release with maintenance off | exactly through `0021` | re-enable the same release's maintenance version while investigating |
 
 The safety-floor Worker is not a valid normal-traffic rollback after `0011`: the species
 contract adds completion guards that older trip writes do not satisfy. A Time Travel restore
@@ -223,6 +223,11 @@ npm run migrate:cloudflare:remote -- \
 
 export RELEASE_MIGRATION=0020_trip_photo_upload_reservations.sql
 export RELEASE_AUTHORIZATION_FILE=/PRIVATE/ENCRYPTED/PATH/migrate-0020.json
+npm run migrate:cloudflare:remote -- \
+  --confirm-primary contourcast-trips --confirm-bookmark-recorded
+
+export RELEASE_MIGRATION=0021_place_community.sql
+export RELEASE_AUTHORIZATION_FILE=/PRIVATE/ENCRYPTED/PATH/migrate-0021.json
 npm run migrate:cloudflare:remote -- \
   --confirm-primary contourcast-trips --confirm-bookmark-recorded
 

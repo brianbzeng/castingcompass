@@ -26,6 +26,7 @@ import {
   type PrivacyExportEnv,
 } from "./privacy-export.ts";
 import { handleDiscussionRequest } from "./discussions";
+import { handleCommunityRequest } from "./community";
 import {
   canonicalRedirect,
   guardRequestBody,
@@ -243,6 +244,23 @@ async function routeRequest(
       case "discussions":
         apiResponse = await handleDiscussionRequest(request, env, sites);
         break;
+      case "community": {
+        let communitySession = authenticatedSession;
+        if (apiPolicy.authorization === "owner") {
+          // Community mutations and account-gated continuation recheck the
+          // live owner/deletion/legal state after central request guarding.
+          const ownerAuthorization = await authorizeOwnerRequest(request, env, {
+            currentLegalAcceptanceRequired: apiPolicy.currentLegalAcceptanceRequired,
+            deletionFenceAccessAllowed: apiPolicy.deletionFenceAccessAllowed,
+          });
+          if (ownerAuthorization.response) return ownerAuthorization.response;
+          communitySession = ownerAuthorization.session;
+        }
+        apiResponse = await handleCommunityRequest(request, env, sites, {
+          accountId: communitySession?.user.id ?? null,
+        });
+        break;
+      }
       case "account":
         apiResponse = await handleAccountRequest(request, env, sites, {
           waitUntil: (promise) => ctx.waitUntil(promise),

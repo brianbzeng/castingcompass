@@ -30,12 +30,15 @@ test("server-renders the CastingCompass product shell", async () => {
   assert.match(response.headers.get("content-type") ?? "", /^text\/html\b/i);
 
   const html = await response.text();
-  assert.match(html, /<title>CastingCompass — California halibut opportunity planner(?: · CastingCompass)?<\/title>/i);
+  assert.match(html, /<title>CastingCompass — California coastal fishing planner(?: · CastingCompass)?<\/title>/i);
   assert.match(html, /Find the water/);
   assert.match(html, /California halibut/);
   assert.match(html, /Pick the hours you have/);
-  assert.match(html, /Work in progress/);
-  assert.match(html, /currently hunts for California halibut only/);
+  assert.match(html, /Evaluated baseline/);
+  assert.match(html, /Choose one target/);
+  assert.match(html, /Striped bass/);
+  assert.match(html, /Surfperch/);
+  assert.match(html, /Jacksmelt/);
   assert.match(html, /Loading the current forecast/i);
   assert.match(html, /Wait for the fishing-location catalog and forecast snapshot to load/i);
   assert.doesNotMatch(html, /class="score-orbit|class="site-card/i);
@@ -53,10 +56,10 @@ test("ships install and offline assets", async () => {
   ]);
 
   const parsed = JSON.parse(manifest);
-  assert.equal(parsed.name, "CastingCompass — Halibut Opportunity Planner");
+  assert.equal(parsed.name, "CastingCompass — California Coastal Fishing Planner");
   assert.equal(parsed.display, "standalone");
   assert.equal(parsed.icons.length, 2);
-  assert.match(serviceWorker, /\/data\/opportunities\.json/);
+  assert.match(serviceWorker, /\/data\/opportunities-browser\.json/);
   assert.match(serviceWorker, /\/data\/community-pulse\.json/);
   assert.match(serviceWorker, /\/topography-contours-v2\.webp/);
   assert.match(serviceWorker, /caches\.match/);
@@ -97,7 +100,7 @@ test("keeps the score framed as a relative ranking", async () => {
   assert.match(app, /ranks within the current comparison set/);
   assert.match(app, /It is <strong>not<\/strong> an 80% chance/);
   assert.match(app, /Old weather and tide readings are not treated as live/);
-  assert.match(app, /research pipeline, not the live score/i);
+  assert.match(app, /not promoted to the live score/i);
   assert.match(app, /ten-channel, three-scale bathymetry stack/i);
   assert.match(app, /Full-survey self-supervised pretraining is complete/i);
   assert.match(app, /What anglers have said/);

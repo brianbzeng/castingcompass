@@ -298,6 +298,10 @@ provider evidence.
       locators without that hash. The preflight proved zero existing trip photo locators before
       the column was added. Alert on active/expired fences, aged reservations, and every
       `needs_attention` row before the upload gate can be enabled, without logging identities or locators.
+- [ ] Migration `0021_place_community.sql` completed before place-community writes are
+      activated; postflight verified the six empty community tables, unique pseudonymous-handle
+      constraint, feed/report/moderation indexes, and account-deletion cascades. Keep community
+      writes closed until independent engineering and legal/UGC review are recorded.
 - [ ] Privacy pre/postflight counts match; the missing-age and legal-reacceptance cohorts have
       an explicit support decision, while export and account deletion remain available.
 - [ ] Canonical, redirect-alias, and `workers.dev` smoke checks passed.

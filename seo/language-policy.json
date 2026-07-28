@@ -1,9 +1,10 @@
 {
   "schemaVersion": 1,
-  "reviewedOn": "2026-07-19",
+  "reviewedOn": "2026-07-28",
   "siteOrigin": "https://castingcompass.com",
   "indexableRoutes": [
     "/",
+    "/community",
     "/privacy",
     "/terms",
     "/ai-disclosure"
@@ -84,24 +85,45 @@
       "route": "/",
       "canonical": "https://castingcompass.com/",
       "indexingIntent": "index",
-      "pagePurpose": "Help anglers compare public California halibut fishing windows across the Bay Area and Santa Barbara South Coast using a transparent heuristic relative ranking, its inputs, freshness, and limitations.",
+      "pagePurpose": "Help anglers compare public coastal fishing windows for one selected target across the Bay Area and Santa Barbara South Coast using a transparent hybrid relative ranking, its inputs, freshness, and limitations.",
       "audienceQuestions": [
-        "How can I compare public Bay Area and Santa Barbara halibut fishing windows?",
+        "How can I compare public Bay Area and Santa Barbara coastal fishing windows?",
         "Which public shore, beach, jetty, or pier options fit the available forecast inputs?",
-        "Why is one available option ranked above another?"
+        "How does changing the selected target change the relative ranking?"
       ],
       "candidateSearchPhrases": [
-        "California halibut fishing planner",
-        "Bay Area halibut shore fishing conditions",
-        "Santa Barbara halibut fishing planner",
-        "Goleta shore fishing conditions",
-        "halibut fishing window comparison",
+        "California coastal fishing planner",
+        "Bay Area shore fishing conditions",
+        "California halibut and striped bass planner",
+        "surfperch and jacksmelt fishing planner",
+        "target species fishing window comparison",
         "California pier beach jetty fishing planner"
       ],
-      "currentTitle": "CastingCompass — California halibut opportunity planner",
+      "currentTitle": "CastingCompass — California coastal fishing planner",
       "currentDescription": "Compare public Bay Area and Santa Barbara South Coast fishing windows using explainable relative rankings from habitat, seasonality, and current conditions.",
       "desiredSnippet": "Compare public Bay Area and Santa Barbara South Coast fishing windows using explainable relative rankings from habitat, seasonality, and current conditions.",
       "nextAction": "Review the ranking inputs and freshness before choosing a public fishing window."
+    },
+    {
+      "route": "/community",
+      "canonical": "https://castingcompass.com/community",
+      "indexingIntent": "index",
+      "pagePurpose": "Help readers find the dedicated discussion for every supported public fishing place while explaining the limited public preview, account-gated continuation, moderation, and private-location safeguards.",
+      "audienceQuestions": [
+        "Where can I find a CastingCompass discussion for a supported public fishing place?",
+        "What can I read before creating a CastingCompass account?",
+        "How does CastingCompass moderate posts and protect private locations?"
+      ],
+      "candidateSearchPhrases": [
+        "CastingCompass fishing community",
+        "Bay Area public fishing place discussions",
+        "Santa Barbara fishing place community",
+        "California shore fishing community"
+      ],
+      "currentTitle": "Place communities · CastingCompass",
+      "currentDescription": "Public previews and account-gated discussions for every supported CastingCompass fishing place.",
+      "desiredSnippet": "Public previews and account-gated discussions for every supported CastingCompass fishing place.",
+      "nextAction": "Choose a supported public place, read its limited preview, and sign in only if you want to continue or participate."
     },
     {
       "route": "/privacy",
@@ -162,8 +184,8 @@
         "CastingCompass fishing model limitations"
       ],
       "currentTitle": "AI and Forecast Disclosure · CastingCompass",
-      "currentDescription": "How CastingCompass uses a heuristic relative ranker, public forecast inputs, model research, and human-gated AI review.",
-      "desiredSnippet": "How CastingCompass uses a heuristic relative ranker, public forecast inputs, model research, and human-gated AI review.",
+      "currentDescription": "How CastingCompass uses automated ranking, public forecast inputs, model research, and human-reviewed AI assistance.",
+      "desiredSnippet": "How CastingCompass uses automated ranking, public forecast inputs, model research, and human-reviewed AI assistance.",
       "nextAction": "Review the method, freshness, uncertainty, and human-review boundaries before relying on a ranking."
     }
   ],
