@@ -17,6 +17,7 @@
     "deploy:cloudflare:worker-only": "npm run release:cloudflare",
     "preflight:cloudflare:remote": "node scripts/integrated-release.mjs preflight",
     "reconcile:cloudflare:0007": "node scripts/integrated-release.mjs reconcile-0007",
+    "reconcile:cloudflare:preledger": "node scripts/integrated-release.mjs reconcile-preledger --drift-target \"$RELEASE_DRIFT_TARGET\"",
     "migrate:cloudflare:remote": "node scripts/integrated-release.mjs apply --migration \"$RELEASE_MIGRATION\"",
     "postflight:cloudflare:remote": "node scripts/integrated-release.mjs postflight",
     "verify:release-maintenance": "node scripts/verify-release-maintenance.mjs",

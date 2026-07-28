@@ -1,6 +1,6 @@
 # CastingCompass goal status
 
-Last reconciled: **2026-07-26 UTC**
+Last reconciled: **2026-07-28 UTC**
 
 This is the owner-facing dashboard for the complete goal list. The detailed acceptance
 criteria and immutable receipts remain in [PRODUCT_ROADMAP.md](PRODUCT_ROADMAP.md); provider
@@ -9,9 +9,11 @@ its complete acceptance boundary passed. “Local complete” means the reposito
 but the parent stays open until its production, provider, legal, or independent-review gate is
 also satisfied.
 
-Current provider truth overrides historical “paused” language in completed receipts below. The
-2026-07-19 read-only reconciliation found an active Worker; no production mutation is authorized
-by that discovery.
+Current provider truth overrides historical “paused” language in completed receipts below.
+The active web-release gate and evidence-backed A–E checklist are in
+[Web release readiness](WEB-RELEASE-READINESS.md). The 2026-07-28 read-only reconciliation found
+an active Worker, configuration drift, no isolated staging resources, and empty pre-ledger D1
+schema drift; no production mutation is authorized by those discoveries.
 
 ## Current protected-main reconciliation — 2026-07-26
 

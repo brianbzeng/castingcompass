@@ -273,6 +273,11 @@ provider evidence.
 - [ ] Release came from a clean worktree at the reviewed immutable commit.
 - [ ] Deployment ID and Worker version ID were recorded; exactly one version has `100%` traffic.
 - [ ] Production migration preflight, Time Travel bookmark, migration, and postflight passed.
+- [ ] The read-only preflight matched either the clean `0007`-only profile or the exact
+      2026-07-28 empty pre-ledger drift fingerprint. For the observed drift profile, the
+      maintenance version was verified at `100%` before separately authorized reconciliation
+      removed only the three empty `0010` tables and two empty `0012` tables; each current
+      migration then recreated its schema and the post-action boundary was recorded.
 - [ ] Migration `0016_data_resilience_indexes.sql` completed within its reviewed window;
       `PRAGMA optimize`, representative production `EXPLAIN QUERY PLAN` output, foreign-key
       checks, and before/after D1 rows-read evidence were recorded without query parameters.
