@@ -1,8 +1,9 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 
-export const LEGAL_EFFECTIVE_DATE = "July 17, 2026";
-export const LEGAL_DOCUMENT_VERSION = "2026-07-17.1";
+export const LEGAL_EFFECTIVE_DATE = "July 27, 2026";
+export const LEGAL_DOCUMENT_VERSION = "2026-07-27.1";
+export const LEGAL_SUPPORT_EMAIL = "support@castingcompass.com";
 
 export function LegalPage({
   eyebrow,
@@ -41,7 +42,7 @@ export function LegalPage({
       </article>
       <footer className="legal-footer">
         <Link href="/">Back to the forecast</Link>
-        <a href="mailto:bzeng0000@gmail.com">bzeng0000@gmail.com</a>
+        <a href={`mailto:${LEGAL_SUPPORT_EMAIL}`}>{LEGAL_SUPPORT_EMAIL}</a>
       </footer>
     </main>
   );

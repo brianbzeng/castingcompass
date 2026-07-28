@@ -5,7 +5,7 @@
   "sourceFiles": [
     {
       "file": "worker/auth.ts",
-      "sha256": "0cb432734313985d5a7475eefddc89fae14e6d0547f54f92f984ab4a23cadfd4",
+      "sha256": "dfa577ef1d59e51a54bf3ca705b735f459b819ad81b150375f3a838e49d0fe8d",
       "prepareCallCount": 133
     },
     {
