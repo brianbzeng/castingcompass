@@ -1215,10 +1215,17 @@ after its acceptance checks pass in the intended environment.
       suitability. The packet preserves the same private, disjoint, source-current review
       contract and grants no score, model, navigation, provider, merge, deployment, or production
       authority. No real response or accepted receipt exists yet.
-- [ ] Add striped bass as the first new beta using a distinct estuary/migration model.
-- [ ] Define and evaluate explicit shore-relevant rockfish species/complexes next; then model
-  cabezon as its own taxon; then split surfperch into defensible habitat/taxon groups. Each beta
-  needs its own source inventory, model card, validation gate, and current regulation treatment.
+- [x] Add one shared, expert-configured planning/ranking baseline with fast single-target
+  selection for California halibut, striped bass, surfperch, and jacksmelt. Each target has a
+  versioned profile over the shared feature/scoring contract; surfperch is disclosed as a
+  family-level planning profile; predictive metrics remain null because no eligible
+  complete-effort corpus exists.
+- [ ] Replace a planning profile with a trained or calibrated target-specific head only after its
+  own eligible labels, temporal/geographic holdouts, leakage controls, metrics, model card,
+  current regulation treatment, and independent review pass.
+- [ ] Keep rockfish deferred. Reconsider only defensible named shore-relevant species or reviewed
+  complexes after a primary product need, source inventory, and species-specific evidence exist;
+  do not ship a behaviorally heterogeneous generic category.
 - [ ] Complete business/legal readiness before substantial promotion or revenue: entity/DBA,
   tax and local-license review, trademark clearance, startup counsel/CPA review, DMCA/UGC
   posture, and broker quotes for cyber/privacy, technology E&O, general, and media liability.

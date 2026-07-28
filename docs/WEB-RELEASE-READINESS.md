@@ -1,7 +1,7 @@
 # CastingCompass web release readiness
 
-Status: **blocked before independent review by absent isolated staging Workers, private access
-boundary, and exercise evidence**
+Status: **candidate preparation; deployment remains blocked before independent review by
+engineering, legal/UGC, isolated-staging, private-access, and exercise gates**
 
 Evidence reconciled: **2026-07-28 UTC**
 
@@ -29,19 +29,20 @@ or production-control activation.
 | Boundary | State | Current evidence |
 | --- | --- | --- |
 | Reviewed source baseline | complete | Remote `main` at the start of this preparation was `ac7e67b90450f28322efedec9f64bf14a3026396`; its required GitHub checks succeeded and open Dependabot, code-scanning, and secret-scanning alert counts were zero |
-| Candidate source | complete | The exact 40-character draft-PR head is bound by the private reviewer manifest; a branch name, mutable PR ref, or working tree is not a release identity. It is not production-eligible until independent review and protected-main integration preserve or replace that identity |
+| Candidate source | local-ready | The integration branch is isolated from the user's dirty primary checkout and based on the reviewed remote main. Its exact draft-PR head must be recorded after final verification; a branch name, mutable PR ref, or working tree is not a release identity |
 | Locked dependencies | complete | Exact Node 22.23.1, npm 10.9.8, `npm ci --ignore-scripts`, checked-in npm/Python locks, deterministic SBOMs, and zero npm audit findings passed on the baseline |
 | Local release path | complete | The production-shaped Vinext build and the complete Node test suite passed; lint, typecheck, and the repository security chain passed |
 | Development runtime | partial | The earlier duplicate-React `useContext` failure was not reproduced in a fresh dev run; a browser extension caused a separate hydration warning. The earlier failure is not declared fixed, and the production build remains the release path |
 | Live Worker configuration | blocked | Read-only provider evidence found one active version at full traffic with maintenance off, missing release variables, missing all six rate-limit bindings, and no source-commit binding |
 | Isolated staging | partial | One empty isolated-staging D1 database and the expected Queue/DLQ were later provisioned and privately evidenced. No application Worker, internal AI stub Worker, private hostname, access policy, secret, R2 bucket, deployment, route, synthetic account, or staging exercise exists |
 | Production D1 | partial | Read-only primary preflight found ledger entries `0000`–`0006`, the expected `0007` columns, and five empty tables from incomplete pre-ledger `0010`/`0012` shapes. Guarded fingerprint-and-empty-table reconciliation is local-ready but unexecuted |
-| Legal pages | blocked | The public copy was professionally revised as version `2026-07-27.1`, uses a role-based support address and category-based external-service disclosures, and passed engineering consistency/model-truthfulness checks. Proofreading and review by an appropriately qualified person remain open; this repository does not provide legal advice |
+| Legal pages | blocked | Public copy is version `2026-07-28.1`, uses a role-based support address, adds the place-community/UGC behavior, and passed engineering consistency/model-truthfulness checks. Proofreading and appropriate legal/UGC review remain open; this repository does not provide legal advice |
+| Place community | local-ready | Dedicated place routes, bounded public post/comment previews, semantic sign-in continuation, pseudonymous profiles, owner controls, reports, blocks, pagination, central rate limits, moderation queues, and privacy-rights coverage pass local tests. Moderator operations, legal/UGC review, abuse drills, and production migration/activation remain blocked |
 | Independent reviewer | blocked | An experienced independent reviewer has not yet been selected |
 
 ## A. Freeze and verify the candidate
 
-- [x] **complete:** Freeze the final repository state as one exact 40-character draft-PR head,
+- [ ] **local-ready:** Freeze the final repository state as one exact 40-character draft-PR head,
   record it in the private manifest, and prove the checkout is clean and matches it.
 - [x] **complete:** Run `npm ci --ignore-scripts`, `npm test`, `npm run lint`,
   `npm run typecheck`, and `npm run security` from a clean checkout of that exact candidate.
@@ -99,6 +100,8 @@ Repository policies and templates for these exercises are **local-ready**, not s
 - [ ] **blocked:** Add the completed staging evidence manifest, sanitized receipts, remediation
   record, and independent staging acceptance to the private packet.
 - [ ] **blocked:** Obtain appropriate review and proofreading of the public legal pages.
+- [ ] **blocked:** Obtain appropriate UGC/moderation review and record moderator ownership,
+  response/escalation targets, appeal handling, DMCA process, abuse drills, and retention.
 - [ ] **blocked:** Obtain an experienced independent reviewer and their explicit recorded
   decisions. Repository authorship is not independent acceptance.
 
@@ -125,7 +128,7 @@ Every item below is **review-gated** and unexecuted:
 - [ ] Reconcile `0007`, deploy and verify the maintenance Worker at full traffic, apply `0009`,
   then reconcile the exact empty pre-ledger `0010` drift before applying `0010`.
 - [ ] Apply `0011`, reconcile the exact empty pre-ledger `0012` drift, and apply `0012` through
-  `0020` individually with action-specific authorization while verified maintenance remains on.
+  `0021` individually with action-specific authorization while verified maintenance remains on.
 - [ ] Prove the exact ledger, indexes, foreign keys, deletion tables, triggers, idempotency
   fields, photo-reservation fields, empty default-off tables, and zero foreign-key violations.
 - [ ] Deploy the exact independently reviewed artifact with maintenance off.
@@ -145,9 +148,11 @@ normal-traffic rollback after migration `0011`.
 
 ## Model and legal truthfulness
 
-The live score is a hybrid planning/ranking model that produces a relative rank. It is not a catch probability,
-does not prove fish are present, and does not use the repository's undeployed deep-learning
-research model. No staging or release artifact may weaken that disclosure.
+The live score is a shared, expert-configured hybrid planning/ranking baseline with one selected
+profile for California halibut, striped bass, surfperch, or jacksmelt. It produces a relative
+rank, not a catch probability; does not prove fish are present; has no measured predictive skill;
+and does not use the repository's undeployed deep-learning research model. Rockfish is deferred.
+No staging or release artifact may weaken that disclosure.
 
 The public Terms, Privacy Policy, and AI disclosure have an engineering consistency baseline only.
 Their substantive legal sufficiency, jurisdictional applicability, and final wording require
@@ -160,5 +165,5 @@ infrastructure operator must provide the remaining isolated staging Workers, pri
 access boundary, secrets, synthetic accounts, and resolved configuration evidence required by
 [Isolated staging configuration](ISOLATED-STAGING-CONFIGURATION.md), without sending secrets or
 resource identifiers through source control. The owner must also identify an experienced
-independent reviewer and arrange appropriate legal-page review. Previously completed setup does
-not need to be repeated.
+independent reviewer and arrange appropriate legal-page and UGC/moderation review.
+Previously completed setup does not need to be repeated.

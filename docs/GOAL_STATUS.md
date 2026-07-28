@@ -43,6 +43,42 @@ schema drift; no production mutation is authorized by those discoveries.
       remain production-release boundaries; they do not require local model or frontend work to
       stay frozen.
 
+## Active checkpoint — shared target ranker, place communities, and interface review
+
+- [x] Establish one evaluated shared hybrid planning/ranking baseline with versioned
+      expert-configured profiles for California halibut, striped bass, surfperch, and jacksmelt.
+      The cross-language audit covers 61 sites and 2,160 current windows; predictive and ranking
+      metrics remain null because eligible complete-effort labels remain zero. Surfperch is
+      disclosed as a family profile, rockfish is deferred, and no catch probability or trained
+      deep-model claim is made.
+- [x] Implement one selected target with fast URL/local-preference swapping throughout the
+      forecast. Structured trip collection remains California-halibut-only until the observation
+      contract is separately expanded.
+- [x] Replace internal cache labels with useful freshness/unavailable states and generate a
+      1,790,613-byte browser projection from the 3,807,293-byte canonical snapshot without
+      changing its 2,160 scored windows.
+- [x] Add Community to primary navigation, `/community`, and all 61 supported place routes.
+      Anonymous responses expose at most three published posts and two comments per previewed
+      post; signed-in feeds and comment threads paginate. Handles are pseudonymous, owner
+      edit/delete, report/block/undo, moderation queues, central rate limits, privacy-rights
+      coverage, and exact-location/contact rejection are implemented.
+- [x] Audit all eleven open PRs. Integrate #185, #188, and #189; deliberately leave native
+      #184/#186/#187 and unrelated/stale dependency #175/#169/#162/#161/#159 work aside without
+      closing or mutating it.
+- [ ] Complete the Figma-led design-system phases after the required workflow approval, reconcile
+      Figma and code, and record independent accessibility/visual review.
+- [x] Record local implementation-candidate evidence: 767 Node tests, 276 browser scenarios,
+      158 pipeline tests with 11 documented optional-raster skips, 29 API tests, lint, types, the
+      complete security chain, and release-SBOM verification pass. Production-shaped Lighthouse
+      records 38.4% fewer transferred bytes, 33.6%/32.8% lower mobile/desktop LCP, 98.5% lower
+      desktop CLS, zero mobile CLS, and 100 accessibility, while retaining the residual
+      17.75-second mobile LCP as open work.
+- [ ] Bind the final evidence to the immutable candidate head, obtain passing hosted checks, and
+      open one draft candidate PR for experienced review after the Figma approval checkpoint.
+- [ ] Keep Community activation, migration `0021`, deployment, provider controls, domain/public
+      traffic, and any model-performance claim blocked pending independent engineering and
+      appropriate legal/UGC review.
+
 ## Active checkpoint — model data and TestFlight collection foundations
 
 - [x] Make model choice evidence-driven rather than architecture-driven. The frozen local

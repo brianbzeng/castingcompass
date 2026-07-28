@@ -85,7 +85,9 @@ Reject the packet as incomplete unless the private evidence proves:
 - no production hostname, binding, data, route, credential, provider request, or public traffic;
 - exact direct and durable-Queue configuration receipts bound to exact staging Worker versions;
 - signup, login, verification, recovery, trip and legitimate no-catch flows, saved locations,
-  privacy export/deletion, cache/offline/mobile behavior, and cross-account refusal;
+  place-community preview/continuation, pseudonymous posting/commenting,
+  reporting/blocking/moderation, privacy export/deletion, cache/offline/mobile behavior, and
+  cross-account refusal;
 - authorized load, spike, soak/recovery, failure injection, and security-test results;
 - log/trace redaction for sensitive values, including request metadata and provider payloads;
 - encrypted backup plus deletion-aware isolated restore; and
@@ -113,7 +115,7 @@ Review:
 3. `0007` ledger reconciliation;
 4. maintenance deployment and all-host verification before `0009`;
 5. `0009`, exact allowlisted empty-table reconciliation before `0010`, then `0010`;
-6. `0011`, exact allowlisted empty-table reconciliation before `0012`, then `0012`–`0020`;
+6. `0011`, exact allowlisted empty-table reconciliation before `0012`, then `0012`–`0021`;
 7. final ledger/schema/index/trigger/idempotency/deletion/privacy/photo/foreign-key postflight; and
 8. the continuing-write-freeze, fix-forward, and Time Travel restore boundaries.
 
@@ -127,26 +129,31 @@ maintenance proof, postflight predicate, and recovery boundary.
 
 ## 6. Model and product truthfulness
 
-The live 0–100 score is a relative percentile from a hybrid planning/ranking system. It is not a
-catch probability, does not promise fish are present, and does not use the repository's
-undeployed deep-learning research model. Trip reports do not train or validate the current live
+The live 0–100 score is a relative percentile from one shared, expert-configured hybrid planning/ranking
+system with a selected California-halibut, striped-bass, surfperch, or jacksmelt profile. It is not a
+catch probability, does not promise fish are present, has no measured
+predictive skill, and does not use the repository's undeployed deep-learning research model.
+Rockfish is deferred. Trip reports and community content do not train or validate the current
 score. Review the public [AI and Forecast Disclosure](../app/ai-disclosure/page.tsx),
-[model card](MODEL_CARD.md), and visible product labels for consistency.
+[model/data audit](MODEL-AND-DATA-AUDIT-2026-07-28.md), [model card](MODEL_CARD.md), and visible
+product labels for consistency.
 
 Reviewer decision: Does every relevant surface preserve those limitations without implying
 validated catch performance?
 
-## 7. Legal-review caveat
+## 7. Legal and UGC-review caveat
 
 Engineering review may check whether the Terms, Privacy Policy, AI disclosure, data-flow
-documentation, retention language, and product behavior are internally consistent. It cannot
+documentation, retention language, community standards, moderation/report/block behavior, and
+product behavior are internally consistent. It cannot
 determine legal sufficiency or replace an appropriately qualified reviewer. The release owner
 must record who performed the final proofreading/review, the version reviewed, required changes,
 and acceptance. This engineering packet is not legal advice. Do not put privileged advice or
 personal contact information in the repository.
 
 Reviewer decision: Is appropriate legal review recorded for the exact public copy, with any
-required changes included in the candidate?
+required changes included in the candidate? Are moderation ownership, escalation/appeal,
+retention, DMCA/UGC process, abuse drills, and activation criteria adequately defined?
 
 ## 8. Rollback, maintenance, and production authorization
 

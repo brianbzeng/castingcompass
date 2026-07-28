@@ -11,15 +11,22 @@ Security boundaries: [threat model and 13-layer security map](docs/THREAT_MODEL.
 [access-control matrix](docs/ACCESS_CONTROL_MATRIX.md) ·
 [key custody and encryption](docs/KEY-CUSTODY-AND-ENCRYPTION.md)
 
-CastingCompass is an installable, mobile-first California halibut opportunity planner for public shore, beach, jetty, and pier access across the Bay Area and Santa Barbara South Coast, from Gaviota through Goleta and Santa Barbara to Rincon.
+CastingCompass is an installable, mobile-first coastal fishing planner for public shore, beach,
+jetty, and pier access across the Bay Area and Santa Barbara South Coast, from Gaviota through
+Goleta and Santa Barbara to Rincon. One target is selected at a time and can be swapped quickly
+between California halibut, striped bass, surfperch, and jacksmelt.
 
-It compares reachable casting zones and two-hour windows using three separately visible components:
+It compares reachable casting zones and two-hour windows using four separately visible components:
 
-- **Habitat** — long-term seafloor structure and public recreational catch evidence.
-- **Seasonality** — monthly California halibut catch and effort patterns.
-- **Conditions** — a bounded modifier from tide, wind, swell, current, and daylight. Modeled water temperature is shown as context but is not scored until it is validated against local observations.
+- **Habitat** — curated public-place structure, access type, and exposure.
+- **Seasonality** — a broad target-specific monthly prior from reviewed public guidance.
+- **Conditions** — a bounded target-specific modifier from current public tide and forecast inputs.
+- **Fishability** — practical presentation conditions from wind, swell, current, and access pressure.
 
-The final 0–100 **Opportunity Score is a relative percentile**, not a catch probability. A score of 80 means a site/window ranks above 80% of the candidates in the current evaluation set.
+The final 0–100 **Opportunity Score is a relative percentile**, not a catch probability. A score
+of 80 means a site/window ranks above 80% of the candidates in the current evaluation set before
+any conservative fishability cap. The four profiles are expert-configured and untrained; no
+predictive-skill or calibration result is claimed.
 
 ## Current demo status
 
@@ -30,11 +37,19 @@ The checked-in demo includes:
 - Live public NOAA CO-OPS tide predictions, NWS hourly forecasts, NDBC observations, and Open-Meteo Marine modeled SST at snapshot generation time.
 - Visible freshness states and exclusion of missing/stale inputs.
 - A MapLibre map using ArcGIS World Ocean base and reference layers, clustered map-native site points, a ranked access list, preset/custom distance-radius filtering, score explanations, official CDFW links, responsive detail sheets, geolocation sorting, PWA installation, and offline access to the latest loaded forecast.
+- A place-based Community hub and dedicated route for all 61 supported places, with bounded
+  public post/comment previews and an account-gated continuation for pseudonymous participation,
+  reporting, blocking, ownership controls, pagination, and human moderation.
 - A first-party validation beta with start/end trip logging, complete catch and no-catch outcomes, searchable gear catalogs and reusable presets, pending-review submissions, aggregate ledger totals, optional metadata-stripped verification photos, and MiMo-sanitized anonymous location notes.
 - FastAPI endpoints, PostgreSQL/PostGIS schema, Docker/Render configuration, and file-snapshot fallback.
 - A reproducible geospatial/ML pipeline with terrain derivation, blocked validation, baselines, ablations, a six-channel ResNet-style encoder, SimCLR-style pretraining, and two-task fine-tuning scaffolding.
 
-The live snapshot's habitat score and monthly seasonality are explicitly labeled **demo/provisional proxies**. No trained deep model contributes to the live score and no real-world performance claim is shipped yet. The repository contains the six-channel ResNet/SimCLR research pipeline and two prediction heads; that model can replace the habitat proxy only after official-data training and geographically blocked validation. See the [model card](docs/MODEL_CARD.md), [dataset card](docs/DATASET_CARD.md), [Santa Barbara coverage boundary](docs/SANTA-BARBARA-COVERAGE.md), [feasibility report](docs/FEASIBILITY_REPORT.md), and [community-integration policy](docs/COMMUNITY_INTEGRATIONS.md).
+The live target profiles and monthly priors are explicitly labeled **expert-configured and
+untrained**. No trained deep model contributes to the live score and no real-world performance
+claim is shipped. See the [model/data audit](docs/MODEL-AND-DATA-AUDIT-2026-07-28.md),
+[model card](docs/MODEL_CARD.md), [dataset card](docs/DATASET_CARD.md), [Santa Barbara coverage
+boundary](docs/SANTA-BARBARA-COVERAGE.md), and [community review
+checklist](docs/MODEL-COMMUNITY-REVIEW-CHECKLIST.md).
 
 ## Architecture
 
@@ -73,7 +88,10 @@ npm run dev
 
 Open `http://localhost:3000`.
 
-The PWA uses `public/data/opportunities.json` when `NEXT_PUBLIC_API_URL` is unset. To use a running API, copy `.env.example` to `.env.local` and keep:
+The PWA uses the compact browser projection at `public/data/opportunities-browser.json` when the
+live API is unavailable. `public/data/opportunities.json` remains the canonical model-run/API
+fixture used to regenerate that projection. To use a running API, copy `.env.example` to
+`.env.local` and keep:
 
 ```bash
 NEXT_PUBLIC_API_URL=http://localhost:8000
@@ -180,9 +198,13 @@ and the PostHog decision boundary, see [Observability and operator diagnostics](
 - CastingCompass is a planning aid, not a guarantee of catch.
 - Bathymetry is explanatory context, not navigational data.
 - Regulation links are informational; always check official CDFW rules and posted access closures.
-- Current CDFW guidance lists a 22-inch total-length minimum for retained California halibut; the app repeats this as a reminder while linking back to the live regulation page.
+- Species rules and access conditions change; use the app's links to check current CDFW rules and
+  posted closures before fishing.
 - Only public access locations are ranked. Exact user catch locations are not collected in this version.
-- Trip reports remain pending review and do not alter the Opportunity Score automatically. Public ledger values are aggregate submission totals, not verified catch claims; location discussions contain only bounded MiMo-sanitized summaries from useful notes.
+- Structured trip reports currently remain California-halibut-only, pending review, and do not
+  alter the Opportunity Score automatically. Community posts/comments are separate UGC, require
+  human moderation before public publication, and prohibit exact private locations and contact
+  details.
 
 ## Official source entry points
 
