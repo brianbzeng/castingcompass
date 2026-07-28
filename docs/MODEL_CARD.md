@@ -7,7 +7,7 @@ implemented; no encoder passed the frozen
 classical baselines, catch heads have run only on fictional capability
 fixtures, and no eligible catch performance has been measured.
 
-**Version:** 0.8.0
+**Version:** 0.9.0
 
 ## Live regional-ranking boundary
 
@@ -282,11 +282,16 @@ The local [model-selection plan](MODEL-SELECTION-PLAN.md) now makes that future
 comparison architecture-neutral without starting it. Its strict machine
 contract inventories naive, regularized linear, spline/GAM, random-forest,
 histogram-gradient-boosted, spatial/hierarchical, bathymetric deep, and
-conditional hybrid/ensemble families. Only the naive, linear, boosted, and
-deep encoder/head plumbing currently exist; no eligible target-specific run,
-winner, or promotion claim exists. Every execution, locked-test, score,
-serving, and deployment flag remains false until a separately preregistered
-confirmatory design freezes the shared evidence and clears the data gates.
+conditional hybrid/ensemble families. Its separate frozen pre-label input
+contract now gives all seven required candidates the same context, source
+snapshots, eligible rows/folds, and raw multiscale terrain evidence while
+excluding outcomes, identities, prior scores, post-trip values, and future
+source revisions. Classical candidates receive fold-local summaries of the
+same terrain bags used by the deep candidate. Pollution, access closures, and
+regulations remain pre-ranking safety gates rather than catch-model features.
+No eligible target-specific run, winner, or promotion claim exists. Every
+execution, locked-test, score, serving, and deployment flag remains false until
+a separately preregistered confirmatory design clears the remaining data gates.
 
 ## Limitations and risks
 
