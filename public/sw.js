@@ -1,8 +1,9 @@
 const CACHE_PREFIXES = ["castingcompass-", "castcompass-", "contourcast-"];
-const CACHE_NAME = "castingcompass-v14";
-const PUBLIC_NAVIGATION_PATHS = new Set(["/", "/community", "/privacy", "/terms", "/ai-disclosure"]);
+const CACHE_NAME = "castingcompass-v15";
+const PUBLIC_NAVIGATION_PATHS = new Set(["/", "/forecast", "/community", "/privacy", "/terms", "/ai-disclosure"]);
 const APP_SHELL = [
   "/",
+  "/forecast",
   "/privacy",
   "/terms",
   "/ai-disclosure",

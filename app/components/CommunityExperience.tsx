@@ -408,7 +408,7 @@ export function PlaceCommunity({
                 <span>{signedIn ? "Community feed" : "Public preview"}</span>
                 <h2>Recent discussions</h2>
               </div>
-              <Link href={`/?site=${site.id}`}>Open forecast</Link>
+              <Link href={`/forecast?site=${site.id}`}>Open forecast</Link>
             </div>
             {loading ? <p role="status">Loading discussions…</p> : null}
             {!loading && posts.length === 0 ? (
@@ -595,7 +595,7 @@ function CommunityShell({ children }: { children: ReactNode }) {
       <header className="community-topbar">
         <Link href="/" className="community-brand"><i aria-hidden="true" />CastingCompass</Link>
         <nav aria-label="Primary navigation">
-          <Link href="/">Forecast</Link>
+          <Link href="/forecast">Forecast</Link>
           <Link href="/community" aria-current="page">Community</Link>
           <Link href="/ai-disclosure">How it works</Link>
         </nav>

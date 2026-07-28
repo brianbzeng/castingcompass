@@ -628,7 +628,7 @@ test.beforeEach(async ({ page }, testInfo) => {
       window.localStorage.setItem("contourcast.respect-water.v1", "dismissed");
     }
   });
-  await page.goto(forecastRecoveryTest ? "/?report=trip" : "/");
+  await page.goto(forecastRecoveryTest ? "/forecast?report=trip" : "/forecast");
   if (forecastRecoveryTest) {
     await expect(page.locator(".forecast-state-card.unavailable")).toBeVisible();
   } else {
@@ -678,6 +678,30 @@ test("primary controls stay inside common phone viewports", async ({ page }) => 
   for (const selector of [".topbar", ".topbar-actions", ".availability-filter", ".availability-filter input"]) {
     await expectSelectorInsideViewport(page, selector);
   }
+});
+
+test("marketing homepage routes to the web planner and keeps TestFlight honestly unavailable", async ({ page }) => {
+  await page.goto("/");
+  await expect(page.getByRole("heading", { name: "Read the coast before you cast." })).toBeVisible();
+  await expect(page.getByRole("link", { name: "Open web planner" })).toHaveAttribute("href", "/forecast");
+  await expect(page.getByRole("link", { name: "Browse place communities" })).toHaveAttribute("href", "/community");
+
+  const testFlight = page.getByRole("button", { name: "TestFlight download — coming soon" });
+  await expect(testFlight).toBeDisabled();
+  await expect(testFlight).toContainText("Coming soon");
+
+  const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
+  expect(overflow).toBeLessThanOrEqual(1);
+
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  const motionState = await page.locator(".marketing-home").evaluate((element) => {
+    const styles = getComputedStyle(element);
+    return {
+      hero: styles.getPropertyValue("--marketing-hero-progress").trim(),
+      wash: styles.getPropertyValue("--marketing-wash-progress").trim(),
+    };
+  });
+  expect(motionState).toEqual({ hero: "1", wash: "1" });
 });
 
 test("keyboard users can skip repeated navigation to the main forecast", async ({ page }, testInfo) => {
@@ -777,7 +801,7 @@ test("the required water reminder traps focus and cannot be dismissed with Escap
     window.localStorage.removeItem("castingcompass.respect-water.v1");
     window.localStorage.removeItem("contourcast.respect-water.v1");
   });
-  await page.goto("/?showRespectReminder=1");
+  await page.goto("/forecast?showRespectReminder=1");
 
   const reminder = page.getByRole("dialog", { name: "Respect the water." });
   await expect(reminder).toBeFocused();
@@ -815,7 +839,7 @@ test("official water-quality status suppresses recommendations and exposes the S
   await expect(page.locator(".site-card").filter({ hasText: "Bolinas Beach" })).toHaveCount(0);
   await expect(page.locator(".site-card").filter({ hasText: "Keller Beach" })).toHaveCount(0);
   await expect(page.locator(".site-card").filter({ hasText: "Crown Memorial State Beach" })).toHaveCount(0);
-  await page.goto("/?site=gaviota-state-park-beach");
+  await page.goto("/forecast?site=gaviota-state-park-beach");
   const actionAdvisory = page.locator(".water-quality-advisory");
   await expect(actionAdvisory).toBeVisible();
   await expect(actionAdvisory).toContainText("Official water-contact posting");
@@ -828,7 +852,7 @@ test("official water-quality status suppresses recommendations and exposes the S
 });
 
 test("official water-quality status exposes the San Mateo sample source", async ({ page }) => {
-  await page.goto("/?site=pacifica-state-beach");
+  await page.goto("/forecast?site=pacifica-state-beach");
   const countyAdvisory = page.locator(".water-quality-advisory");
   await expect(countyAdvisory).toBeVisible();
   await expect(countyAdvisory).toContainText("Official water-contact warning or closure");
@@ -841,7 +865,7 @@ test("official water-quality status exposes the San Mateo sample source", async 
 });
 
 test("official water-quality status exposes the Marin action source", async ({ page }) => {
-  await page.goto("/?site=bolinas-beach");
+  await page.goto("/forecast?site=bolinas-beach");
   const marinAdvisory = page.locator(".water-quality-advisory");
   await expect(marinAdvisory).toBeVisible();
   await expect(marinAdvisory).toContainText("Official water-contact posting");
@@ -854,7 +878,7 @@ test("official water-quality status exposes the Marin action source", async ({ p
 });
 
 test("official water-quality status exposes the East Bay Parks action source", async ({ page }) => {
-  await page.goto("/?site=keller-beach");
+  await page.goto("/forecast?site=keller-beach");
   const eastBayParksAdvisory = page.locator(".water-quality-advisory");
   await expect(eastBayParksAdvisory).toBeVisible();
   await expect(eastBayParksAdvisory).toContainText("Official water-contact posting");
@@ -868,7 +892,7 @@ test("official water-quality status exposes the East Bay Parks action source", a
 test("official water-quality status keeps neutral status explicit", async ({ page }) => {
   // Open the exact site through the product's stable deep-link contract. Its rank can move as
   // regional sites are added, so the advisory test must not assume it appears in the first cards.
-  await page.goto("/?site=crissy-field-east-beach");
+  await page.goto("/forecast?site=crissy-field-east-beach");
   const advisory = page.locator(".water-quality-advisory");
   await expect(advisory).toBeVisible();
   await expect(advisory).toContainText("No active posting reported");
@@ -881,7 +905,7 @@ test("official water-quality status keeps neutral status explicit", async ({ pag
 });
 
 test("source-bound Santa Barbara chart context stays truthful and mobile-safe", async ({ page }) => {
-  await page.goto("/?site=goleta-beach");
+  await page.goto("/forecast?site=goleta-beach");
   const evidence = page.locator(".structure-depth-evidence");
 
   await expect(evidence).toBeVisible();
@@ -901,7 +925,7 @@ test("source-bound Santa Barbara chart context stays truthful and mobile-safe", 
 });
 
 test("source-bound San Francisco chart context preserves partial source-date precision", async ({ page }) => {
-  await page.goto("/?site=torpedo-wharf");
+  await page.goto("/forecast?site=torpedo-wharf");
   const evidence = page.locator(".structure-depth-evidence");
 
   await expect(evidence).toBeVisible();
@@ -914,7 +938,7 @@ test("source-bound San Francisco chart context preserves partial source-date pre
 });
 
 test("source-bound San Francisco chart context keeps a missing sector band explicitly partial", async ({ page }) => {
-  await page.goto("/?site=crane-cove-park");
+  await page.goto("/forecast?site=crane-cove-park");
   const evidence = page.locator(".structure-depth-evidence");
 
   await expect(evidence).toBeVisible();
@@ -926,7 +950,7 @@ test("source-bound San Francisco chart context keeps a missing sector band expli
 });
 
 test("source-bound San Mateo Coast coverage preserves the closed-site recommendation boundary", async ({ page }) => {
-  await page.goto("/?site=pacifica-municipal-pier");
+  await page.goto("/forecast?site=pacifica-municipal-pier");
   const closure = page.locator(".closure-notice").filter({ hasText: "temporarily closed access point" });
 
   await expect(closure).toContainText("1 temporarily closed access point is excluded from ranking");
@@ -941,7 +965,7 @@ test("source-bound San Mateo Coast coverage preserves the closed-site recommenda
 });
 
 test("source-bound San Mateo Coast chart context preserves Half Moon Bay date precision", async ({ page }) => {
-  await page.goto("/?site=francis-state-beach");
+  await page.goto("/forecast?site=francis-state-beach");
   const evidence = page.locator(".structure-depth-evidence");
 
   await expect(evidence).toBeVisible();
@@ -955,7 +979,7 @@ test("source-bound San Mateo Coast chart context preserves Half Moon Bay date pr
 });
 
 test("source-bound Marin Coast chart context keeps a missing sector band explicitly partial", async ({ page }) => {
-  await page.goto("/?site=bolinas-beach");
+  await page.goto("/forecast?site=bolinas-beach");
   const evidence = page.locator(".structure-depth-evidence");
 
   await expect(evidence).toBeVisible();
@@ -969,7 +993,7 @@ test("source-bound Marin Coast chart context keeps a missing sector band explici
 });
 
 test("source-bound Marin Coast chart context preserves Point Reyes date precision", async ({ page }) => {
-  await page.goto("/?site=drakes-beach");
+  await page.goto("/forecast?site=drakes-beach");
   const evidence = page.locator(".structure-depth-evidence");
 
   await expect(evidence).toBeVisible();
@@ -983,7 +1007,7 @@ test("source-bound Marin Coast chart context preserves Point Reyes date precisio
 });
 
 test("source-bound North and East Bay chart context keeps a missing sector band explicitly partial", async ({ page }) => {
-  await page.goto("/?site=mcnears-beach-pier");
+  await page.goto("/forecast?site=mcnears-beach-pier");
   const evidence = page.locator(".structure-depth-evidence");
 
   await expect(evidence).toBeVisible();
@@ -996,7 +1020,7 @@ test("source-bound North and East Bay chart context keeps a missing sector band 
 });
 
 test("source-bound North and East Bay chart context preserves Berkeley date precision", async ({ page }) => {
-  await page.goto("/?site=berkeley-marina-north-basin");
+  await page.goto("/forecast?site=berkeley-marina-north-basin");
   const evidence = page.locator(".structure-depth-evidence");
 
   await expect(evidence).toBeVisible();
@@ -1010,7 +1034,7 @@ test("source-bound North and East Bay chart context preserves Berkeley date prec
 });
 
 test("source-bound Oakland through South Bay chart context preserves Port View depth and date limits", async ({ page }) => {
-  await page.goto("/?site=port-view-park-pier");
+  await page.goto("/forecast?site=port-view-park-pier");
   const evidence = page.locator(".structure-depth-evidence");
 
   await expect(evidence).toBeVisible();
@@ -1024,7 +1048,7 @@ test("source-bound Oakland through South Bay chart context preserves Port View d
 });
 
 test("source-bound Oakland through South Bay chart context keeps Coyote Point display-only", async ({ page }) => {
-  await page.goto("/?site=coyote-point-jetty");
+  await page.goto("/forecast?site=coyote-point-jetty");
   const evidence = page.locator(".structure-depth-evidence");
 
   await expect(evidence).toBeVisible();
@@ -1191,7 +1215,7 @@ test("the 404 recovery page stays truthful and usable on mobile", async ({ page 
   await expect(page.getByRole("heading", { name: "That page isn't here." })).toBeVisible();
   const returnLink = page.getByRole("link", { name: /return to the forecast/i });
   await expect(returnLink).toBeVisible();
-  await expect(returnLink).toHaveAttribute("href", "/");
+  await expect(returnLink).toHaveAttribute("href", "/forecast");
   await expect(page.locator('meta[name="robots"]')).toHaveAttribute("content", /noindex/i);
   await expect(page.locator('link[rel="canonical"]')).toHaveCount(0);
 
@@ -1220,7 +1244,7 @@ test.describe("route render recovery", () => {
     await expect(alert).toBeVisible();
     await expect(page.getByRole("heading", { name: "This page could not finish loading." })).toBeVisible();
     await expect(page.getByRole("button", { name: "Try again" })).toBeVisible();
-    await expect(page.getByRole("link", { name: "Return to the forecast" })).toHaveAttribute("href", "/");
+    await expect(page.getByRole("link", { name: "Return to the forecast" })).toHaveAttribute("href", "/forecast");
     await expect(alert).not.toContainText(/TypeError|ContourMap|digest|stack/i);
 
     const geometry = await page.evaluate(() => {

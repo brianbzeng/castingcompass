@@ -50,7 +50,13 @@ const publicRoutes = [
   {
     path: "/",
     canonical: "https://castingcompass.com/",
-    title: "CastingCompass — California coastal fishing planner",
+    title: "CastingCompass — Read the coast before you cast",
+    description: "An explainable California coastal fishing planner with single-species relative rankings for public shore, beach, jetty, and pier access.",
+  },
+  {
+    path: "/forecast",
+    canonical: "https://castingcompass.com/forecast",
+    title: "California coastal fishing planner · CastingCompass",
     description: "Compare public Bay Area and Santa Barbara South Coast fishing windows using explainable relative rankings from habitat, seasonality, and current conditions.",
   },
   {
@@ -157,6 +163,28 @@ test("homepage JSON-LD is a narrow truthful WebSite declaration", async () => {
   assert.doesNotMatch(JSON.stringify(structuredData), /rating|accuracy|probability|localbusiness|product|dataset/i);
 });
 
+test("forecast JSON-LD is a narrow truthful WebApplication declaration", async () => {
+  const response = await render("/forecast");
+  const html = await response.text();
+  const match = html.match(/<script[^>]*id="castingcompass-forecast-schema"[^>]*>([\s\S]*?)<\/script>/);
+  assert.ok(match, "forecast WebApplication JSON-LD must render");
+  const structuredData = JSON.parse(match[1]);
+  assert.deepEqual(structuredData, {
+    "@context": "https://schema.org",
+    "@type": "WebApplication",
+    name: "CastingCompass",
+    applicationCategory: "SportsApplication",
+    operatingSystem: "Web",
+    url: "https://castingcompass.com/forecast",
+    description: publicRoutes[1].description,
+    inLanguage: "en-US",
+  });
+  assert.doesNotMatch(
+    JSON.stringify(structuredData),
+    /aggregateRating|accuracy|probability|catch probability|trained on|dataset/i,
+  );
+});
+
 test("AI disclosure renders the current all-zero validation boundary and negative result", async () => {
   const response = await render("/ai-disclosure");
   assert.equal(response.status, 200);
@@ -180,7 +208,7 @@ test("unknown routes render a useful noindex page with a real 404 status", async
   const html = await response.text();
   assert.equal(elementText(html, "title"), "Page not found · CastingCompass");
   assert.match(html, /That page isn(?:&#x27;|'|&apos;)t here\./);
-  assert.match(html, /href="\/"[^>]*>[^<]*(?:Return to the forecast|<)/s);
+  assert.match(html, /href="\/forecast"[^>]*>[^<]*(?:Return to the forecast|<)/s);
   assert.deepEqual(canonicalValues(html), []);
   assert.match(metaValues(html, "name", "robots").join(",").toLowerCase(), /noindex/);
 });

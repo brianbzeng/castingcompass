@@ -41,7 +41,7 @@ export function LegalPage({
         {children}
       </article>
       <footer className="legal-footer">
-        <Link href="/">Back to the forecast</Link>
+        <Link href="/forecast">Back to the forecast</Link>
         <a href={`mailto:${LEGAL_SUPPORT_EMAIL}`}>{LEGAL_SUPPORT_EMAIL}</a>
       </footer>
     </main>

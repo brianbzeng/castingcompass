@@ -2144,7 +2144,7 @@ export function AccountModal({
         tabIndex={standalone ? undefined : -1}
       >
         {standalone ? (
-          <Link className="sheet-close" href="/" aria-label="Back to forecast"><CloseIcon /></Link>
+          <Link className="sheet-close" href="/forecast" aria-label="Back to forecast"><CloseIcon /></Link>
         ) : (
           <button className="sheet-close" type="button" onClick={closeAccount} aria-label="Close account"><CloseIcon /></button>
         )}
@@ -2276,7 +2276,7 @@ export function AccountModal({
                         key={saved.site_id}
                         onClick={() => {
                           if (standalone) {
-                            window.location.assign(`/?site=${encodeURIComponent(saved.site_id)}`);
+                            window.location.assign(`/forecast?site=${encodeURIComponent(saved.site_id)}`);
                             return;
                           }
                           closeAccount();

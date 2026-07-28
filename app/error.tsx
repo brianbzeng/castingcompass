@@ -23,7 +23,7 @@ export default function RouteError({ reset }: Readonly<{ reset: () => void }>) {
           <button className="route-state-action route-state-action-primary" type="button" onClick={reset}>
             Try again
           </button>
-          <Link className="route-state-action route-state-action-secondary" href="/">
+          <Link className="route-state-action route-state-action-secondary" href="/forecast">
             Return to the forecast
           </Link>
         </div>

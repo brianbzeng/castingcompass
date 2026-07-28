@@ -65,14 +65,22 @@ schema drift; no production mutation is authorized by those discoveries.
 - [x] Audit all eleven open PRs. Integrate #185, #188, and #189; deliberately leave native
       #184/#186/#187 and unrelated/stale dependency #175/#169/#162/#161/#159 work aside without
       closing or mutating it.
-- [ ] Complete the Figma-led design-system phases after the required workflow approval, reconcile
-      Figma and code, and record independent accessibility/visual review.
-- [x] Record local implementation-candidate evidence: 767 Node tests, 276 browser scenarios,
-      158 pipeline tests with 11 documented optional-raster skips, 29 API tests, lint, types, the
+- [ ] Complete the Figma-led design-system phases, reconcile Figma and code, and record independent
+      accessibility/visual review. Phase 0 and initial semantic variables are saved in the
+      dedicated Figma file; component/screen writes are externally paused at the connected
+      Starter-plan MCP call ceiling. The approved Mobbin-inspired code draft remains reviewable
+      but is not treated as Figma sign-off.
+- [x] Add a dedicated `/` marketing homepage and move the full planner/PWA entry to `/forecast`.
+      The code-native coast expands through the opening scroll, a white surface rises into the
+      product explanation, and lower talking-point panels state the product boundary. Web CTAs
+      are live; TestFlight is visibly and accessibly unavailable with no redirect.
+- [x] Record local implementation-candidate evidence: 769 Node tests, 280 browser scenarios
+      (278 in the full matrix plus isolated passes for two timed-out cases), 158 pipeline tests
+      with 11 documented optional-raster skips, 29 API tests, lint, types, the
       complete security chain, and release-SBOM verification pass. Production-shaped Lighthouse
-      records 38.4% fewer transferred bytes, 33.6%/32.8% lower mobile/desktop LCP, 98.5% lower
-      desktop CLS, zero mobile CLS, and 100 accessibility, while retaining the residual
-      17.75-second mobile LCP as open work.
+      records the homepage at 68/97 mobile/desktop performance with 100 accessibility, and the
+      planner at 61/91 with 100 accessibility. Candidate-planner LCP improved 36.2%/60.2% from
+      baseline while retaining the residual 17.05-second mobile LCP as open work.
 - [ ] Bind the final evidence to the immutable candidate head, obtain passing hosted checks, and
       open one draft candidate PR for experienced review after the Figma approval checkpoint.
 - [ ] Keep Community activation, migration `0021`, deployment, provider controls, domain/public

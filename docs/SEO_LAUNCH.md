@@ -10,22 +10,24 @@ is indexed merely because it appears in a sitemap or an indexing request was sen
 The intended indexable set is deliberately small:
 
 - `https://castingcompass.com/`
+- `https://castingcompass.com/forecast`
+- `https://castingcompass.com/community`
 - `https://castingcompass.com/privacy`
 - `https://castingcompass.com/terms`
 - `https://castingcompass.com/ai-disclosure`
 
 `/profile`, APIs, preview hosts, and generated data assets are not search landing
-pages. The homepage may describe explainable **relative rankings** for California
-halibut opportunity windows. It must not describe the live heuristic configuration
-as a trained catch-probability model or imply that access, regulations, safety, or
-catch outcomes are guaranteed.
+pages. The homepage and planner may describe explainable **relative rankings** for
+one selected supported target at a time. They must not describe the expert-configured
+hybrid planning baseline as a trained catch-probability model or imply that access,
+regulations, safety, or catch outcomes are guaranteed.
 
 Operator-reported state on July 17, 2026: Google Search Console and Bing Webmaster
 Tools dashboards have been created. Repository evidence does not yet prove property
 ownership, sitemap submission, URL inspection, indexing, or search performance, so
 those milestones remain open.
 
-The four-page audience questions, page purposes, candidate phrases, desired snippets,
+The six-page audience questions, page purposes, candidate phrases, desired snippets,
 prohibited claims, and secret-free evidence contract are frozen in
 [`SEO_LANGUAGE_AND_EVIDENCE.md`](SEO_LANGUAGE_AND_EVIDENCE.md) and the machine-checked
 [`seo/language-policy.json`](../seo/language-policy.json). The desired snippets are
@@ -38,7 +40,7 @@ preferences only; search engines may select different page text.
 - [x] `/profile` has a self-canonical plus `noindex, nofollow` and is omitted from
       the sitemap. It remains crawlable so robots can observe the `noindex`.
 - [x] `robots.txt` allows public crawling and names the XML sitemap.
-- [x] `sitemap.xml` contains exactly the four public pages with absolute HTTPS URLs.
+- [x] `sitemap.xml` contains exactly the six public pages with absolute HTTPS URLs.
 - [x] The homepage publishes narrow `WebSite` JSON-LD only; no ratings, accuracy,
       business status, products, FAQs, or dataset claims are invented.
 - [x] Unknown routes return a useful branded page, a real `404` status, noindex
@@ -84,7 +86,7 @@ and [temporarily pausing a site](https://developers.google.com/search/docs/crawl
       redirect, security/API noindex headers, remote CI, alerts, backup, restore,
       and staged migration evidence.
 - [ ] Deploy this SEO commit through the immutable Worker release process.
-- [ ] Fetch all four pages, `/profile`, `/robots.txt`, and `/sitemap.xml` from the
+- [ ] Fetch all six pages, `/profile`, `/robots.txt`, and `/sitemap.xml` from the
       apex, `www`, legacy aliases, and the exact Worker host. Record status,
       redirect, canonical, robots, sitemap, and structured-data evidence without
       user or account data.
@@ -101,7 +103,7 @@ Google's sitemap guidance requires absolute canonical URLs and does not require
 - [ ] Copy Google's ownership TXT value into Cloudflare DNS and retain the record.
       Do not commit a verification value to this repository.
 - [ ] Submit `https://castingcompass.com/sitemap.xml`.
-- [ ] Inspect and live-test the four public URLs, then request indexing.
+- [ ] Inspect and live-test the six public URLs, then request indexing.
 - [ ] Inspect `/profile` only to confirm `noindex`; do not request indexing.
 - [ ] Record Page Indexing, sitemap, Performance, and Core Web Vitals baselines.
       Zero impressions and “not enough data” are valid initial results.
@@ -120,7 +122,7 @@ See Google's [ownership verification](https://support.google.com/webmasters/answ
 - [ ] Prefer importing the verified Google property; otherwise complete Bing's
       own ownership verification without committing a token.
 - [ ] Submit or confirm the imported sitemap.
-- [ ] Use Live URL inspection for the four public pages and request indexing.
+- [ ] Use Live URL inspection for the six public pages and request indexing.
 - [ ] Confirm `/profile` reports `noindex`.
 - [ ] Record the initial Site Explorer and SEO Reports state after Bing has data.
 

@@ -1,12 +1,12 @@
 /* eslint-disable @eslint-react/dom-no-dangerously-set-innerhtml -- The only raw HTML is a static,
  * JSON-stringified schema object with less-than characters escaped below. */
 import type { Metadata } from "next";
-import { OpportunityApp } from "./components/OpportunityApp";
+import { MarketingHome } from "./components/MarketingHome";
 
 const HOME_URL = "https://castingcompass.com/";
-const HOME_TITLE = "CastingCompass — California coastal fishing planner";
+const HOME_TITLE = "CastingCompass — Read the coast before you cast";
 const HOME_DESCRIPTION =
-  "Compare public Bay Area and Santa Barbara South Coast fishing windows using explainable relative rankings from habitat, seasonality, and current conditions.";
+  "An explainable California coastal fishing planner with single-species relative rankings for public shore, beach, jetty, and pier access.";
 
 export const metadata: Metadata = {
   title: { absolute: HOME_TITLE },
@@ -56,7 +56,7 @@ export default function Home() {
           __html: JSON.stringify(websiteStructuredData).replace(/</g, "\\u003c"),
         }}
       />
-      <OpportunityApp />
+      <MarketingHome />
     </>
   );
 }

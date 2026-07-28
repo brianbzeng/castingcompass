@@ -35,12 +35,12 @@ flows as part of the presentation.
    it is not a catch probability.
 3. Open **Forecast check** and show source identity and freshness. Missing or stale
    inputs remain missing or stale instead of receiving invented replacements.
-4. Open `/?site=gaviota-state-park-beach` to demonstrate the stable site-link and
+4. Open `/forecast?site=gaviota-state-park-beach` to demonstrate the stable site-link and
    the time-stamped State Board posting in the checked-in review snapshot. The
    official action hides the site from recommendations but does not rewrite its
-   fishing score. Then open `/?site=leadbetter-beach`: its ended action does not
+   fishing score. Then open `/forecast?site=leadbetter-beach`: its ended action does not
    become a clean-water claim, so the site remains unknown.
-5. Open `/?site=crissy-field-east-beach` to contrast SFPUC's complete, fresh
+5. Open `/forecast?site=crissy-field-east-beach` to contrast SFPUC's complete, fresh
    sample-supported neutral state. Explain that neutral means only no active
    posting was reported under that source's frozen rules; it never improves the
    score or claims that contact or seafood is safe. Unmapped, stale, unavailable,

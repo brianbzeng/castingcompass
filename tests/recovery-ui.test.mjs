@@ -25,7 +25,7 @@ test("the route error boundary offers a safe retry without exposing diagnostics"
   assert.match(errorPage, /^"use client";/);
   assert.match(errorPage, /role="alert"/);
   assert.match(errorPage, /onClick=\{reset\}/);
-  assert.match(errorPage, /href="\/"/);
+  assert.match(errorPage, /href="\/forecast"/);
   assert.match(errorPage, /verify its status before submitting it again/i);
   assert.doesNotMatch(errorPage, /error\.(?:message|stack|cause|digest)|console\.|JSON\.stringify\(error/i);
 });

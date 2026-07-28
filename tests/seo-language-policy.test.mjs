@@ -20,7 +20,13 @@ const expectedPages = [
   {
     route: "/",
     canonical: "https://castingcompass.com/",
-    title: "CastingCompass — California coastal fishing planner",
+    title: "CastingCompass — Read the coast before you cast",
+    description: "An explainable California coastal fishing planner with single-species relative rankings for public shore, beach, jetty, and pier access.",
+  },
+  {
+    route: "/forecast",
+    canonical: "https://castingcompass.com/forecast",
+    title: "California coastal fishing planner · CastingCompass",
     description: "Compare public Bay Area and Santa Barbara South Coast fishing windows using explainable relative rankings from habitat, seasonality, and current conditions.",
   },
   {
@@ -49,7 +55,7 @@ const expectedPages = [
   },
 ];
 
-test("SEO language policy is exact, five-page, and bound to current metadata", async () => {
+test("SEO language policy is exact, six-page, and bound to current metadata", async () => {
   const value = await policy();
   assert.deepEqual(keys(value), [
     "evidenceContract",

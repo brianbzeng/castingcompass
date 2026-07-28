@@ -62,10 +62,20 @@ production migration, provider-control changes, domain attachment, or public tra
 
 - [x] The code implementation uses a restrained dark coastal design system with visible focus,
   reduced-motion handling, semantic gates, and a non-map path.
+- [x] `/` is a dedicated marketing homepage with code-native coastal artwork that expands through
+  the opening scroll, a white rising reveal into the product explanation, and compact lower
+  talking-point cards. The full planner and PWA entry point are now `/forecast`.
+- [x] The web-planner actions route to `/forecast`. TestFlight is a disabled, clearly labelled
+  “Coming soon” control with no fake or premature redirect; only its visible product wordmark is
+  blurred, while its accessible name states that the download is unavailable.
 - [x] Public continuation is a real semantic account gate, not deceptive or inaccessible blur.
 - [x] Community feed actions use buttons/forms with labels and live status messages.
-- [ ] Figma Phase 0 discovery is complete in the dedicated review file; Phase 1 foundations and
-  component work require the explicit workflow approval recorded in the task.
+- [x] Figma Phase 0 discovery and initial Phase 1 variables are recorded in the dedicated review
+  file, including primitive and semantic coastal surface, accent, text, and status tokens.
+- [ ] Figma component and homepage-screen construction is paused because the connected team
+  reached its Starter-plan MCP tool-call ceiling. The code draft was visually reviewed against
+  the approved Mobbin references, but this is not a substitute for the required Figma/code
+  reconciliation.
 - [ ] Figma/code visual reconciliation, keyboard/screen-reader review, contrast review, 200% text
   zoom, and physical-device acceptance must be recorded before design sign-off.
 
@@ -81,12 +91,14 @@ production migration, provider-control changes, domain attachment, or public tra
   or malformed verification remains an unavailable state rather than masquerading as usable data.
 - [x] Production-shaped build, TypeScript, focused community/model tests, D1 query inventory, and
   deterministic release inventory pass.
-- [x] The complete local implementation candidate passes 767 Node tests, 276 mobile/browser
+- [x] The complete local implementation candidate passes 769 Node tests, 280 mobile/browser
   scenarios, 158 pipeline tests with 11 documented optional-raster skips, 29 API tests, lint,
-  TypeScript, the complete security chain, and release-SBOM verification.
+  TypeScript, the complete security chain, and release-SBOM verification. The full browser matrix
+  recorded 278 first-pass cases plus isolated passes for its two timed-out cases.
 - [x] Production-shaped Lighthouse evidence records the exact baseline/candidate profiles:
-  transferred bytes are 38.4% lower, mobile/desktop LCP are 33.6%/32.8% lower, desktop CLS is
-  98.5% lower, mobile CLS is zero, and both accessibility scores are 100. Residual 17.75-second
+  the homepage scores 68/97 mobile/desktop performance at 0.81 MB, while `/forecast` scores 61/91.
+  Candidate-planner mobile/desktop LCP are 36.2%/60.2% lower than baseline, desktop CLS is 0.0067,
+  mobile CLS is zero, and all four accessibility scores are 100. Residual 17.05-second planner
   mobile LCP and timing variance remain explicitly open rather than being characterized as a
   complete performance win.
 - [ ] Re-run or reconcile source-sensitive checks after the final Figma evidence link is recorded,

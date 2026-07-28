@@ -4,6 +4,7 @@
   "siteOrigin": "https://castingcompass.com",
   "indexableRoutes": [
     "/",
+    "/forecast",
     "/community",
     "/privacy",
     "/terms",
@@ -85,6 +86,27 @@
       "route": "/",
       "canonical": "https://castingcompass.com/",
       "indexingIntent": "index",
+      "pagePurpose": "Introduce CastingCompass as an explainable California coastal planning product, show its single-target workflow and limits, and route visitors to the web planner or moderated public-place communities.",
+      "audienceQuestions": [
+        "What does CastingCompass help a California coastal angler plan?",
+        "Can I use CastingCompass on the web before a native app is available?",
+        "Does CastingCompass predict that I will catch a fish?"
+      ],
+      "candidateSearchPhrases": [
+        "CastingCompass",
+        "California coastal fishing planning app",
+        "California shore fishing planner",
+        "Bay Area fishing planning app"
+      ],
+      "currentTitle": "CastingCompass — Read the coast before you cast",
+      "currentDescription": "An explainable California coastal fishing planner with single-species relative rankings for public shore, beach, jetty, and pier access.",
+      "desiredSnippet": "An explainable California coastal fishing planner with single-species relative rankings for public shore, beach, jetty, and pier access.",
+      "nextAction": "Open the web planner to choose one target species and compare public fishing windows, or browse a supported place community."
+    },
+    {
+      "route": "/forecast",
+      "canonical": "https://castingcompass.com/forecast",
+      "indexingIntent": "index",
       "pagePurpose": "Help anglers compare public coastal fishing windows for one selected target across the Bay Area and Santa Barbara South Coast using a transparent hybrid relative ranking, its inputs, freshness, and limitations.",
       "audienceQuestions": [
         "How can I compare public Bay Area and Santa Barbara coastal fishing windows?",
@@ -99,7 +121,7 @@
         "target species fishing window comparison",
         "California pier beach jetty fishing planner"
       ],
-      "currentTitle": "CastingCompass — California coastal fishing planner",
+      "currentTitle": "California coastal fishing planner · CastingCompass",
       "currentDescription": "Compare public Bay Area and Santa Barbara South Coast fishing windows using explainable relative rankings from habitat, seasonality, and current conditions.",
       "desiredSnippet": "Compare public Bay Area and Santa Barbara South Coast fishing windows using explainable relative rankings from habitat, seasonality, and current conditions.",
       "nextAction": "Review the ranking inputs and freshness before choosing a public fishing window."

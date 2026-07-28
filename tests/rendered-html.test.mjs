@@ -25,12 +25,12 @@ async function render(path = "/") {
 }
 
 test("server-renders the CastingCompass product shell", async () => {
-  const response = await render();
+  const response = await render("/forecast");
   assert.equal(response.status, 200);
   assert.match(response.headers.get("content-type") ?? "", /^text\/html\b/i);
 
   const html = await response.text();
-  assert.match(html, /<title>CastingCompass — California coastal fishing planner(?: · CastingCompass)?<\/title>/i);
+  assert.match(html, /<title>California coastal fishing planner · CastingCompass<\/title>/i);
   assert.match(html, /Find the water/);
   assert.match(html, /California halibut/);
   assert.match(html, /Pick the hours you have/);
@@ -46,6 +46,23 @@ test("server-renders the CastingCompass product shell", async () => {
   assert.doesNotMatch(html, /codex-preview|Your site is taking shape|SkeletonPreview/i);
 });
 
+test("server-renders the marketing homepage with honest product routes and an unavailable TestFlight action", async () => {
+  const response = await render();
+  assert.equal(response.status, 200);
+  assert.match(response.headers.get("content-type") ?? "", /^text\/html\b/i);
+
+  const html = await response.text();
+  assert.match(html, /<title>CastingCompass — Read the coast before you cast<\/title>/i);
+  assert.match(html, /Read the coast/);
+  assert.match(html, /One target/);
+  assert.match(html, /expert-configured hybrid planning baseline/i);
+  assert.match(html, /href="\/forecast"/);
+  assert.match(html, /href="\/community"/);
+  assert.match(html, /aria-label="TestFlight download — coming soon"/);
+  assert.match(html, /disabled=""/);
+  assert.doesNotMatch(html, /apps\.apple\.com|testflight\.apple\.com/i);
+});
+
 test("ships install and offline assets", async () => {
   const [manifest, serviceWorker, headerIcon] = await Promise.all([
     readFile(new URL("../public/manifest.webmanifest", import.meta.url), "utf8"),
@@ -58,10 +75,13 @@ test("ships install and offline assets", async () => {
   const parsed = JSON.parse(manifest);
   assert.equal(parsed.name, "CastingCompass — California Coastal Fishing Planner");
   assert.equal(parsed.display, "standalone");
+  assert.equal(parsed.id, "/forecast");
+  assert.equal(parsed.start_url, "/forecast");
   assert.equal(parsed.icons.length, 2);
   assert.match(serviceWorker, /\/data\/opportunities-browser\.json/);
   assert.match(serviceWorker, /\/data\/community-pulse\.json/);
   assert.match(serviceWorker, /\/topography-contours-v2\.webp/);
+  assert.match(serviceWorker, /"\/forecast"/);
   assert.match(serviceWorker, /caches\.match/);
   assert.ok(headerIcon.size < 50_000, `header icon is ${headerIcon.size} bytes`);
 });

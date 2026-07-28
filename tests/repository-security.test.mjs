@@ -194,10 +194,13 @@ test("application output uses React encoding and the only raw script context esc
     assert.doesNotMatch(source, /\b(?:innerHTML|outerHTML|insertAdjacentHTML|document\.write|eval)\b/);
   }
 
-  assert.deepEqual(rawHtmlFiles, ["app/page.tsx"]);
+  assert.deepEqual(rawHtmlFiles.sort(), ["app/forecast/page.tsx", "app/page.tsx"]);
   const home = readFileSync("app/page.tsx", "utf8");
   assert.match(home, /JSON\.stringify\(websiteStructuredData\)\.replace\(\/<\/g/);
   assert.match(home, /\\\\u003c/);
+  const forecast = readFileSync("app/forecast/page.tsx", "utf8");
+  assert.match(forecast, /JSON\.stringify\(forecastStructuredData\)\.replace\(\/<\/g/);
+  assert.match(forecast, /\\\\u003c/);
 });
 
 test("scheduled snapshot refreshes require review instead of pushing the default branch", () => {
