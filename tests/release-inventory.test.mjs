@@ -69,6 +69,18 @@ function sha256(value) {
   return createHash("sha256").update(value).digest("hex");
 }
 
+function deterministicSerialNumber(identityHash) {
+  const urlNamespace = Buffer.from("6ba7b8119dad11d180b400c04fd430c8", "hex");
+  const name = `https://castingcompass.com/sbom/release/${identityHash}`;
+  const bytes = Buffer.from(
+    createHash("sha1").update(urlNamespace).update(name).digest().subarray(0, 16),
+  );
+  bytes[6] = (bytes[6] & 0x0f) | 0x50;
+  bytes[8] = (bytes[8] & 0x3f) | 0x80;
+  const value = bytes.toString("hex");
+  return `urn:uuid:${value.slice(0, 8)}-${value.slice(8, 12)}-${value.slice(12, 16)}-${value.slice(16, 20)}-${value.slice(20)}`;
+}
+
 function pythonIdentities(lock) {
   return [...lock.matchAll(/^([A-Za-z0-9][A-Za-z0-9._-]*)==([^\s;\\]+)/gmu)]
     .map((match) => `pypi:${match[1].toLowerCase().replace(/[_.]+/gu, "-")}@${match[2]}`);
@@ -85,10 +97,16 @@ test("the combined release SBOM is deterministic, input-bound, complete, and exp
   const inventory = JSON.parse(inventoryText);
   const npmSbom = JSON.parse(npmSbomText);
   const wrangler = JSON.parse(wranglerText);
+  const aggregateIdentity = inputPaths
+    .map((path, index) => [path, sha256(inputBytes[index])])
+    .sort(([left], [right]) => left < right ? -1 : left > right ? 1 : 0)
+    .map(([path, hash]) => `${path}:${hash}`)
+    .join("\n");
+  const expectedSerialNumber = deterministicSerialNumber(sha256(aggregateIdentity));
 
   assert.equal(inventory.bomFormat, "CycloneDX");
   assert.equal(inventory.specVersion, "1.5");
-  assert.match(inventory.serialNumber, /^urn:uuid:[0-9a-f]{8}-[0-9a-f]{4}-5[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/u);
+  assert.equal(inventory.serialNumber, expectedSerialNumber);
   assert.equal("timestamp" in inventory.metadata, false);
   assert.equal(inventory.metadata.component.name, "castingcompass-release");
   assert.equal(inventory.metadata.component.properties.some(({ name, value }) =>
