@@ -60,11 +60,12 @@ production migration, provider-control changes, domain attachment, or public tra
 
 ## Interface and accessibility
 
-- [x] The code implementation uses a restrained dark coastal design system with visible focus,
+- [x] The code implementation uses a warm, high-contrast coastal design system with visible focus,
   reduced-motion handling, semantic gates, and a non-map path.
-- [x] `/` is a dedicated marketing homepage with code-native coastal artwork that expands through
-  the opening scroll, a white rising reveal into the product explanation, and compact lower
-  talking-point cards. The full planner and PWA entry point are now `/forecast`.
+- [x] `/` is a dedicated marketing homepage with full-bleed code-native sunset artwork, a
+  scroll-reactive distant-island horizon, an illustrated wave transition into the product
+  explanation, and compact lower talking-point cards. Topographic linework remains a secondary
+  texture. The full planner and PWA entry point are now `/forecast`.
 - [x] The web-planner actions route to `/forecast`. TestFlight is a disabled, clearly labelled
   “Coming soon” control with no fake or premature redirect; only its visible product wordmark is
   blurred, while its accessible name states that the download is unavailable.
@@ -96,7 +97,8 @@ production migration, provider-control changes, domain attachment, or public tra
   TypeScript, the complete security chain, and release-SBOM verification. The full browser matrix
   recorded 278 first-pass cases plus isolated passes for its two timed-out cases.
 - [x] Production-shaped Lighthouse evidence records the exact baseline/candidate profiles:
-  the homepage scores 68/97 mobile/desktop performance at 0.81 MB, while `/forecast` scores 61/91.
+  the revised homepage scores 73/97 mobile/desktop performance at 0.81 MB, while `/forecast`
+  scores 61/91.
   Candidate-planner mobile/desktop LCP are 36.2%/60.2% lower than baseline, desktop CLS is 0.0067,
   mobile CLS is zero, and all four accessibility scores are 100. Residual 17.05-second planner
   mobile LCP and timing variance remain explicitly open rather than being characterized as a

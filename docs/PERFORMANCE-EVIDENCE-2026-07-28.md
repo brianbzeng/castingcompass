@@ -9,7 +9,9 @@ domain, or production request was made.
 ## Reproduction
 
 The baseline was captured from reviewed `origin/main`
-`ac7e67b90450f28322efedec9f64bf14a3026396`. The after run used the final local candidate source.
+`ac7e67b90450f28322efedec9f64bf14a3026396`. The after run used the local candidate source. The
+homepage rows were re-captured after the full-bleed horizon and wave-art direction pass; the
+planner rows are unchanged because that pass does not affect `/forecast`.
 Both used Lighthouse `13.4.1`, Chrome `150.0.0.0`, the standard Lighthouse mobile profile, and
 the Lighthouse desktop preset.
 
@@ -52,10 +54,10 @@ large generated files. The table below is sufficient to compare the exact audite
 | Profile | State | Performance | Accessibility | Best practices | SEO | FCP | LCP | TBT | CLS | Transferred bytes |
 | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
 | Mobile | baseline planner on `/` | 61 | 88 | 96 | 100 | 4,740 ms | 26,738 ms | 69 ms | 0.0182 | 5,196,418 |
-| Mobile | candidate homepage on `/` | 68 | 100 | 96 | 100 | 3,589 ms | 5,640 ms | 92 ms | 0 | 805,564 |
+| Mobile | candidate homepage on `/` | 73 | 100 | 96 | 100 | 3,577 ms | 4,251 ms | 81 ms | 0 | 808,807 |
 | Mobile | candidate planner on `/forecast` | 61 | 100 | 96 | 100 | 5,031 ms | 17,048 ms | 113 ms | 0 | 3,222,697 |
 | Desktop | baseline planner on `/` | 52 | 96 | 96 | 100 | 904 ms | 4,632 ms | 0 ms | 0.4577 | 5,196,418 |
-| Desktop | candidate homepage on `/` | 97 | 100 | 96 | 100 | 781 ms | 1,136 ms | 0 ms | 0 | 805,564 |
+| Desktop | candidate homepage on `/` | 97 | 100 | 96 | 100 | 770 ms | 1,075 ms | 0 ms | 0 | 808,807 |
 | Desktop | candidate planner on `/forecast` | 91 | 100 | 96 | 100 | 955 ms | 1,842 ms | 0 ms | 0.0067 | 3,298,959 |
 
 Material changes:
@@ -66,7 +68,7 @@ Material changes:
 - candidate-planner mobile LCP improved by 36.2% from baseline;
 - candidate-planner desktop LCP improved by 60.2% from baseline;
 - candidate-planner desktop performance improved by 39 points;
-- the separate homepage reached 68 mobile and 97 desktop performance;
+- the revised separate homepage reached 73 mobile and 97 desktop performance;
 - mobile and desktop accessibility both reached 100;
 - planner desktop CLS improved from 0.4577 to 0.0067; and
 - homepage and planner mobile CLS measured zero.
@@ -92,6 +94,8 @@ for offline comparison.
 6. `/` is now a code-native marketing page and the full planner is routed to `/forecast`.
    The homepage does not request the 1.79 MB forecast projection before a visitor chooses to
    open the product.
+7. The homepage art remains code-native SVG/CSS: the full-bleed horizon, distant islands,
+   topographic traces, and wave transition add no raster hero download.
 
 ## Residual risk and next work
 

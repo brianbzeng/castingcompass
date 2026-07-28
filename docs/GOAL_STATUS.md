@@ -71,14 +71,17 @@ schema drift; no production mutation is authorized by those discoveries.
       Starter-plan MCP call ceiling. The approved Mobbin-inspired code draft remains reviewable
       but is not treated as Figma sign-off.
 - [x] Add a dedicated `/` marketing homepage and move the full planner/PWA entry to `/forecast`.
-      The code-native coast expands through the opening scroll, a white surface rises into the
-      product explanation, and lower talking-point panels state the product boundary. Web CTAs
-      are live; TestFlight is visibly and accessibly unavailable with no redirect.
+      The code-native coast is now a full-bleed violet/coral horizon with distant islands and
+      scroll-reactive water layers; an illustrated teal wave rises into the warm product
+      explanation, and lower talking-point panels state the product boundary. Topographic art
+      remains as a secondary texture. Web CTAs are live; TestFlight is visibly and accessibly
+      unavailable with no redirect.
 - [x] Record local implementation-candidate evidence: 769 Node tests, 280 browser scenarios
       (278 in the full matrix plus isolated passes for two timed-out cases), 158 pipeline tests
       with 11 documented optional-raster skips, 29 API tests, lint, types, the
       complete security chain, and release-SBOM verification pass. Production-shaped Lighthouse
-      records the homepage at 68/97 mobile/desktop performance with 100 accessibility, and the
+      records the revised homepage at 73/97 mobile/desktop performance with 100 accessibility,
+      and the
       planner at 61/91 with 100 accessibility. Candidate-planner LCP improved 36.2%/60.2% from
       baseline while retaining the residual 17.05-second mobile LCP as open work.
 - [ ] Bind the final evidence to the immutable candidate head, obtain passing hosted checks, and
