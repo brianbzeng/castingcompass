@@ -221,60 +221,121 @@ const rankingFeatures = [
   ["Access + usability", "Posted access and practical fishing conditions can cap the final rank."],
 ] as const;
 
-function CastingModelVisual() {
+function RodLoadingVisual() {
   return (
-    <div className="marketing-cast-visual" aria-hidden="true">
-      <span className="marketing-cast-label">One target · many conditions</span>
-      <svg viewBox="0 0 720 520" preserveAspectRatio="xMidYMid meet">
-        <defs>
-          <linearGradient id="cc-cast-sky" x1="0" x2="0" y1="0" y2="1">
-            <stop offset="0" stopColor="#5f4d83" />
-            <stop offset="0.55" stopColor="#cf7484" />
-            <stop offset="1" stopColor="#f4ad78" />
-          </linearGradient>
-          <linearGradient id="cc-cast-water" x1="0" x2="0" y1="0" y2="1">
-            <stop offset="0" stopColor="#42ad9e" />
-            <stop offset="1" stopColor="#1d5c70" />
-          </linearGradient>
-        </defs>
-        <rect width="720" height="520" rx="30" fill="url(#cc-cast-sky)" />
-        <circle cx="566" cy="156" r="45" fill="#ffe6a0" opacity="0.86" />
-        <path d="M0 308c120-32 190 24 301 4s205-37 419 4v204H0Z" fill="url(#cc-cast-water)" />
-        <g className="marketing-cast-water-lines" fill="none" stroke="#d9f1df" strokeLinecap="round">
-          <path d="M-40 350c104-27 183 22 283 1s178 24 286 1 174 14 250-3" />
-          <path d="M-35 398c104-25 183 24 283 3s178 25 286 3 174 16 250-1" />
-          <path d="M-30 451c104-23 183 26 283 5s178 27 286 5 174 18 250 1" />
+    <div className="marketing-rod-loader" aria-hidden="true">
+      <span className="marketing-rod-label">Signal line · one target</span>
+      <svg viewBox="0 0 700 500" preserveAspectRatio="xMidYMid meet">
+        <g className="marketing-rod-currents" fill="none" strokeLinecap="round">
+          <path d="M-30 340c120-38 209 30 329 0s220 35 431-6" />
+          <path d="M-25 392c120-34 209 33 329 4s220 38 431-2" />
+          <path d="M-20 446c120-30 209 37 329 8s220 41 431 3" />
         </g>
         <path
-          className="marketing-cast-line"
-          d="M206 234c114-154 285-166 398 50"
+          className="marketing-rod-track"
+          d="M112 438C151 336 188 232 270 128"
           fill="none"
-          stroke="#fff5d7"
           strokeLinecap="round"
-          strokeWidth="5"
+          strokeWidth="16"
         />
-        <g className="marketing-cast-rod">
-          <path d="M126 454 211 214" stroke="#352e54" strokeLinecap="round" strokeWidth="13" />
-          <path d="M126 454 211 214" stroke="#ffe27f" strokeLinecap="round" strokeWidth="4" />
-          <circle cx="135" cy="427" r="20" fill="#3d355b" stroke="#ffe27f" strokeWidth="4" />
+        <path
+          className="marketing-rod-fill"
+          d="M112 438C151 336 188 232 270 128"
+          fill="none"
+          strokeLinecap="round"
+          strokeWidth="7"
+        />
+        <path
+          className="marketing-line-track"
+          d="M270 128C391 10 597 46 626 278"
+          fill="none"
+          strokeLinecap="round"
+          strokeWidth="6"
+        />
+        <path
+          className="marketing-line-fill"
+          d="M270 128C391 10 597 46 626 278"
+          fill="none"
+          strokeLinecap="round"
+          strokeWidth="6"
+        />
+        <g className="marketing-rod-reel">
+          <circle cx="122" cy="410" r="31" />
+          <circle cx="122" cy="410" r="12" />
+          <path d="m144 427 28 30" />
         </g>
-        <g className="marketing-cast-lure">
-          <circle cx="604" cy="284" r="10" fill="#ffe27f" />
-          <circle cx="604" cy="284" r="25" fill="none" stroke="#ffe27f" strokeWidth="3" />
-          <path d="M604 294v21c0 10 16 11 16 0" fill="none" stroke="#fff5d7" strokeLinecap="round" strokeWidth="3" />
+        <g className="marketing-line-lure">
+          <circle cx="626" cy="278" r="10" />
+          <circle cx="626" cy="278" r="25" />
+          <path d="M626 289v23c0 12 18 13 18 0" />
         </g>
-        <g className="marketing-cast-signals">
-          <circle cx="302" cy="364" r="5" />
-          <circle cx="402" cy="412" r="5" />
-          <circle cx="520" cy="356" r="5" />
-          <circle cx="644" cy="430" r="5" />
+        <g className="marketing-rod-signals">
+          <g><circle cx="318" cy="319" r="8" /><circle cx="318" cy="319" r="22" /></g>
+          <g><circle cx="407" cy="376" r="8" /><circle cx="407" cy="376" r="22" /></g>
+          <g><circle cx="505" cy="327" r="8" /><circle cx="505" cy="327" r="22" /></g>
+          <g><circle cx="602" cy="402" r="8" /><circle cx="602" cy="402" r="22" /></g>
         </g>
       </svg>
-      <div className="marketing-cast-caption">
-        <span>01</span>
-        <p><strong>Cast the question.</strong> Compare windows for one selected species.</p>
-      </div>
+      <p><strong>Cast one question.</strong> The signal line fills as each condition joins the rank.</p>
     </div>
+  );
+}
+
+function TreasureMapArtwork() {
+  return (
+    <svg
+      className="marketing-treasure-map-art"
+      viewBox="0 0 1600 1100"
+      preserveAspectRatio="xMidYMid slice"
+      aria-hidden="true"
+    >
+      <defs>
+        <pattern id="cc-map-grid" width="84" height="84" patternUnits="userSpaceOnUse">
+          <path d="M84 0H0v84" fill="none" stroke="#8a5b62" strokeOpacity="0.15" strokeWidth="2" />
+        </pattern>
+      </defs>
+      <rect width="1600" height="1100" fill="url(#cc-map-grid)" />
+      <path
+        d="M-80 100c208 75 247 194 217 315-33 133 31 210 178 243 128 29 199 113 193 264-4 94 20 157 93 218H-80Z"
+        fill="#f49a73"
+        opacity="0.76"
+      />
+      <path
+        d="M1680 67c-154 31-250 124-272 258-21 128-91 180-214 208-140 32-216 116-222 249-5 109-55 216-150 318h858Z"
+        fill="#42aa9d"
+        opacity="0.72"
+      />
+      <g fill="#ffe9a8" stroke="#68415e" strokeWidth="5">
+        <path d="M538 191c47-55 121-62 175-13 42 38 32 91-20 115-68 32-132 11-173-30-21-21-13-48 18-72Z" />
+        <path d="M760 715c55-52 139-47 179 16 32 51 1 103-63 114-77 14-140-21-164-72-13-27 8-46 48-58Z" />
+        <path d="M1118 184c33-30 83-27 108 10 20 31 2 63-37 72-45 10-84-8-101-39-10-18 1-31 30-43Z" />
+      </g>
+      <path
+        className="marketing-map-route"
+        d="M293 811C447 705 434 498 615 427c154-61 257 90 399 3 112-69 129-181 273-216"
+        fill="none"
+        stroke="#4a365f"
+        strokeDasharray="18 18"
+        strokeLinecap="round"
+        strokeWidth="8"
+      />
+      <g className="marketing-map-compass" transform="translate(1240 188)">
+        <circle r="88" fill="#ffe9a8" stroke="#4a365f" strokeWidth="6" />
+        <circle r="62" fill="none" stroke="#4a365f" strokeWidth="3" />
+        <path d="M0-72 18-12 0 0-18-12ZM72 0 12 18 0 0 12-18ZM0 72-18 12 0 0 18 12ZM-72 0-12-18 0 0-12 18Z" fill="#e46f6f" stroke="#4a365f" strokeLinejoin="round" strokeWidth="3" />
+        <text x="0" y="-101" fill="#4a365f" fontSize="30" fontWeight="800" textAnchor="middle">N</text>
+      </g>
+      <g className="marketing-map-x" transform="translate(1304 772)" fill="none" stroke="#68415e" strokeLinecap="round" strokeWidth="17">
+        <path d="m-30-30 60 60M30-30l-60 60" />
+        <circle r="57" strokeWidth="5" />
+      </g>
+      <g fill="#68415e" opacity="0.7">
+        <circle cx="293" cy="811" r="12" />
+        <circle cx="615" cy="427" r="12" />
+        <circle cx="1014" cy="430" r="12" />
+        <circle cx="1287" cy="214" r="12" />
+      </g>
+    </svg>
   );
 }
 
@@ -395,6 +456,7 @@ export function MarketingHome() {
         <div className="marketing-hero-sticky">
           <div className="marketing-art-frame">
             <CoastSignalArtwork />
+            <div className="marketing-art-nightfall" />
             <div className="marketing-art-vignette" />
           </div>
 
@@ -419,7 +481,7 @@ export function MarketingHome() {
 
           <div className="marketing-hero-copy">
             <p className="marketing-kicker"><span /> California coast · planning beta</p>
-            <h1 id="marketing-title">Read the coast<br />before you cast.</h1>
+            <h1 id="marketing-title">Give every cast<br />a compass.</h1>
             <p>
               Compare public shore and pier windows with an explainable relative-ranking
               planner tuned to one target species at a time.
@@ -432,12 +494,12 @@ export function MarketingHome() {
               <button
                 className="marketing-action marketing-action-testflight"
                 type="button"
-                disabled
+                aria-disabled="true"
                 aria-label="TestFlight download — coming soon"
                 title="TestFlight beta is not available yet"
               >
-                <span className="marketing-testflight-blur" aria-hidden="true">TestFlight</span>
-                <span>Coming soon</span>
+                <span className="marketing-testflight-wordmark" aria-hidden="true">TestFlight</span>
+                <span className="marketing-testflight-status" aria-hidden="true">Coming soon</span>
               </button>
             </div>
           </div>
@@ -474,8 +536,10 @@ export function MarketingHome() {
 
       <section className="marketing-wash-scroll" ref={revealRef}>
         <div className="marketing-wash-sticky">
-          <div className="marketing-wash-dark-copy" aria-hidden="true">
-            <span>Follow the horizon.</span>
+          <div className="marketing-current-field" aria-hidden="true">
+            <i />
+            <i />
+            <i />
           </div>
           <div className="marketing-wash-surface" id="product">
             <div className="marketing-wash-edge">
@@ -492,7 +556,7 @@ export function MarketingHome() {
                 </p>
               </header>
               <div className="marketing-model-panel">
-                <CastingModelVisual />
+                <RodLoadingVisual />
                 <ol className="marketing-model-features" aria-label="Signals used by the relative ranking model">
                   {rankingFeatures.map(([title, description], index) => (
                     <li key={title}>
@@ -520,6 +584,7 @@ export function MarketingHome() {
       </section>
 
       <section className="marketing-proof" aria-labelledby="marketing-proof-title">
+        <TreasureMapArtwork />
         <div className="marketing-proof-intro">
           <p className="marketing-kicker"><span /> What the product protects</p>
           <h2 id="marketing-proof-title">Useful context.<br />Honest boundaries.</h2>

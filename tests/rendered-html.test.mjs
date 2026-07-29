@@ -53,13 +53,14 @@ test("server-renders the marketing homepage with honest product routes and an un
 
   const html = await response.text();
   assert.match(html, /<title>CastingCompass — Read the coast before you cast<\/title>/i);
-  assert.match(html, /Read the coast/);
+  assert.match(html, /Give every cast/);
   assert.match(html, /One target/);
   assert.match(html, /expert-configured hybrid planning baseline/i);
   assert.match(html, /href="\/forecast"/);
   assert.match(html, /href="\/community"/);
   assert.match(html, /aria-label="TestFlight download — coming soon"/);
-  assert.match(html, /disabled=""/);
+  assert.match(html, /aria-disabled="true"/);
+  assert.doesNotMatch(html, /disabled=""/);
   assert.doesNotMatch(html, /apps\.apple\.com|testflight\.apple\.com/i);
 });
 

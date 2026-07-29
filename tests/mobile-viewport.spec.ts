@@ -682,7 +682,7 @@ test("primary controls stay inside common phone viewports", async ({ page }) => 
 
 test("marketing homepage routes to the web planner and keeps TestFlight honestly unavailable", async ({ page }) => {
   await page.goto("/");
-  await expect(page.getByRole("heading", { name: "Read the coast before you cast." })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Give every cast a compass." })).toBeVisible();
   await expect(page.getByRole("link", { name: "Open web planner" })).toHaveAttribute("href", "/forecast");
   await expect(page.getByRole("link", { name: "Browse place communities" })).toHaveAttribute("href", "/community");
   await expect(page.getByRole("heading", { name: "Read every signal together." })).toBeVisible();
@@ -692,7 +692,10 @@ test("marketing homepage routes to the web planner and keeps TestFlight honestly
   await expect(page.getByRole("heading", { name: "Meet the water where it is." })).toBeVisible();
 
   const testFlight = page.getByRole("button", { name: "TestFlight download — coming soon" });
-  await expect(testFlight).toBeDisabled();
+  await expect(testFlight).toHaveAttribute("aria-disabled", "true");
+  await expect(testFlight.locator(".marketing-testflight-wordmark")).toHaveCSS("filter", "none");
+  await testFlight.hover();
+  await expect(testFlight.locator(".marketing-testflight-status")).toHaveCSS("opacity", "1");
   await expect(testFlight).toContainText("Coming soon");
 
   const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);

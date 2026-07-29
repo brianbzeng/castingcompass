@@ -12,7 +12,9 @@ The baseline was captured from reviewed `origin/main`
 `ac7e67b90450f28322efedec9f64bf14a3026396`. The after run used the local candidate source. The
 homepage rows were re-captured after the full-bleed horizon and wave-art direction pass, then
 again after the scroll-bound orbital sun, frosted cards, casting explainer, and closing sunset
-banner were added. The planner rows are unchanged because those passes do not affect `/forecast`.
+banner were added, and finally after the screenshot-directed compact-card, nightfall, current,
+progressive-rod, and treasure-map revision. The planner rows are unchanged because those passes
+do not affect `/forecast`.
 Both used Lighthouse `13.4.1`, Chrome `150.0.0.0`, the standard Lighthouse mobile profile, and
 the Lighthouse desktop preset.
 
@@ -56,11 +58,13 @@ large generated files. The table below is sufficient to compare the exact audite
 | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
 | Mobile | baseline planner on `/` | 61 | 88 | 96 | 100 | 4,740 ms | 26,738 ms | 69 ms | 0.0182 | 5,196,418 |
 | Mobile | lighter homepage direction pass on `/` | 73 | 100 | 96 | 100 | 3,577 ms | 4,251 ms | 81 ms | 0 | 808,807 |
-| Mobile | final interaction draft on `/` | 70 | 100 | 96 | 100 | 3,671 ms | 5,569 ms | 125 ms | 0 | 835,476 |
+| Mobile | orbital/casting-card direction pass on `/` | 70 | 100 | 96 | 100 | 3,671 ms | 5,569 ms | 125 ms | 0 | 835,476 |
+| Mobile | screenshot-directed revision on `/` | 70 | 100 | 96 | 100 | 3,702 ms | 5,728 ms | 84 ms | 0 | 842,030 |
 | Mobile | candidate planner on `/forecast` | 61 | 100 | 96 | 100 | 5,031 ms | 17,048 ms | 113 ms | 0 | 3,222,697 |
 | Desktop | baseline planner on `/` | 52 | 96 | 96 | 100 | 904 ms | 4,632 ms | 0 ms | 0.4577 | 5,196,418 |
 | Desktop | lighter homepage direction pass on `/` | 97 | 100 | 96 | 100 | 770 ms | 1,075 ms | 0 ms | 0 | 808,807 |
-| Desktop | final interaction draft on `/` | 98 | 100 | 96 | 100 | 737 ms | 1,046 ms | 0 ms | 0 | 929,490 |
+| Desktop | orbital/casting-card direction pass on `/` | 98 | 100 | 96 | 100 | 737 ms | 1,046 ms | 0 ms | 0 | 929,490 |
+| Desktop | screenshot-directed revision on `/` | 97 | 100 | 96 | 100 | 781 ms | 1,114 ms | 0 ms | 0 | 936,044 |
 | Desktop | candidate planner on `/forecast` | 91 | 100 | 96 | 100 | 955 ms | 1,842 ms | 0 ms | 0.0067 | 3,298,959 |
 
 Material changes:
@@ -71,13 +75,13 @@ Material changes:
 - candidate-planner mobile LCP improved by 36.2% from baseline;
 - candidate-planner desktop LCP improved by 60.2% from baseline;
 - candidate-planner desktop performance improved by 39 points;
-- the final separate homepage reached 70 mobile and 98 desktop performance;
+- the screenshot-directed homepage reached 70 mobile and 97 desktop performance;
 - mobile and desktop accessibility both reached 100;
 - planner desktop CLS improved from 0.4577 to 0.0067; and
 - homepage and planner mobile CLS measured zero.
 
-The final interaction draft moved the mobile synthetic score from 73 to 70 and LCP from 4.25 to
-5.57 seconds relative to the lighter direction pass, while desktop moved from 97 to 98. Mobile
+The screenshot-directed revision records a mobile synthetic score of 70 and LCP of 5.73 seconds
+against 73 and 4.25 seconds in the lighter direction pass; desktop remains 97. Mobile
 FCP/TBT and transferred bytes varied across local runs. This evidence therefore does not claim an
 across-the-board timing win or treat one favorable sample as representative. The separate
 homepage still avoids the forecast projection and is materially faster and lighter than the
@@ -100,8 +104,8 @@ baseline planner, while `/forecast` retains the full data needed for offline com
    The homepage does not request the 1.79 MB forecast projection before a visitor chooses to
    open the product.
 7. The homepage art remains code-native SVG/CSS: the full-bleed horizon, scroll-bound sun and
-   uniform rays, distant islands, casting explainer, topographic traces, wave transition, and
-   pier/cliff banner add no raster hero download.
+   nightfall, full-screen current, progressive fishing rod, parchment treasure map, and pier/cliff
+   banner add no raster hero download.
 8. Below-fold proof/footer sections use `content-visibility` containment, and the scroll controller
    avoids an unnecessary initial layout read when the page begins at the top.
 
@@ -109,7 +113,7 @@ baseline planner, while `/forecast` retains the full data needed for offline com
 
 - The 1.79 MB forecast projection remains the dominant planner transfer. Mobile LCP at 17.05
   seconds under Lighthouse throttling is still too slow for a mature public release.
-- The final homepage mobile LCP is 5.57 seconds in the recorded synthetic run, 1.32 seconds slower
+- The final homepage mobile LCP is 5.73 seconds in the recorded synthetic run, 1.48 seconds slower
   than the lighter direction pass. Preserve the current design for review, then profile hydration
   and SVG/layout cost before treating the homepage as launch-ready.
 - A future phase should evaluate a versioned columnar/dictionary encoding, range/page loading, or
