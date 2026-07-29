@@ -4237,8 +4237,10 @@ footer > div {
 
 .marketing-wash-scroll {
   position: relative;
+  z-index: 2;
   height: 400vh;
   min-height: 2400px;
+  margin-top: -38vh;
   background: #080c20;
 }
 
@@ -4271,13 +4273,62 @@ footer > div {
   will-change: transform;
 }
 
-.marketing-depth-surface {
-  transform: translateX(calc(var(--marketing-wash-progress) * -28px));
+.marketing-depth-light {
+  transform: translateX(calc(var(--marketing-wash-progress) * -20px));
   will-change: transform;
 }
 
 .marketing-depth-bubbles {
   opacity: calc(0.22 + (var(--marketing-wash-progress) * 0.45));
+}
+
+.marketing-depth-fish-school {
+  transform: translateX(calc(var(--marketing-wash-progress) * -32px));
+  will-change: transform;
+}
+
+.marketing-depth-wildlife {
+  transform: translateX(calc(var(--marketing-wash-progress) * 18px));
+  will-change: transform;
+}
+
+.marketing-depth-helmet {
+  --marketing-helmet-sink: clamp(
+    0,
+    calc((var(--marketing-wash-progress) - 0.24) * 2.9),
+    1
+  );
+  transform: translateY(calc(var(--marketing-helmet-sink) * 1500px))
+    rotate(calc(var(--marketing-helmet-sink) * -9deg));
+  transform-box: fill-box;
+  transform-origin: center;
+  opacity: clamp(
+    0,
+    calc((0.66 - var(--marketing-wash-progress)) * 8),
+    1
+  );
+  will-change: transform;
+}
+
+.marketing-depth-angler {
+  --marketing-angler-drift: clamp(
+    0,
+    calc((var(--marketing-wash-progress) - 0.48) * 2.7),
+    1
+  );
+  transform: translate(
+      calc(var(--marketing-angler-drift) * 90px),
+      calc(var(--marketing-angler-drift) * 430px)
+    )
+    rotate(calc(var(--marketing-angler-drift) * 6deg));
+  transform-box: fill-box;
+  transform-origin: center;
+  opacity: clamp(
+    0,
+    calc((0.74 - var(--marketing-wash-progress)) * 8),
+    1
+  );
+  will-change: transform;
 }
 
 .marketing-depth-vignette {
@@ -4394,162 +4445,126 @@ footer > div {
 
 .marketing-model-panel {
   display: grid;
-  grid-template-columns: minmax(280px, 0.88fr) minmax(320px, 1.12fr);
+  grid-template-rows: auto minmax(220px, 1fr);
   gap: clamp(1rem, 2vw, 1.8rem);
-  align-items: center;
+  align-self: stretch;
+  align-items: stretch;
   min-width: 0;
-  padding: clamp(0.8rem, 1.5vw, 1.25rem);
-  border: 1px solid rgba(210, 241, 226, 0.16);
-  border-radius: 28px;
-  background: rgba(7, 17, 42, 0.46);
-  box-shadow:
-    inset 0 1px 0 rgba(238, 252, 239, 0.11),
-    0 24px 70px rgba(3, 6, 20, 0.24);
-  backdrop-filter: blur(16px) saturate(112%);
+  padding: clamp(0.2rem, 0.8vw, 0.7rem);
 }
 
-.marketing-rod-loader {
-  position: relative;
+.marketing-cast-rod {
   display: grid;
-  align-content: end;
   min-width: 0;
-  min-height: 430px;
-  padding: 1rem;
-  overflow: hidden;
-  border: 1px solid rgba(133, 213, 195, 0.12);
-  border-radius: 20px;
-  color: #e8f1dd;
-  background:
-    radial-gradient(circle at 72% 24%, rgba(238, 101, 95, 0.18), transparent 23%),
-    radial-gradient(circle at 32% 74%, rgba(75, 190, 167, 0.2), transparent 28%),
-    rgba(10, 23, 53, 0.48);
+  min-height: 260px;
+  place-items: center;
+  opacity: 0;
 }
 
-.marketing-rod-loader > svg {
-  position: absolute;
-  inset: 0;
+.marketing-cast-rod > svg {
   display: block;
   width: 100% !important;
   height: 100% !important;
+  max-height: 390px;
+  overflow: visible;
 }
 
-.marketing-rod-label {
-  position: absolute;
-  z-index: 2;
-  top: 0.75rem;
-  left: 0.75rem;
-  padding: 0.48rem 0.68rem;
-  border: 1px solid rgba(215, 241, 225, 0.16);
-  border-radius: 100px;
-  background: rgba(11, 27, 55, 0.54);
-  color: #bde9d8;
-  font-family: var(--font-mono);
-  font-size: 0.48rem;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
-
-.marketing-rod-loader > p {
-  position: relative;
-  z-index: 2;
-  max-width: 320px;
-  margin: 0;
-  padding: 0.75rem 0.82rem;
-  border: 1px solid rgba(215, 241, 225, 0.13);
-  border-radius: 13px;
-  color: rgba(224, 239, 224, 0.72);
-  background: rgba(7, 18, 43, 0.58);
-  font-size: 0.6rem;
-  line-height: 1.5;
-  backdrop-filter: blur(9px);
-}
-
-.marketing-rod-loader > p strong {
-  color: #fff0bd;
-}
-
-.marketing-rod-currents {
-  stroke: #4db9a7;
-  stroke-width: 3;
-  opacity: calc(0.16 + (var(--marketing-wash-progress) * 0.42));
-  transform: translateX(calc((1 - var(--marketing-wash-progress)) * -44px));
-  will-change: opacity, transform;
-}
-
-.marketing-rod-track,
-.marketing-line-track {
-  stroke: rgba(217, 239, 223, 0.16);
-}
-
-.marketing-rod-fill {
-  stroke: #ef7069;
-  stroke-dasharray: 420;
-  stroke-dashoffset: calc(420 - (var(--marketing-wash-progress) * 420));
-  will-change: stroke-dashoffset;
-}
-
-.marketing-line-fill {
-  stroke: #ffe5a5;
-  stroke-dasharray: 620;
-  stroke-dashoffset: calc(620 - (var(--marketing-wash-progress) * 620));
-  will-change: stroke-dashoffset;
-}
-
-.marketing-rod-reel {
-  fill: #ffe28e;
-  stroke: #e3e8cc;
-  stroke-linecap: round;
-  stroke-width: 6;
-  opacity: calc(0.18 + (var(--marketing-wash-progress) * 0.82));
-  transform: scale(calc(0.72 + (var(--marketing-wash-progress) * 0.28)));
+.marketing-cast-rod-body {
   transform-box: fill-box;
-  transform-origin: center;
-  will-change: opacity, transform;
+  transform-origin: 16% 88%;
 }
 
-.marketing-line-lure {
-  fill: #ffe28e;
+.marketing-cast-rod-blank {
   stroke: #ef7069;
+}
+
+.marketing-cast-rod-spine {
+  stroke: #fff0b0;
+}
+
+.marketing-cast-rod-grip {
+  stroke: #473958;
+}
+
+.marketing-cast-rod-reel,
+.marketing-cast-rod-guides {
+  fill: #ffe18f;
+  stroke: #fff2be;
   stroke-linecap: round;
+  stroke-width: 5;
+}
+
+.marketing-cast-rod-guides {
+  fill: #0d1a38;
   stroke-width: 4;
-  opacity: clamp(0, calc((var(--marketing-wash-progress) - 0.58) * 3), 1);
-  transform: translateY(calc((1 - var(--marketing-wash-progress)) * -30px));
-  will-change: opacity, transform;
 }
 
-.marketing-line-lure circle:nth-child(2) {
-  fill: none;
+.marketing-cast-line {
+  stroke: #ffe7a5;
+  stroke-dasharray: 650;
+  stroke-dashoffset: 650;
+  opacity: 0;
 }
 
-.marketing-rod-signals {
-  fill: #5ecbb4;
-  stroke: #5ecbb4;
+.marketing-cast-ready .marketing-cast-rod {
+  opacity: 1;
+  transition: opacity 380ms ease-out;
 }
 
-.marketing-rod-signals > g {
-  opacity: clamp(0, calc((var(--marketing-wash-progress) - 0.34) * 3), 1);
+.marketing-cast-ready .marketing-cast-rod-body {
+  animation: marketing-cast-once 1.45s cubic-bezier(0.2, 0.74, 0.26, 1) 1 both;
 }
 
-.marketing-rod-signals > g:nth-child(2) {
-  opacity: clamp(0, calc((var(--marketing-wash-progress) - 0.44) * 3), 1);
+.marketing-cast-ready .marketing-cast-line {
+  animation: marketing-line-once 1.25s 320ms ease-out 1 forwards;
 }
 
-.marketing-rod-signals > g:nth-child(3) {
-  opacity: clamp(0, calc((var(--marketing-wash-progress) - 0.54) * 3), 1);
+@keyframes marketing-cast-once {
+  0% {
+    opacity: 0;
+    transform: rotate(-18deg);
+  }
+
+  20% {
+    opacity: 1;
+    transform: rotate(-27deg);
+  }
+
+  58% {
+    transform: rotate(14deg);
+  }
+
+  78% {
+    transform: rotate(-3deg);
+  }
+
+  100% {
+    opacity: 1;
+    transform: rotate(0);
+  }
 }
 
-.marketing-rod-signals > g:nth-child(4) {
-  opacity: clamp(0, calc((var(--marketing-wash-progress) - 0.64) * 3), 1);
-}
+@keyframes marketing-line-once {
+  0%,
+  20% {
+    opacity: 0;
+    stroke-dashoffset: 650;
+  }
 
-.marketing-rod-signals > g circle:nth-child(2) {
-  fill: none;
-  opacity: 0.38;
+  44% {
+    opacity: 1;
+  }
+
+  100% {
+    opacity: 0.84;
+    stroke-dashoffset: 0;
+  }
 }
 
 .marketing-model-features {
   display: grid;
-  gap: 0.42rem;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.52rem;
   min-width: 0;
   margin: 0;
   padding: 0;
@@ -4680,7 +4695,7 @@ footer > div {
 
 .marketing-proof-intro,
 .marketing-proof-grid,
-.marketing-sunset-banner {
+.marketing-seafloor-cta {
   position: relative;
   z-index: 1;
 }
@@ -4743,44 +4758,16 @@ footer > div {
   line-height: 1.65;
 }
 
-.marketing-sunset-banner {
-  position: relative;
-  min-height: clamp(390px, 38vw, 560px);
-  overflow: hidden;
-  width: min(1480px, 100%);
-  margin: clamp(4rem, 8vw, 8rem) auto 0;
-  border: 1px solid rgba(203, 237, 220, 0.16);
-  border-radius: 34px;
-  background: #0d1430;
-  box-shadow: 0 36px 100px rgba(13, 16, 34, 0.34);
-}
-
-.marketing-abyss-banner-art {
-  position: absolute;
-  inset: 0;
-  width: 100% !important;
-  height: 100% !important;
-}
-
-.marketing-sunset-banner-vignette {
-  position: absolute;
-  inset: 0;
-  background:
-    linear-gradient(90deg, rgba(6, 10, 29, 0.92), rgba(6, 10, 29, 0.34) 58%, rgba(6, 10, 29, 0.12)),
-    linear-gradient(180deg, transparent 42%, rgba(4, 7, 21, 0.58));
-}
-
-.marketing-sunset-banner-copy {
-  position: relative;
-  z-index: 2;
+.marketing-seafloor-cta {
   display: grid;
   align-content: center;
-  width: min(620px, 58%);
-  min-height: inherit;
-  padding: clamp(2rem, 5vw, 5.5rem);
+  width: min(1480px, 100%);
+  min-height: clamp(500px, 52vw, 760px);
+  margin: clamp(3rem, 7vw, 7rem) auto 0;
+  padding: clamp(3rem, 8vw, 8rem) 0;
 }
 
-.marketing-sunset-banner-copy > span {
+.marketing-seafloor-cta > span {
   color: #91d9c7;
   font-family: var(--font-mono);
   font-size: 0.6rem;
@@ -4788,7 +4775,7 @@ footer > div {
   text-transform: uppercase;
 }
 
-.marketing-sunset-banner-copy > h3 {
+.marketing-seafloor-cta > h3 {
   display: block;
   margin-top: 0.8rem;
   margin-bottom: 0;
@@ -4799,7 +4786,7 @@ footer > div {
   line-height: 0.86;
 }
 
-.marketing-sunset-banner-copy > p {
+.marketing-seafloor-cta > p {
   max-width: 510px;
   margin: 1.2rem 0 1.6rem;
   color: rgba(255, 245, 218, 0.78);
@@ -4807,7 +4794,7 @@ footer > div {
   line-height: 1.6;
 }
 
-.marketing-sunset-banner-copy .marketing-action {
+.marketing-seafloor-cta .marketing-action {
   width: fit-content;
 }
 
@@ -4983,6 +4970,7 @@ footer > div {
   .marketing-wash-scroll {
     height: 380vh;
     min-height: 2200px;
+    margin-top: -32vh;
   }
 
   .marketing-wash-sticky {
@@ -4997,6 +4985,34 @@ footer > div {
 
   .marketing-depth-meter i {
     min-height: 80px;
+  }
+
+  .marketing-spearfisher-primary-wrap {
+    transform: translateX(90px) scale(0.64);
+    transform-box: fill-box;
+    transform-origin: center;
+  }
+
+  .marketing-spearfisher-secondary-wrap {
+    transform: translateX(-80px) scale(0.82);
+    transform-box: fill-box;
+    transform-origin: center;
+  }
+
+  .marketing-depth-helmet {
+    transform: translate(
+        500px,
+        calc(var(--marketing-helmet-sink) * 1500px)
+      )
+      rotate(calc(var(--marketing-helmet-sink) * -9deg));
+  }
+
+  .marketing-depth-angler {
+    transform: translate(
+        calc(-310px + (var(--marketing-angler-drift) * 55px)),
+        calc(var(--marketing-angler-drift) * 430px)
+      )
+      rotate(calc(var(--marketing-angler-drift) * 6deg));
   }
 
   .marketing-product {
@@ -5032,31 +5048,14 @@ footer > div {
   }
 
   .marketing-model-panel {
-    grid-template-columns: 1fr;
-    gap: 0.35rem;
-    padding: 0.5rem;
-    border-radius: 20px;
+    grid-template-rows: auto minmax(130px, 1fr);
+    gap: 0.2rem;
+    padding: 0;
   }
 
-  .marketing-rod-loader {
-    min-height: 152px;
-    max-height: 160px;
-    padding: 0.45rem;
-    border-radius: 14px;
-  }
-
-  .marketing-rod-label {
-    top: 0.55rem;
-    left: 0.55rem;
-    padding: 0.3rem 0.42rem;
-    font-size: 0.36rem;
-  }
-
-  .marketing-rod-loader > p {
-    max-width: 190px;
-    padding: 0.38rem 0.45rem;
-    border-radius: 10px;
-    font-size: 0.46rem;
+  .marketing-cast-rod {
+    min-height: 130px;
+    max-height: 152px;
   }
 
   .marketing-model-features {
@@ -5115,35 +5114,23 @@ footer > div {
     margin-top: 3.3rem;
   }
 
-  .marketing-sunset-banner {
-    min-height: 500px;
-    border-radius: 24px;
+  .marketing-seafloor-cta {
+    min-height: 520px;
+    padding: 4rem 0;
   }
 
-  .marketing-sunset-banner-copy {
-    width: 100%;
-    align-content: end;
-    padding: 1.35rem;
-  }
-
-  .marketing-sunset-banner-copy > h3 {
+  .marketing-seafloor-cta > h3 {
     font-size: clamp(2.8rem, 14vw, 4.5rem);
   }
 
-  .marketing-sunset-banner-copy > p {
+  .marketing-seafloor-cta > p {
     max-width: 320px;
     margin-top: 0.85rem;
     font-size: 0.72rem;
   }
 
-  .marketing-sunset-banner-copy .marketing-action {
-    width: 100%;
-  }
-
-  .marketing-sunset-banner-vignette {
-    background:
-      linear-gradient(90deg, rgba(5, 8, 25, 0.74), rgba(5, 8, 25, 0.2) 58%, rgba(5, 8, 25, 0.08)),
-      linear-gradient(180deg, transparent 35%, rgba(4, 7, 21, 0.72));
+  .marketing-seafloor-cta .marketing-action {
+    width: fit-content;
   }
 
   .marketing-footer {
@@ -5231,16 +5218,29 @@ footer > div {
   .marketing-hero-copy,
   .marketing-window-callout,
   .marketing-hero-notes,
-  .marketing-depth-surface,
+  .marketing-depth-light,
+  .marketing-depth-fish-school,
+  .marketing-depth-wildlife,
+  .marketing-depth-helmet,
+  .marketing-depth-angler,
   .marketing-wash-surface,
   .marketing-seafloor-smoke,
   .marketing-product,
   .marketing-model-features li,
-  .marketing-rod-reel,
-  .marketing-line-lure {
+  .marketing-cast-rod-body,
+  .marketing-cast-line {
     animation: none !important;
     transition: none !important;
     transform: none !important;
+  }
+
+  .marketing-cast-rod {
+    opacity: 1;
+  }
+
+  .marketing-cast-line {
+    opacity: 0.84;
+    stroke-dashoffset: 0;
   }
 }
 

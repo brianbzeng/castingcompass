@@ -162,6 +162,25 @@ function CoastSignalArtwork() {
 }
 
 function OceanDescentArtwork() {
+  const fish = [
+    [170, 260, 0.7, -4], [250, 310, 0.5, 2], [330, 245, 0.42, -7],
+    [1160, 390, 0.62, 5], [1260, 445, 0.44, -2], [1370, 370, 0.52, 8],
+    [195, 770, 0.48, 4], [276, 820, 0.34, -5], [356, 742, 0.4, 1],
+    [1120, 960, 0.58, -4], [1215, 1018, 0.4, 3], [1312, 930, 0.46, -7],
+    [215, 1370, 0.5, 7], [305, 1435, 0.34, 0], [390, 1350, 0.42, -5],
+    [1090, 1565, 0.5, -6], [1190, 1620, 0.35, 3], [1290, 1540, 0.42, 7],
+    [160, 1925, 0.48, 3], [255, 1990, 0.33, -5], [350, 1880, 0.4, 8],
+    [1130, 2200, 0.48, -2], [1220, 2265, 0.36, 5], [1325, 2175, 0.42, -8],
+    [210, 2540, 0.46, 5], [305, 2605, 0.31, -3], [398, 2505, 0.39, 7],
+    [1100, 2730, 0.43, -4], [1195, 2795, 0.32, 3], [1290, 2705, 0.38, -6],
+    [620, 300, 0.34, 2], [760, 245, 0.42, -4], [920, 330, 0.3, 6],
+    [650, 790, 0.35, -5], [805, 735, 0.28, 4], [960, 825, 0.4, -2],
+    [615, 1385, 0.32, 5], [785, 1450, 0.42, -3], [940, 1350, 0.28, 2],
+    [655, 1910, 0.36, -5], [810, 1990, 0.29, 3], [965, 1870, 0.4, 6],
+    [620, 2495, 0.3, 4], [780, 2570, 0.39, -4], [930, 2470, 0.27, 1],
+    [645, 2780, 0.34, -3], [805, 2715, 0.26, 5], [950, 2810, 0.37, -5],
+  ] as const;
+
   return (
     <svg
       className="marketing-ocean-descent-art"
@@ -171,12 +190,17 @@ function OceanDescentArtwork() {
     >
       <defs>
         <linearGradient id="cc-depth-water" x1="0" x2="0" y1="0" y2="1">
-          <stop offset="0" stopColor="#54c7b2" />
-          <stop offset="0.17" stopColor="#208799" />
-          <stop offset="0.42" stopColor="#174e70" />
+          <stop offset="0" stopColor="#20385f" />
+          <stop offset="0.13" stopColor="#237586" />
+          <stop offset="0.38" stopColor="#174e70" />
           <stop offset="0.7" stopColor="#102a50" />
           <stop offset="1" stopColor="#080c20" />
         </linearGradient>
+        <radialGradient id="cc-diver-glow">
+          <stop offset="0" stopColor="#7ed9d2" stopOpacity="0.46" />
+          <stop offset="0.48" stopColor="#35a8b1" stopOpacity="0.14" />
+          <stop offset="1" stopColor="#35a8b1" stopOpacity="0" />
+        </radialGradient>
         <radialGradient id="cc-angler-glow">
           <stop offset="0" stopColor="#fff2a8" stopOpacity="0.92" />
           <stop offset="1" stopColor="#fff2a8" stopOpacity="0" />
@@ -187,77 +211,106 @@ function OceanDescentArtwork() {
       </defs>
       <rect width="1600" height="3200" fill="url(#cc-depth-water)" />
 
-      <g className="marketing-depth-surface">
-        <path d="M0 170c180-45 313 52 510 7s337 27 542-9 330 48 548 0v180H0Z" fill="#6ed5c0" />
-        <path d="M0 173c180-45 313 52 510 7s337 27 542-9 330 48 548 0" fill="none" stroke="#fff1c4" strokeLinecap="round" strokeWidth="14" />
-        <path d="M-80 272c258-44 385 39 609 4s355 29 567-2 344 37 584-3" fill="none" stroke="#c5f0dc" strokeLinecap="round" strokeWidth="5" opacity="0.62" />
-        <path d="M236 210 520 890M748 186 690 930M1188 210 930 970M1482 214 1110 940" fill="none" stroke="#fff3bd" strokeLinecap="round" strokeWidth="46" opacity="0.1" />
+      <g className="marketing-depth-light" fill="none" stroke="#c9f3e3" strokeLinecap="round">
+        <path d="M165-70 470 860M520-80 650 940M970-70 880 960M1420-60 1080 880" strokeWidth="54" opacity="0.07" />
       </g>
 
       <g className="marketing-depth-bubbles" fill="none" stroke="#d7f4e9" strokeWidth="4" opacity="0.4">
-        <circle cx="214" cy="530" r="16" /><circle cx="245" cy="467" r="9" /><circle cx="1280" cy="642" r="13" />
-        <circle cx="1310" cy="584" r="7" /><circle cx="1332" cy="531" r="17" /><circle cx="532" cy="1024" r="11" />
-        <circle cx="554" cy="960" r="6" /><circle cx="1090" cy="1278" r="15" /><circle cx="1117" cy="1218" r="8" />
+        <circle cx="215" cy="405" r="16" /><circle cx="244" cy="344" r="9" /><circle cx="1310" cy="510" r="13" />
+        <circle cx="1336" cy="453" r="7" /><circle cx="1360" cy="399" r="17" /><circle cx="527" cy="1024" r="11" />
+        <circle cx="551" cy="960" r="6" /><circle cx="1090" cy="1278" r="15" /><circle cx="1117" cy="1218" r="8" />
         <circle cx="330" cy="1780" r="13" /><circle cx="358" cy="1717" r="7" /><circle cx="1422" cy="1980" r="11" />
         <circle cx="1445" cy="1920" r="17" /><circle cx="730" cy="2440" r="9" /><circle cx="757" cy="2378" r="15" />
+        <circle cx="842" cy="680" r="8" /><circle cx="864" cy="624" r="13" /><circle cx="885" cy="568" r="6" />
       </g>
 
-      <g className="marketing-depth-fish-school" fill="#d5f0dc" opacity="0.5">
-        <path d="m213 710 42-18 43 18-43 18Zm-4 0-25-19v38Z" />
-        <path d="m328 762 35-15 36 15-36 16Zm-4 0-21-16v32Z" />
-        <path d="m448 690 29-13 32 13-32 14Zm-4 0-18-14v28Z" />
-        <path d="m1165 1120 38-16 40 16-40 17Zm-4 0-23-17v34Z" />
-        <path d="m1284 1182 31-14 34 14-34 15Zm-4 0-20-15v30Z" />
+      <g className="marketing-depth-fish-school" fill="#bfe8d9">
+        {fish.map(([x, y, scale, rotation], index) => (
+          <g
+            key={`${x}-${y}`}
+            transform={`translate(${x} ${y}) rotate(${rotation}) scale(${scale})`}
+            opacity={0.32 + ((index % 5) * 0.08)}
+          >
+            <path d="M0 0c36-30 91-27 132 0-41 28-96 31-132 0Zm129 0 45-35v70Z" />
+            <circle cx="28" cy="-6" r="4" fill="#0f3654" />
+          </g>
+        ))}
       </g>
 
-      <g className="marketing-depth-spearfishers" transform="translate(610 720)" fill="#182a45" stroke="#ffd38f" strokeLinecap="round" strokeLinejoin="round">
-        <g transform="rotate(-12 120 120)">
-          <circle cx="96" cy="54" r="23" strokeWidth="5" />
-          <path d="M83 78c-30 50-23 105 16 137l43-67-8-55Z" strokeWidth="7" />
-          <path d="m102 117 98-8M198 109l136-16" fill="none" strokeWidth="6" />
-          <path d="m99 211-64 89M117 213l24 103" fill="none" strokeWidth="12" />
-          <path d="m35 300-44 24 52 4M141 316l-14 51 45-32" fill="none" strokeWidth="9" />
-          <path d="m92 42 42 8" fill="none" strokeWidth="8" />
+      <g className="marketing-depth-spearfishers">
+        <circle cx="825" cy="505" r="300" fill="url(#cc-diver-glow)" />
+        <g className="marketing-spearfisher-primary-wrap">
+          <g className="marketing-spearfisher marketing-spearfisher-primary" transform="translate(365 490) rotate(-8)">
+            <path d="M304 52c-54-29-121-28-181 8L82 92l53 20c58 22 126 8 178-35Z" fill="#0a1b35" />
+            <circle cx="329" cy="57" r="28" fill="#0a1b35" />
+            <path d="m315 42 43 4-7 19-40 3Z" fill="#69d0cb" opacity="0.72" />
+            <path d="m153 93-99 52M180 99 82 173" fill="none" stroke="#0a1b35" strokeLinecap="round" strokeWidth="25" />
+            <path d="m65 131-74 9 57 39ZM92 159l-68 29 68 18Z" fill="#0a1b35" />
+            <path d="m280 72 73 34 62-9M352 106l94-26" fill="none" stroke="#0a1b35" strokeLinecap="round" strokeLinejoin="round" strokeWidth="18" />
+            <path d="M398 91 638 64M637 64l-25-10m25 10-21 15" fill="none" stroke="#f2c678" strokeLinecap="round" strokeWidth="7" />
+            <circle cx="329" cy="57" r="36" fill="none" stroke="#f2c678" strokeWidth="5" opacity="0.56" />
+            <path d="M344 26c18-28 39-40 62-38" fill="none" stroke="#0a1b35" strokeLinecap="round" strokeWidth="12" />
+          </g>
         </g>
-        <g transform="translate(310 184) scale(.7) rotate(8 120 120)" opacity="0.72">
-          <circle cx="96" cy="54" r="23" strokeWidth="5" />
-          <path d="M83 78c-30 50-23 105 16 137l43-67-8-55Z" strokeWidth="7" />
-          <path d="m102 117 208-19" fill="none" strokeWidth="6" />
-          <path d="m99 211-64 89M117 213l24 103" fill="none" strokeWidth="12" />
-          <path d="m35 300-44 24 52 4M141 316l-14 51 45-32" fill="none" strokeWidth="9" />
+        <g className="marketing-spearfisher-secondary-wrap">
+          <g className="marketing-spearfisher marketing-spearfisher-secondary" transform="translate(690 855) rotate(7) scale(.62)">
+            <path d="M304 52c-54-29-121-28-181 8L82 92l53 20c58 22 126 8 178-35Z" fill="#0a1b35" />
+            <circle cx="329" cy="57" r="28" fill="#0a1b35" />
+            <path d="m315 42 43 4-7 19-40 3Z" fill="#69d0cb" opacity="0.7" />
+            <path d="m153 93-99 52M180 99 82 173" fill="none" stroke="#0a1b35" strokeLinecap="round" strokeWidth="25" />
+            <path d="m65 131-74 9 57 39ZM92 159l-68 29 68 18Z" fill="#0a1b35" />
+            <path d="m280 72 73 34 62-9M352 106l94-26" fill="none" stroke="#0a1b35" strokeLinecap="round" strokeWidth="18" />
+            <path d="M398 91 630 64M629 64l-23-10m23 10-20 15" fill="none" stroke="#f2c678" strokeLinecap="round" strokeWidth="7" />
+          </g>
         </g>
       </g>
 
-      <g className="marketing-depth-helmet" transform="translate(550 1295)">
-        <ellipse cx="240" cy="388" rx="235" ry="46" fill="#0b1b35" opacity="0.38" />
-        <path d="M82 318V172C82 72 153 8 250 8s168 64 168 164v146Z" fill="#5d3f35" stroke="#e0a55f" strokeWidth="18" />
-        <path d="M55 318h390l-28 91H83Z" fill="#3c2d31" stroke="#c88c4e" strokeWidth="16" />
-        <circle cx="250" cy="175" r="79" fill="#12233d" stroke="#d9a15f" strokeWidth="19" />
-        <path d="m194 119 112 112M306 119 194 231" stroke="#a56f42" strokeWidth="17" />
-        <circle cx="91" cy="210" r="45" fill="#15263e" stroke="#c88c4e" strokeWidth="16" />
-        <circle cx="409" cy="210" r="45" fill="#15263e" stroke="#c88c4e" strokeWidth="16" />
-        <path d="M155 31v-55h190v55M176-26h148" fill="none" stroke="#c88c4e" strokeLinecap="round" strokeWidth="18" />
-        <circle cx="166" cy="365" r="14" fill="#e2aa67" /><circle cx="334" cy="365" r="14" fill="#e2aa67" />
-        <g transform="translate(430 186)" fill="none" stroke="#d4a263" strokeLinecap="round" strokeWidth="15">
-          <path d="M0 0h82v180H14Z" />
-          <path d="M20 0v-38h42V0M24 52h50M24 98h50" />
+      <g className="marketing-depth-wildlife" fill="#0c2441" stroke="#76bfb3" strokeLinejoin="round">
+        <g className="marketing-depth-ray" transform="translate(980 1170) rotate(-7)">
+          <path d="M0 75c84-97 202-99 298 0-75-19-119-11-149 35-30-46-76-55-149-35Z" strokeWidth="7" />
+          <path d="M149 108c25 47 66 89 125 124" fill="none" strokeLinecap="round" strokeWidth="9" />
         </g>
-        <path d="M500 370c56 18 83 44 114 93" fill="none" stroke="#d5a062" strokeLinecap="round" strokeWidth="15" />
-        <path d="m632 455 82 42-91 10Z" fill="#d5a062" opacity="0.76" />
+        <g className="marketing-depth-jellies" fill="#6db9b0" opacity="0.62">
+          <path d="M206 1510c0-51 38-89 89-89s89 38 89 89c-43-18-136-18-178 0Z" />
+          <path d="M232 1506c-8 80 32 102 8 175M277 1508c20 72-18 111 12 177M328 1507c-7 78 29 108 5 176M363 1505c20 65-9 98 13 151" fill="none" stroke="#87d1c5" strokeLinecap="round" strokeWidth="8" />
+          <path d="M1230 1820c0-39 29-68 68-68s68 29 68 68c-33-14-104-14-136 0Z" />
+          <path d="M1249 1817c-7 62 24 78 6 133M1284 1818c15 55-13 85 9 135M1323 1817c-5 60 22 83 4 135" fill="none" stroke="#87d1c5" strokeLinecap="round" strokeWidth="7" />
+          <path d="M710 1640c0-35 26-61 61-61s61 26 61 61c-30-12-93-12-122 0Z" />
+          <path d="M726 1638c-5 55 22 72 6 121M758 1638c14 51-12 79 8 123M793 1638c-5 55 20 76 4 122" fill="none" stroke="#87d1c5" strokeLinecap="round" strokeWidth="6" />
+        </g>
       </g>
 
-      <g className="marketing-depth-angler" transform="translate(520 2120)">
-        <circle cx="386" cy="-34" r="108" fill="url(#cc-angler-glow)" filter="url(#cc-depth-soft-glow)" />
-        <path d="M34 160c103-150 326-177 468-41 85 82 55 207-73 250-154 51-333 11-417-87-38-44-29-81 22-122Z" fill="#17213a" stroke="#7bb8ad" strokeWidth="9" />
-        <path d="m13 207-104-75 35 116-51 97 123-41" fill="#17213a" stroke="#7bb8ad" strokeLinejoin="round" strokeWidth="9" />
-        <path d="M282 62c0-85 38-131 104-131" fill="none" stroke="#8ac6b8" strokeLinecap="round" strokeWidth="11" />
-        <circle cx="392" cy="-68" r="24" fill="#fff09c" />
-        <circle cx="392" cy="-68" r="51" fill="none" stroke="#fff09c" strokeWidth="5" opacity="0.55" />
-        <circle cx="374" cy="176" r="18" fill="#fff09c" />
-        <path d="M383 257c-88 59-183 66-272 20 83-1 173-8 272-20Z" fill="#080d21" stroke="#dce8d1" strokeWidth="6" />
-        <path d="m157 276 22 33 19-39 25 34 17-41 27 31 14-42" fill="#fff4d0" />
-        <g fill="#6aa69e">
-          <circle cx="210" cy="140" r="8" /><circle cx="260" cy="111" r="6" /><circle cx="453" cy="237" r="8" />
+      <g className="marketing-depth-helmet">
+        <g transform="translate(260 1315) scale(.28)">
+          <ellipse cx="240" cy="388" rx="235" ry="46" fill="#0b1b35" opacity="0.38" />
+          <path d="M82 318V172C82 72 153 8 250 8s168 64 168 164v146Z" fill="#5d3f35" stroke="#e0a55f" strokeWidth="18" />
+          <path d="M55 318h390l-28 91H83Z" fill="#3c2d31" stroke="#c88c4e" strokeWidth="16" />
+          <circle cx="250" cy="175" r="79" fill="#12233d" stroke="#d9a15f" strokeWidth="19" />
+          <path d="m194 119 112 112M306 119 194 231" stroke="#a56f42" strokeWidth="17" />
+          <circle cx="91" cy="210" r="45" fill="#15263e" stroke="#c88c4e" strokeWidth="16" />
+          <circle cx="409" cy="210" r="45" fill="#15263e" stroke="#c88c4e" strokeWidth="16" />
+          <path d="M155 31v-55h190v55M176-26h148" fill="none" stroke="#c88c4e" strokeLinecap="round" strokeWidth="18" />
+          <circle cx="166" cy="365" r="14" fill="#e2aa67" /><circle cx="334" cy="365" r="14" fill="#e2aa67" />
+          <g transform="translate(430 186)" fill="none" stroke="#d4a263" strokeLinecap="round" strokeWidth="15">
+            <path d="M0 0h82v180H14Z" />
+            <path d="M20 0v-38h42V0M24 52h50M24 98h50" />
+          </g>
+          <path d="M500 370c56 18 83 44 114 93" fill="none" stroke="#d5a062" strokeLinecap="round" strokeWidth="15" />
+          <path d="m632 455 82 42-91 10Z" fill="#d5a062" opacity="0.76" />
+        </g>
+      </g>
+
+      <g className="marketing-depth-angler">
+        <g transform="translate(1110 2100) scale(.28)">
+          <circle cx="386" cy="-34" r="108" fill="url(#cc-angler-glow)" filter="url(#cc-depth-soft-glow)" />
+          <path d="M34 160c103-150 326-177 468-41 85 82 55 207-73 250-154 51-333 11-417-87-38-44-29-81 22-122Z" fill="#17213a" stroke="#7bb8ad" strokeWidth="9" />
+          <path d="m13 207-104-75 35 116-51 97 123-41" fill="#17213a" stroke="#7bb8ad" strokeLinejoin="round" strokeWidth="9" />
+          <path d="M282 62c0-85 38-131 104-131" fill="none" stroke="#8ac6b8" strokeLinecap="round" strokeWidth="11" />
+          <circle cx="392" cy="-68" r="24" fill="#fff09c" />
+          <circle cx="392" cy="-68" r="51" fill="none" stroke="#fff09c" strokeWidth="5" opacity="0.55" />
+          <circle cx="374" cy="176" r="18" fill="#fff09c" />
+          <path d="M383 257c-88 59-183 66-272 20 83-1 173-8 272-20Z" fill="#080d21" stroke="#dce8d1" strokeWidth="6" />
+          <path d="m157 276 22 33 19-39 25 34 17-41 27 31 14-42" fill="#fff4d0" />
         </g>
       </g>
 
@@ -285,62 +338,51 @@ const rankingFeatures = [
   ["Access + usability", "Posted access and practical fishing conditions can cap the final rank."],
 ] as const;
 
-function RodLoadingVisual() {
+function CastingRodVisual() {
   return (
-    <div className="marketing-rod-loader" aria-hidden="true">
-      <span className="marketing-rod-label">Signal line · one target</span>
-      <svg viewBox="0 0 700 500" preserveAspectRatio="xMidYMid meet">
-        <g className="marketing-rod-currents" fill="none" strokeLinecap="round">
-          <path d="M-30 340c120-38 209 30 329 0s220 35 431-6" />
-          <path d="M-25 392c120-34 209 33 329 4s220 38 431-2" />
-          <path d="M-20 446c120-30 209 37 329 8s220 41 431 3" />
+    <div className="marketing-cast-rod" aria-hidden="true">
+      <svg viewBox="0 0 760 430" preserveAspectRatio="xMidYMid meet">
+        <g className="marketing-cast-rod-body">
+          <path
+            className="marketing-cast-rod-blank"
+            d="M155 369C205 291 256 212 322 125"
+            fill="none"
+            strokeLinecap="round"
+            strokeWidth="13"
+          />
+          <path
+            className="marketing-cast-rod-spine"
+            d="M155 369C205 291 256 212 322 125"
+            fill="none"
+            strokeLinecap="round"
+            strokeWidth="5"
+          />
+          <path
+            className="marketing-cast-rod-grip"
+            d="M133 401 184 329"
+            fill="none"
+            strokeLinecap="round"
+            strokeWidth="22"
+          />
+          <g className="marketing-cast-rod-reel">
+            <circle cx="169" cy="347" r="28" />
+            <circle cx="169" cy="347" r="10" />
+            <path d="m190 363 27 29" />
+          </g>
+          <g className="marketing-cast-rod-guides" fill="none">
+            <circle cx="230" cy="253" r="7" />
+            <circle cx="276" cy="187" r="6" />
+            <circle cx="318" cy="130" r="5" />
+          </g>
         </g>
         <path
-          className="marketing-rod-track"
-          d="M112 438C151 336 188 232 270 128"
+          className="marketing-cast-line"
+          d="M322 125C461 3 659 47 709 245"
           fill="none"
           strokeLinecap="round"
-          strokeWidth="16"
+          strokeWidth="4"
         />
-        <path
-          className="marketing-rod-fill"
-          d="M112 438C151 336 188 232 270 128"
-          fill="none"
-          strokeLinecap="round"
-          strokeWidth="7"
-        />
-        <path
-          className="marketing-line-track"
-          d="M270 128C391 10 597 46 626 278"
-          fill="none"
-          strokeLinecap="round"
-          strokeWidth="6"
-        />
-        <path
-          className="marketing-line-fill"
-          d="M270 128C391 10 597 46 626 278"
-          fill="none"
-          strokeLinecap="round"
-          strokeWidth="6"
-        />
-        <g className="marketing-rod-reel">
-          <circle cx="122" cy="410" r="31" />
-          <circle cx="122" cy="410" r="12" />
-          <path d="m144 427 28 30" />
-        </g>
-        <g className="marketing-line-lure">
-          <circle cx="626" cy="278" r="10" />
-          <circle cx="626" cy="278" r="25" />
-          <path d="M626 289v23c0 12 18 13 18 0" />
-        </g>
-        <g className="marketing-rod-signals">
-          <g><circle cx="318" cy="319" r="8" /><circle cx="318" cy="319" r="22" /></g>
-          <g><circle cx="407" cy="376" r="8" /><circle cx="407" cy="376" r="22" /></g>
-          <g><circle cx="505" cy="327" r="8" /><circle cx="505" cy="327" r="22" /></g>
-          <g><circle cx="602" cy="402" r="8" /><circle cx="602" cy="402" r="22" /></g>
-        </g>
       </svg>
-      <p><strong>Cast one question.</strong> The signal line fills as each condition joins the rank.</p>
     </div>
   );
 }
@@ -405,48 +447,6 @@ function VolcanicSeafloorArtwork() {
   );
 }
 
-function AbyssBannerArtwork() {
-  return (
-    <svg
-      className="marketing-abyss-banner-art"
-      viewBox="0 0 1600 560"
-      preserveAspectRatio="xMidYMid slice"
-      aria-hidden="true"
-    >
-      <defs>
-        <linearGradient id="cc-abyss-water" x1="0" x2="0" y1="0" y2="1">
-          <stop offset="0" stopColor="#162850" />
-          <stop offset="0.66" stopColor="#0a1735" />
-          <stop offset="1" stopColor="#08091a" />
-        </linearGradient>
-        <radialGradient id="cc-abyss-glow">
-          <stop offset="0" stopColor="#ffb36f" stopOpacity="0.8" />
-          <stop offset="1" stopColor="#ef625e" stopOpacity="0" />
-        </radialGradient>
-      </defs>
-      <rect width="1600" height="560" fill="url(#cc-abyss-water)" />
-      <g fill="#ccf2e2" opacity="0.32">
-        <circle cx="173" cy="112" r="5" /><circle cx="328" cy="207" r="4" />
-        <circle cx="716" cy="90" r="6" /><circle cx="1168" cy="156" r="4" />
-        <circle cx="1450" cy="82" r="6" /><circle cx="1341" cy="243" r="3" />
-      </g>
-      <circle cx="1265" cy="418" r="176" fill="url(#cc-abyss-glow)" />
-      <path d="M0 467 211 307l190 160 272-228 260 228 328-286 339 286v93H0Z" fill="#131326" stroke="#58374b" strokeWidth="8" />
-      <path d="m598 302 75-63 75 64-31 29-80-2Z" fill="#f06862" opacity="0.78" />
-      <path d="m1182 250 79-69 81 70-39 30-82-1Z" fill="#f28c64" opacity="0.72" />
-      <g fill="#17172b" stroke="#795168" strokeLinejoin="round" strokeWidth="7">
-        <path d="m988 473 34-219 55 4 38 215Z" />
-        <path d="m1428 486 29-171 48 3 33 168Z" />
-      </g>
-      <g fill="none" strokeLinecap="round">
-        <path d="M1047 265c-46-72 34-101-9-174M1482 321c42-69-31-97 8-162" stroke="#84c7ba" strokeWidth="25" opacity="0.16" />
-        <path d="M1049 261c-26-71 23-100-5-171M1480 318c-23-65 18-92-4-154" stroke="#e8d5a6" strokeWidth="10" opacity="0.2" />
-      </g>
-      <path d="M0 515c241-44 420 22 628-1 194-21 358 13 539-6 153-16 283-5 433 25v27H0Z" fill="#070815" />
-    </svg>
-  );
-}
-
 export function MarketingHome() {
   const rootRef = useRef<HTMLElement>(null);
   const heroRef = useRef<HTMLElement>(null);
@@ -460,6 +460,7 @@ export function MarketingHome() {
 
     const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
     let frame = 0;
+    let castPlayed = false;
 
     const setSunOrbit = (progress: number) => {
       const startAngle = (-62 * Math.PI) / 180;
@@ -479,6 +480,7 @@ export function MarketingHome() {
       if (reducedMotion.matches) {
         root.style.setProperty("--marketing-hero-progress", "1");
         root.style.setProperty("--marketing-wash-progress", "1");
+        root.classList.add("marketing-cast-ready");
         setSunOrbit(1);
         return;
       }
@@ -493,6 +495,10 @@ export function MarketingHome() {
 
       root.style.setProperty("--marketing-hero-progress", heroProgress.toFixed(4));
       root.style.setProperty("--marketing-wash-progress", washProgress.toFixed(4));
+      if (!castPlayed && washProgress >= 0.76) {
+        castPlayed = true;
+        root.classList.add("marketing-cast-ready");
+      }
       setSunOrbit(heroProgress);
     };
 
@@ -627,7 +633,6 @@ export function MarketingHome() {
                 </p>
               </header>
               <div className="marketing-model-panel">
-                <RodLoadingVisual />
                 <ol className="marketing-model-features" aria-label="Signals used by the relative ranking model">
                   {rankingFeatures.map(([title, description], index) => (
                     <li key={title}>
@@ -639,6 +644,7 @@ export function MarketingHome() {
                     </li>
                   ))}
                 </ol>
+                <CastingRodVisual />
               </div>
               <div className="marketing-product-actions">
                 <Link className="marketing-action marketing-action-ink" href="/forecast">
@@ -682,18 +688,14 @@ export function MarketingHome() {
             <p>The score compares current options. It does not predict a catch or prove fish are present.</p>
           </article>
         </div>
-        <div className="marketing-sunset-banner">
-          <AbyssBannerArtwork />
-          <div className="marketing-sunset-banner-vignette" aria-hidden="true" />
-          <div className="marketing-sunset-banner-copy">
-            <span>From surface to seafloor.</span>
-            <h3>See the whole<br />water column.</h3>
-            <p>Choose a target, compare the public options, and carry an honest plan back to the shore.</p>
-            <Link className="marketing-action marketing-action-primary" href="/forecast">
-              Open CastingCompass
-              <ArrowUpRightIcon />
-            </Link>
-          </div>
+        <div className="marketing-seafloor-cta">
+          <span>From surface to seafloor.</span>
+          <h3>See the whole<br />water column.</h3>
+          <p>Choose a target, compare the public options, and carry an honest plan back to the shore.</p>
+          <Link className="marketing-action marketing-action-primary" href="/forecast">
+            Open CastingCompass
+            <ArrowUpRightIcon />
+          </Link>
         </div>
       </section>
 

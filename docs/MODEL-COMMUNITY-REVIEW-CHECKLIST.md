@@ -65,11 +65,13 @@ production migration, provider-control changes, domain attachment, or public tra
 - [x] `/` is a dedicated marketing homepage with full-bleed code-native sunset artwork, a
   scroll-bound orbital sunset with uniform rays, scroll-linked nightfall, a distant-island
   horizon, and compact frosted-glass information cards. The next scroll sequence begins at the
-  ocean surface and sinks through a continuous code-native water column with spearfishers, a
-  vintage diving helmet and tank, an anglerfish, bubbles, fish schools, and a depth meter. A dark
-  glass model explainer progressively loads its fishing rod and six feature families near the
-  seafloor. Volcanic ridges and hydrothermal vents replace the former treasure-map and pier
-  artwork. The full planner and PWA entry point are now `/forecast`.
+  hero waterline and sinks through a continuous code-native water column with horizontal
+  spearfisher silhouettes, smaller sinking vintage equipment and anglerfish, bubbles, rays,
+  jellyfish, dense fish schools, and a depth meter. Six feature families resolve before a
+  standalone fishing rod performs one non-looping cast near the seafloor. Volcanic ridges and
+  hydrothermal vents replace the former treasure-map and pier artwork, while the closing copy now
+  sits directly on that seafloor rather than inside a duplicate banner. The full planner and PWA
+  entry point are now `/forecast`.
 - [x] The web-planner actions route to `/forecast`. TestFlight is a non-navigating,
   `aria-disabled` control with no fake or premature redirect; its wordmark is sharp by default,
   then blurs on hover/focus while “Coming soon” appears. Its accessible name states that the
@@ -102,11 +104,11 @@ production migration, provider-control changes, domain attachment, or public tra
   TypeScript, the complete security chain, and release-SBOM verification. The full browser matrix
   recorded 278 first-pass cases plus isolated passes for its two timed-out cases.
 - [x] Production-shaped Lighthouse evidence records the exact baseline/candidate profiles:
-  the ocean-descent homepage revision scores 70/98 mobile/desktop performance with 100
+  the refined ocean-descent homepage revision scores 70/98 mobile/desktop performance with 100
   accessibility and zero CLS, while `/forecast` scores 61/91. The earlier, lighter homepage pass
   scored 73/97; the latest mobile pass therefore retains a documented three-point synthetic
-  regression and 5.73-second LCP for follow-up rather than hiding it. The ocean-descent revision
-  transfers 830,740 mobile bytes and 945,968 desktop bytes in the recorded local runs.
+  regression and 5.72-second LCP for follow-up rather than hiding it. The refined revision
+  transfers 851,543 mobile bytes and 945,557 desktop bytes in the recorded local runs.
   Candidate-planner mobile/desktop LCP are 36.2%/60.2% lower than baseline, desktop CLS is 0.0067,
   mobile CLS is zero, and all four accessibility scores are 100. Residual 17.05-second planner
   mobile LCP and timing variance remain explicitly open rather than being characterized as a

@@ -693,7 +693,11 @@ test("marketing homepage routes to the web planner and keeps TestFlight honestly
   await expect(page.locator(".marketing-depth-helmet")).toHaveCount(1);
   await expect(page.locator(".marketing-depth-angler")).toHaveCount(1);
   await expect(page.locator(".marketing-depth-volcanic-field")).toHaveCount(1);
+  await expect(page.locator(".marketing-depth-fish-school > g")).toHaveCount(48);
   await expect(page.locator(".marketing-volcanic-seafloor-art")).toHaveCount(1);
+  await expect(page.locator(".marketing-cast-rod")).toHaveCount(1);
+  await expect(page.locator(".marketing-rod-loader")).toHaveCount(0);
+  await expect(page.locator(".marketing-sunset-banner")).toHaveCount(0);
   await expect(page.getByRole("heading", { name: "See the whole water column." })).toBeVisible();
 
   const testFlight = page.getByRole("button", { name: "TestFlight download — coming soon" });
@@ -702,6 +706,20 @@ test("marketing homepage routes to the web planner and keeps TestFlight honestly
   await testFlight.hover();
   await expect(testFlight.locator(".marketing-testflight-status")).toHaveCSS("opacity", "1");
   await expect(testFlight).toContainText("Coming soon");
+
+  await page.evaluate(() => {
+    const proof = document.querySelector(".marketing-proof");
+    if (!proof) throw new Error("Missing seafloor section");
+    window.scrollTo(0, proof.getBoundingClientRect().top + window.scrollY - window.innerHeight * 1.3);
+  });
+  await expect(page.locator(".marketing-home")).toHaveClass(/marketing-cast-ready/);
+  const castTiming = await page.locator(".marketing-cast-rod-body").evaluate((element) => {
+    const [animation] = element.getAnimations();
+    if (!animation) return null;
+    const timing = animation.effect?.getTiming();
+    return { duration: timing?.duration, iterations: timing?.iterations };
+  });
+  expect(castTiming).toEqual({ duration: 1450, iterations: 1 });
 
   const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
   expect(overflow).toBeLessThanOrEqual(1);
