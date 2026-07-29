@@ -77,6 +77,45 @@
       "private_evidence_receipt": null
     },
     {
+      "id": "marketing-painterly-environment-plates",
+      "title": "Painterly shoreline and water-column environment plates",
+      "kind": "first_party_owner_supplied",
+      "paths": [
+        {
+          "path": "public/marketing/painterly-shoreline.webp",
+          "sha256": "95d1a24bbf24c5041ff68464c5d7904c46de405629df1b0f7b3d616c44bd014a"
+        },
+        {
+          "path": "public/marketing/painterly-water-column.webp",
+          "sha256": "1f339308bd16e9dfa138a66085b0401f1ccf335ba8523e855db38dcb54910e89"
+        }
+      ],
+      "creator_display": "CastingCompass project owner with disclosed OpenAI ImageGen assistance",
+      "creation_date": "2026-07-29",
+      "source_url": null,
+      "source_remote_sha1": null,
+      "source_reviewed_at": null,
+      "license_id": null,
+      "license_label": null,
+      "license_url": null,
+      "rights_basis": "owner_supplied_ai_assisted",
+      "attribution_required": false,
+      "share_alike": false,
+      "attribution_text": "CastingCompass",
+      "modifications": "Generated environment-only painterly plates from the owner-supplied art-direction board; omitted all text, UI, sun, people, and marine-life actors so the live page preserves its semantic content and registered silhouette layers; compressed the selected PNG outputs to WebP.",
+      "ai_assistance": "disclosed",
+      "rights_review": "owner_supplied_not_independently_cleared",
+      "release_state": "candidate_review_required",
+      "upstream_record_id": null,
+      "release_commit": "1f35542f42f46ea68672eea1beac0138884c3f7f",
+      "evidence_refs": [
+        "git:1f35542f42f46ea68672eea1beac0138884c3f7f",
+        "The project owner supplied the July 29 painterly art-direction board and directed this environment overhaul.",
+        "OpenAI ImageGen produced environment-only surface and underwater plates; the supplied silhouette assets remain separate registered layers."
+      ],
+      "private_evidence_receipt": null
+    },
+    {
       "id": "marketing-spearfishers-pair",
       "title": "Paired spearfisher silhouettes for the marketing water column",
       "kind": "first_party_owner_supplied",
