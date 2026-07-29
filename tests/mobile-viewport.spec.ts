@@ -686,30 +686,79 @@ test("marketing homepage routes to the web planner and keeps TestFlight honestly
   await expect(page.getByRole("link", { name: "Open web planner" })).toHaveAttribute("href", "/forecast");
   await expect(page.getByRole("link", { name: "Browse place communities" })).toHaveAttribute("href", "/community");
   await expect(page.getByRole("heading", { name: "Read every signal together." })).toBeVisible();
-  await expect(
-    page.getByRole("list", { name: "Signals used by the relative ranking model" }).getByRole("listitem"),
-  ).toHaveCount(6);
+  await expect(page.getByRole("list", { name: "Signals used by the relative ranking model" }).getByRole("listitem")).toHaveCount(6);
   await expect(page.locator(".marketing-depth-spearfishers")).toHaveCount(1);
-  await expect(page.locator('.marketing-depth-spearfishers image[href="/marketing/spearfishers-pair.webp"]')).toHaveCount(1);
+  await expect(page.locator(".marketing-spearfisher")).toHaveCount(2);
+  await expect(page.locator('.marketing-depth-spearfishers image[href="/marketing/spearfishers-pair.webp"]')).toHaveCount(2);
   await expect(page.locator(".marketing-depth-meter")).toHaveText("");
+  await expect(page.locator(".marketing-depth-whale")).toHaveCount(1);
+  await expect(page.locator(".marketing-depth-squid-pair > g")).toHaveCount(2);
   await expect(page.locator(".marketing-depth-helmet")).toHaveCount(1);
-  await expect(page.locator(".marketing-depth-angler")).toHaveCount(1);
+  await expect(page.locator(".marketing-depth-angler")).toHaveCount(2);
+  await expect(page.locator(".marketing-depth-cliff")).toHaveCount(1);
   await expect(page.locator(".marketing-depth-volcanic-field")).toHaveCount(1);
-  await expect(page.locator(".marketing-depth-fish-school > g")).toHaveCount(48);
+  await expect(page.locator(".marketing-depth-fish-school > g")).toHaveCount(4);
   await expect(page.locator(".marketing-volcanic-seafloor-art")).toHaveCount(1);
-  await expect(page.locator(".marketing-cast-rod")).toHaveCount(1);
+  await expect(page.locator(".marketing-seafloor-vent")).toHaveCount(3);
+  await expect(page.locator(".marketing-seafloor-crab")).toHaveCount(2);
+  await expect(page.locator(".marketing-cast-rod")).toHaveCount(0);
   await expect(page.locator(".marketing-rod-loader")).toHaveCount(0);
   await expect(page.locator(".marketing-sunset-banner")).toHaveCount(0);
   await expect(page.getByRole("heading", { name: "Pick your target" })).toBeVisible();
   await expect(page.getByText("The whole plan updates around that fish.")).toBeVisible();
   await expect(page.getByRole("heading", { name: "See the whole water column." })).toBeVisible();
 
-  const testFlight = page.getByRole("button", { name: "TestFlight download — coming soon" });
+  const testFlight = page.getByRole("button", {
+    name: "TestFlight download — coming soon",
+  });
   await expect(testFlight).toHaveAttribute("aria-disabled", "true");
   await expect(testFlight.locator(".marketing-testflight-wordmark")).toHaveCSS("filter", "none");
   await testFlight.hover();
   await expect(testFlight.locator(".marketing-testflight-status")).toHaveCSS("opacity", "1");
   await expect(testFlight).toContainText("Coming soon");
+
+  const signalCardHeights = await page.locator(".marketing-model-features li").evaluateAll((cards) => cards.map((card) => Math.round(card.getBoundingClientRect().height)));
+  expect(Math.max(...signalCardHeights) - Math.min(...signalCardHeights)).toBeLessThanOrEqual(1);
+
+  const heroTimeline = async (progress: number) => {
+    await page.evaluate((targetProgress) => {
+      const hero = document.querySelector<HTMLElement>(".marketing-hero-scroll");
+      if (!hero) throw new Error("Missing hero scroll section");
+      const travel = Math.max(hero.offsetHeight - window.innerHeight, 1);
+      window.scrollTo({
+        top: hero.offsetTop + travel * targetProgress,
+        left: 0,
+        behavior: "instant",
+      });
+    }, progress);
+    await page.waitForFunction((targetProgress) => {
+      const root = document.querySelector<HTMLElement>(".marketing-home");
+      if (!root) return false;
+      const actual = Number.parseFloat(root.style.getPropertyValue("--marketing-hero-progress"));
+      return Number.isFinite(actual) && Math.abs(actual - targetProgress) < 0.04;
+    }, progress);
+    return page.locator(".marketing-home").evaluate((element) => {
+      const styles = getComputedStyle(element);
+      return {
+        hero: Number.parseFloat(styles.getPropertyValue("--marketing-hero-progress")),
+        surface: Number.parseFloat(styles.getPropertyValue("--marketing-surface-progress")),
+        sun: Number.parseFloat(styles.getPropertyValue("--marketing-sun-progress")),
+      };
+    });
+  };
+
+  const midday = await heroTimeline(0.5);
+  expect(midday.hero).toBeCloseTo(0.5, 1);
+  expect(midday.surface).toBe(0);
+
+  const crossing = await heroTimeline(0.85);
+  expect(crossing.surface).toBeGreaterThan(0.4);
+  expect(crossing.surface).toBeLessThan(0.6);
+
+  const underwater = await heroTimeline(1);
+  expect(underwater.sun).toBeCloseTo(1, 1);
+  expect(underwater.surface).toBeCloseTo(1, 1);
+  await expect(page.locator(".marketing-home")).toHaveClass(/marketing-spearfishers-visible/);
 
   await page.evaluate(() => {
     const waterColumn = document.querySelector<HTMLElement>(".marketing-wash-scroll");
@@ -721,27 +770,45 @@ test("marketing homepage routes to the web planner and keeps TestFlight honestly
       behavior: "instant",
     });
   });
-  await expect(page.locator(".marketing-home")).toHaveClass(/marketing-cast-ready/);
-  const castTiming = await page.locator(".marketing-cast-rod-body").evaluate((element) => {
-    const [animation] = element.getAnimations();
-    if (!animation) return null;
-    const timing = animation.effect?.getTiming();
-    return { duration: timing?.duration, iterations: timing?.iterations };
+  await page.locator(".marketing-proof").scrollIntoViewIfNeeded();
+  await expect(page.locator(".marketing-home")).toHaveClass(/marketing-seafloor-visible/);
+  const crabAnimations = await page.locator(".marketing-seafloor-crab").evaluateAll((crabs) => {
+    return crabs.map((crab) => {
+      const [animation] = crab.getAnimations();
+      const timing = animation?.effect?.getTiming();
+      return {
+        duration: timing?.duration,
+        iterations: timing?.iterations,
+        playState: animation?.playState,
+      };
+    });
   });
-  expect(castTiming).toEqual({ duration: 1450, iterations: 1 });
+  expect(crabAnimations).toEqual([
+    { duration: 34000, iterations: Infinity, playState: "running" },
+    { duration: 39000, iterations: Infinity, playState: "running" },
+  ]);
 
   const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
   expect(overflow).toBeLessThanOrEqual(1);
 
   await page.emulateMedia({ reducedMotion: "reduce" });
-  const motionState = await page.locator(".marketing-home").evaluate((element) => {
-    const styles = getComputedStyle(element);
+  await page.goto("/");
+  const motionState = await page.locator(".marketing-home").evaluate(() => {
+    const spear = document.querySelector<SVGGElement>(".marketing-spearfisher-near");
+    const crab = document.querySelector<SVGGElement>(".marketing-seafloor-crab-a");
+    const descent = document.querySelector<SVGElement>(".marketing-ocean-descent-art");
+    if (!spear || !crab || !descent) throw new Error("Missing reduced-motion artwork");
     return {
-      hero: styles.getPropertyValue("--marketing-hero-progress").trim(),
-      wash: styles.getPropertyValue("--marketing-wash-progress").trim(),
+      spearTransition: getComputedStyle(spear).transitionDuration,
+      crabAnimation: getComputedStyle(crab).animationName,
+      descentTransform: getComputedStyle(descent).transform,
     };
   });
-  expect(motionState).toEqual({ hero: "1", wash: "1" });
+  expect(motionState).toEqual({
+    spearTransition: "0s",
+    crabAnimation: "none",
+    descentTransform: "none",
+  });
 });
 
 test("keyboard users can skip repeated navigation to the main forecast", async ({ page }, testInfo) => {

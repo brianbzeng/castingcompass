@@ -57,6 +57,13 @@ test("server-renders the marketing homepage with honest product routes and an un
   assert.match(html, /One target/);
   assert.match(html, /single-species relative rankings/i);
   assert.match(html, /cannot promise a bite/i);
+  assert.match(html, /Read every/);
+  assert.match(html, /marketing-depth-whale/);
+  assert.match(html, /marketing-depth-squid-pair/);
+  assert.match(html, /marketing-depth-cliff/);
+  assert.match(html, /marketing-seafloor-crab-a/);
+  assert.match(html, /marketing-seafloor-crab-b/);
+  assert.doesNotMatch(html, /marketing-cast-rod/);
   assert.match(html, /href="\/forecast"/);
   assert.match(html, /href="\/community"/);
   assert.match(html, /aria-label="TestFlight download — coming soon"/);
