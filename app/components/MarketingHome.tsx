@@ -111,57 +111,6 @@ function CoastSignalArtwork() {
 }
 
 function OceanDescentArtwork() {
-  const fishSchools = [
-    {
-      id: "surface-left",
-      className: "marketing-depth-school-surface-left",
-      fish: [
-        [130, 240, 0.46, -5, 1],
-        [225, 285, 0.34, 3, 1],
-        [310, 218, 0.38, -2, 1],
-        [395, 300, 0.28, 5, 1],
-        [475, 250, 0.32, -4, 1],
-        [545, 326, 0.24, 2, 1],
-      ],
-    },
-    {
-      id: "surface-right",
-      className: "marketing-depth-school-surface-right",
-      fish: [
-        [1035, 510, 0.4, 4, -1],
-        [1120, 462, 0.3, -2, -1],
-        [1200, 535, 0.34, 5, -1],
-        [1280, 480, 0.27, -6, -1],
-        [1350, 555, 0.23, 3, -1],
-        [1415, 505, 0.28, -2, -1],
-      ],
-    },
-    {
-      id: "mid-left",
-      className: "marketing-depth-school-mid-left",
-      fish: [
-        [155, 1650, 0.42, 5, 1],
-        [250, 1715, 0.31, -4, 1],
-        [345, 1610, 0.36, 2, 1],
-        [445, 1690, 0.27, 6, 1],
-        [545, 1638, 0.3, -3, 1],
-        [630, 1740, 0.23, 3, 1],
-      ],
-    },
-    {
-      id: "mid-right",
-      className: "marketing-depth-school-mid-right",
-      fish: [
-        [990, 1810, 0.36, -4, -1],
-        [1080, 1750, 0.27, 3, -1],
-        [1170, 1830, 0.32, -5, -1],
-        [1260, 1768, 0.24, 4, -1],
-        [1340, 1850, 0.29, -2, -1],
-        [1420, 1798, 0.22, 5, -1],
-      ],
-    },
-  ] as const;
-
   return (
     <svg className="marketing-ocean-descent-art" viewBox="0 0 1600 3200" preserveAspectRatio="xMidYMin slice" aria-hidden="true">
       <defs>
@@ -181,19 +130,14 @@ function OceanDescentArtwork() {
           <stop offset="0" stopColor="#fff2a8" stopOpacity="0.92" />
           <stop offset="1" stopColor="#fff2a8" stopOpacity="0" />
         </radialGradient>
-        <linearGradient id="cc-depth-sand" x1="0" x2="0" y1="0" y2="1">
-          <stop offset="0" stopColor="#a47b5c" />
-          <stop offset="0.55" stopColor="#735848" />
-          <stop offset="1" stopColor="#3f3437" />
-        </linearGradient>
         <filter id="cc-depth-soft-glow" x="-200%" y="-200%" width="500%" height="500%">
           <feGaussianBlur stdDeviation="24" />
         </filter>
       </defs>
       <rect width="1600" height="3200" fill="url(#cc-depth-water)" />
 
-      <g className="marketing-depth-light" fill="none" stroke="#c9f3e3" strokeLinecap="round">
-        <path d="M120-90 430 900M470-80 630 990M1010-80 885 990M1480-70 1110 920" strokeWidth="58" opacity="0.1" />
+      <g className="marketing-depth-light" fill="none" stroke="#d8f7ed" strokeLinecap="round">
+        <path d="M-40-110 330 920M310-110 565 980M665-120 740 900M1035-110 950 970M1360-110 1110 905M1660-100 1325 835" strokeWidth="82" opacity="0.085" />
       </g>
 
       <g className="marketing-depth-bubbles" fill="none" stroke="#d7f4e9" strokeWidth="4" opacity="0.4">
@@ -223,77 +167,35 @@ function OceanDescentArtwork() {
         <circle cx="778" cy="2660" r="5" />
       </g>
 
-      <g className="marketing-depth-fish-school" fill="#bfe8d9">
-        {fishSchools.map((school) => (
-          <g className={school.className} key={school.id}>
-            {school.fish.map(([x, y, scale, rotation, direction], index) => (
-              <g key={`${x}-${y}`} transform={`translate(${x} ${y}) rotate(${rotation}) scale(${scale * direction} ${scale})`} opacity={0.42 + (index % 4) * 0.1}>
-                <path d="M0 0c36-30 91-27 132 0-41 28-96 31-132 0Zm129 0 45-35v70Z" />
-                <circle cx="28" cy="-6" r="4" fill="#0f3654" />
-              </g>
-            ))}
-          </g>
-        ))}
+      <g className="marketing-depth-fish-school">
+        <image className="marketing-depth-school-surface-left" href="/marketing/silhouettes/school-right.webp" x="70" y="155" width="610" height="142" preserveAspectRatio="xMidYMid meet" />
+        <image className="marketing-depth-school-surface-right" href="/marketing/silhouettes/school-left.webp" x="975" y="515" width="540" height="145" preserveAspectRatio="xMidYMid meet" />
+        <image className="marketing-depth-school-mid-left" href="/marketing/silhouettes/school-right.webp" x="120" y="1820" width="450" height="108" preserveAspectRatio="xMidYMid meet" />
+        <image className="marketing-depth-school-mid-right" href="/marketing/silhouettes/school-left.webp" x="1010" y="1690" width="510" height="132" preserveAspectRatio="xMidYMid meet" />
       </g>
 
       <g className="marketing-depth-spearfishers">
-        <circle cx="360" cy="475" r="250" fill="url(#cc-diver-glow)" />
-        <g className="marketing-spearfisher marketing-spearfisher-near">
-          <svg x="64" y="326" width="520" height="150" viewBox="0 0 960 240" preserveAspectRatio="xMidYMid meet">
-            <image href="/marketing/spearfishers-pair.webp" width="960" height="480" />
-          </svg>
-        </g>
-        <g className="marketing-spearfisher marketing-spearfisher-far">
-          <svg x="142" y="474" width="410" height="126" viewBox="0 240 960 240" preserveAspectRatio="xMidYMid meet">
-            <image href="/marketing/spearfishers-pair.webp" width="960" height="480" />
-          </svg>
-        </g>
+        <circle cx="360" cy="430" r="245" fill="url(#cc-diver-glow)" />
+        <image className="marketing-spearfisher marketing-spearfisher-near" href="/marketing/silhouettes/spearfisher-near.webp" x="68" y="305" width="430" height="125" preserveAspectRatio="xMidYMid meet" />
+        <image className="marketing-spearfisher marketing-spearfisher-far" href="/marketing/silhouettes/spearfisher-far.webp" x="146" y="443" width="350" height="108" preserveAspectRatio="xMidYMid meet" />
       </g>
 
-      <g className="marketing-depth-wildlife" fill="#0b2846" stroke="#78bfb4" strokeLinejoin="round">
-        <g className="marketing-depth-whale" transform="translate(850 930) scale(.72)">
-          <path d="M4 173c83-119 304-153 491-76 63 26 126 35 187 17l72-62-7 75 82 29-82 32 10 75-77-58c-87 18-163 14-229-8-64-21-103-12-145 22-52 41-113 54-190 33-88-24-140-51-112-79Z" strokeWidth="8" />
-          <path d="M337 189c-24 80-75 119-153 117 44-28 73-64 87-107" strokeWidth="8" />
-          <path d="M150 186c87 25 182 27 286 3M178 205c79 21 158 21 238 2" fill="none" strokeWidth="5" opacity="0.52" />
-          <circle cx="80" cy="155" r="6" fill="#d6efe4" stroke="none" />
-        </g>
-
-        <g className="marketing-depth-squid-pair" fill="#0a213d" strokeWidth="7">
-          <g transform="translate(440 1620) rotate(-8) scale(.82)">
-            <path d="M0 89C31 18 151-10 237 53c43 31 42 77-1 105C149 214 31 169 0 89Z" />
-            <path d="M55 52-44 13 5 92M53 126l-91 59 43-93" />
-            <path d="M229 65c65-42 96-8 154-53M241 83c77-12 94 34 168 17M239 102c70 24 76 73 142 86M222 122c48 52 43 93 89 136M205 135c25 70 4 99 24 163" fill="none" strokeLinecap="round" />
-            <circle cx="198" cy="83" r="10" fill="#d4eee2" stroke="none" />
-          </g>
-          <g transform="translate(890 1740) rotate(10) scale(.66)">
-            <path d="M0 89C31 18 151-10 237 53c43 31 42 77-1 105C149 214 31 169 0 89Z" />
-            <path d="M55 52-44 13 5 92M53 126l-91 59 43-93" />
-            <path d="M229 65c65-42 96-8 154-53M241 83c77-12 94 34 168 17M239 102c70 24 76 73 142 86M222 122c48 52 43 93 89 136M205 135c25 70 4 99 24 163" fill="none" strokeLinecap="round" />
-            <circle cx="198" cy="83" r="10" fill="#d4eee2" stroke="none" />
-          </g>
+      <g className="marketing-depth-wildlife">
+        <image className="marketing-depth-whale" href="/marketing/silhouettes/whale.webp" x="435" y="920" width="790" height="310" preserveAspectRatio="xMidYMid meet" />
+        <g className="marketing-depth-squid-pair">
+          <image href="/marketing/silhouettes/squid-upper.webp" x="340" y="1490" width="370" height="175" preserveAspectRatio="xMidYMid meet" />
+          <image href="/marketing/silhouettes/squid-lower.webp" x="830" y="1650" width="345" height="160" preserveAspectRatio="xMidYMid meet" />
         </g>
       </g>
 
       <g className="marketing-depth-angler-pair">
-        <g className="marketing-depth-angler marketing-depth-angler-one" transform="translate(390 2040) scale(.31)">
-          <circle cx="386" cy="-34" r="108" fill="url(#cc-angler-glow)" filter="url(#cc-depth-soft-glow)" />
-          <path d="M34 160c103-150 326-177 468-41 85 82 55 207-73 250-154 51-333 11-417-87-38-44-29-81 22-122Z" fill="#111a33" stroke="#7bb8ad" strokeWidth="9" />
-          <path d="m13 207-104-75 35 116-51 97 123-41" fill="#111a33" stroke="#7bb8ad" strokeLinejoin="round" strokeWidth="9" />
-          <path d="M282 62c0-85 38-131 104-131" fill="none" stroke="#8ac6b8" strokeLinecap="round" strokeWidth="11" />
-          <circle cx="392" cy="-68" r="24" fill="#fff09c" />
-          <circle cx="374" cy="176" r="18" fill="#fff09c" />
-          <path d="M383 257c-88 59-183 66-272 20 83-1 173-8 272-20Z" fill="#080d21" stroke="#dce8d1" strokeWidth="6" />
-          <path d="m157 276 22 33 19-39 25 34 17-41 27 31 14-42" fill="#fff4d0" />
+        <g className="marketing-depth-angler marketing-depth-angler-one">
+          <circle cx="515" cy="2035" r="72" fill="url(#cc-angler-glow)" filter="url(#cc-depth-soft-glow)" />
+          <image href="/marketing/silhouettes/angler-left.webp" x="360" y="2010" width="205" height="148" preserveAspectRatio="xMidYMid meet" />
         </g>
-        <g className="marketing-depth-angler marketing-depth-angler-two" transform="translate(795 2200) scale(.25)">
-          <circle cx="386" cy="-34" r="108" fill="url(#cc-angler-glow)" filter="url(#cc-depth-soft-glow)" />
-          <path d="M34 160c103-150 326-177 468-41 85 82 55 207-73 250-154 51-333 11-417-87-38-44-29-81 22-122Z" fill="#111a33" stroke="#7bb8ad" strokeWidth="9" />
-          <path d="m13 207-104-75 35 116-51 97 123-41" fill="#111a33" stroke="#7bb8ad" strokeLinejoin="round" strokeWidth="9" />
-          <path d="M282 62c0-85 38-131 104-131" fill="none" stroke="#8ac6b8" strokeLinecap="round" strokeWidth="11" />
-          <circle cx="392" cy="-68" r="24" fill="#fff09c" />
-          <circle cx="374" cy="176" r="18" fill="#fff09c" />
-          <path d="M383 257c-88 59-183 66-272 20 83-1 173-8 272-20Z" fill="#080d21" stroke="#dce8d1" strokeWidth="6" />
-          <path d="m157 276 22 33 19-39 25 34 17-41 27 31 14-42" fill="#fff4d0" />
+        <g className="marketing-depth-angler marketing-depth-angler-two">
+          <circle cx="790" cy="2187" r="62" fill="url(#cc-angler-glow)" filter="url(#cc-depth-soft-glow)" />
+          <image href="/marketing/silhouettes/angler-right.webp" x="675" y="2145" width="180" height="132" preserveAspectRatio="xMidYMid meet" />
         </g>
       </g>
 
@@ -301,14 +203,11 @@ function OceanDescentArtwork() {
         <path d="M1600 2220c-134 20-206 81-252 176-44 91-99 115-173 153-78 41-109 110-125 206-23 138-82 226-175 300h725Z" fill="#12192c" stroke="#594958" strokeWidth="9" />
         <path d="M1600 2270c-102 31-164 85-205 167-37 73-94 110-164 140-73 31-109 96-132 184" fill="none" stroke="#765a5a" strokeWidth="8" opacity="0.58" />
         <path d="M1410 2388c50 2 91-8 126-29M1260 2548c50 6 89-3 119-28M1110 2760c42 7 79 2 109-17" fill="none" stroke="#8b675d" strokeWidth="6" opacity="0.42" />
-        <g className="marketing-depth-cliff-seaweed" fill="none" stroke="#68aa92" strokeLinecap="round">
-          <path d="M1280 2468c-2-76 34-96 17-163M1297 2394c-33-30-37-61-22-91M1335 2450c8-68-24-84-10-139" strokeWidth="11" />
-          <path d="M1432 2356c-5-65 26-83 12-137M1446 2296c31-27 36-50 23-75M1482 2350c10-57-18-72-5-120" strokeWidth="9" />
-        </g>
+        <image className="marketing-depth-cliff-seaweed" href="/marketing/silhouettes/cliff-seaweed.webp" x="1004" y="2280" width="596" height="239" preserveAspectRatio="xMidYMid meet" />
       </g>
 
       <g className="marketing-depth-helmet">
-        <g transform="translate(1240 2250) scale(.2)">
+        <g transform="translate(1260 2260) rotate(-11 250 205) scale(.16)">
           <ellipse cx="240" cy="388" rx="235" ry="46" fill="#0b1b35" opacity="0.38" />
           <path d="M82 318V172C82 72 153 8 250 8s168 64 168 164v146Z" fill="#5d3f35" stroke="#e0a55f" strokeWidth="18" />
           <path d="M55 318h390l-28 91H83Z" fill="#3c2d31" stroke="#c88c4e" strokeWidth="16" />
@@ -328,17 +227,8 @@ function OceanDescentArtwork() {
         </g>
       </g>
 
-      <g className="marketing-depth-volcanic-field">
-        <g fill="#6f594c" opacity="0.7">
-          <path d="m110 3174 43-20 49 20Z" />
-          <path d="m574 3184 31-17 43 17Z" />
-          <path d="m984 3172 48-24 54 24Z" />
-          <path d="m1420 3192 37-20 45 20Z" />
-        </g>
-        <g fill="none" stroke="#65a78e" strokeLinecap="round" strokeWidth="10" opacity="0.55">
-          <path d="M80 3195c-3-60 31-76 18-126M93 3139c-28-24-32-49-20-73" />
-          <path d="M1510 3198c7-66-25-79-12-132M1504 3142c30-23 36-46 24-70" />
-        </g>
+      <g className="marketing-depth-seabed-approach">
+        <image href="/marketing/silhouettes/seabed-full.webp" x="0" y="2936" width="1600" height="275" preserveAspectRatio="xMidYMax meet" />
       </g>
     </svg>
   );
@@ -353,9 +243,9 @@ const rankingFeatures = [
   ["Access + fishability", "Favor places you can reach and fish during your available window."],
 ] as const;
 
-function VolcanicSeafloorArtwork() {
+function SeafloorArtwork() {
   return (
-    <svg className="marketing-volcanic-seafloor-art" viewBox="0 0 1600 1200" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+    <svg className="marketing-seafloor-art" viewBox="0 0 1600 1200" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
       <defs>
         <linearGradient id="cc-seafloor-depth" x1="0" x2="0" y1="0" y2="1">
           <stop offset="0" stopColor="#080c20" />
@@ -368,10 +258,6 @@ function VolcanicSeafloorArtwork() {
           <stop offset="0.52" stopColor="#695449" />
           <stop offset="1" stopColor="#3b3236" />
         </linearGradient>
-        <radialGradient id="cc-vent-glow">
-          <stop offset="0" stopColor="#f3a16f" stopOpacity="0.28" />
-          <stop offset="1" stopColor="#f3a16f" stopOpacity="0" />
-        </radialGradient>
       </defs>
       <rect width="1600" height="1200" fill="url(#cc-seafloor-depth)" />
 
@@ -388,67 +274,15 @@ function VolcanicSeafloorArtwork() {
         <circle cx="330" cy="476" r="5" />
       </g>
 
-      <g className="marketing-seafloor-smoke" fill="none" strokeLinecap="round">
-        <path d="M284 766c-44-66 32-102-11-180-32-57 24-88-8-143" stroke="#71bcb1" strokeWidth="19" opacity="0.2" />
-        <path d="M776 844c31-52-27-79 7-137 25-44-18-66 5-105" stroke="#d5f0d7" strokeWidth="13" opacity="0.15" />
-        <path d="M1249 775c45-72-34-105 13-186 29-51-23-82 6-133" stroke="#78c0b3" strokeWidth="20" opacity="0.19" />
-      </g>
+      <path d="M0 858c112-47 244-59 362-31 151 36 275 29 408-17 127-44 256-43 385 3 134 48 282 53 445 9v378H0Z" fill="url(#cc-seafloor-sand)" />
+      <path d="M0 1050c172-37 310-26 438 13 119 36 242 31 374-11 130-41 245-36 361-4 120 34 263 32 427-8v160H0Z" fill="#3d3336" opacity="0.78" />
 
-      <g className="marketing-seafloor-bubbles" fill="none" stroke="#d9c89f" strokeWidth="4" opacity="0.46">
-        <circle cx="278" cy="548" r="9" />
-        <circle cx="302" cy="492" r="5" />
-        <circle cx="259" cy="434" r="4" />
-        <circle cx="1248" cy="554" r="8" />
-        <circle cx="1275" cy="500" r="5" />
-        <circle cx="1263" cy="448" r="4" />
-        <circle cx="781" cy="670" r="6" />
-        <circle cx="760" cy="626" r="4" />
-      </g>
-
-      <path d="M0 820c129-42 240-47 348-20 117 29 220 22 336-15 145-46 261-45 396-5 112 33 217 39 312 13 80-22 148-16 208 12v395H0Z" fill="url(#cc-seafloor-sand)" />
-      <path d="M0 1040c154-28 287-23 415 15 108 32 223 27 346-10 138-41 251-39 376-7 131 34 280 33 463-2v164H0Z" fill="#3d3336" opacity="0.72" />
-
-      <g className="marketing-seafloor-rocks" fill="#514445" stroke="#8f6c5a" strokeLinejoin="round" strokeWidth="5">
-        <path d="m80 945 44-31 51 18 22 43-122 4Z" />
-        <path d="m432 1000 31-24 44 9 24 35-104 4Z" />
-        <path d="m964 950 42-30 52 19 17 39-122 1Z" />
-        <path d="m1432 1006 35-30 50 15 23 39-119 2Z" />
-      </g>
-
-      <g className="marketing-seafloor-vents" fill="#47383a" stroke="#a9795b" strokeLinecap="round" strokeLinejoin="round" strokeWidth="8">
-        <g className="marketing-seafloor-vent marketing-seafloor-vent-large" transform="translate(284 929) scale(.82) translate(-284 -929)">
-          <circle cx="284" cy="768" r="128" fill="url(#cc-vent-glow)" stroke="none" />
-          <path d="M132 918c34-33 73-46 110-39 47 9 76-12 117-9 48 3 86 23 119 59-99 31-256 30-346-11Z" />
-          <path d="M222 883c5-47-9-91 1-134 8-37-3-82 19-112 18-25 50-28 70-5 24 28 8 73 18 109 12 42 3 87 14 136-34 18-85 21-122 6Z" />
-          <path d="M344 886c-4-31 7-62 2-91-5-35 12-68 38-78 23-9 43 10 43 35 0 36-7 74 7 113-22 23-61 32-90 21Z" />
-          <path d="m245 640 13-12 28-3 28 17-13 12-29 2-20-7ZM363 723l15-9 25 3 19 11-12 11-27-1-14-7Z" fill="#111426" />
-          <path d="M234 709c20 9 52 9 82-3M231 777c24 12 59 10 91-2M363 798c17 10 38 10 59 1M225 842c31 12 67 10 102-3" fill="none" stroke="#7e594d" strokeWidth="6" opacity="0.76" />
-        </g>
-        <g className="marketing-seafloor-vent marketing-seafloor-vent-small" transform="translate(784 947) scale(.9) translate(-784 -947)">
-          <path d="M674 946c34-28 68-37 103-24 38 14 78 8 119 24-52 28-166 30-222 0Z" />
-          <path d="M731 927c6-34-5-68 2-99 7-28-1-64 18-84 17-18 43-15 57 5 18 25 6 57 14 85 9 30 4 58 11 89-28 17-74 20-102 4Z" />
-          <path d="m754 752 16-9 24 2 15 12-12 11-25-1-13-7Z" fill="#111426" />
-          <path d="M741 811c19 9 45 9 69-2M740 868c21 10 48 9 74-2" fill="none" stroke="#7e594d" strokeWidth="5" opacity="0.7" />
-        </g>
-        <g className="marketing-seafloor-vent marketing-seafloor-vent-tall" transform="translate(1274 946) scale(.72) translate(-1274 -946)">
-          <circle cx="1249" cy="777" r="134" fill="url(#cc-vent-glow)" stroke="none" />
-          <path d="M1085 926c41-36 87-52 130-39 45 14 80-9 124-3 54 7 100 28 139 62-105 31-289 27-393-20Z" />
-          <path d="M1173 892c6-55-8-107 3-157 10-43-3-96 24-129 23-28 58-25 77 5 22 35 3 81 15 124 13 47 5 99 16 148-34 23-95 26-135 9Z" />
-          <path d="M1304 892c-3-37 10-70 5-105-5-41 15-79 45-91 26-10 51 11 50 41-1 40-11 85 5 129-24 29-69 38-105 26Z" />
-          <path d="m1201 614 18-12 32 2 26 13-14 14-33 3-21-10ZM1329 704l18-10 28 3 22 13-13 12-29 1-18-9Z" fill="#111426" />
-          <path d="M1186 685c25 12 64 11 96-3M1183 758c27 14 68 13 101-2M1325 779c21 12 47 11 70-1M1175 831c35 14 80 12 116-3" fill="none" stroke="#7e594d" strokeWidth="6" opacity="0.76" />
-        </g>
-      </g>
-
-      <g className="marketing-seafloor-life" fill="none" stroke="#6eb09a" strokeLinecap="round">
-        <path d="M104 1030c-5-87 39-111 21-181M118 948c-39-33-45-67-27-104M153 1037c13-73-24-95-5-159" strokeWidth="12" />
-        <path d="M485 1042c-4-62 27-82 14-134M499 972c-28-25-34-50-21-78M532 1046c10-58-21-73-7-121" strokeWidth="9" />
-        <path d="M925 1018c-5-74 31-93 17-155M939 948c32-29 38-56 25-88M972 1026c9-64-20-80-4-134" strokeWidth="10" />
-        <path d="M1455 1050c-7-93 35-117 18-198M1474 958c39-37 44-72 27-111M1517 1058c15-78-23-101-3-167" strokeWidth="13" />
+      <g className="marketing-seafloor-life">
+        <image href="/marketing/silhouettes/seabed-full.webp" x="0" y="784" width="1600" height="275" preserveAspectRatio="xMidYMax meet" />
       </g>
 
       <g className="marketing-seafloor-crab marketing-seafloor-crab-a">
-        <g transform="translate(0 1080)" fill="#e47862">
+        <g transform="translate(0 1090) scale(.52)" fill="#e47862">
           <path d="M-34-20h68v12h12v28H34v13h-68V20h-12V-8h12Z" />
           <rect x="-23" y="-31" width="12" height="12" />
           <rect x="11" y="-31" width="12" height="12" />
@@ -460,7 +294,7 @@ function VolcanicSeafloorArtwork() {
         </g>
       </g>
       <g className="marketing-seafloor-crab marketing-seafloor-crab-b">
-        <g transform="translate(0 1135) scale(-.86 .86)" fill="#d98a67">
+        <g transform="translate(0 1140) scale(-.46 .46)" fill="#d98a67">
           <path d="M-34-20h68v12h12v28H34v13h-68V20h-12V-8h12Z" />
           <rect x="-23" y="-31" width="12" height="12" />
           <rect x="11" y="-31" width="12" height="12" />
@@ -518,6 +352,7 @@ export function MarketingHome() {
       root.style.setProperty("--marketing-hero-progress", heroProgress.toFixed(4));
       root.style.setProperty("--marketing-surface-progress", surfaceProgress.toFixed(4));
       root.style.setProperty("--marketing-wash-progress", washProgress.toFixed(4));
+      root.classList.toggle("marketing-hero-passed", heroProgress >= 0.995);
       setSunOrbit(heroProgress);
     };
 
@@ -701,7 +536,7 @@ export function MarketingHome() {
       </section>
 
       <section className="marketing-proof" ref={proofRef} aria-labelledby="marketing-proof-title">
-        <VolcanicSeafloorArtwork />
+        <SeafloorArtwork />
         <div className="marketing-proof-intro">
           <p className="marketing-kicker">
             <span /> At the seafloor

@@ -3767,9 +3767,6 @@ footer > div {
   z-index: -2;
   overflow: hidden;
   background: #62b7df;
-  transform: scale(calc(1.035 - (var(--marketing-hero-progress) * 0.035)));
-  transform-origin: 50% 50%;
-  will-change: transform;
 }
 
 .marketing-art-nightfall {
@@ -3796,9 +3793,6 @@ footer > div {
   width: 102% !important;
   height: 104% !important;
   max-width: none;
-  transform: translateY(calc(var(--marketing-hero-progress) * -2.2%)) scale(1.015);
-  transform-origin: 50% 55%;
-  will-change: transform;
 }
 
 .marketing-art-sunset,
@@ -3817,11 +3811,8 @@ footer > div {
   fill: none;
   stroke: #fff0b0;
   stroke-linecap: round;
-  stroke-width: 5;
-  opacity: calc(0.84 - (var(--marketing-sun-progress) * 0.44));
-  transform: rotate(calc(var(--marketing-sun-progress) * 12deg));
-  transform-box: fill-box;
-  transform-origin: center;
+  stroke-width: 3.5;
+  opacity: calc(0.7 - (var(--marketing-sun-progress) * 0.36));
 }
 
 .marketing-art-sun-disc {
@@ -3833,29 +3824,8 @@ footer > div {
   stroke-width: 2;
 }
 
-.marketing-art-contours-far {
-  transform: translateX(calc(var(--marketing-hero-progress) * -28px)) translateY(calc(var(--marketing-hero-progress) * -24px));
-  will-change: transform;
-}
-
-.marketing-art-clouds {
-  transform: translateX(calc(var(--marketing-hero-progress) * 34px));
-  will-change: transform;
-}
-
-.marketing-art-islands-far {
-  transform: translateX(calc(var(--marketing-hero-progress) * -18px)) translateY(calc(var(--marketing-hero-progress) * 10px));
-  will-change: transform;
-}
-
-.marketing-art-water {
-  transform: translateY(calc(var(--marketing-hero-progress) * 14px));
-  will-change: transform;
-}
-
 .marketing-art-water-sunset {
-  transform: translateY(calc(var(--marketing-hero-progress) * 14px));
-  will-change: opacity, transform;
+  will-change: opacity;
 }
 
 .marketing-art-sun-path {
@@ -3867,14 +3837,6 @@ footer > div {
 .marketing-art-waves {
   opacity: 0.46;
   stroke-width: 2.2;
-  transform: translateX(calc(var(--marketing-hero-progress) * -24px)) translateY(calc(var(--marketing-hero-progress) * 22px));
-  will-change: transform;
-}
-
-.marketing-art-foreground {
-  transform: translateY(calc(var(--marketing-hero-progress) * 26px)) scale(calc(1 + (var(--marketing-surface-progress) * 0.035)));
-  transform-origin: 50% 100%;
-  will-change: transform;
 }
 
 .marketing-marker-ring {
@@ -4034,8 +3996,7 @@ footer > div {
   z-index: 2;
   width: min(760px, 70vw);
   opacity: calc(1 - var(--marketing-surface-progress));
-  transform: translateY(calc(var(--marketing-hero-progress) * -18px));
-  will-change: opacity, transform;
+  will-change: opacity;
 }
 
 .marketing-kicker,
@@ -4237,8 +4198,7 @@ footer > div {
     inset 0 -1px 0 rgba(255, 255, 255, 0.04),
     0 22px 58px rgba(39, 30, 66, 0.2);
   opacity: calc(1 - var(--marketing-surface-progress));
-  transform: translateY(calc(var(--marketing-hero-progress) * -32px));
-  will-change: opacity, transform;
+  will-change: opacity;
 }
 
 .marketing-window-callout span,
@@ -4270,8 +4230,8 @@ footer > div {
   width: min(1080px, calc(100vw - 3rem));
   opacity: calc(1 - var(--marketing-surface-progress));
   pointer-events: none;
-  transform: translateX(50%) translateY(calc((1 - var(--marketing-hero-progress)) * 10px));
-  will-change: opacity, transform;
+  transform: translateX(50%);
+  will-change: opacity;
 }
 
 .marketing-hero-notes article {
@@ -4341,6 +4301,10 @@ footer > div {
   stroke-width: 1.6;
 }
 
+.marketing-hero-passed .marketing-hero-sticky {
+  visibility: hidden;
+}
+
 .marketing-wash-scroll {
   position: relative;
   z-index: 2;
@@ -4388,7 +4352,19 @@ footer > div {
   inset: 0;
   overflow: hidden;
   background: #102d54;
-  clip-path: polygon(0 3.2%, 10% 2%, 21% 3.5%, 33% 2.1%, 45% 3.3%, 58% 1.8%, 71% 3.1%, 84% 2%, 100% 3.2%, 100% 100%, 0 100%);
+  clip-path: polygon(
+    0 clamp(0%, calc(3.2% - (var(--marketing-wash-progress) * 24%)), 3.2%),
+    10% clamp(0%, calc(2% - (var(--marketing-wash-progress) * 24%)), 2%),
+    21% clamp(0%, calc(3.5% - (var(--marketing-wash-progress) * 24%)), 3.5%),
+    33% clamp(0%, calc(2.1% - (var(--marketing-wash-progress) * 24%)), 2.1%),
+    45% clamp(0%, calc(3.3% - (var(--marketing-wash-progress) * 24%)), 3.3%),
+    58% clamp(0%, calc(1.8% - (var(--marketing-wash-progress) * 24%)), 1.8%),
+    71% clamp(0%, calc(3.1% - (var(--marketing-wash-progress) * 24%)), 3.1%),
+    84% clamp(0%, calc(2% - (var(--marketing-wash-progress) * 24%)), 2%),
+    100% clamp(0%, calc(3.2% - (var(--marketing-wash-progress) * 24%)), 3.2%),
+    100% 100%,
+    0 100%
+  );
 }
 
 .marketing-ocean-descent-art {
@@ -4399,14 +4375,14 @@ footer > div {
   width: 100% !important;
   height: 320% !important;
   max-width: none;
-  transform: translateY(calc(var(--marketing-wash-progress) * -68.75%));
+  transform: translate3d(0, calc(var(--marketing-wash-progress) * -68.75%), 0);
+  backface-visibility: hidden;
   will-change: transform;
 }
 
 .marketing-depth-light {
-  transform: translateX(calc(var(--marketing-wash-progress) * -20px));
-  opacity: calc(1 - (var(--marketing-wash-progress) * 0.86));
-  will-change: transform;
+  opacity: calc(0.22 - (var(--marketing-wash-progress) * 0.18));
+  will-change: opacity;
 }
 
 .marketing-depth-bubbles {
@@ -4414,14 +4390,12 @@ footer > div {
 }
 
 .marketing-depth-fish-school {
-  transform: translateX(calc(var(--marketing-wash-progress) * -32px));
-  will-change: transform;
+  opacity: 0.72;
 }
 
 .marketing-depth-spearfishers {
   transform-box: fill-box;
   transform-origin: left center;
-  opacity: clamp(0.18, calc((0.7 - var(--marketing-wash-progress)) * 4), 1);
 }
 
 .marketing-spearfisher {
@@ -4449,17 +4423,15 @@ footer > div {
 }
 
 .marketing-depth-wildlife {
-  transform: translateX(calc(var(--marketing-wash-progress) * 12px));
   opacity: 0.82;
-  will-change: transform;
 }
 
 .marketing-depth-whale {
-  opacity: 0.45;
+  opacity: 0.58;
 }
 
 .marketing-depth-squid-pair {
-  opacity: 0.64;
+  opacity: 0.72;
 }
 
 .marketing-depth-angler-pair,
@@ -4469,7 +4441,7 @@ footer > div {
 }
 
 .marketing-depth-angler-two {
-  opacity: 0.7;
+  opacity: 0.68;
 }
 
 .marketing-depth-vignette {
@@ -4546,10 +4518,9 @@ footer > div {
   min-height: 660px;
   margin: 0 auto;
   padding: clamp(2.5rem, 6vh, 5rem) 0 clamp(1.5rem, 3vh, 2.5rem);
-  opacity: clamp(0, min(calc((var(--marketing-wash-progress) - 0.04) * 7), calc((0.7 - var(--marketing-wash-progress)) * 8)), 1);
-  transform: translateY(calc((1 - var(--marketing-wash-progress)) * 22px));
+  opacity: clamp(0, calc((var(--marketing-wash-progress) - 0.24) * 12.5), 1);
   pointer-events: none;
-  will-change: opacity, transform;
+  will-change: opacity;
 }
 
 .marketing-product > header {
@@ -4606,8 +4577,6 @@ footer > div {
 }
 
 .marketing-model-features li {
-  --marketing-feature-start: 0.08;
-  --marketing-feature-load: clamp(0, calc((var(--marketing-wash-progress) - var(--marketing-feature-start)) * 5), 1);
   display: grid;
   grid-template-columns: auto minmax(0, 1fr);
   gap: 0.78rem;
@@ -4618,29 +4587,6 @@ footer > div {
   border-radius: 15px;
   background: rgba(10, 27, 56, 0.56);
   box-shadow: inset 0 1px 0 rgba(237, 252, 239, 0.06);
-  opacity: calc(0.28 + (var(--marketing-feature-load) * 0.72));
-  transform: translateX(calc((1 - var(--marketing-feature-load)) * 18px));
-  will-change: opacity, transform;
-}
-
-.marketing-model-features li:nth-child(2) {
-  --marketing-feature-start: 0.11;
-}
-
-.marketing-model-features li:nth-child(3) {
-  --marketing-feature-start: 0.14;
-}
-
-.marketing-model-features li:nth-child(4) {
-  --marketing-feature-start: 0.17;
-}
-
-.marketing-model-features li:nth-child(5) {
-  --marketing-feature-start: 0.2;
-}
-
-.marketing-model-features li:nth-child(6) {
-  --marketing-feature-start: 0.23;
 }
 
 .marketing-model-features li > span {
@@ -4697,8 +4643,6 @@ footer > div {
 .marketing-proof {
   position: relative;
   z-index: 3;
-  content-visibility: auto;
-  contain-intrinsic-size: auto 1500px;
   overflow: visible;
   margin-top: -120px;
   padding: calc(clamp(9rem, 14vw, 13rem) + 120px) max(4vw, 1.25rem) 3rem;
@@ -4720,7 +4664,7 @@ footer > div {
   pointer-events: none;
 }
 
-.marketing-volcanic-seafloor-art {
+.marketing-seafloor-art {
   position: absolute;
   inset: 0;
   width: 100% !important;
@@ -4728,11 +4672,6 @@ footer > div {
   max-width: none;
   opacity: 0.96;
   pointer-events: none;
-}
-
-.marketing-seafloor-smoke {
-  transform: translateY(calc((1 - var(--marketing-wash-progress)) * 24px));
-  will-change: transform;
 }
 
 .marketing-seafloor-crab {
@@ -4770,10 +4709,6 @@ footer > div {
   to {
     transform: translateX(-130px);
   }
-}
-
-.marketing-seafloor-glow {
-  opacity: calc(0.48 + (var(--marketing-wash-progress) * 0.38));
 }
 
 .marketing-proof-intro,
@@ -4964,10 +4899,6 @@ footer > div {
     min-height: 640px;
   }
 
-  .marketing-art-frame {
-    transform: scale(calc(1.025 - (var(--marketing-hero-progress) * 0.025)));
-  }
-
   .marketing-coast-art {
     inset: -2% -15%;
     width: 130% !important;
@@ -5045,7 +4976,7 @@ footer > div {
     grid-template-columns: 1fr;
     gap: 0.36rem;
     width: auto;
-    transform: translateY(calc((1 - var(--marketing-hero-progress)) * 8px));
+    transform: none;
   }
 
   .marketing-hero-notes article {
@@ -5106,7 +5037,7 @@ footer > div {
     width: min(calc(100vw - 2rem), 660px);
     min-height: 640px;
     padding: max(1rem, var(--safe-area-top)) 0 max(0.75rem, var(--safe-area-bottom));
-    opacity: clamp(0, min(calc((var(--marketing-wash-progress) - 0.04) * 7), calc((0.7 - var(--marketing-wash-progress)) * 8)), 1);
+    opacity: clamp(0, calc((var(--marketing-wash-progress) - 0.24) * 12.5), 1);
   }
 
   .marketing-product > header {
@@ -5350,7 +5281,6 @@ footer > div {
   .marketing-depth-angler-pair,
   .marketing-depth-cliff,
   .marketing-wash-surface,
-  .marketing-seafloor-smoke,
   .marketing-product,
   .marketing-model-features li {
     animation: none !important;

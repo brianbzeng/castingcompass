@@ -61,9 +61,14 @@ test("server-renders the marketing homepage with honest product routes and an un
   assert.match(html, /marketing-depth-whale/);
   assert.match(html, /marketing-depth-squid-pair/);
   assert.match(html, /marketing-depth-cliff/);
+  assert.match(html, /\/marketing\/silhouettes\/spearfisher-near\.webp/);
+  assert.match(html, /\/marketing\/silhouettes\/spearfisher-far\.webp/);
+  assert.match(html, /\/marketing\/silhouettes\/whale\.webp/);
+  assert.match(html, /\/marketing\/silhouettes\/seabed-full\.webp/);
   assert.match(html, /marketing-seafloor-crab-a/);
   assert.match(html, /marketing-seafloor-crab-b/);
   assert.doesNotMatch(html, /marketing-cast-rod/);
+  assert.doesNotMatch(html, /marketing-depth-volcanic-field|marketing-seafloor-vent/);
   assert.match(html, /href="\/forecast"/);
   assert.match(html, /href="\/community"/);
   assert.match(html, /aria-label="TestFlight download — coming soon"/);
