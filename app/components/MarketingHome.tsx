@@ -115,11 +115,27 @@ function OceanDescentArtwork() {
     <svg className="marketing-ocean-descent-art" viewBox="0 0 1600 3200" preserveAspectRatio="xMidYMin slice" aria-hidden="true">
       <defs>
         <linearGradient id="cc-depth-water" x1="0" x2="0" y1="0" y2="1">
-          <stop offset="0" stopColor="#43aeb0" />
-          <stop offset="0.12" stopColor="#268d9a" />
-          <stop offset="0.38" stopColor="#175c78" />
-          <stop offset="0.7" stopColor="#102d54" />
-          <stop offset="1" stopColor="#080c20" />
+          <stop offset="0" stopColor="#49b6b4" />
+          <stop offset="0.1" stopColor="#2c9298" />
+          <stop offset="0.34" stopColor="#17627a" />
+          <stop offset="0.68" stopColor="#0d3557" />
+          <stop offset="1" stopColor="#070c20" />
+        </linearGradient>
+        <radialGradient id="cc-depth-surface-warm" cx="50%" cy="0%" r="92%">
+          <stop offset="0" stopColor="#ffd98c" stopOpacity="0.72" />
+          <stop offset="0.28" stopColor="#f0b479" stopOpacity="0.25" />
+          <stop offset="0.68" stopColor="#4eb7b0" stopOpacity="0.08" />
+          <stop offset="1" stopColor="#163d5c" stopOpacity="0" />
+        </radialGradient>
+        <linearGradient id="cc-depth-rays" x1="0" x2="0" y1="0" y2="1">
+          <stop offset="0" stopColor="#ffe5a7" stopOpacity="0.82" />
+          <stop offset="0.48" stopColor="#c8ebca" stopOpacity="0.28" />
+          <stop offset="1" stopColor="#83c9c1" stopOpacity="0" />
+        </linearGradient>
+        <linearGradient id="cc-cliff-rock" x1="1" x2="0" y1="0" y2="1">
+          <stop offset="0" stopColor="#243b43" />
+          <stop offset="0.48" stopColor="#152b38" />
+          <stop offset="1" stopColor="#0a172c" />
         </linearGradient>
         <radialGradient id="cc-diver-glow">
           <stop offset="0" stopColor="#7ed9d2" stopOpacity="0.46" />
@@ -133,11 +149,50 @@ function OceanDescentArtwork() {
         <filter id="cc-depth-soft-glow" x="-200%" y="-200%" width="500%" height="500%">
           <feGaussianBlur stdDeviation="24" />
         </filter>
+        <filter id="cc-kelp-silhouette" x="0" y="0" width="1600" height="3200" filterUnits="userSpaceOnUse">
+          <feColorMatrix type="matrix" values="0.2126 0.7152 0.0722 0 0 0.2126 0.7152 0.0722 0 0 0.2126 0.7152 0.0722 0 0 0 0 0 1 0" />
+          <feComponentTransfer>
+            <feFuncR type="discrete" tableValues="1 0 0 0 0 0 0 0" />
+            <feFuncG type="discrete" tableValues="1 0 0 0 0 0 0 0" />
+            <feFuncB type="discrete" tableValues="1 0 0 0 0 0 0 0" />
+          </feComponentTransfer>
+        </filter>
+        <filter id="cc-cliff-silhouette" x="1004" y="2280" width="596" height="239" filterUnits="userSpaceOnUse">
+          <feColorMatrix type="matrix" values="0.2126 0.7152 0.0722 0 0 0.2126 0.7152 0.0722 0 0 0.2126 0.7152 0.0722 0 0 0 0 0 1 0" />
+          <feComponentTransfer>
+            <feFuncR type="discrete" tableValues="0 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0" />
+            <feFuncG type="discrete" tableValues="0 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0" />
+            <feFuncB type="discrete" tableValues="0 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0" />
+          </feComponentTransfer>
+        </filter>
+        <clipPath id="cc-kelp-left-edge">
+          <rect width="260" height="3100" />
+        </clipPath>
+        <clipPath id="cc-kelp-right-edge">
+          <rect x="1340" width="260" height="3100" />
+        </clipPath>
+        <mask id="cc-kelp-left-mask" x="0" y="0" width="1600" height="3200" maskUnits="userSpaceOnUse">
+          <g filter="url(#cc-kelp-silhouette)" clipPath="url(#cc-kelp-left-edge)">
+            <image href="/marketing/silhouettes/seabed-full.webp" x="-16" y="40" width="1640" height="620" preserveAspectRatio="none" />
+            <image href="/marketing/silhouettes/seabed-full.webp" x="-30" y="940" width="1640" height="700" preserveAspectRatio="none" />
+          </g>
+        </mask>
+        <mask id="cc-kelp-right-mask" x="0" y="0" width="1600" height="3200" maskUnits="userSpaceOnUse">
+          <g filter="url(#cc-kelp-silhouette)" clipPath="url(#cc-kelp-right-edge)">
+            <image href="/marketing/silhouettes/seabed-full.webp" x="-24" y="70" width="1650" height="650" preserveAspectRatio="none" />
+            <image href="/marketing/silhouettes/seabed-full.webp" x="-8" y="1220" width="1640" height="680" preserveAspectRatio="none" />
+          </g>
+        </mask>
+        <mask id="cc-cliff-seaweed-mask" x="1004" y="2280" width="596" height="239" maskUnits="userSpaceOnUse">
+          <image href="/marketing/silhouettes/cliff-seaweed.webp" x="1004" y="2280" width="596" height="239" preserveAspectRatio="xMidYMid meet" filter="url(#cc-cliff-silhouette)" />
+        </mask>
       </defs>
       <rect width="1600" height="3200" fill="url(#cc-depth-water)" />
+      <rect className="marketing-depth-surface-warm" width="1600" height="980" fill="url(#cc-depth-surface-warm)" />
 
-      <g className="marketing-depth-light" fill="none" stroke="#d8f7ed" strokeLinecap="round">
-        <path d="M-40-110 330 920M310-110 565 980M665-120 740 900M1035-110 950 970M1360-110 1110 905M1660-100 1325 835" strokeWidth="82" opacity="0.085" />
+      <g className="marketing-depth-light" fill="none" stroke="url(#cc-depth-rays)" strokeLinecap="round">
+        <path d="M-140-110 270 1030M180-120 505 1120M540-130 700 1040M900-130 850 1050M1240-120 1025 1030M1640-100 1260 960" strokeWidth="110" opacity="0.14" />
+        <path d="M35-90 345 920M410-100 620 980M745-110 770 1010M1115-100 940 940M1485-90 1175 850" strokeWidth="32" opacity="0.13" />
       </g>
 
       <g className="marketing-depth-bubbles" fill="none" stroke="#d7f4e9" strokeWidth="4" opacity="0.4">
@@ -167,6 +222,34 @@ function OceanDescentArtwork() {
         <circle cx="778" cy="2660" r="5" />
       </g>
 
+      <g className="marketing-depth-particles" fill="#d9f1d5">
+        <circle cx="224" cy="232" r="3" />
+        <circle cx="516" cy="410" r="2" />
+        <circle cx="702" cy="178" r="3" />
+        <circle cx="1038" cy="500" r="2" />
+        <circle cx="1240" cy="286" r="3" />
+        <circle cx="1490" cy="548" r="2" />
+        <circle cx="270" cy="860" r="3" />
+        <circle cx="630" cy="1060" r="2" />
+        <circle cx="1150" cy="930" r="3" />
+        <circle cx="1395" cy="1180" r="2" />
+        <circle cx="158" cy="1370" r="2" />
+        <circle cx="498" cy="1575" r="3" />
+        <circle cx="965" cy="1480" r="2" />
+        <circle cx="1270" cy="1710" r="3" />
+        <circle cx="1450" cy="1880" r="2" />
+        <circle cx="310" cy="2070" r="2" />
+        <circle cx="1010" cy="2210" r="3" />
+        <circle cx="1380" cy="2480" r="2" />
+        <circle cx="640" cy="2700" r="2" />
+        <circle cx="910" cy="2920" r="3" />
+      </g>
+
+      <g className="marketing-depth-edge-vegetation">
+        <rect className="marketing-kelp-edge marketing-kelp-edge-left" width="1600" height="3200" fill="#173d47" mask="url(#cc-kelp-left-mask)" opacity="0.58" />
+        <rect className="marketing-kelp-edge marketing-kelp-edge-right" width="1600" height="3200" fill="#173d47" mask="url(#cc-kelp-right-mask)" opacity="0.62" />
+      </g>
+
       <g className="marketing-depth-fish-school">
         <image className="marketing-depth-school-surface-left" href="/marketing/silhouettes/school-right.webp" x="70" y="155" width="610" height="142" preserveAspectRatio="xMidYMid meet" />
         <image className="marketing-depth-school-surface-right" href="/marketing/silhouettes/school-left.webp" x="975" y="515" width="540" height="145" preserveAspectRatio="xMidYMid meet" />
@@ -178,13 +261,32 @@ function OceanDescentArtwork() {
         <circle cx="360" cy="430" r="245" fill="url(#cc-diver-glow)" />
         <image className="marketing-spearfisher marketing-spearfisher-near" href="/marketing/silhouettes/spearfisher-near.webp" x="68" y="305" width="430" height="125" preserveAspectRatio="xMidYMid meet" />
         <image className="marketing-spearfisher marketing-spearfisher-far" href="/marketing/silhouettes/spearfisher-far.webp" x="146" y="443" width="350" height="108" preserveAspectRatio="xMidYMid meet" />
+        <g className="marketing-diver-bubbles" fill="none" stroke="#d7f4e9" strokeWidth="3" opacity="0.48">
+          <circle cx="205" cy="292" r="8" />
+          <circle cx="178" cy="262" r="5" />
+          <circle cx="162" cy="231" r="3" />
+          <circle cx="278" cy="432" r="7" />
+          <circle cx="254" cy="405" r="4" />
+          <circle cx="238" cy="378" r="3" />
+        </g>
       </g>
 
       <g className="marketing-depth-wildlife">
-        <image className="marketing-depth-whale" href="/marketing/silhouettes/whale.webp" x="435" y="920" width="790" height="310" preserveAspectRatio="xMidYMid meet" />
+        <g className="marketing-depth-whale-glide">
+          <image className="marketing-depth-whale" href="/marketing/silhouettes/whale.webp" x="435" y="920" width="790" height="310" preserveAspectRatio="xMidYMid meet" transform="translate(1660 0) scale(-1 1)" />
+        </g>
         <g className="marketing-depth-squid-pair">
-          <image href="/marketing/silhouettes/squid-upper.webp" x="340" y="1490" width="370" height="175" preserveAspectRatio="xMidYMid meet" />
-          <image href="/marketing/silhouettes/squid-lower.webp" x="830" y="1650" width="345" height="160" preserveAspectRatio="xMidYMid meet" />
+          <image className="marketing-depth-squid marketing-depth-squid-one" href="/marketing/silhouettes/squid-upper.webp" x="340" y="1490" width="370" height="175" preserveAspectRatio="xMidYMid meet" />
+          <image
+            className="marketing-depth-squid marketing-depth-squid-two"
+            href="/marketing/silhouettes/squid-lower.webp"
+            x="830"
+            y="1650"
+            width="345"
+            height="160"
+            preserveAspectRatio="xMidYMid meet"
+            transform="translate(2005 0) scale(-1 1)"
+          />
         </g>
       </g>
 
@@ -195,15 +297,15 @@ function OceanDescentArtwork() {
         </g>
         <g className="marketing-depth-angler marketing-depth-angler-two">
           <circle cx="790" cy="2187" r="62" fill="url(#cc-angler-glow)" filter="url(#cc-depth-soft-glow)" />
-          <image href="/marketing/silhouettes/angler-right.webp" x="675" y="2145" width="180" height="132" preserveAspectRatio="xMidYMid meet" />
+          <image href="/marketing/silhouettes/angler-right.webp" x="675" y="2145" width="180" height="132" preserveAspectRatio="xMidYMid meet" transform="translate(1530 0) scale(-1 1)" />
         </g>
       </g>
 
       <g className="marketing-depth-cliff">
-        <path d="M1600 2220c-134 20-206 81-252 176-44 91-99 115-173 153-78 41-109 110-125 206-23 138-82 226-175 300h725Z" fill="#12192c" stroke="#594958" strokeWidth="9" />
-        <path d="M1600 2270c-102 31-164 85-205 167-37 73-94 110-164 140-73 31-109 96-132 184" fill="none" stroke="#765a5a" strokeWidth="8" opacity="0.58" />
-        <path d="M1410 2388c50 2 91-8 126-29M1260 2548c50 6 89-3 119-28M1110 2760c42 7 79 2 109-17" fill="none" stroke="#8b675d" strokeWidth="6" opacity="0.42" />
-        <image className="marketing-depth-cliff-seaweed" href="/marketing/silhouettes/cliff-seaweed.webp" x="1004" y="2280" width="596" height="239" preserveAspectRatio="xMidYMid meet" />
+        <path d="M1600 2180c-138 28-205 78-252 176-46 95-98 119-176 160-80 43-112 115-128 215-24 144-84 236-181 314h737Z" fill="url(#cc-cliff-rock)" stroke="#536454" strokeWidth="6" />
+        <path d="M1600 2240c-105 35-166 88-207 172-38 78-97 115-170 147-75 33-112 101-136 192" fill="none" stroke="#718066" strokeWidth="6" opacity="0.42" />
+        <path d="M1410 2368c50 4 92-8 128-31M1262 2532c50 8 91-2 122-31M1104 2753c45 8 83 2 115-18" fill="none" stroke="#91a16f" strokeWidth="4" opacity="0.3" />
+        <rect className="marketing-depth-cliff-seaweed" x="1004" y="2280" width="596" height="239" fill="#08172a" mask="url(#cc-cliff-seaweed-mask)" />
       </g>
 
       <g className="marketing-depth-helmet">
@@ -227,6 +329,12 @@ function OceanDescentArtwork() {
         </g>
       </g>
 
+      <g className="marketing-helmet-bubbles" fill="none" stroke="#bfe8d9" strokeWidth="3" opacity="0.42">
+        <circle cx="1378" cy="2318" r="8" />
+        <circle cx="1402" cy="2275" r="5" />
+        <circle cx="1389" cy="2233" r="3" />
+      </g>
+
       <g className="marketing-depth-seabed-approach">
         <image href="/marketing/silhouettes/seabed-full.webp" x="0" y="2936" width="1600" height="275" preserveAspectRatio="xMidYMax meet" />
       </g>
@@ -245,21 +353,47 @@ const rankingFeatures = [
 
 function SeafloorArtwork() {
   return (
-    <svg className="marketing-seafloor-art" viewBox="0 0 1600 1200" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+    <svg
+      className="marketing-seafloor-art"
+      viewBox="0 0 1600 1200"
+      preserveAspectRatio="xMidYMid slice"
+      aria-hidden="true"
+      style={{ position: "absolute", inset: 0, width: "100%", height: "100%", maxWidth: "none", opacity: 0.96, pointerEvents: "none" }}
+    >
       <defs>
         <linearGradient id="cc-seafloor-depth" x1="0" x2="0" y1="0" y2="1">
           <stop offset="0" stopColor="#080c20" />
-          <stop offset="0.38" stopColor="#080a1d" />
-          <stop offset="0.72" stopColor="#070918" />
-          <stop offset="1" stopColor="#060714" />
+          <stop offset="0.36" stopColor="#071124" />
+          <stop offset="0.7" stopColor="#071421" />
+          <stop offset="1" stopColor="#050b18" />
         </linearGradient>
         <linearGradient id="cc-seafloor-sand" x1="0" x2="0" y1="0" y2="1">
-          <stop offset="0" stopColor="#9c8067" />
-          <stop offset="0.52" stopColor="#695449" />
-          <stop offset="1" stopColor="#3b3236" />
+          <stop offset="0" stopColor="#36514a" />
+          <stop offset="0.46" stopColor="#243c3d" />
+          <stop offset="1" stopColor="#111d29" />
         </linearGradient>
+        <radialGradient id="cc-seafloor-ambient" cx="50%" cy="30%" r="74%">
+          <stop offset="0" stopColor="#1d5b62" stopOpacity="0.3" />
+          <stop offset="0.55" stopColor="#0c2638" stopOpacity="0.13" />
+          <stop offset="1" stopColor="#050a18" stopOpacity="0" />
+        </radialGradient>
+        <filter id="cc-seafloor-silhouette" x="-100" y="650" width="1800" height="500" filterUnits="userSpaceOnUse">
+          <feColorMatrix type="matrix" values="0.2126 0.7152 0.0722 0 0 0.2126 0.7152 0.0722 0 0 0.2126 0.7152 0.0722 0 0 0 0 0 1 0" />
+          <feComponentTransfer>
+            <feFuncR type="discrete" tableValues="1 1 0 0 0 0 0 0" />
+            <feFuncG type="discrete" tableValues="1 1 0 0 0 0 0 0" />
+            <feFuncB type="discrete" tableValues="1 1 0 0 0 0 0 0" />
+          </feComponentTransfer>
+        </filter>
+        <mask id="cc-seafloor-back-mask" x="-80" y="730" width="1760" height="330" maskUnits="userSpaceOnUse">
+          <image href="/marketing/silhouettes/seabed-full.webp" x="-80" y="730" width="1760" height="330" preserveAspectRatio="xMidYMax meet" filter="url(#cc-seafloor-silhouette)" />
+        </mask>
+        <mask id="cc-seafloor-front-mask" x="0" y="784" width="1600" height="275" maskUnits="userSpaceOnUse">
+          <image href="/marketing/silhouettes/seabed-full.webp" x="0" y="784" width="1600" height="275" preserveAspectRatio="xMidYMax meet" filter="url(#cc-seafloor-silhouette)" />
+        </mask>
       </defs>
       <rect width="1600" height="1200" fill="url(#cc-seafloor-depth)" />
+      <rect width="1600" height="1050" fill="url(#cc-seafloor-ambient)" />
 
       <g className="marketing-seafloor-particles" fill="#bcecdf" opacity="0.24">
         <circle cx="116" cy="124" r="5" />
@@ -272,13 +406,18 @@ function SeafloorArtwork() {
         <circle cx="1456" cy="290" r="5" />
         <circle cx="1386" cy="438" r="4" />
         <circle cx="330" cy="476" r="5" />
+        <circle cx="875" cy="520" r="3" />
+        <circle cx="1130" cy="606" r="5" />
+        <circle cx="498" cy="632" r="3" />
+        <circle cx="1520" cy="566" r="4" />
       </g>
 
-      <path d="M0 858c112-47 244-59 362-31 151 36 275 29 408-17 127-44 256-43 385 3 134 48 282 53 445 9v378H0Z" fill="url(#cc-seafloor-sand)" />
-      <path d="M0 1050c172-37 310-26 438 13 119 36 242 31 374-11 130-41 245-36 361-4 120 34 263 32 427-8v160H0Z" fill="#3d3336" opacity="0.78" />
+      <path d="M0 950c112-42 244-52 362-27 151 33 275 27 408-15 127-40 256-39 385 4 134 43 282 48 445 8v280H0Z" fill="url(#cc-seafloor-sand)" />
+      <path d="M0 1050c172-37 310-26 438 13 119 36 242 31 374-11 130-41 245-36 361-4 120 34 263 32 427-8v160H0Z" fill="#0c1622" opacity="0.82" />
 
       <g className="marketing-seafloor-life">
-        <image href="/marketing/silhouettes/seabed-full.webp" x="0" y="784" width="1600" height="275" preserveAspectRatio="xMidYMax meet" />
+        <rect className="marketing-seafloor-kelp-back" x="-80" y="730" width="1760" height="330" fill="#11293a" mask="url(#cc-seafloor-back-mask)" opacity="0.58" />
+        <rect x="0" y="784" width="1600" height="275" fill="#06152c" mask="url(#cc-seafloor-front-mask)" />
       </g>
 
       <g className="marketing-seafloor-crab marketing-seafloor-crab-a">
@@ -375,6 +514,12 @@ export function MarketingHome() {
       },
       { rootMargin: "12% 0px 12% 0px", threshold: 0.01 },
     );
+    const waterColumnObserver = new IntersectionObserver(
+      ([entry]) => {
+        root.classList.toggle("marketing-water-visible", Boolean(entry?.isIntersecting));
+      },
+      { rootMargin: "10% 0px 10% 0px", threshold: 0.01 },
+    );
 
     const handleMotionPreference = () => {
       if (reducedMotion.matches) {
@@ -384,6 +529,7 @@ export function MarketingHome() {
     };
 
     spearfisherObserver.observe(reveal);
+    waterColumnObserver.observe(reveal);
     seafloorObserver.observe(proof);
     handleMotionPreference();
     window.addEventListener("scroll", requestUpdate, { passive: true });
@@ -393,6 +539,7 @@ export function MarketingHome() {
     return () => {
       if (frame) window.cancelAnimationFrame(frame);
       spearfisherObserver.disconnect();
+      waterColumnObserver.disconnect();
       seafloorObserver.disconnect();
       window.removeEventListener("scroll", requestUpdate);
       window.removeEventListener("resize", requestUpdate);
