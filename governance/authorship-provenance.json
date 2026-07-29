@@ -112,6 +112,81 @@
       "private_evidence_receipt": null
     },
     {
+      "id": "marketing-water-column-silhouettes",
+      "title": "Marine-life and seafloor silhouettes for the marketing water column",
+      "kind": "first_party_owner_supplied",
+      "paths": [
+        {
+          "path": "public/marketing/silhouettes/angler-left.webp",
+          "sha256": "a35ef02f9f4e660d3d5d01fc97aca4aee2d7e2e26a9c59bc871d541a838246c9"
+        },
+        {
+          "path": "public/marketing/silhouettes/angler-right.webp",
+          "sha256": "cb876174538de3ab340eea911dbfe118e41fa2873fae19f1f8fa66b3d3db1548"
+        },
+        {
+          "path": "public/marketing/silhouettes/cliff-seaweed.webp",
+          "sha256": "570399a9bee6e7ecf84fc490ad58659723d08a50f73e0a007c5926b96ec3ee02"
+        },
+        {
+          "path": "public/marketing/silhouettes/school-left.webp",
+          "sha256": "965ea939b622005b6a68bff27c5125ca448bbd2ac686b3ad0630547c4090da3e"
+        },
+        {
+          "path": "public/marketing/silhouettes/school-right.webp",
+          "sha256": "02f43bddb1f6b266cc267cae6051ca8660d526fbf27d491f76414ea3d0dc082c"
+        },
+        {
+          "path": "public/marketing/silhouettes/seabed-full.webp",
+          "sha256": "1212e7c5d9044e643d891d666736b2941b48ee3257884d94be304b493fcbeff6"
+        },
+        {
+          "path": "public/marketing/silhouettes/spearfisher-far.webp",
+          "sha256": "53160039c79575ef80a0f18d59b713eea169ae6141d1d2e901e953836f187580"
+        },
+        {
+          "path": "public/marketing/silhouettes/spearfisher-near.webp",
+          "sha256": "d7d7e26d8107b58d04645567ef16a314af33b9d97ff7aa2b599a5a4b08eeeaf3"
+        },
+        {
+          "path": "public/marketing/silhouettes/squid-lower.webp",
+          "sha256": "eb866313d5c9b04efb271a404059e35f10874e4a92f5d78ae892c57f4113ef38"
+        },
+        {
+          "path": "public/marketing/silhouettes/squid-upper.webp",
+          "sha256": "5fad1b7fb2d7e5ca0d292f825b81464b327d65dd01e4d4a0e6648a5187d223a3"
+        },
+        {
+          "path": "public/marketing/silhouettes/whale.webp",
+          "sha256": "309ed84fddf96b2e40f62d7f369827a89ca19459885b03ff8d0d57d45431e671"
+        }
+      ],
+      "creator_display": "CastingCompass project owner with disclosed AI-assisted silhouette generation",
+      "creation_date": "2026-07-29",
+      "source_url": null,
+      "source_remote_sha1": null,
+      "source_reviewed_at": null,
+      "license_id": null,
+      "license_label": null,
+      "license_url": null,
+      "rights_basis": "owner_supplied_ai_assisted",
+      "attribution_required": false,
+      "share_alike": false,
+      "attribution_text": "CastingCompass",
+      "modifications": "Cropped the owner-supplied marine silhouette sheet into individual spearfisher, fish-school, whale, squid, angler-fish, cliff/seaweed, and full-width seabed assets; removed the blue gradient with deterministic color masks; and encoded the results as transparent WebP files.",
+      "ai_assistance": "disclosed",
+      "rights_review": "owner_supplied_not_independently_cleared",
+      "release_state": "candidate_review_required",
+      "upstream_record_id": null,
+      "release_commit": "f978a4b44152d21d489619aac7ed67ed9a5f2e3c",
+      "evidence_refs": [
+        "git:f978a4b44152d21d489619aac7ed67ed9a5f2e3c",
+        "The project owner supplied the full marine silhouette sheet in the product-design task and required those silhouettes to be used as provided.",
+        "The project owner specifically directed use of the two spearfishers on the left and supplied the intended shoreline-to-seafloor composition."
+      ],
+      "private_evidence_receipt": null
+    },
+    {
       "id": "pwa-raster-variants",
       "title": "CastingCompass PWA icon variants",
       "kind": "derived_legacy",

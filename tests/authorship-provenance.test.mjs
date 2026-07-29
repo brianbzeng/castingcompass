@@ -58,10 +58,23 @@ test("the committed public-safe provenance report is deterministic and productio
   const checked = verifyProject(root, { reportMode: "check" });
   const rebuilt = verifyProject(root, { reportMode: "none" });
   assert.deepEqual(checked, rebuilt);
-  assert.equal(checked.visualAssetCount, 16);
+  assert.equal(checked.visualAssetCount, 27);
   assert.equal(checked.thirdPartyRecordCount, 7);
-  assert.equal(checked.candidateReviewRequiredRecordCount, 1);
-  assert.deepEqual(checked.candidateReviewRequiredPaths, ["public/marketing/spearfishers-pair.webp"]);
+  assert.equal(checked.candidateReviewRequiredRecordCount, 2);
+  assert.deepEqual(checked.candidateReviewRequiredPaths, [
+    "public/marketing/silhouettes/angler-left.webp",
+    "public/marketing/silhouettes/angler-right.webp",
+    "public/marketing/silhouettes/cliff-seaweed.webp",
+    "public/marketing/silhouettes/school-left.webp",
+    "public/marketing/silhouettes/school-right.webp",
+    "public/marketing/silhouettes/seabed-full.webp",
+    "public/marketing/silhouettes/spearfisher-far.webp",
+    "public/marketing/silhouettes/spearfisher-near.webp",
+    "public/marketing/silhouettes/squid-lower.webp",
+    "public/marketing/silhouettes/squid-upper.webp",
+    "public/marketing/silhouettes/whale.webp",
+    "public/marketing/spearfishers-pair.webp",
+  ]);
   assert.equal(checked.legacyReviewRequiredPaths.length, 8);
   assert.equal(checked.allVisualAssetsRegistered, true);
   assert.equal(checked.liveAttributionVerified, true);
