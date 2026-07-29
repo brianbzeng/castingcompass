@@ -689,7 +689,12 @@ test("marketing homepage routes to the web planner and keeps TestFlight honestly
   await expect(
     page.getByRole("list", { name: "Signals used by the relative ranking model" }).getByRole("listitem"),
   ).toHaveCount(6);
-  await expect(page.getByRole("heading", { name: "Meet the water where it is." })).toBeVisible();
+  await expect(page.locator(".marketing-depth-spearfishers")).toHaveCount(1);
+  await expect(page.locator(".marketing-depth-helmet")).toHaveCount(1);
+  await expect(page.locator(".marketing-depth-angler")).toHaveCount(1);
+  await expect(page.locator(".marketing-depth-volcanic-field")).toHaveCount(1);
+  await expect(page.locator(".marketing-volcanic-seafloor-art")).toHaveCount(1);
+  await expect(page.getByRole("heading", { name: "See the whole water column." })).toBeVisible();
 
   const testFlight = page.getByRole("button", { name: "TestFlight download — coming soon" });
   await expect(testFlight).toHaveAttribute("aria-disabled", "true");
