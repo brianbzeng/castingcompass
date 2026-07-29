@@ -1,6 +1,6 @@
 {
   "schema_version": "castingcompass.authorship-provenance/1.0.0",
-  "reviewed_at": "2026-07-19",
+  "reviewed_at": "2026-07-29",
   "policy_effective_commit": "ea922c8dfbdb7e35a81836d1f6a9e9e35c9081bb",
   "private_evidence_boundary": "Private agreements, legal advice, identities, personal data, and secret material stay outside this repository; this register may contain only non-sensitive receipt identifiers.",
   "records": [
@@ -73,6 +73,41 @@
       "evidence_refs": [
         "git:3027f2f44d16a547ddacb2d6e40c88ef55453bd9",
         "Git author/custody history is not proof of creation or rights ownership."
+      ],
+      "private_evidence_receipt": null
+    },
+    {
+      "id": "marketing-spearfishers-pair",
+      "title": "Paired spearfisher silhouettes for the marketing water column",
+      "kind": "first_party_owner_supplied",
+      "paths": [
+        {
+          "path": "public/marketing/spearfishers-pair.webp",
+          "sha256": "a10a3e3f2151599c3dd347d65afba1e7da6edaf5f4290a8f03fa88af1c9f944d"
+        }
+      ],
+      "creator_display": "CastingCompass project owner with disclosed OpenAI ImageGen assistance",
+      "creation_date": "2026-07-29",
+      "source_url": null,
+      "source_remote_sha1": null,
+      "source_reviewed_at": null,
+      "license_id": null,
+      "license_label": null,
+      "license_url": null,
+      "rights_basis": "owner_supplied_ai_assisted",
+      "attribution_required": false,
+      "share_alike": false,
+      "attribution_text": "CastingCompass",
+      "modifications": "Selected the top-left and middle-left spearfisher silhouettes from the owner-supplied reference, isolated them from the background, paired them, and encoded the result as a transparent WebP for the marketing page.",
+      "ai_assistance": "disclosed",
+      "rights_review": "owner_supplied_not_independently_cleared",
+      "release_state": "candidate_review_required",
+      "upstream_record_id": null,
+      "release_commit": "c70d4d282f7bbbf004f9a5e06ec6d3e057fa081b",
+      "evidence_refs": [
+        "git:c70d4d282f7bbbf004f9a5e06ec6d3e057fa081b",
+        "The project owner supplied the reference in the product-design task and directed use of only the top-left and middle-left spearfisher silhouettes.",
+        "OpenAI ImageGen isolated the selected silhouettes; the background was removed and the result was re-encoded as a transparent WebP."
       ],
       "private_evidence_receipt": null
     },

@@ -58,8 +58,10 @@ test("the committed public-safe provenance report is deterministic and productio
   const checked = verifyProject(root, { reportMode: "check" });
   const rebuilt = verifyProject(root, { reportMode: "none" });
   assert.deepEqual(checked, rebuilt);
-  assert.equal(checked.visualAssetCount, 15);
+  assert.equal(checked.visualAssetCount, 16);
   assert.equal(checked.thirdPartyRecordCount, 7);
+  assert.equal(checked.candidateReviewRequiredRecordCount, 1);
+  assert.deepEqual(checked.candidateReviewRequiredPaths, ["public/marketing/spearfishers-pair.webp"]);
   assert.equal(checked.legacyReviewRequiredPaths.length, 8);
   assert.equal(checked.allVisualAssetsRegistered, true);
   assert.equal(checked.liveAttributionVerified, true);
@@ -100,12 +102,20 @@ test("asset discovery fails closed on an unregistered file, symlink, or hash dri
   });
 });
 
-test("new legacy exceptions, duplicate paths, and license drift are rejected", () => {
+test("new legacy exceptions, candidate overclaims, duplicate paths, and license drift are rejected", () => {
   withFixture((project) => {
     const register = readJson(project, "governance/authorship-provenance.json");
     register.records.find((record) => record.id === "structure-eelgrass").release_state = "legacy_review_required";
     writeJson(project, "governance/authorship-provenance.json", register);
     assert.throws(() => verifyProject(project, { reportMode: "none" }), /cannot use a legacy release state/u);
+  });
+
+  withFixture((project) => {
+    const register = readJson(project, "governance/authorship-provenance.json");
+    register.records.find((record) => record.id === "marketing-spearfishers-pair").release_state =
+      "approved_existing_use";
+    writeJson(project, "governance/authorship-provenance.json", register);
+    assert.throws(() => verifyProject(project, { reportMode: "none" }), /must remain candidate review required/u);
   });
 
   withFixture((project) => {
