@@ -34,11 +34,6 @@ function CoastSignalArtwork() {
           <stop offset="0.78" stopColor="#f6a46f" />
           <stop offset="1" stopColor="#ffd27e" />
         </linearGradient>
-        <radialGradient id="cc-glow" cx="0.79" cy="0.42" r="0.45">
-          <stop offset="0" stopColor="#ffeaa0" stopOpacity="0.92" />
-          <stop offset="0.38" stopColor="#ffbd77" stopOpacity="0.34" />
-          <stop offset="1" stopColor="#ffbd77" stopOpacity="0" />
-        </radialGradient>
         <linearGradient id="cc-water" x1="0" x2="0" y1="0" y2="1">
           <stop offset="0" stopColor="#268c8c" />
           <stop offset="0.48" stopColor="#176b76" />
@@ -55,11 +50,22 @@ function CoastSignalArtwork() {
       </defs>
 
       <rect width="1600" height="1000" fill="url(#cc-sky)" />
-      <rect width="1600" height="1000" fill="url(#cc-glow)" />
 
       <g className="marketing-art-sun">
-        <circle cx="1270" cy="405" r="112" fill="#ffe69a" opacity="0.34" filter="url(#cc-sun-glow)" />
-        <circle cx="1270" cy="405" r="52" fill="#fff0b0" />
+        <g className="marketing-art-sun-rays">
+          {Array.from({ length: 12 }, (_, index) => (
+            <line
+              key={index}
+              x1="1010"
+              y1="282"
+              x2="1010"
+              y2="258"
+              transform={`rotate(${index * 30} 1010 370)`}
+            />
+          ))}
+        </g>
+        <circle cx="1010" cy="370" r="118" fill="#ffe69a" opacity="0.3" filter="url(#cc-sun-glow)" />
+        <circle className="marketing-art-sun-disc" cx="1010" cy="370" r="52" fill="#fff0b0" />
       </g>
 
       <g
@@ -111,7 +117,7 @@ function CoastSignalArtwork() {
       />
       <path
         className="marketing-art-sun-path"
-        d="M930 611c153-14 268-13 476 2l-93 387H997Z"
+        d="M800 611c153-14 268-13 476 2l-93 387H867Z"
         fill="url(#cc-water-light)"
         opacity="0.58"
       />
@@ -206,51 +212,107 @@ function WaveTransitionArtwork() {
   );
 }
 
-function PlannerPreview() {
+const rankingFeatures = [
+  ["Tide + current", "Direction, stage, and current strength shape the usable window."],
+  ["Wind + swell", "Wind, swell, and wave power temper raw opportunity with fishability."],
+  ["Structure + season", "Habitat and time-of-year priors set a target-specific baseline."],
+  ["Light + water", "Temperature, light, and pressure add current environmental context."],
+  ["Freshness", "Older source observations are made visible and discounted where appropriate."],
+  ["Access + usability", "Posted access and practical fishing conditions can cap the final rank."],
+] as const;
+
+function CastingModelVisual() {
   return (
-    <div className="marketing-planner-preview" aria-label="Illustrative web planner preview">
-      <div className="marketing-preview-toolbar">
-        <span><i aria-hidden="true" /> CastingCompass</span>
-        <span>Updated 18 min ago</span>
-      </div>
-      <div className="marketing-preview-heading">
-        <div>
-          <span>California halibut planning</span>
-          <strong>Find the water<br />worth fishing.</strong>
-        </div>
-        <div className="marketing-preview-score">
-          <span>78</span>
-          <small>relative score</small>
-        </div>
-      </div>
-      <div className="marketing-preview-species" aria-label="Illustrative target species selector">
-        <span className="active">Halibut</span>
-        <span>Striped bass</span>
-        <span>Surfperch</span>
-        <span>Jacksmelt</span>
-      </div>
-      <div className="marketing-preview-grid">
-        <div className="marketing-preview-map">
-          <span className="marketing-preview-map-line one" />
-          <span className="marketing-preview-map-line two" />
-          <span className="marketing-preview-map-line three" />
-          <i aria-hidden="true" />
-          <small>Ocean Beach North</small>
-        </div>
-        <div className="marketing-preview-windows">
-          <article>
-            <span>06:40–08:40</span>
-            <strong>Incoming tide</strong>
-            <small>Structure + fishability align</small>
-          </article>
-          <article>
-            <span>17:10–19:10</span>
-            <strong>Evening window</strong>
-            <small>Lower wind, usable swell</small>
-          </article>
-        </div>
+    <div className="marketing-cast-visual" aria-hidden="true">
+      <span className="marketing-cast-label">One target · many conditions</span>
+      <svg viewBox="0 0 720 520" preserveAspectRatio="xMidYMid meet">
+        <defs>
+          <linearGradient id="cc-cast-sky" x1="0" x2="0" y1="0" y2="1">
+            <stop offset="0" stopColor="#5f4d83" />
+            <stop offset="0.55" stopColor="#cf7484" />
+            <stop offset="1" stopColor="#f4ad78" />
+          </linearGradient>
+          <linearGradient id="cc-cast-water" x1="0" x2="0" y1="0" y2="1">
+            <stop offset="0" stopColor="#42ad9e" />
+            <stop offset="1" stopColor="#1d5c70" />
+          </linearGradient>
+        </defs>
+        <rect width="720" height="520" rx="30" fill="url(#cc-cast-sky)" />
+        <circle cx="566" cy="156" r="45" fill="#ffe6a0" opacity="0.86" />
+        <path d="M0 308c120-32 190 24 301 4s205-37 419 4v204H0Z" fill="url(#cc-cast-water)" />
+        <g className="marketing-cast-water-lines" fill="none" stroke="#d9f1df" strokeLinecap="round">
+          <path d="M-40 350c104-27 183 22 283 1s178 24 286 1 174 14 250-3" />
+          <path d="M-35 398c104-25 183 24 283 3s178 25 286 3 174 16 250-1" />
+          <path d="M-30 451c104-23 183 26 283 5s178 27 286 5 174 18 250 1" />
+        </g>
+        <path
+          className="marketing-cast-line"
+          d="M206 234c114-154 285-166 398 50"
+          fill="none"
+          stroke="#fff5d7"
+          strokeLinecap="round"
+          strokeWidth="5"
+        />
+        <g className="marketing-cast-rod">
+          <path d="M126 454 211 214" stroke="#352e54" strokeLinecap="round" strokeWidth="13" />
+          <path d="M126 454 211 214" stroke="#ffe27f" strokeLinecap="round" strokeWidth="4" />
+          <circle cx="135" cy="427" r="20" fill="#3d355b" stroke="#ffe27f" strokeWidth="4" />
+        </g>
+        <g className="marketing-cast-lure">
+          <circle cx="604" cy="284" r="10" fill="#ffe27f" />
+          <circle cx="604" cy="284" r="25" fill="none" stroke="#ffe27f" strokeWidth="3" />
+          <path d="M604 294v21c0 10 16 11 16 0" fill="none" stroke="#fff5d7" strokeLinecap="round" strokeWidth="3" />
+        </g>
+        <g className="marketing-cast-signals">
+          <circle cx="302" cy="364" r="5" />
+          <circle cx="402" cy="412" r="5" />
+          <circle cx="520" cy="356" r="5" />
+          <circle cx="644" cy="430" r="5" />
+        </g>
+      </svg>
+      <div className="marketing-cast-caption">
+        <span>01</span>
+        <p><strong>Cast the question.</strong> Compare windows for one selected species.</p>
       </div>
     </div>
+  );
+}
+
+function SunsetBannerArtwork() {
+  return (
+    <svg
+      className="marketing-sunset-banner-art"
+      viewBox="0 0 1600 560"
+      preserveAspectRatio="xMaxYMid slice"
+      aria-hidden="true"
+    >
+      <defs>
+        <linearGradient id="cc-banner-sky" x1="0" x2="0" y1="0" y2="1">
+          <stop offset="0" stopColor="#556b8e" />
+          <stop offset="0.58" stopColor="#d69b83" />
+          <stop offset="1" stopColor="#f4c47e" />
+        </linearGradient>
+        <radialGradient id="cc-banner-glow" cx="0.79" cy="0.49" r="0.25">
+          <stop offset="0" stopColor="#fff2b1" stopOpacity="0.84" />
+          <stop offset="1" stopColor="#fff2b1" stopOpacity="0" />
+        </radialGradient>
+      </defs>
+      <rect width="1600" height="560" fill="url(#cc-banner-sky)" />
+      <rect width="1600" height="560" fill="url(#cc-banner-glow)" />
+      <circle cx="1265" cy="278" r="56" fill="#fff0ad" />
+      <path d="M0 353c206-18 373 16 588 0s367 8 557-3 309-7 455 9v201H0Z" fill="#275c6e" />
+      <g className="marketing-banner-pier" fill="none" stroke="#302f42" strokeLinecap="round">
+        <path d="M380 347h785" strokeWidth="12" />
+        <path d="M410 347v75M495 347v68M580 347v74M665 347v64M750 347v72M835 347v65M920 347v70M1005 347v62M1090 347v69" strokeWidth="7" />
+        <path d="m380 347 66-21h719" strokeWidth="5" />
+      </g>
+      <path
+        className="marketing-banner-cliff"
+        d="M1600 0h-148c-15 54-37 92-69 131-50 61-48 104-86 151-42 52-65 76-92 130-25 51-55 99-108 148h503Z"
+        fill="#2d303f"
+      />
+      <path d="M0 458c203-31 406 25 588 3s334-5 517 19 328 23 495-17v97H0Z" fill="#272a3a" opacity="0.84" />
+    </svg>
   );
 }
 
@@ -268,11 +330,25 @@ export function MarketingHome() {
     const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
     let frame = 0;
 
+    const setSunOrbit = (progress: number) => {
+      const startAngle = (-62 * Math.PI) / 180;
+      const angle = ((-62 + (44 * progress)) * Math.PI) / 180;
+      const radius = 270;
+      const horizontalScale = window.innerWidth <= 760 ? 0.38 : 1;
+      const x = radius * (Math.cos(angle) - Math.cos(startAngle)) * horizontalScale;
+      const y = radius * (Math.sin(angle) - Math.sin(startAngle));
+
+      root.style.setProperty("--marketing-sun-orbit-x", `${x.toFixed(2)}px`);
+      root.style.setProperty("--marketing-sun-orbit-y", `${y.toFixed(2)}px`);
+      root.style.setProperty("--marketing-sun-progress", progress.toFixed(4));
+    };
+
     const update = () => {
       frame = 0;
       if (reducedMotion.matches) {
         root.style.setProperty("--marketing-hero-progress", "1");
         root.style.setProperty("--marketing-wash-progress", "1");
+        setSunOrbit(1);
         return;
       }
 
@@ -286,6 +362,7 @@ export function MarketingHome() {
 
       root.style.setProperty("--marketing-hero-progress", heroProgress.toFixed(4));
       root.style.setProperty("--marketing-wash-progress", washProgress.toFixed(4));
+      setSunOrbit(heroProgress);
     };
 
     const requestUpdate = () => {
@@ -293,7 +370,11 @@ export function MarketingHome() {
       frame = window.requestAnimationFrame(update);
     };
 
-    update();
+    if (reducedMotion.matches) {
+      update();
+    } else if (window.scrollY > 0) {
+      requestUpdate();
+    }
     window.addEventListener("scroll", requestUpdate, { passive: true });
     window.addEventListener("resize", requestUpdate);
     reducedMotion.addEventListener("change", requestUpdate);
@@ -402,15 +483,28 @@ export function MarketingHome() {
             </div>
             <div className="marketing-product">
               <header>
-                <p className="marketing-light-kicker">The web planner</p>
-                <h2>One target.<br />One clear plan.</h2>
+                <p className="marketing-light-kicker">Inside the ranking</p>
+                <h2>Read every<br />signal together.</h2>
                 <p>
-                  CastingCompass re-ranks the same public places and conditions with a
-                  versioned target profile. It is an expert-configured hybrid planning
-                  baseline—not a trained catch-probability engine.
+                  CastingCompass combines current conditions with a versioned profile for
+                  the selected species, then compares the available windows. It is an
+                  expert-configured hybrid planning baseline—not a catch-probability engine.
                 </p>
               </header>
-              <PlannerPreview />
+              <div className="marketing-model-panel">
+                <CastingModelVisual />
+                <ol className="marketing-model-features" aria-label="Signals used by the relative ranking model">
+                  {rankingFeatures.map(([title, description], index) => (
+                    <li key={title}>
+                      <span>{String(index + 1).padStart(2, "0")}</span>
+                      <div>
+                        <strong>{title}</strong>
+                        <p>{description}</p>
+                      </div>
+                    </li>
+                  ))}
+                </ol>
+              </div>
               <div className="marketing-product-actions">
                 <Link className="marketing-action marketing-action-ink" href="/forecast">
                   Plan on the web
@@ -427,40 +521,43 @@ export function MarketingHome() {
 
       <section className="marketing-proof" aria-labelledby="marketing-proof-title">
         <div className="marketing-proof-intro">
-          <p className="marketing-kicker"><span /> What the ranking considers</p>
-          <h2 id="marketing-proof-title">Less guesswork.<br />More time in usable water.</h2>
+          <p className="marketing-kicker"><span /> What the product protects</p>
+          <h2 id="marketing-proof-title">Useful context.<br />Honest boundaries.</h2>
         </div>
         <div className="marketing-proof-grid">
           <article>
             <span>01</span>
-            <h3>Structure + season</h3>
-            <p>Habitat and time-of-year priors establish a transparent baseline for each supported target.</p>
+            <h3>One selected target</h3>
+            <p>Swap species quickly while keeping one clear target in focus throughout the plan.</p>
           </article>
           <article>
             <span>02</span>
-            <h3>Conditions now</h3>
-            <p>Tide, current, wind, swell, wave power, temperature, light, pressure, and freshness shape the comparison.</p>
+            <h3>Freshness made visible</h3>
+            <p>Useful source age appears in plain language instead of exposing internal cache terminology.</p>
           </article>
           <article>
             <span>03</span>
-            <h3>Fishability matters</h3>
-            <p>A high raw opportunity score cannot hide water that is difficult, stale, posted, or impractical to fish.</p>
+            <h3>Public-place context</h3>
+            <p>Moderated community previews add broad context without exposing private or exact locations.</p>
           </article>
           <article>
             <span>04</span>
-            <h3>Public-place context</h3>
-            <p>Moderated community previews add broad public-place context without exposing private or exact locations.</p>
+            <h3>A rank, not a promise</h3>
+            <p>The score compares current options. It does not predict a catch or prove fish are present.</p>
           </article>
         </div>
-        <div className="marketing-proof-cta">
-          <div>
+        <div className="marketing-sunset-banner">
+          <SunsetBannerArtwork />
+          <div className="marketing-sunset-banner-vignette" aria-hidden="true" />
+          <div className="marketing-sunset-banner-copy">
             <span>Ready when the coast is.</span>
-            <strong>Find the water worth fishing.</strong>
+            <h3>Meet the water<br />where it is.</h3>
+            <p>Choose a target, compare the public options, and carry an honest plan to the shore.</p>
+            <Link className="marketing-action marketing-action-primary" href="/forecast">
+              Open CastingCompass
+              <ArrowUpRightIcon />
+            </Link>
           </div>
-          <Link className="marketing-action marketing-action-primary" href="/forecast">
-            Open CastingCompass
-            <ArrowUpRightIcon />
-          </Link>
         </div>
       </section>
 

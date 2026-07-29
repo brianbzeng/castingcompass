@@ -72,17 +72,20 @@ schema drift; no production mutation is authorized by those discoveries.
       but is not treated as Figma sign-off.
 - [x] Add a dedicated `/` marketing homepage and move the full planner/PWA entry to `/forecast`.
       The code-native coast is now a full-bleed violet/coral horizon with distant islands and
-      scroll-reactive water layers; an illustrated teal wave rises into the warm product
-      explanation, and lower talking-point panels state the product boundary. Topographic art
-      remains as a secondary texture. Web CTAs are live; TestFlight is visibly and accessibly
-      unavailable with no redirect.
+      scroll-reactive water layers. The sun follows a scroll-bound setting arc with uniform rays
+      and mobile-specific framing; frosted-glass panels sit over the horizon. An illustrated teal
+      wave rises into a warm model explainer with a scroll-linked casting visual and six feature
+      families, and a pier/cliff sunset banner closes the page. Topographic art remains as a
+      secondary texture. Web CTAs are live; TestFlight is visibly and accessibly unavailable
+      with no redirect.
 - [x] Record local implementation-candidate evidence: 769 Node tests, 280 browser scenarios
       (278 in the full matrix plus isolated passes for two timed-out cases), 158 pipeline tests
       with 11 documented optional-raster skips, 29 API tests, lint, types, the
       complete security chain, and release-SBOM verification pass. Production-shaped Lighthouse
-      records the revised homepage at 73/97 mobile/desktop performance with 100 accessibility,
-      and the
-      planner at 61/91 with 100 accessibility. Candidate-planner LCP improved 36.2%/60.2% from
+      records the final interaction draft at 70/98 mobile/desktop performance with 100
+      accessibility and zero CLS. The prior lighter-art pass scored 73/97, so the final mobile
+      three-point regression and 5.57-second LCP remain explicit follow-up work. The planner
+      remains at 61/91 with 100 accessibility. Candidate-planner LCP improved 36.2%/60.2% from
       baseline while retaining the residual 17.05-second mobile LCP as open work.
 - [ ] Bind the final evidence to the immutable candidate head, obtain passing hosted checks, and
       open one draft candidate PR for experienced review after the Figma approval checkpoint.

@@ -685,6 +685,11 @@ test("marketing homepage routes to the web planner and keeps TestFlight honestly
   await expect(page.getByRole("heading", { name: "Read the coast before you cast." })).toBeVisible();
   await expect(page.getByRole("link", { name: "Open web planner" })).toHaveAttribute("href", "/forecast");
   await expect(page.getByRole("link", { name: "Browse place communities" })).toHaveAttribute("href", "/community");
+  await expect(page.getByRole("heading", { name: "Read every signal together." })).toBeVisible();
+  await expect(
+    page.getByRole("list", { name: "Signals used by the relative ranking model" }).getByRole("listitem"),
+  ).toHaveCount(6);
+  await expect(page.getByRole("heading", { name: "Meet the water where it is." })).toBeVisible();
 
   const testFlight = page.getByRole("button", { name: "TestFlight download — coming soon" });
   await expect(testFlight).toBeDisabled();
