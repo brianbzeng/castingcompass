@@ -690,6 +690,8 @@ test("marketing homepage routes to the web planner and keeps TestFlight honestly
     page.getByRole("list", { name: "Signals used by the relative ranking model" }).getByRole("listitem"),
   ).toHaveCount(6);
   await expect(page.locator(".marketing-depth-spearfishers")).toHaveCount(1);
+  await expect(page.locator('.marketing-depth-spearfishers image[href="/marketing/spearfishers-pair.webp"]')).toHaveCount(1);
+  await expect(page.locator(".marketing-depth-meter")).toHaveText("");
   await expect(page.locator(".marketing-depth-helmet")).toHaveCount(1);
   await expect(page.locator(".marketing-depth-angler")).toHaveCount(1);
   await expect(page.locator(".marketing-depth-volcanic-field")).toHaveCount(1);
@@ -698,6 +700,8 @@ test("marketing homepage routes to the web planner and keeps TestFlight honestly
   await expect(page.locator(".marketing-cast-rod")).toHaveCount(1);
   await expect(page.locator(".marketing-rod-loader")).toHaveCount(0);
   await expect(page.locator(".marketing-sunset-banner")).toHaveCount(0);
+  await expect(page.getByRole("heading", { name: "Pick your target" })).toBeVisible();
+  await expect(page.getByText("The whole plan updates around that fish.")).toBeVisible();
   await expect(page.getByRole("heading", { name: "See the whole water column." })).toBeVisible();
 
   const testFlight = page.getByRole("button", { name: "TestFlight download — coming soon" });
@@ -708,9 +712,14 @@ test("marketing homepage routes to the web planner and keeps TestFlight honestly
   await expect(testFlight).toContainText("Coming soon");
 
   await page.evaluate(() => {
-    const proof = document.querySelector(".marketing-proof");
-    if (!proof) throw new Error("Missing seafloor section");
-    window.scrollTo(0, proof.getBoundingClientRect().top + window.scrollY - window.innerHeight * 1.3);
+    const waterColumn = document.querySelector<HTMLElement>(".marketing-wash-scroll");
+    if (!waterColumn) throw new Error("Missing water-column section");
+    const travel = Math.max(waterColumn.offsetHeight - window.innerHeight, 1);
+    window.scrollTo({
+      top: waterColumn.offsetTop + travel * 0.82,
+      left: 0,
+      behavior: "instant",
+    });
   });
   await expect(page.locator(".marketing-home")).toHaveClass(/marketing-cast-ready/);
   const castTiming = await page.locator(".marketing-cast-rod-body").evaluate((element) => {

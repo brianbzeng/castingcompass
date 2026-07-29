@@ -1,6 +1,6 @@
 # Production-build performance evidence
 
-Evidence date: **2026-07-28 UTC**
+Evidence date: **2026-07-29 UTC**
 
 Scope: local production-shaped Vinext build at `http://127.0.0.1:4173/` for the marketing
 homepage and `http://127.0.0.1:4173/forecast` for the planner; no provider, deployment,
@@ -16,9 +16,10 @@ banner were added, and finally after the screenshot-directed compact-card, night
 progressive-rod, and treasure-map revision. A final homepage run records the continuous
 ocean-descent direction with underwater discoveries and a volcanic seafloor. The planner rows are
 unchanged because those passes do not affect `/forecast`. The final refinement removes the
-duplicate surface band, keeps both spearfishers legible in the mobile crop, adds denser wildlife,
-makes the helmet and anglerfish smaller sinking discoveries, isolates a one-time casting-rod
-animation after the six signal categories, and removes the boxed closing-banner treatment.
+sticky-section gaps so the hero waterline, water column, and seafloor hand off continuously; uses
+the supplied paired spearfisher silhouettes as one optimized transparent asset; enlarges the
+mobile signal copy; simplifies the language for anglers; adds card lift/glow feedback; and
+reduces the sandy-floor vents so they read as small underwater volcanoes rather than mountains.
 Both used Lighthouse `13.4.1`, Chrome `150.0.0.0`, the standard Lighthouse mobile profile, and
 the Lighthouse desktop preset.
 
@@ -66,6 +67,7 @@ large generated files. The table below is sufficient to compare the exact audite
 | Mobile | screenshot-directed revision on `/` | 70 | 100 | 96 | 100 | 3,702 ms | 5,728 ms | 84 ms | 0 | 842,030 |
 | Mobile | ocean-descent revision on `/` | 70 | 100 | 96 | 100 | 3,724 ms | 5,727 ms | 124 ms | 0 | 830,740 |
 | Mobile | refined ocean-descent revision on `/` | 70 | 100 | 96 | 100 | 3,666 ms | 5,720 ms | 81 ms | 0 | 851,543 |
+| Mobile | continuous water-column refinement on `/` | 70 | 100 | 96 | 100 | 3,669 ms | 5,802 ms | 63 ms | 0 | 857,148 |
 | Mobile | candidate planner on `/forecast` | 61 | 100 | 96 | 100 | 5,031 ms | 17,048 ms | 113 ms | 0 | 3,222,697 |
 | Desktop | baseline planner on `/` | 52 | 96 | 96 | 100 | 904 ms | 4,632 ms | 0 ms | 0.4577 | 5,196,418 |
 | Desktop | lighter homepage direction pass on `/` | 97 | 100 | 96 | 100 | 770 ms | 1,075 ms | 0 ms | 0 | 808,807 |
@@ -73,24 +75,26 @@ large generated files. The table below is sufficient to compare the exact audite
 | Desktop | screenshot-directed revision on `/` | 97 | 100 | 96 | 100 | 781 ms | 1,114 ms | 0 ms | 0 | 936,044 |
 | Desktop | ocean-descent revision on `/` | 98 | 100 | 96 | 100 | 766 ms | 1,095 ms | 0 ms | 0 | 945,968 |
 | Desktop | refined ocean-descent revision on `/` | 98 | 100 | 96 | 100 | 765 ms | 1,100 ms | 0 ms | 0 | 945,557 |
+| Desktop | continuous water-column refinement on `/` | 97 | 100 | 96 | 100 | 738 ms | 1,134 ms | 0 ms | 0 | 972,376 |
 | Desktop | candidate planner on `/forecast` | 91 | 100 | 96 | 100 | 955 ms | 1,842 ms | 0 ms | 0.0067 | 3,298,959 |
 
 Material changes:
 
-- the refined candidate homepage transfers 0.85 MB on mobile, about 74% less than the candidate
+- the final candidate homepage transfers 0.86 MB on mobile, about 73% less than the candidate
   planner;
 - candidate-planner mobile transferred bytes decreased by 38.0% from baseline;
 - candidate-planner desktop transferred bytes decreased by 36.5% from baseline;
 - candidate-planner mobile LCP improved by 36.2% from baseline;
 - candidate-planner desktop LCP improved by 60.2% from baseline;
 - candidate-planner desktop performance improved by 39 points;
-- the refined ocean-descent homepage retained 70 mobile and 98 desktop performance;
+- the continuous water-column homepage records 70 mobile and 97 desktop performance;
 - mobile and desktop accessibility both reached 100;
 - planner desktop CLS improved from 0.4577 to 0.0067; and
 - homepage and planner mobile CLS measured zero.
 
-The refined ocean-descent revision records a mobile synthetic score of 70 and LCP of 5.72 seconds
-against 73 and 4.25 seconds in the lighter direction pass; desktop records 98 and 1.10 seconds.
+The continuous water-column refinement records a mobile synthetic score of 70 and LCP of 5.80
+seconds against 73 and 4.25 seconds in the lighter direction pass; desktop records 97 and 1.13
+seconds.
 Mobile FCP/TBT and transferred bytes varied across local runs. This evidence therefore does not claim an
 across-the-board timing win or treat one favorable sample as representative. The separate
 homepage still avoids the forecast projection and is materially faster and lighter than the
@@ -112,10 +116,12 @@ baseline planner, while `/forecast` retains the full data needed for offline com
 6. `/` is now a code-native marketing page and the full planner is routed to `/forecast`.
    The homepage does not request the 1.79 MB forecast projection before a visitor chooses to
    open the product.
-7. The homepage art remains code-native SVG/CSS: the full-bleed horizon, scroll-bound sun and
-   nightfall, continuous surface-to-abyss descent, mobile-aware horizontal spearfishers, dense
-   fish schools and wildlife, smaller sinking vintage diving equipment and anglerfish, one
-   standalone non-looping cast, and volcanic seafloor add no raster hero download.
+7. The homepage art remains primarily code-native SVG/CSS: the full-bleed horizon, scroll-bound
+   sun and nightfall, continuous surface-to-seafloor descent, dense fish schools and wildlife,
+   smaller sinking vintage diving equipment and anglerfish, one standalone non-looping cast, and
+   sandy volcanic floor do not require a full-bleed raster hero. The supplied two-spearfisher
+   reference is isolated as one 25,176-byte transparent WebP rather than a 136 KB intermediate
+   PNG.
 8. Below-fold proof/footer sections use `content-visibility` containment, and the scroll controller
    avoids an unnecessary initial layout read when the page begins at the top.
 
@@ -123,7 +129,7 @@ baseline planner, while `/forecast` retains the full data needed for offline com
 
 - The 1.79 MB forecast projection remains the dominant planner transfer. Mobile LCP at 17.05
   seconds under Lighthouse throttling is still too slow for a mature public release.
-- The latest homepage mobile LCP is 5.72 seconds in the recorded synthetic run, 1.47 seconds slower
+- The latest homepage mobile LCP is 5.80 seconds in the recorded synthetic run, 1.55 seconds slower
   than the lighter direction pass. Preserve the current design for review, then profile hydration
   and SVG/layout cost before treating the homepage as launch-ready.
 - A future phase should evaluate a versioned columnar/dictionary encoding, range/page loading, or

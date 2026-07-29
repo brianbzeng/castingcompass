@@ -205,6 +205,11 @@ function OceanDescentArtwork() {
           <stop offset="0" stopColor="#fff2a8" stopOpacity="0.92" />
           <stop offset="1" stopColor="#fff2a8" stopOpacity="0" />
         </radialGradient>
+        <linearGradient id="cc-depth-sand" x1="0" x2="0" y1="0" y2="1">
+          <stop offset="0" stopColor="#a47b5c" />
+          <stop offset="0.55" stopColor="#735848" />
+          <stop offset="1" stopColor="#3f3437" />
+        </linearGradient>
         <filter id="cc-depth-soft-glow" x="-200%" y="-200%" width="500%" height="500%">
           <feGaussianBlur stdDeviation="24" />
         </filter>
@@ -238,35 +243,19 @@ function OceanDescentArtwork() {
       </g>
 
       <g className="marketing-depth-spearfishers">
-        <circle cx="825" cy="505" r="300" fill="url(#cc-diver-glow)" />
-        <g className="marketing-spearfisher-primary-wrap">
-          <g className="marketing-spearfisher marketing-spearfisher-primary" transform="translate(365 490) rotate(-8)">
-            <path d="M304 52c-54-29-121-28-181 8L82 92l53 20c58 22 126 8 178-35Z" fill="#0a1b35" />
-            <circle cx="329" cy="57" r="28" fill="#0a1b35" />
-            <path d="m315 42 43 4-7 19-40 3Z" fill="#69d0cb" opacity="0.72" />
-            <path d="m153 93-99 52M180 99 82 173" fill="none" stroke="#0a1b35" strokeLinecap="round" strokeWidth="25" />
-            <path d="m65 131-74 9 57 39ZM92 159l-68 29 68 18Z" fill="#0a1b35" />
-            <path d="m280 72 73 34 62-9M352 106l94-26" fill="none" stroke="#0a1b35" strokeLinecap="round" strokeLinejoin="round" strokeWidth="18" />
-            <path d="M398 91 638 64M637 64l-25-10m25 10-21 15" fill="none" stroke="#f2c678" strokeLinecap="round" strokeWidth="7" />
-            <circle cx="329" cy="57" r="36" fill="none" stroke="#f2c678" strokeWidth="5" opacity="0.56" />
-            <path d="M344 26c18-28 39-40 62-38" fill="none" stroke="#0a1b35" strokeLinecap="round" strokeWidth="12" />
-          </g>
-        </g>
-        <g className="marketing-spearfisher-secondary-wrap">
-          <g className="marketing-spearfisher marketing-spearfisher-secondary" transform="translate(690 855) rotate(7) scale(.62)">
-            <path d="M304 52c-54-29-121-28-181 8L82 92l53 20c58 22 126 8 178-35Z" fill="#0a1b35" />
-            <circle cx="329" cy="57" r="28" fill="#0a1b35" />
-            <path d="m315 42 43 4-7 19-40 3Z" fill="#69d0cb" opacity="0.7" />
-            <path d="m153 93-99 52M180 99 82 173" fill="none" stroke="#0a1b35" strokeLinecap="round" strokeWidth="25" />
-            <path d="m65 131-74 9 57 39ZM92 159l-68 29 68 18Z" fill="#0a1b35" />
-            <path d="m280 72 73 34 62-9M352 106l94-26" fill="none" stroke="#0a1b35" strokeLinecap="round" strokeWidth="18" />
-            <path d="M398 91 630 64M629 64l-23-10m23 10-20 15" fill="none" stroke="#f2c678" strokeLinecap="round" strokeWidth="7" />
-          </g>
-        </g>
+        <circle cx="755" cy="590" r="340" fill="url(#cc-diver-glow)" />
+        <image
+          href="/marketing/spearfishers-pair.webp"
+          x="175"
+          y="330"
+          width="1080"
+          height="540"
+          preserveAspectRatio="xMidYMid meet"
+        />
       </g>
 
       <g className="marketing-depth-wildlife" fill="#0c2441" stroke="#76bfb3" strokeLinejoin="round">
-        <g className="marketing-depth-ray" transform="translate(980 1170) rotate(-7)">
+        <g className="marketing-depth-ray" transform="translate(980 1420) rotate(-7)">
           <path d="M0 75c84-97 202-99 298 0-75-19-119-11-149 35-30-46-76-55-149-35Z" strokeWidth="7" />
           <path d="M149 108c25 47 66 89 125 124" fill="none" strokeLinecap="round" strokeWidth="9" />
         </g>
@@ -315,14 +304,40 @@ function OceanDescentArtwork() {
       </g>
 
       <g className="marketing-depth-volcanic-field">
-        <path d="M0 3005c124-72 220-53 340 3 120 56 222 44 350-14 155-70 283-70 421 0 139 70 272 81 489-12v218H0Z" fill="#0a0b18" />
-        <path d="M45 3064 238 2742l193 322ZM404 3092l146-254 149 254ZM1020 3074l204-347 212 347Z" fill="#18152b" stroke="#6f3d51" strokeWidth="9" />
-        <path d="m179 2850 59-108 62 110-35 33h-54Z" fill="#e4615d" opacity="0.7" />
-        <path d="m1166 2828 58-101 61 105-34 29h-55Z" fill="#e4615d" opacity="0.78" />
-        <g fill="none" stroke="#efa46d" strokeLinecap="round" opacity="0.58">
-          <path d="M240 2780c-45-89 31-123-7-211" strokeWidth="19" />
-          <path d="M1222 2765c46-98-34-129 16-224" strokeWidth="21" />
-          <path d="M565 2880c-29-68 25-92-7-157" strokeWidth="13" />
+        <path
+          d="M0 2990c210-58 363 35 576-3 212-37 377 35 569-1 151-29 289-20 455 24v190H0Z"
+          fill="url(#cc-depth-sand)"
+        />
+        <path
+          d="M0 3092c197-32 361 24 548-5 226-34 394 22 584-2 178-23 311-12 468 27v88H0Z"
+          fill="#3a3033"
+          opacity="0.82"
+        />
+        <g fill="#4e3e3c" stroke="#b17f5b" strokeLinejoin="round" strokeWidth="8">
+          <path d="m195 3036 42-104 68-3 50 107Z" />
+          <ellipse cx="270" cy="2932" rx="35" ry="12" fill="#171829" />
+          <path d="m665 3074 30-77 53-2 38 79Z" />
+          <ellipse cx="722" cy="2997" rx="27" ry="10" fill="#171829" />
+          <path d="m1190 3048 48-122 78 2 54 120Z" />
+          <ellipse cx="1279" cy="2928" rx="40" ry="13" fill="#171829" />
+        </g>
+        <g fill="none" stroke="#8fc8b5" strokeLinecap="round" opacity="0.38">
+          <path d="M270 2915c-34-54 28-72-4-131" strokeWidth="15" />
+          <path d="M1279 2911c40-61-30-82 8-146" strokeWidth="17" />
+          <path d="M722 2982c-23-40 18-55-5-93" strokeWidth="10" />
+        </g>
+        <g fill="#d4c095" opacity="0.68">
+          <circle cx="285" cy="2800" r="8" /><circle cx="253" cy="2752" r="5" />
+          <circle cx="1264" cy="2779" r="7" /><circle cx="1295" cy="2724" r="5" />
+          <circle cx="707" cy="2912" r="5" />
+        </g>
+        <g fill="none" stroke="#6cae96" strokeLinecap="round" strokeWidth="11" opacity="0.54">
+          <path d="M90 3120c-3-70 34-87 22-143M105 3056c-32-28-36-56-21-82" />
+          <path d="M1500 3135c8-76-29-91-14-151M1492 3068c35-27 42-52 29-81" />
+        </g>
+        <g className="marketing-depth-crabs" fill="#db8a68" opacity="0.76">
+          <path d="M467 3098c22-24 64-24 86 0l-13 30h-60Zm-1 6-27-18m31 32-31 13m116-27 27-18m-31 32 31 13" stroke="#db8a68" strokeLinecap="round" strokeWidth="9" />
+          <circle cx="489" cy="3095" r="4" fill="#15182a" /><circle cx="532" cy="3095" r="4" fill="#15182a" />
         </g>
       </g>
     </svg>
@@ -330,12 +345,12 @@ function OceanDescentArtwork() {
 }
 
 const rankingFeatures = [
-  ["Tide + current", "Direction, stage, and current strength shape the usable window."],
-  ["Wind + swell", "Wind, swell, and wave power temper raw opportunity with fishability."],
-  ["Structure + season", "Habitat and time-of-year priors set a target-specific baseline."],
-  ["Light + water", "Temperature, light, and pressure add current environmental context."],
-  ["Freshness", "Older source observations are made visible and discounted where appropriate."],
-  ["Access + usability", "Posted access and practical fishing conditions can cap the final rank."],
+  ["Tide + current", "See which way the water is moving and how hard it is running."],
+  ["Wind + swell", "Know when wind or surf could make a spot tough to fish."],
+  ["Structure + season", "Match your target to the water it uses and the time of year."],
+  ["Light + water", "Factor in daylight, water temperature, and changing weather."],
+  ["Fresh reports", "See how recently conditions were checked before you head out."],
+  ["Access + fishability", "Favor places you can reach and fish during your available window."],
 ] as const;
 
 function CastingRodVisual() {
@@ -397,18 +412,15 @@ function VolcanicSeafloorArtwork() {
     >
       <defs>
         <linearGradient id="cc-seafloor-depth" x1="0" x2="0" y1="0" y2="1">
-          <stop offset="0" stopColor="#101b3f" />
-          <stop offset="0.52" stopColor="#0a1230" />
-          <stop offset="1" stopColor="#070817" />
+          <stop offset="0" stopColor="#080c20" />
+          <stop offset="0.48" stopColor="#0a1230" />
+          <stop offset="1" stopColor="#12142a" />
         </linearGradient>
-        <radialGradient id="cc-seafloor-lava">
-          <stop offset="0" stopColor="#ffbf6b" stopOpacity="0.86" />
-          <stop offset="0.36" stopColor="#ef655f" stopOpacity="0.46" />
-          <stop offset="1" stopColor="#ef655f" stopOpacity="0" />
-        </radialGradient>
-        <filter id="cc-seafloor-blur" x="-100%" y="-100%" width="300%" height="300%">
-          <feGaussianBlur stdDeviation="28" />
-        </filter>
+        <linearGradient id="cc-seafloor-sand" x1="0" x2="0" y1="0" y2="1">
+          <stop offset="0" stopColor="#aa8464" />
+          <stop offset="0.6" stopColor="#72584b" />
+          <stop offset="1" stopColor="#44383a" />
+        </linearGradient>
       </defs>
       <rect width="1600" height="1100" fill="url(#cc-seafloor-depth)" />
       <g fill="#bcecdf" opacity="0.24">
@@ -417,31 +429,45 @@ function VolcanicSeafloorArtwork() {
         <circle cx="1444" cy="129" r="4" /><circle cx="1040" cy="365" r="5" />
       </g>
       <g className="marketing-seafloor-smoke" fill="none" strokeLinecap="round">
-        <path d="M290 737c-78-132 72-182-10-330" stroke="#5fb5ac" strokeWidth="34" opacity="0.14" />
-        <path d="M332 748c83-142-58-195 26-352" stroke="#d5f0d7" strokeWidth="23" opacity="0.12" />
-        <path d="M1217 724c70-126-62-171 15-316" stroke="#69b9b2" strokeWidth="30" opacity="0.14" />
-        <path d="M1253 739c-63-139 58-189-10-338" stroke="#e7dbb2" strokeWidth="19" opacity="0.1" />
+        <path d="M312 715c-34-58 31-86-5-151" stroke="#71bcb1" strokeWidth="18" opacity="0.19" />
+        <path d="M832 787c25-46-22-67 4-116" stroke="#d5f0d7" strokeWidth="12" opacity="0.14" />
+        <path d="M1278 728c34-61-29-86 8-153" stroke="#78c0b3" strokeWidth="18" opacity="0.18" />
       </g>
-      <g className="marketing-seafloor-vents" fill="#171629" stroke="#755367" strokeLinejoin="round" strokeWidth="8">
-        <path d="m232 815 37-237 69 4 44 233Z" />
-        <path d="m1128 811 46-291 77 5 50 286Z" />
-        <path d="m533 856 29-149 55 2 37 147Z" />
+      <g fill="#d9c89f" opacity="0.44">
+        <circle cx="307" cy="551" r="7" /><circle cx="328" cy="514" r="4" />
+        <circle cx="1280" cy="560" r="7" /><circle cx="1260" cy="521" r="4" />
+        <circle cx="833" cy="656" r="5" />
       </g>
-      <g className="marketing-seafloor-glow">
-        <circle cx="796" cy="846" r="230" fill="url(#cc-seafloor-lava)" filter="url(#cc-seafloor-blur)" />
-        <circle cx="1408" cy="899" r="164" fill="url(#cc-seafloor-lava)" filter="url(#cc-seafloor-blur)" opacity="0.62" />
+      <path
+        d="M0 748c188-63 349 22 540-7 220-33 370 23 564-5 186-28 326-17 496 33v331H0Z"
+        fill="url(#cc-seafloor-sand)"
+      />
+      <path
+        d="M0 938c193-35 352 24 547-4 216-31 371 20 558-4 182-24 328-12 495 32v138H0Z"
+        fill="#3d3336"
+        opacity="0.72"
+      />
+      <g className="marketing-seafloor-vents" fill="#4a3a3a" stroke="#b17e5d" strokeLinejoin="round" strokeWidth="8">
+        <path d="m250 790 25-75 70-1 36 76Z" />
+        <ellipse cx="312" cy="715" rx="30" ry="9" fill="#171728" />
+        <path d="m790 842 18-55 48-1 25 56Z" />
+        <ellipse cx="833" cy="787" rx="24" ry="8" fill="#171728" />
+        <path d="m1205 811 28-84 70 1 37 83Z" />
+        <ellipse cx="1270" cy="728" rx="32" ry="10" fill="#171728" />
       </g>
-      <path d="M0 902 231 622l202 280 335-424 329 424 221-287 282 287v198H0Z" fill="#131123" stroke="#553448" strokeWidth="10" />
-      <path d="m682 587 86-109 88 113-43 31-67-1Z" fill="#ee655d" opacity="0.78" />
-      <path d="m1250 703 68-88 72 92-38 27h-66Z" fill="#f08a62" opacity="0.66" />
-      <path d="M0 982c213-58 376 30 576 0 229-34 371 19 549-10 154-25 296-15 475 34v94H0Z" fill="#080713" />
-      <g fill="#91d7c7" opacity="0.72">
-        <path d="m919 312 42-18 43 18-43 18Zm-5 0-25-19v38Z" />
-        <path d="m1036 368 31-14 34 14-34 15Zm-5 0-19-15v30Z" />
+      <g className="marketing-seafloor-life" fill="none" stroke="#6eb09a" strokeLinecap="round">
+        <path d="M93 919c-5-72 35-92 19-151M107 852c-34-27-39-55-24-86M139 930c10-65-24-81-8-135" strokeWidth="12" />
+        <path d="M1454 950c-6-82 31-102 16-174M1472 871c34-34 39-65 24-98M1511 958c13-70-20-89-2-149" strokeWidth="12" />
+        <path d="M598 960c-4-55 23-73 13-119M611 899c-24-21-28-44-17-67" strokeWidth="9" />
       </g>
-      <g className="marketing-seafloor-tube-worms" fill="none" strokeLinecap="round" strokeWidth="9">
-        <path d="M103 934c-4-68 14-94 3-146M135 940c18-59 4-91 24-131M1480 953c-8-64 9-99-6-139M1511 956c21-63 12-94 32-137" stroke="#e4676a" />
-        <path d="M103 790h7M157 810h7M1471 815h7M1540 820h7" stroke="#ffd185" strokeWidth="16" />
+      <g className="marketing-seafloor-crabs" fill="#de8b69" stroke="#de8b69" strokeLinecap="round">
+        <path d="M470 914c21-24 63-24 84 0l-12 29h-60Zm-2 4-26-18m30 31-29 13m112-26 26-18m-30 31 29 13" strokeWidth="9" />
+        <circle cx="491" cy="911" r="4" fill="#171728" stroke="none" /><circle cx="533" cy="911" r="4" fill="#171728" stroke="none" />
+        <path d="M1015 1002c17-19 50-19 67 0l-10 23h-47Zm-1 3-21-14m24 24-23 10m89-20 21-14m-24 24 23 10" strokeWidth="7" />
+      </g>
+      <g fill="#91d7c7" opacity="0.62">
+        <path d="m924 307 40-17 42 17-42 19Zm-5 0-24-18v36Z" />
+        <path d="m1070 394 30-13 32 13-32 14Zm-4 0-18-14v28Z" />
       </g>
     </svg>
   );
@@ -559,8 +585,8 @@ export function MarketingHome() {
             <p className="marketing-kicker"><span /> California coast · planning beta</p>
             <h1 id="marketing-title">Give every cast<br />a compass.</h1>
             <p>
-              Compare public shore and pier windows with an explainable relative-ranking
-              planner tuned to one target species at a time.
+              Pick your target, compare public shore and pier windows, and see which
+              conditions line up before you make the drive.
             </p>
             <div className="marketing-hero-actions">
               <Link className="marketing-action marketing-action-primary" href="/forecast">
@@ -616,20 +642,16 @@ export function MarketingHome() {
             <OceanDescentArtwork />
             <div className="marketing-depth-vignette" />
           </div>
-          <div className="marketing-depth-meter" aria-hidden="true">
-            <span>Surface</span>
-            <i />
-            <span>Abyss</span>
-          </div>
+          <div className="marketing-depth-meter" aria-hidden="true"><i /></div>
           <div className="marketing-wash-surface" id="product">
             <div className="marketing-product">
               <header>
                 <p className="marketing-light-kicker">Below the surface</p>
                 <h2>Read every<br />signal together.</h2>
                 <p>
-                  CastingCompass combines current conditions with a versioned profile for
-                  the selected species, then compares the available windows. It is an
-                  expert-configured hybrid planning baseline—not a catch-probability engine.
+                  Pick a fish, then compare the conditions that matter before you head out.
+                  CastingCompass ranks the public spots and times in your plan—it can help
+                  you choose a window, but it cannot promise a bite.
                 </p>
               </header>
               <div className="marketing-model-panel">
@@ -664,28 +686,28 @@ export function MarketingHome() {
         <VolcanicSeafloorArtwork />
         <div className="marketing-proof-intro">
           <p className="marketing-kicker"><span /> At the seafloor</p>
-          <h2 id="marketing-proof-title">Useful context.<br />Solid ground.</h2>
+          <h2 id="marketing-proof-title">Know the water.<br />Pick your window.</h2>
         </div>
         <div className="marketing-proof-grid">
           <article>
             <span>01</span>
-            <h3>One selected target</h3>
-            <p>Swap species quickly while keeping one clear target in focus throughout the plan.</p>
+            <h3>Pick your target</h3>
+            <p>Choose halibut, striped bass, surfperch, or jacksmelt. The whole plan updates around that fish.</p>
           </article>
           <article>
             <span>02</span>
-            <h3>Freshness made visible</h3>
-            <p>Useful source age appears in plain language instead of exposing internal cache terminology.</p>
+            <h3>Know what is fresh</h3>
+            <p>See when conditions were last checked, so you can judge the plan before leaving home.</p>
           </article>
           <article>
             <span>03</span>
-            <h3>Public-place context</h3>
-            <p>Moderated community previews add broad context without exposing private or exact locations.</p>
+            <h3>Hear from the shoreline</h3>
+            <p>Read public notes from anglers without exposing anyone&apos;s private or exact fishing spot.</p>
           </article>
           <article>
             <span>04</span>
-            <h3>A rank, not a promise</h3>
-            <p>The score compares current options. It does not predict a catch or prove fish are present.</p>
+            <h3>Compare—do not gamble</h3>
+            <p>Use the rank to choose between today&apos;s options. It is guidance for the plan, never a promised catch.</p>
           </article>
         </div>
         <div className="marketing-seafloor-cta">

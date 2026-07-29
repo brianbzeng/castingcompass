@@ -55,7 +55,8 @@ test("server-renders the marketing homepage with honest product routes and an un
   assert.match(html, /<title>CastingCompass — Read the coast before you cast<\/title>/i);
   assert.match(html, /Give every cast/);
   assert.match(html, /One target/);
-  assert.match(html, /expert-configured hybrid planning baseline/i);
+  assert.match(html, /single-species relative rankings/i);
+  assert.match(html, /cannot promise a bite/i);
   assert.match(html, /href="\/forecast"/);
   assert.match(html, /href="\/community"/);
   assert.match(html, /aria-label="TestFlight download — coming soon"/);

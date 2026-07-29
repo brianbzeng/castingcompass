@@ -75,26 +75,28 @@ schema drift; no production mutation is authorized by those discoveries.
       scroll-reactive water layers. The sun follows a scroll-bound setting arc with uniform rays
       and mobile-specific framing while the sky dims toward night; compact frosted-glass panels
       no longer collide with either CTA. The next scroll sequence begins at the surface and sinks
-      through one continuous water column containing mobile-aware horizontal spearfisher
-      silhouettes, smaller sinking vintage equipment and anglerfish, bubbles, rays, jellyfish,
-      dense fish schools, and a visible surface-to-abyss meter. Near the bottom, six signal
-      families resolve before one standalone rod performs a single non-looping cast. Volcanic
-      ridges, lava glow, tube worms, and hydrothermal vents replace the former treasure-map and
-      pier artwork; the final copy sits directly on the seafloor rather than inside a second art
-      card. Web CTAs are live; TestFlight is sharp by default, reveals “Coming soon” on
-      hover/focus, and remains visibly and accessibly unavailable with no redirect.
+      through one continuous water column without blank sticky-section gaps. The supplied pair of
+      horizontal spearfisher silhouettes remains grouped and mobile-visible among smaller sinking
+      vintage equipment and anglerfish, bubbles, rays, jellyfish, dense fish schools, and an
+      unlabeled depth line. Near the bottom, six plain-language condition families resolve before
+      one standalone rod performs a single non-looping cast. Hover/focus gives the proof cards a
+      restrained lift and glow. Small cratered vents sit on a sandy seafloor instead of the former
+      mountain-like field; the final copy remains directly on the floor. Web CTAs are live;
+      TestFlight is sharp by default, reveals “Coming soon” on hover/focus, and remains visibly
+      and accessibly unavailable with no redirect.
 - [x] Record local implementation-candidate evidence: 769 Node tests, 280 browser scenarios
       (278 in the full matrix plus isolated passes for two timed-out cases), 158 pipeline tests
       with 11 documented optional-raster skips, 29 API tests, lint, types, the
       complete security chain, and release-SBOM verification pass. Production-shaped Lighthouse
-      records the refined ocean-descent revision at 70/98 mobile/desktop performance with 100
+      records the continuous water-column revision at 70/97 mobile/desktop performance with 100
       accessibility and zero CLS. The prior lighter-art pass scored 73/97, so the latest mobile
-      three-point regression and 5.72-second LCP remain explicit follow-up work. The planner
+      three-point regression and 5.80-second LCP remain explicit follow-up work. The planner
       remains at 61/91 with 100 accessibility. Candidate-planner LCP improved 36.2%/60.2% from
       baseline while retaining the residual 17.05-second mobile LCP as open work. The latest
-      presentation-only change also passes the production build, TypeScript, ESLint, 22 focused
-      HTML/accessibility/SEO checks, and four targeted Chromium/WebKit phone checks (26 focused
-      checks total).
+      presentation-only change also passes the production build, TypeScript, ESLint, 11 focused
+      rendered-homepage checks, and four targeted Chromium/WebKit phone checks. Source-sensitive
+      release-evidence tests remain intentionally pending until the final commit identity is
+      available.
 - [ ] Bind the final evidence to the immutable candidate head, obtain passing hosted checks, and
       open one draft candidate PR for experienced review after the Figma approval checkpoint.
 - [ ] Keep Community activation, migration `0021`, deployment, provider controls, domain/public
