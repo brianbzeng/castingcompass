@@ -700,8 +700,11 @@ test("marketing homepage routes to the web planner and keeps TestFlight honestly
   await expect(page.locator(".marketing-depth-angler")).toHaveCount(2);
   await expect(page.locator(".marketing-depth-cliff")).toHaveCount(1);
   await expect(page.locator(".marketing-depth-fish-school > image")).toHaveCount(4);
+  await expect(page.locator('image.marketing-painterly-shoreline[href="/marketing/painterly-shoreline.webp"]')).toHaveCount(1);
+  await expect(page.locator('image.marketing-painterly-water-column[href="/marketing/painterly-water-column.webp"]')).toHaveCount(1);
   await expect(page.locator(".marketing-seafloor-art")).toHaveCount(1);
-  await expect(page.locator('.marketing-seafloor-art mask image[href="/marketing/silhouettes/seabed-full.webp"]')).toHaveCount(2);
+  await expect(page.locator('.marketing-depth-seabed-approach image[href="/marketing/silhouettes/seabed-full.webp"]')).toHaveCount(1);
+  await expect(page.locator('.marketing-seafloor-art image[href="/marketing/silhouettes/seabed-full.webp"]')).toHaveCount(1);
   await expect(page.locator(".marketing-depth-volcanic-field, .marketing-seafloor-vent")).toHaveCount(0);
   await expect(page.locator(".marketing-seafloor-crab")).toHaveCount(2);
   await expect(page.locator(".marketing-cast-rod")).toHaveCount(0);
@@ -722,6 +725,7 @@ test("marketing homepage routes to the web planner and keeps TestFlight honestly
 
   const signalCardHeights = await page.locator(".marketing-model-features li").evaluateAll((cards) => cards.map((card) => Math.round(card.getBoundingClientRect().height)));
   expect(Math.max(...signalCardHeights) - Math.min(...signalCardHeights)).toBeLessThanOrEqual(1);
+  await expect(page.locator(".marketing-proof")).toHaveCSS("background-image", /painterly-water-column\.webp/);
 
   const heroTimeline = async (progress: number) => {
     await page.evaluate((targetProgress) => {
