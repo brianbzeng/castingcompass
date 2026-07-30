@@ -74,11 +74,26 @@ test("server-renders the approved marketing homepage with honest product routes 
   assert.match(html, /Recent Catch Reports/);
   assert.match(html, /Sample community preview/);
   assert.match(html, /Stay in the know/);
-  assert.match(html, /\/marketing\/approved\/boat-fisherman\.webp/);
-  assert.match(html, /\/marketing\/approved\/striped-bass\.webp/);
-  assert.match(html, /\/marketing\/actors\/foreground-kelp\.webp/);
-  assert.match(html, /\/marketing\/approved\/seafloor-anchor\.webp/);
-  assert.match(html, /\/marketing\/approved\/seafloor-starfish\.webp/);
+  assert.match(
+    html,
+    /(?:\/|%2F)marketing(?:\/|%2F)approved(?:\/|%2F)boat-fisherman\.webp/i,
+  );
+  assert.match(
+    html,
+    /(?:\/|%2F)marketing(?:\/|%2F)approved(?:\/|%2F)striped-bass\.webp/i,
+  );
+  assert.match(
+    html,
+    /(?:\/|%2F)marketing(?:\/|%2F)actors(?:\/|%2F)foreground-kelp\.webp/i,
+  );
+  assert.match(
+    html,
+    /(?:\/|%2F)marketing(?:\/|%2F)approved(?:\/|%2F)seafloor-anchor\.webp/i,
+  );
+  assert.match(
+    html,
+    /(?:\/|%2F)marketing(?:\/|%2F)approved(?:\/|%2F)seafloor-starfish\.webp/i,
+  );
   assert.match(html, /cc-diver cc-diver-a/);
   assert.match(html, /cc-diver cc-diver-b/);
   assert.match(html, /cc-crab cc-crab-a/);

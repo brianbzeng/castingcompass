@@ -77,6 +77,89 @@
       "private_evidence_receipt": null
     },
     {
+      "id": "marketing-approved-coastal-landing",
+      "title": "Approved coastal landing environment, animation sprites, and sample-report artwork",
+      "kind": "first_party_owner_supplied",
+      "paths": [
+        {
+          "path": "public/marketing/approved/boat-fisherman.webp",
+          "sha256": "6abf255d07a25eb29f693324ae23019e91cfc5de59d0267991983c93b62479e4"
+        },
+        {
+          "path": "public/marketing/approved/bubble-sprite.webp",
+          "sha256": "7ac5bf9355943055bbb92dc7dbfeb4723a9ceb907f4e50261abbb85828bcf6dc"
+        },
+        {
+          "path": "public/marketing/approved/catch-report-1.webp",
+          "sha256": "c5e59ad7c4af7c39ae14dfaf2ca73361b6acab7e491d6081216d368a563537da"
+        },
+        {
+          "path": "public/marketing/approved/catch-report-2.webp",
+          "sha256": "013f2c1eb366b2b520f010a6689341dbd8446a1393d4f6ecd8e8e2ec3b8f4d52"
+        },
+        {
+          "path": "public/marketing/approved/catch-report-3.webp",
+          "sha256": "d3849d23ec6aee64050fc4a41e950d521c9ad206003f551752cee24296319a27"
+        },
+        {
+          "path": "public/marketing/approved/catch-report-4.webp",
+          "sha256": "e3c41253a52c61e49c857d7a8cefdb32bd2b847cdf404e063f98ddabda4d7257"
+        },
+        {
+          "path": "public/marketing/approved/coastal-world.webp",
+          "sha256": "cb9c410d8d175f6b4ebd28c2d13cf013199c3f1d7b9fed746fac458e277f5c08"
+        },
+        {
+          "path": "public/marketing/approved/crab-sprite.webp",
+          "sha256": "f04ca331c12f4013ec71ca312911a6469f508f7238b7ae0cac2e40efffa8bfbc"
+        },
+        {
+          "path": "public/marketing/approved/diver-sprite.webp",
+          "sha256": "bedf4639b1f305656a7a9f3a4a30cb3bf73b5a3d472264038be05319195f8db3"
+        },
+        {
+          "path": "public/marketing/approved/helmet-fish-sprite.webp",
+          "sha256": "643090752a9e0de25ef131dd8a9b4ced7ec202e372c9480181938f65a9323b12"
+        },
+        {
+          "path": "public/marketing/approved/seafloor-anchor.webp",
+          "sha256": "0edfb4b25a77f50afb32d805581a702785d2e2576db88c78fba6648cbb4734f0"
+        },
+        {
+          "path": "public/marketing/approved/seafloor-starfish.webp",
+          "sha256": "00b6d24ba0a3f7a6395157bc218c7684bfe9e96f60717918cc37b75177c38699"
+        },
+        {
+          "path": "public/marketing/approved/striped-bass.webp",
+          "sha256": "4c4bee76bf4e1aae57d3ee1e3639740dd0082aa74d7883a2cb65549529f55dcb"
+        }
+      ],
+      "creator_display": "CastingCompass project owner with disclosed OpenAI ImageGen assistance",
+      "creation_date": "2026-07-30",
+      "source_url": null,
+      "source_remote_sha1": null,
+      "source_reviewed_at": null,
+      "license_id": null,
+      "license_label": null,
+      "license_url": null,
+      "rights_basis": "owner_supplied_ai_assisted",
+      "attribution_required": false,
+      "share_alike": false,
+      "attribution_text": "CastingCompass",
+      "modifications": "Created the clean coastal environment, striped bass, report portraits, anchor, and five-armed starfish from the owner-approved mockup with OpenAI ImageGen; cropped, cleaned, reordered, and encoded the owner-supplied diver, crab, bubble, and helmet animation sheets as WebP sprites; reused the registered boat actor; no third-party stock imagery was added.",
+      "ai_assistance": "disclosed",
+      "rights_review": "owner_supplied_not_independently_cleared",
+      "release_state": "candidate_review_required",
+      "upstream_record_id": null,
+      "release_commit": "bcbcc6a87eb37df3c4bbc28b26da4929581e5f8b",
+      "evidence_refs": [
+        "git:bcbcc6a87eb37df3c4bbc28b26da4929581e5f8b",
+        "The project owner supplied the approved July 30 landing-page mockup and directed the composition, copy, actors, animation behavior, and blue coastal art direction.",
+        "OpenAI ImageGen produced the disclosed original painterly assets; local crop, alpha cleanup, sprite packing, and WebP encoding prepared the repository files."
+      ],
+      "private_evidence_receipt": null
+    },
+    {
       "id": "marketing-painterly-environment-plates",
       "title": "Painterly shoreline and water-column environment plates",
       "kind": "first_party_owner_supplied",

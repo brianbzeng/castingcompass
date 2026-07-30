@@ -3,10 +3,10 @@
   "registerSchemaVersion": "castingcompass.authorship-provenance/1.0.0",
   "policyEffectiveCommit": "ea922c8dfbdb7e35a81836d1f6a9e9e35c9081bb",
   "reviewedAt": "2026-07-29",
-  "recordCount": 16,
-  "visualAssetCount": 36,
+  "recordCount": 17,
+  "visualAssetCount": 49,
   "thirdPartyRecordCount": 7,
-  "candidateReviewRequiredRecordCount": 4,
+  "candidateReviewRequiredRecordCount": 5,
   "candidateReviewRequiredPaths": [
     "public/marketing/actors/boat-fisherman.webp",
     "public/marketing/actors/diving-helmet.webp",
@@ -15,6 +15,19 @@
     "public/marketing/actors/seafloor-compass.webp",
     "public/marketing/actors/seafloor-crab.webp",
     "public/marketing/actors/shark.webp",
+    "public/marketing/approved/boat-fisherman.webp",
+    "public/marketing/approved/bubble-sprite.webp",
+    "public/marketing/approved/catch-report-1.webp",
+    "public/marketing/approved/catch-report-2.webp",
+    "public/marketing/approved/catch-report-3.webp",
+    "public/marketing/approved/catch-report-4.webp",
+    "public/marketing/approved/coastal-world.webp",
+    "public/marketing/approved/crab-sprite.webp",
+    "public/marketing/approved/diver-sprite.webp",
+    "public/marketing/approved/helmet-fish-sprite.webp",
+    "public/marketing/approved/seafloor-anchor.webp",
+    "public/marketing/approved/seafloor-starfish.webp",
+    "public/marketing/approved/striped-bass.webp",
     "public/marketing/painterly-shoreline.webp",
     "public/marketing/painterly-water-column.webp",
     "public/marketing/silhouettes/angler-left.webp",
@@ -47,7 +60,7 @@
     "cc0": 1,
     "derived_from_registered_legacy": 1,
     "owner_confirmation_required": 4,
-    "owner_supplied_ai_assisted": 4,
+    "owner_supplied_ai_assisted": 5,
     "source_public_domain_assertion": 2
   },
   "licenseIds": [
@@ -72,7 +85,7 @@
   "inputSha256": {
     "app/data/structure-images.json": "179cb5ed047f0874090637c96cee690f85a2bce8ac188b67494971686c735516",
     "contracts/authorship-provenance.schema.json": "0531c0550fe47725e4c56c5f71717ae0cca5cad7e10d4008cac2c43a7af6dd3e",
-    "governance/authorship-provenance.json": "567042531475c4be44c21c52c4eb431a7188a21512794ed111c70e25441fe02b",
+    "governance/authorship-provenance.json": "612f716bf9ce05495fda6aacf4221e32f79c75b792ce49609175f5dde988d1ea",
     "security/authorship-provenance-policy.json": "a757a8edb26dfdb86752f6f10303c92236f267cc45f382c354d58074019a9ef5"
   }
 }

@@ -58,9 +58,9 @@ test("the committed public-safe provenance report is deterministic and productio
   const checked = verifyProject(root, { reportMode: "check" });
   const rebuilt = verifyProject(root, { reportMode: "none" });
   assert.deepEqual(checked, rebuilt);
-  assert.equal(checked.visualAssetCount, 36);
+  assert.equal(checked.visualAssetCount, 49);
   assert.equal(checked.thirdPartyRecordCount, 7);
-  assert.equal(checked.candidateReviewRequiredRecordCount, 4);
+  assert.equal(checked.candidateReviewRequiredRecordCount, 5);
   assert.deepEqual(checked.candidateReviewRequiredPaths, [
     "public/marketing/actors/boat-fisherman.webp",
     "public/marketing/actors/diving-helmet.webp",
@@ -69,6 +69,19 @@ test("the committed public-safe provenance report is deterministic and productio
     "public/marketing/actors/seafloor-compass.webp",
     "public/marketing/actors/seafloor-crab.webp",
     "public/marketing/actors/shark.webp",
+    "public/marketing/approved/boat-fisherman.webp",
+    "public/marketing/approved/bubble-sprite.webp",
+    "public/marketing/approved/catch-report-1.webp",
+    "public/marketing/approved/catch-report-2.webp",
+    "public/marketing/approved/catch-report-3.webp",
+    "public/marketing/approved/catch-report-4.webp",
+    "public/marketing/approved/coastal-world.webp",
+    "public/marketing/approved/crab-sprite.webp",
+    "public/marketing/approved/diver-sprite.webp",
+    "public/marketing/approved/helmet-fish-sprite.webp",
+    "public/marketing/approved/seafloor-anchor.webp",
+    "public/marketing/approved/seafloor-starfish.webp",
+    "public/marketing/approved/striped-bass.webp",
     "public/marketing/painterly-shoreline.webp",
     "public/marketing/painterly-water-column.webp",
     "public/marketing/silhouettes/angler-left.webp",
