@@ -20,7 +20,8 @@ CI verifies its locked hash and semantics without reading any private packet. Th
 - separate `operator` and `independent_reviewer` approvals;
 - the one permitted safety-floor commit;
 - one action for every safety-floor, maintenance, and normal deployment; and
-- one action for `0007` reconciliation and each exact `0009`–`0018` migration.
+- one action for `0007` reconciliation, each exact `0009`–`0020` migration, and each of
+  the two empty pre-ledger drift reconciliations required before current `0010` and `0012`.
 
 The verifier requires full lowercase 40-character release and gate commits. Each verified
 checkout must be clean, belong to the official `brianbzeng/castingcompass` origin, and be
@@ -119,6 +120,9 @@ npm run release:cloudflare:safety-floor
 For D1, set a new action-specific `RELEASE_AUTHORIZATION_FILE` before every reconciliation or
 migration command in [Integrated production release](INTEGRATED-RELEASE.md). Static confirmation
 flags, a previous packet, or a successful preflight cannot authorize the next mutation.
+The pre-ledger reconciliation actions additionally require the exact known DDL fingerprint,
+zero-row evidence, and a verified maintenance version. They do not authorize dropping any
+other object or any table that contains a row.
 
 The public receipt contains only the authorization-file hash, action, release and gate commits,
 expiry, role labels, and evidence names. Store it with the private release record, then continue

@@ -970,6 +970,14 @@ export async function buildPrivacyExportPayload(
     delete exportedTrip.photo_key;
     return exportedTrip;
   });
+  const communityReadiness = await db.prepare(`SELECT COUNT(*) AS required_tables
+    FROM sqlite_master
+    WHERE type = 'table' AND name IN (
+      'community_profiles', 'community_posts', 'community_comments',
+      'community_blocks', 'community_reports'
+    )`).first<{ required_tables: number }>();
+  const communitySchemaReady = Number(communityReadiness?.required_tables ?? 0) === 5;
+  const emptyCommunityRows = Promise.resolve({ results: [] as Record<string, unknown>[] });
   const [
     discussionRows,
     forecastImpressionRows,
@@ -977,6 +985,11 @@ export async function buildPrivacyExportPayload(
     validationFeasibilityRows,
     validationFeasibilityRecruitmentRows,
     validationFeasibilityCorrectionRows,
+    communityProfileRows,
+    communityPostRows,
+    communityCommentRows,
+    communityReportRows,
+    communityBlockRows,
   ] = await Promise.all([
     db.prepare(`SELECT site_discussion_posts.id, site_discussion_posts.trip_id,
         site_discussion_posts.site_id, site_discussion_posts.summary, site_discussion_posts.gear_summary,
@@ -1013,6 +1026,23 @@ export async function buildPrivacyExportPayload(
       JOIN trips ON trips.id = corrections.trip_id
       WHERE trips.user_id = ? ORDER BY corrections.sequence ASC`)
       .bind(userId).all<Record<string, unknown>>(),
+    communitySchemaReady ? db.prepare(`SELECT handle, bio, created_at, updated_at
+      FROM community_profiles WHERE user_id = ?`)
+      .bind(userId).all<Record<string, unknown>>() : emptyCommunityRows,
+    communitySchemaReady ? db.prepare(`SELECT id, site_id, title, body, moderation_status, created_at, updated_at, deleted_at
+      FROM community_posts WHERE user_id = ? ORDER BY created_at DESC`)
+      .bind(userId).all<Record<string, unknown>>() : emptyCommunityRows,
+    communitySchemaReady ? db.prepare(`SELECT id, post_id, body, moderation_status, created_at, updated_at, deleted_at
+      FROM community_comments WHERE user_id = ? ORDER BY created_at DESC`)
+      .bind(userId).all<Record<string, unknown>>() : emptyCommunityRows,
+    communitySchemaReady ? db.prepare(`SELECT id, target_kind, target_id, reason, detail, status, created_at, updated_at
+      FROM community_reports WHERE reporter_user_id = ? ORDER BY created_at DESC`)
+      .bind(userId).all<Record<string, unknown>>() : emptyCommunityRows,
+    communitySchemaReady ? db.prepare(`SELECT blocked.handle AS blocked_handle, block.created_at
+      FROM community_blocks AS block
+      JOIN community_profiles AS blocked ON blocked.user_id = block.blocked_user_id
+      WHERE block.blocker_user_id = ? ORDER BY block.created_at DESC`)
+      .bind(userId).all<Record<string, unknown>>() : emptyCommunityRows,
   ]);
   const photoRows = tripRows.filter((trip) => typeof trip.photo_key === "string" && trip.photo_key);
   const photoManifest = await mapWithConcurrency(
@@ -1037,6 +1067,11 @@ export async function buildPrivacyExportPayload(
     validationFeasibilityRecruitment: validationFeasibilityRecruitmentRows.results ?? [],
     validationFeasibilityCorrections: validationFeasibilityCorrectionRows.results ?? [],
     discussionPosts: discussionRows.results ?? [],
+    communityProfile: communityProfileRows.results ?? [],
+    communityPosts: communityPostRows.results ?? [],
+    communityComments: communityCommentRows.results ?? [],
+    communityReports: communityReportRows.results ?? [],
+    communityBlocks: communityBlockRows.results ?? [],
     photos: photoManifest,
   };
   const recordCount = (account ? 1 : 0) + Object.values(payload)

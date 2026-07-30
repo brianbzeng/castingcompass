@@ -174,6 +174,15 @@ function validateRecordSemantics(register, policy, discovered, root) {
       }[record.rights_basis];
       invariant(expected, `${record.id} has an invalid third-party rights basis`);
       invariant(record.attribution_required === expected[0] && record.share_alike === expected[1] && record.rights_review === expected[2], `${record.id} rights flags disagree with its rights basis`);
+    } else if (record.kind === "first_party_owner_supplied") {
+      invariant(record.release_state === "candidate_review_required", `${record.id} must remain candidate review required`);
+      invariant(record.source_url === null && record.source_remote_sha1 === null && record.source_reviewed_at === null, `${record.id} invents external source evidence`);
+      invariant(record.license_id === null && record.license_label === null && record.license_url === null, `${record.id} invents an external license`);
+      invariant(record.rights_basis === "owner_supplied_ai_assisted", `${record.id} has an invalid owner-supplied rights basis`);
+      invariant(record.rights_review === "owner_supplied_not_independently_cleared", `${record.id} overstates independent rights review`);
+      invariant(record.ai_assistance === "disclosed", `${record.id} must disclose AI assistance`);
+      invariant(record.attribution_required === false && record.share_alike === false, `${record.id} cannot invent third-party attribution duties`);
+      invariant(record.upstream_record_id === null, `${record.id} cannot declare a registered upstream record`);
     } else {
       invariant(record.release_state === "legacy_review_required", `${record.id} is unresolved but not marked legacy review required`);
       invariant(record.source_url === null && record.source_remote_sha1 === null && record.source_reviewed_at === null, `${record.id} invents source evidence for an unresolved legacy asset`);
@@ -244,6 +253,10 @@ function buildReport(register, policy, discovered, inputs) {
     .filter((record) => record.release_state === "legacy_review_required")
     .flatMap((record) => record.paths.map((asset) => asset.path))
     .sort();
+  const candidateReviewRequiredPaths = register.records
+    .filter((record) => record.release_state === "candidate_review_required")
+    .flatMap((record) => record.paths.map((asset) => asset.path))
+    .sort();
   const licenseIds = [...new Set(register.records.map((record) => record.license_id).filter(Boolean))].sort();
   return {
     schemaVersion: "castingcompass.authorship-provenance-report/1.0.0",
@@ -253,6 +266,8 @@ function buildReport(register, policy, discovered, inputs) {
     recordCount: register.records.length,
     visualAssetCount: discovered.length,
     thirdPartyRecordCount: register.records.filter((record) => record.kind === "third_party_reference").length,
+    candidateReviewRequiredRecordCount: register.records.filter((record) => record.release_state === "candidate_review_required").length,
+    candidateReviewRequiredPaths,
     legacyReviewRequiredRecordCount: register.records.filter((record) => record.release_state === "legacy_review_required").length,
     legacyReviewRequiredPaths,
     rightsBasisCounts: Object.fromEntries(Object.entries(rightsBasisCounts).sort(([left], [right]) => left.localeCompare(right))),
@@ -263,6 +278,7 @@ function buildReport(register, policy, discovered, inputs) {
     productionReadiness: policy.productionReadiness,
     limitations: [
       "Repository and Git evidence do not independently prove copyright ownership or legal clearance.",
+      "The owner-supplied AI-assisted marketing silhouette remains candidate review required and is not represented as independently rights-cleared.",
       "Legacy brand, icon, social-card, and topography assets remain subject to owner confirmation.",
       "Private agreements, privileged advice, identities, personal data, and secret material are intentionally excluded.",
       "This source-bound report is not deployment evidence and does not authorize production release."

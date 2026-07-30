@@ -1,11 +1,14 @@
 # Integrated production release
 
 This runbook is the authoritative path for the first release containing migrations
-`0009` through `0020`. It exists because production has a known, narrowly bounded drift:
-the eight nullable `0007_legal_acceptance.sql` columns are already present, while the D1
-migration ledger records only `0000` through `0006`. Running Wrangler against the normal
-`drizzle` directory would try `0007` again and then every later migration. Do not run raw
-`wrangler d1 migrations apply` against production.
+`0009` through `0021`. A read-only primary-D1 audit on 2026-07-28 superseded the earlier
+`0007`-only assumption. The migration ledger still records only `0000` through `0006`, and
+the eight nullable `0007_legal_acceptance.sql` columns are present, but production also has
+five empty pre-ledger tables from incomplete, older shapes of `0010` and `0012`. The current
+named indexes and every `0012` trigger are not present. The guarded preflight fingerprints
+the exact table/index DDL and proves all five tables are empty. Running Wrangler against the
+normal `drizzle` directory would silently retain incompatible `IF NOT EXISTS` tables. Do not
+run raw `wrangler d1 migrations apply` against production.
 
 The release remains pending until a human explicitly authorizes the external operations.
 All command output and identifiers belong in a private evidence directory outside the
@@ -25,8 +28,16 @@ Checkout verification, static confirmation flags, or a previous phase's packet c
   ledger before and after, and creates a private temporary Wrangler config whose
   `migrations_pattern` exposes one exact file.
 - `0007` is never rerun. A guarded SQL statement records it only if the ledger is exactly
-  `0000`–`0006`, all eight columns have the expected nullable `TEXT` shape, no later schema
-  exists, and the foreign-key check is empty.
+  `0000`–`0006`, all eight columns have the expected nullable `TEXT` shape, the wrapper has
+  accepted either the `0007`-only profile or the exact known five-table pre-ledger profile,
+  no other later schema exists, and the foreign-key check is empty.
+- The separately guarded pre-ledger reconciliations accept only the exact normalized DDL
+  fingerprints observed on 2026-07-28, an exact ordered ledger, zero rows in every affected
+  table, no additional named objects, no foreign-key violations, and no inbound foreign-key
+  references from any production table. They may run only while
+  the exact maintenance Worker is verified at `100%`. Each removes only its empty, allowlisted
+  tables so the corresponding current migration can recreate them. Any row, object, DDL,
+  ledger, or maintenance-evidence drift is a stop.
 - Remote D1 does not authorize SQLite `PRAGMA integrity_check`. The release therefore uses
   D1's supported foreign-key check and exact schema/data predicates; the complete migration
   chain still runs `integrity_check` in local automated tests.
@@ -39,9 +50,9 @@ Checkout verification, static confirmation flags, or a previous phase's packet c
 
 | Phase | Worker serving traffic | Permitted schema state | Safe recovery |
 | --- | --- | --- | --- |
-| A | pinned discussion safety floor | through `0010` | route back to the recorded safety version |
-| B | reviewed full release with maintenance on | `0010` through `0018` | remain on the recorded maintenance version and fix forward |
-| C | reviewed full release with maintenance off | exactly through `0018` | re-enable the same release's maintenance version while investigating |
+| A | pinned discussion safety floor | `0000`–`0007` ledger only | route back to the recorded safety version |
+| B | reviewed full release with maintenance on | reconciliation plus `0009` through `0021` | remain on the recorded maintenance version and fix forward |
+| C | reviewed full release with maintenance off | exactly through `0021` | re-enable the same release's maintenance version while investigating |
 
 The safety-floor Worker is not a valid normal-traffic rollback after `0011`: the species
 contract adds completion guards that older trip writes do not satisfy. A Time Travel restore
@@ -92,41 +103,29 @@ npm run preflight:cloudflare:remote
 ```
 
 Stop unless the preflight succeeds. It must observe the exact `0000`–`0006` ledger; all eight
-`0007` columns; no `0009`–`0020` release schema or indexes; no photo locators; no
-foreign-key violations; and
-only aggregate user, trip, and discussion counts. Preserve its aggregate evidence hash and
-output. The zero-photo-locator result is the protected boundary that permits `0020` to add a
-source-bound locator-hash column without inventing legacy object identity. The confirmation flags
-in later commands assert that the bookmark was already stored;
-they do not create or preserve it for the operator.
+`0007` columns; the exact five-table, empty, pre-ledger `0010`/`0012` drift fingerprint;
+no other later tables, columns, indexes, or triggers; no photo locators; no foreign-key
+violations; and only aggregate user, trip, and discussion counts. Preserve its aggregate
+evidence hash and output. The zero-photo-locator result is the protected boundary that permits
+`0020` to add a source-bound locator-hash column without inventing legacy object identity.
+The confirmation flags in later commands assert that the bookmark was already stored; they
+do not create or preserve it for the operator. If the five drift tables are absent because a
+separately reviewed repair already occurred, the `0007`-only profile is also accepted.
 
-## 4. Reconcile `0007`, then apply the safety-compatible migrations
+## 4. Reconcile `0007`
 
-These are production mutations. Run them only after explicit release approval:
+This is a production mutation. Run it only after explicit release approval:
 
 ```sh
 export RELEASE_AUTHORIZATION_FILE=/PRIVATE/ENCRYPTED/PATH/migrate-reconcile-0007.json
 npm run reconcile:cloudflare:0007 -- \
   --confirm-primary contourcast-trips --confirm-bookmark-recorded
-
-export RELEASE_MIGRATION=0009_human_discussion_approval.sql
-export RELEASE_AUTHORIZATION_FILE=/PRIVATE/ENCRYPTED/PATH/migrate-0009.json
-npm run migrate:cloudflare:remote -- \
-  --confirm-primary contourcast-trips --confirm-bookmark-recorded
-
-export RELEASE_MIGRATION=0010_privacy_durability.sql
-export RELEASE_AUTHORIZATION_FILE=/PRIVATE/ENCRYPTED/PATH/migrate-0010.json
-npm run migrate:cloudflare:remote -- \
-  --confirm-primary contourcast-trips --confirm-bookmark-recorded
 ```
 
-Each invocation re-verifies the immutable checkout and exact ordered remote ledger. Wrangler
-also verifies that none of the target migration's tables, columns, or boundary triggers exists;
-it can then see only the named file and creates its normal per-migration backup. Stop on any
-mismatch, prompt rejection, command error, or post-apply ledger failure. Do not skip ahead,
-rename a migration, or use the normal `wrangler.jsonc` migration directory directly.
+The command re-verifies the immutable checkout, exact drift profile, and ordered remote ledger.
+Stop on any mismatch, prompt rejection, command error, or post-reconciliation failure.
 
-## 5. Deploy and prove the maintenance bridge
+## 5. Deploy and prove the maintenance bridge before `0009`
 
 Deploy the full reviewed release with every public feature switch off and maintenance on:
 
@@ -148,17 +147,38 @@ npm run verify:release-maintenance -- \
   --expected-worker-version-id MAINTENANCE_VERSION_ID
 ```
 
-Do not apply `0011` unless this check passes. If maintenance deployment or verification fails,
+Do not apply `0009` or run either pre-ledger reconciliation unless this check passes. If
+maintenance deployment or verification fails,
 stop in phase A and retain or restore the recorded safety-floor version.
 
-## 6. Apply the schema-bound migrations one at a time
+## 6. Reconcile the empty pre-ledger fragments and apply every migration one at a time
 
 While the verified maintenance version is at `100%`, apply the remaining exact sequence:
 
 ```sh
+export RELEASE_MIGRATION=0009_human_discussion_approval.sql
+export RELEASE_AUTHORIZATION_FILE=/PRIVATE/ENCRYPTED/PATH/migrate-0009.json
+npm run migrate:cloudflare:remote -- \
+  --confirm-primary contourcast-trips --confirm-bookmark-recorded
+
+export RELEASE_DRIFT_TARGET=0010_privacy_durability.sql
+export RELEASE_AUTHORIZATION_FILE=/PRIVATE/ENCRYPTED/PATH/reconcile-preledger-0010.json
+npm run reconcile:cloudflare:preledger -- \
+  --confirm-primary contourcast-trips --confirm-bookmark-recorded
+
+export RELEASE_MIGRATION=0010_privacy_durability.sql
+export RELEASE_AUTHORIZATION_FILE=/PRIVATE/ENCRYPTED/PATH/migrate-0010.json
+npm run migrate:cloudflare:remote -- \
+  --confirm-primary contourcast-trips --confirm-bookmark-recorded
+
 export RELEASE_MIGRATION=0011_species_aware_observations.sql
 export RELEASE_AUTHORIZATION_FILE=/PRIVATE/ENCRYPTED/PATH/migrate-0011.json
 npm run migrate:cloudflare:remote -- \
+  --confirm-primary contourcast-trips --confirm-bookmark-recorded
+
+export RELEASE_DRIFT_TARGET=0012_validation_protocol.sql
+export RELEASE_AUTHORIZATION_FILE=/PRIVATE/ENCRYPTED/PATH/reconcile-preledger-0012.json
+npm run reconcile:cloudflare:preledger -- \
   --confirm-primary contourcast-trips --confirm-bookmark-recorded
 
 export RELEASE_MIGRATION=0012_validation_protocol.sql
@@ -206,8 +226,22 @@ export RELEASE_AUTHORIZATION_FILE=/PRIVATE/ENCRYPTED/PATH/migrate-0020.json
 npm run migrate:cloudflare:remote -- \
   --confirm-primary contourcast-trips --confirm-bookmark-recorded
 
+export RELEASE_MIGRATION=0021_place_community.sql
+export RELEASE_AUTHORIZATION_FILE=/PRIVATE/ENCRYPTED/PATH/migrate-0021.json
+npm run migrate:cloudflare:remote -- \
+  --confirm-primary contourcast-trips --confirm-bookmark-recorded
+
 npm run postflight:cloudflare:remote
 ```
+
+Every reconciliation and migration invocation re-verifies the immutable checkout and exact
+ordered remote ledger. The pre-ledger commands additionally re-query the normalized DDL and
+zero-row boundary, enumerate the current production tables, and prove no inbound foreign-key
+reference immediately before their action-specific authorization check. They remove only the
+allowlisted empty tables and prove the target migration boundary is absent afterward.
+Wrangler can then see only the named migration and creates its normal per-migration backup.
+Stop on any mismatch, prompt rejection, command error, or post-action failure. Do not skip
+ahead, rename a migration, or use the normal `wrangler.jsonc` migration directory directly.
 
 The postflight must prove the exact full ledger; approval, privacy, species, validation, and
 snapshot-suppression schema; all 15 workload-backed data-resilience indexes; the exact nullable
@@ -261,6 +295,8 @@ The private release record must include:
 - D1 backend information and the pre-mutation Time Travel bookmark;
 - initial aggregate preflight output/hash, each reconciliation/migration result, and final
   aggregate postflight output/hash;
+- the exact normalized pre-ledger DDL fingerprints, zero-row receipts, and separately
+  authorized `0010` and `0012` reconciliation receipts;
 - aggregate synthetic, deletion, backup/restore, alert, and rate-limit outcomes required by
   the other P0 runbooks.
 

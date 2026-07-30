@@ -44,6 +44,24 @@
         "time_travel_bookmark_recorded"
       ]
     },
+    "deploy:maintenance": {
+      "fixed_release_commit": null,
+      "required_evidence": [
+        "automatic_deployments_disabled",
+        "change_window_approved",
+        "current_provider_state_recorded",
+        "initial_preflight_passed",
+        "key_custody_reviewed",
+        "maintenance_live_verification_plan",
+        "notification_path_confirmed",
+        "rollback_path_recorded",
+        "safety_floor_source_bound",
+        "security_alert_inventory_reviewed",
+        "snapshot_schedule_paused",
+        "source_commit_reviewed",
+        "time_travel_bookmark_recorded"
+      ]
+    },
     "migrate:0009_human_discussion_approval.sql": {
       "fixed_release_commit": null,
       "required_evidence": [
@@ -52,10 +70,31 @@
         "current_provider_state_recorded",
         "initial_preflight_passed",
         "key_custody_reviewed",
+        "maintenance_version_verified",
         "notification_path_confirmed",
         "previous_ledger_verified",
         "rollback_path_recorded",
         "safety_floor_source_bound",
+        "security_alert_inventory_reviewed",
+        "snapshot_schedule_paused",
+        "source_commit_reviewed",
+        "time_travel_bookmark_recorded"
+      ]
+    },
+    "migrate:reconcile-preledger-0010": {
+      "fixed_release_commit": null,
+      "required_evidence": [
+        "automatic_deployments_disabled",
+        "change_window_approved",
+        "current_provider_state_recorded",
+        "initial_preflight_passed",
+        "key_custody_reviewed",
+        "known_preledger_drift_verified",
+        "maintenance_version_verified",
+        "notification_path_confirmed",
+        "preledger_drift_zero_rows_verified",
+        "previous_ledger_verified",
+        "rollback_path_recorded",
         "security_alert_inventory_reviewed",
         "snapshot_schedule_paused",
         "source_commit_reviewed",
@@ -70,27 +109,11 @@
         "current_provider_state_recorded",
         "initial_preflight_passed",
         "key_custody_reviewed",
+        "maintenance_version_verified",
         "notification_path_confirmed",
+        "preledger_0010_reconciled",
         "previous_ledger_verified",
         "rollback_path_recorded",
-        "safety_floor_source_bound",
-        "security_alert_inventory_reviewed",
-        "snapshot_schedule_paused",
-        "source_commit_reviewed",
-        "time_travel_bookmark_recorded"
-      ]
-    },
-    "deploy:maintenance": {
-      "fixed_release_commit": null,
-      "required_evidence": [
-        "automatic_deployments_disabled",
-        "change_window_approved",
-        "current_provider_state_recorded",
-        "key_custody_reviewed",
-        "maintenance_live_verification_plan",
-        "notification_path_confirmed",
-        "rollback_path_recorded",
-        "safety_migrations_verified",
         "security_alert_inventory_reviewed",
         "snapshot_schedule_paused",
         "source_commit_reviewed",
@@ -114,6 +137,26 @@
         "time_travel_bookmark_recorded"
       ]
     },
+    "migrate:reconcile-preledger-0012": {
+      "fixed_release_commit": null,
+      "required_evidence": [
+        "automatic_deployments_disabled",
+        "change_window_approved",
+        "current_provider_state_recorded",
+        "key_custody_reviewed",
+        "known_preledger_drift_verified",
+        "maintenance_version_verified",
+        "notification_path_confirmed",
+        "preledger_0010_migration_verified",
+        "preledger_drift_zero_rows_verified",
+        "previous_ledger_verified",
+        "rollback_path_recorded",
+        "security_alert_inventory_reviewed",
+        "snapshot_schedule_paused",
+        "source_commit_reviewed",
+        "time_travel_bookmark_recorded"
+      ]
+    },
     "migrate:0012_validation_protocol.sql": {
       "fixed_release_commit": null,
       "required_evidence": [
@@ -123,6 +166,7 @@
         "key_custody_reviewed",
         "maintenance_version_verified",
         "notification_path_confirmed",
+        "preledger_0012_reconciled",
         "previous_ledger_verified",
         "rollback_path_recorded",
         "security_alert_inventory_reviewed",

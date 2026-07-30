@@ -1,11 +1,11 @@
 import type { Metadata } from "next";
 import validationStatus from "../../validation/public-status.json";
-import { LegalPage, LegalSection } from "../components/LegalPage";
+import { LEGAL_SUPPORT_EMAIL, LegalPage, LegalSection } from "../components/LegalPage";
 
 const PAGE_URL = "https://castingcompass.com/ai-disclosure";
 const PAGE_TITLE = "AI and Forecast Disclosure · CastingCompass";
 const PAGE_DESCRIPTION =
-  "How CastingCompass uses a heuristic relative ranker, public forecast inputs, model research, and human-gated AI review.";
+  "How CastingCompass uses automated ranking, public forecast inputs, model research, and human-reviewed AI assistance.";
 
 export const metadata: Metadata = {
   title: "AI and Forecast Disclosure",
@@ -17,13 +17,13 @@ export const metadata: Metadata = {
     type: "website",
     url: PAGE_URL,
     siteName: "CastingCompass",
-    images: [{ url: "/og.png", width: 1200, height: 630, alt: "CastingCompass — California Halibut Opportunity Planner" }],
+    images: [{ url: "/og.png", width: 1200, height: 630, alt: "CastingCompass — California coastal fishing planner" }],
   },
   twitter: {
     card: "summary_large_image",
     title: PAGE_TITLE,
     description: PAGE_DESCRIPTION,
-    images: [{ url: "/og.png", alt: "CastingCompass — California Halibut Opportunity Planner" }],
+    images: [{ url: "/og.png", alt: "CastingCompass — California coastal fishing planner" }],
   },
 };
 
@@ -32,13 +32,11 @@ export default function AiDisclosurePage() {
     <LegalPage
       eyebrow="Transparency · Automated systems"
       title="AI and Forecast Disclosure"
-      summary="CastingCompass uses automated scoring and a third-party language model. This page separates what is live today from research that is still being tested."
-      updatedDate="July 20, 2026"
-      documentVersion="2026-07-20.1"
+      summary="This disclosure explains how CastingCompass uses automated ranking and limited AI-assisted review, distinguishes live product features from research, and describes the systems’ material limitations."
     >
       <LegalSection title="The live Opportunity Score">
-        <p>The live score is a hybrid ranking system. It combines curated habitat and access information, public seasonal data, tides, weather and marine conditions, daylight and moon context, and practical fishability adjustments. The result is converted to a 0–100 percentile among the current location and time-window candidates.</p>
-        <p>It is not a catch probability, a statement that halibut are present, or a promise that the water is safe or practical to fish. Public inputs can be wrong or unavailable. Trip reports may inform product review, but they do not validate or train the current score.</p>
+        <p>The live Opportunity Score is produced by a hybrid planning and relative-ranking system. It combines curated habitat and access information, public seasonal data, tides, weather and marine conditions, daylight and moon context, and practical fishability adjustments. The result is expressed as a percentile among the locations and time windows currently being compared.</p>
+        <p>The score is not a catch probability, a statement that the selected target is present, or a representation that a location is safe, lawful, accessible, or practical to fish. Public inputs may be delayed, incomplete, unavailable, or inaccurate. The four target profiles are expert-configured and untrained. Trip reports may inform product review, but they do not validate or train the current live score.</p>
         <p>A separately versioned water-quality advisory overlay can remove an exactly mapped site from recommendations when the official agency reports an active water-contact status. A no-posting result never increases the Opportunity Score. Missing, stale, unmonitored, unavailable, and unmapped status stays unknown, and neither the overlay nor the score establishes water-contact or seafood safety.</p>
       </LegalSection>
 
@@ -49,25 +47,27 @@ export default function AiDisclosurePage() {
       </LegalSection>
 
       <LegalSection title="Deep-learning research status">
-        <p>CastingCompass has a bathymetry pretraining and model-research pipeline intended to learn useful underwater terrain representations. Unless the product expressly labels a deployed model version as trained and validated, that research output is not the live Habitat Score. The live product will not claim a deep-learning accuracy improvement until geographically blocked evaluation shows a reliable ranking gain over simpler baselines.</p>
+        <p>CastingCompass maintains a research pipeline intended to evaluate whether learned underwater-terrain representations can improve future ranking systems. Research outputs are not part of the live Habitat Score unless the product expressly identifies a deployed model version and its supporting validation. CastingCompass will not claim a deep-learning accuracy improvement unless appropriate geographically separated evaluation demonstrates a reliable gain over simpler baselines.</p>
       </LegalSection>
 
-      <LegalSection title="Trip-note and gear review">
-        <p>When a signed-in angler completes or edits a trip report, Xiaomi MiMo may review a limited trip payload. It normalizes recognizable rod, reel, lure, and rig names; flags inconsistent or unsafe content; and may prepare a pseudonymous discussion draft. A queued review is authorized only after a final deletion-record check. Deletion committed before that point cancels the request; a provider request already authorized or sent before deletion cannot be recalled, although its response cannot restore the deleted trip or publish a post. The model cannot publish or approve the draft. A human moderator must approve it before it can appear publicly.</p>
-        <p>Automated review can misunderstand a note or gear product. It does not determine legal guilt, eligibility for a benefit, employment, credit, health care, housing, or another high-impact decision. Users can request correction or removal by contacting <a href="mailto:bzeng0000@gmail.com">bzeng0000@gmail.com</a>.</p>
+      <LegalSection title="AI-assisted trip-note and gear review">
+        <p>When a signed-in user completes or edits a trip report, an external AI service may process a limited portion of the report to standardize recognizable gear names, identify potentially inconsistent or unsafe content, and prepare a possible pseudonymous discussion draft.</p>
+        <p>A queued review is authorized only after a final deletion-record check. A deletion completed before that point prevents the external request. A request already authorized or transmitted before deletion cannot be recalled, although its response cannot restore the deleted trip or publish a post. The automated system cannot publish or approve a draft. A human moderator must approve a draft before it can appear publicly.</p>
+        <p>Automated review may misunderstand a note, product, or context. It does not determine legal responsibility or make decisions concerning employment, credit, health care, housing, eligibility for a public benefit, or another high-impact matter. Users may request correction or removal by contacting <a href={`mailto:${LEGAL_SUPPORT_EMAIL}`}>{LEGAL_SUPPORT_EMAIL}</a>.</p>
       </LegalSection>
 
       <LegalSection title="Data sent for review">
-        <p>The review can receive the curated site and type, trip time, method, effort and catch counts, gear entries, observed fishability, forecast/model context, and up to 1,000 characters of notes. CastingCompass deliberately omits the user’s email, internal account ID, uploaded photo, and structured browser-location or coordinate fields. Free-text trip fields are sent as entered and could contain details the user typed.</p>
+        <p>The limited review data may include the curated site and site type, trip time, method, effort and catch counts, gear entries, observed fishability, forecast and model context, and up to 1,000 characters of notes. CastingCompass excludes the user&apos;s email address, internal account identifier, uploaded photo, and structured browser-location or coordinate fields.</p>
+        <p>Free-text fields are processed as submitted and may contain information the user chooses to enter. Users should not include names, contact information, private access instructions, exact sensitive locations, or other confidential information. Submissions intended to disrupt, manipulate, or circumvent the service may be rejected and may result in account action under the Terms of Service.</p>
       </LegalSection>
 
       <LegalSection title="How to interpret explanations">
-        <p>Component scores and explanation text describe the inputs that influenced the ranking. They are not proof of causation. Conditions such as tide and weather can be correlated with each other, and a high score can still produce a skunk. Trip reports do not change the current score or enter model evaluation automatically; any future use requires the separate validation protocol.</p>
+        <p>Component scores and explanation text describe inputs that influenced a ranking. They do not establish causation. Environmental conditions may be correlated with one another, and a highly ranked option may still result in no catch. Trip reports do not automatically change the live score or enter formal model evaluation; any future evaluative use is subject to a separate validation process.</p>
       </LegalSection>
 
-      <LegalSection title="Regulatory approach">
-        <p>There is no single universal “FTC AI disclosure” form. CastingCompass follows the core consumer-protection principle that claims about automated systems must be truthful, supported, and not misleading. This page, the score explanation, source freshness labels, and the Terms are designed to make the present limitations conspicuous.</p>
-        <p>California generative-AI training-data and synthetic-media provenance laws may become relevant if CastingCompass later develops or publicly releases covered generative systems. The current opportunity ranker and private note-review workflow are not presented as a general-purpose generative-AI service. This assessment will be revisited when features change.</p>
+      <LegalSection title="Transparency and changes">
+        <p>CastingCompass seeks to describe automated features in a truthful, supportable, and non-misleading manner. This disclosure, the score explanation, source-freshness labels, the Privacy Policy, and the Terms of Service are intended to communicate the present uses and limitations of automated systems.</p>
+        <p>We review applicable consumer-protection, privacy, and AI-transparency requirements as the service changes. We will update this disclosure before materially expanding automated processing, deploying a materially different scoring model, or introducing an automated system that makes decisions with significant effects on users.</p>
       </LegalSection>
     </LegalPage>
   );

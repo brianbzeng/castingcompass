@@ -72,10 +72,10 @@ test("trip entry points are present in the top bar, forecast detail, and validat
     readFile(appPath, "utf8"),
   ]);
 
-  assert.match(app, /disabled=\{!forecastReady\}/);
+  assert.match(app, /disabled=\{!forecastReady \|\| selectedTarget !== "california-halibut"\}/);
   assert.match(app, /Wait for the fishing-location catalog and forecast snapshot to load/);
   assert.match(app, /Forecast verification failed\. Retry the forecast before logging a trip\./);
-  assert.match(app, /Log trip\s*<\/button>/);
+  assert.match(app, /\{selectedTarget === "california-halibut" \? "Log trip" : "Planning only"\}/);
   assert.match(app, /Fish this window/);
   assert.match(app, /<TripReportFeature/);
   assert.match(app, /sites=\{sites\}/);
@@ -89,7 +89,8 @@ test("trip entry points are present in the top bar, forecast detail, and validat
   assert.doesNotMatch(app, /training data can be checked/);
   assert.match(feature, /id="validation"/);
   assert.match(feature, /The skunks/);
-  assert.match(app, /22 inches total length/);
+  assert.match(app, /Check current CDFW regulations/);
+  assert.match(app, /Rules and access can change/);
   assert.match(app, /contourcast\.respect-water\.v1/);
   assert.match(feature, /whether it’s a skunk or not are useful and genuinely appreciated/);
 });

@@ -50,8 +50,20 @@ const publicRoutes = [
   {
     path: "/",
     canonical: "https://castingcompass.com/",
-    title: "CastingCompass — California halibut opportunity planner",
+    title: "CastingCompass — Read the coast before you cast",
+    description: "An explainable California coastal fishing planner with single-species relative rankings for public shore, beach, jetty, and pier access.",
+  },
+  {
+    path: "/forecast",
+    canonical: "https://castingcompass.com/forecast",
+    title: "California coastal fishing planner · CastingCompass",
     description: "Compare public Bay Area and Santa Barbara South Coast fishing windows using explainable relative rankings from habitat, seasonality, and current conditions.",
+  },
+  {
+    path: "/community",
+    canonical: "https://castingcompass.com/community",
+    title: "Place communities · CastingCompass",
+    description: "Public previews and account-gated discussions for every supported CastingCompass fishing place.",
   },
   {
     path: "/privacy",
@@ -69,7 +81,7 @@ const publicRoutes = [
     path: "/ai-disclosure",
     canonical: "https://castingcompass.com/ai-disclosure",
     title: "AI and Forecast Disclosure · CastingCompass",
-    description: "How CastingCompass uses a heuristic relative ranker, public forecast inputs, model research, and human-gated AI review.",
+    description: "How CastingCompass uses automated ranking, public forecast inputs, model research, and human-reviewed AI assistance.",
   },
 ];
 
@@ -87,13 +99,13 @@ test("public pages render one self-canonical and truthful route-specific social 
     assert.deepEqual(metaValues(html, "property", "og:site_name"), ["CastingCompass"]);
     assert.deepEqual(metaValues(html, "property", "og:image:width"), ["1200"]);
     assert.deepEqual(metaValues(html, "property", "og:image:height"), ["630"]);
-    assert.deepEqual(metaValues(html, "property", "og:image:alt"), ["CastingCompass — California Halibut Opportunity Planner"]);
+    assert.deepEqual(metaValues(html, "property", "og:image:alt"), ["CastingCompass — California coastal fishing planner"]);
     assert.deepEqual(metaValues(html, "property", "og:image"), ["https://castingcompass.com/og.png"]);
     assert.deepEqual(metaValues(html, "name", "twitter:card"), ["summary_large_image"]);
     assert.deepEqual(metaValues(html, "name", "twitter:title"), [route.title]);
     assert.deepEqual(metaValues(html, "name", "twitter:description"), [route.description]);
     assert.deepEqual(metaValues(html, "name", "twitter:image"), ["https://castingcompass.com/og.png"]);
-    assert.deepEqual(metaValues(html, "name", "twitter:image:alt"), ["CastingCompass — California Halibut Opportunity Planner"]);
+    assert.deepEqual(metaValues(html, "name", "twitter:image:alt"), ["CastingCompass — California coastal fishing planner"]);
     assert.equal(metaValues(html, "name", "robots").some((value) => /noindex/i.test(value ?? "")), false);
     assert.doesNotMatch(html, /<meta[^>]+(?:google-site-verification|msvalidate\.01)/i);
   }
@@ -151,12 +163,34 @@ test("homepage JSON-LD is a narrow truthful WebSite declaration", async () => {
   assert.doesNotMatch(JSON.stringify(structuredData), /rating|accuracy|probability|localbusiness|product|dataset/i);
 });
 
+test("forecast JSON-LD is a narrow truthful WebApplication declaration", async () => {
+  const response = await render("/forecast");
+  const html = await response.text();
+  const match = html.match(/<script[^>]*id="castingcompass-forecast-schema"[^>]*>([\s\S]*?)<\/script>/);
+  assert.ok(match, "forecast WebApplication JSON-LD must render");
+  const structuredData = JSON.parse(match[1]);
+  assert.deepEqual(structuredData, {
+    "@context": "https://schema.org",
+    "@type": "WebApplication",
+    name: "CastingCompass",
+    applicationCategory: "SportsApplication",
+    operatingSystem: "Web",
+    url: "https://castingcompass.com/forecast",
+    description: publicRoutes[1].description,
+    inLanguage: "en-US",
+  });
+  assert.doesNotMatch(
+    JSON.stringify(structuredData),
+    /aggregateRating|accuracy|probability|catch probability|trained on|dataset/i,
+  );
+});
+
 test("AI disclosure renders the current all-zero validation boundary and negative result", async () => {
   const response = await render("/ai-disclosure");
   assert.equal(response.status, 200);
   const html = await response.text();
   const text = articleText(html);
-  assert.match(text, /Effective and last updated: July 20, 2026 · Document version 2026-07-20\.1/);
+  assert.match(text, /Effective and last updated: July 28, 2026 · Document version 2026-07-28\.1/);
   assert.match(text, /has not activated a prospective validation study/);
   assert.match(text, /0 attempts/);
   assert.match(text, /0 eligible target encounters and 0 eligible target non-encounters/);
@@ -174,7 +208,7 @@ test("unknown routes render a useful noindex page with a real 404 status", async
   const html = await response.text();
   assert.equal(elementText(html, "title"), "Page not found · CastingCompass");
   assert.match(html, /That page isn(?:&#x27;|'|&apos;)t here\./);
-  assert.match(html, /href="\/"[^>]*>[^<]*(?:Return to the forecast|<)/s);
+  assert.match(html, /href="\/forecast"[^>]*>[^<]*(?:Return to the forecast|<)/s);
   assert.deepEqual(canonicalValues(html), []);
   assert.match(metaValues(html, "name", "robots").join(",").toLowerCase(), /noindex/);
 });

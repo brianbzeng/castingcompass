@@ -24,15 +24,24 @@ from shared.species_contract import (
     validate_contract_assets,
 )
 
+from .model_input_contract import (
+    CONTRACT_ID as INPUT_CONTRACT_ID,
+    CONTRACT_VERSION as INPUT_CONTRACT_VERSION,
+    DEFAULT_INPUT_CONTRACT_PATH,
+    SCHEMA_VERSION as INPUT_CONTRACT_SCHEMA_VERSION,
+    canonical_input_contract_sha256,
+    load_model_input_contract,
+)
+
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_PLAN_PATH = (
     REPOSITORY_ROOT / "model" / "selection" / "california-halibut-v1.json"
 )
-SCHEMA_VERSION = "castingcompass.model-selection-plan/1.0.0"
+SCHEMA_VERSION = "castingcompass.model-selection-plan/1.1.0"
 RECEIPT_SCHEMA_VERSION = "castingcompass.model-selection-plan-audit/1.0.0"
 PLAN_ID = "california-halibut-model-selection-v1"
-PLAN_VERSION = "1.0.0"
+PLAN_VERSION = "1.1.0"
 PLAN_STATUS = "frozen-local-template-not-preregistered"
 
 AUTHORITY = {
@@ -65,6 +74,10 @@ DATA_GATES = [
     "encrypted-custody-restore-deletion-and-retention-evidence",
     "activation-manifest-sealed-before-first-eligible-row",
 ]
+LOCALLY_SATISFIED_DATA_GATES = [
+    "candidate-feature-and-input-contract-frozen-before-label-access",
+]
+INPUT_CONTRACT_REPOSITORY_PATH = "model/selection/california-halibut-input-v1.json"
 
 REQUIRED_OUTPUTS = [
     "target-occurrence-probability",
@@ -308,6 +321,8 @@ def validate_model_selection_plan(plan: Mapping[str, Any]) -> None:
             "contract_versions",
             "authority",
             "data_gates",
+            "locally_satisfied_data_gates",
+            "candidate_input_contract",
             "common_evaluation",
             "candidate_families",
             "selection_rule",
@@ -339,6 +354,33 @@ def validate_model_selection_plan(plan: Mapping[str, Any]) -> None:
         raise ValueError("plan authority must remain fully closed")
 
     _ordered_unique_slugs(plan["data_gates"], DATA_GATES, "plan.data_gates")
+    _ordered_unique_slugs(
+        plan["locally_satisfied_data_gates"],
+        LOCALLY_SATISFIED_DATA_GATES,
+        "plan.locally_satisfied_data_gates",
+    )
+    if not set(LOCALLY_SATISFIED_DATA_GATES).issubset(DATA_GATES):
+        raise RuntimeError("locally satisfied model-selection gates are not declared")
+
+    input_reference = _mapping(
+        plan["candidate_input_contract"],
+        "plan.candidate_input_contract",
+    )
+    _exact_keys(
+        input_reference,
+        {"schema_version", "contract_id", "contract_version", "path", "sha256"},
+        "plan.candidate_input_contract",
+    )
+    input_contract = load_model_input_contract(DEFAULT_INPUT_CONTRACT_PATH)
+    expected_input_reference = {
+        "schema_version": INPUT_CONTRACT_SCHEMA_VERSION,
+        "contract_id": INPUT_CONTRACT_ID,
+        "contract_version": INPUT_CONTRACT_VERSION,
+        "path": INPUT_CONTRACT_REPOSITORY_PATH,
+        "sha256": canonical_input_contract_sha256(input_contract),
+    }
+    if dict(input_reference) != expected_input_reference:
+        raise ValueError("plan candidate input contract identity or hash changed")
 
     evaluation = _mapping(plan["common_evaluation"], "plan.common_evaluation")
     _exact_keys(
@@ -388,11 +430,9 @@ def validate_model_selection_plan(plan: Mapping[str, Any]) -> None:
     for field in required_true:
         if evaluation.get(field) is not True:
             raise ValueError(f"evaluation safeguard {field} must remain true")
-    for field in {
-        "candidate_input_contract_frozen",
-        "final_primary_metric_set_frozen",
-        "materiality_thresholds_frozen",
-    }:
+    if evaluation.get("candidate_input_contract_frozen") is not True:
+        raise ValueError("candidate input contract must remain frozen")
+    for field in {"final_primary_metric_set_frozen", "materiality_thresholds_frozen"}:
         if evaluation.get(field) is not False:
             raise ValueError(f"open planning gate {field} must remain false")
     _ordered_unique_slugs(
@@ -450,7 +490,15 @@ def audit_model_selection_plan(
             for candidate in selected["candidate_families"]
         ),
         "implementation_counts": dict(sorted(implementation_counts.items())),
-        "open_data_gate_count": len(selected["data_gates"]),
+        "open_data_gate_count": (
+            len(selected["data_gates"]) - len(selected["locally_satisfied_data_gates"])
+        ),
+        "locally_satisfied_data_gate_count": len(
+            selected["locally_satisfied_data_gates"]
+        ),
+        "candidate_input_contract_sha256": selected["candidate_input_contract"][
+            "sha256"
+        ],
         "benchmark_execution_authorized": False,
         "target_specific_training_authorized": False,
         "locked_test_access_authorized": False,

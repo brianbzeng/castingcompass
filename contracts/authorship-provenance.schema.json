@@ -145,6 +145,7 @@
         "kind": {
           "enum": [
             "third_party_reference",
+            "first_party_owner_supplied",
             "first_party_legacy",
             "derived_legacy"
           ]
@@ -188,6 +189,7 @@
             "cc_by",
             "cc_by_sa",
             "source_public_domain_assertion",
+            "owner_supplied_ai_assisted",
             "owner_confirmation_required",
             "derived_from_registered_legacy"
           ]
@@ -220,6 +222,7 @@
           "enum": [
             "verified_source_license",
             "source_public_domain_assertion",
+            "owner_supplied_not_independently_cleared",
             "owner_confirmation_required",
             "derived_from_registered_legacy"
           ]
@@ -227,6 +230,7 @@
         "release_state": {
           "enum": [
             "approved_existing_use",
+            "candidate_review_required",
             "legacy_review_required"
           ]
         },

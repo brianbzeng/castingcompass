@@ -29,10 +29,10 @@ export default function NotFound() {
           <p className="not-found-eyebrow">404 · Off the chart</p>
           <h1 id="not-found-title">That page isn&apos;t here.</h1>
           <p className="not-found-copy">
-            The link may be outdated, or the page may have moved. The latest California
-            halibut opportunity forecast is still waiting at the main page.
+            The link may be outdated, or the page may have moved. The latest coastal
+            fishing plan is still waiting in the web planner.
           </p>
-          <Link className="not-found-action" href="/">
+          <Link className="not-found-action" href="/forecast">
             Return to the forecast
             <ArrowIcon />
           </Link>

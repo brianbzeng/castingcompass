@@ -7,24 +7,34 @@ implemented; no encoder passed the frozen
 classical baselines, catch heads have run only on fictional capability
 fixtures, and no eligible catch performance has been measured.
 
-**Version:** 0.8.0
+**Version:** 0.10.0
 
 ## Live regional-ranking boundary
 
-The public live ranker is a separate heuristic configuration, not the untrained
-research heads described below. Its catalog covers the Bay Area plus 14 public
-Santa Barbara South Coast access locations from Gaviota through Rincon. Santa
-Barbara sites use curated casting-zone exposure and habitat priors together with
-Santa Barbara tide, weather, buoy, and marine-forecast inputs. They do not use a
-Santa Barbara-trained terrain model and have not been validated against local trip
-outcomes. Scores remain relative percentiles across the current candidate set, so
+The public live ranker is a separate shared, expert-configured hybrid planning
+baseline, not the untrained research heads described below. It has versioned
+profiles for California halibut, striped bass, surfperch, and jacksmelt. Only one
+target is ranked at a time. Surfperch is expressly a family-level planning profile;
+rockfish is deferred because the generic category is behaviorally heterogeneous.
+The exact shared schema, profiles, source notes, and implementation audit are in
+`model/hybrid/species-profiles-v1.json` and
+`docs/MODEL-AND-DATA-AUDIT-2026-07-28.md`.
+
+The catalog covers the Bay Area plus 14 public Santa Barbara South Coast access
+locations from Gaviota through Rincon. Santa Barbara sites use curated casting-zone
+exposure and habitat priors together with public tide, weather, buoy, and
+marine-forecast inputs. No supported target uses a trained Santa Barbara terrain
+model or has been validated against local trip outcomes. Scores remain relative
+percentiles across the current candidate set, subject to a fishability cap, so
 adding a region changes the comparison universe rather than creating a catch
 probability.
 
-Ordinary trip reports from the new region remain private, reviewable product
-observations. They cannot become evidence for the frozen Bay Area validation pilot
-or a performance claim without a separately approved, prospective protocol that
-defines the new geography before outcomes are known.
+Structured trip reports remain limited to California halibut by the current
+observation contract. Ordinary reports remain private, reviewable product
+observations. Community posts and comments are UGC, not labels. None can become
+evidence for a validation or performance claim without a separately approved,
+prospective protocol that defines targets, geography, time, and eligibility
+before outcomes are known.
 
 ## Model purpose
 
@@ -282,11 +292,16 @@ The local [model-selection plan](MODEL-SELECTION-PLAN.md) now makes that future
 comparison architecture-neutral without starting it. Its strict machine
 contract inventories naive, regularized linear, spline/GAM, random-forest,
 histogram-gradient-boosted, spatial/hierarchical, bathymetric deep, and
-conditional hybrid/ensemble families. Only the naive, linear, boosted, and
-deep encoder/head plumbing currently exist; no eligible target-specific run,
-winner, or promotion claim exists. Every execution, locked-test, score,
-serving, and deployment flag remains false until a separately preregistered
-confirmatory design freezes the shared evidence and clears the data gates.
+conditional hybrid/ensemble families. Its separate frozen pre-label input
+contract now gives all seven required candidates the same context, source
+snapshots, eligible rows/folds, and raw multiscale terrain evidence while
+excluding outcomes, identities, prior scores, post-trip values, and future
+source revisions. Classical candidates receive fold-local summaries of the
+same terrain bags used by the deep candidate. Pollution, access closures, and
+regulations remain pre-ranking safety gates rather than catch-model features.
+No eligible target-specific run, winner, or promotion claim exists. Every
+execution, locked-test, score, serving, and deployment flag remains false until
+a separately preregistered confirmatory design clears the remaining data gates.
 
 ## Limitations and risks
 

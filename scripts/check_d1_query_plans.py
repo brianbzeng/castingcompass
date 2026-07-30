@@ -999,8 +999,8 @@ CHECKS = (
 
 def apply_migrations(connection: sqlite3.Connection) -> list[Path]:
     migrations = sorted(MIGRATIONS.glob("*.sql"))
-    if not migrations or migrations[-1].name != "0020_trip_photo_upload_reservations.sql":
-        raise AssertionError("0020_trip_photo_upload_reservations.sql must be the latest D1 migration")
+    if not migrations or migrations[-1].name != "0021_place_community.sql":
+        raise AssertionError("0021_place_community.sql must be the latest D1 migration")
     connection.execute("PRAGMA foreign_keys = ON")
     for path in migrations:
         sql = path.read_text(encoding="utf-8").replace("--> statement-breakpoint", "")

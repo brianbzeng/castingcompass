@@ -10,7 +10,7 @@ import {
 } from "../../shared/auth-contract";
 import { CloseIcon } from "./icons";
 import { GearCatalogFields } from "./GearCatalogFields";
-import { LEGAL_DOCUMENT_VERSION } from "./LegalPage";
+import { LEGAL_DOCUMENT_VERSION, LEGAL_SUPPORT_EMAIL } from "./LegalPage";
 import { SiteCombobox } from "./SiteCombobox";
 import {
   TurnstileChallenge,
@@ -2144,7 +2144,7 @@ export function AccountModal({
         tabIndex={standalone ? undefined : -1}
       >
         {standalone ? (
-          <Link className="sheet-close" href="/" aria-label="Back to forecast"><CloseIcon /></Link>
+          <Link className="sheet-close" href="/forecast" aria-label="Back to forecast"><CloseIcon /></Link>
         ) : (
           <button className="sheet-close" type="button" onClick={closeAccount} aria-label="Close account"><CloseIcon /></button>
         )}
@@ -2190,7 +2190,7 @@ export function AccountModal({
             <span className="eyebrow"><span /> Account update</span>
             <h2 id="account-title">Account features<br />paused.</h2>
             <p>This older account has no retained age-eligibility confirmation. CastingCompass will not ask for a birth date alongside an existing account or silently mark it eligible.</p>
-            <p>Email <a href="mailto:bzeng0000@gmail.com">bzeng0000@gmail.com</a> for privacy support. You can also permanently delete the account below with its password.</p>
+            <p>Email <a href={`mailto:${LEGAL_SUPPORT_EMAIL}`}>{LEGAL_SUPPORT_EMAIL}</a> for privacy support. You can also permanently delete the account below with its password.</p>
             <PrivacyExportControl />
             <details className="account-delete-details">
               <summary>Delete account</summary>
@@ -2276,7 +2276,7 @@ export function AccountModal({
                         key={saved.site_id}
                         onClick={() => {
                           if (standalone) {
-                            window.location.assign(`/?site=${encodeURIComponent(saved.site_id)}`);
+                            window.location.assign(`/forecast?site=${encodeURIComponent(saved.site_id)}`);
                             return;
                           }
                           closeAccount();

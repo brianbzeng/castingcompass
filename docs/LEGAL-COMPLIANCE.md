@@ -1,6 +1,6 @@
 # CastingCompass legal and product compliance register
 
-Last reviewed: 2026-07-17
+Last reviewed: 2026-07-28
 
 This is an engineering and product checklist, not legal advice. The public Terms and Privacy Policy are a practical launch baseline. A California attorney should review them before paid subscriptions, advertising, native-app distribution, SMS, large-scale marketing, or material growth.
 
@@ -13,8 +13,9 @@ This is an engineering and product checklist, not legal advice. The public Terms
 | Legal acceptance | Terms and Privacy agreement | Affirmative unchecked boxes; accepted versions and timestamps stored; existing accounts must accept material versions before account features resume |
 | Browser location | Potential precise location | Optional pre-prompt; coordinate stays in the browser tab and is used only for nearby sorting/radius; no account or trip persistence |
 | Trip report | Time, site, catches, gear, notes, fishability, optional photo | Clear consent; user ownership representation; private-by-default raw data; metadata-stripped photo; pending edit/delete; public output limited to an anonymous reviewed summary |
-| Automated review | Trip payload sent to Xiaomi MiMo | No email, account ID, device location, photo, or exact private coordinate in the review payload; separate AI disclosure; correction/removal contact |
-| Email | Verification, recovery, welcome | Transactional only; Resend is the delivery provider; no marketing list or SMS |
+| Place community | Pseudonymous profile, posts, comments, reports, blocks, moderation state | Three-post/two-comment public preview, semantic account-gated continuation, human moderation before public publication, owner edit/delete, reporting/blocking, bounded pagination/rate limits, exact-location/contact rejection, and export/deletion coverage; production activation remains legally and operationally gated |
+| Automated review | Limited trip payload sent to an external AI service | No email, account ID, device location, photo, or exact private coordinate in the review payload; separate AI disclosure; correction/removal contact |
+| Email | Verification, recovery, welcome | Transactional account messages only; no marketing list or SMS |
 | Storage | D1 account/trip records, optional R2 photos, and a proposed private R2 portability package | Secure session cookies, same-origin mutation checks, rate limits, comprehensive JSON export plus separate authenticated photo downloads, durable deletion jobs, secure status receipts, scheduled retry of object cleanup, and pseudonymous deletion tombstones. Background packaging remains default-off and provider-free; if activated, its owner-only file expires within 24 hours |
 
 ## Current legal baseline
@@ -71,6 +72,19 @@ Primary references:
 - FTC deceptive AI claims enforcement: <https://www.ftc.gov/news-events/news/press-releases/2024/09/ftc-announces-crackdown-deceptive-ai-claims-schemes>
 - California AB 2013: <https://leginfo.legislature.ca.gov/faces/billNavClient.xhtml?bill_id=202320240AB2013>
 - California SB 942: <https://leginfo.legislature.ca.gov/faces/billTextClient.xhtml?bill_id=202320240SB942>
+
+### User-generated community content
+
+- Treat posts and comments as user-generated content with clear community rules, reporting,
+  blocking, owner edit/delete, human moderation, and documented enforcement.
+- Keep private/exact locations, contact details, access codes, harassment, spam, unsafe advice,
+  and unlawful content out of public publication.
+- Define moderator ownership, response/escalation targets, appeals, preservation/removal rules,
+  repeat-abuse handling, and a DMCA/UGC process before production activation.
+- Verify that public previews, account gating, retention, exports, deletion, and account
+  termination match the exact Terms and Privacy Policy.
+- Obtain appropriate legal review before activation; this engineering register does not establish
+  platform immunity, statutory compliance, or the right response to any particular notice.
 
 ### Fishing, weather, bathymetry, and safety
 
@@ -148,7 +162,10 @@ and processor review before making those claims.
 - Retain pseudonymous completed-deletion tombstones for 90 days. Document the production backup-retention window and prove through an isolated restore drill that the current deletion ledger is replayed before restored data can receive traffic.
 - Verify exports against populated fixtures: account and consent records, saved locations, gear presets, full trip fields, discussion linkage, photo manifest, and successful authenticated download of each photo file that the export says is available.
 - Before background export activation, apply `0019_async_privacy_exports.sql` through the guarded release, create a non-public R2 bucket and dedicated Queue with least-privilege bindings, document provider retention/encryption/cost controls, and complete the owner, cross-owner, expiry, account-deletion, duplicate-delivery, and failed-object-cleanup drills in [Asynchronous privacy exports](ASYNC-PRIVACY-EXPORTS.md). Keep the flag false until every item is evidenced.
-- Review and document Cloudflare, Resend, and Xiaomi MiMo deletion and log-retention terms. Complete counsel review of the updated Terms, Privacy Policy, age gate, backup language, and user-request workflow.
+- Review and document the deletion, security, and log-retention terms for every infrastructure,
+  communications, credential-security, automated-processing, and public-data provider. Complete
+  counsel review of the updated Terms, Privacy Policy, age gate, backup language, and user-request
+  workflow.
 
 ## Open items for counsel
 
@@ -158,3 +175,5 @@ and processor review before making those claims.
 - Trademark/name clearance for CastingCompass.
 - Vendor DPAs and international data transfer terms as usage grows.
 - Subscription, advertising, SMS, and native-store review before those features launch.
+- Community standards, moderation process, appeals, DMCA/UGC notices, retention, and reporting/
+  blocking behavior before place-community activation.

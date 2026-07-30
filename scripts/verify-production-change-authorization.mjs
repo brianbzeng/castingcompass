@@ -9,7 +9,7 @@ import { verifyReleaseCheckout } from "./verify-release-checkout.mjs";
 
 const DEFAULT_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const POLICY_PATH = "security/production-change-authorization-policy.json";
-const LOCKED_POLICY_SHA256 = "b33af9d70a39a841459a1c453ebfe8916dfa28809ea2481c8af878f341746067";
+const LOCKED_POLICY_SHA256 = "dfab866c9add2be8725171ce6945d8064f50fc3b286599720300cbdf31be390c";
 const MAX_AUTHORIZATION_BYTES = 64 * 1024;
 const CLOCK_SKEW_MS = 60 * 1000;
 const COMMIT_PATTERN = /^[a-f0-9]{40}$/u;
@@ -20,10 +20,12 @@ const TIMESTAMP_PATTERN = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/u;
 const EXPECTED_ACTIONS = Object.freeze([
   "deploy:safety-floor",
   "migrate:reconcile-0007",
-  "migrate:0009_human_discussion_approval.sql",
-  "migrate:0010_privacy_durability.sql",
   "deploy:maintenance",
+  "migrate:0009_human_discussion_approval.sql",
+  "migrate:reconcile-preledger-0010",
+  "migrate:0010_privacy_durability.sql",
   "migrate:0011_species_aware_observations.sql",
+  "migrate:reconcile-preledger-0012",
   "migrate:0012_validation_protocol.sql",
   "migrate:0013_validation_feasibility_pilot.sql",
   "migrate:0014_validation_feasibility_recruitment_and_corrections.sql",

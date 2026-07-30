@@ -89,6 +89,7 @@ test("every declared API route example resolves to its exact executable policy",
       "auth.login",
       "trips.summary",
       "discussions.site",
+      "community.preview",
     ],
   );
   for (const policy of API_ROUTE_POLICIES.filter((policy) => policy.authorization === "public")) {
@@ -589,7 +590,7 @@ test("the Worker entry point centrally denies unknown paths and unclassified met
   assert.ok(publicAuthorization > rejection, "public policy review must follow central route rejection");
   assert.ok(ownerPolicyReview > rejection, "owner policy review must follow central route rejection");
   assert.ok(ownerAuthorization > ownerPolicyReview, "owner authorization must follow owner policy review");
-  assert.equal(ownerAuthorizations.length, 2);
+  assert.equal(ownerAuthorizations.length, 3);
   assert.ok(ownerAuthorization > rejection, "owner authorization must follow central route rejection");
   assert.ok(receiptPolicyReview > rejection, "receipt policy review must follow central route rejection");
   assert.ok(

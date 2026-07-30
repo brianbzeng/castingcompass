@@ -16,6 +16,10 @@ prove who created a work or who owns its rights.
 
 - The seven structure-reference photos have evidence-reviewed source records. Their local hashes
   and the live credit/license/change copy are bound by CI.
+- The owner-supplied, AI-assisted marketing silhouettes have exact local hashes, disclosed
+  transformations, and the commits where they first appear. The original paired-spearfisher
+  asset and the extracted marine-life/seafloor set remain `candidate_review_required`; neither
+  set is represented as independently rights-cleared.
 - Eight pre-policy brand, icon, social-card, and topography paths are preserved on an exact legacy
   allowlist. Their creator, source layers, assignment/license, and AI-assistance history still
   need owner confirmation. They are not represented as rights-cleared merely because they are in

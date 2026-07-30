@@ -43,7 +43,7 @@ const ACCOUNT_DELETION_FENCE_LEASE_MS = 5 * 60 * 1000;
 const MAX_SAVED_SITES_PER_ACCOUNT = 100;
 const MAX_GEAR_PROFILES_PER_ACCOUNT = 100;
 const AUTH_RETENTION_DELETE_BATCH = 100;
-export const LEGAL_VERSION = "2026-07-17.1";
+export const LEGAL_VERSION = "2026-07-28.1";
 const AGE_GATE_VERSION = `age-13:${LEGAL_VERSION}`;
 const MINIMUM_ACCOUNT_AGE = 13;
 // Cloudflare Workers currently caps Web Crypto PBKDF2 at 100,000 rounds.

@@ -12,29 +12,59 @@ meta description when that is a better summary. Titles and snippets are preferen
 not fields an operator can force. See Google's [title-link guidance](https://developers.google.com/search/docs/appearance/title-link)
 and [snippet guidance](https://developers.google.com/search/docs/appearance/snippet).
 
-## Four-page language sheet
+## Six-page language sheet
 
 Candidate phrases are research prompts for understanding audience intent. They are
 not a direction to repeat keywords, a prediction of ranking, or permission to add a
 claim that the page does not support.
 
-### `/` — public opportunity planner
+### `/` — product homepage
+
+- **Audience questions:** What does CastingCompass help a California coastal angler
+  plan? Can someone use it on the web before a native app is available? Does it
+  predict that someone will catch a fish?
+- **Honest purpose:** Introduce the product, its single-target workflow and limits,
+  and route visitors to the web planner or moderated place communities.
+- **Candidate phrases:** “CastingCompass,” “California coastal fishing planning
+  app,” “California shore fishing planner,” and “Bay Area fishing planning app.”
+- **Current title:** “CastingCompass — Read the coast before you cast.”
+- **Desired snippet:** “An explainable California coastal fishing planner with
+  single-species relative rankings for public shore, beach, jetty, and pier access.”
+- **Useful next action:** Open the web planner to choose one target species and
+  compare public fishing windows, or browse a supported place community.
+
+### `/forecast` — public opportunity planner
 
 - **Audience questions:** How can someone compare public Bay Area and Santa Barbara
-  South Coast halibut fishing windows? Which available shore, beach, jetty, or pier
-  options fit the forecast inputs? Why is one option ranked above another?
-- **Honest purpose:** Compare options with a transparent heuristic relative ranking,
-  while showing inputs, freshness, and limitations.
-- **Candidate phrases:** “California halibut fishing planner,” “Bay Area halibut
-  shore fishing conditions,” “Santa Barbara halibut fishing planner,” “Goleta shore
-  fishing conditions,” “halibut fishing window comparison,” and “California pier
-  beach jetty fishing planner.”
-- **Current title:** “CastingCompass — California halibut opportunity planner.”
-- **Desired snippet:** “Compare public Bay Area and Santa Barbara South Coast fishing
-  windows using explainable relative rankings from habitat, seasonality, and current
-  conditions.”
+  coastal fishing windows? Which available shore, beach, jetty, or pier options fit
+  the forecast inputs? How does changing the selected target change the ranking?
+- **Honest purpose:** Compare options for one selected target with a transparent
+  hybrid relative ranking while showing inputs, freshness, and limitations.
+- **Candidate phrases:** “California coastal fishing planner,” “Bay Area shore
+  fishing conditions,” “California halibut and striped bass planner,” “surfperch
+  and jacksmelt fishing planner,” and “target species fishing window comparison.”
+- **Current title:** “California coastal fishing planner · CastingCompass.”
+- **Desired snippet:** “Compare public Bay Area and Santa Barbara South Coast
+  fishing windows using explainable relative rankings from habitat, seasonality,
+  and current conditions.”
 - **Useful next action:** Review ranking inputs and freshness before choosing a
   public fishing window.
+
+### `/community` — place communities
+
+- **Audience questions:** Where is the discussion for a supported public fishing
+  place? What can someone read before creating an account? How are posts moderated
+  and private locations protected?
+- **Honest purpose:** Provide limited public previews for every supported place,
+  with account-gated continuation, moderation, and private-location safeguards.
+- **Candidate phrases:** “CastingCompass fishing community,” “Bay Area public
+  fishing place discussions,” “Santa Barbara fishing place community,” and
+  “California shore fishing community.”
+- **Current title:** “Place communities · CastingCompass.”
+- **Desired snippet:** “Public previews and account-gated discussions for every
+  supported CastingCompass fishing place.”
+- **Useful next action:** Choose a supported public place, read its limited preview,
+  and sign in only to continue or participate.
 
 ### `/privacy` — privacy policy
 
@@ -84,7 +114,7 @@ claim that the page does not support.
 
 The canonical policy contains the exact titles, descriptions, URLs, questions,
 candidate phrases, next actions, and index intent. Automated tests bind it to the
-four-page crawl set and the current rendered metadata.
+six-page crawl set and the current rendered metadata.
 
 ## Prohibited claims
 

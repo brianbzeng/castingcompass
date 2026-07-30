@@ -25,27 +25,94 @@ async function render(path = "/") {
 }
 
 test("server-renders the CastingCompass product shell", async () => {
+  const response = await render("/forecast");
+  assert.equal(response.status, 200);
+  assert.match(response.headers.get("content-type") ?? "", /^text\/html\b/i);
+
+  const html = await response.text();
+  assert.match(
+    html,
+    /<title>California coastal fishing planner · CastingCompass<\/title>/i,
+  );
+  assert.match(html, /Find the water/);
+  assert.match(html, /California halibut/);
+  assert.match(html, /Pick the hours you have/);
+  assert.match(html, /Evaluated baseline/);
+  assert.match(html, /Choose one target/);
+  assert.match(html, /Striped bass/);
+  assert.match(html, /Surfperch/);
+  assert.match(html, /Jacksmelt/);
+  assert.match(html, /Loading the current forecast/i);
+  assert.match(
+    html,
+    /Wait for the fishing-location catalog and forecast snapshot to load/i,
+  );
+  assert.doesNotMatch(html, /class="score-orbit|class="site-card/i);
+  assert.match(html, /CDFW Bay regulations/);
+  assert.doesNotMatch(
+    html,
+    /codex-preview|Your site is taking shape|SkeletonPreview/i,
+  );
+});
+
+test("server-renders the approved marketing homepage with honest product routes and sample content disclosure", async () => {
   const response = await render();
   assert.equal(response.status, 200);
   assert.match(response.headers.get("content-type") ?? "", /^text\/html\b/i);
 
   const html = await response.text();
-  assert.match(html, /<title>CastingCompass — California halibut opportunity planner(?: · CastingCompass)?<\/title>/i);
-  assert.match(html, /Find the water/);
-  assert.match(html, /California halibut/);
-  assert.match(html, /Pick the hours you have/);
-  assert.match(html, /Work in progress/);
-  assert.match(html, /currently hunts for California halibut only/);
-  assert.match(html, /Loading the current forecast/i);
-  assert.match(html, /Wait for the fishing-location catalog and forecast snapshot to load/i);
-  assert.doesNotMatch(html, /class="score-orbit|class="site-card/i);
-  assert.match(html, /CDFW Bay regulations/);
-  assert.doesNotMatch(html, /codex-preview|Your site is taking shape|SkeletonPreview/i);
+  assert.match(
+    html,
+    /<title>CastingCompass — Read the coast before you cast<\/title>/i,
+  );
+  assert.match(html, /Give every/);
+  assert.match(html, /cast a compass\./);
+  assert.match(html, /Find best spot near you/);
+  assert.match(html, /No login required to explore/);
+  assert.match(html, /Everything you need for/);
+  assert.match(html, /a successful day on the water\./);
+  assert.match(html, /Recent Catch Reports/);
+  assert.match(html, /Sample community preview/);
+  assert.match(html, /Stay in the know/);
+  assert.match(
+    html,
+    /(?:\/|%2F)marketing(?:\/|%2F)approved(?:\/|%2F)boat-fisherman\.webp/i,
+  );
+  assert.match(
+    html,
+    /(?:\/|%2F)marketing(?:\/|%2F)approved(?:\/|%2F)striped-bass\.webp/i,
+  );
+  assert.match(
+    html,
+    /(?:\/|%2F)marketing(?:\/|%2F)actors(?:\/|%2F)foreground-kelp\.webp/i,
+  );
+  assert.match(
+    html,
+    /(?:\/|%2F)marketing(?:\/|%2F)approved(?:\/|%2F)seafloor-anchor\.webp/i,
+  );
+  assert.match(
+    html,
+    /(?:\/|%2F)marketing(?:\/|%2F)approved(?:\/|%2F)seafloor-starfish\.webp/i,
+  );
+  assert.match(html, /cc-diver cc-diver-a/);
+  assert.match(html, /cc-diver cc-diver-b/);
+  assert.match(html, /cc-crab cc-crab-a/);
+  assert.match(html, /cc-crab cc-crab-b/);
+  assert.match(html, /href="\/forecast"/);
+  assert.match(html, /href="\/community"/);
+  assert.match(html, /aria-label="Example fishing forecast"/);
+  assert.match(html, /aria-label="5 out of 5 stars"/);
+  assert.match(html, /aria-disabled="true"/);
+  assert.doesNotMatch(html, /TestFlight|apps\.apple\.com|testflight\.apple\.com/i);
+  assert.doesNotMatch(html, /shark/i);
 });
 
 test("ships install and offline assets", async () => {
   const [manifest, serviceWorker, headerIcon] = await Promise.all([
-    readFile(new URL("../public/manifest.webmanifest", import.meta.url), "utf8"),
+    readFile(
+      new URL("../public/manifest.webmanifest", import.meta.url),
+      "utf8",
+    ),
     readFile(new URL("../public/sw.js", import.meta.url), "utf8"),
     stat(new URL("../public/icons/icon-192.png", import.meta.url)),
     access(new URL("../public/icons/icon-192.png", import.meta.url)),
@@ -53,25 +120,41 @@ test("ships install and offline assets", async () => {
   ]);
 
   const parsed = JSON.parse(manifest);
-  assert.equal(parsed.name, "CastingCompass — Halibut Opportunity Planner");
+  assert.equal(
+    parsed.name,
+    "CastingCompass — California Coastal Fishing Planner",
+  );
   assert.equal(parsed.display, "standalone");
+  assert.equal(parsed.id, "/forecast");
+  assert.equal(parsed.start_url, "/forecast");
   assert.equal(parsed.icons.length, 2);
-  assert.match(serviceWorker, /\/data\/opportunities\.json/);
+  assert.match(serviceWorker, /\/data\/opportunities-browser\.json/);
   assert.match(serviceWorker, /\/data\/community-pulse\.json/);
   assert.match(serviceWorker, /\/topography-contours-v2\.webp/);
+  assert.match(serviceWorker, /"\/forecast"/);
   assert.match(serviceWorker, /caches\.match/);
-  assert.ok(headerIcon.size < 50_000, `header icon is ${headerIcon.size} bytes`);
+  assert.ok(
+    headerIcon.size < 50_000,
+    `header icon is ${headerIcon.size} bytes`,
+  );
 });
 
 test("avoids third-party font requests and oversized header-icon references", async () => {
   const response = await render();
   const html = await response.text();
-  const assetNames = await readdir(new URL("../dist/client/assets/", import.meta.url));
+  const assetNames = await readdir(
+    new URL("../dist/client/assets/", import.meta.url),
+  );
   const builtCss = (
     await Promise.all(
       assetNames
         .filter((name) => name.endsWith(".css"))
-        .map((name) => readFile(new URL(`../dist/client/assets/${name}`, import.meta.url), "utf8")),
+        .map((name) =>
+          readFile(
+            new URL(`../dist/client/assets/${name}`, import.meta.url),
+            "utf8",
+          ),
+        ),
     )
   ).join("\n");
   const [layout, sourceCss] = await Promise.all([
@@ -81,7 +164,10 @@ test("avoids third-party font requests and oversized header-icon references", as
 
   assert.doesNotMatch(html, /fonts\.(?:googleapis|gstatic)\.com/i);
   assert.doesNotMatch(html, /<link[^>]+rel="preload"[^>]+as="font"/i);
-  assert.doesNotMatch(builtCss, /fonts\.(?:googleapis|gstatic)\.com|@font-face/i);
+  assert.doesNotMatch(
+    builtCss,
+    /fonts\.(?:googleapis|gstatic)\.com|@font-face/i,
+  );
   assert.doesNotMatch(layout, /next\/font\/google|castingcompass-icon\.png/);
   assert.match(layout, /\/icons\/icon-192\.png/);
   assert.match(layout, /\/icons\/icon-512\.png/);
@@ -97,7 +183,7 @@ test("keeps the score framed as a relative ranking", async () => {
   assert.match(app, /ranks within the current comparison set/);
   assert.match(app, /It is <strong>not<\/strong> an 80% chance/);
   assert.match(app, /Old weather and tide readings are not treated as live/);
-  assert.match(app, /research pipeline, not the live score/i);
+  assert.match(app, /not promoted to the live score/i);
   assert.match(app, /ten-channel, three-scale bathymetry stack/i);
   assert.match(app, /Full-survey self-supervised pretraining is complete/i);
   assert.match(app, /What anglers have said/);
@@ -177,11 +263,17 @@ test("uses a marine basemap with map-native clustered points and deterministic r
 
 test("keeps maps and source navigation immediately reachable", async () => {
   const [app, css] = await Promise.all([
-    readFile(new URL("../app/components/OpportunityApp.tsx", import.meta.url), "utf8"),
+    readFile(
+      new URL("../app/components/OpportunityApp.tsx", import.meta.url),
+      "utf8",
+    ),
     readFile(new URL("../app/globals.css", import.meta.url), "utf8"),
   ]);
 
-  assert.ok(app.indexOf('className="place-media-block"') < app.indexOf('className="detail-score-block"'));
+  assert.ok(
+    app.indexOf('className="place-media-block"') <
+      app.indexOf('className="detail-score-block"'),
+  );
   assert.match(app, /scrollToSection\("sources"\)/);
   assert.match(app, /role="dialog"/);
   assert.match(app, /aria-modal="true"/);
@@ -194,7 +286,10 @@ test("keeps maps and source navigation immediately reachable", async () => {
 
 test("defers the interactive map and keeps the offline snapshot lightweight", async () => {
   const [app, css, snapshot] = await Promise.all([
-    readFile(new URL("../app/components/OpportunityApp.tsx", import.meta.url), "utf8"),
+    readFile(
+      new URL("../app/components/OpportunityApp.tsx", import.meta.url),
+      "utf8",
+    ),
     readFile(new URL("../app/globals.css", import.meta.url), "utf8"),
     readFile(new URL("../public/data/opportunities.json", import.meta.url)),
   ]);
@@ -204,7 +299,10 @@ test("defers the interactive map and keeps the offline snapshot lightweight", as
   assert.match(app, /Open interactive map/);
   const transferSize = gzipSync(snapshot).byteLength;
   const windowCount = JSON.parse(snapshot.toString("utf8")).windows.length;
-  assert.ok(transferSize < 210_000, `compressed forecast snapshot is ${transferSize} bytes`);
+  assert.ok(
+    transferSize < 210_000,
+    `compressed forecast snapshot is ${transferSize} bytes`,
+  );
   assert.ok(
     transferSize / windowCount < 100,
     `compressed forecast snapshot is ${(transferSize / windowCount).toFixed(1)} bytes per window`,

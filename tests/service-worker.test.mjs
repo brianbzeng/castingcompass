@@ -9,11 +9,12 @@ const registrationSource = await readFile(
 );
 
 test("service worker publishes a new cache and removes prior CastingCompass releases", () => {
-  assert.match(workerSource, /CACHE_NAME = "castingcompass-v13"/);
+  assert.match(workerSource, /CACHE_NAME = "castingcompass-v15"/);
   assert.match(workerSource, /CACHE_PREFIXES\.some/);
   assert.match(workerSource, /caches\.delete\(key\)/);
   assert.doesNotMatch(workerSource, /\/castingcompass-icon\.png/);
   assert.match(workerSource, /\/icons\/icon-192\.png/);
+  assert.match(workerSource, /"\/forecast"/);
 });
 
 test("maintenance navigations pass through without entering or falling back to the offline cache", () => {

@@ -5,16 +5,20 @@ import test from "node:test";
 import {
   ALL_RELEASE_MIGRATIONS,
   BASE_APPLIED_MIGRATIONS,
+  KNOWN_PRELEDGER_DRIFT_PROFILES,
   RECONCILED_LEGAL_MIGRATION,
   STAGED_MIGRATIONS,
   authorizeProductionMutation,
   createStagedWranglerConfig,
   expectedMigrationsBefore,
+  normalizedSchemaSqlSha256,
+  productionMutationAction,
   verifyFinalPostflight,
   verifyInitialPreflight,
+  verifyKnownPreledgerDrift,
   verifyLedgerPayload,
   verifyLocalMigrationSet,
-  productionMutationAction,
+  verifyPreledgerDropPayload,
   verifyReconciliationResult,
   verifyStageBoundaryPayload,
 } from "../scripts/integrated-release.mjs";
@@ -66,12 +70,13 @@ async function legalSchemaWithUnrecordedMigration() {
   return sqlite;
 }
 
-test("integrated preflight recognizes only the observed 0007 schema-ledger drift", async () => {
+test("integrated preflight distinguishes the 0007-only boundary from the fingerprinted drift path", async () => {
   const sqlite = await legalSchemaWithUnrecordedMigration();
   const source = await readFile(new URL("../scripts/integrated-release-preflight.sql", import.meta.url), "utf8");
   const row = sqlite.prepare(source).get();
   const result = verifyInitialPreflight(readEnvelope(row));
   assert.deepEqual(result.appliedMigrations, BASE_APPLIED_MIGRATIONS);
+  assert.equal(result.schemaProfile, "0007-only");
   assert.deepEqual(result.aggregates, {
     users: 0,
     usersMissingAgeEligibility: 0,
@@ -97,6 +102,100 @@ test("integrated preflight recognizes only the observed 0007 schema-ledger drift
   assert.throws(
     () => verifyInitialPreflight(readEnvelope(indexDrift.prepare(source).get())),
     /later_indexes_found/,
+  );
+
+  const pendingFingerprint = { ...row, later_tables_found: 5 };
+  assert.equal(
+    verifyInitialPreflight(readEnvelope(pendingFingerprint)).schemaProfile,
+    "known-empty-preledger-drift-pending-fingerprint",
+  );
+  assert.throws(
+    () => verifyInitialPreflight(readEnvelope({ ...row, later_tables_found: 1 })),
+    /later_tables_found/,
+  );
+});
+
+test("known pre-ledger drift requires exact empty tables and normalized DDL fingerprints", () => {
+  const tableSql = "CREATE TABLE legacy_table (id TEXT PRIMARY KEY NOT NULL)";
+  const indexSql = "CREATE INDEX legacy_table_lookup ON legacy_table (id)";
+  const profile = {
+    tables: ["legacy_table"],
+    dropOrder: ["legacy_table"],
+    objectSha256: {
+      "index:legacy_table_lookup:legacy_table": normalizedSchemaSqlSha256(indexSql),
+      "table:legacy_table:legacy_table": normalizedSchemaSqlSha256(tableSql),
+    },
+  };
+  const row = {
+    applied_migrations_json: JSON.stringify(BASE_APPLIED_MIGRATIONS),
+    foreign_key_violations: 0,
+    table_objects_json: JSON.stringify([
+      { name: "_d1_internal", sql: "CREATE TABLE _d1_internal (id TEXT PRIMARY KEY)" },
+      { name: "legacy_table", sql: tableSql },
+    ]),
+    legacy_table_rows: 0,
+    objects_json: JSON.stringify([
+      { type: "index", name: "legacy_table_lookup", table_name: "legacy_table", sql: indexSql },
+      { type: "table", name: "legacy_table", table_name: "legacy_table", sql: tableSql },
+    ]),
+  };
+  const verified = verifyKnownPreledgerDrift(
+    readEnvelope(row),
+    "synthetic.sql",
+    BASE_APPLIED_MIGRATIONS,
+    profile,
+  );
+  assert.equal(verified.rowCounts.legacy_table, 0);
+  assert.deepEqual(Object.keys(verified.objectSha256), Object.keys(profile.objectSha256));
+  assert.throws(
+    () => verifyKnownPreledgerDrift(
+      readEnvelope({ ...row, legacy_table_rows: 1 }),
+      "synthetic.sql",
+      BASE_APPLIED_MIGRATIONS,
+      profile,
+    ),
+    /legacy_table_rows/,
+  );
+  const driftedObjects = JSON.parse(row.objects_json);
+  driftedObjects[1].sql = "CREATE TABLE legacy_table (id TEXT)";
+  assert.throws(
+    () => verifyKnownPreledgerDrift(
+      readEnvelope({ ...row, objects_json: JSON.stringify(driftedObjects) }),
+      "synthetic.sql",
+      BASE_APPLIED_MIGRATIONS,
+      profile,
+    ),
+    /normalized DDL SHA-256/,
+  );
+  const inboundTableObjects = JSON.parse(row.table_objects_json);
+  inboundTableObjects[0].sql =
+    "CREATE TABLE _d1_internal (parent_id TEXT REFERENCES legacy_table(id))";
+  assert.throws(
+    () => verifyKnownPreledgerDrift(
+      readEnvelope({ ...row, table_objects_json: JSON.stringify(inboundTableObjects) }),
+      "synthetic.sql",
+      BASE_APPLIED_MIGRATIONS,
+      profile,
+    ),
+    /Inbound foreign-key reference/,
+  );
+  assert.deepEqual(
+    Object.keys(KNOWN_PRELEDGER_DRIFT_PROFILES),
+    ["0010_privacy_durability.sql", "0012_validation_protocol.sql"],
+  );
+});
+
+test("pre-ledger drop receipts must be primary, row-free schema mutations", () => {
+  const entry = {
+    results: [],
+    success: true,
+    meta: { served_by_primary: true, changed_db: true, changes: 1, rows_written: 0 },
+  };
+  assert.deepEqual(verifyPreledgerDropPayload([entry, entry], 2), { droppedStatements: 2 });
+  assert.throws(() => verifyPreledgerDropPayload([entry], 2), /statement count/);
+  assert.throws(
+    () => verifyPreledgerDropPayload([{ ...entry, meta: { ...entry.meta, rows_written: 1 } }], 1),
+    /rows_written/,
   );
 });
 
@@ -196,18 +295,27 @@ test("the operator runbook enumerates the exact guarded migration sequence", asy
   const documentedMigrations = [...runbook.matchAll(/export RELEASE_MIGRATION=(\d{4}_[A-Za-z0-9_]+\.sql)/g)]
     .map((match) => match[1]);
   assert.deepEqual(documentedMigrations, STAGED_MIGRATIONS);
-  assert.match(runbook, /`0009` through `0020`/);
+  assert.match(runbook, /`0009` through `0021`/);
   assert.match(runbook, /exact nullable\s+text trip-idempotency column/);
   assert.match(operations, /Migration `0017_trip_idempotency\.sql` completed before normal traffic resumed/);
   assert.match(operations, /Migration `0018_ai_review_queue\.sql` completed before any Queue binding/);
   assert.match(operations, /Migration `0019_async_privacy_exports\.sql` completed before any privacy-export Queue or\s+private R2 binding/);
   assert.match(operations, /Migration `0020_trip_photo_upload_reservations\.sql` completed before trip-photo uploads are\s+activated/);
+  assert.match(operations, /Migration `0021_place_community\.sql` completed before place-community writes are\s+activated/);
 });
 
 test("every D1 mutation maps to one exact private authorization action before Wrangler", async () => {
   assert.equal(productionMutationAction({ command: "preflight" }), null);
   assert.equal(productionMutationAction({ command: "postflight" }), null);
   assert.equal(productionMutationAction({ command: "reconcile-0007" }), "migrate:reconcile-0007");
+  assert.equal(productionMutationAction({
+    command: "reconcile-preledger",
+    driftTarget: "0010_privacy_durability.sql",
+  }), "migrate:reconcile-preledger-0010");
+  assert.equal(productionMutationAction({
+    command: "reconcile-preledger",
+    driftTarget: "0012_validation_protocol.sql",
+  }), "migrate:reconcile-preledger-0012");
   for (const migration of STAGED_MIGRATIONS) {
     assert.equal(
       productionMutationAction({ command: "apply", migration }),

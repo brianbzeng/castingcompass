@@ -17,6 +17,7 @@
     "deploy:cloudflare:worker-only": "npm run release:cloudflare",
     "preflight:cloudflare:remote": "node scripts/integrated-release.mjs preflight",
     "reconcile:cloudflare:0007": "node scripts/integrated-release.mjs reconcile-0007",
+    "reconcile:cloudflare:preledger": "node scripts/integrated-release.mjs reconcile-preledger --drift-target \"$RELEASE_DRIFT_TARGET\"",
     "migrate:cloudflare:remote": "node scripts/integrated-release.mjs apply --migration \"$RELEASE_MIGRATION\"",
     "postflight:cloudflare:remote": "node scripts/integrated-release.mjs postflight",
     "verify:release-maintenance": "node scripts/verify-release-maintenance.mjs",
@@ -127,7 +128,7 @@
     "evaluate:oakland-south-bay-structure-depth-review": "node scripts/verify-oakland-south-bay-structure-depth-review.mjs evaluate",
     "verify:validation-successor": "node scripts/verify-validation-successor.mjs",
     "finance:ledger:verify": "node --test tests/provider-cost-ledger.test.mjs",
-    "data:refresh": "PYTHONPATH=. python3 scripts/refresh_water_quality.py && PYTHONPATH=. python3 scripts/generate_snapshot.py && PYTHONPATH=. python3 scripts/generate_opportunity_attestations.py",
+    "data:refresh": "PYTHONPATH=. python3 scripts/refresh_water_quality.py && PYTHONPATH=. python3 scripts/generate_snapshot.py && PYTHONPATH=. python3 scripts/generate_browser_projection.py && PYTHONPATH=. python3 scripts/generate_opportunity_attestations.py",
     "api:test": "python3 -m pytest services/api/tests -q"
   },
   "dependencies": {

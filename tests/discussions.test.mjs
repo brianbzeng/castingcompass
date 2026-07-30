@@ -46,7 +46,9 @@ test("public location discussions expose summaries without raw notes or identity
   assert.match(discussions, /post\.source_ai_reviewed_at = trip\.ai_reviewed_at/);
   assert.match(discussions, /trip\.ai_review_status = 'reviewed'/);
   assert.match(discussions, /substr\(post\.observed_at, 1, 10\)/);
-  assert.match(app, /Human-reviewed CastingCompass trip notes/);
+  assert.match(app, /Community preview/);
+  assert.match(app, /discussionPosts\.slice\(0, 2\)/);
+  assert.match(app, /Open the \{selectedSite\.name\} community/);
   assert.match(app, /human moderator must approve it before publication/i);
   assert.match(migration, /CREATE TABLE `site_discussion_posts`/);
   assert.match(migration, /UNIQUE INDEX `site_discussion_posts_trip_unique`/);

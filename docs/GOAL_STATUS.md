@@ -1,6 +1,6 @@
 # CastingCompass goal status
 
-Last reconciled: **2026-07-26 UTC**
+Last reconciled: **2026-07-28 UTC**
 
 This is the owner-facing dashboard for the complete goal list. The detailed acceptance
 criteria and immutable receipts remain in [PRODUCT_ROADMAP.md](PRODUCT_ROADMAP.md); provider
@@ -9,9 +9,11 @@ its complete acceptance boundary passed. “Local complete” means the reposito
 but the parent stays open until its production, provider, legal, or independent-review gate is
 also satisfied.
 
-Current provider truth overrides historical “paused” language in completed receipts below. The
-2026-07-19 read-only reconciliation found an active Worker; no production mutation is authorized
-by that discovery.
+Current provider truth overrides historical “paused” language in completed receipts below.
+The active web-release gate and evidence-backed A–E checklist are in
+[Web release readiness](WEB-RELEASE-READINESS.md). The 2026-07-28 read-only reconciliation found
+an active Worker, configuration drift, no isolated staging resources, and empty pre-ledger D1
+schema drift; no production mutation is authorized by those discoveries.
 
 ## Current protected-main reconciliation — 2026-07-26
 
@@ -41,6 +43,66 @@ by that discovery.
       remain production-release boundaries; they do not require local model or frontend work to
       stay frozen.
 
+## Active checkpoint — shared target ranker, place communities, and interface review
+
+- [x] Establish one evaluated shared hybrid planning/ranking baseline with versioned
+      expert-configured profiles for California halibut, striped bass, surfperch, and jacksmelt.
+      The cross-language audit covers 61 sites and 2,160 current windows; predictive and ranking
+      metrics remain null because eligible complete-effort labels remain zero. Surfperch is
+      disclosed as a family profile, rockfish is deferred, and no catch probability or trained
+      deep-model claim is made.
+- [x] Implement one selected target with fast URL/local-preference swapping throughout the
+      forecast. Structured trip collection remains California-halibut-only until the observation
+      contract is separately expanded.
+- [x] Replace internal cache labels with useful freshness/unavailable states and generate a
+      1,790,613-byte browser projection from the 3,807,293-byte canonical snapshot without
+      changing its 2,160 scored windows.
+- [x] Add Community to primary navigation, `/community`, and all 61 supported place routes.
+      Anonymous responses expose at most three published posts and two comments per previewed
+      post; signed-in feeds and comment threads paginate. Handles are pseudonymous, owner
+      edit/delete, report/block/undo, moderation queues, central rate limits, privacy-rights
+      coverage, and exact-location/contact rejection are implemented.
+- [x] Audit all eleven open PRs. Integrate #185, #188, and #189; deliberately leave native
+      #184/#186/#187 and unrelated/stale dependency #175/#169/#162/#161/#159 work aside without
+      closing or mutating it.
+- [ ] Complete the Figma-led design-system phases, reconcile Figma and code, and record independent
+      accessibility/visual review. Phase 0 and initial semantic variables are saved in the
+      dedicated Figma file; component/screen writes are externally paused at the connected
+      Starter-plan MCP call ceiling. The approved Mobbin-inspired code draft remains reviewable
+      but is not treated as Figma sign-off.
+- [x] Add a dedicated `/` marketing homepage and move the full planner/PWA entry to `/forecast`.
+      The code-native coast is now a full-bleed violet/coral horizon with distant islands and
+      scroll-reactive water layers. The sun follows a scroll-bound setting arc with uniform rays
+      and mobile-specific framing while the sky dims toward night; compact frosted-glass panels
+      no longer collide with either CTA. The next scroll sequence begins at the surface and sinks
+      through one continuous water column without blank sticky-section gaps. The supplied pair of
+      horizontal spearfisher silhouettes remains grouped and mobile-visible among smaller sinking
+      vintage equipment and anglerfish, bubbles, rays, jellyfish, dense fish schools, and an
+      unlabeled depth line. Near the bottom, six plain-language condition families resolve before
+      one standalone rod performs a single non-looping cast. Hover/focus gives the proof cards a
+      restrained lift and glow. Small cratered vents sit on a sandy seafloor instead of the former
+      mountain-like field; the final copy remains directly on the floor. Web CTAs are live;
+      TestFlight is sharp by default, reveals “Coming soon” on hover/focus, and remains visibly
+      and accessibly unavailable with no redirect.
+- [x] Record local implementation-candidate evidence: 769 Node tests, 280 browser scenarios
+      (278 in the full matrix plus isolated passes for two timed-out cases), 158 pipeline tests
+      with 11 documented optional-raster skips, 29 API tests, lint, types, the
+      complete security chain, and release-SBOM verification pass. Production-shaped Lighthouse
+      records the continuous water-column revision at 70/97 mobile/desktop performance with 100
+      accessibility and zero CLS. The prior lighter-art pass scored 73/97, so the latest mobile
+      three-point regression and 5.80-second LCP remain explicit follow-up work. The planner
+      remains at 61/91 with 100 accessibility. Candidate-planner LCP improved 36.2%/60.2% from
+      baseline while retaining the residual 17.05-second mobile LCP as open work. The latest
+      presentation-only change also passes the production build, TypeScript, ESLint, 11 focused
+      rendered-homepage checks, and four targeted Chromium/WebKit phone checks. Source-sensitive
+      release-evidence tests remain intentionally pending until the final commit identity is
+      available.
+- [ ] Bind the final evidence to the immutable candidate head, obtain passing hosted checks, and
+      open one draft candidate PR for experienced review after the Figma approval checkpoint.
+- [ ] Keep Community activation, migration `0021`, deployment, provider controls, domain/public
+      traffic, and any model-performance claim blocked pending independent engineering and
+      appropriate legal/UGC review.
+
 ## Active checkpoint — model data and TestFlight collection foundations
 
 - [x] Make model choice evidence-driven rather than architecture-driven. The frozen local
@@ -52,10 +114,22 @@ by that discovery.
       bathymetric-deep candidate. These prove deterministic interface compatibility only; they
       cannot consume California-halibut labels, select a winner, change the score, serve a model,
       or authorize deployment.
+- [x] Freeze the shared pre-label input boundary for the future comparison. All seven required
+      candidates receive identical eligible rows/folds, context, source snapshots, and raw
+      multiscale terrain evidence; classical models receive fold-local summaries of the same
+      patch bags used by the deep model. Outcomes, identities, personal history, prior scores,
+      post-trip fields, lookahead values, moderation, and restricted-platform inputs are
+      prohibited. Missingness remains explicit, unsupported terrain abstains, and current
+      pollution/access/regulation actions remain separate pre-ranking safety gates that cannot
+      improve catch opportunity. The hash-bound local contract opens no labels or execution
+      authority.
 - [ ] Obtain eligible complete-attempt evidence. Recruit consented participants who report every
       targeted attempt, including non-encounters, and send the drafted RecFIN/CRFS request for a
-      permitted reproducible complete-effort export with confirmed zero-catch semantics and
-      intended-use terms. Do not scrape Fishbrain, Facebook, or other restricted sources.
+      permitted reproducible non-confidential public-release complete-effort export with an
+      opaque non-identifying public-release effort key, confirmed zero-catch semantics, and
+      intended-use terms. Do not request confidential or restricted records, respondent
+      identifiers, protected precise locations, or special raw-query access. Do not scrape
+      Fishbrain, Facebook, or other restricted sources.
 - [ ] Keep ordinary friend reports truthful. Until the separately reviewed feasibility protocol
       is activated, new reports are privacy-minimized product observations only and cannot be
       retroactively relabeled as pilot or confirmatory rows.
@@ -4216,7 +4290,8 @@ supersedes this mutation-metadata authority while preserving its fail-closed beh
 - [ ] Acquire reproducible official CDFW/CRFS/RecFIN data with manifests, checksums, licenses,
       dictionaries, sampling support, and allowed-use declarations; begin a prospective cohort.
       **Exact aggregate ds3186/ds3185 snapshots and receipts complete;** both are context-only,
-      while a complete-effort RecFIN export and the prospective cohort remain open.
+      while a non-confidential public-release complete-effort RecFIN export and the prospective
+      cohort remain open.
 - [ ] Treat Fishbrain only as an optional written-license partnership and Facebook groups only
       as admin-approved prospective recruitment—never scraped retrospective evidence.
       **Local default-deny policy/schema/loader and operation gates complete;** written platform
@@ -4415,9 +4490,11 @@ supersedes this mutation-metadata authority while preserving its fail-closed beh
       **Public complete-effort discovery locally complete:** official RecFIN SD002 exposes
       Santa Barbara California-halibut-target sample rows, including blank-catch rows, and its
       exact 71-field comprehensive-sample dictionary is hash-bound. Raw QueryBuilder/LDE access
-      is account-bound; blank-row zero-catch semantics, stable export identities, a California
-      effort unit, sampling fields, a saved query/export checksum, and written intended-use
-      permission remain open. A draft request is ready but was not sent, no raw corpus was
+      is account-bound; CastingCompass's draft explicitly refuses confidential or restricted
+      records, respondent identifiers, protected precise locations, and special raw-query
+      access. Blank-row zero-catch semantics, an opaque non-identifying public-release effort
+      key, a California effort unit, sampling fields, public filters and an export checksum, and
+      written intended-use permission remain open. The draft was not sent, no raw corpus was
       acquired, and normalization/training/validation/scoring remain denied.
 - [x] Draft five short user-interview scripts focused on whether people understand the
       heuristic ranking, freshness labels, limitations, and trip-report privacy. The fictional,

@@ -1,6 +1,6 @@
 {
   "schema_version": "castingcompass.authorship-provenance/1.0.0",
-  "reviewed_at": "2026-07-19",
+  "reviewed_at": "2026-07-29",
   "policy_effective_commit": "ea922c8dfbdb7e35a81836d1f6a9e9e35c9081bb",
   "private_evidence_boundary": "Private agreements, legal advice, identities, personal data, and secret material stay outside this repository; this register may contain only non-sensitive receipt identifiers.",
   "records": [
@@ -73,6 +73,297 @@
       "evidence_refs": [
         "git:3027f2f44d16a547ddacb2d6e40c88ef55453bd9",
         "Git author/custody history is not proof of creation or rights ownership."
+      ],
+      "private_evidence_receipt": null
+    },
+    {
+      "id": "marketing-approved-coastal-landing",
+      "title": "Approved coastal landing environment, animation sprites, and sample-report artwork",
+      "kind": "first_party_owner_supplied",
+      "paths": [
+        {
+          "path": "public/marketing/approved/boat-fisherman.webp",
+          "sha256": "6abf255d07a25eb29f693324ae23019e91cfc5de59d0267991983c93b62479e4"
+        },
+        {
+          "path": "public/marketing/approved/bubble-sprite.webp",
+          "sha256": "7ac5bf9355943055bbb92dc7dbfeb4723a9ceb907f4e50261abbb85828bcf6dc"
+        },
+        {
+          "path": "public/marketing/approved/catch-report-1.webp",
+          "sha256": "c5e59ad7c4af7c39ae14dfaf2ca73361b6acab7e491d6081216d368a563537da"
+        },
+        {
+          "path": "public/marketing/approved/catch-report-2.webp",
+          "sha256": "013f2c1eb366b2b520f010a6689341dbd8446a1393d4f6ecd8e8e2ec3b8f4d52"
+        },
+        {
+          "path": "public/marketing/approved/catch-report-3.webp",
+          "sha256": "d3849d23ec6aee64050fc4a41e950d521c9ad206003f551752cee24296319a27"
+        },
+        {
+          "path": "public/marketing/approved/catch-report-4.webp",
+          "sha256": "e3c41253a52c61e49c857d7a8cefdb32bd2b847cdf404e063f98ddabda4d7257"
+        },
+        {
+          "path": "public/marketing/approved/coastal-world.webp",
+          "sha256": "cb9c410d8d175f6b4ebd28c2d13cf013199c3f1d7b9fed746fac458e277f5c08"
+        },
+        {
+          "path": "public/marketing/approved/crab-sprite.webp",
+          "sha256": "f04ca331c12f4013ec71ca312911a6469f508f7238b7ae0cac2e40efffa8bfbc"
+        },
+        {
+          "path": "public/marketing/approved/diver-sprite.webp",
+          "sha256": "bedf4639b1f305656a7a9f3a4a30cb3bf73b5a3d472264038be05319195f8db3"
+        },
+        {
+          "path": "public/marketing/approved/helmet-fish-sprite.webp",
+          "sha256": "643090752a9e0de25ef131dd8a9b4ced7ec202e372c9480181938f65a9323b12"
+        },
+        {
+          "path": "public/marketing/approved/seafloor-anchor.webp",
+          "sha256": "0edfb4b25a77f50afb32d805581a702785d2e2576db88c78fba6648cbb4734f0"
+        },
+        {
+          "path": "public/marketing/approved/seafloor-starfish.webp",
+          "sha256": "00b6d24ba0a3f7a6395157bc218c7684bfe9e96f60717918cc37b75177c38699"
+        },
+        {
+          "path": "public/marketing/approved/striped-bass.webp",
+          "sha256": "4c4bee76bf4e1aae57d3ee1e3639740dd0082aa74d7883a2cb65549529f55dcb"
+        }
+      ],
+      "creator_display": "CastingCompass project owner with disclosed OpenAI ImageGen assistance",
+      "creation_date": "2026-07-30",
+      "source_url": null,
+      "source_remote_sha1": null,
+      "source_reviewed_at": null,
+      "license_id": null,
+      "license_label": null,
+      "license_url": null,
+      "rights_basis": "owner_supplied_ai_assisted",
+      "attribution_required": false,
+      "share_alike": false,
+      "attribution_text": "CastingCompass",
+      "modifications": "Created the clean coastal environment, striped bass, report portraits, anchor, and five-armed starfish from the owner-approved mockup with OpenAI ImageGen; cropped, cleaned, reordered, and encoded the owner-supplied diver, crab, bubble, and helmet animation sheets as WebP sprites; reused the registered boat actor; no third-party stock imagery was added.",
+      "ai_assistance": "disclosed",
+      "rights_review": "owner_supplied_not_independently_cleared",
+      "release_state": "candidate_review_required",
+      "upstream_record_id": null,
+      "release_commit": "bcbcc6a87eb37df3c4bbc28b26da4929581e5f8b",
+      "evidence_refs": [
+        "git:bcbcc6a87eb37df3c4bbc28b26da4929581e5f8b",
+        "The project owner supplied the approved July 30 landing-page mockup and directed the composition, copy, actors, animation behavior, and blue coastal art direction.",
+        "OpenAI ImageGen produced the disclosed original painterly assets; local crop, alpha cleanup, sprite packing, and WebP encoding prepared the repository files."
+      ],
+      "private_evidence_receipt": null
+    },
+    {
+      "id": "marketing-painterly-environment-plates",
+      "title": "Painterly shoreline and water-column environment plates",
+      "kind": "first_party_owner_supplied",
+      "paths": [
+        {
+          "path": "public/marketing/painterly-shoreline.webp",
+          "sha256": "95d1a24bbf24c5041ff68464c5d7904c46de405629df1b0f7b3d616c44bd014a"
+        },
+        {
+          "path": "public/marketing/painterly-water-column.webp",
+          "sha256": "846b6520398d26e0afec4688b82df4ea6740a711dd777f1d156eef474f99fc43"
+        }
+      ],
+      "creator_display": "CastingCompass project owner with disclosed OpenAI ImageGen assistance",
+      "creation_date": "2026-07-29",
+      "source_url": null,
+      "source_remote_sha1": null,
+      "source_reviewed_at": null,
+      "license_id": null,
+      "license_label": null,
+      "license_url": null,
+      "rights_basis": "owner_supplied_ai_assisted",
+      "attribution_required": false,
+      "share_alike": false,
+      "attribution_text": "CastingCompass",
+      "modifications": "Generated environment-only painterly plates from the owner-supplied art-direction board; regenerated the water-column plate from the approved July 29 mockup and animation sheet with restrained rays, simplified rock texture, and open space for semantic content and separately animated actors; omitted all text, UI, sun, people, and marine-life actors; compressed the selected PNG outputs to WebP.",
+      "ai_assistance": "disclosed",
+      "rights_review": "owner_supplied_not_independently_cleared",
+      "release_state": "candidate_review_required",
+      "upstream_record_id": null,
+      "release_commit": "2570c87afd451e653029fbd9dae4e9847b3aeec0",
+      "evidence_refs": [
+        "git:2570c87afd451e653029fbd9dae4e9847b3aeec0",
+        "The project owner supplied the July 29 painterly art-direction board and directed this environment overhaul.",
+        "OpenAI ImageGen produced environment-only surface and underwater plates; the supplied silhouette assets and new isolated painterly actors remain separate registered layers."
+      ],
+      "private_evidence_receipt": null
+    },
+    {
+      "id": "marketing-painterly-interactive-actors",
+      "title": "Painterly interactive actors for the marketing ocean journey",
+      "kind": "first_party_owner_supplied",
+      "paths": [
+        {
+          "path": "public/marketing/actors/boat-fisherman.webp",
+          "sha256": "6abf255d07a25eb29f693324ae23019e91cfc5de59d0267991983c93b62479e4"
+        },
+        {
+          "path": "public/marketing/actors/diving-helmet.webp",
+          "sha256": "08646b04c75fef0466801d12841f89e15fe2a562c434c9538096c9d1ca957059"
+        },
+        {
+          "path": "public/marketing/actors/foreground-kelp.webp",
+          "sha256": "e36c1a78a4642a426b84a5ef3a65e8dcb68a75be5544f7321b1bda785b3782b6"
+        },
+        {
+          "path": "public/marketing/actors/helmet-fish.webp",
+          "sha256": "bde89dec4ee7d286dd36ef667ba561c193eb07c1ad76fd2580bf2c29c150fb1f"
+        },
+        {
+          "path": "public/marketing/actors/seafloor-compass.webp",
+          "sha256": "eb409a486f97a929ce8eefabeafdf5b1c280dd3444d34eca47ab51b600fdcaa8"
+        },
+        {
+          "path": "public/marketing/actors/seafloor-crab.webp",
+          "sha256": "694e453ade59cc0dc8ea54a81bf30126f687275b62d506d647e9cd2140bc9af1"
+        },
+        {
+          "path": "public/marketing/actors/shark.webp",
+          "sha256": "6cbaedab5b6689d2aa49e5ba4ee0e0f563199b5f619089766ad682dde20890ce"
+        }
+      ],
+      "creator_display": "CastingCompass project owner with disclosed OpenAI ImageGen assistance",
+      "creation_date": "2026-07-29",
+      "source_url": null,
+      "source_remote_sha1": null,
+      "source_reviewed_at": null,
+      "license_id": null,
+      "license_label": null,
+      "license_url": null,
+      "rights_basis": "owner_supplied_ai_assisted",
+      "attribution_required": false,
+      "share_alike": false,
+      "attribution_text": "CastingCompass",
+      "modifications": "Generated isolated painterly actors from the owner-approved mockup and animation sheet; removed solid chroma backgrounds with a soft matte and despill pass, trimmed alpha bounds, and encoded the selected outputs as transparent WebP assets.",
+      "ai_assistance": "disclosed",
+      "rights_review": "owner_supplied_not_independently_cleared",
+      "release_state": "candidate_review_required",
+      "upstream_record_id": null,
+      "release_commit": "2570c87afd451e653029fbd9dae4e9847b3aeec0",
+      "evidence_refs": [
+        "git:2570c87afd451e653029fbd9dae4e9847b3aeec0",
+        "The project owner supplied the approved July 29 homepage mockup and animation behavior sheet as the art-direction source of truth.",
+        "OpenAI ImageGen created the isolated actor assets; local chroma-key removal and WebP encoding prepared the transparent production layers."
+      ],
+      "private_evidence_receipt": null
+    },
+    {
+      "id": "marketing-spearfishers-pair",
+      "title": "Paired spearfisher silhouettes for the marketing water column",
+      "kind": "first_party_owner_supplied",
+      "paths": [
+        {
+          "path": "public/marketing/spearfishers-pair.webp",
+          "sha256": "a10a3e3f2151599c3dd347d65afba1e7da6edaf5f4290a8f03fa88af1c9f944d"
+        }
+      ],
+      "creator_display": "CastingCompass project owner with disclosed OpenAI ImageGen assistance",
+      "creation_date": "2026-07-29",
+      "source_url": null,
+      "source_remote_sha1": null,
+      "source_reviewed_at": null,
+      "license_id": null,
+      "license_label": null,
+      "license_url": null,
+      "rights_basis": "owner_supplied_ai_assisted",
+      "attribution_required": false,
+      "share_alike": false,
+      "attribution_text": "CastingCompass",
+      "modifications": "Selected the top-left and middle-left spearfisher silhouettes from the owner-supplied reference, isolated them from the background, paired them, and encoded the result as a transparent WebP for the marketing page.",
+      "ai_assistance": "disclosed",
+      "rights_review": "owner_supplied_not_independently_cleared",
+      "release_state": "candidate_review_required",
+      "upstream_record_id": null,
+      "release_commit": "c70d4d282f7bbbf004f9a5e06ec6d3e057fa081b",
+      "evidence_refs": [
+        "git:c70d4d282f7bbbf004f9a5e06ec6d3e057fa081b",
+        "The project owner supplied the reference in the product-design task and directed use of only the top-left and middle-left spearfisher silhouettes.",
+        "OpenAI ImageGen isolated the selected silhouettes; the background was removed and the result was re-encoded as a transparent WebP."
+      ],
+      "private_evidence_receipt": null
+    },
+    {
+      "id": "marketing-water-column-silhouettes",
+      "title": "Marine-life and seafloor silhouettes for the marketing water column",
+      "kind": "first_party_owner_supplied",
+      "paths": [
+        {
+          "path": "public/marketing/silhouettes/angler-left.webp",
+          "sha256": "a35ef02f9f4e660d3d5d01fc97aca4aee2d7e2e26a9c59bc871d541a838246c9"
+        },
+        {
+          "path": "public/marketing/silhouettes/angler-right.webp",
+          "sha256": "cb876174538de3ab340eea911dbfe118e41fa2873fae19f1f8fa66b3d3db1548"
+        },
+        {
+          "path": "public/marketing/silhouettes/cliff-seaweed.webp",
+          "sha256": "570399a9bee6e7ecf84fc490ad58659723d08a50f73e0a007c5926b96ec3ee02"
+        },
+        {
+          "path": "public/marketing/silhouettes/school-left.webp",
+          "sha256": "965ea939b622005b6a68bff27c5125ca448bbd2ac686b3ad0630547c4090da3e"
+        },
+        {
+          "path": "public/marketing/silhouettes/school-right.webp",
+          "sha256": "02f43bddb1f6b266cc267cae6051ca8660d526fbf27d491f76414ea3d0dc082c"
+        },
+        {
+          "path": "public/marketing/silhouettes/seabed-full.webp",
+          "sha256": "1212e7c5d9044e643d891d666736b2941b48ee3257884d94be304b493fcbeff6"
+        },
+        {
+          "path": "public/marketing/silhouettes/spearfisher-far.webp",
+          "sha256": "53160039c79575ef80a0f18d59b713eea169ae6141d1d2e901e953836f187580"
+        },
+        {
+          "path": "public/marketing/silhouettes/spearfisher-near.webp",
+          "sha256": "d7d7e26d8107b58d04645567ef16a314af33b9d97ff7aa2b599a5a4b08eeeaf3"
+        },
+        {
+          "path": "public/marketing/silhouettes/squid-lower.webp",
+          "sha256": "eb866313d5c9b04efb271a404059e35f10874e4a92f5d78ae892c57f4113ef38"
+        },
+        {
+          "path": "public/marketing/silhouettes/squid-upper.webp",
+          "sha256": "5fad1b7fb2d7e5ca0d292f825b81464b327d65dd01e4d4a0e6648a5187d223a3"
+        },
+        {
+          "path": "public/marketing/silhouettes/whale.webp",
+          "sha256": "309ed84fddf96b2e40f62d7f369827a89ca19459885b03ff8d0d57d45431e671"
+        }
+      ],
+      "creator_display": "CastingCompass project owner with disclosed AI-assisted silhouette generation",
+      "creation_date": "2026-07-29",
+      "source_url": null,
+      "source_remote_sha1": null,
+      "source_reviewed_at": null,
+      "license_id": null,
+      "license_label": null,
+      "license_url": null,
+      "rights_basis": "owner_supplied_ai_assisted",
+      "attribution_required": false,
+      "share_alike": false,
+      "attribution_text": "CastingCompass",
+      "modifications": "Cropped the owner-supplied marine silhouette sheet into individual spearfisher, fish-school, whale, squid, angler-fish, cliff/seaweed, and full-width seabed assets; removed the blue gradient with deterministic color masks; and encoded the results as transparent WebP files.",
+      "ai_assistance": "disclosed",
+      "rights_review": "owner_supplied_not_independently_cleared",
+      "release_state": "candidate_review_required",
+      "upstream_record_id": null,
+      "release_commit": "f978a4b44152d21d489619aac7ed67ed9a5f2e3c",
+      "evidence_refs": [
+        "git:f978a4b44152d21d489619aac7ed67ed9a5f2e3c",
+        "The project owner supplied the full marine silhouette sheet in the product-design task and required those silhouettes to be used as provided.",
+        "The project owner specifically directed use of the two spearfishers on the left and supplied the intended shoreline-to-seafloor composition."
       ],
       "private_evidence_receipt": null
     },

@@ -949,11 +949,13 @@ after its acceptance checks pass in the intended environment.
     California-halibut-target rows and blank-catch rows are publicly represented, document that
     raw QueryBuilder/LDE paths require an authorized account, and keep blank-row semantics,
     California effort units, permissions, and every model role fail closed.
-  - [ ] Obtain a permitted, reproducible complete-effort CRFS/RecFIN sample export and begin the
-    prospective first-party cohort. The aggregate layers cannot substitute for complete
-    attempts, species-specific target effort, exact support, or source-separated validation.
-    Send the drafted official request, retain stable record identities and confirmed zero-catch
-    semantics, and obtain written intended-use terms before normalization.
+  - [ ] Obtain a permitted, reproducible, non-confidential public-release complete-effort
+    CRFS/RecFIN sample export and begin the prospective first-party cohort. The aggregate layers
+    cannot substitute for complete attempts, species-specific target effort, exact support, or
+    source-separated validation. Send the drafted public-data request, retain only an opaque
+    non-identifying public-release effort key and confirmed zero-catch semantics, and obtain
+    written intended-use terms before normalization. Do not request confidential or restricted
+    records, respondent identifiers, protected precise locations, or special raw-query access.
 - [ ] Treat Fishbrain as an optional written-license partnership and Facebook groups as
   admin-approved prospective recruitment—not scraped retrospective evidence. Licensed social
   data without complete attempts, no-catch, effort, coverage, and sampling propensity is for
@@ -1003,10 +1005,18 @@ after its acceptance checks pass in the intended environment.
     attention pooling, and returns the same two heads. Real targets/datasets and every training,
     benchmark, locked-test, winner, score, serving, and deployment authority remain rejected;
     the metric-free receipt reports plumbing facts only.
-  - [ ] After eligible data and a separate confirmatory design exist, freeze the actual input
-    adapters, search spaces, final primary metrics, materiality thresholds, slice floors,
+  - [x] Freeze and locally verify the pre-label candidate input contract before eligible outcomes
+    exist. Every required family is bound to the same rows, folds, context, source snapshots,
+    and raw 64 m/256 m/1,024 m six-channel terrain evidence; classical models receive fold-local
+    summaries of the same patch bags used by the deep model. Outcome, identity, history, score,
+    post-trip, lookahead, moderation, and restricted-platform inputs are prohibited. Missingness
+    stays explicit, unsupported terrain abstains, and pollution/access/regulation remain separate
+    pre-ranking safety actions that cannot increase catch opportunity. The hash-bound contract
+    grants no label, training, benchmark, selection, score, serving, or deployment authority.
+  - [ ] After eligible data and a separate confirmatory design exist, implement the frozen input
+    adapters and freeze search spaces, final primary metrics, materiality thresholds, slice floors,
     calibration ceiling, and independent-reproduction procedure before any locked-test access.
-    The local v1 template is not a preregistration and runs no benchmark.
+    The local v1.1 template is not a preregistration and runs no benchmark.
 - [ ] Define model promotion, drift, and rollback gates: beat preregistered geographic/time
   holdout baselines before promotion; monitor by site, season, mode, and taxon; version every
   release; and require rollback/revalidation when performance or data support drifts. **Local
@@ -1205,10 +1215,17 @@ after its acceptance checks pass in the intended environment.
       suitability. The packet preserves the same private, disjoint, source-current review
       contract and grants no score, model, navigation, provider, merge, deployment, or production
       authority. No real response or accepted receipt exists yet.
-- [ ] Add striped bass as the first new beta using a distinct estuary/migration model.
-- [ ] Define and evaluate explicit shore-relevant rockfish species/complexes next; then model
-  cabezon as its own taxon; then split surfperch into defensible habitat/taxon groups. Each beta
-  needs its own source inventory, model card, validation gate, and current regulation treatment.
+- [x] Add one shared, expert-configured planning/ranking baseline with fast single-target
+  selection for California halibut, striped bass, surfperch, and jacksmelt. Each target has a
+  versioned profile over the shared feature/scoring contract; surfperch is disclosed as a
+  family-level planning profile; predictive metrics remain null because no eligible
+  complete-effort corpus exists.
+- [ ] Replace a planning profile with a trained or calibrated target-specific head only after its
+  own eligible labels, temporal/geographic holdouts, leakage controls, metrics, model card,
+  current regulation treatment, and independent review pass.
+- [ ] Keep rockfish deferred. Reconsider only defensible named shore-relevant species or reviewed
+  complexes after a primary product need, source inventory, and species-specific evidence exist;
+  do not ship a behaviorally heterogeneous generic category.
 - [ ] Complete business/legal readiness before substantial promotion or revenue: entity/DBA,
   tax and local-license review, trademark clearance, startup counsel/CPA review, DMCA/UGC
   posture, and broker quotes for cyber/privacy, technology E&O, general, and media liability.

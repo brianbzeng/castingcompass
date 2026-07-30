@@ -13,6 +13,7 @@ import {
 import Image from "next/image";
 import Link from "next/link";
 import { AccountModal, SavedSiteControls, useAccount } from "./AccountFeature";
+import { LEGAL_SUPPORT_EMAIL } from "./LegalPage";
 import { TripReportFeature } from "./TripReportFeature";
 import {
   ArrowIcon,
@@ -52,6 +53,13 @@ import {
   hasLiveForecastInputs,
   sourceStatusTone,
 } from "../lib/forecast-freshness";
+import {
+  TARGET_SPECIES,
+  isTargetTaxonId,
+  rankSnapshotForSpecies,
+  targetSpeciesProfile,
+  type TargetTaxonId,
+} from "../lib/species-ranking";
 import { applyCurrentWaterQualityFreshness } from "../lib/water-quality-freshness";
 import { useModalDialog } from "../lib/use-modal-dialog";
 import structureImages from "../data/structure-images.json";
@@ -59,7 +67,7 @@ import structureImages from "../data/structure-images.json";
 const PACIFIC_TIME_ZONE = "America/Los_Angeles";
 const ContourMap = lazy(() => import("./ContourMap").then((module) => ({ default: module.ContourMap })));
 
-type ForecastDataState = "loading" | "live" | "cached" | "unavailable";
+type ForecastDataState = "loading" | "live" | "snapshot" | "unavailable";
 
 const EMPTY_FORECAST_SNAPSHOT: OpportunitySnapshot = {
   generatedAt: "",
@@ -286,11 +294,11 @@ async function loadForecastData(signal: AbortSignal) {
         structureDepth,
         state: hasLiveForecastInputs(snapshot)
           ? "live" as const
-          : "cached" as const,
+          : "snapshot" as const,
       };
     } catch {
       if (signal.aborted) throw new DOMException("Forecast request aborted", "AbortError");
-      const response = await fetch("/data/opportunities.json", { signal });
+      const response = await fetch("/data/opportunities-browser.json", { signal });
       if (!response.ok) throw new Error("API and snapshot unavailable");
       const snapshot = applyCurrentFreshness((await response.json()) as OpportunitySnapshot);
       return {
@@ -301,14 +309,14 @@ async function loadForecastData(signal: AbortSignal) {
         structureDepth,
         state: hasLiveForecastInputs(snapshot)
           ? "live" as const
-          : "cached" as const,
+          : "snapshot" as const,
       };
     }
   }
 
   const [staticSites, staticSnapshot, community, waterQuality, structureDepth] = await Promise.all([
     staticSitesPromise,
-    fetch("/data/opportunities.json", { signal }).then((response) => {
+    fetch("/data/opportunities-browser.json", { signal }).then((response) => {
       if (!response.ok) throw new Error("snapshot unavailable");
       return response.json() as Promise<OpportunitySnapshot>;
     }),
@@ -317,14 +325,14 @@ async function loadForecastData(signal: AbortSignal) {
     structureDepthPromise,
   ]);
   const currentSnapshot = applyCurrentFreshness(staticSnapshot);
-  const state = hasLiveForecastInputs(currentSnapshot) ? "live" : "cached";
+  const state = hasLiveForecastInputs(currentSnapshot) ? "live" : "snapshot";
   return {
     sites: staticSites,
     snapshot: currentSnapshot,
     community,
     waterQuality,
     structureDepth,
-    state: state as "live" | "cached",
+    state: state as "live" | "snapshot",
   };
 }
 
@@ -1020,7 +1028,8 @@ export function OpportunityApp() {
   const detailTriggerSiteIdRef = useRef<string | null>(null);
   const mapWrapRef = useRef<HTMLDivElement>(null);
   const [sites, setSites] = useState<FishingSite[]>([]);
-  const [snapshot, setSnapshot] = useState<OpportunitySnapshot>(EMPTY_FORECAST_SNAPSHOT);
+  const [sourceSnapshot, setSourceSnapshot] = useState<OpportunitySnapshot>(EMPTY_FORECAST_SNAPSHOT);
+  const [selectedTarget, setSelectedTarget] = useState<TargetTaxonId>("california-halibut");
   const [communityPulses, setCommunityPulses] = useState<CommunityPulse[]>([]);
   const [waterQuality, setWaterQuality] = useState<WaterQualitySnapshot | null>(null);
   const [structureDepth, setStructureDepth] = useState<StructureDepthSnapshot | null>(null);
@@ -1044,7 +1053,7 @@ export function OpportunityApp() {
   const [showCompare, setShowCompare] = useState(false);
   const [dataState, setDataState] = useState<ForecastDataState>("loading");
   const [forecastLoadAttempt, setForecastLoadAttempt] = useState(0);
-  const forecastReady = dataState === "live" || dataState === "cached";
+  const forecastReady = dataState === "live" || dataState === "snapshot";
   const forecastUnavailable = dataState === "unavailable";
   const [tripReportRequest, setTripReportRequest] = useState<TripReportRequest | null>(null);
   const [mapEnabled, setMapEnabled] = useState(false);
@@ -1054,6 +1063,11 @@ export function OpportunityApp() {
   const tripReportRequestKeyRef = useRef(0);
   const initialSiteHandledRef = useRef(false);
   const discussionPosts = discussionFeed?.siteId === selectedSiteId ? discussionFeed.posts : [];
+  const selectedTargetProfile = targetSpeciesProfile(selectedTarget);
+  const snapshot = useMemo(
+    () => rankSnapshotForSpecies(sourceSnapshot, sites, selectedTarget),
+    [sourceSnapshot, sites, selectedTarget],
+  );
 
   const closeSiteDetail = useCallback(() => {
     setSelectedSiteId(null);
@@ -1094,7 +1108,7 @@ export function OpportunityApp() {
       .then(({ sites: nextSites, snapshot: nextSnapshot, community, waterQuality: nextWaterQuality, structureDepth: nextStructureDepth, state }) => {
         if (!active) return;
         setSites(nextSites);
-        setSnapshot(nextSnapshot);
+        setSourceSnapshot(nextSnapshot);
         setCommunityPulses(community);
         setWaterQuality(nextWaterQuality);
         setStructureDepth(nextStructureDepth);
@@ -1112,6 +1126,20 @@ export function OpportunityApp() {
       controller.abort();
     };
   }, [forecastLoadAttempt]);
+
+  useEffect(() => {
+    const frame = window.requestAnimationFrame(() => {
+      const queryTarget = new URLSearchParams(window.location.search).get("species");
+      const rememberedTarget = window.localStorage.getItem("castingcompass.target-species.v1");
+      const initialTarget = isTargetTaxonId(queryTarget)
+        ? queryTarget
+        : isTargetTaxonId(rememberedTarget)
+          ? rememberedTarget
+          : "california-halibut";
+      setSelectedTarget(initialTarget);
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, []);
 
   useEffect(() => {
     if (!selectedSiteId) return;
@@ -1283,13 +1311,17 @@ export function OpportunityApp() {
   const selectedStructureDepth = selectedSiteId
     ? structureDepth?.sites[selectedSiteId] ?? null
     : null;
-  const selectedStructureGuides = selectedSite ? structureGuidesForSite(selectedSite) : [];
+  const selectedStructureGuides = selectedSite && selectedTarget === "california-halibut"
+    ? structureGuidesForSite(selectedSite)
+    : [];
   const dataStateLabel = dataState === "loading"
     ? "Loading"
     : dataState === "live"
       ? "Live data"
-      : dataState === "cached"
-        ? "Cached"
+      : dataState === "snapshot"
+        ? snapshot.generatedAt
+          ? `Updated ${formatAge(snapshot.generatedAt)}`
+          : "Verified snapshot"
         : "Unavailable";
   const hasHourFilter = Boolean(availableFrom || availableUntil);
   const strongestWindowLabel = hasHourFilter
@@ -1330,6 +1362,14 @@ export function OpportunityApp() {
   const retryForecast = useCallback(() => {
     setDataState("loading");
     setForecastLoadAttempt((attempt) => attempt + 1);
+  }, []);
+
+  const selectTarget = useCallback((targetTaxonId: TargetTaxonId) => {
+    setSelectedTarget(targetTaxonId);
+    window.localStorage.setItem("castingcompass.target-species.v1", targetTaxonId);
+    const nextUrl = new URL(window.location.href);
+    nextUrl.searchParams.set("species", targetTaxonId);
+    window.history.replaceState(null, "", `${nextUrl.pathname}${nextUrl.search}${nextUrl.hash}`);
   }, []);
 
   const continueFromRespectNotice = useCallback(() => {
@@ -1422,6 +1462,7 @@ export function OpportunityApp() {
         </a>
         <nav className="desktop-nav" aria-label="Primary navigation">
           <button type="button" onClick={() => scrollToSection(forecastReady ? "forecast" : "forecast-status")}>Forecast</button>
+          <Link href="/community">Community</Link>
           <button type="button" onClick={() => setShowMethod(true)}>How It Works</button>
           <button type="button" onClick={() => scrollToSection("sources")}>Data</button>
         </nav>
@@ -1436,15 +1477,17 @@ export function OpportunityApp() {
           <button
             className="log-trip-button"
             type="button"
-            disabled={!forecastReady}
-            title={forecastReady
-              ? undefined
+            disabled={!forecastReady || selectedTarget !== "california-halibut"}
+            title={selectedTarget !== "california-halibut"
+              ? "Structured trip validation is still limited to California halibut; other targets are planning-only in this phase."
+              : forecastReady
+                ? undefined
               : forecastUnavailable
                 ? "Forecast verification failed. Retry the forecast before logging a trip."
                 : "Wait for the fishing-location catalog and forecast snapshot to load"}
             onClick={() => openTripReport("past")}
           >
-            Log trip
+            {selectedTarget === "california-halibut" ? "Log trip" : "Planning only"}
           </button>
           <button
             className={`data-pill ${dataState}`}
@@ -1464,11 +1507,33 @@ export function OpportunityApp() {
       <main id="main-content" tabIndex={-1}>
       <section className="forecast-intro" id="top">
         <div className="eyebrow-row">
-          <span className="eyebrow"><span /> California halibut</span>
+          <span className="eyebrow"><span /> {selectedTargetProfile.displayName} planning</span>
         </div>
+        <fieldset className="species-switcher">
+          <legend>Choose one target</legend>
+          <div>
+            {TARGET_SPECIES.map((species) => (
+              <button
+                key={species.taxonId}
+                type="button"
+                aria-pressed={selectedTarget === species.taxonId}
+                className={selectedTarget === species.taxonId ? "active" : ""}
+                onClick={() => selectTarget(species.taxonId)}
+              >
+                {species.shortName}
+              </button>
+            ))}
+          </div>
+          <p>
+            Fast swapping re-ranks the same public places and conditions with a versioned target profile.
+            {selectedTargetProfile.targetKind === "family-profile"
+              ? " Surfperch is explicitly a family-level planning profile because species behavior varies."
+              : ""}
+          </p>
+        </fieldset>
         <div className="work-in-progress-note">
-          <strong>Work in progress</strong>
-          <span>CastingCompass currently hunts for California halibut only. Every score and condition adjustment is tuned around halibut habitat and behavior.</span>
+          <strong>Evaluated baseline</strong>
+          <span>This shared hybrid ranker is expert-configured and untrained. Scores compare the current choices; they are not catch probabilities or proof that fish are present.</span>
         </div>
         <div className="intro-grid">
           <div>
@@ -1497,7 +1562,7 @@ export function OpportunityApp() {
               <InfoIcon />
               <div>
                 <strong>Forecast unavailable</strong>
-                <p>No fishing scores are shown because the current catalog or planning snapshot could not be verified. Nothing on this screen is being presented as a cached forecast.</p>
+                <p>No fishing scores are shown because the current catalog or planning snapshot could not be verified. Nothing on this screen is being presented as a current forecast.</p>
                 <button type="button" onClick={retryForecast}>Retry forecast</button>
               </div>
             </div>
@@ -1519,6 +1584,13 @@ export function OpportunityApp() {
           )}
         </div>
       </section>
+
+      {dataState === "loading" ? (
+        <div className="forecast-layout-reserve" aria-hidden="true">
+          <span />
+          <span />
+        </div>
+      ) : null}
 
       {forecastReady ? (
         <>
@@ -1607,7 +1679,7 @@ export function OpportunityApp() {
         <div className="filters">
           <label>
             <span>Area</span>
-            <select value={region} onChange={(event) => {
+            <select aria-label="Forecast area" value={region} onChange={(event) => {
               const nextRegion = event.target.value;
               if (nextRegion === "Saved locations" && !account.user) {
                 account.openAccount("Sign in to see saved fishing locations across devices.");
@@ -1772,15 +1844,17 @@ export function OpportunityApp() {
         </>
       ) : null}
 
-      <TripReportFeature
-        sites={sites}
-        snapshot={snapshot}
-        forecastReady={forecastReady}
-        forecastUnavailable={forecastUnavailable}
-        request={tripReportRequest}
-        canSubmit={Boolean(account.user?.legalAccepted)}
-        onRequireLogin={() => account.openAccount("Sign in before submitting a trip report. Complete trips and skunks are tied to an account so reports can be reviewed privately before any separate decision about model evidence.")}
-      />
+      {selectedTarget === "california-halibut" ? (
+        <TripReportFeature
+          sites={sites}
+          snapshot={snapshot}
+          forecastReady={forecastReady}
+          forecastUnavailable={forecastUnavailable}
+          request={tripReportRequest}
+          canSubmit={Boolean(account.user?.legalAccepted)}
+          onRequireLogin={() => account.openAccount("Sign in before submitting a trip report. Complete trips and skunks are tied to an account so reports can be reviewed privately before any separate decision about model evidence.")}
+        />
+      ) : null}
 
       <section className="source-section" id="sources">
         <div className="source-heading">
@@ -1813,14 +1887,11 @@ export function OpportunityApp() {
       </main>
 
       <footer>
-        <a className="brand footer-brand" href="#top"><span className="brand-icon" aria-hidden="true" /><span>CastingCompass</span></a>
+        <a className="brand footer-brand" href="#top" aria-label="CastingCompass — back to top"><span className="brand-icon" aria-hidden="true" /><span>CastingCompass</span></a>
         <div className="footer-center">
           <p>Planning aid only. Not navigational data, legal advice, or a guarantee of catch.</p>
-          <div className="contact-bar" aria-label="Contact Brian Zeng">
-            <a href="https://brianzeng.com" target="_blank" rel="noreferrer">Portfolio ↗</a>
-            <a href="mailto:bzeng0000@gmail.com">Email ↗</a>
-            <a href="https://github.com/brianbzeng" target="_blank" rel="noreferrer">GitHub ↗</a>
-            <a href="https://www.linkedin.com/in/brianbzeng" target="_blank" rel="noreferrer">LinkedIn ↗</a>
+          <div className="contact-bar" aria-label="Contact CastingCompass">
+            <a href={`mailto:${LEGAL_SUPPORT_EMAIL}`}>Support ↗</a>
           </div>
           <div className="footer-legal" aria-label="Legal and privacy">
             <Link href="/terms">Terms</Link>
@@ -1842,7 +1913,7 @@ export function OpportunityApp() {
             <h2 id="respect-title">Respect the water.</h2>
             <p>
               Pack out line and trash, avoid disturbing wildlife and habitat, and follow current access rules and fishing regulations.
-              California halibut must be at least <strong>22 inches total length</strong> to keep.
+              Limits, seasons, gear rules, and closures vary by species and location; verify them before keeping any fish.
             </p>
             <a href="https://wildlife.ca.gov/Fishing/Ocean/Regulations/Fishing-Map/San-Francisco" target="_blank" rel="noreferrer">Check current CDFW rules ↗</a>
             <label>
@@ -2221,8 +2292,8 @@ export function OpportunityApp() {
               )}
               {discussionPosts.length ? (
                 <div className="location-discussion-feed">
-                  <h4>Human-reviewed CastingCompass trip notes</h4>
-                  {discussionPosts.map((post) => (
+                  <h4>Community preview</h4>
+                  {discussionPosts.slice(0, 2).map((post) => (
                     <article key={post.id}>
                       <p>{post.summary}</p>
                       {post.gearSummary ? <small><b>Setup:</b> {post.gearSummary}</small> : null}
@@ -2230,9 +2301,12 @@ export function OpportunityApp() {
                       <time dateTime={post.observedAt}>{new Date(post.observedAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}</time>
                     </article>
                   ))}
+                  <Link href={`/community/${selectedSite.id}`}>Open the {selectedSite.name} community →</Link>
                 </div>
               ) : (
-                <p className="location-discussion-empty">No human-approved CastingCompass trip summaries have been posted for this location yet.</p>
+                <p className="location-discussion-empty">
+                  No human-approved preview is available yet. <Link href={`/community/${selectedSite.id}`}>Visit this place community →</Link>
+                </p>
               )}
               <small>
                 Static summaries do not change the score. Automated review can prepare a draft, but a human moderator must approve it before publication.
@@ -2259,17 +2333,17 @@ export function OpportunityApp() {
             <p>
               CastingCompass compares reachable casting zones and upcoming two-hour windows. Before the practical cap, the 0–100 value ranks within the current comparison set. Fishability can lower it when the water is too difficult to work effectively. It is not a catch probability.
             </p>
-            <div className="predictor-list" aria-label="Predictors used in the live score">
+            <div className="predictor-list" aria-label={`Predictors used for ${selectedTargetProfile.displayName}`}>
               <details open>
-                <summary><span>Bottom and habitat</span><b>44% of combined score</b></summary>
-                <p>Nearby depth, slope, roughness, channel edges, shoreline distance, sediment and structure tags, plus the current curated habitat prior. The trained bathymetry encoder remains in research until it beats the strongest classical baseline.</p>
+                <summary><span>Bottom and habitat</span><b>{Math.round(selectedTargetProfile.componentWeights.habitat * 100)}% of combined score</b></summary>
+                <p>Public-place structure tags, shoreline exposure, access type, and a bounded curated site prior. The adjustments come from versioned target profiles, not a trained habitat model.</p>
               </details>
               <details>
-                <summary><span>Time of year</span><b>16% of combined score</b></summary>
-                <p>Monthly California halibut seasonality. This is still a provisional public-data prior while the reproducible RecFIN extract is being finished.</p>
+                <summary><span>Time of year</span><b>{Math.round(selectedTargetProfile.componentWeights.seasonality * 100)}% of combined score</b></summary>
+                <p>A broad configured monthly prior for {selectedTargetProfile.displayName}. It is planning guidance from reviewed public sources, not learned catch frequency.</p>
               </details>
               <details>
-                <summary><span>Tide and current</span><b>Live, bounded input</b></summary>
+                <summary><span>Tide and current</span><b>{Math.round(selectedTargetProfile.componentWeights.dynamic * 100)}% conditions component</b></summary>
                 <p>NOAA tide stage and change, plus Open-Meteo modeled current speed. Direction is shown to anglers, while the score uses speed only because the effect of direction depends on each shoreline.</p>
               </details>
               <details>
@@ -2277,7 +2351,7 @@ export function OpportunityApp() {
                 <p>Wind, water temperature, cloud cover, atmospheric-pressure trend, daylight, moon phase and illumination. Moon and pressure stay low-weight to avoid double-counting tides or overstating a weak local signal.</p>
               </details>
               <details>
-                <summary><span>Practical fishability</span><b>20% plus a hard score cap</b></summary>
+                <summary><span>Practical fishability</span><b>{Math.round(selectedTargetProfile.componentWeights.fishability * 100)}% plus a hard score cap</b></summary>
                 <p>Wind, current, expected crowding, swell height, period, direction, estimated wave power, beach slope, and nearshore exposure estimate whether an angler can cast and control a lure or bait. Difficult or severe surf can cap the final score even when habitat looks excellent.</p>
               </details>
               <details>
@@ -2291,7 +2365,7 @@ export function OpportunityApp() {
             </div>
             <div className="method-callout">
               <InfoIcon />
-              <p><strong>Deep-learning status: research pipeline, not the live score.</strong> The current live Habitat score is a labeled, curated proxy. It is not output from a trained neural network.</p>
+              <p><strong>Training status: expert-configured and untrained.</strong> This is a shared explainable hybrid ranker with a versioned {selectedTargetProfile.displayName} profile. It is not a neural catch model and has no measured catch-prediction claim.</p>
             </div>
             <div className="method-callout">
               <InfoIcon />

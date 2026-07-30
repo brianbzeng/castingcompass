@@ -1,8 +1,9 @@
 {
-  "name": "CastingCompass — Halibut Opportunity Planner",
+  "name": "CastingCompass — California Coastal Fishing Planner",
   "short_name": "CastingCompass",
-  "description": "Compare California halibut windows at public Bay Area and Santa Barbara South Coast access.",
-  "start_url": "/",
+  "description": "Compare public California coastal fishing windows for California halibut, striped bass, surfperch, and jacksmelt.",
+  "id": "/forecast",
+  "start_url": "/forecast",
   "display": "standalone",
   "orientation": "portrait-primary",
   "background_color": "#06172e",
