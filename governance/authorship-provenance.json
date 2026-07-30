@@ -87,7 +87,7 @@
         },
         {
           "path": "public/marketing/painterly-water-column.webp",
-          "sha256": "1f339308bd16e9dfa138a66085b0401f1ccf335ba8523e855db38dcb54910e89"
+          "sha256": "846b6520398d26e0afec4688b82df4ea6740a711dd777f1d156eef474f99fc43"
         }
       ],
       "creator_display": "CastingCompass project owner with disclosed OpenAI ImageGen assistance",
@@ -102,16 +102,75 @@
       "attribution_required": false,
       "share_alike": false,
       "attribution_text": "CastingCompass",
-      "modifications": "Generated environment-only painterly plates from the owner-supplied art-direction board; omitted all text, UI, sun, people, and marine-life actors so the live page preserves its semantic content and registered silhouette layers; compressed the selected PNG outputs to WebP.",
+      "modifications": "Generated environment-only painterly plates from the owner-supplied art-direction board; regenerated the water-column plate from the approved July 29 mockup and animation sheet with restrained rays, simplified rock texture, and open space for semantic content and separately animated actors; omitted all text, UI, sun, people, and marine-life actors; compressed the selected PNG outputs to WebP.",
       "ai_assistance": "disclosed",
       "rights_review": "owner_supplied_not_independently_cleared",
       "release_state": "candidate_review_required",
       "upstream_record_id": null,
-      "release_commit": "1f35542f42f46ea68672eea1beac0138884c3f7f",
+      "release_commit": "2570c87afd451e653029fbd9dae4e9847b3aeec0",
       "evidence_refs": [
-        "git:1f35542f42f46ea68672eea1beac0138884c3f7f",
+        "git:2570c87afd451e653029fbd9dae4e9847b3aeec0",
         "The project owner supplied the July 29 painterly art-direction board and directed this environment overhaul.",
-        "OpenAI ImageGen produced environment-only surface and underwater plates; the supplied silhouette assets remain separate registered layers."
+        "OpenAI ImageGen produced environment-only surface and underwater plates; the supplied silhouette assets and new isolated painterly actors remain separate registered layers."
+      ],
+      "private_evidence_receipt": null
+    },
+    {
+      "id": "marketing-painterly-interactive-actors",
+      "title": "Painterly interactive actors for the marketing ocean journey",
+      "kind": "first_party_owner_supplied",
+      "paths": [
+        {
+          "path": "public/marketing/actors/boat-fisherman.webp",
+          "sha256": "6abf255d07a25eb29f693324ae23019e91cfc5de59d0267991983c93b62479e4"
+        },
+        {
+          "path": "public/marketing/actors/diving-helmet.webp",
+          "sha256": "08646b04c75fef0466801d12841f89e15fe2a562c434c9538096c9d1ca957059"
+        },
+        {
+          "path": "public/marketing/actors/foreground-kelp.webp",
+          "sha256": "e36c1a78a4642a426b84a5ef3a65e8dcb68a75be5544f7321b1bda785b3782b6"
+        },
+        {
+          "path": "public/marketing/actors/helmet-fish.webp",
+          "sha256": "bde89dec4ee7d286dd36ef667ba561c193eb07c1ad76fd2580bf2c29c150fb1f"
+        },
+        {
+          "path": "public/marketing/actors/seafloor-compass.webp",
+          "sha256": "eb409a486f97a929ce8eefabeafdf5b1c280dd3444d34eca47ab51b600fdcaa8"
+        },
+        {
+          "path": "public/marketing/actors/seafloor-crab.webp",
+          "sha256": "694e453ade59cc0dc8ea54a81bf30126f687275b62d506d647e9cd2140bc9af1"
+        },
+        {
+          "path": "public/marketing/actors/shark.webp",
+          "sha256": "6cbaedab5b6689d2aa49e5ba4ee0e0f563199b5f619089766ad682dde20890ce"
+        }
+      ],
+      "creator_display": "CastingCompass project owner with disclosed OpenAI ImageGen assistance",
+      "creation_date": "2026-07-29",
+      "source_url": null,
+      "source_remote_sha1": null,
+      "source_reviewed_at": null,
+      "license_id": null,
+      "license_label": null,
+      "license_url": null,
+      "rights_basis": "owner_supplied_ai_assisted",
+      "attribution_required": false,
+      "share_alike": false,
+      "attribution_text": "CastingCompass",
+      "modifications": "Generated isolated painterly actors from the owner-approved mockup and animation sheet; removed solid chroma backgrounds with a soft matte and despill pass, trimmed alpha bounds, and encoded the selected outputs as transparent WebP assets.",
+      "ai_assistance": "disclosed",
+      "rights_review": "owner_supplied_not_independently_cleared",
+      "release_state": "candidate_review_required",
+      "upstream_record_id": null,
+      "release_commit": "2570c87afd451e653029fbd9dae4e9847b3aeec0",
+      "evidence_refs": [
+        "git:2570c87afd451e653029fbd9dae4e9847b3aeec0",
+        "The project owner supplied the approved July 29 homepage mockup and animation behavior sheet as the art-direction source of truth.",
+        "OpenAI ImageGen created the isolated actor assets; local chroma-key removal and WebP encoding prepared the transparent production layers."
       ],
       "private_evidence_receipt": null
     },
