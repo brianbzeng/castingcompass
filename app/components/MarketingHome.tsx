@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, type CSSProperties } from "react";
 
 function ArrowUpRightIcon() {
   return (
@@ -16,6 +16,321 @@ function ArrowDownIcon() {
     <svg aria-hidden="true" viewBox="0 0 20 20">
       <path d="M10 3v13m-5-5 5 5 5-5" />
     </svg>
+  );
+}
+
+type BubbleSpec = {
+  delay: number;
+  distance: number;
+  drift: number;
+  duration: number;
+  pop: "mid" | "surface";
+  radius: number;
+  x: number;
+  y: number;
+};
+
+const waterColumnBubbles: readonly BubbleSpec[] = [
+  {
+    x: 118,
+    y: 890,
+    radius: 12,
+    duration: 12.8,
+    delay: -4.2,
+    distance: 620,
+    drift: 34,
+    pop: "surface",
+  },
+  {
+    x: 154,
+    y: 940,
+    radius: 7,
+    duration: 9.6,
+    delay: -1.4,
+    distance: 430,
+    drift: -22,
+    pop: "mid",
+  },
+  {
+    x: 198,
+    y: 1010,
+    radius: 4,
+    duration: 8.4,
+    delay: -6.7,
+    distance: 340,
+    drift: 18,
+    pop: "mid",
+  },
+  {
+    x: 570,
+    y: 790,
+    radius: 9,
+    duration: 11.4,
+    delay: -7.1,
+    distance: 590,
+    drift: -36,
+    pop: "surface",
+  },
+  {
+    x: 612,
+    y: 860,
+    radius: 5,
+    duration: 8.8,
+    delay: -2.8,
+    distance: 310,
+    drift: 22,
+    pop: "mid",
+  },
+  {
+    x: 924,
+    y: 1120,
+    radius: 14,
+    duration: 14.2,
+    delay: -10.3,
+    distance: 720,
+    drift: 42,
+    pop: "surface",
+  },
+  {
+    x: 972,
+    y: 1178,
+    radius: 6,
+    duration: 10.1,
+    delay: -4.9,
+    distance: 430,
+    drift: -28,
+    pop: "mid",
+  },
+  {
+    x: 1418,
+    y: 1050,
+    radius: 10,
+    duration: 12.2,
+    delay: -8.8,
+    distance: 640,
+    drift: -38,
+    pop: "surface",
+  },
+  {
+    x: 1452,
+    y: 1128,
+    radius: 5,
+    duration: 8.6,
+    delay: -3.5,
+    distance: 300,
+    drift: 18,
+    pop: "mid",
+  },
+  {
+    x: 286,
+    y: 1810,
+    radius: 11,
+    duration: 13.8,
+    delay: -5.7,
+    distance: 680,
+    drift: 46,
+    pop: "surface",
+  },
+  {
+    x: 332,
+    y: 1874,
+    radius: 5,
+    duration: 9.2,
+    delay: -1.9,
+    distance: 360,
+    drift: -22,
+    pop: "mid",
+  },
+  {
+    x: 760,
+    y: 2010,
+    radius: 8,
+    duration: 11.8,
+    delay: -7.6,
+    distance: 520,
+    drift: -34,
+    pop: "surface",
+  },
+  {
+    x: 810,
+    y: 2070,
+    radius: 4,
+    duration: 8.1,
+    delay: -4.4,
+    distance: 280,
+    drift: 16,
+    pop: "mid",
+  },
+  {
+    x: 1326,
+    y: 1960,
+    radius: 13,
+    duration: 14.6,
+    delay: -11.8,
+    distance: 700,
+    drift: -44,
+    pop: "surface",
+  },
+  {
+    x: 1380,
+    y: 2028,
+    radius: 6,
+    duration: 9.8,
+    delay: -6.2,
+    distance: 350,
+    drift: 24,
+    pop: "mid",
+  },
+  {
+    x: 170,
+    y: 2920,
+    radius: 9,
+    duration: 12.6,
+    delay: -9.5,
+    distance: 610,
+    drift: 38,
+    pop: "surface",
+  },
+  {
+    x: 218,
+    y: 2980,
+    radius: 4,
+    duration: 8.7,
+    delay: -2.2,
+    distance: 320,
+    drift: -20,
+    pop: "mid",
+  },
+  {
+    x: 1060,
+    y: 2860,
+    radius: 12,
+    duration: 13.6,
+    delay: -7.8,
+    distance: 660,
+    drift: -40,
+    pop: "surface",
+  },
+  {
+    x: 1112,
+    y: 2940,
+    radius: 6,
+    duration: 9.4,
+    delay: -5.1,
+    distance: 360,
+    drift: 28,
+    pop: "mid",
+  },
+  {
+    x: 1474,
+    y: 3040,
+    radius: 8,
+    duration: 11.2,
+    delay: -3.8,
+    distance: 520,
+    drift: -34,
+    pop: "surface",
+  },
+] as const;
+
+const seafloorBubbles: readonly BubbleSpec[] = [
+  {
+    x: 164,
+    y: 1110,
+    radius: 9,
+    duration: 12.4,
+    delay: -5.4,
+    distance: 580,
+    drift: 30,
+    pop: "surface",
+  },
+  {
+    x: 204,
+    y: 1140,
+    radius: 4,
+    duration: 8.8,
+    delay: -2.2,
+    distance: 290,
+    drift: -18,
+    pop: "mid",
+  },
+  {
+    x: 910,
+    y: 1100,
+    radius: 12,
+    duration: 13.6,
+    delay: -8.2,
+    distance: 640,
+    drift: -38,
+    pop: "surface",
+  },
+  {
+    x: 962,
+    y: 1142,
+    radius: 5,
+    duration: 9.1,
+    delay: -4.6,
+    distance: 330,
+    drift: 22,
+    pop: "mid",
+  },
+  {
+    x: 1436,
+    y: 1120,
+    radius: 8,
+    duration: 11.7,
+    delay: -6.5,
+    distance: 520,
+    drift: -26,
+    pop: "surface",
+  },
+] as const;
+
+function BubbleField({
+  className,
+  gradientId = "cc-bubble-glass",
+  specs,
+}: {
+  className: string;
+  gradientId?: string;
+  specs: readonly BubbleSpec[];
+}) {
+  return (
+    <g className={className}>
+      {specs.map((bubble) => (
+        <g
+          key={`${bubble.x}-${bubble.y}-${bubble.duration}-${bubble.delay}`}
+          transform={`translate(${bubble.x} ${bubble.y})`}
+        >
+          <g
+            className={`marketing-bubble marketing-bubble-${bubble.pop}`}
+            style={
+              {
+                "--bubble-delay": `${bubble.delay}s`,
+                "--bubble-distance": `${bubble.distance * -1}px`,
+                "--bubble-drift": `${bubble.drift}px`,
+                "--bubble-duration": `${bubble.duration}s`,
+              } as CSSProperties
+            }
+          >
+            <circle
+              className="marketing-bubble-shell"
+              r={bubble.radius}
+              fill={`url(#${gradientId})`}
+              stroke="#dffcf5"
+              strokeWidth={Math.max(1.4, bubble.radius * 0.16)}
+            />
+            <circle
+              className="marketing-bubble-glint"
+              cx={bubble.radius * -0.28}
+              cy={bubble.radius * -0.32}
+              r={Math.max(1, bubble.radius * 0.2)}
+              fill="#f8fff8"
+            />
+          </g>
+        </g>
+      ))}
+    </g>
   );
 }
 
@@ -43,6 +358,9 @@ function CoastSignalArtwork() {
         <filter id="cc-sun-glow" x="-100%" y="-100%" width="300%" height="300%">
           <feGaussianBlur stdDeviation="34" />
         </filter>
+        <clipPath id="cc-sun-horizon-clip">
+          <path d="M0 0h1600v552c-168 18-310 15-456 5-170-12-323 10-502 5-190-6-382-13-642-1Z" />
+        </clipPath>
       </defs>
 
       <image
@@ -58,26 +376,37 @@ function CoastSignalArtwork() {
         height="1000"
         fill="url(#cc-painterly-sunset-wash)"
       />
+      <image
+        className="marketing-hero-boat"
+        href="/marketing/actors/boat-fisherman.webp"
+        x="770"
+        y="500"
+        width="470"
+        height="238"
+        preserveAspectRatio="xMidYMid meet"
+      />
 
-      <g className="marketing-art-sun">
-        <g className="marketing-art-sun-rays">
-          <path d="M1010 278v-42M940 294l-28-41M1081 294l34-47M916 349l-47-15M1101 350l60-16M935 423l-37 31M1084 424l44 36M1008 447l-2 42" />
+      <g clipPath="url(#cc-sun-horizon-clip)">
+        <g className="marketing-art-sun">
+          <g className="marketing-art-sun-rays">
+            <path d="M1010 278v-42M940 294l-28-41M1081 294l34-47M916 349l-47-15M1101 350l60-16M935 423l-37 31M1084 424l44 36M1008 447l-2 42" />
+          </g>
+          <circle
+            cx="1010"
+            cy="370"
+            r="118"
+            fill="#ffe69a"
+            opacity="0.3"
+            filter="url(#cc-sun-glow)"
+          />
+          <circle
+            className="marketing-art-sun-disc"
+            cx="1010"
+            cy="370"
+            r="52"
+            fill="#fff0b0"
+          />
         </g>
-        <circle
-          cx="1010"
-          cy="370"
-          r="118"
-          fill="#ffe69a"
-          opacity="0.3"
-          filter="url(#cc-sun-glow)"
-        />
-        <circle
-          className="marketing-art-sun-disc"
-          cx="1010"
-          cy="370"
-          r="52"
-          fill="#fff0b0"
-        />
       </g>
     </svg>
   );
@@ -93,8 +422,8 @@ function OceanDescentArtwork() {
     >
       <defs>
         <radialGradient id="cc-depth-surface-warm" cx="50%" cy="0%" r="92%">
-          <stop offset="0" stopColor="#ffe49a" stopOpacity="0.42" />
-          <stop offset="0.3" stopColor="#eaa26f" stopOpacity="0.14" />
+          <stop offset="0" stopColor="#ffe49a" stopOpacity="0.18" />
+          <stop offset="0.3" stopColor="#eaa26f" stopOpacity="0.05" />
           <stop offset="1" stopColor="#163d5c" stopOpacity="0" />
         </radialGradient>
         <radialGradient id="cc-diver-glow">
@@ -106,6 +435,15 @@ function OceanDescentArtwork() {
           <stop offset="0" stopColor="#fff2a8" stopOpacity="0.92" />
           <stop offset="1" stopColor="#fff2a8" stopOpacity="0" />
         </radialGradient>
+        <radialGradient id="cc-bubble-glass" cx="30%" cy="24%" r="74%">
+          <stop offset="0" stopColor="#f8fffb" stopOpacity="0.38" />
+          <stop offset="0.38" stopColor="#a9ede2" stopOpacity="0.08" />
+          <stop offset="0.78" stopColor="#4ba7b4" stopOpacity="0.04" />
+          <stop offset="1" stopColor="#d8fff4" stopOpacity="0.22" />
+        </radialGradient>
+        <clipPath id="cc-helmet-porthole">
+          <ellipse cx="1308" cy="2447" rx="48" ry="55" />
+        </clipPath>
         <filter
           id="cc-depth-soft-glow"
           x="-200%"
@@ -130,38 +468,10 @@ function OceanDescentArtwork() {
         fill="url(#cc-depth-surface-warm)"
       />
 
-      <g
+      <BubbleField
         className="marketing-depth-bubbles"
-        fill="none"
-        stroke="#d7f4e9"
-        strokeWidth="4"
-        opacity="0.4"
-      >
-        <circle cx="90" cy="178" r="14" />
-        <circle cx="122" cy="116" r="8" />
-        <circle cx="148" cy="62" r="5" />
-        <circle cx="850" cy="360" r="8" />
-        <circle cx="875" cy="305" r="13" />
-        <circle cx="900" cy="245" r="6" />
-        <circle cx="1375" cy="760" r="16" />
-        <circle cx="1404" cy="700" r="8" />
-        <circle cx="1429" cy="642" r="5" />
-        <circle cx="420" cy="1090" r="11" />
-        <circle cx="448" cy="1026" r="6" />
-        <circle cx="470" cy="970" r="4" />
-        <circle cx="1090" cy="1420" r="15" />
-        <circle cx="1118" cy="1357" r="8" />
-        <circle cx="1140" cy="1302" r="5" />
-        <circle cx="330" cy="1940" r="13" />
-        <circle cx="358" cy="1877" r="7" />
-        <circle cx="378" cy="1820" r="4" />
-        <circle cx="1390" cy="2360" r="11" />
-        <circle cx="1416" cy="2300" r="17" />
-        <circle cx="1442" cy="2238" r="6" />
-        <circle cx="725" cy="2780" r="9" />
-        <circle cx="752" cy="2718" r="15" />
-        <circle cx="778" cy="2660" r="5" />
-      </g>
+        specs={waterColumnBubbles}
+      />
 
       <g className="marketing-depth-particles" fill="#d9f1d5">
         <circle cx="224" cy="232" r="3" />
@@ -184,6 +494,36 @@ function OceanDescentArtwork() {
         <circle cx="1380" cy="2480" r="2" />
         <circle cx="640" cy="2700" r="2" />
         <circle cx="910" cy="2920" r="3" />
+      </g>
+
+      <g className="marketing-depth-kelp-foreground">
+        <image
+          className="marketing-kelp-cluster marketing-kelp-cluster-a"
+          href="/marketing/actors/foreground-kelp.webp"
+          x="-96"
+          y="1180"
+          width="360"
+          height="490"
+          preserveAspectRatio="xMidYMax meet"
+        />
+        <image
+          className="marketing-kelp-cluster marketing-kelp-cluster-b"
+          href="/marketing/actors/foreground-kelp.webp"
+          x="1332"
+          y="1730"
+          width="330"
+          height="450"
+          preserveAspectRatio="xMidYMax meet"
+        />
+        <image
+          className="marketing-kelp-cluster marketing-kelp-cluster-c"
+          href="/marketing/actors/foreground-kelp.webp"
+          x="-42"
+          y="2460"
+          width="300"
+          height="410"
+          preserveAspectRatio="xMidYMax meet"
+        />
       </g>
 
       <g className="marketing-depth-fish-school">
@@ -262,16 +602,15 @@ function OceanDescentArtwork() {
       </g>
 
       <g className="marketing-depth-wildlife">
-        <g className="marketing-depth-whale-glide">
+        <g className="marketing-depth-shark-glide">
           <image
-            className="marketing-depth-whale"
-            href="/marketing/silhouettes/whale.webp"
-            x="390"
-            y="910"
-            width="860"
-            height="338"
+            className="marketing-depth-shark"
+            href="/marketing/actors/shark.webp"
+            x="330"
+            y="920"
+            width="940"
+            height="348"
             preserveAspectRatio="xMidYMid meet"
-            transform="translate(1640 0) scale(-1 1)"
           />
         </g>
         <g className="marketing-depth-squid-pair">
@@ -335,107 +674,27 @@ function OceanDescentArtwork() {
         </g>
       </g>
 
-      <image
-        className="marketing-depth-cliff marketing-depth-cliff-seaweed"
-        href="/marketing/silhouettes/cliff-seaweed.webp"
-        x="1004"
-        y="2260"
-        width="596"
-        height="239"
-        preserveAspectRatio="xMidYMid meet"
-      />
-
       <g className="marketing-depth-helmet">
-        <g transform="translate(1260 2260) rotate(-11 250 205) scale(.16)">
-          <ellipse
-            cx="240"
-            cy="388"
-            rx="235"
-            ry="46"
-            fill="#0b1b35"
-            opacity="0.38"
+        <image
+          className="marketing-depth-helmet-shell"
+          href="/marketing/actors/diving-helmet.webp"
+          x="1190"
+          y="2295"
+          width="300"
+          height="405"
+          preserveAspectRatio="xMidYMax meet"
+        />
+        <g clipPath="url(#cc-helmet-porthole)">
+          <image
+            className="marketing-helmet-fish"
+            href="/marketing/actors/helmet-fish.webp"
+            x="1260"
+            y="2411"
+            width="112"
+            height="66"
+            preserveAspectRatio="xMidYMid meet"
           />
-          <path
-            d="M82 318V172C82 72 153 8 250 8s168 64 168 164v146Z"
-            fill="#5d3f35"
-            stroke="#e0a55f"
-            strokeWidth="18"
-          />
-          <path
-            d="M55 318h390l-28 91H83Z"
-            fill="#3c2d31"
-            stroke="#c88c4e"
-            strokeWidth="16"
-          />
-          <circle
-            cx="250"
-            cy="175"
-            r="79"
-            fill="#12233d"
-            stroke="#d9a15f"
-            strokeWidth="19"
-          />
-          <path
-            d="m194 119 112 112M306 119 194 231"
-            stroke="#a56f42"
-            strokeWidth="17"
-          />
-          <circle
-            cx="91"
-            cy="210"
-            r="45"
-            fill="#15263e"
-            stroke="#c88c4e"
-            strokeWidth="16"
-          />
-          <circle
-            cx="409"
-            cy="210"
-            r="45"
-            fill="#15263e"
-            stroke="#c88c4e"
-            strokeWidth="16"
-          />
-          <path
-            d="M155 31v-55h190v55M176-26h148"
-            fill="none"
-            stroke="#c88c4e"
-            strokeLinecap="round"
-            strokeWidth="18"
-          />
-          <circle cx="166" cy="365" r="14" fill="#e2aa67" />
-          <circle cx="334" cy="365" r="14" fill="#e2aa67" />
-          <g
-            transform="translate(430 186)"
-            fill="none"
-            stroke="#d4a263"
-            strokeLinecap="round"
-            strokeWidth="15"
-          >
-            <path d="M0 0h82v180H14Z" />
-            <path d="M20 0v-38h42V0M24 52h50M24 98h50" />
-          </g>
-          <path
-            d="M500 370c56 18 83 44 114 93"
-            fill="none"
-            stroke="#d5a062"
-            strokeLinecap="round"
-            strokeWidth="15"
-          />
-          <path d="m632 455 82 42-91 10Z" fill="#d5a062" opacity="0.76" />
         </g>
-      </g>
-
-      <g
-        className="marketing-helmet-bubbles"
-        fill="none"
-        stroke="#bfe8d9"
-        strokeWidth="3"
-        opacity="0.42"
-      >
-        <circle cx="1378" cy="2318" r="8" />
-        <circle cx="1402" cy="2275" r="5" />
-        <circle cx="1389" cy="2233" r="3" />
       </g>
 
       <g className="marketing-depth-seabed-approach">
@@ -484,6 +743,23 @@ function SeafloorArtwork() {
       preserveAspectRatio="xMidYMid slice"
       aria-hidden="true"
     >
+      <defs>
+        <radialGradient id="cc-seafloor-bubble-glass" cx="30%" cy="24%" r="74%">
+          <stop offset="0" stopColor="#f8fffb" stopOpacity="0.38" />
+          <stop offset="0.38" stopColor="#a9ede2" stopOpacity="0.08" />
+          <stop offset="0.78" stopColor="#4ba7b4" stopOpacity="0.04" />
+          <stop offset="1" stopColor="#d8fff4" stopOpacity="0.22" />
+        </radialGradient>
+      </defs>
+      <image
+        className="marketing-seafloor-plate"
+        href="/marketing/painterly-water-column.webp"
+        x="0"
+        y="0"
+        width="1600"
+        height="1200"
+        preserveAspectRatio="xMidYMax slice"
+      />
       <g className="marketing-seafloor-particles" fill="#bcecdf" opacity="0.24">
         <circle cx="116" cy="124" r="5" />
         <circle cx="238" cy="294" r="7" />
@@ -500,6 +776,11 @@ function SeafloorArtwork() {
         <circle cx="498" cy="632" r="3" />
         <circle cx="1520" cy="566" r="4" />
       </g>
+      <BubbleField
+        className="marketing-seafloor-bubbles"
+        gradientId="cc-seafloor-bubble-glass"
+        specs={seafloorBubbles}
+      />
 
       <g className="marketing-seafloor-life">
         <image
@@ -511,41 +792,58 @@ function SeafloorArtwork() {
           height="330"
           preserveAspectRatio="xMidYMax meet"
         />
+        <image
+          className="marketing-seafloor-kelp marketing-seafloor-kelp-a"
+          href="/marketing/actors/foreground-kelp.webp"
+          x="-70"
+          y="660"
+          width="350"
+          height="478"
+          preserveAspectRatio="xMidYMax meet"
+        />
+        <image
+          className="marketing-seafloor-kelp marketing-seafloor-kelp-b"
+          href="/marketing/actors/foreground-kelp.webp"
+          x="1320"
+          y="700"
+          width="330"
+          height="450"
+          preserveAspectRatio="xMidYMax meet"
+        />
       </g>
 
+      <image
+        className="marketing-seafloor-compass"
+        href="/marketing/actors/seafloor-compass.webp"
+        x="1080"
+        y="850"
+        width="150"
+        height="143"
+        preserveAspectRatio="xMidYMid meet"
+        transform="rotate(-12 1155 922)"
+      />
+
       <g className="marketing-seafloor-crab marketing-seafloor-crab-a">
-        <g transform="translate(0 1090) scale(.52)" fill="#e47862">
-          <path d="M-34-20h68v12h12v28H34v13h-68V20h-12V-8h12Z" />
-          <rect x="-23" y="-31" width="12" height="12" />
-          <rect x="11" y="-31" width="12" height="12" />
-          <rect x="-54" y="-19" width="16" height="10" />
-          <rect x="38" y="-19" width="16" height="10" />
-          <path
-            d="M-44 10h-20v12h-16M44 10h20v12h16M-35 25h-18v14h-16M35 25h18v14h16"
-            fill="none"
-            stroke="#e47862"
-            strokeWidth="8"
-          />
-          <rect x="-20" y="-16" width="8" height="8" fill="#101326" />
-          <rect x="12" y="-16" width="8" height="8" fill="#101326" />
-        </g>
+        <image
+          className="marketing-crab-facing marketing-crab-facing-a"
+          href="/marketing/actors/seafloor-crab.webp"
+          x="0"
+          y="1085"
+          width="145"
+          height="76"
+          preserveAspectRatio="xMidYMid meet"
+        />
       </g>
       <g className="marketing-seafloor-crab marketing-seafloor-crab-b">
-        <g transform="translate(0 1140) scale(-.46 .46)" fill="#d98a67">
-          <path d="M-34-20h68v12h12v28H34v13h-68V20h-12V-8h12Z" />
-          <rect x="-23" y="-31" width="12" height="12" />
-          <rect x="11" y="-31" width="12" height="12" />
-          <rect x="-54" y="-19" width="16" height="10" />
-          <rect x="38" y="-19" width="16" height="10" />
-          <path
-            d="M-44 10h-20v12h-16M44 10h20v12h16M-35 25h-18v14h-16M35 25h18v14h16"
-            fill="none"
-            stroke="#d98a67"
-            strokeWidth="8"
-          />
-          <rect x="-20" y="-16" width="8" height="8" fill="#101326" />
-          <rect x="12" y="-16" width="8" height="8" fill="#101326" />
-        </g>
+        <image
+          className="marketing-crab-facing marketing-crab-facing-b"
+          href="/marketing/actors/seafloor-crab.webp"
+          x="0"
+          y="1120"
+          width="128"
+          height="67"
+          preserveAspectRatio="xMidYMid meet"
+        />
       </g>
     </svg>
   );
@@ -562,6 +860,7 @@ export function MarketingHome() {
     const hero = heroRef.current;
     const reveal = revealRef.current;
     const proof = proofRef.current;
+    const product = root?.querySelector<HTMLElement>(".marketing-product");
     if (!root || !hero || !reveal || !proof) return;
 
     const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
@@ -569,7 +868,8 @@ export function MarketingHome() {
 
     const setSunOrbit = (progress: number) => {
       const startAngle = (-62 * Math.PI) / 180;
-      const angle = ((-62 + 72 * progress) * Math.PI) / 180;
+      const orbitProgress = progress ** 1.55;
+      const angle = ((-62 + 94 * orbitProgress) * Math.PI) / 180;
       const radius = 270;
       const horizontalScale = window.innerWidth <= 760 ? 0.52 : 1;
       const x =
@@ -600,6 +900,12 @@ export function MarketingHome() {
         1,
         Math.max(0, -revealRect.top / revealTravel),
       );
+      const productOpacity = Math.min(
+        Math.min(1, Math.max(0, (washProgress - 0.24) * 12.5)),
+        Math.min(1, Math.max(0, (0.86 - washProgress) * 8)),
+      );
+      const surfaceEdgeOpacity =
+        surfaceProgress * Math.max(0, 1 - washProgress * 5);
 
       root.style.setProperty(
         "--marketing-hero-progress",
@@ -613,6 +919,17 @@ export function MarketingHome() {
         "--marketing-wash-progress",
         washProgress.toFixed(4),
       );
+      root.style.setProperty(
+        "--marketing-product-opacity",
+        productOpacity.toFixed(4),
+      );
+      root.style.setProperty(
+        "--marketing-surface-edge-opacity",
+        surfaceEdgeOpacity.toFixed(4),
+      );
+      if (product) {
+        product.style.opacity = productOpacity.toFixed(4);
+      }
       root.classList.toggle("marketing-hero-passed", heroProgress >= 0.995);
       setSunOrbit(heroProgress);
     };

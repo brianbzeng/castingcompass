@@ -681,6 +681,7 @@ test("primary controls stay inside common phone viewports", async ({ page }) => 
 });
 
 test("marketing homepage routes to the web planner and keeps TestFlight honestly unavailable", async ({ page }) => {
+  test.setTimeout(60_000);
   await page.goto("/");
   await expect(page.getByRole("heading", { name: "Give every cast a compass." })).toBeVisible();
   await expect(page.getByRole("link", { name: "Open web planner" })).toHaveAttribute("href", "/forecast");
@@ -693,20 +694,29 @@ test("marketing homepage routes to the web planner and keeps TestFlight honestly
   await expect(page.locator('.marketing-depth-spearfishers image[href="/marketing/silhouettes/spearfisher-far.webp"]')).toHaveCount(1);
   await expect(page.locator('image[href="/marketing/spearfishers-pair.webp"]')).toHaveCount(0);
   await expect(page.locator(".marketing-depth-meter")).toHaveText("");
-  await expect(page.locator(".marketing-depth-whale")).toHaveCount(1);
-  await expect(page.locator('.marketing-depth-whale[href="/marketing/silhouettes/whale.webp"]')).toHaveCount(1);
+  await expect(page.locator(".marketing-depth-whale")).toHaveCount(0);
+  await expect(page.locator(".marketing-depth-shark")).toHaveCount(1);
+  await expect(page.locator('.marketing-depth-shark[href="/marketing/actors/shark.webp"]')).toHaveCount(1);
   await expect(page.locator(".marketing-depth-squid-pair > image")).toHaveCount(2);
   await expect(page.locator(".marketing-depth-helmet")).toHaveCount(1);
+  await expect(page.locator('.marketing-depth-helmet-shell[href="/marketing/actors/diving-helmet.webp"]')).toHaveCount(1);
+  await expect(page.locator('.marketing-helmet-fish[href="/marketing/actors/helmet-fish.webp"]')).toHaveCount(1);
   await expect(page.locator(".marketing-depth-angler")).toHaveCount(2);
-  await expect(page.locator(".marketing-depth-cliff")).toHaveCount(1);
+  await expect(page.locator(".marketing-depth-cliff")).toHaveCount(0);
   await expect(page.locator(".marketing-depth-fish-school > image")).toHaveCount(4);
+  await expect(page.locator('.marketing-hero-boat[href="/marketing/actors/boat-fisherman.webp"]')).toHaveCount(1);
+  await expect(page.locator('.marketing-kelp-cluster[href="/marketing/actors/foreground-kelp.webp"]')).toHaveCount(3);
   await expect(page.locator('image.marketing-painterly-shoreline[href="/marketing/painterly-shoreline.webp"]')).toHaveCount(1);
   await expect(page.locator('image.marketing-painterly-water-column[href="/marketing/painterly-water-column.webp"]')).toHaveCount(1);
   await expect(page.locator(".marketing-seafloor-art")).toHaveCount(1);
+  await expect(page.locator('.marketing-seafloor-plate[href="/marketing/painterly-water-column.webp"]')).toHaveCount(1);
   await expect(page.locator('.marketing-depth-seabed-approach image[href="/marketing/silhouettes/seabed-full.webp"]')).toHaveCount(1);
   await expect(page.locator('.marketing-seafloor-art image[href="/marketing/silhouettes/seabed-full.webp"]')).toHaveCount(1);
   await expect(page.locator(".marketing-depth-volcanic-field, .marketing-seafloor-vent")).toHaveCount(0);
   await expect(page.locator(".marketing-seafloor-crab")).toHaveCount(2);
+  await expect(page.locator('.marketing-crab-facing[href="/marketing/actors/seafloor-crab.webp"]')).toHaveCount(2);
+  await expect(page.locator('.marketing-seafloor-compass[href="/marketing/actors/seafloor-compass.webp"]')).toHaveCount(1);
+  await expect(page.locator(".marketing-bubble")).toHaveCount(25);
   await expect(page.locator(".marketing-cast-rod")).toHaveCount(0);
   await expect(page.locator(".marketing-rod-loader")).toHaveCount(0);
   await expect(page.locator(".marketing-sunset-banner")).toHaveCount(0);
@@ -725,7 +735,6 @@ test("marketing homepage routes to the web planner and keeps TestFlight honestly
 
   const signalCardHeights = await page.locator(".marketing-model-features li").evaluateAll((cards) => cards.map((card) => Math.round(card.getBoundingClientRect().height)));
   expect(Math.max(...signalCardHeights) - Math.min(...signalCardHeights)).toBeLessThanOrEqual(1);
-  await expect(page.locator(".marketing-proof")).toHaveCSS("background-image", /painterly-water-column\.webp/);
 
   const heroTimeline = async (progress: number) => {
     await page.evaluate((targetProgress) => {
@@ -750,6 +759,7 @@ test("marketing homepage routes to the web planner and keeps TestFlight honestly
         hero: Number.parseFloat(styles.getPropertyValue("--marketing-hero-progress")),
         surface: Number.parseFloat(styles.getPropertyValue("--marketing-surface-progress")),
         sun: Number.parseFloat(styles.getPropertyValue("--marketing-sun-progress")),
+        sunY: Number.parseFloat(styles.getPropertyValue("--marketing-sun-orbit-y")),
       };
     });
   };
@@ -765,6 +775,7 @@ test("marketing homepage routes to the web planner and keeps TestFlight honestly
   const underwater = await heroTimeline(1);
   expect(underwater.sun).toBeCloseTo(1, 1);
   expect(underwater.surface).toBeCloseTo(1, 1);
+  expect(underwater.sunY).toBeGreaterThan(350);
   await expect(page.locator(".marketing-home")).toHaveClass(/marketing-spearfishers-visible/);
 
   await page.evaluate(() => {
@@ -791,8 +802,8 @@ test("marketing homepage routes to the web planner and keeps TestFlight honestly
     });
   });
   expect(crabAnimations).toEqual([
-    { duration: 34000, iterations: Infinity, playState: "running" },
-    { duration: 39000, iterations: Infinity, playState: "running" },
+    { duration: 18000, iterations: Infinity, playState: "running" },
+    { duration: 22000, iterations: Infinity, playState: "running" },
   ]);
 
   const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);

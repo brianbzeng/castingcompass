@@ -3751,12 +3751,14 @@ footer > div {
 .marketing-home {
   --marketing-hero-progress: 0;
   --marketing-surface-progress: 0;
+  --marketing-surface-edge-opacity: 0;
   --marketing-wash-progress: 0;
   --marketing-sun-base-x: 0px;
   --marketing-sun-base-y: 0px;
   --marketing-sun-orbit-x: 0px;
   --marketing-sun-orbit-y: 0px;
   --marketing-sun-progress: 0;
+  --marketing-product-opacity: 0;
   min-width: 320px;
   overflow: clip;
   color: var(--ink);
@@ -3857,11 +3859,22 @@ footer > div {
 
 .marketing-painterly-shoreline {
   filter: brightness(calc(1.08 - (var(--marketing-sun-progress) * 0.18)))
-    saturate(calc(1.02 + (var(--marketing-sun-progress) * 0.12)));
+    saturate(calc(1.02 + (var(--marketing-sun-progress) * 0.12)))
+    hue-rotate(calc(var(--marketing-sun-progress) * -8deg))
+    contrast(calc(1 + (var(--marketing-sun-progress) * 0.06)));
   transform: scale(calc(1 + (var(--marketing-hero-progress) * 0.025)));
   transform-box: fill-box;
   transform-origin: center 58%;
   will-change: filter, transform;
+}
+
+.marketing-hero-boat {
+  opacity: calc(0.92 - (var(--marketing-sun-progress) * 0.18));
+  filter: brightness(calc(1 - (var(--marketing-sun-progress) * 0.2)))
+    saturate(0.82) drop-shadow(0 18px 24px rgba(3, 17, 37, 0.34));
+  transform-box: fill-box;
+  transform-origin: center bottom;
+  will-change: filter, opacity, transform;
 }
 
 .marketing-art-sunset {
@@ -3884,7 +3897,7 @@ footer > div {
   stroke: #fff0b0;
   stroke-linecap: round;
   stroke-width: 4;
-  opacity: calc(0.7 - (var(--marketing-sun-progress) * 0.36));
+  opacity: calc(0.66 - (var(--marketing-sun-progress) * 0.46));
   filter: drop-shadow(0 0 9px rgba(255, 220, 144, 0.38));
 }
 
@@ -4395,7 +4408,7 @@ footer > div {
     0 100%
   );
   content: "";
-  opacity: var(--marketing-surface-progress);
+  opacity: var(--marketing-surface-edge-opacity);
   transform: translateY(calc((1 - var(--marketing-surface-progress)) * 42px));
   pointer-events: none;
   will-change: opacity, transform;
@@ -4421,6 +4434,10 @@ footer > div {
   );
 }
 
+.marketing-hero-passed .marketing-ocean-descent {
+  clip-path: inset(0);
+}
+
 .marketing-ocean-descent-art {
   position: absolute;
   top: 0;
@@ -4435,8 +4452,8 @@ footer > div {
 }
 
 .marketing-painterly-water-column {
-  filter: brightness(calc(1.03 - (var(--marketing-wash-progress) * 0.22)))
-    saturate(calc(1.08 - (var(--marketing-wash-progress) * 0.08)));
+  filter: brightness(calc(0.86 - (var(--marketing-wash-progress) * 0.16)))
+    saturate(calc(0.96 - (var(--marketing-wash-progress) * 0.06)));
   transform: scale(1.008);
   transform-box: fill-box;
   transform-origin: center top;
@@ -4449,8 +4466,29 @@ footer > div {
 }
 
 .marketing-depth-bubbles {
-  opacity: calc(0.22 + (var(--marketing-wash-progress) * 0.45));
-  animation: marketing-bubbles-rise 15s linear infinite;
+  opacity: calc(0.34 + (var(--marketing-wash-progress) * 0.32));
+}
+
+.marketing-bubble {
+  opacity: 0;
+  animation: marketing-bubble-cycle var(--bubble-duration) linear
+    var(--bubble-delay) infinite;
+  animation-play-state: paused;
+  transform-box: fill-box;
+  transform-origin: center;
+  will-change: opacity, transform;
+}
+
+.marketing-bubble-shell {
+  filter: drop-shadow(0 0 5px rgba(170, 240, 232, 0.26));
+}
+
+.marketing-bubble-glint {
+  opacity: 0.72;
+}
+
+.marketing-bubble-mid {
+  animation-name: marketing-bubble-pop-cycle;
 }
 
 .marketing-depth-particles {
@@ -4479,8 +4517,7 @@ footer > div {
   transform-origin: left center;
 }
 
-.marketing-diver-bubbles,
-.marketing-helmet-bubbles {
+.marketing-diver-bubbles {
   animation: marketing-bubbles-rise 7s linear infinite;
 }
 
@@ -4515,16 +4552,40 @@ footer > div {
   mix-blend-mode: multiply;
 }
 
-.marketing-depth-whale-glide {
-  animation: marketing-whale-glide 28s ease-in-out infinite alternate;
+.marketing-depth-shark-glide {
+  animation: marketing-shark-glide 26s ease-in-out infinite alternate;
   transform-box: fill-box;
   transform-origin: center;
 }
 
-.marketing-depth-whale {
-  opacity: 0.76;
-  filter: sepia(0.08) saturate(0.8)
+.marketing-depth-shark {
+  opacity: 0.78;
+  filter: saturate(0.72) brightness(0.72)
     drop-shadow(0 24px 42px rgba(2, 16, 31, 0.32));
+}
+
+.marketing-depth-kelp-foreground {
+  opacity: 0.78;
+}
+
+.marketing-kelp-cluster {
+  filter: saturate(0.78) brightness(0.72)
+    drop-shadow(0 16px 24px rgba(2, 17, 32, 0.26));
+  transform-box: fill-box;
+  transform-origin: center bottom;
+  animation: marketing-kelp-sway 13s ease-in-out infinite alternate;
+}
+
+.marketing-kelp-cluster-b {
+  opacity: 0.72;
+  animation-duration: 16s;
+  animation-delay: -6s;
+}
+
+.marketing-kelp-cluster-c {
+  opacity: 0.66;
+  animation-duration: 18s;
+  animation-delay: -9s;
 }
 
 .marketing-depth-squid-pair {
@@ -4535,9 +4596,25 @@ footer > div {
 }
 
 .marketing-depth-angler-pair,
-.marketing-depth-cliff,
 .marketing-depth-helmet {
   opacity: 0.84;
+}
+
+.marketing-depth-helmet {
+  filter: drop-shadow(-14px 22px 30px rgba(2, 13, 27, 0.42));
+}
+
+.marketing-depth-helmet-shell {
+  filter: saturate(0.76) brightness(0.7);
+}
+
+.marketing-helmet-fish {
+  opacity: 0;
+  animation: marketing-helmet-fish-peek 14s ease-in-out -4s infinite;
+  filter: saturate(0.72) brightness(0.7);
+  transform-box: fill-box;
+  transform-origin: center;
+  will-change: opacity, transform;
 }
 
 .marketing-depth-angler-two {
@@ -4553,18 +4630,9 @@ footer > div {
     alternate-reverse;
 }
 
-.marketing-depth-angler,
-.marketing-depth-cliff-seaweed {
+.marketing-depth-angler {
   transform-box: fill-box;
   transform-origin: center;
-}
-
-.marketing-depth-cliff-seaweed {
-  animation: none;
-  filter: sepia(0.14) saturate(0.7) brightness(0.62)
-    drop-shadow(-18px 20px 28px rgba(3, 15, 29, 0.34));
-  mix-blend-mode: multiply;
-  transform-origin: right bottom;
 }
 
 .marketing-depth-bubbles,
@@ -4574,10 +4642,11 @@ footer > div {
 .marketing-depth-school-mid-left,
 .marketing-depth-school-mid-right,
 .marketing-diver-bubbles,
-.marketing-helmet-bubbles,
-.marketing-depth-whale-glide,
+.marketing-depth-shark-glide,
+.marketing-kelp-cluster,
 .marketing-depth-squid-pair,
-.marketing-depth-angler {
+.marketing-depth-angler,
+.marketing-helmet-fish {
   animation-play-state: paused;
   will-change: opacity, transform;
 }
@@ -4589,10 +4658,12 @@ footer > div {
 .marketing-water-visible .marketing-depth-school-mid-left,
 .marketing-water-visible .marketing-depth-school-mid-right,
 .marketing-water-visible .marketing-diver-bubbles,
-.marketing-water-visible .marketing-helmet-bubbles,
-.marketing-water-visible .marketing-depth-whale-glide,
+.marketing-water-visible .marketing-depth-shark-glide,
+.marketing-water-visible .marketing-kelp-cluster,
 .marketing-water-visible .marketing-depth-squid-pair,
-.marketing-water-visible .marketing-depth-angler {
+.marketing-water-visible .marketing-depth-angler,
+.marketing-water-visible .marketing-helmet-fish,
+.marketing-water-visible .marketing-bubble {
   animation-play-state: running;
 }
 
@@ -4603,6 +4674,60 @@ footer > div {
 
   to {
     transform: translateY(-54px);
+  }
+}
+
+@keyframes marketing-bubble-cycle {
+  0%,
+  8% {
+    opacity: 0;
+    transform: translate3d(0, 20px, 0) scale(0.68);
+  }
+
+  16% {
+    opacity: 0.54;
+  }
+
+  78% {
+    opacity: 0.48;
+  }
+
+  94%,
+  100% {
+    opacity: 0;
+    transform: translate3d(var(--bubble-drift), var(--bubble-distance), 0)
+      scale(1.08);
+  }
+}
+
+@keyframes marketing-bubble-pop-cycle {
+  0%,
+  10% {
+    opacity: 0;
+    transform: translate3d(0, 16px, 0) scale(0.66);
+  }
+
+  18% {
+    opacity: 0.48;
+  }
+
+  72% {
+    opacity: 0.44;
+    transform: translate3d(var(--bubble-drift), var(--bubble-distance), 0)
+      scale(1);
+  }
+
+  82% {
+    opacity: 0.2;
+    transform: translate3d(var(--bubble-drift), var(--bubble-distance), 0)
+      scale(1.3);
+  }
+
+  86%,
+  100% {
+    opacity: 0;
+    transform: translate3d(var(--bubble-drift), var(--bubble-distance), 0)
+      scale(0.18);
   }
 }
 
@@ -4638,13 +4763,23 @@ footer > div {
   }
 }
 
-@keyframes marketing-whale-glide {
+@keyframes marketing-shark-glide {
   from {
-    transform: translate(42px, -7px) rotate(-1deg);
+    transform: translate(38px, -6px) rotate(-0.7deg);
   }
 
   to {
-    transform: translate(-56px, 15px) rotate(1deg);
+    transform: translate(-48px, 12px) rotate(0.7deg);
+  }
+}
+
+@keyframes marketing-kelp-sway {
+  from {
+    transform: rotate(-1.6deg) skewX(-0.5deg);
+  }
+
+  to {
+    transform: rotate(1.8deg) skewX(0.7deg);
   }
 }
 
@@ -4668,13 +4803,48 @@ footer > div {
   }
 }
 
+@keyframes marketing-helmet-fish-peek {
+  0%,
+  12% {
+    opacity: 0;
+    transform: translateX(58px) scale(0.9);
+  }
+
+  20% {
+    opacity: 0.76;
+    transform: translateX(22px) scale(0.96);
+  }
+
+  32%,
+  55% {
+    opacity: 0.84;
+    transform: translateX(2px) scale(1);
+  }
+
+  63% {
+    opacity: 0.84;
+    transform: translateX(8px) scale(1) rotate(-1deg);
+  }
+
+  78% {
+    opacity: 0.68;
+    transform: translateX(24px) scale(0.96);
+  }
+
+  88%,
+  100% {
+    opacity: 0;
+    transform: translateX(58px) scale(0.9);
+  }
+}
+
 .marketing-depth-vignette {
   position: absolute;
   inset: 0;
   background:
     radial-gradient(
       circle at 50% 2%,
-      rgba(255, 220, 137, calc((1 - var(--marketing-wash-progress)) * 0.2)),
+      rgba(255, 220, 137, calc((1 - var(--marketing-wash-progress)) * 0.03)),
       transparent 34%
     ),
     radial-gradient(
@@ -4684,7 +4854,7 @@ footer > div {
     ),
     linear-gradient(
       180deg,
-      rgba(255, 192, 116, calc((1 - var(--marketing-wash-progress)) * 0.08)),
+      rgba(7, 38, 64, calc((1 - var(--marketing-wash-progress)) * 0.32)),
       rgba(2, 5, 19, calc(var(--marketing-wash-progress) * 0.38))
     );
   pointer-events: none;
@@ -4756,7 +4926,7 @@ footer > div {
   min-height: 660px;
   margin: 0 auto;
   padding: clamp(2.5rem, 6vh, 5rem) 0 clamp(1.5rem, 3vh, 2.5rem);
-  opacity: clamp(0, calc((var(--marketing-wash-progress) - 0.24) * 12.5), 1);
+  opacity: var(--marketing-product-opacity);
   pointer-events: none;
   will-change: opacity;
 }
@@ -4886,9 +5056,7 @@ footer > div {
   padding: calc(clamp(9rem, 14vw, 13rem) + 120px) max(4vw, 1.25rem) 3rem;
   border-top: 0;
   background:
-    linear-gradient(180deg, rgba(4, 17, 34, 0.3), rgba(3, 10, 24, 0.74)),
-    url("/marketing/painterly-water-column.webp") center bottom / cover
-      no-repeat,
+    linear-gradient(180deg, rgba(4, 17, 34, 0.28), rgba(3, 10, 24, 0.72)),
     #051426;
   -webkit-mask-image: linear-gradient(180deg, transparent 0, #000 120px);
   mask-image: linear-gradient(180deg, transparent 0, #000 120px);
@@ -4917,6 +5085,10 @@ footer > div {
   pointer-events: none;
 }
 
+.marketing-seafloor-plate {
+  filter: brightness(0.66) saturate(0.82);
+}
+
 .marketing-seafloor-kelp-back {
   transform-box: fill-box;
   transform-origin: center bottom;
@@ -4927,45 +5099,106 @@ footer > div {
   will-change: transform;
 }
 
-.marketing-seafloor-visible .marketing-seafloor-kelp-back {
+.marketing-seafloor-kelp {
+  opacity: 0.66;
+  filter: saturate(0.7) brightness(0.48)
+    drop-shadow(0 14px 22px rgba(2, 12, 25, 0.3));
+  animation: marketing-kelp-sway 15s ease-in-out infinite alternate;
   animation-play-state: paused;
+  transform-box: fill-box;
+  transform-origin: center bottom;
+  will-change: transform;
+}
+
+.marketing-seafloor-kelp-b {
+  opacity: 0.56;
+  animation-duration: 18s;
+  animation-delay: -7s;
+}
+
+.marketing-seafloor-compass {
+  opacity: 0.74;
+  filter: saturate(0.72) brightness(0.58)
+    drop-shadow(0 18px 24px rgba(2, 10, 22, 0.48));
+}
+
+.marketing-seafloor-bubbles {
+  opacity: 0.48;
 }
 
 .marketing-seafloor-crab {
   animation-play-state: paused;
-  filter: drop-shadow(0 0 14px rgba(235, 117, 87, 0.3));
+  filter: saturate(0.74) brightness(0.62)
+    drop-shadow(0 10px 14px rgba(2, 10, 21, 0.42));
+  transform-box: fill-box;
+  transform-origin: center;
   will-change: transform;
 }
 
 .marketing-seafloor-crab-a {
-  animation: marketing-crab-across 34s linear infinite;
+  animation: marketing-crab-patrol-a 18s ease-in-out infinite;
 }
 
 .marketing-seafloor-crab-b {
-  animation: marketing-crab-back 39s -13s linear infinite;
+  animation: marketing-crab-patrol-b 22s -7s ease-in-out infinite;
 }
 
-.marketing-seafloor-visible .marketing-seafloor-crab {
+.marketing-crab-facing {
+  animation: marketing-crab-step 1.2s ease-in-out infinite alternate;
+  animation-play-state: paused;
+  transform-box: fill-box;
+  transform-origin: center bottom;
+  will-change: transform;
+}
+
+.marketing-seafloor-visible .marketing-seafloor-crab,
+.marketing-seafloor-visible .marketing-crab-facing,
+.marketing-seafloor-visible .marketing-seafloor-bubbles .marketing-bubble,
+.marketing-seafloor-visible .marketing-seafloor-kelp {
   animation-play-state: running;
 }
 
-@keyframes marketing-crab-across {
-  from {
-    transform: translateX(-130px);
+@keyframes marketing-crab-patrol-a {
+  0%,
+  8% {
+    transform: translateX(150px);
   }
 
-  to {
-    transform: translateX(1730px);
+  45%,
+  55% {
+    transform: translateX(610px);
+  }
+
+  92%,
+  100% {
+    transform: translateX(150px);
   }
 }
 
-@keyframes marketing-crab-back {
+@keyframes marketing-crab-patrol-b {
+  0%,
+  10% {
+    transform: translateX(1080px);
+  }
+
+  44%,
+  56% {
+    transform: translateX(1370px);
+  }
+
+  90%,
+  100% {
+    transform: translateX(1080px);
+  }
+}
+
+@keyframes marketing-crab-step {
   from {
-    transform: translateX(1730px);
+    transform: translateY(0) rotate(-0.5deg);
   }
 
   to {
-    transform: translateX(-130px);
+    transform: translateY(-3px) rotate(0.5deg);
   }
 }
 
@@ -5163,6 +5396,11 @@ footer > div {
     height: 104% !important;
   }
 
+  .marketing-hero-boat {
+    opacity: calc(0.62 - (var(--marketing-sun-progress) * 0.12));
+    transform: translate(-120px, 38px) scale(0.72);
+  }
+
   .marketing-nav {
     top: max(0.7rem, var(--safe-area-top));
     right: max(0.7rem, var(--safe-area-right));
@@ -5279,11 +5517,21 @@ footer > div {
     transform-origin: left center;
   }
 
-  .marketing-depth-cliff,
+  .marketing-depth-wildlife {
+    transform: translateX(-120px) scale(0.84);
+    transform-box: fill-box;
+    transform-origin: center;
+  }
+
   .marketing-depth-helmet {
     transform: translateX(-270px);
     transform-box: fill-box;
     transform-origin: center;
+  }
+
+  .marketing-kelp-cluster-b,
+  .marketing-kelp-cluster-c {
+    opacity: 0.42;
   }
 
   .marketing-product {
@@ -5296,7 +5544,7 @@ footer > div {
     min-height: 640px;
     padding: max(1rem, var(--safe-area-top)) 0
       max(0.75rem, var(--safe-area-bottom));
-    opacity: clamp(0, calc((var(--marketing-wash-progress) - 0.24) * 12.5), 1);
+    opacity: var(--marketing-product-opacity);
   }
 
   .marketing-product > header {
@@ -5516,6 +5764,7 @@ footer > div {
 
   .marketing-art-frame,
   .marketing-coast-art,
+  .marketing-hero-boat,
   .marketing-art-sun,
   .marketing-hero-copy,
   .marketing-window-callout,
@@ -5533,19 +5782,21 @@ footer > div {
   .marketing-diver-bubbles,
   .marketing-spearfisher,
   .marketing-depth-wildlife,
-  .marketing-depth-whale-glide,
-  .marketing-depth-whale,
+  .marketing-depth-shark-glide,
+  .marketing-depth-shark,
+  .marketing-kelp-cluster,
   .marketing-depth-squid-pair,
   .marketing-depth-helmet,
-  .marketing-helmet-bubbles,
+  .marketing-helmet-fish,
   .marketing-depth-angler-pair,
   .marketing-depth-angler,
-  .marketing-depth-cliff,
-  .marketing-depth-cliff-seaweed,
   .marketing-wash-surface,
   .marketing-product,
   .marketing-model-features li,
-  .marketing-seafloor-kelp-back {
+  .marketing-bubble,
+  .marketing-seafloor-kelp-back,
+  .marketing-seafloor-kelp,
+  .marketing-crab-facing {
     animation: none !important;
     transition: none !important;
     transform: none !important;
@@ -5559,16 +5810,20 @@ footer > div {
     opacity: 0.64;
   }
 
+  .marketing-helmet-fish {
+    opacity: 0.74;
+  }
+
   .marketing-seafloor-crab {
     animation: none !important;
   }
 
   .marketing-seafloor-crab-a {
-    transform: translateX(205px);
+    transform: translateX(430px);
   }
 
   .marketing-seafloor-crab-b {
-    transform: translateX(1375px);
+    transform: translateX(1000px);
   }
 
   .marketing-proof-grid article:hover {
