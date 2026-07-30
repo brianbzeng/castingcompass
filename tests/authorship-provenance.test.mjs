@@ -58,10 +58,19 @@ test("the committed public-safe provenance report is deterministic and productio
   const checked = verifyProject(root, { reportMode: "check" });
   const rebuilt = verifyProject(root, { reportMode: "none" });
   assert.deepEqual(checked, rebuilt);
-  assert.equal(checked.visualAssetCount, 27);
+  assert.equal(checked.visualAssetCount, 36);
   assert.equal(checked.thirdPartyRecordCount, 7);
-  assert.equal(checked.candidateReviewRequiredRecordCount, 2);
+  assert.equal(checked.candidateReviewRequiredRecordCount, 4);
   assert.deepEqual(checked.candidateReviewRequiredPaths, [
+    "public/marketing/actors/boat-fisherman.webp",
+    "public/marketing/actors/diving-helmet.webp",
+    "public/marketing/actors/foreground-kelp.webp",
+    "public/marketing/actors/helmet-fish.webp",
+    "public/marketing/actors/seafloor-compass.webp",
+    "public/marketing/actors/seafloor-crab.webp",
+    "public/marketing/actors/shark.webp",
+    "public/marketing/painterly-shoreline.webp",
+    "public/marketing/painterly-water-column.webp",
     "public/marketing/silhouettes/angler-left.webp",
     "public/marketing/silhouettes/angler-right.webp",
     "public/marketing/silhouettes/cliff-seaweed.webp",
@@ -87,63 +96,103 @@ test("the strict schema and private-data boundary reject extra or sensitive reco
     const register = readJson(project, "governance/authorship-provenance.json");
     register.records[0].contact_email = "owner@example.invalid";
     writeJson(project, "governance/authorship-provenance.json", register);
-    assert.throws(() => verifyProject(project, { reportMode: "none" }), /schema validation failed/u);
+    assert.throws(
+      () => verifyProject(project, { reportMode: "none" }),
+      /schema validation failed/u,
+    );
   });
 
   withFixture((project) => {
     const register = readJson(project, "governance/authorship-provenance.json");
     register.records[0].evidence_refs.push("owner@example.invalid");
     writeJson(project, "governance/authorship-provenance.json", register);
-    assert.throws(() => verifyProject(project, { reportMode: "none" }), /forbidden private or secret-shaped data/u);
+    assert.throws(
+      () => verifyProject(project, { reportMode: "none" }),
+      /forbidden private or secret-shaped data/u,
+    );
   });
 });
 
 test("asset discovery fails closed on an unregistered file, symlink, or hash drift", () => {
   withFixture((project) => {
-    writeFileSync(join(project, "public/unregistered.png"), "not-a-reviewed-image");
-    assert.throws(() => verifyProject(project, { reportMode: "none" }), /Visual asset inventory differs/u);
+    writeFileSync(
+      join(project, "public/unregistered.png"),
+      "not-a-reviewed-image",
+    );
+    assert.throws(
+      () => verifyProject(project, { reportMode: "none" }),
+      /Visual asset inventory differs/u,
+    );
   });
 
   withFixture((project) => {
     symlinkSync("favicon.svg", join(project, "public/alias.svg"));
-    assert.throws(() => verifyProject(project, { reportMode: "none" }), /contains a symlink/u);
+    assert.throws(
+      () => verifyProject(project, { reportMode: "none" }),
+      /contains a symlink/u,
+    );
   });
 
   withFixture((project) => {
     writeFileSync(join(project, "public/favicon.svg"), "\n", { flag: "a" });
-    assert.throws(() => verifyProject(project, { reportMode: "none" }), /does not match its registered SHA-256/u);
+    assert.throws(
+      () => verifyProject(project, { reportMode: "none" }),
+      /does not match its registered SHA-256/u,
+    );
   });
 });
 
 test("new legacy exceptions, candidate overclaims, duplicate paths, and license drift are rejected", () => {
   withFixture((project) => {
     const register = readJson(project, "governance/authorship-provenance.json");
-    register.records.find((record) => record.id === "structure-eelgrass").release_state = "legacy_review_required";
+    register.records.find(
+      (record) => record.id === "structure-eelgrass",
+    ).release_state = "legacy_review_required";
     writeJson(project, "governance/authorship-provenance.json", register);
-    assert.throws(() => verifyProject(project, { reportMode: "none" }), /cannot use a legacy release state/u);
+    assert.throws(
+      () => verifyProject(project, { reportMode: "none" }),
+      /cannot use a legacy release state/u,
+    );
   });
 
   withFixture((project) => {
     const register = readJson(project, "governance/authorship-provenance.json");
-    register.records.find((record) => record.id === "marketing-spearfishers-pair").release_state =
-      "approved_existing_use";
+    register.records.find(
+      (record) => record.id === "marketing-spearfishers-pair",
+    ).release_state = "approved_existing_use";
     writeJson(project, "governance/authorship-provenance.json", register);
-    assert.throws(() => verifyProject(project, { reportMode: "none" }), /must remain candidate review required/u);
+    assert.throws(
+      () => verifyProject(project, { reportMode: "none" }),
+      /must remain candidate review required/u,
+    );
   });
 
   withFixture((project) => {
     const register = readJson(project, "governance/authorship-provenance.json");
-    const duplicate = structuredClone(register.records.find((record) => record.id === "brand-raster-mark").paths[0]);
-    register.records.find((record) => record.id === "brand-vector-marks").paths.unshift(duplicate);
+    const duplicate = structuredClone(
+      register.records.find((record) => record.id === "brand-raster-mark")
+        .paths[0],
+    );
+    register.records
+      .find((record) => record.id === "brand-vector-marks")
+      .paths.unshift(duplicate);
     writeJson(project, "governance/authorship-provenance.json", register);
-    assert.throws(() => verifyProject(project, { reportMode: "none" }), /registered more than once/u);
+    assert.throws(
+      () => verifyProject(project, { reportMode: "none" }),
+      /registered more than once/u,
+    );
   });
 
   withFixture((project) => {
     const register = readJson(project, "governance/authorship-provenance.json");
-    register.records.find((record) => record.id === "structure-sandbar").license_url = "https://example.invalid/license";
+    register.records.find(
+      (record) => record.id === "structure-sandbar",
+    ).license_url = "https://example.invalid/license";
     writeJson(project, "governance/authorship-provenance.json", register);
-    assert.throws(() => verifyProject(project, { reportMode: "none" }), /license URL is not canonical/u);
+    assert.throws(
+      () => verifyProject(project, { reportMode: "none" }),
+      /license URL is not canonical/u,
+    );
   });
 });
 
@@ -152,12 +201,21 @@ test("live and documented attribution cannot drift from registered source eviden
     const images = readJson(project, "app/data/structure-images.json");
     images["sand-bar"].credit = "Wrong creator";
     writeJson(project, "app/data/structure-images.json", images);
-    assert.throws(() => verifyProject(project, { reportMode: "none" }), /credit drifted from the register/u);
+    assert.throws(
+      () => verifyProject(project, { reportMode: "none" }),
+      /credit drifted from the register/u,
+    );
   });
 
   withFixture((project) => {
     const audit = join(project, "docs/structure-image-audit.md");
-    writeFileSync(audit, readFileSync(audit, "utf8").replace("Frank Kovalchek", "Unknown creator"));
-    assert.throws(() => verifyProject(project, { reportMode: "none" }), /documentation is missing structure-sandbar evidence/u);
+    writeFileSync(
+      audit,
+      readFileSync(audit, "utf8").replace("Frank Kovalchek", "Unknown creator"),
+    );
+    assert.throws(
+      () => verifyProject(project, { reportMode: "none" }),
+      /documentation is missing structure-sandbar evidence/u,
+    );
   });
 });

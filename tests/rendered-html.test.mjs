@@ -30,7 +30,10 @@ test("server-renders the CastingCompass product shell", async () => {
   assert.match(response.headers.get("content-type") ?? "", /^text\/html\b/i);
 
   const html = await response.text();
-  assert.match(html, /<title>California coastal fishing planner · CastingCompass<\/title>/i);
+  assert.match(
+    html,
+    /<title>California coastal fishing planner · CastingCompass<\/title>/i,
+  );
   assert.match(html, /Find the water/);
   assert.match(html, /California halibut/);
   assert.match(html, /Pick the hours you have/);
@@ -40,10 +43,16 @@ test("server-renders the CastingCompass product shell", async () => {
   assert.match(html, /Surfperch/);
   assert.match(html, /Jacksmelt/);
   assert.match(html, /Loading the current forecast/i);
-  assert.match(html, /Wait for the fishing-location catalog and forecast snapshot to load/i);
+  assert.match(
+    html,
+    /Wait for the fishing-location catalog and forecast snapshot to load/i,
+  );
   assert.doesNotMatch(html, /class="score-orbit|class="site-card/i);
   assert.match(html, /CDFW Bay regulations/);
-  assert.doesNotMatch(html, /codex-preview|Your site is taking shape|SkeletonPreview/i);
+  assert.doesNotMatch(
+    html,
+    /codex-preview|Your site is taking shape|SkeletonPreview/i,
+  );
 });
 
 test("server-renders the marketing homepage with honest product routes and an unavailable TestFlight action", async () => {
@@ -52,23 +61,35 @@ test("server-renders the marketing homepage with honest product routes and an un
   assert.match(response.headers.get("content-type") ?? "", /^text\/html\b/i);
 
   const html = await response.text();
-  assert.match(html, /<title>CastingCompass — Read the coast before you cast<\/title>/i);
+  assert.match(
+    html,
+    /<title>CastingCompass — Read the coast before you cast<\/title>/i,
+  );
   assert.match(html, /Give every cast/);
   assert.match(html, /One target/);
   assert.match(html, /single-species relative rankings/i);
   assert.match(html, /cannot promise a bite/i);
   assert.match(html, /Read every/);
-  assert.match(html, /marketing-depth-whale/);
+  assert.match(html, /marketing-depth-shark/);
   assert.match(html, /marketing-depth-squid-pair/);
-  assert.match(html, /marketing-depth-cliff/);
   assert.match(html, /\/marketing\/silhouettes\/spearfisher-near\.webp/);
   assert.match(html, /\/marketing\/silhouettes\/spearfisher-far\.webp/);
-  assert.match(html, /\/marketing\/silhouettes\/whale\.webp/);
+  assert.match(html, /\/marketing\/actors\/boat-fisherman\.webp/);
+  assert.match(html, /\/marketing\/actors\/shark\.webp/);
+  assert.match(html, /\/marketing\/actors\/diving-helmet\.webp/);
+  assert.match(html, /\/marketing\/actors\/helmet-fish\.webp/);
+  assert.match(html, /\/marketing\/actors\/foreground-kelp\.webp/);
+  assert.match(html, /\/marketing\/actors\/seafloor-compass\.webp/);
+  assert.match(html, /\/marketing\/actors\/seafloor-crab\.webp/);
   assert.match(html, /\/marketing\/silhouettes\/seabed-full\.webp/);
   assert.match(html, /marketing-seafloor-crab-a/);
   assert.match(html, /marketing-seafloor-crab-b/);
+  assert.doesNotMatch(html, /marketing-depth-whale|marketing-depth-cliff/);
   assert.doesNotMatch(html, /marketing-cast-rod/);
-  assert.doesNotMatch(html, /marketing-depth-volcanic-field|marketing-seafloor-vent/);
+  assert.doesNotMatch(
+    html,
+    /marketing-depth-volcanic-field|marketing-seafloor-vent/,
+  );
   assert.match(html, /href="\/forecast"/);
   assert.match(html, /href="\/community"/);
   assert.match(html, /aria-label="TestFlight download — coming soon"/);
@@ -79,7 +100,10 @@ test("server-renders the marketing homepage with honest product routes and an un
 
 test("ships install and offline assets", async () => {
   const [manifest, serviceWorker, headerIcon] = await Promise.all([
-    readFile(new URL("../public/manifest.webmanifest", import.meta.url), "utf8"),
+    readFile(
+      new URL("../public/manifest.webmanifest", import.meta.url),
+      "utf8",
+    ),
     readFile(new URL("../public/sw.js", import.meta.url), "utf8"),
     stat(new URL("../public/icons/icon-192.png", import.meta.url)),
     access(new URL("../public/icons/icon-192.png", import.meta.url)),
@@ -87,7 +111,10 @@ test("ships install and offline assets", async () => {
   ]);
 
   const parsed = JSON.parse(manifest);
-  assert.equal(parsed.name, "CastingCompass — California Coastal Fishing Planner");
+  assert.equal(
+    parsed.name,
+    "CastingCompass — California Coastal Fishing Planner",
+  );
   assert.equal(parsed.display, "standalone");
   assert.equal(parsed.id, "/forecast");
   assert.equal(parsed.start_url, "/forecast");
@@ -97,18 +124,28 @@ test("ships install and offline assets", async () => {
   assert.match(serviceWorker, /\/topography-contours-v2\.webp/);
   assert.match(serviceWorker, /"\/forecast"/);
   assert.match(serviceWorker, /caches\.match/);
-  assert.ok(headerIcon.size < 50_000, `header icon is ${headerIcon.size} bytes`);
+  assert.ok(
+    headerIcon.size < 50_000,
+    `header icon is ${headerIcon.size} bytes`,
+  );
 });
 
 test("avoids third-party font requests and oversized header-icon references", async () => {
   const response = await render();
   const html = await response.text();
-  const assetNames = await readdir(new URL("../dist/client/assets/", import.meta.url));
+  const assetNames = await readdir(
+    new URL("../dist/client/assets/", import.meta.url),
+  );
   const builtCss = (
     await Promise.all(
       assetNames
         .filter((name) => name.endsWith(".css"))
-        .map((name) => readFile(new URL(`../dist/client/assets/${name}`, import.meta.url), "utf8")),
+        .map((name) =>
+          readFile(
+            new URL(`../dist/client/assets/${name}`, import.meta.url),
+            "utf8",
+          ),
+        ),
     )
   ).join("\n");
   const [layout, sourceCss] = await Promise.all([
@@ -118,7 +155,10 @@ test("avoids third-party font requests and oversized header-icon references", as
 
   assert.doesNotMatch(html, /fonts\.(?:googleapis|gstatic)\.com/i);
   assert.doesNotMatch(html, /<link[^>]+rel="preload"[^>]+as="font"/i);
-  assert.doesNotMatch(builtCss, /fonts\.(?:googleapis|gstatic)\.com|@font-face/i);
+  assert.doesNotMatch(
+    builtCss,
+    /fonts\.(?:googleapis|gstatic)\.com|@font-face/i,
+  );
   assert.doesNotMatch(layout, /next\/font\/google|castingcompass-icon\.png/);
   assert.match(layout, /\/icons\/icon-192\.png/);
   assert.match(layout, /\/icons\/icon-512\.png/);
@@ -214,11 +254,17 @@ test("uses a marine basemap with map-native clustered points and deterministic r
 
 test("keeps maps and source navigation immediately reachable", async () => {
   const [app, css] = await Promise.all([
-    readFile(new URL("../app/components/OpportunityApp.tsx", import.meta.url), "utf8"),
+    readFile(
+      new URL("../app/components/OpportunityApp.tsx", import.meta.url),
+      "utf8",
+    ),
     readFile(new URL("../app/globals.css", import.meta.url), "utf8"),
   ]);
 
-  assert.ok(app.indexOf('className="place-media-block"') < app.indexOf('className="detail-score-block"'));
+  assert.ok(
+    app.indexOf('className="place-media-block"') <
+      app.indexOf('className="detail-score-block"'),
+  );
   assert.match(app, /scrollToSection\("sources"\)/);
   assert.match(app, /role="dialog"/);
   assert.match(app, /aria-modal="true"/);
@@ -231,7 +277,10 @@ test("keeps maps and source navigation immediately reachable", async () => {
 
 test("defers the interactive map and keeps the offline snapshot lightweight", async () => {
   const [app, css, snapshot] = await Promise.all([
-    readFile(new URL("../app/components/OpportunityApp.tsx", import.meta.url), "utf8"),
+    readFile(
+      new URL("../app/components/OpportunityApp.tsx", import.meta.url),
+      "utf8",
+    ),
     readFile(new URL("../app/globals.css", import.meta.url), "utf8"),
     readFile(new URL("../public/data/opportunities.json", import.meta.url)),
   ]);
@@ -241,7 +290,10 @@ test("defers the interactive map and keeps the offline snapshot lightweight", as
   assert.match(app, /Open interactive map/);
   const transferSize = gzipSync(snapshot).byteLength;
   const windowCount = JSON.parse(snapshot.toString("utf8")).windows.length;
-  assert.ok(transferSize < 210_000, `compressed forecast snapshot is ${transferSize} bytes`);
+  assert.ok(
+    transferSize < 210_000,
+    `compressed forecast snapshot is ${transferSize} bytes`,
+  );
   assert.ok(
     transferSize / windowCount < 100,
     `compressed forecast snapshot is ${(transferSize / windowCount).toFixed(1)} bytes per window`,
