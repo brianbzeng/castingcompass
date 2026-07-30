@@ -62,6 +62,9 @@ CREATE TABLE `community_comments` (
 CREATE INDEX `community_comments_post_feed_idx`
   ON `community_comments` (`post_id`, `moderation_status`, `created_at`, `id`);
 --> statement-breakpoint
+CREATE INDEX `community_comments_owner_idx`
+  ON `community_comments` (`user_id`, `created_at` DESC);
+--> statement-breakpoint
 CREATE TABLE `community_blocks` (
   `blocker_user_id` text NOT NULL,
   `blocked_user_id` text NOT NULL,
@@ -72,6 +75,9 @@ CREATE TABLE `community_blocks` (
   CONSTRAINT `community_blocks_self_check`
     CHECK (`blocker_user_id` != `blocked_user_id`)
 );
+--> statement-breakpoint
+CREATE INDEX `community_blocks_blocked_idx`
+  ON `community_blocks` (`blocked_user_id`);
 --> statement-breakpoint
 CREATE TABLE `community_reports` (
   `id` text PRIMARY KEY NOT NULL,
