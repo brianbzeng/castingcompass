@@ -55,7 +55,7 @@ test("server-renders the CastingCompass product shell", async () => {
   );
 });
 
-test("server-renders the marketing homepage with honest product routes and an unavailable TestFlight action", async () => {
+test("server-renders the approved marketing homepage with honest product routes and sample content disclosure", async () => {
   const response = await render();
   assert.equal(response.status, 200);
   assert.match(response.headers.get("content-type") ?? "", /^text\/html\b/i);
@@ -65,37 +65,31 @@ test("server-renders the marketing homepage with honest product routes and an un
     html,
     /<title>CastingCompass — Read the coast before you cast<\/title>/i,
   );
-  assert.match(html, /Give every cast/);
-  assert.match(html, /One target/);
-  assert.match(html, /single-species relative rankings/i);
-  assert.match(html, /cannot promise a bite/i);
-  assert.match(html, /Read every/);
-  assert.match(html, /marketing-depth-shark/);
-  assert.match(html, /marketing-depth-squid-pair/);
-  assert.match(html, /\/marketing\/silhouettes\/spearfisher-near\.webp/);
-  assert.match(html, /\/marketing\/silhouettes\/spearfisher-far\.webp/);
-  assert.match(html, /\/marketing\/actors\/boat-fisherman\.webp/);
-  assert.match(html, /\/marketing\/actors\/shark\.webp/);
-  assert.match(html, /\/marketing\/actors\/diving-helmet\.webp/);
-  assert.match(html, /\/marketing\/actors\/helmet-fish\.webp/);
+  assert.match(html, /Give every/);
+  assert.match(html, /cast a compass\./);
+  assert.match(html, /Find best spot near you/);
+  assert.match(html, /No login required to explore/);
+  assert.match(html, /Everything you need for/);
+  assert.match(html, /a successful day on the water\./);
+  assert.match(html, /Recent Catch Reports/);
+  assert.match(html, /Sample community preview/);
+  assert.match(html, /Stay in the know/);
+  assert.match(html, /\/marketing\/approved\/boat-fisherman\.webp/);
+  assert.match(html, /\/marketing\/approved\/striped-bass\.webp/);
   assert.match(html, /\/marketing\/actors\/foreground-kelp\.webp/);
-  assert.match(html, /\/marketing\/actors\/seafloor-compass\.webp/);
-  assert.match(html, /\/marketing\/actors\/seafloor-crab\.webp/);
-  assert.match(html, /\/marketing\/silhouettes\/seabed-full\.webp/);
-  assert.match(html, /marketing-seafloor-crab-a/);
-  assert.match(html, /marketing-seafloor-crab-b/);
-  assert.doesNotMatch(html, /marketing-depth-whale|marketing-depth-cliff/);
-  assert.doesNotMatch(html, /marketing-cast-rod/);
-  assert.doesNotMatch(
-    html,
-    /marketing-depth-volcanic-field|marketing-seafloor-vent/,
-  );
+  assert.match(html, /\/marketing\/approved\/seafloor-anchor\.webp/);
+  assert.match(html, /\/marketing\/approved\/seafloor-starfish\.webp/);
+  assert.match(html, /cc-diver cc-diver-a/);
+  assert.match(html, /cc-diver cc-diver-b/);
+  assert.match(html, /cc-crab cc-crab-a/);
+  assert.match(html, /cc-crab cc-crab-b/);
   assert.match(html, /href="\/forecast"/);
   assert.match(html, /href="\/community"/);
-  assert.match(html, /aria-label="TestFlight download — coming soon"/);
+  assert.match(html, /aria-label="Example fishing forecast"/);
+  assert.match(html, /aria-label="5 out of 5 stars"/);
   assert.match(html, /aria-disabled="true"/);
-  assert.doesNotMatch(html, /disabled=""/);
-  assert.doesNotMatch(html, /apps\.apple\.com|testflight\.apple\.com/i);
+  assert.doesNotMatch(html, /TestFlight|apps\.apple\.com|testflight\.apple\.com/i);
+  assert.doesNotMatch(html, /shark/i);
 });
 
 test("ships install and offline assets", async () => {

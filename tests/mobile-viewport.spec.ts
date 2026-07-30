@@ -680,152 +680,92 @@ test("primary controls stay inside common phone viewports", async ({ page }) => 
   }
 });
 
-test("marketing homepage routes to the web planner and keeps TestFlight honestly unavailable", async ({ page }) => {
+test("marketing homepage recreates the approved coastal journey with responsive, reversible motion", async ({ page }) => {
   test.setTimeout(60_000);
   await page.goto("/");
   await expect(page.getByRole("heading", { name: "Give every cast a compass." })).toBeVisible();
-  await expect(page.getByRole("link", { name: "Open web planner" })).toHaveAttribute("href", "/forecast");
-  await expect(page.getByRole("link", { name: "Browse place communities" })).toHaveAttribute("href", "/community");
-  await expect(page.getByRole("heading", { name: "Read every signal together." })).toBeVisible();
-  await expect(page.getByRole("list", { name: "Signals used by the relative ranking model" }).getByRole("listitem")).toHaveCount(6);
-  await expect(page.locator(".marketing-depth-spearfishers")).toHaveCount(1);
-  await expect(page.locator(".marketing-spearfisher")).toHaveCount(2);
-  await expect(page.locator('.marketing-depth-spearfishers image[href="/marketing/silhouettes/spearfisher-near.webp"]')).toHaveCount(1);
-  await expect(page.locator('.marketing-depth-spearfishers image[href="/marketing/silhouettes/spearfisher-far.webp"]')).toHaveCount(1);
-  await expect(page.locator('image[href="/marketing/spearfishers-pair.webp"]')).toHaveCount(0);
-  await expect(page.locator(".marketing-depth-meter")).toHaveText("");
-  await expect(page.locator(".marketing-depth-whale")).toHaveCount(0);
-  await expect(page.locator(".marketing-depth-shark")).toHaveCount(1);
-  await expect(page.locator('.marketing-depth-shark[href="/marketing/actors/shark.webp"]')).toHaveCount(1);
-  await expect(page.locator(".marketing-depth-squid-pair > image")).toHaveCount(2);
-  await expect(page.locator(".marketing-depth-helmet")).toHaveCount(1);
-  await expect(page.locator('.marketing-depth-helmet-shell[href="/marketing/actors/diving-helmet.webp"]')).toHaveCount(1);
-  await expect(page.locator('.marketing-helmet-fish[href="/marketing/actors/helmet-fish.webp"]')).toHaveCount(1);
-  await expect(page.locator(".marketing-depth-angler")).toHaveCount(2);
-  await expect(page.locator(".marketing-depth-cliff")).toHaveCount(0);
-  await expect(page.locator(".marketing-depth-fish-school > image")).toHaveCount(4);
-  await expect(page.locator('.marketing-hero-boat[href="/marketing/actors/boat-fisherman.webp"]')).toHaveCount(1);
-  await expect(page.locator('.marketing-kelp-cluster[href="/marketing/actors/foreground-kelp.webp"]')).toHaveCount(3);
-  await expect(page.locator('image.marketing-painterly-shoreline[href="/marketing/painterly-shoreline.webp"]')).toHaveCount(1);
-  await expect(page.locator('image.marketing-painterly-water-column[href="/marketing/painterly-water-column.webp"]')).toHaveCount(1);
-  await expect(page.locator(".marketing-seafloor-art")).toHaveCount(1);
-  await expect(page.locator('.marketing-seafloor-plate[href="/marketing/painterly-water-column.webp"]')).toHaveCount(1);
-  await expect(page.locator('.marketing-depth-seabed-approach image[href="/marketing/silhouettes/seabed-full.webp"]')).toHaveCount(1);
-  await expect(page.locator('.marketing-seafloor-art image[href="/marketing/silhouettes/seabed-full.webp"]')).toHaveCount(1);
-  await expect(page.locator(".marketing-depth-volcanic-field, .marketing-seafloor-vent")).toHaveCount(0);
-  await expect(page.locator(".marketing-seafloor-crab")).toHaveCount(2);
-  await expect(page.locator('.marketing-crab-facing[href="/marketing/actors/seafloor-crab.webp"]')).toHaveCount(2);
-  await expect(page.locator('.marketing-seafloor-compass[href="/marketing/actors/seafloor-compass.webp"]')).toHaveCount(1);
-  await expect(page.locator(".marketing-bubble")).toHaveCount(25);
-  await expect(page.locator(".marketing-cast-rod")).toHaveCount(0);
-  await expect(page.locator(".marketing-rod-loader")).toHaveCount(0);
-  await expect(page.locator(".marketing-sunset-banner")).toHaveCount(0);
-  await expect(page.getByRole("heading", { name: "Pick your target" })).toBeVisible();
-  await expect(page.getByText("The whole plan updates around that fish.")).toBeVisible();
-  await expect(page.getByRole("heading", { name: "See the whole water column." })).toBeVisible();
+  await expect(page.getByRole("link", { name: "Find best spot near you" })).toHaveAttribute("href", "/forecast");
+  await expect(page.getByRole("link", { name: "Community", exact: true })).toHaveAttribute("href", "/community");
+  await expect(page.getByRole("complementary", { name: "Example fishing forecast" })).toContainText("Good bite window");
+  await expect(page.getByRole("heading", { name: "Everything you need for a successful day on the water." })).toBeVisible();
+  await expect(page.locator(".cc-feature-grid article")).toHaveCount(4);
+  await expect(page.locator(".cc-report-grid article")).toHaveCount(4);
+  await expect(page.getByText("Sample community preview")).toBeVisible();
+  await expect(page.locator(".cc-diver")).toHaveCount(2);
+  await expect(page.locator(".cc-striped-bass")).toHaveCount(2);
+  await expect(page.locator(".cc-crab")).toHaveCount(2);
+  await expect(page.locator(".cc-bubble-sprite")).toHaveCount(3);
+  await expect(page.locator(".cc-helmet-sprite")).toHaveCount(1);
+  await expect(page.locator(".cc-boat-scene .cc-cast-line")).toHaveCount(1);
+  await expect(page.locator(".cc-boat-scene .cc-bobber")).toHaveCount(1);
+  await expect(page.locator("body")).not.toContainText("TestFlight");
+  await expect(page.locator("body")).not.toContainText("shark");
+  await expect(page.getByRole("button", { name: "Subscribe" })).toHaveAttribute("aria-disabled", "true");
 
-  const testFlight = page.getByRole("button", {
-    name: "TestFlight download — coming soon",
+  const initialSun = await page.locator(".cc-landing").evaluate((element) => {
+    const styles = getComputedStyle(element);
+    return {
+      progress: Number.parseFloat(styles.getPropertyValue("--cc-scroll")),
+      sunX: Number.parseFloat(styles.getPropertyValue("--cc-sun-x")),
+      sunY: Number.parseFloat(styles.getPropertyValue("--cc-sun-y")),
+    };
   });
-  await expect(testFlight).toHaveAttribute("aria-disabled", "true");
-  await expect(testFlight.locator(".marketing-testflight-wordmark")).toHaveCSS("filter", "none");
-  await testFlight.hover();
-  await expect(testFlight.locator(".marketing-testflight-status")).toHaveCSS("opacity", "1");
-  await expect(testFlight).toContainText("Coming soon");
+  expect(initialSun.progress).toBeCloseTo(0, 2);
+  expect(initialSun.sunX).toBeCloseTo(0, 2);
+  expect(initialSun.sunY).toBeCloseTo(0, 2);
 
-  const signalCardHeights = await page.locator(".marketing-model-features li").evaluateAll((cards) => cards.map((card) => Math.round(card.getBoundingClientRect().height)));
-  expect(Math.max(...signalCardHeights) - Math.min(...signalCardHeights)).toBeLessThanOrEqual(1);
-
-  const heroTimeline = async (progress: number) => {
-    await page.evaluate((targetProgress) => {
-      const hero = document.querySelector<HTMLElement>(".marketing-hero-scroll");
-      if (!hero) throw new Error("Missing hero scroll section");
-      const travel = Math.max(hero.offsetHeight - window.innerHeight, 1);
-      window.scrollTo({
-        top: hero.offsetTop + travel * targetProgress,
-        left: 0,
-        behavior: "instant",
-      });
-    }, progress);
-    await page.waitForFunction((targetProgress) => {
-      const root = document.querySelector<HTMLElement>(".marketing-home");
-      if (!root) return false;
-      const actual = Number.parseFloat(root.style.getPropertyValue("--marketing-hero-progress"));
-      return Number.isFinite(actual) && Math.abs(actual - targetProgress) < 0.04;
-    }, progress);
-    return page.locator(".marketing-home").evaluate((element) => {
-      const styles = getComputedStyle(element);
-      return {
-        hero: Number.parseFloat(styles.getPropertyValue("--marketing-hero-progress")),
-        surface: Number.parseFloat(styles.getPropertyValue("--marketing-surface-progress")),
-        sun: Number.parseFloat(styles.getPropertyValue("--marketing-sun-progress")),
-        sunY: Number.parseFloat(styles.getPropertyValue("--marketing-sun-orbit-y")),
-      };
-    });
-  };
-
-  const midday = await heroTimeline(0.5);
-  expect(midday.hero).toBeCloseTo(0.5, 1);
-  expect(midday.surface).toBe(0);
-
-  const crossing = await heroTimeline(0.85);
-  expect(crossing.surface).toBeGreaterThan(0.4);
-  expect(crossing.surface).toBeLessThan(0.6);
-
-  const underwater = await heroTimeline(1);
-  expect(underwater.sun).toBeCloseTo(1, 1);
-  expect(underwater.surface).toBeCloseTo(1, 1);
-  expect(underwater.sunY).toBeGreaterThan(350);
-  await expect(page.locator(".marketing-home")).toHaveClass(/marketing-spearfishers-visible/);
-
-  await page.evaluate(() => {
-    const waterColumn = document.querySelector<HTMLElement>(".marketing-wash-scroll");
-    if (!waterColumn) throw new Error("Missing water-column section");
-    const travel = Math.max(waterColumn.offsetHeight - window.innerHeight, 1);
-    window.scrollTo({
-      top: waterColumn.offsetTop + travel * 0.82,
-      left: 0,
-      behavior: "instant",
-    });
+  await page.evaluate(() =>
+    window.scrollTo({ top: window.innerHeight * 0.95, behavior: "instant" }),
+  );
+  await page.waitForFunction(() => {
+    const root = document.querySelector<HTMLElement>(".cc-landing");
+    return Number.parseFloat(root?.style.getPropertyValue("--cc-scroll") ?? "0") > 0.98;
   });
-  await page.locator(".marketing-proof").scrollIntoViewIfNeeded();
-  await expect(page.locator(".marketing-home")).toHaveClass(/marketing-seafloor-visible/);
-  const crabAnimations = await page.locator(".marketing-seafloor-crab").evaluateAll((crabs) => {
-    return crabs.map((crab) => {
-      const [animation] = crab.getAnimations();
-      const timing = animation?.effect?.getTiming();
-      return {
-        duration: timing?.duration,
-        iterations: timing?.iterations,
-        playState: animation?.playState,
-      };
-    });
+  const setSun = await page.locator(".cc-landing").evaluate((element) => {
+    const styles = getComputedStyle(element);
+    return {
+      progress: Number.parseFloat(styles.getPropertyValue("--cc-scroll")),
+      sunY: Number.parseFloat(styles.getPropertyValue("--cc-sun-y")),
+    };
   });
-  expect(crabAnimations).toEqual([
-    { duration: 18000, iterations: Infinity, playState: "running" },
-    { duration: 22000, iterations: Infinity, playState: "running" },
-  ]);
+  expect(setSun.progress).toBeCloseTo(1, 2);
+  expect(setSun.sunY).toBeGreaterThan(100);
+
+  await page.locator(".cc-newsletter").scrollIntoViewIfNeeded();
+  await expect(page.locator(".cc-landing")).toHaveClass(/cc-floor-active/);
+  const runningAnimations = await page.locator(".cc-crab-a").evaluate((crab) => {
+    const styles = getComputedStyle(crab);
+    return {
+      names: styles.animationName,
+      iterations: styles.animationIterationCount,
+      playState: styles.animationPlayState,
+    };
+  });
+  expect(runningAnimations.names).toContain("cc-crab-frames");
+  expect(runningAnimations.names).toContain("cc-crab-patrol-a");
+  expect(runningAnimations.iterations).toContain("infinite");
+  expect(runningAnimations.playState).toContain("running");
 
   const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
   expect(overflow).toBeLessThanOrEqual(1);
 
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.goto("/");
-  const motionState = await page.locator(".marketing-home").evaluate(() => {
-    const spear = document.querySelector<SVGGElement>(".marketing-spearfisher-near");
-    const crab = document.querySelector<SVGGElement>(".marketing-seafloor-crab-a");
-    const descent = document.querySelector<SVGElement>(".marketing-ocean-descent-art");
-    if (!spear || !crab || !descent) throw new Error("Missing reduced-motion artwork");
+  const motionState = await page.locator(".cc-landing").evaluate(() => {
+    const diver = document.querySelector<HTMLElement>(".cc-diver-a");
+    const crab = document.querySelector<HTMLElement>(".cc-crab-a");
+    const boat = document.querySelector<HTMLElement>(".cc-boat");
+    if (!diver || !crab || !boat) throw new Error("Missing reduced-motion artwork");
     return {
-      spearTransition: getComputedStyle(spear).transitionDuration,
+      diverAnimation: getComputedStyle(diver).animationName,
       crabAnimation: getComputedStyle(crab).animationName,
-      descentTransform: getComputedStyle(descent).transform,
+      boatAnimation: getComputedStyle(boat).animationName,
     };
   });
   expect(motionState).toEqual({
-    spearTransition: "0s",
+    diverAnimation: "none",
     crabAnimation: "none",
-    descentTransform: "none",
+    boatAnimation: "none",
   });
 });
 

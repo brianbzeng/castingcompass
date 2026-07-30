@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { RegisterServiceWorker } from "./register-service-worker";
 import "./globals.css";
+import "./marketing.css";
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://castingcompass.com"),
