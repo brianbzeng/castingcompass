@@ -2,7 +2,26 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useEffect, useRef, type ReactNode } from "react";
+import {
+  useEffect,
+  useRef,
+  useState,
+  type FormEvent,
+  type ReactNode,
+} from "react";
+import {
+  joinMarketingMailingList,
+  loadApprovedCatchReports,
+  loadMarketingCommunity,
+  loadMarketingOpportunity,
+  requestBrowserLocation,
+  type DataState,
+  type LocationState,
+  type MarketingCatchReport,
+  type MarketingCommunityThread,
+  type MarketingOpportunity,
+} from "./marketing-home-data";
+import { HeroTopographicArt, TopographicLoader } from "./TopographicTransition";
 
 const navItems = [
   ["Home", "/"],
@@ -12,79 +31,38 @@ const navItems = [
   ["Community", "/community"],
 ] as const;
 
-const features = [
+const approachCards = [
   {
-    icon: "pin",
-    title: "Find Top Spots",
-    description:
-      "Discover proven spots near you based on real angler catches and local knowledge.",
+    number: "01",
+    title: "Find top spots",
+    copy: "Compare public shore, pier, beach, and jetty options near you.",
   },
   {
-    icon: "waves",
-    title: "Detailed Forecasts",
-    description:
-      "Get hyperlocal tide, wind, waves, and solunar data you can count on.",
+    number: "02",
+    title: "Read live conditions",
+    copy: "See tide, wind, swell, and source freshness in plain language.",
   },
   {
-    icon: "fish",
-    title: "Species Insights",
-    description:
-      "Target striped bass and more with seasonal patterns, bait tips, and catch reports.",
+    number: "03",
+    title: "Pick one target",
+    copy: "Keep one species in focus and swap targets without rebuilding the trip.",
   },
   {
-    icon: "share",
-    title: "Plan & Share",
-    description:
-      "Save trip, drop pins, and share your success with friends and the community.",
+    number: "04",
+    title: "Check local reports",
+    copy: "Add recent public-place context before you decide whether to make the drive.",
   },
 ] as const;
 
-const catchReports = [
-  {
-    image: "/marketing/approved/catch-report-1.webp",
-    size: "28 in · 7.4 lbs",
-    location: "Maple Point, CA",
-    time: "2h ago",
-    handle: "CoastalMike",
-  },
-  {
-    image: "/marketing/approved/catch-report-2.webp",
-    size: "32 in · 9.1 lbs",
-    location: "Bodega Bay, CA",
-    time: "4h ago",
-    handle: "SaltySarah",
-  },
-  {
-    image: "/marketing/approved/catch-report-3.webp",
-    size: "26 in · 6.2 lbs",
-    location: "Tomales Bay, CA",
-    time: "5h ago",
-    handle: "ReelLocal",
-  },
-  {
-    image: "/marketing/approved/catch-report-4.webp",
-    size: "30 in · 8.3 lbs",
-    location: "Pacifica, CA",
-    time: "7h ago",
-    handle: "PierCurrent",
-  },
-] as const;
+type IntroState = "drawing" | "revealing" | "settled";
+const INTRO_REVEAL_DELAY_MS = 1000;
+const INTRO_FALLBACK_SETTLE_MS = 3400;
 
-function CompassLogo({ compact = false }: { compact?: boolean }) {
-  return (
-    <Link className={`cc-brand${compact ? " cc-brand-compact" : ""}`} href="/">
-      <Image
-        src="/castingcompass-icon.png"
-        width={44}
-        height={44}
-        alt=""
-        priority={!compact}
-        unoptimized
-      />
-      <span>CastingCompass</span>
-    </Link>
-  );
-}
+type CommunityResult = {
+  threads: MarketingCommunityThread[];
+  scope: "local" | "service";
+  siteName?: string;
+};
 
 function Icon({
   children,
@@ -112,6 +90,14 @@ function Icon({
   );
 }
 
+function ArrowIcon() {
+  return (
+    <Icon size={18}>
+      <path d="M5 12h14M14 7l5 5-5 5" />
+    </Icon>
+  );
+}
+
 function SearchIcon() {
   return (
     <Icon>
@@ -121,495 +107,827 @@ function SearchIcon() {
   );
 }
 
-function ArrowIcon() {
+function CompassLogo({ compact = false }: { compact?: boolean }) {
   return (
-    <Icon size={18}>
-      <path d="M5 12h14M14 7l5 5-5 5" />
-    </Icon>
+    <Link className={`cc-brand${compact ? " cc-brand-compact" : ""}`} href="/">
+      <Image
+        src="/castingcompass-icon.png"
+        width={44}
+        height={44}
+        alt=""
+        priority={!compact}
+        unoptimized
+      />
+      <span>CastingCompass</span>
+    </Link>
   );
 }
 
-function PlayIcon() {
-  return (
-    <span className="cc-play-icon" aria-hidden="true">
-      <Icon size={18}>
-        <path d="m9 7 7 5-7 5Z" />
-      </Icon>
-    </span>
-  );
+function formatNumber(value: number | null, suffix: string) {
+  return value === null
+    ? "Not available"
+    : `${Math.round(value * 10) / 10}${suffix}`;
 }
 
-function FeatureIcon({ name }: { name: (typeof features)[number]["icon"] }) {
-  if (name === "pin") {
-    return (
-      <Icon size={34}>
-        <path d="M12 21s6-5.5 6-11a6 6 0 1 0-12 0c0 5.5 6 11 6 11Z" />
-        <circle cx="12" cy="10" r="2" />
-        <path d="M4 18 1.5 20.5M20 18l2.5 2.5" />
-      </Icon>
-    );
-  }
-  if (name === "waves") {
-    return (
-      <Icon size={34}>
-        <path d="M2 8c3-3 5 3 8 0s5 3 8 0 3 0 4 1M2 13c3-3 5 3 8 0s5 3 8 0 3 0 4 1M2 18c3-3 5 3 8 0s5 3 8 0 3 0 4 1" />
-      </Icon>
-    );
-  }
-  if (name === "fish") {
-    return (
-      <Icon size={36}>
-        <path d="M3 12c4-5 9-6 14-2l4-3v10l-4-3c-5 4-10 3-14-2Z" />
-        <circle cx="14" cy="11" r="0.7" fill="currentColor" />
-      </Icon>
-    );
-  }
-  return (
-    <Icon size={35}>
-      <path d="M4 12h11M11 6l6 6-6 6" />
-      <path d="M17 8h3v8h-3" />
-    </Icon>
-  );
+function formatTimestamp(value: string) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "Time unavailable";
+  return new Intl.DateTimeFormat(undefined, {
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  }).format(date);
 }
 
-function ForecastCard() {
-  const metrics = [
-    ["Wind", "8 mph"],
-    ["Waves", "1–2 ft"],
-    ["Pressure", "30.12 in"],
-    ["Tide", "Rising"],
-  ] as const;
+function formatWindow(opportunity: MarketingOpportunity) {
+  const start = new Date(opportunity.start);
+  const end = new Date(opportunity.end);
+  if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) {
+    return "Window time unavailable";
+  }
+  const startText = new Intl.DateTimeFormat(undefined, {
+    weekday: opportunity.timing === "active" ? undefined : "short",
+    hour: "numeric",
+    minute: "2-digit",
+  }).format(start);
+  const endText = new Intl.DateTimeFormat(undefined, {
+    hour: "numeric",
+    minute: "2-digit",
+  }).format(end);
+  return `${startText}–${endText}`;
+}
 
-  return (
-    <aside className="cc-forecast-card" aria-label="Example fishing forecast">
-      <div className="cc-forecast-summary">
-        <span className="cc-weather-sun" aria-hidden="true">
-          <i />
-        </span>
-        <strong>72°F</strong>
-        <span>Sunny</span>
-      </div>
-      <dl className="cc-forecast-metrics">
-        {metrics.map(([label, value]) => (
-          <div key={label}>
-            <dt>{label}</dt>
-            <dd>{value}</dd>
-          </div>
-        ))}
-      </dl>
-      <div className="cc-bite-window">
-        <span aria-hidden="true" />
+function ForecastCard({
+  state,
+  location,
+}: {
+  state: DataState<MarketingOpportunity>;
+  location: LocationState;
+}) {
+  if (state.status === "loading") {
+    return (
+      <aside className="cc-forecast-card cc-data-card-state" aria-live="polite">
+        <span className="cc-data-spinner" aria-hidden="true" />
+        <strong>Finding your best California halibut window</strong>
         <p>
-          Good bite window
-          <strong>9:00 AM - 1:00 PM</strong>
+          {location.status === "loading"
+            ? "Checking location permission…"
+            : "Reading current options…"}
+        </p>
+      </aside>
+    );
+  }
+
+  if (state.status === "error" || state.status === "empty") {
+    return (
+      <aside className="cc-forecast-card cc-data-card-state" aria-live="polite">
+        <strong>Planning window unavailable</strong>
+        <p>{state.message}</p>
+        <Link href="/forecast">
+          Open the full forecast <ArrowIcon />
+        </Link>
+      </aside>
+    );
+  }
+
+  const opportunity = state.data;
+  const timingLabel =
+    opportunity.timing === "active"
+      ? "Best active window"
+      : opportunity.timing === "upcoming"
+        ? "Next strong window"
+        : "Latest available window";
+  const scopeLabel =
+    opportunity.scope === "local"
+      ? "Near your location"
+      : location.status === "denied"
+        ? "Service-wide fallback · location denied"
+        : "Service-wide fallback";
+
+  return (
+    <aside
+      className="cc-forecast-card"
+      aria-label="California halibut planning window"
+    >
+      <header>
+        <div>
+          <span>California halibut</span>
+          <strong>{opportunity.siteName}</strong>
+        </div>
+        <span className="cc-forecast-status">{scopeLabel}</span>
+      </header>
+      <div className="cc-opportunity-score">
+        <div>
+          <span>Opportunity score</span>
+          <strong>
+            {opportunity.score}
+            <small>/100</small>
+          </strong>
+        </div>
+        <p>
+          {timingLabel}
+          <strong>{formatWindow(opportunity)}</strong>
         </p>
       </div>
+      <dl>
+        <div>
+          <dt>Wind</dt>
+          <dd>{formatNumber(opportunity.windMph, " mph")}</dd>
+        </div>
+        <div>
+          <dt>Swell</dt>
+          <dd>{formatNumber(opportunity.swellFeet, " ft")}</dd>
+        </div>
+        <div>
+          <dt>Tide</dt>
+          <dd>{opportunity.tideStage ?? "Not available"}</dd>
+        </div>
+      </dl>
+      <p className="cc-forecast-freshness">
+        Data timestamp:{" "}
+        <time dateTime={opportunity.generatedAt}>
+          {formatTimestamp(opportunity.generatedAt)}
+        </time>
+      </p>
+      <p className="cc-forecast-disclosure">
+        Relative rank among available options—not a catch probability or
+        guarantee.
+      </p>
     </aside>
   );
 }
 
-function Gulls() {
+function Header() {
   return (
-    <svg className="cc-gulls" viewBox="0 0 310 120" aria-hidden="true">
-      <g>
-        <path d="M8 74q12-14 24 0 12-14 24 0" />
-        <path d="M78 42q10-12 20 0 10-12 20 0" />
-        <path d="M142 80q13-15 26 0 13-15 26 0" />
-        <path d="M208 30q10-12 20 0 10-12 20 0" />
-        <path d="M250 68q12-14 24 0 12-14 24 0" />
-      </g>
-    </svg>
+    <header className="cc-navbar">
+      <CompassLogo />
+      <nav aria-label="Primary navigation">
+        {navItems.map(([label, href]) => (
+          <Link
+            key={label}
+            href={href}
+            aria-current={label === "Home" ? "page" : undefined}
+          >
+            {label}
+          </Link>
+        ))}
+      </nav>
+      <div className="cc-nav-actions">
+        <Link
+          className="cc-search-link"
+          href="/forecast"
+          aria-label="Search fishing spots"
+        >
+          <SearchIcon />
+        </Link>
+        <Link className="cc-sign-in" href="/profile">
+          Sign in
+        </Link>
+        <Link className="cc-sign-up" href="/profile">
+          Create account
+        </Link>
+      </div>
+    </header>
   );
 }
 
-function BoatScene() {
+function RecentReports({
+  state,
+}: {
+  state: DataState<MarketingCatchReport[]>;
+}) {
   return (
-    <div className="cc-boat-scene" aria-hidden="true">
-      <Image
-        className="cc-boat"
-        src="/marketing/approved/boat-fisherman.webp"
-        width={1200}
-        height={610}
-        alt=""
-        priority
-      />
-      <svg className="cc-cast-line" viewBox="0 0 540 320">
-        <path d="M275 47C355 58 417 132 454 254" pathLength="1" />
-      </svg>
-      <span className="cc-bobber">
-        <i />
-      </span>
-    </div>
+    <section className="cc-reports" aria-labelledby="cc-reports-title">
+      <header>
+        <h2 id="cc-reports-title">Recent Catch Reports</h2>
+      </header>
+      {state.status === "loading" && (
+        <div className="cc-reports-state" aria-live="polite">
+          <span className="cc-data-spinner" aria-hidden="true" />
+          <p>Checking for approved catch photos…</p>
+        </div>
+      )}
+      {state.status === "error" && (
+        <div className="cc-reports-state" role="status">
+          <strong>Catch reports are temporarily unavailable.</strong>
+          <p>{state.message}</p>
+        </div>
+      )}
+      {state.status === "empty" && (
+        <div className="cc-reports-state" role="status">
+          <strong>No approved catch photos yet.</strong>
+          <p>
+            Reviewed community images will appear here automatically when they
+            are available.
+          </p>
+        </div>
+      )}
+      {state.status === "ready" && (
+        <div className="cc-report-grid">
+          {state.data.map((report) => (
+            <article key={report.id}>
+              <Image
+                src={report.imageUrl}
+                width={720}
+                height={520}
+                sizes="(max-width: 680px) 90vw, (max-width: 1080px) 44vw, 23vw"
+                alt={report.imageAlt}
+                unoptimized
+              />
+              <div>
+                <span className="cc-report-species">{report.species}</span>
+                <strong>{report.measurement}</strong>
+                <p>{report.siteName}</p>
+                <p>
+                  <time dateTime={report.createdAt}>
+                    {formatTimestamp(report.createdAt)}
+                  </time>{" "}
+                  · @{report.handle}
+                </p>
+              </div>
+            </article>
+          ))}
+        </div>
+      )}
+    </section>
   );
 }
 
-function OceanActors() {
+function CommunitySection({ state }: { state: DataState<CommunityResult> }) {
   return (
-    <div className="cc-actor-layer" aria-hidden="true">
-      <div className="cc-sun">
-        <i />
-      </div>
-      <div className="cc-sun-reflection" />
-      <Gulls />
-      <BoatScene />
-
-      <div className="cc-light-shafts" />
-      <div className="cc-kelp-overlay cc-kelp-overlay-a">
-        <Image
-          src="/marketing/actors/foreground-kelp.webp"
-          width={600}
-          height={820}
-          alt=""
-        />
-      </div>
-      <div className="cc-kelp-overlay cc-kelp-overlay-b">
-        <Image
-          src="/marketing/actors/foreground-kelp.webp"
-          width={600}
-          height={820}
-          alt=""
-        />
-      </div>
-
-      <div className="cc-school cc-school-a">
-        <Image
-          src="/marketing/silhouettes/school-right.webp"
-          width={610}
-          height={142}
-          alt=""
-        />
-      </div>
-      <div className="cc-school cc-school-b">
-        <Image
-          src="/marketing/silhouettes/school-left.webp"
-          width={540}
-          height={145}
-          alt=""
-        />
-      </div>
-
-      <div className="cc-diver cc-diver-a" />
-      <div className="cc-diver cc-diver-b" />
-      <div className="cc-bubble-sprite cc-bubbles-a" />
-      <div className="cc-bubble-sprite cc-bubbles-b" />
-      <div className="cc-bubble-sprite cc-bubbles-c" />
-
-      <Image
-        className="cc-striped-bass cc-striped-bass-a"
-        src="/marketing/approved/striped-bass.webp"
-        width={900}
-        height={349}
-        alt=""
-      />
-      <Image
-        className="cc-striped-bass cc-striped-bass-b"
-        src="/marketing/approved/striped-bass.webp"
-        width={900}
-        height={349}
-        alt=""
-      />
-
-      <div className="cc-helmet-sprite" />
-      <Image
-        className="cc-seafloor-anchor"
-        src="/marketing/approved/seafloor-anchor.webp"
-        width={544}
-        height={657}
-        alt=""
-      />
-      <Image
-        className="cc-starfish cc-starfish-a"
-        src="/marketing/approved/seafloor-starfish.webp"
-        width={619}
-        height={636}
-        alt=""
-      />
-      <Image
-        className="cc-starfish cc-starfish-b"
-        src="/marketing/approved/seafloor-starfish.webp"
-        width={619}
-        height={636}
-        alt=""
-      />
-      <div className="cc-crab cc-crab-a" />
-      <div className="cc-crab cc-crab-b" />
-    </div>
+    <section
+      className="cc-community-preview"
+      aria-labelledby="cc-community-title"
+    >
+      <header>
+        <div>
+          <h2 id="cc-community-title">
+            Local threads,
+            <br />
+            before you make the drive.
+          </h2>
+          <p>
+            Read recent public-place notes from anglers nearby. Exact private
+            locations stay private.
+          </p>
+        </div>
+        <Link href="/community">
+          View all reports <ArrowIcon />
+        </Link>
+      </header>
+      {state.status === "loading" && (
+        <div className="cc-community-state" aria-live="polite">
+          <span className="cc-data-spinner" aria-hidden="true" />
+          <p>Looking for nearby public threads…</p>
+        </div>
+      )}
+      {state.status === "error" && (
+        <div className="cc-community-state" role="status">
+          <strong>Community threads are temporarily unavailable.</strong>
+          <p>{state.message}</p>
+        </div>
+      )}
+      {state.status === "empty" && (
+        <div className="cc-community-state" role="status">
+          <strong>No public threads to show yet.</strong>
+          <p>
+            When reviewed local conversations are available, the newest ones
+            will appear here.
+          </p>
+        </div>
+      )}
+      {state.status === "ready" && (
+        <>
+          <p className="cc-community-scope">
+            {state.data.scope === "local"
+              ? `Showing threads near ${state.data.siteName ?? "you"}`
+              : "Showing the newest public threads across CastingCompass"}
+          </p>
+          <div className="cc-thread-grid">
+            {state.data.threads.map((thread) => (
+              <article key={thread.id}>
+                <div>
+                  <span>{thread.siteName}</span>
+                  <time dateTime={thread.createdAt}>
+                    {formatTimestamp(thread.createdAt)}
+                  </time>
+                </div>
+                <h3>{thread.title}</h3>
+                <p>{thread.body}</p>
+                <footer>
+                  @{thread.handle} · {thread.commentCount} comments
+                </footer>
+              </article>
+            ))}
+          </div>
+        </>
+      )}
+    </section>
   );
 }
 
-function SocialIcon({ label, children }: { label: string; children: ReactNode }) {
+function TestFlightSection() {
   return (
-    <a href="#" aria-label={label} onClick={(event) => event.preventDefault()}>
-      {children}
-    </a>
+    <section className="cc-testflight" aria-labelledby="cc-testflight-title">
+      <div>
+        <h2 id="cc-testflight-title">
+          Carry the coast
+          <br />
+          with you.
+        </h2>
+        <p>
+          Keep a California halibut plan, current conditions, and public-place
+          context close at hand. The iPhone preview is a visual mockup while the
+          mobile build is still in development.
+        </p>
+        <button
+          className="cc-testflight-button"
+          type="button"
+          aria-disabled="true"
+        >
+          <span>Download on TestFlight</span>
+          <strong>Coming soon</strong>
+        </button>
+      </div>
+      <figure>
+        <Image
+          src="/marketing/daylight-draft/testflight-phone-mockup-v1.png"
+          width={1536}
+          height={1024}
+          sizes="(max-width: 800px) 92vw, 52vw"
+          alt="Concept mockup of CastingCompass on a phone held in one hand"
+          unoptimized
+        />
+        <figcaption>Concept preview—not a released app screen.</figcaption>
+      </figure>
+    </section>
+  );
+}
+
+function MailingList() {
+  const [email, setEmail] = useState("");
+  const [status, setStatus] = useState<
+    "idle" | "loading" | "success" | "error"
+  >("idle");
+  const [message, setMessage] = useState("");
+
+  async function submit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!email.trim() || status === "loading") return;
+    setStatus("loading");
+    setMessage("");
+    try {
+      const responseMessage = await joinMarketingMailingList(email.trim());
+      setStatus("success");
+      setMessage(responseMessage);
+      setEmail("");
+    } catch (error) {
+      setStatus("error");
+      setMessage(
+        error instanceof Error
+          ? error.message
+          : "Signup is temporarily unavailable.",
+      );
+    }
+  }
+
+  return (
+    <section className="cc-mailing-list" aria-labelledby="cc-mailing-title">
+      <div>
+        <h2 id="cc-mailing-title">Join the coast list.</h2>
+        <p>
+          Occasional product updates, public-place notes, and planning tips. No
+          catch promises.
+        </p>
+      </div>
+      <form onSubmit={submit}>
+        <label htmlFor="cc-mailing-email">Email address</label>
+        <div>
+          <input
+            id="cc-mailing-email"
+            type="email"
+            value={email}
+            onChange={(event) => setEmail(event.target.value)}
+            autoComplete="email"
+            placeholder="you@example.com"
+            required
+            disabled={status === "loading"}
+          />
+          <button type="submit" disabled={status === "loading"}>
+            {status === "loading" ? "Joining…" : "Join mail list"}
+          </button>
+        </div>
+        {message && (
+          <p
+            className={`cc-mailing-message cc-mailing-message-${status}`}
+            role="status"
+          >
+            {message}
+          </p>
+        )}
+      </form>
+    </section>
   );
 }
 
 export function MarketingHome() {
-  const rootRef = useRef<HTMLElement>(null);
-  const underwaterRef = useRef<HTMLElement>(null);
-  const floorRef = useRef<HTMLElement>(null);
+  const [introState, setIntroState] = useState<IntroState>("drawing");
+  const [location, setLocation] = useState<LocationState>({
+    status: "loading",
+  });
+  const [opportunity, setOpportunity] = useState<
+    DataState<MarketingOpportunity>
+  >({ status: "loading" });
+  const [community, setCommunity] = useState<DataState<CommunityResult>>({
+    status: "loading",
+  });
+  const [reports, setReports] = useState<DataState<MarketingCatchReport[]>>({
+    status: "loading",
+  });
+  const [showBackToTop, setShowBackToTop] = useState(false);
+  const [approachActive, setApproachActive] = useState(false);
+  const approachRef = useRef<HTMLElement>(null);
 
   useEffect(() => {
-    const root = rootRef.current;
-    const underwater = underwaterRef.current;
-    const floor = floorRef.current;
-    if (!root || !underwater || !floor) return;
-
     const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
-    let frame = 0;
+    if (reducedMotion.matches) {
+      const frame = window.requestAnimationFrame(() =>
+        setIntroState("settled"),
+      );
+      return () => window.cancelAnimationFrame(frame);
+    }
 
-    const update = () => {
-      frame = 0;
-      const travel = Math.max(window.innerHeight * 0.95, 1);
-      const progress = Math.min(1, Math.max(0, window.scrollY / travel));
-      const appliedProgress = reducedMotion.matches ? 0 : progress;
-      const startAngle = (-65 * Math.PI) / 180;
-      const angle = ((-65 + 63 * appliedProgress) * Math.PI) / 180;
-      const radius = Math.min(window.innerWidth * 0.46, 460);
-      const horizontalScale = window.innerWidth < 700 ? 0.46 : 1;
-      const x =
-        radius * (Math.cos(angle) - Math.cos(startAngle)) * horizontalScale;
-      const y = radius * (Math.sin(angle) - Math.sin(startAngle));
-
-      root.style.setProperty("--cc-scroll", progress.toFixed(4));
-      root.style.setProperty("--cc-sun-x", `${x.toFixed(2)}px`);
-      root.style.setProperty("--cc-sun-y", `${y.toFixed(2)}px`);
-    };
-
-    const requestUpdate = () => {
-      if (frame) return;
-      frame = window.requestAnimationFrame(update);
-    };
-
-    const oceanObserver = new IntersectionObserver(
-      ([entry]) => {
-        root.classList.toggle("cc-ocean-active", Boolean(entry?.isIntersecting));
-      },
-      { rootMargin: "18% 0px", threshold: 0.01 },
+    const revealTimer = window.setTimeout(
+      () => setIntroState("revealing"),
+      INTRO_REVEAL_DELAY_MS,
     );
-    const floorObserver = new IntersectionObserver(
-      ([entry]) => {
-        root.classList.toggle("cc-floor-active", Boolean(entry?.isIntersecting));
-      },
-      { rootMargin: "18% 0px", threshold: 0.01 },
+    // Animation completion normally settles the intro. This is only a safety
+    // fallback for environments that suppress CSS animation events.
+    const finishTimer = window.setTimeout(
+      () => setIntroState("settled"),
+      INTRO_FALLBACK_SETTLE_MS,
     );
-
-    oceanObserver.observe(underwater);
-    floorObserver.observe(floor);
-    root.classList.add("cc-ready");
-    update();
-    window.addEventListener("scroll", requestUpdate, { passive: true });
-    window.addEventListener("resize", requestUpdate);
-    reducedMotion.addEventListener("change", requestUpdate);
-
     return () => {
-      if (frame) window.cancelAnimationFrame(frame);
-      oceanObserver.disconnect();
-      floorObserver.disconnect();
-      window.removeEventListener("scroll", requestUpdate);
-      window.removeEventListener("resize", requestUpdate);
-      reducedMotion.removeEventListener("change", requestUpdate);
+      window.clearTimeout(revealTimer);
+      window.clearTimeout(finishTimer);
     };
   }, []);
 
+  useEffect(() => {
+    let active = true;
+    void requestBrowserLocation().then((nextLocation) => {
+      if (active) setLocation(nextLocation);
+    });
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    // Keep the large offline opportunity projection out of the critical intro
+    // path. Geolocation still resolves first; data hydration begins as soon as
+    // the three-second reveal has handed control to the page.
+    if (location.status === "loading" || introState !== "settled") return;
+    const controller = new AbortController();
+
+    void loadMarketingOpportunity(location, controller.signal)
+      .then((data) => setOpportunity({ status: "ready", data }))
+      .catch((error) => {
+        if (!controller.signal.aborted) {
+          setOpportunity({
+            status: "error",
+            message:
+              error instanceof Error
+                ? error.message
+                : "Current conditions are unavailable.",
+          });
+        }
+      });
+
+    void loadMarketingCommunity(location, controller.signal)
+      .then((data) =>
+        setCommunity(
+          data.threads.length
+            ? { status: "ready", data }
+            : {
+                status: "empty",
+                message: "No public threads are available yet.",
+              },
+        ),
+      )
+      .catch((error) => {
+        if (!controller.signal.aborted) {
+          setCommunity({
+            status: "error",
+            message:
+              error instanceof Error
+                ? error.message
+                : "Public threads are unavailable.",
+          });
+        }
+      });
+
+    return () => controller.abort();
+  }, [introState, location]);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    void loadApprovedCatchReports(controller.signal)
+      .then((data) =>
+        setReports(
+          data.length
+            ? { status: "ready", data }
+            : { status: "empty", message: "No approved catch photos yet." },
+        ),
+      )
+      .catch((error) => {
+        if (!controller.signal.aborted) {
+          setReports({
+            status: "error",
+            message:
+              error instanceof Error
+                ? error.message
+                : "Approved catch reports are unavailable.",
+          });
+        }
+      });
+    return () => controller.abort();
+  }, []);
+
+  useEffect(() => {
+    let scheduled = false;
+    const update = () => {
+      scheduled = false;
+      setShowBackToTop(window.scrollY > window.innerHeight);
+    };
+    const onScroll = () => {
+      if (!scheduled) {
+        scheduled = true;
+        window.requestAnimationFrame(update);
+      }
+    };
+    update();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    window.addEventListener("resize", onScroll);
+    return () => {
+      window.removeEventListener("scroll", onScroll);
+      window.removeEventListener("resize", onScroll);
+    };
+  }, []);
+
+  useEffect(() => {
+    const node = approachRef.current;
+    if (!node) return;
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      const frame = window.requestAnimationFrame(() => setApproachActive(true));
+      return () => window.cancelAnimationFrame(frame);
+    }
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) setApproachActive(true);
+      },
+      { threshold: 0.22 },
+    );
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, []);
+
+  function returnToTop() {
+    const reducedMotion = window.matchMedia(
+      "(prefers-reduced-motion: reduce)",
+    ).matches;
+    window.scrollTo({ top: 0, behavior: reducedMotion ? "auto" : "smooth" });
+  }
+
   return (
-    <main className="marketing-home cc-landing" ref={rootRef}>
-      <a className="skip-link cc-skip-link" href="#cc-features">
+    <main
+      className={`marketing-home cc-landing cc-intro-${introState}`}
+      aria-busy={introState !== "settled"}
+    >
+      <a className="skip-link cc-skip-link" href="#cc-approach">
         Skip to landing page content
       </a>
 
-      <div className="cc-world" aria-hidden="true">
-        <div className="cc-world-warmth" />
-        <div className="cc-world-depth" />
-      </div>
-      <OceanActors />
-
-      <header className="cc-navbar">
-        <CompassLogo />
-        <nav aria-label="Primary navigation">
-          {navItems.map(([label, href]) => (
-            <Link key={label} href={href} aria-current={label === "Home" ? "page" : undefined}>
-              {label}
-            </Link>
-          ))}
-        </nav>
-        <div className="cc-nav-actions">
-          <Link className="cc-search-link" href="/forecast" aria-label="Search fishing spots">
-            <SearchIcon />
-          </Link>
-          <Link className="cc-sign-in" href="/profile">
-            Sign in
-          </Link>
-          <Link className="cc-sign-up" href="/profile">
-            Sign up
-          </Link>
-        </div>
-      </header>
-
-      <section className="cc-hero" aria-labelledby="cc-title">
-        <div className="cc-hero-copy">
-          <h1 id="cc-title">
-            Give every
-            <br />
-            cast a compass.
-          </h1>
-          <p>
-            Pick your target, compare public shore and pier windows, and see
-            which conditions line up before you make the drive.
-          </p>
-          <div className="cc-hero-actions">
-            <Link className="cc-primary-button" href="/forecast">
-              <span aria-hidden="true">⌖</span>
-              Find best spot near you
-              <ArrowIcon />
-            </Link>
-            <Link className="cc-secondary-button" href="#cc-features">
-              <PlayIcon />
-              See how it works
-            </Link>
+      <section className="cc-opening" aria-labelledby="cc-title">
+        <div className="cc-opening-sticky">
+          <div className="cc-hero-topo-panel">
+            <HeroTopographicArt />
+            <ForecastCard state={opportunity} location={location} />
           </div>
-          <p className="cc-utility-copy">
-            <span aria-hidden="true">✓</span>
-            No login required to explore
-          </p>
-          <div className="cc-reviews" aria-label="Trusted by 25,000 plus anglers">
-            <div className="cc-review-avatars" aria-hidden="true">
-              {catchReports.slice(0, 3).map((report) => (
-                <Image
-                  key={report.handle}
-                  src={report.image}
-                  width={38}
-                  height={38}
-                  alt=""
-                  unoptimized
-                />
-              ))}
+
+          <Header />
+
+          <div className="cc-hero-copy">
+            <h1 id="cc-title">
+              Give every
+              <br />
+              cast a compass.
+            </h1>
+            <p className="cc-hero-description">
+              Pick your target, compare public shore and pier windows, and see
+              which conditions line up before you make the drive.
+            </p>
+            <div className="cc-hero-actions">
+              <Link className="cc-primary-button" href="/forecast">
+                Find best spot near you <ArrowIcon />
+              </Link>
+              <Link className="cc-secondary-button" href="#cc-approach">
+                See how it works
+              </Link>
             </div>
-            <div>
-              <span aria-label="5 out of 5 stars">★★★★★</span>
-              <small>Trusted by 25,000+ anglers</small>
-            </div>
+            <p className="cc-utility-copy">
+              <span aria-hidden="true">✓</span> No login required to explore
+            </p>
           </div>
         </div>
-        <ForecastCard />
+      </section>
+
+      {introState !== "settled" && (
+        <TopographicLoader onRevealComplete={() => setIntroState("settled")} />
+      )}
+
+      <section
+        ref={approachRef}
+        className={`cc-approach${approachActive ? " cc-approach-active" : ""}`}
+        id="cc-approach"
+        aria-labelledby="cc-approach-title"
+      >
+        <div className="cc-approach-sticky">
+          <Image
+            className="cc-approach-background"
+            src="/marketing/daylight-draft/surf-cast-wide.jpg"
+            alt="An angler casting from the surf"
+            fill
+            sizes="100vw"
+            unoptimized
+          />
+          <div className="cc-approach-shade" />
+          <div className="cc-approach-copy">
+            <h2 id="cc-approach-title">
+              Read the coast
+              <br />
+              before you cast.
+            </h2>
+            <p>
+              CastingCompass brings the useful pieces of a fishing plan into one
+              place—without pretending conditions can guarantee a catch.
+            </p>
+          </div>
+          <div className="cc-white-layer" aria-hidden="true">
+            <div className="cc-white-layer-left" />
+            <div className="cc-white-layer-right" />
+          </div>
+        </div>
       </section>
 
       <section
-        className="cc-features"
-        id="cc-features"
-        ref={underwaterRef}
-        aria-labelledby="cc-features-title"
+        className="cc-approach-grid cc-modern-mosaic"
+        aria-labelledby="cc-mosaic-title"
       >
-        <div className="cc-section-heading">
-          <h2 id="cc-features-title">
-            Everything you need for
-            <br />a successful day on the water.
+        <div className="cc-mosaic-rules" aria-hidden="true" />
+
+        <header className="cc-mosaic-intro">
+          <h2 id="cc-mosaic-title">Every piece adds context.</h2>
+          <p>
+            Compare public places, current conditions, one target species, and
+            local reports while keeping the coast itself in view.
+          </p>
+        </header>
+
+        <figure className="cc-mosaic-image cc-mosaic-image-hero">
+          <Image
+            src="/marketing/daylight-draft/bay-bridge-angler.jpg"
+            alt="An angler fishing along the San Francisco Bay waterfront"
+            fill
+            sizes="(max-width: 800px) 100vw, 34vw"
+            unoptimized
+          />
+        </figure>
+
+        <figure className="cc-mosaic-image cc-mosaic-image-tide">
+          <Image
+            src="/marketing/daylight-draft/surf-cast-close.jpg"
+            alt="A close view of surf breaking around an angler"
+            fill
+            sizes="(max-width: 800px) 48vw, 25vw"
+            unoptimized
+          />
+        </figure>
+
+        <figure className="cc-mosaic-image cc-mosaic-image-main">
+          <Image
+            src="/marketing/daylight-draft/surf-cast-wide.jpg"
+            alt="A wide coastal view of an angler casting through the surf"
+            fill
+            sizes="(max-width: 800px) 100vw, 46vw"
+            unoptimized
+          />
+        </figure>
+
+        <figure className="cc-mosaic-image cc-mosaic-image-pier" aria-hidden="true">
+          <Image
+            src="/marketing/daylight-draft/bay-bridge-angler.jpg"
+            alt=""
+            fill
+            sizes="(max-width: 800px) 48vw, 25vw"
+            unoptimized
+          />
+        </figure>
+
+        <figure className="cc-mosaic-image cc-mosaic-image-gear" aria-hidden="true">
+          <Image
+            src="/marketing/daylight-draft/surf-cast-close.jpg"
+            alt=""
+            fill
+            sizes="(max-width: 800px) 48vw, 25vw"
+            unoptimized
+          />
+        </figure>
+
+        <figure className="cc-mosaic-image cc-mosaic-image-community" aria-hidden="true">
+          <Image
+            src="/marketing/daylight-draft/bay-bridge-angler.jpg"
+            alt=""
+            fill
+            sizes="(max-width: 800px) 48vw, 25vw"
+            unoptimized
+          />
+        </figure>
+
+        {approachCards.map((card) => (
+          <article
+            className={`cc-mosaic-card cc-mosaic-card-${card.number}`}
+            key={card.number}
+          >
+            <span>{card.number}</span>
+            <h3>{card.title}</h3>
+            <p>{card.copy}</p>
+          </article>
+        ))}
+      </section>
+
+      <RecentReports state={reports} />
+      <CommunitySection state={community} />
+      <TestFlightSection />
+
+      <section className="cc-final-cta" aria-labelledby="cc-final-title">
+        <Image
+          src="/marketing/daylight-draft/surf-cast-close.jpg"
+          alt="An angler making a cast through the surf at golden hour"
+          fill
+          sizes="100vw"
+          unoptimized
+        />
+        <div className="cc-final-wash" />
+        <div>
+          <h2 id="cc-final-title">
+            Start with the conditions.
+            <br />
+            Choose the coast from there.
           </h2>
         </div>
-        <div className="cc-feature-grid">
-          {features.map((feature) => (
-            <article key={feature.title}>
-              <span className={`cc-feature-icon cc-feature-icon-${feature.icon}`}>
-                <FeatureIcon name={feature.icon} />
-              </span>
-              <div>
-                <h3>{feature.title}</h3>
-                <p>{feature.description}</p>
-              </div>
-            </article>
-          ))}
-        </div>
       </section>
 
-      <section className="cc-reports" aria-labelledby="cc-reports-title">
-        <header>
-          <div>
-            <p>Sample community preview</p>
-            <h2 id="cc-reports-title">Recent Catch Reports</h2>
-          </div>
-          <Link href="/community">
-            View all reports <ArrowIcon />
-          </Link>
-        </header>
-        <div className="cc-report-grid">
-          {catchReports.map((report) => (
-            <article key={report.handle}>
-              <Image
-                src={report.image}
-                width={720}
-                height={520}
-                sizes="(max-width: 680px) 88vw, (max-width: 1000px) 42vw, 22vw"
-                alt={`Sample catch report portrait for ${report.handle}`}
-              />
-              <div>
-                <h3>Striped Bass</h3>
-                <p>{report.size}</p>
-                <p>{report.location}</p>
-                <p>{report.time}</p>
-                <span>
-                  <i aria-hidden="true">{report.handle.charAt(0)}</i>
-                  {report.handle}
-                </span>
-              </div>
-            </article>
-          ))}
-        </div>
-      </section>
-
-      <section className="cc-newsletter" ref={floorRef} aria-labelledby="cc-newsletter-title">
-        <span className="cc-mail-icon" aria-hidden="true">
-          <Icon size={30}>
-            <rect x="3" y="5" width="18" height="14" rx="2" />
-            <path d="m4 7 8 6 8-6" />
-          </Icon>
-        </span>
-        <div>
-          <h2 id="cc-newsletter-title">Stay in the know</h2>
-          <p>
-            Weekly fishing tips, bite alerts, and exclusive spot
-            recommendations.
-          </p>
-        </div>
-        <form>
-          <label className="sr-only" htmlFor="cc-newsletter-email">
-            Email address
-          </label>
-          <input
-            id="cc-newsletter-email"
-            type="email"
-            name="email"
-            autoComplete="email"
-            placeholder="Enter your email"
-          />
-          <button
-            type="button"
-            aria-disabled="true"
-            title="Newsletter signup is not active in this review build"
-          >
-            Subscribe
-          </button>
-        </form>
-      </section>
+      <MailingList />
 
       <footer className="cc-footer">
-        <CompassLogo compact />
-        <nav aria-label="Footer links">
-          <Link href="/ai-disclosure">About</Link>
-          <Link href="/community">Contact</Link>
-          <Link href="/community">Careers</Link>
-          <Link href="/community">Press</Link>
-          <Link href="/terms">Terms</Link>
-          <Link href="/privacy">Privacy</Link>
-        </nav>
-        <div className="cc-socials">
-          <SocialIcon label="Instagram">◎</SocialIcon>
-          <SocialIcon label="Facebook">f</SocialIcon>
-          <SocialIcon label="YouTube">▶</SocialIcon>
-          <SocialIcon label="X">𝕏</SocialIcon>
+        <div className="cc-footer-brand">
+          <CompassLogo compact />
+          <p>Relative planning guidance, not a catch prediction.</p>
         </div>
-        <p>© 2024 CastingCompass. All rights reserved.</p>
+        <nav aria-label="Product links">
+          <strong>Product</strong>
+          <Link href="/forecast">Forecast</Link>
+          <Link href="/community">Community</Link>
+          <Link href="/ai-disclosure">How it works</Link>
+        </nav>
+        <nav aria-label="Company links">
+          <strong>Company</strong>
+          <Link href="/ai-disclosure">About CastingCompass</Link>
+          <a href="mailto:support@castingcompass.com">Support</a>
+        </nav>
+        <nav aria-label="Legal links">
+          <strong>Legal</strong>
+          <Link href="/terms">Terms of service</Link>
+          <Link href="/privacy">Privacy policy</Link>
+          <Link href="/ai-disclosure">AI disclosure</Link>
+        </nav>
+        <p className="cc-footer-copyright">
+          © 2026 CastingCompass. All rights reserved.
+        </p>
       </footer>
+
+      {showBackToTop && (
+        <button
+          className="cc-back-to-top"
+          type="button"
+          onClick={returnToTop}
+          aria-label="Back to top"
+        >
+          <span aria-hidden="true">↑</span>
+        </button>
+      )}
     </main>
   );
 }

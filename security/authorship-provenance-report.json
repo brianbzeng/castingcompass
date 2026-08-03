@@ -3,10 +3,10 @@
   "registerSchemaVersion": "castingcompass.authorship-provenance/1.0.0",
   "policyEffectiveCommit": "ea922c8dfbdb7e35a81836d1f6a9e9e35c9081bb",
   "reviewedAt": "2026-07-29",
-  "recordCount": 17,
-  "visualAssetCount": 49,
+  "recordCount": 22,
+  "visualAssetCount": 54,
   "thirdPartyRecordCount": 7,
-  "candidateReviewRequiredRecordCount": 5,
+  "candidateReviewRequiredRecordCount": 10,
   "candidateReviewRequiredPaths": [
     "public/marketing/actors/boat-fisherman.webp",
     "public/marketing/actors/diving-helmet.webp",
@@ -28,6 +28,11 @@
     "public/marketing/approved/seafloor-anchor.webp",
     "public/marketing/approved/seafloor-starfish.webp",
     "public/marketing/approved/striped-bass.webp",
+    "public/marketing/daylight-draft/bay-bridge-angler.jpg",
+    "public/marketing/daylight-draft/surf-cast-close.jpg",
+    "public/marketing/daylight-draft/surf-cast-wide.jpg",
+    "public/marketing/daylight-draft/testflight-phone-mockup-v1.png",
+    "public/marketing/daylight-draft/topographic-stock-blue.webp",
     "public/marketing/painterly-shoreline.webp",
     "public/marketing/painterly-water-column.webp",
     "public/marketing/silhouettes/angler-left.webp",
@@ -58,9 +63,10 @@
     "cc_by": 3,
     "cc_by_sa": 1,
     "cc0": 1,
+    "commercial_stock_license": 4,
     "derived_from_registered_legacy": 1,
     "owner_confirmation_required": 4,
-    "owner_supplied_ai_assisted": 5,
+    "owner_supplied_ai_assisted": 6,
     "source_public_domain_assertion": 2
   },
   "licenseIds": [
@@ -68,6 +74,7 @@
     "CC-BY-4.0",
     "CC-BY-SA-4.0",
     "CC0-1.0",
+    "LicenseRef-AdobeStock-Standard",
     "LicenseRef-Commons-PD-USGov-FWS",
     "LicenseRef-Commons-PD-USGov-USACE"
   ],
@@ -84,8 +91,8 @@
   ],
   "inputSha256": {
     "app/data/structure-images.json": "179cb5ed047f0874090637c96cee690f85a2bce8ac188b67494971686c735516",
-    "contracts/authorship-provenance.schema.json": "0531c0550fe47725e4c56c5f71717ae0cca5cad7e10d4008cac2c43a7af6dd3e",
-    "governance/authorship-provenance.json": "612f716bf9ce05495fda6aacf4221e32f79c75b792ce49609175f5dde988d1ea",
-    "security/authorship-provenance-policy.json": "a757a8edb26dfdb86752f6f10303c92236f267cc45f382c354d58074019a9ef5"
+    "contracts/authorship-provenance.schema.json": "eb3d56b7a4dabc705074dff3e204a36029c5327021ef0a13bea9dfc0c698572c",
+    "governance/authorship-provenance.json": "fea2d9042facece38c764300dbdf2baa6b27be4d59935e5eb124fe320ed93a5d",
+    "security/authorship-provenance-policy.json": "fbc5208ea21d31683fe9d9ffa8cbbf657e61898071ac748dcccef93704d5978c"
   }
 }

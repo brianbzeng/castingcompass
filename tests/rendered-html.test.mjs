@@ -55,7 +55,7 @@ test("server-renders the CastingCompass product shell", async () => {
   );
 });
 
-test("server-renders the approved marketing homepage with honest product routes and sample content disclosure", async () => {
+test("server-renders the marketing homepage with truthful live-data and release states", async () => {
   const response = await render();
   assert.equal(response.status, 200);
   assert.match(response.headers.get("content-type") ?? "", /^text\/html\b/i);
@@ -69,42 +69,32 @@ test("server-renders the approved marketing homepage with honest product routes 
   assert.match(html, /cast a compass\./);
   assert.match(html, /Find best spot near you/);
   assert.match(html, /No login required to explore/);
-  assert.match(html, /Everything you need for/);
-  assert.match(html, /a successful day on the water\./);
+  assert.match(html, /Read the coast/);
+  assert.match(html, /before you cast\./);
   assert.match(html, /Recent Catch Reports/);
-  assert.match(html, /Sample community preview/);
-  assert.match(html, /Stay in the know/);
+  assert.match(html, /Checking for approved catch photos/);
+  assert.match(html, /Local threads/);
+  assert.match(html, /Carry the coast/);
+  assert.match(html, /Download on TestFlight/);
+  assert.match(html, /Coming soon/);
+  assert.match(html, /Join the coast list\./);
+  assert.match(html, /support@castingcompass\.com/);
   assert.match(
     html,
-    /(?:\/|%2F)marketing(?:\/|%2F)approved(?:\/|%2F)boat-fisherman\.webp/i,
+    /(?:\/|%2F)marketing(?:\/|%2F)daylight-draft(?:\/|%2F)surf-cast-wide\.jpg/i,
   );
   assert.match(
     html,
-    /(?:\/|%2F)marketing(?:\/|%2F)approved(?:\/|%2F)striped-bass\.webp/i,
+    /(?:\/|%2F)marketing(?:\/|%2F)daylight-draft(?:\/|%2F)surf-cast-close\.jpg/i,
   );
-  assert.match(
-    html,
-    /(?:\/|%2F)marketing(?:\/|%2F)actors(?:\/|%2F)foreground-kelp\.webp/i,
-  );
-  assert.match(
-    html,
-    /(?:\/|%2F)marketing(?:\/|%2F)approved(?:\/|%2F)seafloor-anchor\.webp/i,
-  );
-  assert.match(
-    html,
-    /(?:\/|%2F)marketing(?:\/|%2F)approved(?:\/|%2F)seafloor-starfish\.webp/i,
-  );
-  assert.match(html, /cc-diver cc-diver-a/);
-  assert.match(html, /cc-diver cc-diver-b/);
-  assert.match(html, /cc-crab cc-crab-a/);
-  assert.match(html, /cc-crab cc-crab-b/);
   assert.match(html, /href="\/forecast"/);
   assert.match(html, /href="\/community"/);
-  assert.match(html, /aria-label="Example fishing forecast"/);
-  assert.match(html, /aria-label="5 out of 5 stars"/);
-  assert.match(html, /aria-disabled="true"/);
-  assert.doesNotMatch(html, /TestFlight|apps\.apple\.com|testflight\.apple\.com/i);
-  assert.doesNotMatch(html, /shark/i);
+  assert.match(html, /Finding your best California halibut window/);
+  assert.match(html, /Relative planning guidance, not a catch prediction/i);
+  assert.doesNotMatch(html, /cc-topography/);
+  assert.doesNotMatch(html, /Sample community preview|FIELD MAP 01|Explore the coast|Skip intro/i);
+  assert.doesNotMatch(html, /Trusted by 25,000\+ anglers/i);
+  assert.doesNotMatch(html, /apps\.apple\.com|testflight\.apple\.com/i);
 });
 
 test("ships install and offline assets", async () => {

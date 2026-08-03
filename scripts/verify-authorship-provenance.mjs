@@ -174,6 +174,16 @@ function validateRecordSemantics(register, policy, discovered, root) {
       }[record.rights_basis];
       invariant(expected, `${record.id} has an invalid third-party rights basis`);
       invariant(record.attribution_required === expected[0] && record.share_alike === expected[1] && record.rights_review === expected[2], `${record.id} rights flags disagree with its rights basis`);
+    } else if (record.kind === "third_party_owner_licensed") {
+      invariant(record.release_state === "candidate_review_required", `${record.id} must remain candidate review required`);
+      invariant(record.source_url && record.source_remote_sha1 && record.source_reviewed_at, `${record.id} lacks owner-supplied stock source evidence`);
+      invariant(record.license_id && record.license_label && record.license_url, `${record.id} lacks an owner-supplied stock license record`);
+      invariant(policy.licenses[record.license_id] === record.license_url, `${record.id} license URL is not canonical`);
+      invariant(record.rights_basis === "commercial_stock_license", `${record.id} has an invalid stock rights basis`);
+      invariant(record.rights_review === "owner_license_not_independently_cleared", `${record.id} overstates independent stock-license review`);
+      invariant(record.ai_assistance === "not_disclosed_by_source", `${record.id} invents a stock-source AI disclosure`);
+      invariant(record.attribution_required === false && record.share_alike === false, `${record.id} stock rights flags disagree with the supplied license`);
+      invariant(record.upstream_record_id === null, `${record.id} cannot declare a registered upstream record`);
     } else if (record.kind === "first_party_owner_supplied") {
       invariant(record.release_state === "candidate_review_required", `${record.id} must remain candidate review required`);
       invariant(record.source_url === null && record.source_remote_sha1 === null && record.source_reviewed_at === null, `${record.id} invents external source evidence`);

@@ -20,6 +20,11 @@ prove who created a work or who owns its rights.
   transformations, and the commits where they first appear. The original paired-spearfisher
   asset and the extracted marine-life/seafloor set remain `candidate_review_required`; neither
   set is represented as independently rights-cleared.
+- Four owner-purchased Adobe Stock assets used by the Daylight-style homepage draft have
+  exact local and original-file hashes, Adobe asset IDs, and the canonical stock-license terms.
+  They remain `candidate_review_required`: the repository records the owner's purchase statement
+  but does not contain or independently validate private receipts. Three creator names still need
+  confirmation from the owner's private Adobe purchase history.
 - Eight pre-policy brand, icon, social-card, and topography paths are preserved on an exact legacy
   allowlist. Their creator, source layers, assignment/license, and AI-assistance history still
   need owner confirmation. They are not represented as rights-cleared merely because they are in

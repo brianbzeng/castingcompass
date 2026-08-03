@@ -58,9 +58,9 @@ test("the committed public-safe provenance report is deterministic and productio
   const checked = verifyProject(root, { reportMode: "check" });
   const rebuilt = verifyProject(root, { reportMode: "none" });
   assert.deepEqual(checked, rebuilt);
-  assert.equal(checked.visualAssetCount, 49);
+  assert.equal(checked.visualAssetCount, 54);
   assert.equal(checked.thirdPartyRecordCount, 7);
-  assert.equal(checked.candidateReviewRequiredRecordCount, 5);
+  assert.equal(checked.candidateReviewRequiredRecordCount, 10);
   assert.deepEqual(checked.candidateReviewRequiredPaths, [
     "public/marketing/actors/boat-fisherman.webp",
     "public/marketing/actors/diving-helmet.webp",
@@ -82,6 +82,11 @@ test("the committed public-safe provenance report is deterministic and productio
     "public/marketing/approved/seafloor-anchor.webp",
     "public/marketing/approved/seafloor-starfish.webp",
     "public/marketing/approved/striped-bass.webp",
+    "public/marketing/daylight-draft/bay-bridge-angler.jpg",
+    "public/marketing/daylight-draft/surf-cast-close.jpg",
+    "public/marketing/daylight-draft/surf-cast-wide.jpg",
+    "public/marketing/daylight-draft/testflight-phone-mockup-v1.png",
+    "public/marketing/daylight-draft/topographic-stock-blue.webp",
     "public/marketing/painterly-shoreline.webp",
     "public/marketing/painterly-water-column.webp",
     "public/marketing/silhouettes/angler-left.webp",
