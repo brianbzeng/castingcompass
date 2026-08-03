@@ -34,8 +34,11 @@
     "CC-BY-4.0": "https://creativecommons.org/licenses/by/4.0/",
     "CC-BY-SA-4.0": "https://creativecommons.org/licenses/by-sa/4.0/",
     "LicenseRef-AdobeStock-Standard": "https://stock.adobe.com/license-terms",
+    "LicenseRef-Copernicus-Sentinel": "https://cds.climate.copernicus.eu/licences/ec-sentinel",
     "LicenseRef-Commons-PD-USGov-FWS": "https://commons.wikimedia.org/wiki/Template:PD-USGov-FWS",
-    "LicenseRef-Commons-PD-USGov-USACE": "https://commons.wikimedia.org/wiki/Template:PD-USGov-USACE"
+    "LicenseRef-Commons-PD-USGov-USACE": "https://commons.wikimedia.org/wiki/Template:PD-USGov-USACE",
+    "LicenseRef-NOAA-PublicDomain": "https://oceanservice.noaa.gov/about/faq.html",
+    "LicenseRef-USGS-PublicDomain": "https://www.usgs.gov/information-policies-and-instructions/copyrights-and-credits"
   },
   "liveAttribution": {
     "dataPath": "app/data/structure-images.json",

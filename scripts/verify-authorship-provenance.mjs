@@ -174,6 +174,19 @@ function validateRecordSemantics(register, policy, discovered, root) {
       }[record.rights_basis];
       invariant(expected, `${record.id} has an invalid third-party rights basis`);
       invariant(record.attribution_required === expected[0] && record.share_alike === expected[1] && record.rights_review === expected[2], `${record.id} rights flags disagree with its rights basis`);
+    } else if (record.kind === "third_party_open_data") {
+      invariant(record.release_state === "approved_existing_use", `${record.id} cannot use a legacy release state`);
+      invariant(record.source_url && record.source_remote_sha1 && record.source_reviewed_at, `${record.id} lacks reviewed open-data source evidence`);
+      invariant(record.license_id && record.license_label && record.license_url, `${record.id} lacks a direct open-data license record`);
+      invariant(policy.licenses[record.license_id] === record.license_url, `${record.id} license URL is not canonical`);
+      invariant(record.upstream_record_id === null, `${record.id} cannot inherit a first-party upstream record`);
+      const expected = {
+        copernicus_open_data: [true, false, "verified_source_license"],
+        source_public_domain_assertion: [false, false, "source_public_domain_assertion"],
+      }[record.rights_basis];
+      invariant(expected, `${record.id} has an invalid open-data rights basis`);
+      invariant(record.attribution_required === expected[0] && record.share_alike === expected[1] && record.rights_review === expected[2], `${record.id} open-data rights flags disagree with its rights basis`);
+      invariant(record.ai_assistance !== "unknown_legacy", `${record.id} cannot use the first-party legacy AI state`);
     } else if (record.kind === "third_party_owner_licensed") {
       invariant(record.release_state === "candidate_review_required", `${record.id} must remain candidate review required`);
       invariant(record.source_url && record.source_remote_sha1 && record.source_reviewed_at, `${record.id} lacks owner-supplied stock source evidence`);
@@ -188,9 +201,13 @@ function validateRecordSemantics(register, policy, discovered, root) {
       invariant(record.release_state === "candidate_review_required", `${record.id} must remain candidate review required`);
       invariant(record.source_url === null && record.source_remote_sha1 === null && record.source_reviewed_at === null, `${record.id} invents external source evidence`);
       invariant(record.license_id === null && record.license_label === null && record.license_url === null, `${record.id} invents an external license`);
-      invariant(record.rights_basis === "owner_supplied_ai_assisted", `${record.id} has an invalid owner-supplied rights basis`);
+      const expectedAiAssistance = {
+        owner_supplied: "none_declared",
+        owner_supplied_ai_assisted: "disclosed",
+      }[record.rights_basis];
+      invariant(expectedAiAssistance, `${record.id} has an invalid owner-supplied rights basis`);
       invariant(record.rights_review === "owner_supplied_not_independently_cleared", `${record.id} overstates independent rights review`);
-      invariant(record.ai_assistance === "disclosed", `${record.id} must disclose AI assistance`);
+      invariant(record.ai_assistance === expectedAiAssistance, `${record.id} owner-supplied rights basis and AI disclosure disagree`);
       invariant(record.attribution_required === false && record.share_alike === false, `${record.id} cannot invent third-party attribution duties`);
       invariant(record.upstream_record_id === null, `${record.id} cannot declare a registered upstream record`);
     } else {
@@ -275,7 +292,7 @@ function buildReport(register, policy, discovered, inputs) {
     reviewedAt: register.reviewed_at,
     recordCount: register.records.length,
     visualAssetCount: discovered.length,
-    thirdPartyRecordCount: register.records.filter((record) => record.kind === "third_party_reference").length,
+    thirdPartyRecordCount: register.records.filter((record) => record.kind.startsWith("third_party_")).length,
     candidateReviewRequiredRecordCount: register.records.filter((record) => record.release_state === "candidate_review_required").length,
     candidateReviewRequiredPaths,
     legacyReviewRequiredRecordCount: register.records.filter((record) => record.release_state === "legacy_review_required").length,
@@ -289,6 +306,7 @@ function buildReport(register, policy, discovered, inputs) {
     limitations: [
       "Repository and Git evidence do not independently prove copyright ownership or legal clearance.",
       "The owner-supplied AI-assisted marketing silhouette remains candidate review required and is not represented as independently rights-cleared.",
+      "Owner-supplied personal photographs remain candidate review required; the repository does not independently establish photographer rights or depicted-person permissions.",
       "Legacy brand, icon, social-card, and topography assets remain subject to owner confirmation.",
       "Private agreements, privileged advice, identities, personal data, and secret material are intentionally excluded.",
       "This source-bound report is not deployment evidence and does not authorize production release."

@@ -1186,6 +1186,18 @@ test("marketing homepage resolves its loading artwork into a responsive planning
   page,
 }) => {
   test.setTimeout(60_000);
+  let releaseOpportunity!: () => void;
+  const opportunityGate = new Promise<void>((resolve) => {
+    releaseOpportunity = resolve;
+  });
+  await page.route("**/data/opportunities-browser.json", async (route) => {
+    await opportunityGate;
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: OPPORTUNITIES_FIXTURE,
+    });
+  });
   await page.route("**/api/marketing/recent-catches?*", (route) =>
     route.fulfill({
       status: 200,
@@ -1200,6 +1212,15 @@ test("marketing homepage resolves its loading artwork into a responsive planning
       body: JSON.stringify({ posts: [] }),
     }),
   );
+  let mailingRequestBody: unknown;
+  await page.route("**/api/marketing/mailing-list", async (route) => {
+    mailingRequestBody = route.request().postDataJSON();
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({ message: "Test-only signup accepted." }),
+    });
+  });
   await page.goto("/");
   const landing = page.locator(".cc-landing");
   await expect(landing).toHaveClass(/cc-intro-settled/, { timeout: 10_000 });
@@ -1214,18 +1235,114 @@ test("marketing homepage resolves its loading artwork into a responsive planning
   await expect(
     page.locator(".cc-navbar nav a").filter({ hasText: /^Community$/ }),
   ).toHaveAttribute("href", "/community");
+  const routeLinks = [
+    ["Sign in", "/profile"],
+    ["Create account", "/profile"],
+    ["Forecast", "/forecast"],
+    ["Terms of service", "/terms"],
+    ["Privacy policy", "/privacy"],
+    ["AI disclosure", "/ai-disclosure"],
+  ] as const;
+  for (const [name, href] of routeLinks) {
+    const link = page
+      .locator(`a[href="${href}"]`)
+      .filter({ hasText: new RegExp(`^${name}$`) });
+    await expect(link).toHaveCount(1);
+    await expect(link).toHaveAttribute("href", href);
+  }
+  for (const path of [
+    "/forecast",
+    "/community",
+    "/profile",
+    "/terms",
+    "/privacy",
+    "/ai-disclosure",
+  ]) {
+    expect((await page.request.get(path)).ok()).toBe(true);
+  }
+
+  const readHeroLayout = () =>
+    page.locator(".cc-opening").evaluate(() => {
+      const readRect = (selector: string) => {
+        const rect = document
+          .querySelector<HTMLElement>(selector)!
+          .getBoundingClientRect();
+        return {
+          x: rect.x,
+          y: rect.y,
+          width: rect.width,
+          height: rect.height,
+        };
+      };
+      return {
+        opening: readRect(".cc-opening"),
+        panel: readRect(".cc-hero-topo-panel"),
+        copy: readRect(".cc-hero-copy"),
+      };
+    });
+
+  await expect(page.locator(".cc-forecast-card")).toContainText(
+    "Finding your best California halibut window",
+  );
+  await page.waitForTimeout(800);
+  const loadingHeroLayout = await readHeroLayout();
+  releaseOpportunity();
+
   const forecast = page.getByRole("complementary", {
     name: "California halibut planning window",
   });
   await expect(forecast).toContainText("California halibut");
   await expect(forecast).toContainText("Opportunity score");
   await expect(forecast).toContainText("Relative rank among available options");
+  const readyHeroLayout = await readHeroLayout();
+  for (const region of ["opening", "panel", "copy"] as const) {
+    for (const dimension of ["x", "y", "width", "height"] as const) {
+      expect(readyHeroLayout[region][dimension]).toBeCloseTo(
+        loadingHeroLayout[region][dimension],
+        1,
+      );
+    }
+  }
   await expect(
     page.getByRole("heading", { name: "Read the coast before you cast." }),
   ).toBeVisible();
-  await expect(page.locator(".cc-approach-grid article")).toHaveCount(4);
+  const benefitCards = page.locator(".cc-mosaic-card");
+  const mosaicImages = page.locator(".cc-mosaic-image");
+  await expect(benefitCards).toHaveCount(4);
+  await expect(mosaicImages).toHaveCount(6);
+  const mosaicSources = await mosaicImages
+    .locator("img")
+    .evaluateAll((images) =>
+      images.map(
+        (image) =>
+          new URL(image.getAttribute("src") ?? "", window.location.href)
+            .pathname,
+      ),
+    );
+  expect(mosaicSources).toEqual([
+    "/structure-guides/eelgrass.jpg",
+    "/structure-guides/estuary.jpg",
+    "/structure-guides/pilings.jpg",
+    "/structure-guides/riprap.jpg",
+    "/structure-guides/sandbar.jpg",
+    "/structure-guides/tidal-channel.jpg",
+  ]);
+  await expect(
+    mosaicImages.getByRole("img", {
+      name: "Eelgrass growing along a shallow coastal channel",
+    }),
+  ).toBeVisible();
+  await expect(
+    mosaicImages.getByRole("img", {
+      name: "A tidal channel cutting through a coastal sandbar",
+    }),
+  ).toBeVisible();
   await expect(page.locator(".cc-report-grid article")).toHaveCount(0);
-  await expect(page.getByText("No approved catch photos yet.")).toBeVisible();
+  await expect(
+    page.getByText("Community Images Will Appear When Available", {
+      exact: true,
+    }),
+  ).toBeVisible();
   await expect(
     page.getByRole("heading", {
       name: "Local threads, before you make the drive.",
@@ -1243,12 +1360,35 @@ test("marketing homepage resolves its loading artwork into a responsive planning
   await expect(page.locator("body")).not.toContainText("Explore the coast");
   await expect(page.locator("body")).not.toContainText("Skip intro");
 
-  await expect(page.locator(".cc-topographic-map-hero image")).toHaveAttribute(
-    "href",
-    /topographic-stock-blue\.webp/,
+  await expect(page.locator(".cc-hero-satellite-image")).toHaveCount(1);
+  await expect(page.locator(".cc-hero-bathymetry")).toHaveCount(0);
+  await expect(page.locator(".cc-hero-etopo-bathymetry")).toHaveCount(1);
+  await expect(page.locator(".cc-hero-map-attribution")).toContainText(
+    "Sentinel-2 / NOAA ETOPO / USGS contours",
+  );
+  await expect(page.locator(".cc-hero-etopo-bathymetry")).toHaveAttribute(
+    "data-coverage",
+    "full-water",
+  );
+  await expect(page.locator(".cc-hero-satellite-image")).toHaveCSS(
+    "transform",
+    /matrix\(/,
+  );
+  await expect(page.locator(".cc-hero-topo-panel")).toHaveCSS("opacity", "1");
+  await expect(page.locator(".cc-hero-satellite-image")).toHaveCSS(
+    "opacity",
+    "1",
   );
   await expect(page.locator(".cc-topo-lines")).toHaveCount(0);
   await expect(page.locator(".cc-topography")).toHaveCount(0);
+
+  const heroReveal = await page
+    .locator(".cc-hero-topo-panel")
+    .evaluate((element) => ({
+      animationName: getComputedStyle(element).animationName,
+      opacity: getComputedStyle(element).opacity,
+    }));
+  expect(heroReveal).toEqual({ animationName: "none", opacity: "1" });
 
   const heroFrame = await page
     .locator(".cc-hero-topo-panel")
@@ -1282,10 +1422,84 @@ test("marketing homepage resolves its loading artwork into a responsive planning
     mobileHeroSpacing.mediaTop - 8,
   );
 
+  const mosaicOrder = await page
+    .locator(".cc-modern-mosaic")
+    .evaluate((mosaic) => {
+      const cards = Array.from(
+        mosaic.querySelectorAll<HTMLElement>(".cc-mosaic-card"),
+      );
+      const images = Array.from(
+        mosaic.querySelectorAll<HTMLElement>(".cc-mosaic-image"),
+      );
+      const firstImage = images[0];
+      const lastCard = cards.at(-1);
+      const domOrder =
+        firstImage && lastCard
+          ? Boolean(
+              lastCard.compareDocumentPosition(firstImage) &
+              Node.DOCUMENT_POSITION_FOLLOWING,
+            )
+          : false;
+      return {
+        domOrder,
+        lastCardBottom: lastCard?.getBoundingClientRect().bottom ?? 0,
+        firstImageTop: firstImage?.getBoundingClientRect().top ?? 0,
+      };
+    });
+  expect(mosaicOrder.domOrder).toBe(true);
+  expect(mosaicOrder.lastCardBottom).toBeLessThanOrEqual(
+    mosaicOrder.firstImageTop,
+  );
+
+  const uspFlow = await page.locator(".cc-usp-section").evaluate((section) => {
+    const list = section.querySelector<HTMLElement>(".cc-usp-list")!;
+    const items = Array.from(
+      section.querySelectorAll<HTMLElement>(".cc-usp-item"),
+    );
+    const contents = Array.from(
+      section.querySelectorAll<HTMLElement>(".cc-usp-content"),
+    );
+    return {
+      mode: section.getAttribute("data-animation-mode"),
+      visibleStories: section.getAttribute("data-visible-stories"),
+      rowCount: items.length,
+      heightRatio: list.offsetHeight / window.innerHeight,
+      contentPositions: contents.map(
+        (content) => getComputedStyle(content).position,
+      ),
+      contentOpacity: contents.map(
+        (content) => getComputedStyle(content).opacity,
+      ),
+    };
+  });
+  expect(uspFlow.mode).toBe("mobile-flow");
+  expect(uspFlow.visibleStories).toBe("3");
+  expect(uspFlow.rowCount).toBe(3);
+  expect(uspFlow.heightRatio).toBeGreaterThan(2);
+  expect(uspFlow.contentPositions).toEqual(["static", "static", "static"]);
+  expect(uspFlow.contentOpacity).toEqual(["1", "1", "1"]);
+
+  const scrollContract = await page.evaluate(() => ({
+    bodySnap: getComputedStyle(document.body).scrollSnapType,
+    htmlSnap: getComputedStyle(document.documentElement).scrollSnapType,
+    sectionSnap: getComputedStyle(
+      document.querySelector<HTMLElement>(".cc-approach")!,
+    ).scrollSnapType,
+  }));
+  expect(Object.values(scrollContract).every((value) => value === "none")).toBe(
+    true,
+  );
+
   const overflow = await page.evaluate(
     () => document.documentElement.scrollWidth - window.innerWidth,
   );
   expect(overflow).toBeLessThanOrEqual(1);
+
+  await expect(page.locator(".cc-social-placeholder")).toHaveCount(4);
+  await expect(page.locator(".cc-footer-social a")).toHaveCount(0);
+  await expect(
+    page.locator('.cc-footer a[href="mailto:support@castingcompass.com"]'),
+  ).toHaveText("support@castingcompass.com");
 
   const testFlight = page.getByRole("button", {
     name: /Download on TestFlight Coming soon/,
@@ -1293,6 +1507,16 @@ test("marketing homepage resolves its loading artwork into a responsive planning
   await testFlight.scrollIntoViewIfNeeded();
   await testFlight.hover();
   await expect(testFlight.getByText("Coming soon")).toBeVisible();
+
+  await page.getByLabel("Email address").fill("homepage-check@example.com");
+  await page.getByRole("button", { name: "Join mail list" }).click();
+  await expect(page.locator(".cc-mailing-message")).toHaveText(
+    "Test-only signup accepted.",
+  );
+  expect(mailingRequestBody).toEqual({
+    email: "homepage-check@example.com",
+    source: "marketing-home",
+  });
 
   await page.evaluate(() => window.scrollTo(0, window.innerHeight + 1));
   const backToTop = page.getByRole("button", { name: "Back to top" });
@@ -1304,13 +1528,706 @@ test("marketing homepage resolves its loading artwork into a responsive planning
   await page.goto("/");
   await expect(page.locator(".cc-landing")).toHaveClass(/cc-intro-settled/);
   await expect(page.locator(".cc-topo-loader")).toHaveCount(0);
-  await expect(page.locator(".cc-topographic-map-hero")).toHaveCSS(
+  await expect(page.locator(".cc-hero-satellite-image")).toHaveCSS(
     "opacity",
     "1",
   );
   await expect(
     page.getByRole("heading", { name: "Give every cast a compass." }),
   ).toBeVisible();
+  await expect(page.locator(".cc-usp-list")).toBeVisible();
+  await expect(page.locator(".cc-usp-item")).toHaveCount(3);
+  await expect(page.locator(".cc-usp-content")).toHaveCount(3);
+  await expect(page.locator(".cc-usp-figure")).toHaveCount(3);
+  await expect(page.locator(".cc-usp-media-frame")).toHaveCount(3);
+  await expect(page.locator(".cc-daylight-foreground-surface")).toHaveCount(0);
+});
+
+test("desktop USP keeps media in flow and enforces a strict master-story timeline", async ({
+  page,
+}) => {
+  test.setTimeout(60_000);
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto("/");
+  await expect(page.locator(".cc-landing")).toHaveClass(/cc-intro-settled/, {
+    timeout: 10_000,
+  });
+
+  const contract = await page.locator(".cc-usp-section").evaluate((section) => {
+    const list = section.querySelector<HTMLElement>(".cc-usp-list")!;
+    const items = Array.from(
+      section.querySelectorAll<HTMLElement>(".cc-usp-item"),
+    );
+    const figures = Array.from(
+      section.querySelectorAll<HTMLElement>(".cc-usp-figure"),
+    );
+    const frames = Array.from(
+      section.querySelectorAll<HTMLElement>(".cc-usp-media-frame"),
+    );
+    const sectionStyle = getComputedStyle(section);
+    const listStyle = getComputedStyle(list);
+    const nextSection =
+      document.querySelector<HTMLElement>(".cc-approach-grid")!;
+    const nextSectionStyle = getComputedStyle(nextSection);
+    return {
+      width: section.getBoundingClientRect().width,
+      viewportWidth: window.innerWidth,
+      itemCount: items.length,
+      frameCount: frames.length,
+      gridColumns: items.map(
+        (item) =>
+          getComputedStyle(item.querySelector<HTMLElement>(".cc-usp-figure")!)
+            .gridColumnStart,
+      ),
+      listHeight: list.offsetHeight,
+      viewportHeight: window.innerHeight,
+      textPosition: getComputedStyle(
+        section.querySelector<HTMLElement>(".cc-usp-content")!,
+      ).position,
+      centerClip: getComputedStyle(
+        section.querySelector<HTMLElement>(".cc-usp-center-cell")!,
+      ).clipPath,
+      containment: {
+        sectionPosition: sectionStyle.position,
+        sectionOverflow: [sectionStyle.overflowX, sectionStyle.overflowY],
+        sectionTransform: sectionStyle.transform,
+        sectionFilter: sectionStyle.filter,
+        sectionPerspective: sectionStyle.perspective,
+        sectionContain: sectionStyle.contain,
+        listOverflow: [listStyle.overflowX, listStyle.overflowY],
+        itemOverflow: items.map((item) => {
+          const style = getComputedStyle(item);
+          return [style.overflowX, style.overflowY];
+        }),
+        figureOverflow: figures.map((figure) => {
+          const style = getComputedStyle(figure);
+          return [style.overflowX, style.overflowY];
+        }),
+        nextSectionPosition: nextSectionStyle.position,
+        nextSectionBackground: nextSectionStyle.backgroundColor,
+      },
+      media: frames.map((frame) => {
+        const rect = frame.getBoundingClientRect();
+        const image = frame.querySelector<HTMLImageElement>("img")!;
+        const frameStyle = getComputedStyle(frame);
+        const imageStyle = getComputedStyle(image);
+        const imageRect = image.getBoundingClientRect();
+        return {
+          width: rect.width,
+          height: rect.height,
+          imageWidth: imageRect.width,
+          imageHeight: imageRect.height,
+          framePosition: frameStyle.position,
+          frameOverflow: [frameStyle.overflowX, frameStyle.overflowY],
+          frameTransform: frameStyle.transform,
+          frameClipPath: frameStyle.clipPath,
+          frameAnimation: frameStyle.animationName,
+          frameTransitionDuration: frameStyle.transitionDuration,
+          imagePosition: imageStyle.position,
+          imageInset: [
+            imageStyle.top,
+            imageStyle.right,
+            imageStyle.bottom,
+            imageStyle.left,
+          ],
+          imageObjectFit: imageStyle.objectFit,
+          imageObjectPosition: imageStyle.objectPosition,
+          imageOpacity: imageStyle.opacity,
+          imageTransform: imageStyle.transform,
+          imageClipPath: imageStyle.clipPath,
+          imageAnimation: imageStyle.animationName,
+          imageTransitionDuration: imageStyle.transitionDuration,
+        };
+      }),
+    };
+  });
+  expect(contract.width).toBeCloseTo(contract.viewportWidth, 0);
+  expect(contract.itemCount).toBe(3);
+  expect(contract.frameCount).toBe(3);
+  expect(contract.gridColumns).toEqual(["3", "1", "3"]);
+  expect(contract.listHeight / contract.viewportHeight).toBeGreaterThan(1.5);
+  expect(contract.textPosition).toBe("fixed");
+  expect(contract.centerClip).toContain("inset");
+  expect(contract.containment.sectionPosition).toBe("relative");
+  expect(contract.containment.sectionOverflow).toEqual(["clip", "clip"]);
+  expect(contract.containment.sectionTransform).toBe("none");
+  expect(contract.containment.sectionFilter).toBe("none");
+  expect(contract.containment.sectionPerspective).toBe("none");
+  expect(contract.containment.sectionContain).not.toContain("paint");
+  expect(contract.containment.listOverflow).toEqual(["visible", "visible"]);
+  expect(contract.containment.itemOverflow).toEqual([
+    ["visible", "visible"],
+    ["visible", "visible"],
+    ["visible", "visible"],
+  ]);
+  expect(contract.containment.figureOverflow).toEqual([
+    ["clip", "clip"],
+    ["clip", "clip"],
+    ["clip", "clip"],
+  ]);
+  expect(contract.containment.nextSectionPosition).toBe("relative");
+  expect(contract.containment.nextSectionBackground).not.toBe(
+    "rgba(0, 0, 0, 0)",
+  );
+  for (const frame of contract.media) {
+    expect(frame.framePosition).toBe("relative");
+    expect(frame.frameOverflow).toEqual(["clip", "clip"]);
+    expect(frame.frameTransform).toBe("none");
+    expect(frame.frameClipPath).toBe("none");
+    expect(frame.frameAnimation).toBe("none");
+    expect(frame.frameTransitionDuration).toBe("0s");
+    expect(frame.imagePosition).toBe("absolute");
+    expect(frame.imageInset).toEqual(["0px", "0px", "0px", "0px"]);
+    expect(frame.imageObjectFit).toBe("cover");
+    expect(frame.imageOpacity).toBe("1");
+    expect(frame.imageTransform).toBe("none");
+    expect(frame.imageClipPath).toBe("none");
+    expect(frame.imageAnimation).toBe("none");
+    expect(frame.imageTransitionDuration).toBe("0s");
+    expect(frame.imageWidth).toBeCloseTo(frame.width, 3);
+    expect(frame.imageHeight).toBeCloseTo(frame.height, 3);
+    expect(frame.width / frame.height).toBeCloseTo(335 / 415, 3);
+    expect(frame.width).toBeGreaterThan(300);
+    expect(frame.height).toBeGreaterThan(390);
+  }
+
+  const scrollToProgress = async (progress: number) => {
+    await page.evaluate((targetProgress) => {
+      const list = document.querySelector<HTMLElement>(".cc-usp-list")!;
+      const listPageTop = list.getBoundingClientRect().top + window.scrollY;
+      const start = window.innerHeight * 0.52;
+      const end = window.innerHeight * 0.5;
+      const target =
+        listPageTop -
+        start +
+        targetProgress * (start + list.offsetHeight - end);
+      window.scrollTo(0, target);
+    }, progress);
+    await expect
+      .poll(async () =>
+        Number(
+          await page
+            .locator(".cc-usp-section")
+            .getAttribute("data-scroll-progress"),
+        ),
+      )
+      .toBeCloseTo(progress, 2);
+    await page.waitForTimeout(20);
+  };
+  const readStoryState = () =>
+    page.locator(".cc-usp-section").evaluate((section) => ({
+      visibleStories: Number(section.getAttribute("data-visible-stories")),
+      content: Array.from(
+        section.querySelectorAll<HTMLElement>(".cc-usp-content"),
+      ).map((element) => ({
+        opacity: Number(getComputedStyle(element).opacity),
+        visibility: getComputedStyle(element).visibility,
+        position: getComputedStyle(element).position,
+        rect: element.getBoundingClientRect().toJSON(),
+      })),
+    }));
+
+  await scrollToProgress(0.1);
+  let state = await readStoryState();
+  expect(state.visibleStories).toBe(1);
+  expect(
+    state.content.filter((story) => story.visibility !== "hidden"),
+  ).toHaveLength(1);
+  expect(state.content[0].opacity).toBeGreaterThan(0.01);
+  expect(state.content[1].visibility).toBe("hidden");
+  expect(state.content[2].visibility).toBe("hidden");
+
+  for (const progress of [0.41, 0.42, 0.43, 0.7, 0.71, 0.72]) {
+    await scrollToProgress(progress);
+    state = await readStoryState();
+    expect(state.visibleStories, `gap sample ${progress}`).toBe(0);
+    expect(
+      state.content.every((story) => story.visibility === "hidden"),
+      `gap visibility sample ${progress}`,
+    ).toBe(true);
+  }
+
+  await scrollToProgress(0.45);
+  state = await readStoryState();
+  expect(state.visibleStories).toBe(1);
+  expect(state.content[0].visibility).toBe("hidden");
+  expect(state.content[1].visibility).toBe("visible");
+  expect(state.content[2].visibility).toBe("hidden");
+
+  await scrollToProgress(0.74);
+  state = await readStoryState();
+  expect(state.visibleStories).toBe(1);
+  expect(state.content[0].visibility).toBe("hidden");
+  expect(state.content[1].visibility).toBe("hidden");
+  expect(state.content[2].visibility).toBe("visible");
+
+  await scrollToProgress(0.45);
+  state = await readStoryState();
+  expect(state.visibleStories).toBe(1);
+  expect(state.content[0].visibility).toBe("hidden");
+  expect(state.content[1].visibility).toBe("visible");
+  expect(state.content[2].visibility).toBe("hidden");
+
+  await scrollToProgress(0.1);
+  state = await readStoryState();
+  expect(state.visibleStories).toBe(1);
+  expect(state.content[0].visibility).toBe("visible");
+  expect(state.content[1].visibility).toBe("hidden");
+  expect(state.content[2].visibility).toBe("hidden");
+
+  const afterScrollMedia = await page
+    .locator(".cc-usp-media-frame")
+    .evaluateAll((frames) =>
+      frames.map((frame) => {
+        const rect = frame.getBoundingClientRect();
+        return {
+          width: rect.width,
+          height: rect.height,
+          pageY: rect.top + window.scrollY,
+        };
+      }),
+    );
+  expect(
+    afterScrollMedia.map(({ width, height }) => ({ width, height })),
+  ).toEqual(contract.media.map(({ width, height }) => ({ width, height })));
+  expect(afterScrollMedia.every(({ pageY }) => Number.isFinite(pageY))).toBe(
+    true,
+  );
+});
+
+test("marketing homepage keeps approved-catch loading, ready, empty, and error states honest", async ({
+  page,
+}) => {
+  test.setTimeout(60_000);
+  type CatchMode = "hold" | "ready" | "non-json" | "error";
+  let catchMode: CatchMode = "hold";
+  let heldCatchRoute: Route | undefined;
+
+  await page.route("**/api/marketing/recent-catches?*", async (route) => {
+    if (catchMode === "hold") {
+      heldCatchRoute = route;
+      return;
+    }
+    if (catchMode === "ready") {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          reports: [
+            {
+              id: "test-approved-report",
+              imageUrl: "/marketing/daylight-draft/surf-cast-close.jpg",
+              imageAlt: "Test-only approved catch fixture",
+              species: "California halibut",
+              measurement: "Test fixture",
+              siteName: "Test pier",
+              createdAt: "2026-08-01T12:00:00Z",
+              handle: "test_angler",
+            },
+          ],
+        }),
+      });
+      return;
+    }
+    if (catchMode === "non-json") {
+      await route.fulfill({
+        status: 200,
+        contentType: "text/html",
+        body: "not json",
+      });
+      return;
+    }
+    await route.abort("failed");
+  });
+  await page.route("**/api/marketing/community-preview?*", (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({ posts: [] }),
+    }),
+  );
+
+  await page.goto("/", { waitUntil: "domcontentloaded" });
+  await expect(
+    page.getByText("Checking for approved catch photos…"),
+  ).toBeVisible();
+  await expect.poll(() => Boolean(heldCatchRoute)).toBe(true);
+  catchMode = "non-json";
+  await heldCatchRoute!.fulfill({
+    status: 200,
+    contentType: "application/json",
+    body: JSON.stringify({ reports: [] }),
+  });
+  await expect(
+    page.getByText("Community Images Will Appear When Available", {
+      exact: true,
+    }),
+  ).toBeVisible();
+
+  catchMode = "ready";
+  await page.reload({ waitUntil: "domcontentloaded" });
+  await expect(page.locator(".cc-report-grid article")).toHaveCount(1);
+  await expect(
+    page.getByRole("img", { name: "Test-only approved catch fixture" }),
+  ).toBeVisible();
+  await expect(page.locator(".cc-report-grid article")).toContainText(
+    "California halibut",
+  );
+
+  catchMode = "non-json";
+  await page.reload({ waitUntil: "domcontentloaded" });
+  await expect(
+    page.getByText("Community Images Will Appear When Available", {
+      exact: true,
+    }),
+  ).toBeVisible();
+
+  catchMode = "error";
+  await page.reload({ waitUntil: "domcontentloaded" });
+  await expect(
+    page.getByText("Catch reports are temporarily unavailable.", {
+      exact: true,
+    }),
+  ).toBeVisible();
+});
+
+test("marketing homepage transition preserves native wheel, touch, and keyboard scrolling contracts", async ({
+  page,
+}, testInfo) => {
+  test.setTimeout(60_000);
+  await page.route("**/api/marketing/recent-catches?*", (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({ reports: [] }),
+    }),
+  );
+  await page.route("**/api/marketing/community-preview?*", (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({ posts: [] }),
+    }),
+  );
+  await page.goto("/");
+  await expect(page.locator(".cc-landing")).toHaveClass(/cc-intro-settled/, {
+    timeout: 10_000,
+  });
+
+  const section = page.locator(".cc-approach");
+  const scrollContract = await section.evaluate((element) => {
+    const style = getComputedStyle(element);
+    const top = element.getBoundingClientRect().top + window.scrollY;
+    const travel = Math.max(1, element.scrollHeight - window.innerHeight);
+    return {
+      start: Math.max(0, top - window.innerHeight * 0.12),
+      travel,
+      touchAction: style.touchAction,
+      overscrollBehavior: style.overscrollBehavior,
+    };
+  });
+  expect(scrollContract.touchAction).toBe("auto");
+  expect(scrollContract.overscrollBehavior).not.toContain("none");
+
+  await page.evaluate(
+    (position) => window.scrollTo(0, position),
+    scrollContract.start,
+  );
+  await expect
+    .poll(() =>
+      page.evaluate(
+        (position) => Math.abs(window.scrollY - position),
+        scrollContract.start,
+      ),
+    )
+    .toBeLessThanOrEqual(1);
+  const initialProgress = Number(
+    await section.getAttribute("data-scroll-progress"),
+  );
+  if (testInfo.project.name === "webkit-iphone-13") return;
+
+  const waitForScrollToSettle = () =>
+    page.evaluate(
+      () =>
+        new Promise<void>((resolve) => {
+          let previous = window.scrollY;
+          let stableFrames = 0;
+
+          const sample = () => {
+            const current = window.scrollY;
+            stableFrames =
+              Math.abs(current - previous) <= 1 ? stableFrames + 1 : 0;
+            previous = current;
+
+            if (stableFrames >= 5) {
+              resolve();
+              return;
+            }
+
+            window.requestAnimationFrame(sample);
+          };
+
+          window.requestAnimationFrame(sample);
+        }),
+    );
+
+  const viewport = page.viewportSize()!;
+  const touchDistance = Math.max(72, scrollContract.travel * 0.55);
+  const cdp = await page.context().newCDPSession(page);
+  await cdp.send("Input.synthesizeScrollGesture", {
+    x: Math.floor(viewport.width / 2),
+    y: Math.floor(viewport.height * 0.65),
+    yDistance: -touchDistance,
+    speed: 800,
+    gestureSourceType: "touch",
+  });
+  await expect
+    .poll(() => page.evaluate(() => window.scrollY))
+    .toBeGreaterThan(scrollContract.start);
+  await expect
+    .poll(async () =>
+      Number(await section.getAttribute("data-scroll-progress")),
+    )
+    .toBeGreaterThan(initialProgress);
+  const touchForwardProgress = Number(
+    await section.getAttribute("data-scroll-progress"),
+  );
+  await cdp.send("Input.synthesizeScrollGesture", {
+    x: Math.floor(viewport.width / 2),
+    y: Math.floor(viewport.height * 0.35),
+    yDistance: touchDistance,
+    speed: 800,
+    gestureSourceType: "touch",
+  });
+  await expect
+    .poll(async () =>
+      Number(await section.getAttribute("data-scroll-progress")),
+    )
+    .toBeLessThan(touchForwardProgress);
+  await waitForScrollToSettle();
+  await cdp.detach();
+
+  await page.evaluate(
+    (position) => window.scrollTo(0, position),
+    scrollContract.start,
+  );
+  await expect
+    .poll(() =>
+      page.evaluate(
+        (position) => Math.abs(window.scrollY - position),
+        scrollContract.start,
+      ),
+    )
+    .toBeLessThanOrEqual(1);
+  await waitForScrollToSettle();
+
+  const wheelDistance = Math.max(36, scrollContract.travel * 0.42);
+  await page.mouse.wheel(0, wheelDistance);
+  await expect
+    .poll(() => page.evaluate(() => window.scrollY))
+    .toBeGreaterThan(scrollContract.start);
+  await expect
+    .poll(async () =>
+      Number(await section.getAttribute("data-scroll-progress")),
+    )
+    .toBeGreaterThan(initialProgress);
+  await waitForScrollToSettle();
+
+  const forwardProgress = Number(
+    await section.getAttribute("data-scroll-progress"),
+  );
+  await page.mouse.wheel(0, -wheelDistance * 0.55);
+  await expect
+    .poll(async () =>
+      Number(await section.getAttribute("data-scroll-progress")),
+    )
+    .toBeLessThan(forwardProgress);
+
+  const beforePageDown = await page.evaluate(() => window.scrollY);
+  await page.keyboard.press("PageDown");
+  await expect
+    .poll(() => page.evaluate(() => window.scrollY))
+    .toBeGreaterThan(beforePageDown);
+  await waitForScrollToSettle();
+  const afterPageDown = await page.evaluate(() => window.scrollY);
+  await page.keyboard.press("PageUp");
+  await expect
+    .poll(() => page.evaluate(() => window.scrollY))
+    .toBeLessThan(afterPageDown);
+  await waitForScrollToSettle();
+  const beforeSpace = await page.evaluate(() => window.scrollY);
+  await page.keyboard.press("Space");
+  await expect
+    .poll(() => page.evaluate(() => window.scrollY))
+    .toBeGreaterThan(beforeSpace);
+  await waitForScrollToSettle();
+  const afterSpace = await page.evaluate(() => window.scrollY);
+  await page.keyboard.press("Shift+Space");
+  await expect
+    .poll(() => page.evaluate(() => window.scrollY))
+    .toBeLessThan(afterSpace);
+  await waitForScrollToSettle();
+  expect(await page.evaluate(() => window.scrollY)).toBeLessThan(afterSpace);
+  const beforeEnd = await page.evaluate(() => window.scrollY);
+  await page.keyboard.press("End");
+  await expect
+    .poll(() => page.evaluate(() => window.scrollY))
+    .toBeGreaterThan(beforeEnd);
+  await expect
+    .poll(() =>
+      page.evaluate(
+        () =>
+          (document.documentElement.scrollHeight -
+            document.documentElement.clientHeight -
+            window.scrollY) /
+          window.innerHeight,
+      ),
+    )
+    .toBeLessThanOrEqual(0.2);
+  await waitForScrollToSettle();
+  await page.keyboard.press("Home");
+  await expect
+    .poll(() => page.evaluate(() => window.scrollY))
+    .toBeLessThanOrEqual(1);
+});
+
+test("marketing homepage keeps keyboard focus visible and ordered through the full page", async ({
+  page,
+}, testInfo) => {
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await page.route("**/api/marketing/recent-catches?*", (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({ reports: [] }),
+    }),
+  );
+  await page.route("**/api/marketing/community-preview?*", (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({ posts: [] }),
+    }),
+  );
+  await page.goto("/");
+
+  const skipLink = page.getByRole("link", {
+    name: "Skip to landing page content",
+  });
+  await page.keyboard.press("Tab");
+  if (
+    !(await skipLink.evaluate((element) => element === document.activeElement))
+  ) {
+    // Touch-emulation projects do not synthesize an initial document-level
+    // Tab focus. Establish the same starting point, then keep the remainder
+    // of the traversal keyboard-driven.
+    await skipLink.focus();
+  }
+  await expect(skipLink).toBeFocused();
+
+  const testFlight = page.locator(".cc-testflight-button");
+  const readFocusRing = () =>
+    testFlight.evaluate((element) => {
+      const style = getComputedStyle(element);
+      return {
+        style: style.outlineStyle,
+        width: Number.parseFloat(style.outlineWidth),
+      };
+    });
+
+  if (testInfo.project.name === "webkit-iphone-13") {
+    const sourceOrder = await page.evaluate(() => {
+      const selectors = [
+        ".cc-primary-button",
+        ".cc-testflight-button",
+        "#cc-mailing-email",
+        ".cc-footer-brand .cc-brand",
+      ];
+      const elements = selectors.map((selector) =>
+        document.querySelector(selector),
+      );
+      return (
+        elements.every(Boolean) &&
+        elements.every(
+          (element, index) =>
+            index === 0 ||
+            Boolean(
+              elements[index - 1]!.compareDocumentPosition(element!) &
+              Node.DOCUMENT_POSITION_FOLLOWING,
+            ),
+        )
+      );
+    });
+    expect(sourceOrder).toBe(true);
+    await testFlight.focus();
+    await expect(testFlight).toBeFocused();
+    const touchFocusRing = await readFocusRing();
+    expect(touchFocusRing.style).not.toBe("none");
+    expect(touchFocusRing.width).toBeGreaterThanOrEqual(2);
+    await page.getByLabel("Email address").focus();
+    await expect(page.getByLabel("Email address")).toBeFocused();
+    await page.locator(".cc-footer-brand .cc-brand").focus();
+    await expect(page.locator(".cc-footer-brand .cc-brand")).toBeFocused();
+    return;
+  }
+
+  const focusOrder: string[] = [];
+  for (let index = 0; index < 32; index += 1) {
+    const focusedClass = await page.evaluate(() =>
+      document.activeElement instanceof HTMLElement
+        ? document.activeElement.className
+        : "",
+    );
+    focusOrder.push(String(focusedClass));
+    if (String(focusedClass).includes("cc-testflight-button")) break;
+    await page.keyboard.press("Tab");
+  }
+
+  const primaryIndex = focusOrder.findIndex((value) =>
+    value.includes("cc-primary-button"),
+  );
+  const testFlightIndex = focusOrder.findIndex((value) =>
+    value.includes("cc-testflight-button"),
+  );
+  expect(testFlightIndex).toBeGreaterThan(0);
+  if (primaryIndex >= 0) {
+    expect(testFlightIndex).toBeGreaterThan(primaryIndex);
+  }
+  const commandOrder = await page.evaluate(() => {
+    const primary = document.querySelector(".cc-primary-button");
+    const testFlightControl = document.querySelector(".cc-testflight-button");
+    if (!primary || !testFlightControl) return false;
+    return Boolean(
+      primary.compareDocumentPosition(testFlightControl) &
+      Node.DOCUMENT_POSITION_FOLLOWING,
+    );
+  });
+  expect(commandOrder).toBe(true);
+
+  await expect(testFlight).toBeFocused();
+  const focusRing = await readFocusRing();
+  expect(focusRing.style).not.toBe("none");
+  expect(focusRing.width).toBeGreaterThanOrEqual(2);
+
+  const emailField = page.getByLabel("Email address");
+  let emailReached = false;
+  for (let index = 0; index < 32; index += 1) {
+    await page.keyboard.press("Tab");
+    if (
+      await emailField.evaluate((element) => element === document.activeElement)
+    ) {
+      emailReached = true;
+      break;
+    }
+  }
+  expect(emailReached).toBe(true);
+  await expect(emailField).toBeFocused();
+  await page.keyboard.press("Tab");
+  await expect(
+    page.getByRole("button", { name: "Join mail list" }),
+  ).toBeFocused();
+  await page.keyboard.press("Tab");
+  await expect(page.locator(".cc-footer-brand .cc-brand")).toBeFocused();
 });
 
 test("keyboard users can skip repeated navigation to the main forecast", async ({

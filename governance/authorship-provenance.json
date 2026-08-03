@@ -1,6 +1,6 @@
 {
   "schema_version": "castingcompass.authorship-provenance/1.0.0",
-  "reviewed_at": "2026-07-29",
+  "reviewed_at": "2026-08-02",
   "policy_effective_commit": "ea922c8dfbdb7e35a81836d1f6a9e9e35c9081bb",
   "private_evidence_boundary": "Private agreements, legal advice, identities, personal data, and secret material stay outside this repository; this register may contain only non-sensitive receipt identifiers.",
   "records": [
@@ -254,6 +254,167 @@
         "git:2570c87afd451e653029fbd9dae4e9847b3aeec0",
         "The project owner supplied the approved July 29 homepage mockup and animation behavior sheet as the art-direction source of truth.",
         "OpenAI ImageGen created the isolated actor assets; local chroma-key removal and WebP encoding prepared the transparent production layers."
+      ],
+      "private_evidence_receipt": null
+    },
+    {
+      "id": "marketing-personal-mosaic-photographs",
+      "title": "Owner-supplied coastal fishing photographs for the Modern Mosaic",
+      "kind": "first_party_owner_supplied",
+      "paths": [
+        {
+          "path": "public/marketing/daylight-draft/personal-angler-catch.jpg",
+          "sha256": "ba422768fa9d578a9e3496e4e2b30f8a344a03528a7c246f4bc255715557e06c"
+        },
+        {
+          "path": "public/marketing/daylight-draft/personal-group-catch.jpg",
+          "sha256": "03767304314b337ccfe29c404ef74ad0749a2fcd405e8d58a174f7bf74052ba2"
+        },
+        {
+          "path": "public/marketing/daylight-draft/personal-pier-sunset.jpg",
+          "sha256": "e81e3d9e95d7ce51bd388445dd08e02b5f389f762bd4de9a1d170b20b154b276"
+        },
+        {
+          "path": "public/marketing/daylight-draft/personal-rocky-intertidal.jpg",
+          "sha256": "4cf335b427e02b51ba9e372e2096b2fec8a30fb5bcee57fb1667b003044c9502"
+        },
+        {
+          "path": "public/marketing/daylight-draft/personal-rod-pov.jpg",
+          "sha256": "1c9e7444da4c8ffd492740ae0b2d6938ab3176f62a976ca3fb7068a1f7237894"
+        },
+        {
+          "path": "public/marketing/daylight-draft/personal-santa-barbara-sunset.jpg",
+          "sha256": "95d6fddaed56bebbcb3bda1c5d7985180993482c32d113acb7c5ff29640fb9d7"
+        }
+      ],
+      "creator_display": "Project-owner supplied; photographer confirmation required",
+      "creation_date": null,
+      "source_url": null,
+      "source_remote_sha1": null,
+      "source_reviewed_at": null,
+      "license_id": null,
+      "license_label": null,
+      "license_url": null,
+      "rights_basis": "owner_supplied",
+      "attribution_required": false,
+      "share_alike": false,
+      "attribution_text": "CastingCompass owner-supplied photography",
+      "modifications": "Selected six of eight photographs supplied for the Modern Mosaic, resized each to a maximum 2000-pixel dimension as needed, stripped embedded metadata, and re-encoded as JPEG; no generative edit or content alteration was used.",
+      "ai_assistance": "none_declared",
+      "rights_review": "owner_supplied_not_independently_cleared",
+      "release_state": "candidate_review_required",
+      "upstream_record_id": null,
+      "release_commit": "a895429d14665af66380407a188b5c119966aa17",
+      "evidence_refs": [
+        "git:a895429d14665af66380407a188b5c119966aa17",
+        "The project owner supplied eight personal coastal-fishing photographs in the 2026-08-02 homepage recovery task and directed their use to complete the Modern Mosaic.",
+        "This public record does not claim independent photographer-rights verification, depicted-person permission, or production release clearance."
+      ],
+      "private_evidence_receipt": null
+    },
+    {
+      "id": "marketing-santa-barbara-bathymetry",
+      "title": "USGS Santa Barbara offshore bathymetric contours",
+      "kind": "third_party_open_data",
+      "paths": [
+        {
+          "path": "public/marketing/daylight-draft/santa-barbara-bathymetry.svg",
+          "sha256": "b7f1f4229ee8192c4af8ffdc316d44fa90800bd70cc7bfa2fa0a650e1d62d047"
+        }
+      ],
+      "creator_display": "U.S. Geological Survey Coastal and Marine Geology Program",
+      "creation_date": null,
+      "source_url": "https://pubs.usgs.gov/ds/781/OffshoreSantaBarbara/data_catalog_OffshoreSantaBarbara.html",
+      "source_remote_sha1": "3f34683607b24988f5aa74b13b1107f71a864427",
+      "source_reviewed_at": "2026-08-02",
+      "license_id": "LicenseRef-USGS-PublicDomain",
+      "license_label": "USGS public-domain source data",
+      "license_url": "https://www.usgs.gov/information-policies-and-instructions/copyrights-and-credits",
+      "rights_basis": "source_public_domain_assertion",
+      "attribution_required": false,
+      "share_alike": false,
+      "attribution_text": "U.S. Geological Survey offshore Santa Barbara contours",
+      "modifications": "Converted the official offshore contour shapefile to WGS84, clipped it to the satellite crop, projected it to UTM for pixel-accurate placement, and rendered water-only contour paths as an external SVG; no generative edit was used.",
+      "ai_assistance": "none_declared",
+      "rights_review": "source_public_domain_assertion",
+      "release_state": "approved_existing_use",
+      "upstream_record_id": null,
+      "release_commit": "a895429d14665af66380407a188b5c119966aa17",
+      "evidence_refs": [
+        "git:a895429d14665af66380407a188b5c119966aa17",
+        "USGS data catalog: Contours_OffshoreSantaBarbara.zip",
+        "Source archive SHA-1: 3f34683607b24988f5aa74b13b1107f71a864427"
+      ],
+      "private_evidence_receipt": null
+    },
+    {
+      "id": "marketing-santa-barbara-etopo-bathymetry",
+      "title": "NOAA ETOPO 2022 full-water bathymetric contours for Santa Barbara",
+      "kind": "third_party_open_data",
+      "paths": [
+        {
+          "path": "public/marketing/daylight-draft/santa-barbara-etopo-bathymetry.svg",
+          "sha256": "330f47208b85c373fca57bf87e08e8042ae64de63616515902ed6868147625bf"
+        }
+      ],
+      "creator_display": "NOAA National Centers for Environmental Information",
+      "creation_date": "2022-10-01",
+      "source_url": "https://gis.ngdc.noaa.gov/arcgis/rest/services/DEM_mosaics/DEM_all/ImageServer/exportImage?bbox=-119.86,34.28,-119.57,34.52&bboxSR=4326&size=1800,1800&imageSR=4326&format=tiff&pixelType=F32&interpolation=+RSP_Bilinear&compression=LZ77&renderingRule=%7B%22rasterFunction%22%3A%22none%22%7D&mosaicRule=%7B%22where%22%3A%22Name%3D%27ETOPO_2022_v1_15s_bed_elev%27%22%7D&f=image",
+      "source_remote_sha1": "ecb6bdb5539da3b34167f2aa0719df7cd86a5ee6",
+      "source_reviewed_at": "2026-08-02",
+      "license_id": "LicenseRef-NOAA-PublicDomain",
+      "license_label": "NOAA public-domain data",
+      "license_url": "https://oceanservice.noaa.gov/about/faq.html",
+      "rights_basis": "source_public_domain_assertion",
+      "attribution_required": false,
+      "share_alike": false,
+      "attribution_text": "NOAA National Centers for Environmental Information ETOPO 2022",
+      "modifications": "Requested the official ETOPO 2022 bedrock elevation surface for the Santa Barbara crop as a 900px WGS84 GeoTIFF, masked land and no-data cells, extracted measured water-depth contours at 10m-to-50m intervals, and rendered them as an external SVG; no generative edit was used.",
+      "ai_assistance": "none_declared",
+      "rights_review": "source_public_domain_assertion",
+      "release_state": "approved_existing_use",
+      "upstream_record_id": null,
+      "release_commit": "a895429d14665af66380407a188b5c119966aa17",
+      "evidence_refs": [
+        "git:a895429d14665af66380407a188b5c119966aa17",
+        "NOAA NCEI ETOPO Global Relief Model: 15 arc-second bedrock elevation",
+        "ArcGIS ImageServer export SHA-1: ecb6bdb5539da3b34167f2aa0719df7cd86a5ee6"
+      ],
+      "private_evidence_receipt": null
+    },
+    {
+      "id": "marketing-santa-barbara-satellite",
+      "title": "Copernicus Sentinel-2 true-color Santa Barbara satellite crop",
+      "kind": "third_party_open_data",
+      "paths": [
+        {
+          "path": "public/marketing/daylight-draft/santa-barbara-satellite.jpg",
+          "sha256": "1ce626462f1fe77c39c98f1d5940595cbc32f904cb46a54c839bf135a6167305"
+        }
+      ],
+      "creator_display": "Copernicus Sentinel-2 / Element84 Earth Search",
+      "creation_date": "2025-10-17",
+      "source_url": "https://earth-search.aws.element84.com/v1/collections/sentinel-2-l2a/items/S2B_11SKU_20251017_0_L2A",
+      "source_remote_sha1": "dfecb8ea3231bc4c4d18cc7c887668fc55032afa",
+      "source_reviewed_at": "2026-08-02",
+      "license_id": "LicenseRef-Copernicus-Sentinel",
+      "license_label": "Copernicus Sentinel data free, full, and open access",
+      "license_url": "https://cds.climate.copernicus.eu/licences/ec-sentinel",
+      "rights_basis": "copernicus_open_data",
+      "attribution_required": true,
+      "share_alike": false,
+      "attribution_text": "Copernicus Sentinel-2 / Element84 Earth Search",
+      "modifications": "Cropped the 10m true-color COG to the Santa Barbara shoreline, resized it to an 1800px square JPEG, and stripped source metadata; no generative edit was used.",
+      "ai_assistance": "none_declared",
+      "rights_review": "verified_source_license",
+      "release_state": "approved_existing_use",
+      "upstream_record_id": null,
+      "release_commit": "a895429d14665af66380407a188b5c119966aa17",
+      "evidence_refs": [
+        "git:a895429d14665af66380407a188b5c119966aa17",
+        "Element84 Earth Search STAC item: S2B_11SKU_20251017_0_L2A",
+        "Source COG SHA-1: dfecb8ea3231bc4c4d18cc7c887668fc55032afa",
+        "Selected item metadata: 2025-10-17, EPSG:32611, 10m true-color asset, 0.00222 cloud cover."
       ],
       "private_evidence_receipt": null
     },

@@ -145,6 +145,7 @@
         "kind": {
           "enum": [
             "third_party_reference",
+            "third_party_open_data",
             "third_party_owner_licensed",
             "first_party_owner_supplied",
             "first_party_legacy",
@@ -189,8 +190,10 @@
             "cc0",
             "cc_by",
             "cc_by_sa",
+            "copernicus_open_data",
             "source_public_domain_assertion",
             "commercial_stock_license",
+            "owner_supplied",
             "owner_supplied_ai_assisted",
             "owner_confirmation_required",
             "derived_from_registered_legacy"

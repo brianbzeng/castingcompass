@@ -69,8 +69,21 @@ test("server-renders the marketing homepage with truthful live-data and release 
   assert.match(html, /cast a compass\./);
   assert.match(html, /Find best spot near you/);
   assert.match(html, /No login required to explore/);
+  assert.match(html, /Choose a target species, compare public fishing locations/);
+  assert.match(html, /santa-barbara-satellite\.jpg/);
+  assert.doesNotMatch(html, /santa-barbara-bathymetry\.svg/);
+  assert.match(html, /santa-barbara-etopo-bathymetry\.svg/);
+  assert.match(html, /Sentinel-2 \/ NOAA ETOPO \/ USGS contours/);
   assert.match(html, /Read the coast/);
   assert.match(html, /before you cast\./);
+  assert.match(html, /Follow the water/);
+  assert.match(html, /to the right spot\./);
+  assert.match(html, /Every piece adds/);
+  assert.match(html, /context\./);
+  assert.match(html, /data-story-row="3"/);
+  assert.doesNotMatch(html, /SCROLL TO EXPLORE/);
+  assert.doesNotMatch(html, /cc-daylight-foreground-surface/);
+  assert.match(html, /Log a trip to help CastingCompass improve its guidance/);
   assert.match(html, /Recent Catch Reports/);
   assert.match(html, /Checking for approved catch photos/);
   assert.match(html, /Local threads/);
@@ -79,13 +92,28 @@ test("server-renders the marketing homepage with truthful live-data and release 
   assert.match(html, /Coming soon/);
   assert.match(html, /Join the coast list\./);
   assert.match(html, /support@castingcompass\.com/);
-  assert.match(
-    html,
-    /(?:\/|%2F)marketing(?:\/|%2F)daylight-draft(?:\/|%2F)surf-cast-wide\.jpg/i,
-  );
+  assert.match(html, /Instagram profile not yet available/);
+  assert.match(html, /YouTube profile not yet available/);
   assert.match(
     html,
     /(?:\/|%2F)marketing(?:\/|%2F)daylight-draft(?:\/|%2F)surf-cast-close\.jpg/i,
+  );
+  for (const file of [
+    "personal-angler-catch",
+    "personal-rod-pov",
+    "personal-santa-barbara-sunset",
+  ]) {
+    assert.match(
+      html,
+      new RegExp(
+        `(?:/|%2F)marketing(?:/|%2F)daylight-draft(?:/|%2F)${file}\\.jpg`,
+        "i",
+      ),
+    );
+  }
+  assert.match(
+    html,
+    /An angler holding a fish and rod beside the Santa Barbara coast/,
   );
   assert.match(html, /href="\/forecast"/);
   assert.match(html, /href="\/community"/);

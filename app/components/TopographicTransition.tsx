@@ -77,11 +77,10 @@ function smoothClosedRidge(path: string) {
   return `M ${points[0][0]} ${points[0][1]} ${commands.join(" ")} Z`;
 }
 
-function spreadStyle(groupIndex: number, loader = false): CSSProperties {
+function spreadStyle(): CSSProperties {
   return {
-    // The loader uses one uninterrupted timeline for every peak. The hero can
-    // retain its subtle stagger after the loader has completely disappeared.
-    "--cc-spread-delay": loader ? "0ms" : `${225 + groupIndex * 32}ms`,
+    // Every loader summit follows the same uninterrupted reveal timeline.
+    "--cc-spread-delay": "0ms",
   } as CSSProperties;
 }
 
@@ -119,7 +118,7 @@ function LoaderTopographicMap({
               <path
                 key={ridgeGroup.name}
                 d={smoothClosedRidge(ridgeGroup.paths[0])}
-                style={spreadStyle(groupIndex, true)}
+                style={spreadStyle()}
                 onAnimationEnd={
                   groupIndex === 0
                     ? (event) => {
@@ -151,50 +150,29 @@ function LoaderTopographicMap({
 
 function HeroTopographicMap() {
   return (
-    <svg
-      className="cc-topographic-map cc-topographic-map-hero"
-      viewBox="0 0 6324 2372"
-      preserveAspectRatio="xMidYMid slice"
-      aria-hidden="true"
-    >
-      <defs>
-        <mask
-          id="cc-topo-hero-assemble"
-          maskUnits="userSpaceOnUse"
-          x="0"
-          y="0"
-          width="6324"
-          height="2372"
-        >
-          <rect width="6324" height="2372" fill="black" />
-          <g
-            className="cc-topo-hero-ridges"
-            fill="white"
-            stroke="white"
-            strokeLinejoin="round"
-          >
-            {revealRidges.map((ridgeGroup, groupIndex) => (
-              <path
-                key={ridgeGroup.name}
-                d={smoothClosedRidge(
-                  ridgeGroup.paths[ridgeGroup.paths.length - 1],
-                )}
-                style={spreadStyle(groupIndex)}
-              />
-            ))}
-          </g>
-        </mask>
-      </defs>
-      <image
-        {...HIGH_PRIORITY_SVG_IMAGE}
-        className="cc-topo-stock-image"
-        href={TOPOGRAPHIC_ASSET}
-        width="6324"
-        height="2372"
-        preserveAspectRatio="none"
-        mask="url(#cc-topo-hero-assemble)"
+    <div className="cc-hero-satellite" aria-hidden="true">
+      <img
+        className="cc-hero-satellite-image"
+        src="/marketing/daylight-draft/santa-barbara-satellite.jpg"
+        alt=""
+        loading="eager"
+        decoding="async"
       />
-    </svg>
+      <div className="cc-hero-ocean-tint" />
+      <div className="cc-hero-contour-water">
+        <img
+          className="cc-hero-etopo-bathymetry"
+          src="/marketing/daylight-draft/santa-barbara-etopo-bathymetry.svg?v=20260802-smooth-2"
+          alt=""
+          data-coverage="full-water"
+          loading="eager"
+          decoding="async"
+        />
+      </div>
+      <span className="cc-hero-map-attribution">
+        Santa Barbara · Sentinel-2 / NOAA ETOPO / USGS contours
+      </span>
+    </div>
   );
 }
 
@@ -225,7 +203,11 @@ export function TopographicLoader({
 
 export function HeroTopographicArt() {
   return (
-    <div className="cc-hero-topo" aria-hidden="true">
+    <div
+      className="cc-hero-topo"
+      role="img"
+      aria-label="Satellite view of Santa Barbara shoreline with smooth NOAA ETOPO bathymetric contours"
+    >
       <HeroTopographicMap />
     </div>
   );

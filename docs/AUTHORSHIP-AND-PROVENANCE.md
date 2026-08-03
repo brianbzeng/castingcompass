@@ -25,6 +25,16 @@ prove who created a work or who owns its rights.
   They remain `candidate_review_required`: the repository records the owner's purchase statement
   but does not contain or independently validate private receipts. Three creator names still need
   confirmation from the owner's private Adobe purchase history.
+- Six personal coastal-fishing photographs selected for the Modern Mosaic have exact hashes and
+  a public-safe record of the resizing, metadata stripping, and JPEG re-encoding used for their
+  web derivatives. They remain `candidate_review_required`: direct task delivery establishes
+  owner-supplied custody, not independent photographer-rights or depicted-person-permission
+  clearance, and no such clearance is claimed here.
+- The Santa Barbara hero satellite crop is registered as Copernicus Sentinel-2 open data with its
+  source STAC item, source COG SHA-1, crop disclosure, and visible attribution. The bathymetry
+  overlay combines NOAA ETOPO 2022 depth contours across the full water field with higher-detail
+  USGS nearshore contours; both source derivatives and their projection/rendering disclosures are
+  registered in the public record.
 - Eight pre-policy brand, icon, social-card, and topography paths are preserved on an exact legacy
   allowlist. Their creator, source layers, assignment/license, and AI-assistance history still
   need owner confirmation. They are not represented as rights-cleared merely because they are in

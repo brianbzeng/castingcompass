@@ -58,9 +58,10 @@ test("the committed public-safe provenance report is deterministic and productio
   const checked = verifyProject(root, { reportMode: "check" });
   const rebuilt = verifyProject(root, { reportMode: "none" });
   assert.deepEqual(checked, rebuilt);
-  assert.equal(checked.visualAssetCount, 54);
-  assert.equal(checked.thirdPartyRecordCount, 7);
-  assert.equal(checked.candidateReviewRequiredRecordCount, 10);
+  assert.equal(checked.recordCount, 26);
+  assert.equal(checked.visualAssetCount, 63);
+  assert.equal(checked.thirdPartyRecordCount, 14);
+  assert.equal(checked.candidateReviewRequiredRecordCount, 11);
   assert.deepEqual(checked.candidateReviewRequiredPaths, [
     "public/marketing/actors/boat-fisherman.webp",
     "public/marketing/actors/diving-helmet.webp",
@@ -83,6 +84,12 @@ test("the committed public-safe provenance report is deterministic and productio
     "public/marketing/approved/seafloor-starfish.webp",
     "public/marketing/approved/striped-bass.webp",
     "public/marketing/daylight-draft/bay-bridge-angler.jpg",
+    "public/marketing/daylight-draft/personal-angler-catch.jpg",
+    "public/marketing/daylight-draft/personal-group-catch.jpg",
+    "public/marketing/daylight-draft/personal-pier-sunset.jpg",
+    "public/marketing/daylight-draft/personal-rocky-intertidal.jpg",
+    "public/marketing/daylight-draft/personal-rod-pov.jpg",
+    "public/marketing/daylight-draft/personal-santa-barbara-sunset.jpg",
     "public/marketing/daylight-draft/surf-cast-close.jpg",
     "public/marketing/daylight-draft/surf-cast-wide.jpg",
     "public/marketing/daylight-draft/testflight-phone-mockup-v1.png",
@@ -107,6 +114,7 @@ test("the committed public-safe provenance report is deterministic and productio
   assert.equal(checked.liveAttributionVerified, true);
   assert.equal(checked.privateEvidenceIncluded, false);
   assert.equal(checked.productionReadiness, false);
+  assert.equal(checked.rightsBasisCounts.owner_supplied, 1);
 });
 
 test("the strict schema and private-data boundary reject extra or sensitive record content", () => {
@@ -182,6 +190,18 @@ test("new legacy exceptions, candidate overclaims, duplicate paths, and license 
     assert.throws(
       () => verifyProject(project, { reportMode: "none" }),
       /must remain candidate review required/u,
+    );
+  });
+
+  withFixture((project) => {
+    const register = readJson(project, "governance/authorship-provenance.json");
+    register.records.find(
+      (record) => record.id === "marketing-personal-mosaic-photographs",
+    ).ai_assistance = "disclosed";
+    writeJson(project, "governance/authorship-provenance.json", register);
+    assert.throws(
+      () => verifyProject(project, { reportMode: "none" }),
+      /rights basis and AI disclosure disagree/u,
     );
   });
 
