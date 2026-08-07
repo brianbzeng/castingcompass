@@ -139,7 +139,7 @@
   },
   "devDependencies": {
     "@cloudflare/vite-plugin": "1.47.0",
-    "@eslint-react/eslint-plugin": "5.18.0",
+    "@eslint-react/eslint-plugin": "5.18.1",
     "@next/eslint-plugin-next": "16.2.12",
     "@playwright/test": "1.61.1",
     "@tailwindcss/postcss": "4.3.3",
@@ -155,11 +155,11 @@
     "eslint-plugin-import-x": "4.17.1",
     "eslint-plugin-jsx-a11y-x": "0.2.0",
     "eslint-plugin-react-hooks": "7.1.1",
-    "globals": "16.4.0",
+    "globals": "17.9.0",
     "react-server-dom-webpack": "19.2.8",
     "tailwindcss": "4.3.3",
     "typescript": "5.9.3",
-    "typescript-eslint": "8.65.0",
+    "typescript-eslint": "8.66.0",
     "vinext": "0.0.50",
     "vite": "8.1.5",
     "wrangler": "4.114.0"
