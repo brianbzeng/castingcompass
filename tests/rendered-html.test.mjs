@@ -36,6 +36,12 @@ test("server-renders the CastingCompass product shell", async () => {
   assert.match(csp, /script-src-attr 'none'/);
   assert.match(csp, /style-src-attr 'none'/);
 
+  const secondResponse = await render();
+  const secondCsp = secondResponse.headers.get("content-security-policy-report-only") ?? "";
+  const secondCspNonce = secondCsp.match(/'nonce-([a-f0-9]{32})'/)?.[1];
+  assert.ok(secondCspNonce, "a second rendered response must advertise a 128-bit CSP nonce");
+  assert.notEqual(secondCspNonce, cspNonce, "CSP nonces must be unique per response");
+
   const html = await response.text();
   assert.doesNotMatch(html, /<(?:script|style)\b(?![^>]*\bnonce=)[^>]*>/i);
   for (const occurrence of html.matchAll(/<(?:script|style)\b[^>]*\bnonce="([^"]+)"/gi)) {
