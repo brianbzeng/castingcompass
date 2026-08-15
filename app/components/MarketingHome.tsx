@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
+import Lenis from "lenis";
 import {
   Fragment,
   useEffect,
@@ -33,62 +34,71 @@ const navItems = [
   ["Community", "/community"],
 ] as const;
 
-const approachCards = [
+const logCards = [
   {
     number: "01",
-    title: "Find top spots",
-    copy: "Compare public shore, pier, beach, and jetty options near you.",
+    title: "Record every outcome",
+    copy: "Keep catches, short releases, other species, and no-catch time in the same honest record.",
   },
   {
     number: "02",
-    title: "Read live conditions",
-    copy: "See tide, wind, swell, and source freshness in plain language.",
+    title: "Reuse your setup",
+    copy: "Save rod, reel, rig, and bait or lure as a gear preset for the next trip.",
   },
   {
     number: "03",
-    title: "Pick one target",
-    copy: "Keep one species in focus and swap targets without rebuilding the trip.",
+    title: "Note what changed",
+    copy: "Capture waves, weeds, snags, casting room, and overall fishability at the water.",
   },
   {
     number: "04",
-    title: "Check local reports",
-    copy: "Add recent public-place context before you decide whether to make the drive.",
+    title: "Keep details private",
+    copy: "Raw trip notes and verification photos stay private, with photo metadata stripped before storage.",
   },
 ] as const;
 
 const daylightStoryBeats = [
   {
     number: "01",
-    eyebrow: "01 / ORIENT",
-    title: ["Read the coast", "before you cast."],
-    copy: "Start with a real place and the conditions that shape a useful fishing window.",
+    eyebrow: "01 / COMPARE",
+    title: ["See what moves", "a spot up", "the list."],
+    copy: "See how tide, wind, swell, source freshness, and one target species shape each relative opportunity score.",
     image: {
-      src: "/marketing/daylight-draft/personal-rod-pov.jpg",
-      alt: "A fishing rod held over the water from a rocky jetty",
+      src: "/marketing/daylight-draft/adobe-rock-anglers-watermarked.jpg",
+      alt: "Two anglers fishing from rocks along a turbulent coast.",
+      aspect: "landscape",
     },
-    imageSide: "right",
+    imageSide: "left",
+    testFlight: false,
+    disclosure: null,
   },
   {
     number: "02",
-    eyebrow: "02 / FIND THE WINDOW",
-    title: ["Follow the water", "to the right spot."],
-    copy: "Compare public places, target one species, and make the drive feel considered.",
+    eyebrow: "02 / LEARN",
+    title: ["Every trip", "tells you", "something."],
+    copy: "A keeper, a short release, or a no-catch trip can all make the next decision more informed.",
     image: {
-      src: "/marketing/daylight-draft/personal-angler-catch.jpg",
-      alt: "An angler holding a fish and rod beside the Santa Barbara coast",
+      src: "/marketing/daylight-draft/personal-measured-catch.jpg",
+      alt: "A freshly caught fish being measured on a pier.",
+      aspect: "portrait",
     },
-    imageSide: "left",
+    imageSide: "right",
+    testFlight: false,
+    disclosure: null,
   },
   {
     number: "03",
-    eyebrow: "03 / LOG THE CONTEXT",
-    title: ["Every piece adds", "context."],
-    copy: "Log the place, conditions, and result so the next plan starts with better local context.",
+    eyebrow: "03 / KEEP",
+    title: ["Save what", "worked for", "next time."],
+    copy: "Keep public places, gear presets, and trip history together, ready for the next window.",
     image: {
-      src: "/marketing/daylight-draft/personal-santa-barbara-sunset.jpg",
-      alt: "A wide sunset over the Santa Barbara coast",
+      src: "/marketing/daylight-draft/adobe-phone-watermarked.webp",
+      alt: "A phone held in two hands beside the water.",
+      aspect: "landscape",
     },
-    imageSide: "right",
+    imageSide: "left",
+    testFlight: true,
+    disclosure: "Watermarked stock preview used for layout testing.",
   },
 ] as const;
 
@@ -101,6 +111,45 @@ const DEFAULT_MARKETING_LOCATION: LocationState = {
 type IntroState = "drawing" | "revealing" | "settled";
 const INTRO_REVEAL_DELAY_MS = 1000;
 const INTRO_FALLBACK_SETTLE_MS = 3400;
+const USP_SETTLE_CAPTURE_VH = 0.65;
+const USP_SETTLE_INPUT_END_MS = 140;
+const USP_SETTLE_DURATION_SECONDS = 0.55;
+const USP_TEXT_VELOCITY_LERP = 0.16;
+const USP_TEXT_OFFSET_LERP = 0.14;
+const USP_VELOCITY_PARALLAX_FACTOR = 0.5;
+const USP_VELOCITY_PARALLAX_MAX_PX = 12;
+
+type UspScrollDirection = -1 | 0 | 1;
+
+type UspSettleCandidate = {
+  distance: number;
+  story: number;
+  target: number;
+};
+
+export function selectDirectionalSettleCandidate(
+  targets: readonly number[],
+  releaseY: number,
+  direction: UspScrollDirection,
+  forwardCaptureDistance: number,
+): UspSettleCandidate | null {
+  if (direction === 0) return null;
+
+  const orderedIndexes =
+    direction > 0
+      ? targets.map((_, index) => index)
+      : targets.map((_, index) => index).reverse();
+
+  for (const index of orderedIndexes) {
+    const target = targets[index];
+    const distance = direction > 0 ? target - releaseY : releaseY - target;
+    if (distance < 0) continue;
+    if (distance > forwardCaptureDistance) return null;
+    return { distance, story: index + 1, target };
+  }
+
+  return null;
+}
 
 type CommunityResult = {
   threads: MarketingCommunityThread[];
@@ -170,7 +219,13 @@ function SocialPlaceholder({
   );
 }
 
-function AnimatedHeroLine({ text, startIndex }: { text: string; startIndex: number }) {
+function AnimatedHeroLine({
+  text,
+  startIndex,
+}: {
+  text: string;
+  startIndex: number;
+}) {
   let letterIndex = startIndex;
   const words = text.split(" ");
   return (
@@ -183,7 +238,11 @@ function AnimatedHeroLine({ text, startIndex }: { text: string; startIndex: numb
             <span
               className="cc-hero-letter"
               key={`${text}-${currentIndex}`}
-              style={{ "--cc-hero-letter-delay": `${currentIndex * 42}ms` } as CSSProperties}
+              style={
+                {
+                  "--cc-hero-letter-delay": `${currentIndex * 42}ms`,
+                } as CSSProperties
+              }
             >
               {letter}
             </span>
@@ -194,7 +253,9 @@ function AnimatedHeroLine({ text, startIndex }: { text: string; startIndex: numb
           <Fragment key={`${text}-${word}-${wordIndex}`}>
             <span className="cc-hero-word">{letters}</span>
             {wordIndex < words.length - 1 && (
-              <span className="cc-hero-space" aria-hidden="true">{"\u00a0"}</span>
+              <span className="cc-hero-space" aria-hidden="true">
+                {"\u00a0"}
+              </span>
             )}
           </Fragment>
         );
@@ -455,17 +516,17 @@ function CommunitySection({ state }: { state: DataState<CommunityResult> }) {
       <header>
         <div>
           <h2 id="cc-community-title">
-            Local threads,
+            Talk about the water,
             <br />
-            before you make the drive.
+            not the exact spot.
           </h2>
           <p>
-            Read recent public-place notes from anglers nearby. Exact private
-            locations stay private.
+            Read human-reviewed notes on public access, presentation,
+            structure, and broad conditions. Private locations stay private.
           </p>
         </div>
         <Link href="/community">
-          View all reports <ArrowIcon />
+          Open community <ArrowIcon />
         </Link>
       </header>
       {state.status === "loading" && (
@@ -519,41 +580,77 @@ function CommunitySection({ state }: { state: DataState<CommunityResult> }) {
   );
 }
 
-function TestFlightSection() {
+type DaylightStory = (typeof daylightStoryBeats)[number];
+
+function UspStoryContent({
+  story,
+  storyIndex,
+}: {
+  story: DaylightStory;
+  storyIndex: number;
+}) {
+  const storyNumber = storyIndex + 1;
+  const titleId =
+    storyIndex === 0 ? "cc-approach-title" : `cc-approach-title-${storyNumber}`;
+
   return (
-    <section className="cc-testflight" aria-labelledby="cc-testflight-title">
-      <div>
-        <h2 id="cc-testflight-title">
-          Carry the coast
-          <br />
-          with you.
+    <div
+      className={`cc-usp-content cc-usp-content-${storyIndex}`}
+      data-story-content={storyNumber}
+    >
+      <div className="cc-usp-content-inner">
+        <span className="cc-usp-eyebrow-mask">
+          <span className="cc-usp-eyebrow" data-usp-line="eyebrow">
+            {story.eyebrow}
+          </span>
+        </span>
+        <h2 id={titleId} className="cc-usp-headline">
+          {story.title.map((line, lineIndex) => (
+            <Fragment key={line}>
+              <span className="cc-usp-title-line-mask">
+                <span className="cc-usp-title-line" data-usp-line="headline">
+                  {line}
+                </span>
+              </span>
+              {lineIndex < story.title.length - 1 ? " " : null}
+            </Fragment>
+          ))}
         </h2>
-        <p>
-          Keep a California halibut plan, current conditions, and public-place
-          context close at hand. The iPhone preview is a visual mockup while the
-          mobile build is still in development.
-        </p>
-        <button
-          className="cc-testflight-button"
-          type="button"
-          aria-disabled="true"
-        >
-          <span>Download on TestFlight</span>
-          <strong>Coming soon</strong>
-        </button>
+        <p>{story.copy}</p>
+        {story.testFlight && (
+          <div className="cc-usp-testflight-action">
+            <button
+              className="cc-testflight-button"
+              type="button"
+              aria-disabled="true"
+              aria-describedby="cc-usp-mockup-disclosure"
+            >
+              <span>Download on TestFlight</span>
+              <strong>Coming soon</strong>
+            </button>
+            <small
+              className="cc-usp-mockup-disclosure"
+              id="cc-usp-mockup-disclosure"
+            >
+              {story.disclosure}
+            </small>
+          </div>
+        )}
       </div>
-      <figure>
-        <Image
-          src="/marketing/daylight-draft/testflight-phone-mockup-v1.png"
-          width={1536}
-          height={1024}
-          sizes="(max-width: 800px) 92vw, 52vw"
-          alt="Concept mockup of CastingCompass on a phone held in one hand"
-          unoptimized
-        />
-        <figcaption>Concept preview—not a released app screen.</figcaption>
-      </figure>
-    </section>
+    </div>
+  );
+}
+
+function UspImage({ story, sizes }: { story: DaylightStory; sizes: string }) {
+  return (
+    <Image
+      src={story.image.src}
+      alt={story.image.alt}
+      data-usp-story-asset={story.number}
+      fill
+      sizes={sizes}
+      unoptimized
+    />
   );
 }
 
@@ -589,8 +686,8 @@ function MailingList() {
       <div>
         <h2 id="cc-mailing-title">Join the coast list.</h2>
         <p>
-          Occasional product updates, public-place notes, and planning tips. No
-          catch promises.
+          Occasional build notes, TestFlight invitations, and new-coast
+          coverage. No catch promises.
         </p>
       </div>
       <form onSubmit={submit}>
@@ -636,7 +733,9 @@ export function MarketingHome() {
     status: "loading",
   });
   const [showBackToTop, setShowBackToTop] = useState(false);
+  const [desktopUspActive, setDesktopUspActive] = useState(true);
   const approachRef = useRef<HTMLElement>(null);
+  const imageChapterRef = useRef<HTMLElement>(null);
 
   useEffect(() => {
     const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
@@ -758,236 +857,704 @@ export function MarketingHome() {
   }, []);
 
   useLayoutEffect(() => {
-    const section = approachRef.current;
-    const list = section?.querySelector<HTMLElement>(".cc-usp-list");
-    if (!section || !list) return;
-
-    const contents = Array.from(
-      section.querySelectorAll<HTMLElement>(".cc-usp-content"),
-    );
-    const items = Array.from(
-      section.querySelectorAll<HTMLElement>(".cc-usp-item"),
-    );
     const desktopQuery = window.matchMedia("(min-width: 1024px)");
     const reducedMotionQuery = window.matchMedia(
       "(prefers-reduced-motion: reduce)",
     );
-    let cleanupMode = () => {};
+    const updateMode = () => {
+      setDesktopUspActive(desktopQuery.matches && !reducedMotionQuery.matches);
+    };
+
+    updateMode();
+    desktopQuery.addEventListener("change", updateMode);
+    reducedMotionQuery.addEventListener("change", updateMode);
+    return () => {
+      desktopQuery.removeEventListener("change", updateMode);
+      reducedMotionQuery.removeEventListener("change", updateMode);
+    };
+  }, []);
+
+  useEffect(() => {
+    const section = approachRef.current;
+    const desktopQuery = window.matchMedia("(min-width: 1024px)");
+    const reducedMotionQuery = window.matchMedia(
+      "(prefers-reduced-motion: reduce)",
+    );
+    if (
+      !section ||
+      !desktopUspActive ||
+      !desktopQuery.matches ||
+      reducedMotionQuery.matches
+    ) {
+      document.documentElement.dataset.ccLenis = "inactive";
+      section?.setAttribute("data-usp-lenis", "inactive");
+      return;
+    }
+
+    const lenis = new Lenis({
+      lerp: 0.08,
+      orientation: "vertical",
+      gestureOrientation: "vertical",
+      wheelMultiplier: 1,
+      smoothWheel: true,
+      syncTouch: false,
+      anchors: true,
+      autoRaf: true,
+    });
+    const scrollWindow = window as typeof window & {
+      __castingCompassLenis?: Lenis;
+    };
+    scrollWindow.__castingCompassLenis = lenis;
+    document.documentElement.dataset.ccLenis = "active";
+    section.dataset.uspLenis = "active";
+
+    return () => {
+      lenis.destroy();
+      delete scrollWindow.__castingCompassLenis;
+      delete document.documentElement.dataset.ccLenis;
+      delete section.dataset.uspLenis;
+    };
+  }, [desktopUspActive]);
+
+  useLayoutEffect(() => {
+    const section = approachRef.current;
+    if (!section) return;
+    const imageChapter = imageChapterRef.current;
+
+    const contents = Array.from(
+      section.querySelectorAll<HTMLElement>(".cc-usp-content"),
+    );
+    const rows = Array.from(
+      section.querySelectorAll<HTMLElement>("[data-usp-row]"),
+    );
+    const figures = Array.from(
+      section.querySelectorAll<HTMLElement>("[data-usp-figure]"),
+    );
+    const images = figures.map((figure) =>
+      figure.querySelector<HTMLImageElement>("img"),
+    );
+    const chapterLines = imageChapter
+      ? Array.from(
+          imageChapter.querySelectorAll<HTMLElement>("[data-chapter-line]"),
+        )
+      : [];
+    const scrollWindow = window as typeof window & {
+      __castingCompassLenis?: Lenis;
+    };
     let frame = 0;
-    let masterProgress = Number(section.dataset.scrollProgress ?? 0);
+    let releaseProbeFrame = 0;
+    let settleTimer: number | null = null;
+    let settleToken = 0;
+    let settleInProgress = false;
+    let inputSequence = 0;
+    let lastDirection: UspScrollDirection = 0;
+    let lastScrollY = window.scrollY;
+    let previousAnimationScrollY = window.scrollY;
+    let lastInputAt = 0;
+    let burstStartedAt = 0;
+    let burstSustained = false;
+    let touchY: number | null = null;
+    let scrollbarPointerActive = false;
+    let latestSettleTargets: number[] = [];
+    let smoothedVelocity = 0;
+    const renderedTextOffsets = contents.map(() => 0);
 
     const clamp = (value: number) => Math.min(1, Math.max(0, value));
-    const easeOut = (value: number) => {
-      const eased = clamp(value);
-      return 1 - (1 - eased) ** 3;
+    const clampRange = (value: number, minimum: number, maximum: number) =>
+      Math.min(maximum, Math.max(minimum, value));
+    const lerp = (from: number, to: number, amount: number) =>
+      from + (to - from) * amount;
+    const signedDirection = (value: number): UspScrollDirection =>
+      value > 0 ? 1 : value < 0 ? -1 : 0;
+    const smoothstep = (value: number) => {
+      const progress = clamp(value);
+      return progress * progress * (3 - 2 * progress);
     };
-    const lerp = (from: number, to: number, progress: number) =>
-      from + (to - from) * clamp(progress);
-    const setAutoAlpha = (element: HTMLElement, value: number) => {
-      const alpha = clamp(value);
-      element.style.opacity = alpha.toFixed(4);
-      element.style.visibility = alpha > 0.01 ? "visible" : "hidden";
-      element.style.pointerEvents = "none";
-      element.dataset.autoAlpha = alpha.toFixed(4);
+    const boundaryOpacities = (boundaryY: number, viewportHeight: number) => {
+      const viewportCenter = viewportHeight / 2;
+      const rawDelta = boundaryY - viewportCenter;
+      const delta = Math.abs(rawDelta) <= 1 ? 0 : rawDelta;
+      const fullFadeDistance = viewportHeight * 0.18;
+      const crossoverDistance = viewportHeight * 0.08;
+      const transitionStartY = viewportCenter + fullFadeDistance;
+      const transitionEndY = viewportCenter - fullFadeDistance;
+      const boundaryProgress = clamp(
+        (boundaryY - transitionStartY) /
+          (transitionEndY - transitionStartY),
+      );
+      const outgoing =
+        delta >= fullFadeDistance
+          ? 1
+          : delta >= 0
+            ? 0.2 + 0.8 * smoothstep(delta / fullFadeDistance)
+            : delta > -crossoverDistance
+              ? 0.2 * smoothstep(1 + delta / crossoverDistance)
+              : 0;
+      const incoming =
+        delta >= crossoverDistance
+          ? 0
+          : delta > 0
+            ? 0.2 * smoothstep(1 - delta / crossoverDistance)
+            : delta > -fullFadeDistance
+              ? 0.2 + 0.8 * smoothstep(-delta / fullFadeDistance)
+              : 1;
+      return {
+        boundaryProgress,
+        incoming,
+        outgoing,
+        transitionWeight: 1 - clamp(Math.abs(delta) / fullFadeDistance),
+      };
+    };
+    const setGalleryDirection = (direction: UspScrollDirection) => {
+      section.dataset.galleryDirection =
+        direction > 0 ? "down" : direction < 0 ? "up" : "idle";
+    };
+    const setGallerySettleState = (
+      state: "idle" | "eligible" | "settling" | "cancelled",
+      story = 0,
+    ) => {
+      section.dataset.gallerySettleState = state;
+      section.dataset.gallerySettleStory = String(story);
     };
     const resetInlineAnimationState = () => {
       contents.forEach((content) => {
         content.style.removeProperty("opacity");
-        content.style.removeProperty("visibility");
         content.style.removeProperty("pointer-events");
-        content.style.removeProperty("position");
-        content.style.removeProperty("inset");
-        content.style.removeProperty("transform");
+        content.style.removeProperty("clip-path");
         content.style.removeProperty("--cc-usp-content-y");
-        content.dataset.autoAlpha = "0";
-        content.dataset.visibilityState = "hidden";
-        content
-          .querySelectorAll<HTMLElement>("[data-usp-line]")
-          .forEach((line) => {
-            line.style.removeProperty("--cc-usp-line-y");
-            line.style.removeProperty("--cc-usp-line-alpha");
-          });
+        delete content.dataset.rowProgress;
+        delete content.dataset.storyOpacity;
+        delete content.dataset.baseOpacity;
+        delete content.dataset.boundaryOffset;
+        delete content.dataset.geometryOffset;
+        delete content.dataset.renderedOffset;
+        delete content.dataset.velocityOffset;
+        const action = content.querySelector<HTMLButtonElement>(
+          ".cc-testflight-button",
+        );
+        action?.removeAttribute("tabindex");
       });
-      items.forEach((item) => item.classList.remove("cc-usp-item-is-visible"));
-    };
-    const getScrollProgress = () => {
-      const rect = list.getBoundingClientRect();
-      const start = window.innerHeight * 0.52;
-      const end = window.innerHeight * 0.5;
-      return clamp((start - rect.top) / Math.max(start + list.offsetHeight - end, 1));
+      images.forEach((image) => {
+        image?.style.removeProperty("--cc-usp-image-y");
+        image?.style.removeProperty("--cc-usp-velocity-y");
+        if (image) {
+          delete image.dataset.parallaxProgress;
+          delete image.dataset.velocityOffset;
+        }
+      });
+      chapterLines.forEach((line) => {
+        line.style.removeProperty("opacity");
+        line.style.removeProperty("transform");
+      });
+      if (imageChapter) delete imageChapter.dataset.chapterProgress;
+      rows.forEach((row) => {
+        delete row.dataset.boundaryProgress;
+        delete row.dataset.boundaryY;
+        delete row.dataset.rowProgress;
+      });
     };
 
-    const configureDesktop = (reducedMotion: boolean) => {
-      if (reducedMotion) {
-        contents.forEach((content) => {
-          content.style.position = "static";
-          content.style.inset = "auto";
-          content.style.transform = "none";
-          setAutoAlpha(content, 1);
-          content.dataset.visibilityState = "visible";
+    if (!desktopUspActive) {
+      resetInlineAnimationState();
+      section.dataset.animationMode = "mobile-flow";
+      section.dataset.uspModel = "document-flow";
+      section.dataset.uspSettleState = "disabled";
+      setGalleryDirection(0);
+      setGallerySettleState("idle");
+      return () => {
+        resetInlineAnimationState();
+      };
+    }
+
+    section.dataset.uspSettleCount = "0";
+    section.dataset.uspSettleCancelCount = "0";
+    section.dataset.uspSettleState = "idle";
+    setGalleryDirection(0);
+    setGallerySettleState("idle");
+
+    const update = () => {
+      const viewportHeight = window.innerHeight;
+      const viewportCenter = viewportHeight / 2;
+      const scrollY = window.scrollY;
+      const rawVelocity = scrollY - previousAnimationScrollY;
+      previousAnimationScrollY = scrollY;
+      smoothedVelocity = lerp(
+        smoothedVelocity,
+        rawVelocity,
+        USP_TEXT_VELOCITY_LERP,
+      );
+      if (Math.abs(rawVelocity) < 0.1) {
+        smoothedVelocity = lerp(smoothedVelocity, 0, 0.2);
+      }
+      const textVelocityLimit = viewportHeight * 0.08;
+      const clampedTextVelocity = clampRange(
+        smoothedVelocity,
+        -textVelocityLimit,
+        textVelocityLimit,
+      );
+      const maxTextVelocityOffset = clampRange(
+        viewportHeight * 0.035,
+        18,
+        36,
+      );
+      const textVelocityOffset =
+        (clampedTextVelocity / textVelocityLimit) * maxTextVelocityOffset;
+      const lenisVelocity =
+        section.dataset.uspSettleState === "input"
+          ? (scrollWindow.__castingCompassLenis?.velocity ?? 0)
+          : 0;
+      const velocityOffset = Math.max(
+        -USP_VELOCITY_PARALLAX_MAX_PX,
+        Math.min(
+          USP_VELOCITY_PARALLAX_MAX_PX,
+          lenisVelocity * USP_VELOCITY_PARALLAX_FACTOR,
+        ),
+      );
+      const measurements = rows.map((row) => {
+        const rect = row.getBoundingClientRect();
+        const progress = clamp(
+          (viewportHeight - rect.top) / (viewportHeight + rect.height),
+        );
+        const easedProgress = smoothstep(progress);
+        return {
+          clipBottom: clamp((viewportHeight - rect.bottom) / viewportHeight),
+          clipTop: clamp(rect.top / viewportHeight),
+          parallaxY: (easedProgress - 0.5) * rect.height * 0.198,
+          progress,
+          textY: 18 - easedProgress * 36,
+          centerInside:
+            rect.top <= viewportCenter && rect.bottom >= viewportCenter,
+          settleTarget:
+            scrollY + rect.top + rect.height / 2 - viewportCenter,
+          boundaryY: rect.bottom,
+        };
+      });
+      const handoffs = measurements
+        .slice(0, -1)
+        .map((measurement) =>
+          boundaryOpacities(measurement.boundaryY, viewportHeight),
+        );
+      const opacities = [
+        handoffs[0]?.outgoing ?? 1,
+        Math.min(handoffs[0]?.incoming ?? 1, handoffs[1]?.outgoing ?? 1),
+        handoffs[1]?.incoming ?? 1,
+      ];
+      const boundaryOffsets = measurements.map((_, index) => {
+        const previousHandoff = handoffs[index - 1];
+        const nextHandoff = handoffs[index];
+        const incomingOffset = previousHandoff
+          ? (1 - previousHandoff.boundaryProgress) * 34
+          : 0;
+        const outgoingOffset = nextHandoff
+          ? -nextHandoff.boundaryProgress * 34
+          : 0;
+        return incomingOffset + outgoingOffset;
+      });
+      const velocityOffsets = measurements.map((_, index) => {
+        const incomingWeight = handoffs[index - 1]?.transitionWeight ?? 0;
+        const outgoingWeight = handoffs[index]?.transitionWeight ?? 0;
+        return (
+          Math.abs(textVelocityOffset) * (incomingWeight - outgoingWeight)
+        );
+      });
+
+      latestSettleTargets = measurements.map((measurement) =>
+        Math.max(0, measurement.settleTarget),
+      );
+
+      contents.forEach((content, index) => {
+        const measurement = measurements[index];
+        const opacity = opacities[index];
+        const geometryOffset = measurement.textY;
+        const boundaryOffset = boundaryOffsets[index];
+        const velocityOffset = velocityOffsets[index];
+        const targetOffset = geometryOffset + boundaryOffset + velocityOffset;
+        renderedTextOffsets[index] = lerp(
+          renderedTextOffsets[index],
+          targetOffset,
+          USP_TEXT_OFFSET_LERP,
+        );
+        content.style.opacity = opacity.toFixed(4);
+        content.style.pointerEvents = "none";
+        content.style.clipPath = `inset(${(
+          measurement.clipTop * viewportHeight
+        ).toFixed(2)}px 0 ${(
+          measurement.clipBottom * viewportHeight
+        ).toFixed(2)}px 0)`;
+        content.style.setProperty(
+          "--cc-usp-content-y",
+          `${renderedTextOffsets[index].toFixed(2)}px`,
+        );
+        content.dataset.rowProgress = measurement.progress.toFixed(4);
+        content.dataset.storyOpacity = opacity.toFixed(4);
+        content.dataset.baseOpacity = opacity.toFixed(4);
+        content.dataset.boundaryOffset = boundaryOffset.toFixed(2);
+        content.dataset.geometryOffset = geometryOffset.toFixed(2);
+        content.dataset.velocityOffset = velocityOffset.toFixed(2);
+        rows[index].dataset.rowProgress = measurement.progress.toFixed(4);
+        rows[index].dataset.boundaryY = measurement.boundaryY.toFixed(2);
+        if (handoffs[index]) {
+          rows[index].dataset.boundaryProgress =
+            handoffs[index].boundaryProgress.toFixed(4);
+        } else {
+          delete rows[index].dataset.boundaryProgress;
+        }
+        const action = content.querySelector<HTMLButtonElement>(
+          ".cc-testflight-button",
+        );
+        if (action) {
+          action.tabIndex =
+            measurement.centerInside && opacity > 0.2 ? 0 : -1;
+        }
+      });
+      images.forEach((image, index) => {
+        const measurement = measurements[index];
+        image?.style.setProperty(
+          "--cc-usp-image-y",
+          `${measurement.parallaxY.toFixed(2)}px`,
+        );
+        image?.style.setProperty(
+          "--cc-usp-velocity-y",
+          `${velocityOffset.toFixed(2)}px`,
+        );
+        if (image) {
+          image.dataset.parallaxProgress = measurement.progress.toFixed(4);
+          image.dataset.velocityOffset = velocityOffset.toFixed(2);
+        }
+      });
+      if (imageChapter) {
+        const chapterRect = imageChapter.getBoundingClientRect();
+        const chapterProgress = clamp(
+          (viewportHeight - chapterRect.top) / (viewportHeight * 0.82),
+        );
+        const chapterTiming = [
+          { start: 0.2, duration: 0.3 },
+          { start: 0.34, duration: 0.38 },
+          { start: 0.43, duration: 0.38 },
+          { start: 0.58, duration: 0.28 },
+          { start: 0.72, duration: 0.24 },
+        ];
+
+        chapterLines.forEach((line, index) => {
+          const timing = chapterTiming[index] ?? chapterTiming.at(-1)!;
+          const lineProgress = smoothstep(
+            (chapterProgress - timing.start) / timing.duration,
+          );
+          line.style.opacity = lineProgress.toFixed(4);
+          line.style.transform = `translate3d(0, ${(
+            (1 - lineProgress) * 108
+          ).toFixed(2)}%, 0)`;
         });
-        section.dataset.animationMode = "desktop-reduced";
-        section.dataset.visibleStories = "3";
-        return () => resetInlineAnimationState();
+        imageChapter.dataset.chapterProgress = chapterProgress.toFixed(4);
       }
 
-      // One normalized master timeline, equivalent to Daylight's paused GSAP
-      // timeline, owns every desktop story state and is driven by native scroll.
-      const storyOpacity = (
-        progress: number,
-        enterStart: number,
-        enterEnd: number,
-        holdEnd: number,
-        exitEnd: number,
-      ) => {
-        if (progress <= enterStart || progress >= exitEnd) return 0;
-        if (progress < enterEnd) {
-          return easeOut((progress - enterStart) / (enterEnd - enterStart));
+      section.dataset.animationMode = "desktop-daylight-flow";
+      section.dataset.uspModel = "document-flow";
+      section.dataset.uspSmoothedVelocity = smoothedVelocity.toFixed(3);
+      let textMotionActive = Math.abs(smoothedVelocity) > 0.05;
+      contents.forEach((content, index) => {
+        const previousOffset = Number(content.dataset.renderedOffset ?? "0");
+        const currentOffset = renderedTextOffsets[index];
+        content.dataset.renderedOffset = currentOffset.toFixed(2);
+        if (Math.abs(currentOffset - previousOffset) > 0.1) {
+          textMotionActive = true;
         }
-        if (progress <= holdEnd) return 1;
-        return 1 - easeOut((progress - holdEnd) / (exitEnd - holdEnd));
-      };
-      const masterTimeline = {
-        progress(value?: number) {
-          if (value === undefined) return masterProgress;
-          masterProgress = clamp(value);
-
-          const states = [
-            {
-              opacity: storyOpacity(masterProgress, 0.06, 0.19, 0.28, 0.41),
-              y: lerp(150, -50, masterProgress / 0.4),
-              enter: 0.06,
-            },
-            {
-              opacity: storyOpacity(masterProgress, 0.44, 0.56, 0.58, 0.70),
-              y: lerp(50, -150, (masterProgress - 0.3) / 0.4),
-              enter: 0.44,
-            },
-            {
-              opacity: storyOpacity(masterProgress, 0.73, 0.86, 1, 1.1),
-              y: lerp(-50, -250, (masterProgress - 0.6) / 0.4),
-              enter: 0.73,
-            },
-          ];
-          const maxOpacity = Math.max(...states.map((state) => state.opacity));
-          const activeIndex = states.findIndex(
-            (state) => state.opacity === maxOpacity && maxOpacity > 0.01,
-          );
-
-          contents.forEach((content, index) => {
-            const state = states[index];
-            const opacity = index === activeIndex ? state.opacity : 0;
-            const lineProgress = easeOut(
-              (masterProgress - state.enter) / 0.15,
-            );
-            setAutoAlpha(content, opacity);
-            content.style.setProperty(
-              "--cc-usp-content-y",
-              `${Math.round(state.y)}px`,
-            );
-            content.dataset.visibilityState = opacity > 0.01 ? "visible" : "hidden";
-            content
-              .querySelectorAll<HTMLElement>("[data-usp-line]")
-              .forEach((line) => {
-                const isEyebrow = line.dataset.uspLine === "eyebrow";
-                line.style.setProperty(
-                  "--cc-usp-line-y",
-                  `${Math.round((isEyebrow ? 100 : 60) * (1 - lineProgress))}%`,
-                );
-                line.style.setProperty(
-                  "--cc-usp-line-alpha",
-                  isEyebrow ? "1" : lineProgress.toFixed(4),
-                );
-              });
-          });
-
-          section.dataset.animationMode = "desktop-master";
-          section.dataset.story = activeIndex < 0 ? "0" : String(activeIndex + 1);
-          section.dataset.visibleStories = activeIndex < 0 ? "0" : "1";
-          section.dataset.scrollProgress = masterProgress.toFixed(3);
-        },
-        kill() {
-          window.removeEventListener("scroll", scheduleUpdate);
-          window.removeEventListener("resize", scheduleUpdate);
-          if (frame) window.cancelAnimationFrame(frame);
-          frame = 0;
-        },
-      };
-      const update = () => masterTimeline.progress(getScrollProgress());
-      const scheduleUpdate = () => {
-        if (!frame) frame = window.requestAnimationFrame(() => {
+      });
+      if (textMotionActive) {
+        scheduleUpdate();
+      }
+    };
+    const scheduleUpdate = () => {
+      if (!frame) {
+        frame = window.requestAnimationFrame(() => {
           frame = 0;
           update();
         });
-      };
-
-      masterTimeline.progress(
-        Number.isFinite(masterProgress) ? masterProgress : getScrollProgress(),
+      }
+    };
+    const clearSettleTimer = () => {
+      if (settleTimer !== null) {
+        window.clearTimeout(settleTimer);
+        settleTimer = null;
+      }
+      if (releaseProbeFrame) {
+        window.cancelAnimationFrame(releaseProbeFrame);
+        releaseProbeFrame = 0;
+      }
+    };
+    const cancelActiveSettle = () => {
+      if (!settleInProgress) return false;
+      settleToken += 1;
+      settleInProgress = false;
+      const lenis = scrollWindow.__castingCompassLenis;
+      lenis?.scrollTo(lenis.animatedScroll, {
+        immediate: true,
+        force: true,
+      });
+      section.dataset.uspSettleState = "cancelled";
+      setGallerySettleState("cancelled");
+      section.dataset.uspSettleCancelCount = String(
+        Number(section.dataset.uspSettleCancelCount ?? "0") + 1,
       );
-      window.addEventListener("scroll", scheduleUpdate, { passive: true });
-      window.addEventListener("resize", scheduleUpdate);
-
-      return () => {
-        masterTimeline.kill();
-        resetInlineAnimationState();
-      };
+      return true;
     };
+    const settleFromRelease = (
+      releaseY: number,
+      direction: UspScrollDirection,
+      targets: readonly number[],
+      sequence: number,
+    ) => {
+      if (sequence !== inputSequence || direction === 0) return;
+      if (burstSustained || lastDirection === 0) {
+        section.dataset.uspSettleState = "idle";
+        setGallerySettleState("idle");
+        burstSustained = false;
+        return;
+      }
 
-    const configureMobile = () => {
-      contents.forEach((content) => {
-        content.style.position = "static";
-        content.style.inset = "auto";
-        content.style.transform = "none";
-        setAutoAlpha(content, 1);
-        content.dataset.visibilityState = "visible";
+      const lenis = scrollWindow.__castingCompassLenis;
+      if (!lenis) return;
+      const threshold = window.innerHeight * USP_SETTLE_CAPTURE_VH;
+      section.dataset.uspSettleThreshold = threshold.toFixed(2);
+      const candidate = selectDirectionalSettleCandidate(
+        targets,
+        releaseY,
+        direction,
+        threshold,
+      );
+      if (!candidate || candidate.distance < 1) {
+        section.dataset.uspSettleState = "idle";
+        setGallerySettleState("idle");
+        return;
+      }
+
+      section.dataset.uspSettleState = "eligible";
+      section.dataset.uspSettleDirection = String(direction);
+      section.dataset.uspSettleReleaseY = releaseY.toFixed(2);
+      section.dataset.uspSettleTargetY = candidate.target.toFixed(2);
+      section.dataset.uspSettleStory = String(candidate.story);
+      setGallerySettleState("eligible", candidate.story);
+      const token = ++settleToken;
+      releaseProbeFrame = window.requestAnimationFrame(() => {
+        releaseProbeFrame = 0;
+        if (sequence !== inputSequence || token !== settleToken) return;
+        settleInProgress = true;
+        section.dataset.uspSettleState = "settling";
+        setGallerySettleState("settling", candidate.story);
+        section.dataset.uspSettleCount = String(
+          Number(section.dataset.uspSettleCount ?? "0") + 1,
+        );
+        lenis.scrollTo(candidate.target, {
+          duration: USP_SETTLE_DURATION_SECONDS,
+          easing: (time) => 1 - (1 - time) ** 3,
+          lock: false,
+          force: false,
+          userData: { source: "usp-directional-settle" },
+          onComplete: () => {
+            if (token !== settleToken) return;
+            settleInProgress = false;
+            section.dataset.uspSettleState = "settled";
+            setGallerySettleState("idle");
+          },
+        });
       });
-      section.dataset.animationMode = "mobile-flow";
-      section.dataset.story = "0";
-      section.dataset.visibleStories = "3";
-      const observer =
-        typeof IntersectionObserver === "function"
-          ? new IntersectionObserver(
-              (entries) => {
-                entries.forEach((entry) => {
-                  if (entry.isIntersecting) {
-                    entry.target.classList.add("cc-usp-item-is-visible");
-                    observer?.unobserve(entry.target);
-                  }
-                });
-              },
-              { threshold: 0.2, rootMargin: "0px 0px -10% 0px" },
-            )
-          : null;
-      items.forEach((item) => {
-        if (observer) observer.observe(item);
-        else item.classList.add("cc-usp-item-is-visible");
-      });
-      return () => {
-        observer?.disconnect();
-        resetInlineAnimationState();
-      };
     };
-
-    const configure = () => {
-      cleanupMode();
-      cleanupMode = desktopQuery.matches
-        ? configureDesktop(reducedMotionQuery.matches)
-        : configureMobile();
+    const probeForStableRelease = (
+      sequence: number,
+      direction: UspScrollDirection,
+      targets: readonly number[],
+      previousY: number,
+      stableFrames: number,
+    ) => {
+      if (sequence !== inputSequence || scrollbarPointerActive) return;
+      if (burstSustained) {
+        section.dataset.uspSettleState = "idle";
+        setGallerySettleState("idle");
+        burstSustained = false;
+        return;
+      }
+      const lenis = scrollWindow.__castingCompassLenis;
+      if (!lenis) return;
+      const releaseY = lenis.animatedScroll;
+      const isStable =
+        Math.abs(releaseY - previousY) <= 1.25 &&
+        Math.abs(lenis.targetScroll - releaseY) <= 2;
+      const nextStableFrames = isStable ? stableFrames + 1 : 0;
+      if (nextStableFrames >= 2) {
+        settleFromRelease(releaseY, direction, targets, sequence);
+        return;
+      }
+      releaseProbeFrame = window.requestAnimationFrame(() =>
+        probeForStableRelease(
+          sequence,
+          direction,
+          targets,
+          releaseY,
+          nextStableFrames,
+        ),
+      );
     };
-    const onMediaChange = () => configure();
+    const beginReleaseProbe = (
+      sequence: number,
+      direction: UspScrollDirection,
+      targets: readonly number[],
+    ) => {
+      settleTimer = null;
+      if (sequence !== inputSequence) return;
+      const elapsed = performance.now() - lastInputAt;
+      if (elapsed < USP_SETTLE_INPUT_END_MS) {
+        settleTimer = window.setTimeout(
+          () => beginReleaseProbe(sequence, direction, targets),
+          USP_SETTLE_INPUT_END_MS - elapsed,
+        );
+        return;
+      }
+      const lenis = scrollWindow.__castingCompassLenis;
+      if (!lenis) return;
+      releaseProbeFrame = window.requestAnimationFrame(() =>
+        probeForStableRelease(
+          sequence,
+          direction,
+          targets,
+          lenis.animatedScroll,
+          0,
+        ),
+      );
+    };
+    const registerInput = (direction: UspScrollDirection) => {
+      const now = performance.now();
+      if (now - lastInputAt > 240) {
+        burstStartedAt = now;
+        burstSustained = false;
+      }
+      lastInputAt = now;
+      if (now - burstStartedAt > 700) burstSustained = true;
+      if (direction !== 0) lastDirection = direction;
+      inputSequence += 1;
+      const sequence = inputSequence;
+      clearSettleTimer();
+      const cancelledSettle = cancelActiveSettle();
+      section.dataset.uspSettleState = "input";
+      setGalleryDirection(lastDirection);
+      if (!cancelledSettle) setGallerySettleState("idle");
+      const frozenTargets = [...latestSettleTargets];
+      settleTimer = window.setTimeout(
+        () => beginReleaseProbe(sequence, lastDirection, frozenTargets),
+        USP_SETTLE_INPUT_END_MS,
+      );
+    };
+    const handleScroll = () => {
+      const scrollY = window.scrollY;
+      const delta = scrollY - lastScrollY;
+      if (!settleInProgress && Math.abs(delta) > 1) {
+        lastDirection = signedDirection(delta);
+        setGalleryDirection(lastDirection);
+      }
+      lastScrollY = scrollY;
+      scheduleUpdate();
+    };
+    const handleWheel = (event: WheelEvent) => {
+      registerInput(signedDirection(event.deltaY));
+    };
+    const handleTouchStart = (event: TouchEvent) => {
+      touchY = event.touches[0]?.clientY ?? null;
+      registerInput(0);
+    };
+    const handleTouchMove = (event: TouchEvent) => {
+      const nextTouchY = event.touches[0]?.clientY;
+      if (nextTouchY === undefined || touchY === null) return;
+      registerInput(signedDirection(touchY - nextTouchY));
+      touchY = nextTouchY;
+    };
+    const handleTouchEnd = () => {
+      touchY = null;
+    };
+    const handleKeyDown = (event: KeyboardEvent) => {
+      const downwardKeys = ["ArrowDown", "PageDown", "End", " "];
+      const upwardKeys = ["ArrowUp", "PageUp", "Home"];
+      if (downwardKeys.includes(event.key)) registerInput(1);
+      if (upwardKeys.includes(event.key)) registerInput(-1);
+    };
+    const handlePointerDown = (event: PointerEvent) => {
+      const scrollbarWidth =
+        window.innerWidth - document.documentElement.clientWidth;
+      const scrollbarEdge =
+        scrollbarWidth > 0
+          ? document.documentElement.clientWidth
+          : window.innerWidth - 16;
+      if (
+        event.pointerType !== "mouse" ||
+        event.clientX < scrollbarEdge
+      ) {
+        return;
+      }
+      scrollbarPointerActive = true;
+      inputSequence += 1;
+      clearSettleTimer();
+      const cancelledSettle = cancelActiveSettle();
+      section.dataset.uspSettleState = "input";
+      if (!cancelledSettle) setGallerySettleState("idle");
+    };
+    const handlePointerUp = () => {
+      if (!scrollbarPointerActive) return;
+      scrollbarPointerActive = false;
+      registerInput(lastDirection);
+    };
+    const resizeObserver = new ResizeObserver(scheduleUpdate);
 
     resetInlineAnimationState();
-    configure();
-    desktopQuery.addEventListener("change", onMediaChange);
-    reducedMotionQuery.addEventListener("change", onMediaChange);
+    update();
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    window.addEventListener("resize", scheduleUpdate);
+    window.addEventListener("wheel", handleWheel, {
+      capture: true,
+      passive: true,
+    });
+    window.addEventListener("touchstart", handleTouchStart, {
+      capture: true,
+      passive: true,
+    });
+    window.addEventListener("touchmove", handleTouchMove, {
+      capture: true,
+      passive: true,
+    });
+    window.addEventListener("touchend", handleTouchEnd, true);
+    window.addEventListener("keydown", handleKeyDown, true);
+    window.addEventListener("pointerdown", handlePointerDown, true);
+    window.addEventListener("pointerup", handlePointerUp, true);
+    window.addEventListener("pointercancel", handlePointerUp, true);
+    resizeObserver.observe(section);
+    rows.forEach((row) => resizeObserver.observe(row));
+    images.forEach((image) => {
+      if (!image) return;
+      image.addEventListener("load", scheduleUpdate);
+    });
+    void document.fonts?.ready.then(scheduleUpdate);
 
     return () => {
-      cleanupMode();
-      desktopQuery.removeEventListener("change", onMediaChange);
-      reducedMotionQuery.removeEventListener("change", onMediaChange);
+      clearSettleTimer();
+      cancelActiveSettle();
+      window.removeEventListener("scroll", handleScroll);
+      window.removeEventListener("resize", scheduleUpdate);
+      window.removeEventListener("wheel", handleWheel, true);
+      window.removeEventListener("touchstart", handleTouchStart, true);
+      window.removeEventListener("touchmove", handleTouchMove, true);
+      window.removeEventListener("touchend", handleTouchEnd, true);
+      window.removeEventListener("keydown", handleKeyDown, true);
+      window.removeEventListener("pointerdown", handlePointerDown, true);
+      window.removeEventListener("pointerup", handlePointerUp, true);
+      window.removeEventListener("pointercancel", handlePointerUp, true);
+      resizeObserver.disconnect();
+      images.forEach((image) => {
+        image?.removeEventListener("load", scheduleUpdate);
+      });
+      if (frame) window.cancelAnimationFrame(frame);
+      if (releaseProbeFrame) window.cancelAnimationFrame(releaseProbeFrame);
+      frame = 0;
+      releaseProbeFrame = 0;
       resetInlineAnimationState();
     };
-  }, []);
+  }, [desktopUspActive]);
 
   function returnToTop() {
     const reducedMotion = window.matchMedia(
@@ -1005,7 +1572,11 @@ export function MarketingHome() {
         Skip to landing page content
       </a>
 
-      <section className="cc-opening" aria-labelledby="cc-title">
+      <section
+        className="cc-opening"
+        aria-labelledby="cc-title"
+        data-hero-transition="pinned-cover"
+      >
         <div className="cc-opening-sticky">
           <div className="cc-hero-topo-panel">
             <HeroTopographicArt />
@@ -1020,8 +1591,8 @@ export function MarketingHome() {
               <AnimatedHeroLine text="cast a compass." startIndex={10} />
             </h1>
             <p className="cc-hero-description">
-              Choose a target species, compare public fishing locations, and
-              find the most promising current window before you make the drive.
+              Rank nearby public fishing places for one target, then carry that
+              plan into an honest trip log.
             </p>
             <div className="cc-hero-actions">
               <Link className="cc-primary-button" href="/forecast">
@@ -1042,8 +1613,6 @@ export function MarketingHome() {
         <TopographicLoader onRevealComplete={() => setIntroState("settled")} />
       )}
 
-      <TestFlightSection />
-
       <section
         ref={approachRef}
         className="cc-approach cc-usp-section"
@@ -1051,60 +1620,111 @@ export function MarketingHome() {
         aria-labelledby="cc-approach-title"
         data-scroll-linked="true"
       >
-        <ul className="cc-usp-list">
+        <span
+          className="cc-usp-vertical-rail cc-usp-vertical-rail-left"
+          data-usp-grid-divider="left"
+          aria-hidden="true"
+        />
+        <span
+          className="cc-usp-vertical-rail cc-usp-vertical-rail-right"
+          data-usp-grid-divider="right"
+          aria-hidden="true"
+        />
+        <div className="cc-usp-flow" data-usp-flow>
           {daylightStoryBeats.map((story, storyIndex) => {
             const storyNumber = storyIndex + 1;
-            const titleId =
-              storyIndex === 0
-                ? "cc-approach-title"
-                : `cc-approach-title-${storyNumber}`;
+            const figure = (
+              <figure
+                className={`cc-usp-side-cell cc-usp-figure cc-usp-figure-${storyNumber}`}
+                data-usp-figure={storyNumber}
+                data-usp-aspect={story.image.aspect}
+                data-usp-side={story.imageSide}
+                aria-describedby={
+                  story.testFlight ? "cc-usp-mockup-disclosure" : undefined
+                }
+              >
+                <div className="cc-usp-image-frame">
+                  <UspImage
+                    story={story}
+                    sizes="(min-width: 1024px) 24vw, 100vw"
+                  />
+                </div>
+              </figure>
+            );
 
             return (
-              <li
-                className={`cc-usp-item cc-usp-item-${storyNumber}`}
-                data-story-row={storyNumber}
-                key={story.eyebrow}
+              <article
+                className={`cc-usp-row cc-usp-row-${storyNumber}`}
+                data-usp-row={storyNumber}
+                key={story.number}
               >
-                <div className="cc-usp-center-cell">
+                {story.imageSide === "left" ? (
+                  figure
+                ) : (
                   <div
-                    className={`cc-usp-content cc-usp-content-${storyIndex}`}
-                    data-story-content={storyNumber}
-                  >
-                    <span className="cc-usp-eyebrow-mask">
-                      <span className="cc-usp-eyebrow" data-usp-line="eyebrow">
-                        {story.eyebrow}
-                      </span>
-                    </span>
-                    <h2 id={titleId} className="cc-usp-headline">
-                      {story.title.map((line) => (
-                        <span className="cc-usp-title-line-mask" key={line}>
-                          <span className="cc-usp-title-line" data-usp-line="headline">
-                            {line}
-                          </span>
-                        </span>
-                      ))}
-                    </h2>
-                    <p>{story.copy}</p>
-                  </div>
+                    className="cc-usp-side-cell cc-usp-side-cell-empty"
+                    aria-hidden="true"
+                  />
+                )}
+                <div className="cc-usp-center-cell" data-usp-text-clip={storyNumber}>
+                  <UspStoryContent story={story} storyIndex={storyIndex} />
                 </div>
-                <figure
-                  className={`cc-usp-figure cc-usp-figure-${story.imageSide}`}
-                  data-image-frame={storyNumber}
-                >
-                  <div className="cc-usp-media-frame">
-                    <Image
-                      src={story.image.src}
-                      alt={story.image.alt}
-                      fill
-                      sizes="(max-width: 1023px) 78vw, 25vw"
-                      unoptimized
-                    />
-                  </div>
-                </figure>
-              </li>
+                {story.imageSide === "right" ? (
+                  figure
+                ) : (
+                  <div
+                    className="cc-usp-side-cell cc-usp-side-cell-empty"
+                    aria-hidden="true"
+                  />
+                )}
+              </article>
             );
           })}
-        </ul>
+        </div>
+      </section>
+
+      <section
+        ref={imageChapterRef}
+        className="cc-image-chapter"
+        aria-labelledby="cc-image-chapter-title"
+        data-image-chapter="daylight"
+      >
+        <div className="cc-image-chapter-sticky">
+          <Image
+            src="/marketing/daylight-draft/surf-cast-wide.jpg"
+            alt="An angler casting through the surf beneath a warm coastal sky"
+            fill
+            sizes="100vw"
+            unoptimized
+          />
+          <div className="cc-image-chapter-wash" aria-hidden="true" />
+          <div className="cc-image-chapter-copy">
+            <span className="cc-image-chapter-mask cc-image-chapter-eyebrow-mask">
+              <span data-chapter-line="eyebrow">
+                TURN EXPERIENCE INTO CONTEXT
+              </span>
+            </span>
+            <h2 id="cc-image-chapter-title">
+              <span className="cc-image-chapter-mask">
+                <span data-chapter-line="headline-1">The next trip starts</span>
+              </span>
+              <span className="cc-image-chapter-mask">
+                <span data-chapter-line="headline-2">with this one.</span>
+              </span>
+            </h2>
+            <span className="cc-image-chapter-mask cc-image-chapter-body-mask">
+              <span data-chapter-line="body">
+                Record the setup, fishability, and full outcome while the
+                details are still fresh.
+              </span>
+            </span>
+            <span className="cc-image-chapter-mask cc-image-chapter-action-mask">
+              <Link data-chapter-line="action" href="/forecast?report=trip">
+                Start a trip report <ArrowIcon />
+              </Link>
+            </span>
+          </div>
+        </div>
       </section>
 
       <section
@@ -1116,13 +1736,12 @@ export function MarketingHome() {
         <header className="cc-mosaic-intro">
           <h2 id="cc-mosaic-title">Keep a better log.</h2>
           <p>
-            Log a trip to help CastingCompass improve its guidance with real
-            outcomes and give nearby anglers more useful local knowledge for
-            their next plan.
+            Save the whole attempt, not just the catch. Each trip record
+            connects what you planned with what the water actually gave you.
           </p>
         </header>
 
-        {approachCards.map((card) => (
+        {logCards.map((card) => (
           <article
             className={`cc-mosaic-card cc-mosaic-card-${card.number}`}
             key={card.number}
@@ -1132,89 +1751,10 @@ export function MarketingHome() {
             <p>{card.copy}</p>
           </article>
         ))}
-
-        <figure className="cc-mosaic-image cc-mosaic-image-hero">
-          <Image
-            src="/structure-guides/eelgrass.jpg"
-            alt="Eelgrass growing along a shallow coastal channel"
-            fill
-            sizes="(max-width: 800px) 100vw, 34vw"
-            unoptimized
-          />
-        </figure>
-
-        <figure className="cc-mosaic-image cc-mosaic-image-tide">
-          <Image
-            src="/structure-guides/estuary.jpg"
-            alt="A coastal estuary where water and shoreline meet"
-            fill
-            sizes="(max-width: 800px) 48vw, 25vw"
-            unoptimized
-          />
-        </figure>
-
-        <figure className="cc-mosaic-image cc-mosaic-image-main">
-          <Image
-            src="/structure-guides/pilings.jpg"
-            alt="Wooden pilings standing in coastal water"
-            fill
-            sizes="(max-width: 800px) 100vw, 46vw"
-            unoptimized
-          />
-        </figure>
-
-        <figure className="cc-mosaic-image cc-mosaic-image-pier" aria-hidden="true">
-          <Image
-            src="/structure-guides/riprap.jpg"
-            alt=""
-            fill
-            sizes="(max-width: 800px) 48vw, 25vw"
-            unoptimized
-          />
-        </figure>
-
-        <figure className="cc-mosaic-image cc-mosaic-image-gear" aria-hidden="true">
-          <Image
-            src="/structure-guides/sandbar.jpg"
-            alt=""
-            fill
-            sizes="(max-width: 800px) 48vw, 25vw"
-            unoptimized
-          />
-        </figure>
-
-        <figure className="cc-mosaic-image cc-mosaic-image-community">
-          <Image
-            src="/structure-guides/tidal-channel.jpg"
-            alt="A tidal channel cutting through a coastal sandbar"
-            fill
-            sizes="(max-width: 800px) 48vw, 25vw"
-            unoptimized
-          />
-        </figure>
-
       </section>
 
       <RecentReports state={reports} />
       <CommunitySection state={community} />
-
-      <section className="cc-final-cta" aria-labelledby="cc-final-title">
-        <Image
-          src="/marketing/daylight-draft/surf-cast-close.jpg"
-          alt="An angler making a cast through the surf at golden hour"
-          fill
-          sizes="100vw"
-          unoptimized
-        />
-        <div className="cc-final-wash" />
-        <div>
-          <h2 id="cc-final-title">
-            Start with the conditions.
-            <br />
-            Choose the coast from there.
-          </h2>
-        </div>
-      </section>
 
       <MailingList />
 
@@ -1230,7 +1770,13 @@ export function MarketingHome() {
             <SocialPlaceholder label="Instagram">
               <rect x="4" y="4" width="16" height="16" rx="4" />
               <circle cx="12" cy="12" r="3.5" />
-              <circle cx="17.5" cy="6.5" r="0.8" fill="currentColor" stroke="none" />
+              <circle
+                cx="17.5"
+                cy="6.5"
+                r="0.8"
+                fill="currentColor"
+                stroke="none"
+              />
             </SocialPlaceholder>
             <SocialPlaceholder label="Facebook">
               <path d="M14.5 5.5h-2.2c-1.8 0-2.8 1.1-2.8 3v2.1H7.2v3h2.3v5.2h3.3v-5.2h2.6l.5-3h-3.1V9c0-.6.3-.9 1-.9h.7Z" />

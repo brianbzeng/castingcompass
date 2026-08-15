@@ -1304,39 +1304,12 @@ test("marketing homepage resolves its loading artwork into a responsive planning
     }
   }
   await expect(
-    page.getByRole("heading", { name: "Read the coast before you cast." }),
+    page.getByRole("heading", { name: "Keep a better log." }),
   ).toBeVisible();
   const benefitCards = page.locator(".cc-mosaic-card");
   const mosaicImages = page.locator(".cc-mosaic-image");
   await expect(benefitCards).toHaveCount(4);
-  await expect(mosaicImages).toHaveCount(6);
-  const mosaicSources = await mosaicImages
-    .locator("img")
-    .evaluateAll((images) =>
-      images.map(
-        (image) =>
-          new URL(image.getAttribute("src") ?? "", window.location.href)
-            .pathname,
-      ),
-    );
-  expect(mosaicSources).toEqual([
-    "/structure-guides/eelgrass.jpg",
-    "/structure-guides/estuary.jpg",
-    "/structure-guides/pilings.jpg",
-    "/structure-guides/riprap.jpg",
-    "/structure-guides/sandbar.jpg",
-    "/structure-guides/tidal-channel.jpg",
-  ]);
-  await expect(
-    mosaicImages.getByRole("img", {
-      name: "Eelgrass growing along a shallow coastal channel",
-    }),
-  ).toBeVisible();
-  await expect(
-    mosaicImages.getByRole("img", {
-      name: "A tidal channel cutting through a coastal sandbar",
-    }),
-  ).toBeVisible();
+  await expect(mosaicImages).toHaveCount(0);
   await expect(page.locator(".cc-report-grid article")).toHaveCount(0);
   await expect(
     page.getByText("Community Images Will Appear When Available", {
@@ -1345,7 +1318,7 @@ test("marketing homepage resolves its loading artwork into a responsive planning
   ).toBeVisible();
   await expect(
     page.getByRole("heading", {
-      name: "Local threads, before you make the drive.",
+      name: "Talk about the water, not the exact spot.",
     }),
   ).toBeVisible();
   await expect(page.getByText("No public threads to show yet.")).toBeVisible();
@@ -1360,22 +1333,23 @@ test("marketing homepage resolves its loading artwork into a responsive planning
   await expect(page.locator("body")).not.toContainText("Explore the coast");
   await expect(page.locator("body")).not.toContainText("Skip intro");
 
-  await expect(page.locator(".cc-hero-satellite-image")).toHaveCount(1);
-  await expect(page.locator(".cc-hero-bathymetry")).toHaveCount(0);
-  await expect(page.locator(".cc-hero-etopo-bathymetry")).toHaveCount(1);
+  await expect(page.locator(".cc-hero-land-layer")).toHaveCount(1);
+  await expect(page.locator(".cc-hero-bathymetry")).toHaveCount(1);
+  await expect(page.locator(".cc-hero-etopo-bathymetry")).toHaveCount(0);
   await expect(page.locator(".cc-hero-map-attribution")).toContainText(
-    "Sentinel-2 / NOAA ETOPO / USGS contours",
+    "USGS DS 702 / NOAA MHW / Sentinel-2",
   );
-  await expect(page.locator(".cc-hero-etopo-bathymetry")).toHaveAttribute(
-    "data-coverage",
-    "full-water",
+  await expect(page.locator(".cc-hero-bathymetry path")).toHaveCount(306);
+  await expect(page.locator(".cc-hero-bathymetry path").first()).toHaveAttribute(
+    "data-source",
+    "usgs-ds-702",
   );
-  await expect(page.locator(".cc-hero-satellite-image")).toHaveCSS(
+  await expect(page.locator(".cc-hero-map-camera")).toHaveCSS(
     "transform",
     /matrix\(/,
   );
   await expect(page.locator(".cc-hero-topo-panel")).toHaveCSS("opacity", "1");
-  await expect(page.locator(".cc-hero-satellite-image")).toHaveCSS(
+  await expect(page.locator(".cc-hero-land-layer")).toHaveCSS(
     "opacity",
     "1",
   );
@@ -1422,37 +1396,26 @@ test("marketing homepage resolves its loading artwork into a responsive planning
     mobileHeroSpacing.mediaTop - 8,
   );
 
-  const mosaicOrder = await page
+  const mosaicLayout = await page
     .locator(".cc-modern-mosaic")
     .evaluate((mosaic) => {
+      const intro = mosaic.querySelector<HTMLElement>(".cc-mosaic-intro")!;
       const cards = Array.from(
         mosaic.querySelectorAll<HTMLElement>(".cc-mosaic-card"),
       );
-      const images = Array.from(
-        mosaic.querySelectorAll<HTMLElement>(".cc-mosaic-image"),
-      );
-      const firstImage = images[0];
-      const lastCard = cards.at(-1);
-      const domOrder =
-        firstImage && lastCard
-          ? Boolean(
-              lastCard.compareDocumentPosition(firstImage) &
-              Node.DOCUMENT_POSITION_FOLLOWING,
-            )
-          : false;
       return {
-        domOrder,
-        lastCardBottom: lastCard?.getBoundingClientRect().bottom ?? 0,
-        firstImageTop: firstImage?.getBoundingClientRect().top ?? 0,
+        imageCount: mosaic.querySelectorAll(".cc-mosaic-image").length,
+        introBottom: intro.getBoundingClientRect().bottom,
+        firstCardTop: cards[0]?.getBoundingClientRect().top ?? 0,
       };
     });
-  expect(mosaicOrder.domOrder).toBe(true);
-  expect(mosaicOrder.lastCardBottom).toBeLessThanOrEqual(
-    mosaicOrder.firstImageTop,
+  expect(mosaicLayout.imageCount).toBe(0);
+  expect(mosaicLayout.introBottom).toBeLessThanOrEqual(
+    mosaicLayout.firstCardTop,
   );
 
   const uspFlow = await page.locator(".cc-usp-section").evaluate((section) => {
-    const list = section.querySelector<HTMLElement>(".cc-usp-list")!;
+    const list = section.querySelector<HTMLElement>("[data-usp-mobile-list]")!;
     const items = Array.from(
       section.querySelectorAll<HTMLElement>(".cc-usp-item"),
     );
@@ -1528,271 +1491,20 @@ test("marketing homepage resolves its loading artwork into a responsive planning
   await page.goto("/");
   await expect(page.locator(".cc-landing")).toHaveClass(/cc-intro-settled/);
   await expect(page.locator(".cc-topo-loader")).toHaveCount(0);
-  await expect(page.locator(".cc-hero-satellite-image")).toHaveCSS(
+  await expect(page.locator(".cc-hero-land-layer")).toHaveCSS(
     "opacity",
     "1",
   );
   await expect(
     page.getByRole("heading", { name: "Give every cast a compass." }),
   ).toBeVisible();
-  await expect(page.locator(".cc-usp-list")).toBeVisible();
+  await expect(page.locator("[data-usp-mobile-list]")).toBeVisible();
   await expect(page.locator(".cc-usp-item")).toHaveCount(3);
   await expect(page.locator(".cc-usp-content")).toHaveCount(3);
-  await expect(page.locator(".cc-usp-figure")).toHaveCount(3);
-  await expect(page.locator(".cc-usp-media-frame")).toHaveCount(3);
-  await expect(page.locator(".cc-daylight-foreground-surface")).toHaveCount(0);
-});
-
-test("desktop USP keeps media in flow and enforces a strict master-story timeline", async ({
-  page,
-}) => {
-  test.setTimeout(60_000);
-  await page.setViewportSize({ width: 1440, height: 900 });
-  await page.goto("/");
-  await expect(page.locator(".cc-landing")).toHaveClass(/cc-intro-settled/, {
-    timeout: 10_000,
-  });
-
-  const contract = await page.locator(".cc-usp-section").evaluate((section) => {
-    const list = section.querySelector<HTMLElement>(".cc-usp-list")!;
-    const items = Array.from(
-      section.querySelectorAll<HTMLElement>(".cc-usp-item"),
-    );
-    const figures = Array.from(
-      section.querySelectorAll<HTMLElement>(".cc-usp-figure"),
-    );
-    const frames = Array.from(
-      section.querySelectorAll<HTMLElement>(".cc-usp-media-frame"),
-    );
-    const sectionStyle = getComputedStyle(section);
-    const listStyle = getComputedStyle(list);
-    const nextSection =
-      document.querySelector<HTMLElement>(".cc-approach-grid")!;
-    const nextSectionStyle = getComputedStyle(nextSection);
-    return {
-      width: section.getBoundingClientRect().width,
-      viewportWidth: window.innerWidth,
-      itemCount: items.length,
-      frameCount: frames.length,
-      gridColumns: items.map(
-        (item) =>
-          getComputedStyle(item.querySelector<HTMLElement>(".cc-usp-figure")!)
-            .gridColumnStart,
-      ),
-      listHeight: list.offsetHeight,
-      viewportHeight: window.innerHeight,
-      textPosition: getComputedStyle(
-        section.querySelector<HTMLElement>(".cc-usp-content")!,
-      ).position,
-      centerClip: getComputedStyle(
-        section.querySelector<HTMLElement>(".cc-usp-center-cell")!,
-      ).clipPath,
-      containment: {
-        sectionPosition: sectionStyle.position,
-        sectionOverflow: [sectionStyle.overflowX, sectionStyle.overflowY],
-        sectionTransform: sectionStyle.transform,
-        sectionFilter: sectionStyle.filter,
-        sectionPerspective: sectionStyle.perspective,
-        sectionContain: sectionStyle.contain,
-        listOverflow: [listStyle.overflowX, listStyle.overflowY],
-        itemOverflow: items.map((item) => {
-          const style = getComputedStyle(item);
-          return [style.overflowX, style.overflowY];
-        }),
-        figureOverflow: figures.map((figure) => {
-          const style = getComputedStyle(figure);
-          return [style.overflowX, style.overflowY];
-        }),
-        nextSectionPosition: nextSectionStyle.position,
-        nextSectionBackground: nextSectionStyle.backgroundColor,
-      },
-      media: frames.map((frame) => {
-        const rect = frame.getBoundingClientRect();
-        const image = frame.querySelector<HTMLImageElement>("img")!;
-        const frameStyle = getComputedStyle(frame);
-        const imageStyle = getComputedStyle(image);
-        const imageRect = image.getBoundingClientRect();
-        return {
-          width: rect.width,
-          height: rect.height,
-          imageWidth: imageRect.width,
-          imageHeight: imageRect.height,
-          framePosition: frameStyle.position,
-          frameOverflow: [frameStyle.overflowX, frameStyle.overflowY],
-          frameTransform: frameStyle.transform,
-          frameClipPath: frameStyle.clipPath,
-          frameAnimation: frameStyle.animationName,
-          frameTransitionDuration: frameStyle.transitionDuration,
-          imagePosition: imageStyle.position,
-          imageInset: [
-            imageStyle.top,
-            imageStyle.right,
-            imageStyle.bottom,
-            imageStyle.left,
-          ],
-          imageObjectFit: imageStyle.objectFit,
-          imageObjectPosition: imageStyle.objectPosition,
-          imageOpacity: imageStyle.opacity,
-          imageTransform: imageStyle.transform,
-          imageClipPath: imageStyle.clipPath,
-          imageAnimation: imageStyle.animationName,
-          imageTransitionDuration: imageStyle.transitionDuration,
-        };
-      }),
-    };
-  });
-  expect(contract.width).toBeCloseTo(contract.viewportWidth, 0);
-  expect(contract.itemCount).toBe(3);
-  expect(contract.frameCount).toBe(3);
-  expect(contract.gridColumns).toEqual(["3", "1", "3"]);
-  expect(contract.listHeight / contract.viewportHeight).toBeGreaterThan(1.5);
-  expect(contract.textPosition).toBe("fixed");
-  expect(contract.centerClip).toContain("inset");
-  expect(contract.containment.sectionPosition).toBe("relative");
-  expect(contract.containment.sectionOverflow).toEqual(["clip", "clip"]);
-  expect(contract.containment.sectionTransform).toBe("none");
-  expect(contract.containment.sectionFilter).toBe("none");
-  expect(contract.containment.sectionPerspective).toBe("none");
-  expect(contract.containment.sectionContain).not.toContain("paint");
-  expect(contract.containment.listOverflow).toEqual(["visible", "visible"]);
-  expect(contract.containment.itemOverflow).toEqual([
-    ["visible", "visible"],
-    ["visible", "visible"],
-    ["visible", "visible"],
-  ]);
-  expect(contract.containment.figureOverflow).toEqual([
-    ["clip", "clip"],
-    ["clip", "clip"],
-    ["clip", "clip"],
-  ]);
-  expect(contract.containment.nextSectionPosition).toBe("relative");
-  expect(contract.containment.nextSectionBackground).not.toBe(
-    "rgba(0, 0, 0, 0)",
-  );
-  for (const frame of contract.media) {
-    expect(frame.framePosition).toBe("relative");
-    expect(frame.frameOverflow).toEqual(["clip", "clip"]);
-    expect(frame.frameTransform).toBe("none");
-    expect(frame.frameClipPath).toBe("none");
-    expect(frame.frameAnimation).toBe("none");
-    expect(frame.frameTransitionDuration).toBe("0s");
-    expect(frame.imagePosition).toBe("absolute");
-    expect(frame.imageInset).toEqual(["0px", "0px", "0px", "0px"]);
-    expect(frame.imageObjectFit).toBe("cover");
-    expect(frame.imageOpacity).toBe("1");
-    expect(frame.imageTransform).toBe("none");
-    expect(frame.imageClipPath).toBe("none");
-    expect(frame.imageAnimation).toBe("none");
-    expect(frame.imageTransitionDuration).toBe("0s");
-    expect(frame.imageWidth).toBeCloseTo(frame.width, 3);
-    expect(frame.imageHeight).toBeCloseTo(frame.height, 3);
-    expect(frame.width / frame.height).toBeCloseTo(335 / 415, 3);
-    expect(frame.width).toBeGreaterThan(300);
-    expect(frame.height).toBeGreaterThan(390);
-  }
-
-  const scrollToProgress = async (progress: number) => {
-    await page.evaluate((targetProgress) => {
-      const list = document.querySelector<HTMLElement>(".cc-usp-list")!;
-      const listPageTop = list.getBoundingClientRect().top + window.scrollY;
-      const start = window.innerHeight * 0.52;
-      const end = window.innerHeight * 0.5;
-      const target =
-        listPageTop -
-        start +
-        targetProgress * (start + list.offsetHeight - end);
-      window.scrollTo(0, target);
-    }, progress);
-    await expect
-      .poll(async () =>
-        Number(
-          await page
-            .locator(".cc-usp-section")
-            .getAttribute("data-scroll-progress"),
-        ),
-      )
-      .toBeCloseTo(progress, 2);
-    await page.waitForTimeout(20);
-  };
-  const readStoryState = () =>
-    page.locator(".cc-usp-section").evaluate((section) => ({
-      visibleStories: Number(section.getAttribute("data-visible-stories")),
-      content: Array.from(
-        section.querySelectorAll<HTMLElement>(".cc-usp-content"),
-      ).map((element) => ({
-        opacity: Number(getComputedStyle(element).opacity),
-        visibility: getComputedStyle(element).visibility,
-        position: getComputedStyle(element).position,
-        rect: element.getBoundingClientRect().toJSON(),
-      })),
-    }));
-
-  await scrollToProgress(0.1);
-  let state = await readStoryState();
-  expect(state.visibleStories).toBe(1);
-  expect(
-    state.content.filter((story) => story.visibility !== "hidden"),
-  ).toHaveLength(1);
-  expect(state.content[0].opacity).toBeGreaterThan(0.01);
-  expect(state.content[1].visibility).toBe("hidden");
-  expect(state.content[2].visibility).toBe("hidden");
-
-  for (const progress of [0.41, 0.42, 0.43, 0.7, 0.71, 0.72]) {
-    await scrollToProgress(progress);
-    state = await readStoryState();
-    expect(state.visibleStories, `gap sample ${progress}`).toBe(0);
-    expect(
-      state.content.every((story) => story.visibility === "hidden"),
-      `gap visibility sample ${progress}`,
-    ).toBe(true);
-  }
-
-  await scrollToProgress(0.45);
-  state = await readStoryState();
-  expect(state.visibleStories).toBe(1);
-  expect(state.content[0].visibility).toBe("hidden");
-  expect(state.content[1].visibility).toBe("visible");
-  expect(state.content[2].visibility).toBe("hidden");
-
-  await scrollToProgress(0.74);
-  state = await readStoryState();
-  expect(state.visibleStories).toBe(1);
-  expect(state.content[0].visibility).toBe("hidden");
-  expect(state.content[1].visibility).toBe("hidden");
-  expect(state.content[2].visibility).toBe("visible");
-
-  await scrollToProgress(0.45);
-  state = await readStoryState();
-  expect(state.visibleStories).toBe(1);
-  expect(state.content[0].visibility).toBe("hidden");
-  expect(state.content[1].visibility).toBe("visible");
-  expect(state.content[2].visibility).toBe("hidden");
-
-  await scrollToProgress(0.1);
-  state = await readStoryState();
-  expect(state.visibleStories).toBe(1);
-  expect(state.content[0].visibility).toBe("visible");
-  expect(state.content[1].visibility).toBe("hidden");
-  expect(state.content[2].visibility).toBe("hidden");
-
-  const afterScrollMedia = await page
-    .locator(".cc-usp-media-frame")
-    .evaluateAll((frames) =>
-      frames.map((frame) => {
-        const rect = frame.getBoundingClientRect();
-        return {
-          width: rect.width,
-          height: rect.height,
-          pageY: rect.top + window.scrollY,
-        };
-      }),
-    );
-  expect(
-    afterScrollMedia.map(({ width, height }) => ({ width, height })),
-  ).toEqual(contract.media.map(({ width, height }) => ({ width, height })));
-  expect(afterScrollMedia.every(({ pageY }) => Number.isFinite(pageY))).toBe(
-    true,
-  );
+  await expect(page.locator(".cc-usp-mobile-figure")).toHaveCount(3);
+  await expect(page.locator(".cc-usp-mobile-frame")).toHaveCount(3);
+  await expect(page.locator("[data-usp-media-plane]")).toHaveCount(0);
+  await expect(page.locator("[data-usp-foreground-layer]")).toHaveCount(0);
 });
 
 test("marketing homepage keeps approved-catch loading, ready, empty, and error states honest", async ({
@@ -1941,9 +1653,8 @@ test("marketing homepage transition preserves native wheel, touch, and keyboard 
       ),
     )
     .toBeLessThanOrEqual(1);
-  const initialProgress = Number(
-    await section.getAttribute("data-scroll-progress"),
-  );
+  await expect(section).toHaveAttribute("data-usp-lenis", "inactive");
+  await expect(page.locator("html")).not.toHaveClass(/lenis/);
   if (testInfo.project.name === "webkit-iphone-13") return;
 
   const waitForScrollToSettle = () =>
@@ -1984,14 +1695,7 @@ test("marketing homepage transition preserves native wheel, touch, and keyboard 
   await expect
     .poll(() => page.evaluate(() => window.scrollY))
     .toBeGreaterThan(scrollContract.start);
-  await expect
-    .poll(async () =>
-      Number(await section.getAttribute("data-scroll-progress")),
-    )
-    .toBeGreaterThan(initialProgress);
-  const touchForwardProgress = Number(
-    await section.getAttribute("data-scroll-progress"),
-  );
+  const touchForwardScroll = await page.evaluate(() => window.scrollY);
   await cdp.send("Input.synthesizeScrollGesture", {
     x: Math.floor(viewport.width / 2),
     y: Math.floor(viewport.height * 0.35),
@@ -2000,10 +1704,8 @@ test("marketing homepage transition preserves native wheel, touch, and keyboard 
     gestureSourceType: "touch",
   });
   await expect
-    .poll(async () =>
-      Number(await section.getAttribute("data-scroll-progress")),
-    )
-    .toBeLessThan(touchForwardProgress);
+    .poll(() => page.evaluate(() => window.scrollY))
+    .toBeLessThan(touchForwardScroll);
   await waitForScrollToSettle();
   await cdp.detach();
 
@@ -2026,22 +1728,13 @@ test("marketing homepage transition preserves native wheel, touch, and keyboard 
   await expect
     .poll(() => page.evaluate(() => window.scrollY))
     .toBeGreaterThan(scrollContract.start);
-  await expect
-    .poll(async () =>
-      Number(await section.getAttribute("data-scroll-progress")),
-    )
-    .toBeGreaterThan(initialProgress);
   await waitForScrollToSettle();
 
-  const forwardProgress = Number(
-    await section.getAttribute("data-scroll-progress"),
-  );
+  const forwardScroll = await page.evaluate(() => window.scrollY);
   await page.mouse.wheel(0, -wheelDistance * 0.55);
   await expect
-    .poll(async () =>
-      Number(await section.getAttribute("data-scroll-progress")),
-    )
-    .toBeLessThan(forwardProgress);
+    .poll(() => page.evaluate(() => window.scrollY))
+    .toBeLessThan(forwardScroll);
 
   const beforePageDown = await page.evaluate(() => window.scrollY);
   await page.keyboard.press("PageDown");
