@@ -276,6 +276,9 @@ function versionList(output) {
   if (!Array.isArray(versions) || versions.some(({ id }) => !VERSION_ID_PATTERN.test(id ?? ""))) {
     throw new Error("Worker version list is invalid.");
   }
+  if (new Set(versions.map(({ id }) => id)).size !== versions.length) {
+    throw new Error("Worker version list contains duplicate version identities.");
+  }
   return versions;
 }
 
@@ -437,9 +440,9 @@ export async function releaseCloudflare({
     );
   } else if (mode === "activation") {
     throw new Error("The production activation release requires the reviewed activation secrets file.");
-  } else if (config.vars?.RATE_LIMITING_ENABLED === "true"
-    || config.vars?.TURNSTILE_ENABLED === "true") {
-    throw new Error("Enabled production abuse controls require the reviewed activation secrets file.");
+  } else if (config.vars?.RATE_LIMITING_ENABLED !== "false"
+    || config.vars?.TURNSTILE_ENABLED !== "false") {
+    throw new Error("Non-activation releases require both production abuse controls to be exactly false.");
   }
   if (root === POLICY_ROOT) {
     exactKeys(config.secrets, ["required"], "Reviewed Wrangler secrets configuration");
@@ -561,6 +564,14 @@ export async function releaseCloudflare({
   if (JSON.stringify(trafficReceipt) !== JSON.stringify(receipt)) {
     throw new Error("Production authorization changed before the traffic mutation.");
   }
+  const preTrafficDeployment = jsonCommand(
+    ["deployments", "status", "--config", "wrangler.jsonc", "--json"],
+    "Pre-traffic production deployment",
+  );
+  if (singleDeploymentVersion(preTrafficDeployment, "Pre-traffic production deployment")
+    !== priorVersion) {
+    throw new Error("Production deployment baseline drifted before the traffic mutation.");
+  }
   let trafficMayHaveChanged = false;
   try {
     trafficMayHaveChanged = true;
@@ -650,7 +661,7 @@ async function main() {
   const options = parseArguments(process.argv.slice(2));
   if (options.help) {
     process.stdout.write(
-      "Usage: node scripts/release-cloudflare.mjs --mode normal|maintenance|safety-floor --release-root /ABSOLUTE/REVIEWED/WORKTREE --expected-commit COMMIT --expected-gate-commit GATE_COMMIT --authorization-file /PRIVATE/AUTHORIZATION.json [--secrets-file /PRIVATE/ACTIVATION-SECRETS.json]\n",
+      "Usage: node scripts/release-cloudflare.mjs --mode normal|activation|maintenance|safety-floor --release-root /ABSOLUTE/REVIEWED/WORKTREE --expected-commit COMMIT --expected-gate-commit GATE_COMMIT --authorization-file /PRIVATE/AUTHORIZATION.json [--secrets-file /PRIVATE/ACTIVATION-SECRETS.json]\n",
     );
     return;
   }

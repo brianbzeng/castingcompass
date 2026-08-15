@@ -56,6 +56,8 @@ function versionedRunner(events, {
   config = ROOT_CONFIG,
   mode = "normal",
   secretNames = BASE_SECRETS,
+  afterVersions = [{ id: NEW_VERSION }, { id: PRIOR_VERSION }],
+  preTrafficVersion = PRIOR_VERSION,
   finalVersion = NEW_VERSION,
   restoredVersion = PRIOR_VERSION,
 } = {}) {
@@ -69,7 +71,7 @@ function versionedRunner(events, {
       versionLists += 1;
       return JSON.stringify(versionLists === 1
         ? [{ id: PRIOR_VERSION }]
-        : [{ id: NEW_VERSION }, { id: PRIOR_VERSION }]);
+        : afterVersions);
     }
     if (operation[0] === "versions" && operation[1] === "view") {
       return JSON.stringify(uploadedVersion(config, mode, secretNames));
@@ -79,8 +81,10 @@ function versionedRunner(events, {
       const version = deploymentStatuses === 1
         ? PRIOR_VERSION
         : deploymentStatuses === 2
-          ? finalVersion
-          : restoredVersion;
+          ? preTrafficVersion
+          : deploymentStatuses === 3
+            ? finalVersion
+            : restoredVersion;
       return JSON.stringify({ versions: [{ version_id: version, percentage: 100 }] });
     }
     return "";
@@ -179,7 +183,7 @@ test("release wrapper authorizes before locked install, build, and exact normal 
     assert.deepEqual(authorizations[1], authorizations[0]);
     assert.deepEqual(authorizations[2], authorizations[0]);
     const subprocesses = events.filter(({ type }) => type === "subprocess");
-    assert.equal(subprocesses.length, 10);
+    assert.equal(subprocesses.length, 11);
     assert.deepEqual(subprocesses[1].args.slice(-2), ["ci", "--ignore-scripts"]);
     assert.deepEqual(subprocesses[2].args.slice(-2), ["run", "build:cloudflare"]);
     assert.deepEqual(subprocesses[3].args.slice(1), [
@@ -189,13 +193,17 @@ test("release wrapper authorizes before locked install, build, and exact normal 
       "versions", "upload", "--config", "wrangler.jsonc",
     ]);
     assert.ok(subprocesses[5].args.includes("--strict"));
-    assert.deepEqual(subprocesses[8].args.slice(1, 4), [
+    assert.deepEqual(subprocesses[9].args.slice(1, 4), [
       "versions", "deploy", `${NEW_VERSION}@100%`,
     ]);
     assert.ok(events.indexOf(authorizations[1]) > events.indexOf(subprocesses[2]));
     assert.ok(events.indexOf(authorizations[1]) < events.indexOf(subprocesses[3]));
     assert.ok(events.indexOf(authorizations[2]) > events.indexOf(subprocesses[7]));
     assert.ok(events.indexOf(authorizations[2]) < events.indexOf(subprocesses[8]));
+    assert.deepEqual(subprocesses[8].args.slice(1), [
+      "deployments", "status", "--config", "wrangler.jsonc", "--json",
+    ]);
+    assert.ok(events.indexOf(subprocesses[8]) < events.indexOf(subprocesses[9]));
     for (const event of subprocesses) {
       assert.equal(event.command, process.execPath);
       assert.equal(event.options.cwd, await realpath(releaseRoot));
@@ -311,7 +319,7 @@ test("release wrapper supports a fresh checkout with no preinstalled Wrangler", 
       runner: installingVersionedRunner(releaseRoot, events),
     });
     const subprocesses = events.filter(({ type }) => type === "subprocess");
-    assert.equal(subprocesses.length, 10);
+    assert.equal(subprocesses.length, 11);
     assert.equal(subprocesses.some(({ args }) => args.includes("ci")), true);
     assert.equal(subprocesses.some(({ args }) => args[1] === "versions" && args[2] === "deploy"), true);
   } finally {
@@ -524,7 +532,7 @@ test("activation mode and enabled controls refuse every missing or misplaced sec
     );
     await assert.rejects(
       releaseCloudflare({ ...base, mode: "normal" }),
-      /Enabled production abuse controls require the reviewed activation secrets file/,
+      /require both production abuse controls to be exactly false/,
     );
     await assert.rejects(
       releaseCloudflare({
@@ -534,6 +542,66 @@ test("activation mode and enabled controls refuse every missing or misplaced sec
       }),
       /permitted only for the activation release mode/,
     );
+  } finally {
+    await rm(directory, { recursive: true, force: true });
+  }
+});
+
+test("provider baseline drift after inactive inspection refuses before traffic", async () => {
+  const directory = await mkdtemp(join(tmpdir(), "castingcompass-versioned-provider-drift-"));
+  try {
+    const releaseRoot = await freshReleaseRoot(directory);
+    const events = [];
+    await assert.rejects(
+      releaseCloudflare({
+        mode: "normal",
+        releaseRoot,
+        expectedCommit: HEAD,
+        expectedGateCommit: HEAD,
+        authorizationFile: "/private/authorization.json",
+        npmCli: await fakeNpmCli(directory),
+        environment: { PATH: process.env.PATH },
+        authorizationVerifier: async () => ({ authorized: true }),
+        runner: installingVersionedRunner(releaseRoot, events, { preTrafficVersion: NEW_VERSION }),
+      }),
+      /baseline drifted before the traffic mutation/,
+    );
+    const deployments = events.filter(
+      ({ args }) => args?.[1] === "versions" && args?.[2] === "deploy",
+    );
+    assert.equal(deployments.length, 0);
+  } finally {
+    await rm(directory, { recursive: true, force: true });
+  }
+});
+
+test("ambiguous provider version inventory refuses before inspection or traffic", async () => {
+  const directory = await mkdtemp(join(tmpdir(), "castingcompass-versioned-list-ambiguity-"));
+  try {
+    const releaseRoot = await freshReleaseRoot(directory);
+    const events = [];
+    await assert.rejects(
+      releaseCloudflare({
+        mode: "normal",
+        releaseRoot,
+        expectedCommit: HEAD,
+        expectedGateCommit: HEAD,
+        authorizationFile: "/private/authorization.json",
+        npmCli: await fakeNpmCli(directory),
+        environment: { PATH: process.env.PATH },
+        authorizationVerifier: async () => ({ authorized: true }),
+        runner: installingVersionedRunner(releaseRoot, events, {
+          afterVersions: [{ id: NEW_VERSION }, { id: NEW_VERSION }, { id: PRIOR_VERSION }],
+        }),
+      }),
+      /duplicate version identities/,
+    );
+    assert.equal(events.some(
+      ({ args }) => args?.[1] === "versions" && args?.[2] === "view",
+    ), false);
+    assert.equal(events.some(
+      ({ args }) => args?.[1] === "versions" && args?.[2] === "deploy",
+    ), false);
   } finally {
     await rm(directory, { recursive: true, force: true });
   }

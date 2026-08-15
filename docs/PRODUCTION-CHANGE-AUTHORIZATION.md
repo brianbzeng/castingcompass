@@ -97,9 +97,10 @@ Wrangler without a shell. The wrapper rechecks the installed tooling, clean sour
 action, and expiry after the build. It uploads exactly one inactive version, identifies that
 version by comparing the before/after version inventories, and verifies its runtime, every
 binding, every variable, the D1 identity, and all rate-limit parameters against reviewed source.
-Only after a third authorization check may it send `100%` of traffic to that exact version ID.
-It verifies the resulting deployment and automatically restores the recorded prior version at
-`100%` if promotion or the final status check fails. D1 mutations likewise reauthorize after
+Only after a third authorization check does it re-read the active deployment, refuse any drift
+from the recorded single version at `100%`, and then send `100%` of traffic to that exact new
+version ID. It verifies the resulting deployment and automatically restores the recorded prior
+version at `100%` if promotion or the final status check fails. D1 mutations likewise reauthorize after
 their final read-only boundary check and immediately before the write:
 
 ```sh
