@@ -119,6 +119,49 @@ SELECT
       'trips_completed_contract_update_guard'
     )
   ) AS later_triggers_found,
+  (SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'signup_age_proofs')
+    AS preledger_signup_age_proofs_schema,
+  (SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'privacy_deletion_jobs')
+    AS preledger_privacy_deletion_jobs_schema,
+  (SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'privacy_deletion_tasks')
+    AS preledger_privacy_deletion_tasks_schema,
+  (SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'forecast_impressions')
+    AS preledger_forecast_impressions_schema,
+  (SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'trip_validation_provenance')
+    AS preledger_trip_validation_provenance_schema,
+  (SELECT sql FROM sqlite_master WHERE type = 'index' AND name = 'signup_age_proofs_expiry_idx')
+    AS preledger_signup_age_proofs_expiry_index_schema,
+  (SELECT sql FROM sqlite_master WHERE type = 'index' AND name = 'privacy_deletion_jobs_state_updated_idx')
+    AS preledger_privacy_deletion_jobs_state_index_schema,
+  (SELECT sql FROM sqlite_master WHERE type = 'index' AND name = 'privacy_deletion_jobs_owner_state_idx')
+    AS preledger_privacy_deletion_jobs_owner_index_schema,
+  (SELECT sql FROM sqlite_master WHERE type = 'index' AND name = 'privacy_deletion_tasks_retry_idx')
+    AS preledger_privacy_deletion_tasks_retry_index_schema,
+  COALESCE((SELECT json_group_array(name) FROM (
+    SELECT name FROM sqlite_master
+    WHERE type = 'index' AND tbl_name IN (
+      'signup_age_proofs', 'privacy_deletion_jobs', 'privacy_deletion_tasks'
+    ) ORDER BY name
+  )), '[]') AS preledger_privacy_indexes_json,
+  COALESCE((SELECT json_group_array(name) FROM (
+    SELECT name FROM sqlite_master
+    WHERE type = 'index' AND tbl_name IN (
+      'forecast_impressions', 'trip_validation_provenance'
+    ) ORDER BY name
+  )), '[]') AS preledger_validation_indexes_json,
+  (SELECT COUNT(*) FROM sqlite_master
+    WHERE type = 'trigger' AND tbl_name IN (
+      'signup_age_proofs', 'privacy_deletion_jobs', 'privacy_deletion_tasks'
+    )) AS preledger_privacy_triggers,
+  (SELECT COUNT(*) FROM sqlite_master
+    WHERE type = 'trigger' AND tbl_name IN (
+      'forecast_impressions', 'trip_validation_provenance'
+    )) AS preledger_validation_triggers,
+  (SELECT COUNT(*) FROM signup_age_proofs) AS preledger_signup_age_proof_rows,
+  (SELECT COUNT(*) FROM privacy_deletion_jobs) AS preledger_privacy_deletion_job_rows,
+  (SELECT COUNT(*) FROM privacy_deletion_tasks) AS preledger_privacy_deletion_task_rows,
+  (SELECT COUNT(*) FROM forecast_impressions) AS preledger_forecast_impression_rows,
+  (SELECT COUNT(*) FROM trip_validation_provenance) AS preledger_trip_validation_provenance_rows,
   (SELECT COUNT(*) FROM users) AS users,
   (SELECT COUNT(*) FROM users WHERE age_eligibility_confirmed_at IS NULL) AS users_missing_age_eligibility,
   (SELECT COUNT(*) FROM users
