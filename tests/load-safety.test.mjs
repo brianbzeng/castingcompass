@@ -3,10 +3,13 @@ import { readFile } from "node:fs/promises";
 import test from "node:test";
 
 import {
+  calculateProjectedSequenceRequests,
+  createGlobalRequestScheduler,
   evaluateResults,
   executeLoadTest,
   percentile,
   preflightRemoteTarget,
+  runWorker,
   validateConfiguration,
   validateRemoteIdentity,
   validateTarget,
@@ -86,7 +89,8 @@ test("load harness permits localhost but requires explicit authorization for rem
 
 test("performance configuration locks route scope, execution ceilings, and API identity", () => {
   assert.equal(configuration.apiCompatibilityVersion, API_COMPATIBILITY_VERSION);
-  assert.equal(configuration.schemaVersion, "castingcompass.performance-budgets/1.1.0");
+  assert.equal(configuration.schemaVersion, "castingcompass.performance-budgets/1.2.0");
+  assert.equal(calculateProjectedSequenceRequests(configuration), 64_504);
 
   const widenedRoute = structuredClone(configuration);
   widenedRoute.routes.push({ name: "account", path: "/api/profile", expectedStatuses: [200] });
@@ -95,6 +99,18 @@ test("performance configuration locks route scope, execution ceilings, and API i
   const weakenedConcurrency = structuredClone(configuration);
   weakenedConcurrency.limits.maximumConcurrency = 51;
   assert.throws(() => validateConfiguration(weakenedConcurrency), /execution limits/);
+
+  const unboundedRate = structuredClone(configuration);
+  unboundedRate.profiles.spike.requestsPerSecond = 501;
+  assert.throws(() => validateConfiguration(unboundedRate), /locked limits/);
+
+  const weakenedReserve = structuredClone(configuration);
+  weakenedReserve.quotaGuard.minimumReserveRequests = 34_999;
+  assert.throws(() => validateConfiguration(weakenedReserve), /quota guard/);
+
+  const overDailyAllowance = structuredClone(configuration);
+  overDailyAllowance.profiles.soak.requestsPerSecond = 41;
+  assert.throws(() => validateConfiguration(overDailyAllowance), /daily request allowance/);
 
   const staleApi = structuredClone(configuration);
   staleApi.apiCompatibilityVersion = "2";
@@ -199,6 +215,97 @@ test("remote execution verifies checkout then target identity before starting wo
   assert.equal(result.sourceCommit, COMMIT);
   assert.equal(result.passed, true);
   assert.doesNotMatch(JSON.stringify(result), /isolated\.example\.test|version-123|sec_/u);
+  assert.equal(result.targetRequestsPerSecond, 20);
+  assert.equal(result.projectedProfileRequestCeiling, 300);
+});
+
+test("pacer enforces the global request rate and never catches up in a burst", async () => {
+  const concurrentProfile = { durationSeconds: 2, concurrency: 3, requestsPerSecond: 4 };
+  const scheduler = createGlobalRequestScheduler(concurrentProfile, 0);
+  assert.deepEqual([
+    scheduler.claim(0, 2_000),
+    scheduler.claim(0, 2_000),
+    scheduler.claim(0, 2_000),
+  ], [0, 250, 500]);
+  assert.equal(scheduler.claim(1_000, 2_000), 1_000);
+  assert.equal(scheduler.claim(1_000, 2_000), 1_250);
+
+  let concurrentNow = 0;
+  let waiters = [];
+  const flushAsyncTurns = async () => {
+    for (let index = 0; index < 12; index += 1) await Promise.resolve();
+  };
+  const concurrentTiming = {
+    now: () => concurrentNow,
+    wait: (milliseconds) => new Promise((resolve) => {
+      waiters.push({ at: concurrentNow + milliseconds, resolve });
+    }),
+  };
+  const advanceTo = async (nextNow) => {
+    concurrentNow = nextNow;
+    const ready = waiters.filter(({ at }) => at <= concurrentNow);
+    waiters = waiters.filter(({ at }) => at > concurrentNow);
+    for (const waiter of ready) waiter.resolve();
+    await flushAsyncTurns();
+  };
+  const concurrentStarts = [];
+  const concurrentResults = { latencies: [], failures: 0 };
+  const sharedScheduler = createGlobalRequestScheduler(
+    { durationSeconds: 2, concurrency: 2, requestsPerSecond: 4 },
+    0,
+  );
+  const workers = [0, 1].map((workerId) => runWorker(
+    workerId,
+    new URL("http://127.0.0.1:8787"),
+    configuration,
+    { durationSeconds: 2, concurrency: 2, requestsPerSecond: 4 },
+    2_000,
+    concurrentResults,
+    async () => {
+      concurrentStarts.push(concurrentNow);
+      return new Response(null, { status: 200 });
+    },
+    concurrentTiming,
+    sharedScheduler,
+  ));
+  await flushAsyncTurns();
+  await advanceTo(1_000);
+  await advanceTo(1_250);
+  await advanceTo(1_500);
+  await advanceTo(1_750);
+  await advanceTo(2_000);
+  await Promise.all(workers);
+  assert.deepEqual(concurrentStarts, [0, 1_000, 1_250, 1_500, 1_750]);
+  assert.equal(new Set(concurrentStarts).size, concurrentStarts.length);
+
+  let now = 0;
+  const starts = [];
+  const timing = {
+    now: () => now,
+    wait: async (milliseconds) => { now += milliseconds; },
+  };
+  const results = { latencies: [], failures: 0 };
+  await runWorker(
+    0,
+    new URL("http://127.0.0.1:8787"),
+    configuration,
+    { durationSeconds: 2, concurrency: 1, requestsPerSecond: 2 },
+    1_600,
+    results,
+    async () => {
+      starts.push(now);
+      now += 750;
+      return new Response(null, { status: 200 });
+    },
+    timing,
+    createGlobalRequestScheduler(
+      { durationSeconds: 2, concurrency: 1, requestsPerSecond: 2 },
+      0,
+    ),
+  );
+  assert.deepEqual(starts, [0, 750, 1_500]);
+  assert.equal(results.failures, 0);
+  assert.deepEqual(results.latencies, [750, 750, 750]);
 });
 
 test("checkout or identity refusal occurs before any remote load worker starts", async () => {

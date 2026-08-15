@@ -1,13 +1,22 @@
 {
-  "schemaVersion": "castingcompass.performance-budgets/1.1.0",
+  "schemaVersion": "castingcompass.performance-budgets/1.2.0",
   "apiCompatibilityVersion": "1",
   "profiles": {
-    "smoke": { "durationSeconds": 15, "concurrency": 2 },
-    "load": { "durationSeconds": 120, "concurrency": 10 },
-    "spike": { "durationSeconds": 30, "concurrency": 30 },
-    "soak": { "durationSeconds": 900, "concurrency": 5 }
+    "smoke": { "durationSeconds": 15, "concurrency": 2, "requestsPerSecond": 20 },
+    "load": { "durationSeconds": 120, "concurrency": 10, "requestsPerSecond": 160 },
+    "spike": { "durationSeconds": 30, "concurrency": 30, "requestsPerSecond": 300 },
+    "soak": { "durationSeconds": 900, "concurrency": 5, "requestsPerSecond": 40 }
   },
-  "limits": { "maximumDurationSeconds": 1800, "maximumConcurrency": 50 },
+  "limits": {
+    "maximumDurationSeconds": 1800,
+    "maximumConcurrency": 50,
+    "maximumRequestsPerSecond": 500
+  },
+  "quotaGuard": {
+    "accountDailyRequestCeiling": 100000,
+    "minimumReserveRequests": 35000,
+    "preflightRequestsPerProfile": 1
+  },
   "requestTimeoutMilliseconds": 5000,
   "maximumHealthResponseBytes": 8192,
   "budgets": {
