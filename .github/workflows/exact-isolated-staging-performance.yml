@@ -1,0 +1,54 @@
+name: Exact isolated-staging performance
+
+on:
+  push:
+    branches:
+      - codex/staging-load-evidence-fec7ab3
+
+permissions:
+  contents: read
+
+concurrency:
+  group: exact-isolated-staging-performance-fec7ab3
+  cancel-in-progress: false
+
+jobs:
+  performance:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Check out the exact protected release
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: fec7ab34b8bc8fc08c5510ed5dd5a6f89dcd0864
+          fetch-depth: 0
+      - name: Bind the official protected-main ref
+        run: git fetch --no-tags origin main:refs/remotes/origin/main
+      - name: Set up exact Node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version-file: .node-version
+          cache: npm
+      - name: Install the locked dependency graph
+        run: npm ci --ignore-scripts
+      - name: Verify exact clean source
+        env:
+          RELEASE_COMMIT: fec7ab34b8bc8fc08c5510ed5dd5a6f89dcd0864
+        run: node scripts/verify-release-checkout.mjs --root . --expected-commit "$RELEASE_COMMIT"
+      - name: Run exact isolated-staging performance sequence
+        env:
+          CASTINGCOMPASS_LOAD_AUTHORIZATION: ${{ secrets.CODEX_FEC7AB3_LOAD_AUTHORIZATION }}
+          STAGING_TARGET: ${{ secrets.CODEX_FEC7AB3_STAGING_TARGET }}
+          STAGING_WORKER_VERSION: ${{ secrets.CODEX_FEC7AB3_STAGING_WORKER_VERSION }}
+          STAGING_EXERCISE_ID: ${{ secrets.CODEX_FEC7AB3_STAGING_EXERCISE_ID }}
+          RELEASE_COMMIT: fec7ab34b8bc8fc08c5510ed5dd5a6f89dcd0864
+        run: |
+          set -euo pipefail
+          for profile in smoke load spike soak; do
+            node scripts/load-test.mjs \
+              --profile "$profile" \
+              --target "$STAGING_TARGET" \
+              --expected-commit "$RELEASE_COMMIT" \
+              --expected-worker-version "$STAGING_WORKER_VERSION" \
+              --exercise-id "$STAGING_EXERCISE_ID"
+          done
