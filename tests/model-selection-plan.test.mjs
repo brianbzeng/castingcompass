@@ -22,6 +22,12 @@ test("the model-selection plan is schema-valid and grants no execution authority
   );
   assert.equal(plan.selection_rule.deep_learning_is_default, false);
   assert.equal(plan.selection_rule.prefer_simpler_when_statistically_indistinguishable, true);
+  assert.equal(plan.common_evaluation.candidate_input_contract_frozen, true);
+  assert.deepEqual(
+    plan.locally_satisfied_data_gates,
+    ["candidate-feature-and-input-contract-frozen-before-label-access"],
+  );
+  assert.match(plan.candidate_input_contract.sha256, /^[a-f0-9]{64}$/u);
   for (const [field, value] of Object.entries(plan.authority)) {
     if (field !== "reason") {
       assert.equal(value, false, `${field} must remain false`);
@@ -44,6 +50,10 @@ test("the schema rejects authority expansion, candidate omission, and undeclared
   const extra = structuredClone(plan);
   extra.locked_test_results = [];
   cases.push(extra);
+
+  const inputContract = structuredClone(plan);
+  inputContract.candidate_input_contract.sha256 = "0".repeat(64);
+  cases.push(inputContract);
 
   for (const candidate of cases) {
     assert.equal(validate(candidate), false);

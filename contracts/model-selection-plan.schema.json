@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "castingcompass.model-selection-plan/1.0.0",
-  "title": "CastingCompass model-selection plan 1.0.0",
+  "$id": "castingcompass.model-selection-plan/1.1.0",
+  "title": "CastingCompass model-selection plan 1.1.0",
   "description": "Strict local planning contract for a future model-agnostic California-halibut benchmark. It grants no data, training, locked-test, promotion, score, serving, or deployment authority.",
   "type": "object",
   "additionalProperties": false,
@@ -14,15 +14,17 @@
     "contract_versions",
     "authority",
     "data_gates",
+    "locally_satisfied_data_gates",
+    "candidate_input_contract",
     "common_evaluation",
     "candidate_families",
     "selection_rule",
     "resource_reporting"
   ],
   "properties": {
-    "schema_version": { "const": "castingcompass.model-selection-plan/1.0.0" },
+    "schema_version": { "const": "castingcompass.model-selection-plan/1.1.0" },
     "plan_id": { "const": "california-halibut-model-selection-v1" },
-    "plan_version": { "const": "1.0.0" },
+    "plan_version": { "const": "1.1.0" },
     "status": { "const": "frozen-local-template-not-preregistered" },
     "target_taxon_id": { "const": "california-halibut" },
     "contract_versions": {
@@ -41,6 +43,39 @@
       "minItems": 10,
       "uniqueItems": true,
       "items": { "$ref": "#/$defs/slug" }
+    },
+    "locally_satisfied_data_gates": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 1,
+      "uniqueItems": true,
+      "items": {
+        "const": "candidate-feature-and-input-contract-frozen-before-label-access"
+      }
+    },
+    "candidate_input_contract": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "contract_id",
+        "contract_version",
+        "path",
+        "sha256"
+      ],
+      "properties": {
+        "schema_version": {
+          "const": "castingcompass.model-input-contract/1.0.0"
+        },
+        "contract_id": { "const": "california-halibut-model-input-v1" },
+        "contract_version": { "const": "1.0.0" },
+        "path": {
+          "const": "model/selection/california-halibut-input-v1.json"
+        },
+        "sha256": {
+          "const": "aeca877e3f08f9241684e6176681de500c0b3e5b82511bcc46c6a7494c77a5f8"
+        }
+      }
     },
     "common_evaluation": { "$ref": "#/$defs/commonEvaluation" },
     "candidate_families": {
@@ -131,7 +166,7 @@
             ]
           }
         },
-        "candidate_input_contract_frozen": { "const": false },
+        "candidate_input_contract_frozen": { "const": true },
         "same_rows_folds_and_features_for_every_compatible_candidate": { "const": true },
         "source_separated_development_and_locked_test": { "const": true },
         "geographic_and_temporal_outer_holdouts": { "const": true },

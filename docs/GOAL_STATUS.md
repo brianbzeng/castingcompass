@@ -52,6 +52,15 @@ by that discovery.
       bathymetric-deep candidate. These prove deterministic interface compatibility only; they
       cannot consume California-halibut labels, select a winner, change the score, serve a model,
       or authorize deployment.
+- [x] Freeze the shared pre-label input boundary for the future comparison. All seven required
+      candidates receive identical eligible rows/folds, context, source snapshots, and raw
+      multiscale terrain evidence; classical models receive fold-local summaries of the same
+      patch bags used by the deep model. Outcomes, identities, personal history, prior scores,
+      post-trip fields, lookahead values, moderation, and restricted-platform inputs are
+      prohibited. Missingness remains explicit, unsupported terrain abstains, and current
+      pollution/access/regulation actions remain separate pre-ranking safety gates that cannot
+      improve catch opportunity. The hash-bound local contract opens no labels or execution
+      authority.
 - [ ] Obtain eligible complete-attempt evidence. Recruit consented participants who report every
       targeted attempt, including non-encounters, and send the drafted RecFIN/CRFS request for a
       permitted reproducible non-confidential public-release complete-effort export with an

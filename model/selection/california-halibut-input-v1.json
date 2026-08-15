@@ -1,0 +1,188 @@
+{
+  "schema_version": "castingcompass.model-input-contract/1.0.0",
+  "contract_id": "california-halibut-model-input-v1",
+  "contract_version": "1.0.0",
+  "status": "frozen-local-template-no-label-authority",
+  "target_taxon_id": "california-halibut",
+  "prediction_unit": "one-public-site-by-two-hour-window-before-outcome",
+  "prediction_time_boundary": {
+    "anchor": "before-score-exposure-and-before-trip-start",
+    "forecast_values": "only-values-issued-or-observed-at-or-before-the-anchor",
+    "future_or_revised_values_allowed": false,
+    "post_start_values_allowed": false
+  },
+  "candidate_parity": {
+    "required_candidate_ids": [
+      "naive-prevalence-mean-cpue",
+      "regularized-linear-two-head",
+      "spline-gam-two-head",
+      "random-forest-two-head",
+      "hist-gradient-boosted-two-head",
+      "spatial-hierarchical-two-head",
+      "bathymetric-deep-two-head"
+    ],
+    "same_eligible_rows": true,
+    "same_outer_and_inner_folds": true,
+    "same_context_features": true,
+    "same_raw_terrain_sources_and_centers": true,
+    "same_source_snapshots": true,
+    "candidate_exclusive_upstream_source_allowed": false,
+    "architecture_view_rule": "classical-candidates-receive-fold-local-summaries-of-the-exact-multiscale-terrain-bags-received-by-the-deep-candidate"
+  },
+  "context_features": {
+    "numeric": [
+      "month_sin",
+      "month_cos",
+      "local_hour_sin",
+      "local_hour_cos",
+      "tide_level_midpoint_ft",
+      "tide_change_m",
+      "current_knots",
+      "current_direction_sin",
+      "current_direction_cos",
+      "wind_mph",
+      "swell_feet",
+      "swell_period_seconds",
+      "swell_direction_sin",
+      "swell_direction_cos",
+      "wave_power_kw_m",
+      "water_temp_f",
+      "cloud_cover_fraction",
+      "pressure_hpa",
+      "pressure_trend_hpa_3h",
+      "moon_illumination_fraction",
+      "expected_access_pressure_fraction",
+      "casting_bearing_sin",
+      "casting_bearing_cos",
+      "forecast_lead_hours",
+      "tide_source_age_hours",
+      "weather_source_age_hours",
+      "buoy_source_age_hours",
+      "marine_source_age_hours"
+    ],
+    "categorical": [
+      "fishing_mode",
+      "region_panel",
+      "tide_stage",
+      "casting_exposure",
+      "beach_slope_class"
+    ],
+    "binary": [
+      "daylight"
+    ],
+    "availability_masks": [
+      "tide_available",
+      "weather_available",
+      "buoy_available",
+      "marine_forecast_available",
+      "terrain_available"
+    ]
+  },
+  "terrain_view": {
+    "source_channels": [
+      "depth_m",
+      "slope_deg",
+      "roughness_m",
+      "curvature",
+      "tpi_local_m",
+      "tpi_broad_m"
+    ],
+    "radii_m": [
+      64.0,
+      256.0,
+      1024.0
+    ],
+    "output_size": 33,
+    "minimum_valid_fraction_each_scale": 0.8,
+    "classical_summary_statistics": [
+      "center",
+      "mean",
+      "std",
+      "min",
+      "max"
+    ],
+    "deep_patch_bag": {
+      "shape": "rows-by-sitesupportpatches-by-3-scales-by-6-channels-by-33-by-33",
+      "mask_required": true,
+      "maximum_site_support_patches": 32,
+      "empty_bag_action": "abstain"
+    },
+    "fold_local_only": [
+      "imputation",
+      "normalization",
+      "categorical-encoding",
+      "feature-selection",
+      "calibration"
+    ]
+  },
+  "label_contract": {
+    "observation_contract_version": "castingcompass.observation/2.0.0",
+    "eligible_contract_status": "valid",
+    "primary_target_taxon_id": "california-halibut",
+    "complete_attempt_required": true,
+    "expanded_estimate_allowed": false,
+    "occurrence_label": "target-encounter-count-greater-than-zero",
+    "positive_cpue_label": "target-encounter-count-divided-by-positive-target-effort",
+    "non_encounter_cpue": 0,
+    "pilot_rows_allowed": false,
+    "legacy_unverified_rows_allowed": false
+  },
+  "missingness_and_abstention": {
+    "invented_neutral_values_allowed": false,
+    "missingness_masks_required": true,
+    "missing_dynamic_values_may_be_fold_locally_imputed": true,
+    "missing_terrain_or_subthreshold_coverage_action": "abstain",
+    "outside_validated_geography_or_mode_action": "abstain",
+    "abstentions_reported_separately": true
+  },
+  "safety_gate_boundary": {
+    "candidate_inputs": [],
+    "ordered_before_ranking": [
+      "current-access-closure",
+      "current-fishing-regulation",
+      "current-water-quality-action"
+    ],
+    "unsafe_or_unknown_action": "withhold-or-clearly-downgrade-through-a-separate-reviewed-safety-policy",
+    "pollution_or_advisory_status_may_increase_opportunity": false,
+    "reason": "a-catch-model-must-not-learn-that-polluted-closed-or-illegal-water-is-a-better-destination"
+  },
+  "prohibited_inputs": [
+    "target-outcome",
+    "catch-counts",
+    "post-trip-observations",
+    "trip-notes",
+    "trip-photo",
+    "bait-lure-rig-or-gear-selected-after-score-exposure",
+    "participant-account-or-reporter-identity",
+    "participant-personal-history",
+    "exact-private-gps",
+    "score-influenced-choice",
+    "current-or-prior-opportunity-score",
+    "current-or-prior-component-scores",
+    "future-weather-or-revised-source-values",
+    "moderation-output",
+    "protected-or-scraped-platform-content"
+  ],
+  "source_binding": {
+    "raw_source_id_required": true,
+    "raw_sha256_required": true,
+    "source_revision_required": true,
+    "retrieved_at_required": true,
+    "issued_or_observed_at_required": true,
+    "transform_version_required": true,
+    "feature_order_hash_required": true,
+    "feature_order_sha256": "e7916adf5d65ac03c89bbe6a9d8d7ef52a7eda56a6611d6af5d2f7306af12f4d",
+    "timezone": "America/Los_Angeles",
+    "no_lookahead_enforced": true
+  },
+  "authority": {
+    "eligible_labeled_data_available": false,
+    "benchmark_execution_authorized": false,
+    "target_specific_training_authorized": false,
+    "locked_test_access_authorized": false,
+    "winner_selection_authorized": false,
+    "score_change_authorized": false,
+    "serving_change_authorized": false,
+    "deployment_authorized": false
+  }
+}

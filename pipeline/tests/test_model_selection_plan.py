@@ -56,6 +56,13 @@ class ModelSelectionPlanTests(unittest.TestCase):
             ]
         )
         self.assertTrue(
+            self.plan["common_evaluation"]["candidate_input_contract_frozen"]
+        )
+        self.assertEqual(
+            self.plan["locally_satisfied_data_gates"],
+            ["candidate-feature-and-input-contract-frozen-before-label-access"],
+        )
+        self.assertTrue(
             all(
                 value is False
                 for key, value in self.plan["authority"].items()
@@ -83,7 +90,19 @@ class ModelSelectionPlanTests(unittest.TestCase):
         mutations.append(changed)
 
         changed = copy.deepcopy(self.plan)
+        changed["common_evaluation"]["candidate_input_contract_frozen"] = False
+        mutations.append(changed)
+
+        changed = copy.deepcopy(self.plan)
         changed["common_evaluation"]["final_primary_metric_set_frozen"] = True
+        mutations.append(changed)
+
+        changed = copy.deepcopy(self.plan)
+        changed["candidate_input_contract"]["sha256"] = "0" * 64
+        mutations.append(changed)
+
+        changed = copy.deepcopy(self.plan)
+        changed["locally_satisfied_data_gates"] = []
         mutations.append(changed)
 
         changed = copy.deepcopy(self.plan)
@@ -127,7 +146,12 @@ class ModelSelectionPlanTests(unittest.TestCase):
                 "implemented": 7,
             },
         )
-        self.assertEqual(receipt["open_data_gate_count"], 12)
+        self.assertEqual(receipt["open_data_gate_count"], 11)
+        self.assertEqual(receipt["locally_satisfied_data_gate_count"], 1)
+        self.assertRegex(
+            receipt["candidate_input_contract_sha256"],
+            r"^[a-f0-9]{64}$",
+        )
         self.assertFalse(receipt["benchmark_execution_authorized"])
         self.assertFalse(receipt["target_specific_training_authorized"])
         self.assertFalse(receipt["locked_test_access_authorized"])
