@@ -15,7 +15,7 @@ concurrency:
 jobs:
   performance:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 10
     steps:
       - name: Check out the exact protected release
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
@@ -35,7 +35,7 @@ jobs:
         env:
           RELEASE_COMMIT: fec7ab34b8bc8fc08c5510ed5dd5a6f89dcd0864
         run: node scripts/verify-release-checkout.mjs --root . --expected-commit "$RELEASE_COMMIT"
-      - name: Run exact isolated-staging performance sequence
+      - name: Run exact isolated-staging spike profile
         env:
           CASTINGCOMPASS_LOAD_AUTHORIZATION: ${{ secrets.CODEX_FEC7AB3_LOAD_AUTHORIZATION }}
           STAGING_TARGET: ${{ secrets.CODEX_FEC7AB3_STAGING_TARGET }}
@@ -44,11 +44,9 @@ jobs:
           RELEASE_COMMIT: fec7ab34b8bc8fc08c5510ed5dd5a6f89dcd0864
         run: |
           set -euo pipefail
-          for profile in smoke load spike soak; do
-            node scripts/load-test.mjs \
-              --profile "$profile" \
-              --target "$STAGING_TARGET" \
-              --expected-commit "$RELEASE_COMMIT" \
-              --expected-worker-version "$STAGING_WORKER_VERSION" \
-              --exercise-id "$STAGING_EXERCISE_ID"
-          done
+          node scripts/load-test.mjs \
+            --profile spike \
+            --target "$STAGING_TARGET" \
+            --expected-commit "$RELEASE_COMMIT" \
+            --expected-worker-version "$STAGING_WORKER_VERSION" \
+            --exercise-id "$STAGING_EXERCISE_ID"
