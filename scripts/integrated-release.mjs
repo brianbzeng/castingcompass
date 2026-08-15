@@ -628,6 +628,7 @@ export function productionMutationAction(options) {
     expectedMigrationsBefore(options.migration);
     return `migrate:${options.migration}`;
   }
+  if (options.command === "optimize") return "optimize:pragma";
   return null;
 }
 
@@ -657,6 +658,58 @@ async function runPreflight(root, runner, expectedMigrations = BASE_APPLIED_MIGR
   const payload = await executeReadOnlySqlFile(root, runner, "scripts/integrated-release-preflight.sql");
   const result = verifyInitialPreflight(payload, expectedMigrations);
   return { ...result, evidenceSha256: evidenceDigest(result) };
+}
+
+async function runPostflight(root, runner) {
+  const payload = await executeReadOnlySqlFile(root, runner, "scripts/integrated-release-postflight.sql");
+  const verified = verifyFinalPostflight(payload);
+  return { ...verified, evidenceSha256: evidenceDigest(verified) };
+}
+
+export function verifyOptimizeResult(payload) {
+  if (!Array.isArray(payload) || payload.length !== 1) {
+    throw new Error(`Production optimize must return exactly one statement result; received ${payload?.length ?? "invalid"}.`);
+  }
+  const entry = payload[0];
+  requireEqual("production optimize success", entry?.success, true);
+  requireEqual("production optimize primary execution", entry?.meta?.served_by_primary, true);
+  if (typeof entry?.meta?.changed_db !== "boolean") {
+    throw new Error("Production optimize changed_db metadata must be boolean.");
+  }
+  requireNonnegativeInteger("production optimize changes", entry?.meta?.changes);
+  requireNonnegativeInteger("production optimize rows_written", entry?.meta?.rows_written);
+  if (!Array.isArray(entry.results)) {
+    throw new Error("Production optimize result is missing its results array.");
+  }
+  return {
+    servedByPrimary: true,
+    changedDatabase: entry.meta.changed_db,
+    changes: entry.meta.changes,
+    rowsWritten: entry.meta.rows_written,
+    resultRows: entry.results.length,
+  };
+}
+
+export async function runProductionOptimize(
+  root,
+  runner,
+  options,
+  reauthorize = authorizeProductionMutation,
+) {
+  assertMutationConfirmation(options);
+  const before = await runPostflight(root, runner);
+  await reauthorize(root, options);
+  const operation = verifyOptimizeResult(
+    await executeMutationFile(root, runner, "scripts/optimize-production.sql"),
+  );
+  const after = await runPostflight(root, runner);
+  requireEqual("production optimize ledger preservation", after.evidenceSha256, before.evidenceSha256);
+  return {
+    operation,
+    before,
+    after,
+    evidenceSha256: evidenceDigest({ operation, before, after }),
+  };
 }
 
 async function withStagedConfig(root, targetMigration, callback) {
@@ -743,7 +796,8 @@ async function main({ root = DEFAULT_ROOT, runner = defaultWranglerRunner } = {}
       "  node scripts/integrated-release.mjs preflight\n" +
       "  RELEASE_AUTHORIZATION_FILE=/PRIVATE/PATH.json node scripts/integrated-release.mjs reconcile-0007 --confirm-primary contourcast-trips --confirm-bookmark-recorded\n" +
       "  RELEASE_AUTHORIZATION_FILE=/PRIVATE/PATH.json node scripts/integrated-release.mjs apply --migration FILE --confirm-primary contourcast-trips --confirm-bookmark-recorded\n" +
-      "  node scripts/integrated-release.mjs postflight\n",
+      "  node scripts/integrated-release.mjs postflight\n" +
+      "  RELEASE_AUTHORIZATION_FILE=/PRIVATE/PATH.json node scripts/integrated-release.mjs optimize --confirm-primary contourcast-trips --confirm-bookmark-recorded\n",
     );
     return;
   }
@@ -763,9 +817,9 @@ async function main({ root = DEFAULT_ROOT, runner = defaultWranglerRunner } = {}
   } else if (options.command === "apply") {
     result = await applyOneMigration(root, runner, options);
   } else if (options.command === "postflight") {
-    const payload = await executeReadOnlySqlFile(root, runner, "scripts/integrated-release-postflight.sql");
-    const verified = verifyFinalPostflight(payload);
-    result = { ...verified, evidenceSha256: evidenceDigest(verified) };
+    result = await runPostflight(root, runner);
+  } else if (options.command === "optimize") {
+    result = await runProductionOptimize(root, runner, options);
   } else {
     throw new Error(`Unknown command: ${options.command}`);
   }

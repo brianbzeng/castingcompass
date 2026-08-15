@@ -19,6 +19,7 @@
     "reconcile:cloudflare:0007": "node scripts/integrated-release.mjs reconcile-0007",
     "migrate:cloudflare:remote": "node scripts/integrated-release.mjs apply --migration \"$RELEASE_MIGRATION\"",
     "postflight:cloudflare:remote": "node scripts/integrated-release.mjs postflight",
+    "optimize:cloudflare:remote": "node scripts/integrated-release.mjs optimize",
     "verify:release-maintenance": "node scripts/verify-release-maintenance.mjs",
     "release:cloudflare": "node scripts/release-cloudflare.mjs --mode normal --release-root . --expected-commit \"$RELEASE_COMMIT\" --expected-gate-commit \"$RELEASE_COMMIT\" --authorization-file \"$RELEASE_AUTHORIZATION_FILE\"",
     "release:cloudflare:maintenance": "node scripts/release-cloudflare.mjs --mode maintenance --release-root . --expected-commit \"$RELEASE_COMMIT\" --expected-gate-commit \"$RELEASE_COMMIT\" --authorization-file \"$RELEASE_AUTHORIZATION_FILE\"",

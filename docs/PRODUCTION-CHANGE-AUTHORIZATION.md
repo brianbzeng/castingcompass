@@ -20,7 +20,8 @@ CI verifies its locked hash and semantics without reading any private packet. Th
 - separate `operator` and `independent_reviewer` approvals;
 - the one permitted safety-floor commit;
 - one action for every safety-floor, maintenance, and normal deployment; and
-- one action for `0007` reconciliation and each exact `0009`–`0020` migration.
+- one action for `0007` reconciliation and each exact `0009`–`0020` migration; and
+- one action for the fixed production `PRAGMA optimize` operation before normal traffic.
 
 The verifier requires full lowercase 40-character release and gate commits. Each verified
 checkout must be clean, belong to the official `brianbzeng/castingcompass` origin, and be
@@ -116,9 +117,10 @@ export RELEASE_AUTHORIZATION_FILE=/PRIVATE/ENCRYPTED/PATH/deploy-safety-floor.js
 npm run release:cloudflare:safety-floor
 ```
 
-For D1, set a new action-specific `RELEASE_AUTHORIZATION_FILE` before every reconciliation or
-migration command in [Integrated production release](INTEGRATED-RELEASE.md). Static confirmation
-flags, a previous packet, or a successful preflight cannot authorize the next mutation.
+For D1, set a new action-specific `RELEASE_AUTHORIZATION_FILE` before every reconciliation,
+migration, or optimize command in [Integrated production release](INTEGRATED-RELEASE.md). Static
+confirmation flags, a previous packet, or a successful preflight/postflight cannot authorize the
+next mutation.
 
 The public receipt contains only the authorization-file hash, action, release and gate commits,
 expiry, role labels, and evidence names. Store it with the private release record, then continue
