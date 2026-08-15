@@ -96,6 +96,9 @@ test("production release scripts cannot apply migrations implicitly or bypass th
   assert.doesNotMatch(packageJson.scripts["migrate:cloudflare:remote"], /\bwrangler\b/);
   assert.doesNotMatch(packageJson.scripts["migrate:cloudflare:remote"], /confirm-(primary|bookmark)/);
   assert.doesNotMatch(packageJson.scripts["reconcile:cloudflare:0007"], /confirm-(primary|bookmark)/);
+  assert.match(packageJson.scripts["optimize:cloudflare:remote"], /integrated-release\.mjs optimize/);
+  assert.doesNotMatch(packageJson.scripts["optimize:cloudflare:remote"], /\bwrangler\b/);
+  assert.doesNotMatch(packageJson.scripts["optimize:cloudflare:remote"], /confirm-(primary|bookmark)/);
 });
 
 test("every deploy and migration entry point requires private exact-action authorization", () => {
@@ -126,12 +129,14 @@ test("every deploy and migration entry point requires private exact-action autho
   assert.match(releaseWrapper, /shell: false/);
   assert.match(scripts["migrate:cloudflare:remote"], /integrated-release\.mjs apply/);
   assert.match(scripts["reconcile:cloudflare:0007"], /integrated-release\.mjs reconcile-0007/);
+  assert.match(scripts["optimize:cloudflare:remote"], /integrated-release\.mjs optimize/);
   const integratedRelease = readFileSync("scripts/integrated-release.mjs", "utf8");
   assert.match(integratedRelease, /verifyProductionChangeAuthorization/);
   assert.match(integratedRelease, /RELEASE_AUTHORIZATION_FILE/);
   assert.match(integratedRelease, /await authorizeProductionMutation\(root, options\)/);
   assert.match(integratedRelease, /runPreflight\(root, runner\)[\s\S]+await authorizeProductionMutation\(root, options\)[\s\S]+executeMutationFile/);
   assert.match(integratedRelease, /requireMigrationArray\([\s\S]+await reauthorize\(root, options\)[\s\S]+"migrations", "apply"/);
+  assert.match(integratedRelease, /runPostflight\(root, runner\)[\s\S]+await reauthorize\(root, options\)[\s\S]+optimize-production\.sql[\s\S]+runPostflight\(root, runner\)/);
 });
 
 test("release maintenance is default-off and suppresses scheduled database work", () => {

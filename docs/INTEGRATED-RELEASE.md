@@ -240,9 +240,21 @@ foreign-key violations. Preserve its aggregate evidence hash. Once `0011` begins
 ordinary traffic to the older safety Worker. On failure, keep the maintenance bridge active
 and fix forward from a newly reviewed immutable commit.
 
-After postflight succeeds, run `PRAGMA optimize` as a separate reviewed primary-D1 operation,
-then capture the representative `EXPLAIN QUERY PLAN` and rows-read evidence defined in
-`docs/PERFORMANCE-READINESS.md`. Do not combine that evidence operation with application deploy.
+After postflight succeeds, run the exact repository-guarded `PRAGMA optimize` operation with a new
+action-specific authorization packet. The wrapper repeats the full postflight immediately before
+the statement, reauthorizes immediately before Wrangler, and repeats the full postflight after it:
+
+```sh
+export RELEASE_AUTHORIZATION_FILE=/PRIVATE/ENCRYPTED/PATH/optimize-pragma.json
+npm run optimize:cloudflare:remote -- \
+  --confirm-primary contourcast-trips --confirm-bookmark-recorded
+```
+
+Preserve the optimize receipt and both identical aggregate postflight hashes, then capture the
+representative `EXPLAIN QUERY PLAN` and rows-read evidence defined in
+`docs/PERFORMANCE-READINESS.md`. Do not combine either operation with application deploy. Do not
+publish the normal release unless the optimize and performance evidence digests are independently
+reviewed and included in its authorization packet.
 
 ## 7. Publish the normal release and run live checks
 

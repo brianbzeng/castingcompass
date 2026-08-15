@@ -3,6 +3,7 @@ import { chmod, link, mkdtemp, realpath, rm, symlink, writeFile } from "node:fs/
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import test from "node:test";
+import { fileURLToPath } from "node:url";
 
 import {
   loadProductionChangePolicy,
@@ -11,7 +12,7 @@ import {
   verifyProductionChangeAuthorization,
 } from "../scripts/verify-production-change-authorization.mjs";
 
-const ROOT = resolve(new URL("../", import.meta.url).pathname);
+const ROOT = resolve(fileURLToPath(new URL("../", import.meta.url)));
 const HEAD = "0123456789abcdef0123456789abcdef01234567";
 const NOW = "2026-07-19T16:00:00.000Z";
 
@@ -77,6 +78,7 @@ test("locked production change policy is canonical and covers every release phas
     "migrate:0018_ai_review_queue.sql",
     "migrate:0019_async_privacy_exports.sql",
     "migrate:0020_trip_photo_upload_reservations.sql",
+    "optimize:pragma",
     "deploy:normal",
   ]);
   const weakened = structuredClone(policy);

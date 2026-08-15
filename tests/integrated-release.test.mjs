@@ -17,6 +17,8 @@ import {
   verifyLocalMigrationSet,
   verifyPrivacyPreservationPayload,
   productionMutationAction,
+  runProductionOptimize,
+  verifyOptimizeResult,
   verifyReconciliationResult,
   verifyStageBoundaryPayload,
 } from "../scripts/integrated-release.mjs";
@@ -331,11 +333,14 @@ test("the operator runbook enumerates the exact guarded migration sequence", asy
   assert.match(operations, /Migration `0018_ai_review_queue\.sql` completed before any Queue binding/);
   assert.match(operations, /Migration `0019_async_privacy_exports\.sql` completed before any privacy-export Queue or\s+private R2 binding/);
   assert.match(operations, /Migration `0020_trip_photo_upload_reservations\.sql` completed before trip-photo uploads are\s+activated/);
+  assert.match(runbook, /npm run optimize:cloudflare:remote/);
+  assert.match(runbook, /performance evidence digests are independently\s+reviewed/);
 });
 
 test("every D1 mutation maps to one exact private authorization action before Wrangler", async () => {
   assert.equal(productionMutationAction({ command: "preflight" }), null);
   assert.equal(productionMutationAction({ command: "postflight" }), null);
+  assert.equal(productionMutationAction({ command: "optimize" }), "optimize:pragma");
   assert.equal(productionMutationAction({ command: "reconcile-0007" }), "migrate:reconcile-0007");
   for (const migration of STAGED_MIGRATIONS) {
     assert.equal(
@@ -382,5 +387,55 @@ test("every D1 mutation maps to one exact private authorization action before Wr
       {},
     ),
     /--confirm-primary/,
+  );
+});
+
+test("production optimize is primary-only, reauthorized after postflight, and proves no aggregate drift", async () => {
+  const postflight = await readFile(
+    new URL("../scripts/integrated-release-postflight.sql", import.meta.url),
+    "utf8",
+  );
+  const sqlite = new DatabaseSync(":memory:");
+  sqlite.exec("PRAGMA foreign_keys = ON");
+  createLedger(sqlite);
+  for (const migration of ALL_RELEASE_MIGRATIONS) {
+    await applyMigration(sqlite, migration);
+    recordMigration(sqlite, migration);
+  }
+  const postflightPayload = () => readEnvelope(sqlite.prepare(postflight).get());
+  const optimizePayload = [{
+    results: [],
+    success: true,
+    meta: { served_by_primary: true, changed_db: true, changes: 0, rows_written: 0 },
+  }];
+  const calls = [];
+  const runner = async (_root, args) => {
+    const command = args[args.indexOf("--command") + 1];
+    calls.push(command);
+    return JSON.stringify(command.includes("PRAGMA optimize") ? optimizePayload : postflightPayload());
+  };
+  const options = {
+    command: "optimize",
+    confirmPrimary: "contourcast-trips",
+    confirmBookmarkRecorded: true,
+  };
+  let authorizations = 0;
+  const result = await runProductionOptimize(".", runner, options, async () => {
+    authorizations += 1;
+  });
+  assert.equal(authorizations, 1);
+  assert.equal(calls.length, 3);
+  assert.match(calls[1], /PRAGMA optimize/);
+  assert.equal(result.operation.servedByPrimary, true);
+  assert.equal(result.before.evidenceSha256, result.after.evidenceSha256);
+  assert.match(result.evidenceSha256, /^[a-f0-9]{64}$/);
+
+  assert.throws(
+    () => verifyOptimizeResult([{
+      results: [],
+      success: true,
+      meta: { served_by_primary: false, changed_db: true, changes: 0, rows_written: 0 },
+    }]),
+    /primary execution/,
   );
 });

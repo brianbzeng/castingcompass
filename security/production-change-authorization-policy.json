@@ -267,6 +267,24 @@
         "time_travel_bookmark_recorded"
       ]
     },
+    "optimize:pragma": {
+      "fixed_release_commit": null,
+      "required_evidence": [
+        "automatic_deployments_disabled",
+        "change_window_approved",
+        "current_provider_state_recorded",
+        "final_postflight_passed",
+        "key_custody_reviewed",
+        "maintenance_version_verified",
+        "notification_path_confirmed",
+        "performance_evidence_plan_reviewed",
+        "rollback_path_recorded",
+        "security_alert_inventory_reviewed",
+        "snapshot_schedule_paused",
+        "source_commit_reviewed",
+        "time_travel_bookmark_recorded"
+      ]
+    },
     "deploy:normal": {
       "fixed_release_commit": null,
       "required_evidence": [
@@ -278,6 +296,8 @@
         "maintenance_version_verified",
         "normal_live_verification_plan",
         "notification_path_confirmed",
+        "performance_evidence_recorded",
+        "production_optimize_verified",
         "rollback_path_recorded",
         "security_alert_inventory_reviewed",
         "snapshot_schedule_paused",
