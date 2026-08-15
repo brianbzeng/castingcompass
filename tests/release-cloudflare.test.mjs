@@ -424,6 +424,17 @@ test("activation secrets file enforces the POSIX private-file boundary", {
     );
     await rm(hardLinkPath);
 
+    const thirdCheckout = join(directory, "third-checkout");
+    await mkdir(thirdCheckout);
+    await writeFile(join(thirdCheckout, ".git"), "gitdir: ../private-git-metadata\n", { mode: 0o600 });
+    const checkoutSecretPath = join(thirdCheckout, "activation-secrets.json");
+    await writeFile(checkoutSecretPath, source, { mode: 0o600 });
+    await chmod(checkoutSecretPath, 0o600);
+    await assert.rejects(
+      verifiedActivationSecretsFile(ROOT, checkoutSecretPath, ACTIVATION_SECRETS),
+      /outside every Git checkout/,
+    );
+
     const duplicatePath = join(directory, "activation-secrets-duplicate.json");
     await writeFile(duplicatePath, source.replace(
       '  "RATE_LIMIT_KEY_SECRET":',

@@ -54,6 +54,26 @@ function isInside(root, candidate) {
     || (!pathFromRoot.startsWith(`..${sep}`) && pathFromRoot !== ".." && !isAbsolute(pathFromRoot));
 }
 
+async function assertOutsideGitCheckout(candidate) {
+  let directory = dirname(candidate);
+  while (true) {
+    let marker = null;
+    try {
+      marker = await lstat(resolve(directory, ".git"));
+    } catch (error) {
+      if (error?.code !== "ENOENT") {
+        throw new Error("Production activation secrets Git-checkout boundary could not be verified.");
+      }
+    }
+    if (marker) {
+      throw new Error("Production activation secrets must be outside every Git checkout.");
+    }
+    const parent = dirname(directory);
+    if (parent === directory) return;
+    directory = parent;
+  }
+}
+
 function exactKeys(value, expected, label) {
   if (!value || typeof value !== "object" || Array.isArray(value)
     || JSON.stringify(Object.keys(value)) !== JSON.stringify(expected)) {
@@ -128,6 +148,7 @@ export async function verifiedActivationSecretsFile(releaseRoot, secretsFile, ex
   if (isInside(releaseRoot, pathBeforeOpen) || isInside(POLICY_ROOT, pathBeforeOpen)) {
     throw new Error("Production activation secrets must be outside every release checkout.");
   }
+  await assertOutsideGitCheckout(pathBeforeOpen);
   let handle;
   try {
     handle = await open(requestedPath, constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0));
