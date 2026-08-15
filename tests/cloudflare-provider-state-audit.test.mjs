@@ -125,6 +125,8 @@ test("current provider drift produces only aggregate blockers and never leaks pr
     "reviewed-commit-unbound",
   ]);
   assert.deepEqual(receipt.configuration.missing_binding_names, [
+    "DEPLOYMENT_ENVIRONMENT",
+    "STAGING_HOSTNAME",
     "RATE_LIMITING_ENABLED",
     "AI_REVIEW_QUEUE_ENABLED",
     "PRIVACY_EXPORT_QUEUE_ENABLED",

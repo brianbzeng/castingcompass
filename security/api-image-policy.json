@@ -1,18 +1,18 @@
 {
   "schemaVersion": 2,
-  "reviewedAt": "2026-07-18",
+  "reviewedAt": "2026-08-15",
   "exceptionReview": {
     "owner": "repository-security-maintainer",
     "decision": "bounded-renewal-pending-stable-release",
-    "observedStableVersion": "3.13.14",
-    "expectedNextVersion": "3.13.15",
-    "nextReviewOn": "2026-08-04",
-    "renewalDeadline": "2026-08-08",
+    "observedStableVersion": "3.13.15",
+    "expectedNextVersion": "3.13.16",
+    "nextReviewOn": "2026-10-06",
+    "renewalDeadline": "2026-10-10",
     "maximumPostReleaseGraceDays": 4,
-    "reason": "Python 3.13.14 remains the latest stable 3.13 release, while CPython schedules 3.13.15 for 2026-08-04. Preserve the module-removal mitigations and allow four days for the Docker Official Image to publish and pass native two-architecture review.",
+    "reason": "Python 3.13.15 is the current stable 3.13 maintenance release. Its CPython source contains the CVE-2026-15308 backport, but the fresh NVD CPE feed still flags the binary and names only 3.15.0 as fixed. Retain the removed and import-guarded html.parser mitigation plus a bounded review through the scheduled final 3.13.16 bugfix release.",
     "sources": [
       "https://www.python.org/downloads/source/",
-      "https://www.python.org/downloads/release/python-31314/",
+      "https://www.python.org/downloads/release/python-31315/",
       "https://peps.python.org/pep-0719/",
       "https://github.com/docker-library/official-images/blob/master/library/python"
     ]
@@ -32,22 +32,22 @@
   },
   "baseImage": {
     "repository": "python",
-    "tag": "3.13.14-alpine3.24",
-    "indexDigest": "sha256:399babc8b49529dabfd9c922f2b5eea81d611e4512e3ed250d75bd2e7683f4b0",
-    "sourceRevision": "f79aea5b8f6b2d65b31ba2bb3f69c0c2083345c8",
+    "tag": "3.13.15-alpine3.24",
+    "indexDigest": "sha256:540c7d91f98ff6880174c40e99067bf5941eb54d818a7a5e094d188b196a934d",
+    "sourceRevision": "3cb2fbae63fab2184343a01e4bd63a7540462999",
     "platforms": {
       "linux/amd64": {
-        "manifestDigest": "sha256:c25cd44f45df1279a2cba589e67dfcd9db04647ea483b117a7de8b1a99bdfb23",
-        "operatingSystemBaseDigest": "sha256:79ff19e9084a00eece421b2523fb93e22d730e2c0e525905de047e848e56d95f"
+        "manifestDigest": "sha256:42825e7ec3437b3bce923c237484eb23d32128476e18307d2f48951bf86f1db2",
+        "operatingSystemBaseDigest": "sha256:55afa1ecc21d2bb5e5045f32dafee56272ffd89860bac26f6c32123439af26a4"
       },
       "linux/arm64": {
-        "manifestDigest": "sha256:0515d7a37d0febc8bd7d88b4879b8598f4e1a1aae16307c733fd34f36be18f15",
-        "operatingSystemBaseDigest": "sha256:e7a1a92a5bfeee40966aea60f0796b0e7917cc35591542701834f03a68fa3d18"
+        "manifestDigest": "sha256:a3b06b4d76b4f145ee7091d76008d78075174cc1712ba3772d80e477313f92fe",
+        "operatingSystemBaseDigest": "sha256:5de55e5ef9c033997441461efe7ba23a986db059c0bb78b38f84ee0d72b99167"
       }
     }
   },
   "runtime": {
-    "python": "3.13.14",
+    "python": "3.13.15",
     "operatingSystem": "Alpine Linux 3.24",
     "commonApkPackages": [
       { "package": "alpine-baselayout", "version": "3.7.2-r1" },
@@ -67,7 +67,7 @@
       { "package": "libncursesw", "version": "6.6_p20260516-r0" },
       { "package": "libpanelw", "version": "6.6_p20260516-r0" },
       { "package": "libssl3", "version": "3.5.7-r0" },
-      { "package": "libuuid", "version": "2.42-r0" },
+      { "package": "libuuid", "version": "2.42.1-r0" },
       { "package": "musl", "version": "1.2.6-r2" },
       { "package": "musl-utils", "version": "1.2.6-r2" },
       { "package": "ncurses-terminfo-base", "version": "6.6_p20260516-r0" },
@@ -75,16 +75,16 @@
       { "package": "scanelf", "version": "1.3.9-r1" },
       { "package": "sqlite-libs", "version": "3.53.2-r0" },
       { "package": "ssl_client", "version": "1.37.0-r31" },
-      { "package": "tzdata", "version": "2026b-r0" },
+      { "package": "tzdata", "version": "2026c-r0" },
       { "package": "xz-libs", "version": "5.8.3-r0" },
       { "package": "zlib", "version": "1.3.2-r0" }
     ],
     "platformApkPackages": {
       "linux/amd64": [
-        { "package": ".python-rundeps", "version": "20260616.002554" }
+        { "package": ".python-rundeps", "version": "20260810.210928" }
       ],
       "linux/arm64": [
-        { "package": ".python-rundeps", "version": "20260616.002547" }
+        { "package": ".python-rundeps", "version": "20260810.211022" }
       ]
     },
     "forbiddenPackages": [
@@ -125,19 +125,19 @@
   "missingLicenseReviews": [
     {
       "package": ".python-rundeps",
-      "version": "20260616.002547",
+      "version": "20260810.211022",
       "type": "apk",
       "platform": "linux/arm64",
       "classification": "virtual dependency marker with no distributable package payload",
-      "source": "https://github.com/docker-library/python/tree/f79aea5b8f6b2d65b31ba2bb3f69c0c2083345c8/3.13/alpine3.24"
+      "source": "https://github.com/docker-library/python/tree/3cb2fbae63fab2184343a01e4bd63a7540462999/3.13/alpine3.24"
     },
     {
       "package": ".python-rundeps",
-      "version": "20260616.002554",
+      "version": "20260810.210928",
       "type": "apk",
       "platform": "linux/amd64",
       "classification": "virtual dependency marker with no distributable package payload",
-      "source": "https://github.com/docker-library/python/tree/f79aea5b8f6b2d65b31ba2bb3f69c0c2083345c8/3.13/alpine3.24"
+      "source": "https://github.com/docker-library/python/tree/3cb2fbae63fab2184343a01e4bd63a7540462999/3.13/alpine3.24"
     }
   ],
   "mitigatedModules": [
@@ -152,39 +152,15 @@
   ],
   "highSeverityExceptions": [
     {
-      "vulnerability": "CVE-2026-11940",
-      "namespace": "nvd:cpe",
-      "package": "python",
-      "version": "3.13.14",
-      "type": "binary",
-      "severity": "High",
-      "expires": "2026-08-08",
-      "module": "tarfile",
-      "reason": "The 2026-07-18 primary-source review found no stable CPython 3.13 release containing the backport; the API image removes tarfile and the source contract rejects reintroduction.",
-      "source": "https://github.com/python/cpython/issues/151558"
-    },
-    {
-      "vulnerability": "CVE-2026-11972",
-      "namespace": "nvd:cpe",
-      "package": "python",
-      "version": "3.13.14",
-      "type": "binary",
-      "severity": "High",
-      "expires": "2026-08-08",
-      "module": "tarfile",
-      "reason": "The 2026-07-18 primary-source review found no stable CPython 3.13 release containing the backport; the API image removes tarfile and the source contract rejects reintroduction.",
-      "source": "https://github.com/python/cpython/issues/151981"
-    },
-    {
       "vulnerability": "CVE-2026-15308",
       "namespace": "nvd:cpe",
       "package": "python",
-      "version": "3.13.14",
+      "version": "3.13.15",
       "type": "binary",
       "severity": "High",
-      "expires": "2026-08-08",
+      "expires": "2026-10-10",
       "module": "html.parser",
-      "reason": "The 2026-07-18 primary-source review found no stable CPython 3.13 release containing the backport; the API image removes html.parser and the source contract rejects reintroduction.",
+      "reason": "The CPython 3.13 backport was merged before Python 3.13.15, but the current Grype NVD CPE record still reports only 3.15.0 as fixed. The API image removes html.parser and the source contract rejects reintroduction while the discrepancy remains under bounded review.",
       "source": "https://github.com/python/cpython/issues/153030"
     }
   ]

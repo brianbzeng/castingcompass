@@ -1,7 +1,7 @@
 {
   "bomFormat": "CycloneDX",
   "specVersion": "1.5",
-  "serialNumber": "urn:uuid:f768f66e-b701-5f19-aa89-6802d8f8a309",
+  "serialNumber": "urn:uuid:3d21d315-254b-5179-bc5b-cd4c9497f73c",
   "version": 1,
   "metadata": {
     "component": {
@@ -41,7 +41,7 @@
         },
         {
           "name": "castingcompass:input-sha256",
-          "value": "contracts/isolated-staging-wrangler.schema.json:3a2ede27362f54eaef447d1538464758efae884c585443816e3defd18afb05e4"
+          "value": "contracts/isolated-staging-wrangler.schema.json:67312915c6d3242b66ddd8f83567ed62ad3cb69dde9d573d11863f408ec38b06"
         },
         {
           "name": "castingcompass:input-sha256",
@@ -105,11 +105,11 @@
         },
         {
           "name": "castingcompass:input-sha256",
-          "value": "package-lock.json:372c7d03b83aa143d3951fa8f0ae627c2bf212322080bb2d3b24355a82b04d4d"
+          "value": "package-lock.json:8872ff7a264d2b6da5f3df15393b7c8cfb693487dee98573408eff167a2c065d"
         },
         {
           "name": "castingcompass:input-sha256",
-          "value": "package.json:11efbe4d258b4d0ea6549fece8b4d3101d03cb7f1d2875221e2d89de6507168b"
+          "value": "package.json:0ec8593c97fd3285722c7ab9397dbbb0ab7100a3da632e89b9198766470e8628"
         },
         {
           "name": "castingcompass:input-sha256",
@@ -117,7 +117,7 @@
         },
         {
           "name": "castingcompass:input-sha256",
-          "value": "pipeline/requirements-ci.lock:a275330ce3af4e0c2e0bff6fb1ecb804dae465b99041d96dfffd36f8fc051a2c"
+          "value": "pipeline/requirements-ci.lock:654598b121081ef60b9334bc92365c787037a3bc5b445d5afd9fb34459a1f076"
         },
         {
           "name": "castingcompass:input-sha256",
@@ -125,7 +125,7 @@
         },
         {
           "name": "castingcompass:input-sha256",
-          "value": "scripts/verify-npm-audit-policy.mjs:c2e100fd33b096fc35b1b3e8c56abfea344df2d6c33f3fc4ec42b075742f49d2"
+          "value": "scripts/verify-npm-audit-policy.mjs:c39d979fa682577824552d27fb36515a044ef1709bebb0f70514346d620aed49"
         },
         {
           "name": "castingcompass:input-sha256",
@@ -133,7 +133,7 @@
         },
         {
           "name": "castingcompass:input-sha256",
-          "value": "security/api-image-policy.json:23176e5218bdaa339c27a4deb851f26d9763012c865938dec71c68baec3e7695"
+          "value": "security/api-image-policy.json:43eae8620aef0cc31fb97e7ae7ecfc4fa1ec856a7aa77f4619f3e9361ce86460"
         },
         {
           "name": "castingcompass:input-sha256",
@@ -141,7 +141,7 @@
         },
         {
           "name": "castingcompass:input-sha256",
-          "value": "security/cloudflare-provider-state-policy.json:b1989e7da9b5dfaa4fa8015c36f1d4e6e080b4c5c5180a3ad2db63f2de35e137"
+          "value": "security/cloudflare-provider-state-policy.json:b73be31d9a7988ad067415f87c2726f3c45337217508f81b2394b772235953f6"
         },
         {
           "name": "castingcompass:input-sha256",
@@ -149,11 +149,11 @@
         },
         {
           "name": "castingcompass:input-sha256",
-          "value": "security/d1-query-inventory.json:65707f5477579dc8808cbb64c95ccaf8ac15f57522a660b7173fb0f9a00510be"
+          "value": "security/d1-query-inventory.json:206bb80b5334376639fb5e898c647d45099f0a68b991ddb7c7f7771810c3a23a"
         },
         {
           "name": "castingcompass:input-sha256",
-          "value": "security/isolated-staging-config-policy.json:81a14972236f39577595e6d3535aa6b6470cb49c9c7772a35dd21c51d23afcc0"
+          "value": "security/isolated-staging-config-policy.json:df6b7272e5a39d9aa2048655a25a2857a2adb0f643de51662c0c4862f478683c"
         },
         {
           "name": "castingcompass:input-sha256",
@@ -161,11 +161,11 @@
         },
         {
           "name": "castingcompass:input-sha256",
-          "value": "security/npm-audit-policy.json:79bbaa23e54e0a6284353a746d29be56d3e296477f7ddc36311e159fb8357531"
+          "value": "security/npm-audit-policy.json:fc476aeba8b5ceb17c6999bc57738c082185060cba6dbbcb9e5e4c366db09525"
         },
         {
           "name": "castingcompass:input-sha256",
-          "value": "security/npm-install-policy.json:c3adc5a60d35eebbcc1890103b4aba1308f1bf9877024106d5dd9e1b686e86b7"
+          "value": "security/npm-install-policy.json:f2a68aba98f88f96fec512310528461049a02f00a8bc4af3d206bbaeebe433c8"
         },
         {
           "name": "castingcompass:input-sha256",
@@ -185,23 +185,27 @@
         },
         {
           "name": "castingcompass:input-sha256",
-          "value": "security/sbom.cdx.json:fb8043c1f7b5bab8ff9e8fe836afdebebfb5c895ae6d0f7969d2c4defb508b1a"
+          "value": "security/sbom.cdx.json:751e17e8df41dcea943307545589b09cc61a1d316923f70546a02030df502ee3"
         },
         {
           "name": "castingcompass:input-sha256",
-          "value": "services/api/.python-version:f8faecf2505680716c6279bf2cdec3d5a5ba2ba852f0d7df45d51ac1ce8d9ade"
+          "value": "services/api/.python-version:861b3dd8083d28f336ef70f6755bc399538ddad627b1d095820ca34cb953cf14"
         },
         {
           "name": "castingcompass:input-sha256",
-          "value": "services/api/Dockerfile:70f1e667245e6dae80beec7be7c79a9361538d445f6d6ed13ec027b7cde95bcf"
+          "value": "services/api/Dockerfile:c6590189037c3c3591488fa353e509370034da33aa8226d111745f94e407b330"
         },
         {
           "name": "castingcompass:input-sha256",
-          "value": "services/api/requirements-runtime.lock:6cea94a8204926a6703b22a5e85d3cd015061ccce5e80890a62d1631e18b252b"
+          "value": "services/api/requirements-runtime.lock:33df67982e9d596483a12f89c2117d813d12764de38acb5501aeee78e2993caa"
         },
         {
           "name": "castingcompass:input-sha256",
-          "value": "staging/ai-review-exercise-stub.wrangler.jsonc:69803e6ce5f1936a87aed17a77f59f8b99caa3db8db0133dd5c0a097992c1dde"
+          "value": "staging/ai-review-exercise-stub.wrangler.jsonc:1f3e8c6c2c6634187c2f39eddab95781ec009b54a9658e9c1051d46c16e8f997"
+        },
+        {
+          "name": "castingcompass:input-sha256",
+          "value": "tsconfig.worker.json:93e6722e910f9d2e5cc8425db421a4b07d2f36b085ab90002f0b1db3985a4a28"
         },
         {
           "name": "castingcompass:input-sha256",
@@ -233,11 +237,15 @@
         },
         {
           "name": "castingcompass:input-sha256",
+          "value": "worker-configuration.d.ts:12cd954f9cb3b3863e3adb75ed1be9b5f4a0443621de35707576d89ad41d3da5"
+        },
+        {
+          "name": "castingcompass:input-sha256",
           "value": "worker/ai-review-exercise-stub.ts:1d44976ec9656fc32b60648618ae772ad47626bcedda0d8c3adf5a81aa39b8c7"
         },
         {
           "name": "castingcompass:input-sha256",
-          "value": "wrangler.jsonc:eb055dbff42ca11f52b6c952faba602d3ee8fd7137a709ea980111f220d8bd35"
+          "value": "wrangler.jsonc:a246fe056f96bc6fad3d71b9f9fe9b3e6b5164c92a42578699704ffbb2b1eb18"
         }
       ],
       "purl": "pkg:generic/castingcompass-release@0.1.0"
@@ -1522,12 +1530,12 @@
       ]
     },
     {
-      "bom-ref": "@next/env@16.2.12",
+      "bom-ref": "@next/env@16.3.1",
       "type": "library",
       "name": "@next/env",
-      "version": "16.2.12",
+      "version": "16.3.1",
       "scope": "required",
-      "purl": "pkg:npm/%40next/env@16.2.12",
+      "purl": "pkg:npm/%40next/env@16.3.1",
       "properties": [
         {
           "name": "cdx:npm:package:path",
@@ -1537,13 +1545,13 @@
       "externalReferences": [
         {
           "type": "distribution",
-          "url": "https://registry.npmjs.org/@next/env/-/env-16.2.12.tgz"
+          "url": "https://registry.npmjs.org/@next/env/-/env-16.3.1.tgz"
         }
       ],
       "hashes": [
         {
           "alg": "SHA-512",
-          "content": "77467905cd7715ae2747ca4500ac768dacb6ca124cd7abe57c76d3cd89d4400c6535be81ea59a7e218edebd95836de2446dc983fa804338f653d11cd6c8ca77a"
+          "content": "df91b7c7091051bda81134838c55c6ad5ba0927a1ac8b14187bbd213ec80725f483f6cd3f70c86c2aef6f7b0181d1d7590995df34eede5ff00241b3a581cd7b1"
         }
       ],
       "licenses": [
@@ -1555,12 +1563,12 @@
       ]
     },
     {
-      "bom-ref": "@next/swc-darwin-arm64@16.2.12",
+      "bom-ref": "@next/swc-darwin-arm64@16.3.1",
       "type": "library",
       "name": "@next/swc-darwin-arm64",
-      "version": "16.2.12",
+      "version": "16.3.1",
       "scope": "optional",
-      "purl": "pkg:npm/%40next/swc-darwin-arm64@16.2.12",
+      "purl": "pkg:npm/%40next/swc-darwin-arm64@16.3.1",
       "properties": [
         {
           "name": "cdx:npm:package:path",
@@ -1570,13 +1578,13 @@
       "externalReferences": [
         {
           "type": "distribution",
-          "url": "https://registry.npmjs.org/@next/swc-darwin-arm64/-/swc-darwin-arm64-16.2.12.tgz"
+          "url": "https://registry.npmjs.org/@next/swc-darwin-arm64/-/swc-darwin-arm64-16.3.1.tgz"
         }
       ],
       "hashes": [
         {
           "alg": "SHA-512",
-          "content": "d16d51d2d787589aea297d051f6d08cf321600eb86b41c4f1ae39baf1cb5944f2142f0858f8f4a13c6b75948340fbb2aeab9face433873b60652786e7414baa0"
+          "content": "001308bb6cd0edc9cd2079b98af286c19c14ae6d2901a8b7ca227f80afeb17573554ff543a78fb5c409b30a15d54aa7d23d78c62af4da03b355973a8a30c7327"
         }
       ],
       "licenses": [
@@ -1588,12 +1596,12 @@
       ]
     },
     {
-      "bom-ref": "@next/swc-darwin-x64@16.2.12",
+      "bom-ref": "@next/swc-darwin-x64@16.3.1",
       "type": "library",
       "name": "@next/swc-darwin-x64",
-      "version": "16.2.12",
+      "version": "16.3.1",
       "scope": "optional",
-      "purl": "pkg:npm/%40next/swc-darwin-x64@16.2.12",
+      "purl": "pkg:npm/%40next/swc-darwin-x64@16.3.1",
       "properties": [
         {
           "name": "cdx:npm:package:path",
@@ -1603,13 +1611,13 @@
       "externalReferences": [
         {
           "type": "distribution",
-          "url": "https://registry.npmjs.org/@next/swc-darwin-x64/-/swc-darwin-x64-16.2.12.tgz"
+          "url": "https://registry.npmjs.org/@next/swc-darwin-x64/-/swc-darwin-x64-16.3.1.tgz"
         }
       ],
       "hashes": [
         {
           "alg": "SHA-512",
-          "content": "1f2e4bb34f7df9a15498e2e62203df2ea362ea20b084bdee402b2ccf9ad693ee4d91ce9350a084f370d8e416cdca57e6dfe99fc1c4859cb45fad90c9855c5db7"
+          "content": "80d1b6d5efd49ebae879271b63f42775411d974985d454626d6ec105e614cffe400427a98ea0dd11d82be7ddafa7332d0a7fe6ec54e362add33784e9c839eeb7"
         }
       ],
       "licenses": [
@@ -1621,12 +1629,12 @@
       ]
     },
     {
-      "bom-ref": "@next/swc-linux-arm64-gnu@16.2.12",
+      "bom-ref": "@next/swc-linux-arm64-gnu@16.3.1",
       "type": "library",
       "name": "@next/swc-linux-arm64-gnu",
-      "version": "16.2.12",
+      "version": "16.3.1",
       "scope": "optional",
-      "purl": "pkg:npm/%40next/swc-linux-arm64-gnu@16.2.12",
+      "purl": "pkg:npm/%40next/swc-linux-arm64-gnu@16.3.1",
       "properties": [
         {
           "name": "cdx:npm:package:path",
@@ -1636,13 +1644,13 @@
       "externalReferences": [
         {
           "type": "distribution",
-          "url": "https://registry.npmjs.org/@next/swc-linux-arm64-gnu/-/swc-linux-arm64-gnu-16.2.12.tgz"
+          "url": "https://registry.npmjs.org/@next/swc-linux-arm64-gnu/-/swc-linux-arm64-gnu-16.3.1.tgz"
         }
       ],
       "hashes": [
         {
           "alg": "SHA-512",
-          "content": "f98a94da1d5c4241ec19fbe302cad29acb7c50814189b0469b9c775e07a5f0d2cc88342d34e338b0cd8638432f1b962238135e37f62493c7100b64b45ebaa58e"
+          "content": "e81e8bc34d7a8b035442e689a2b68c3132e1e93c07cc552dc62a5249c0f5177632ca672b4569286e87514b67ed20e905e6faece33365c94ad30b961943d2f3e7"
         }
       ],
       "licenses": [
@@ -1654,12 +1662,12 @@
       ]
     },
     {
-      "bom-ref": "@next/swc-linux-arm64-musl@16.2.12",
+      "bom-ref": "@next/swc-linux-arm64-musl@16.3.1",
       "type": "library",
       "name": "@next/swc-linux-arm64-musl",
-      "version": "16.2.12",
+      "version": "16.3.1",
       "scope": "optional",
-      "purl": "pkg:npm/%40next/swc-linux-arm64-musl@16.2.12",
+      "purl": "pkg:npm/%40next/swc-linux-arm64-musl@16.3.1",
       "properties": [
         {
           "name": "cdx:npm:package:path",
@@ -1669,13 +1677,13 @@
       "externalReferences": [
         {
           "type": "distribution",
-          "url": "https://registry.npmjs.org/@next/swc-linux-arm64-musl/-/swc-linux-arm64-musl-16.2.12.tgz"
+          "url": "https://registry.npmjs.org/@next/swc-linux-arm64-musl/-/swc-linux-arm64-musl-16.3.1.tgz"
         }
       ],
       "hashes": [
         {
           "alg": "SHA-512",
-          "content": "d2a8e189805a280a85eb72c0d59580027293cc5520b806998916b97ad30b1863e3fc1eae1158ed21995d233144a77c07941d24a0ae9a4f3a8fb527699530a3a0"
+          "content": "25488f5d928af703a18dfe0c803887dbd1992f17ea39eb1b2ed1eada90f1c07fd6c2c713455d93a329a73938757a0cda65fd2e7947fc4f6f827984c61e35b423"
         }
       ],
       "licenses": [
@@ -1687,12 +1695,12 @@
       ]
     },
     {
-      "bom-ref": "@next/swc-linux-x64-gnu@16.2.12",
+      "bom-ref": "@next/swc-linux-x64-gnu@16.3.1",
       "type": "library",
       "name": "@next/swc-linux-x64-gnu",
-      "version": "16.2.12",
+      "version": "16.3.1",
       "scope": "optional",
-      "purl": "pkg:npm/%40next/swc-linux-x64-gnu@16.2.12",
+      "purl": "pkg:npm/%40next/swc-linux-x64-gnu@16.3.1",
       "properties": [
         {
           "name": "cdx:npm:package:path",
@@ -1702,13 +1710,13 @@
       "externalReferences": [
         {
           "type": "distribution",
-          "url": "https://registry.npmjs.org/@next/swc-linux-x64-gnu/-/swc-linux-x64-gnu-16.2.12.tgz"
+          "url": "https://registry.npmjs.org/@next/swc-linux-x64-gnu/-/swc-linux-x64-gnu-16.3.1.tgz"
         }
       ],
       "hashes": [
         {
           "alg": "SHA-512",
-          "content": "ec0deadba5be87b827035e6ea814e836e0ea04415965caa1d265b69a7e00261fc6e69760d91544de7e2c9732c49620126451b7366b1b1339e0ff1d92874f6606"
+          "content": "52883d8ecae621120bfe57ef229f61b66b2448d0bb25c42c315b9c5cbd95d98635cbf0fd2143772cf11a7eacb4cd1276708535490d15e85e9395f7d0fa92c01a"
         }
       ],
       "licenses": [
@@ -1720,12 +1728,12 @@
       ]
     },
     {
-      "bom-ref": "@next/swc-linux-x64-musl@16.2.12",
+      "bom-ref": "@next/swc-linux-x64-musl@16.3.1",
       "type": "library",
       "name": "@next/swc-linux-x64-musl",
-      "version": "16.2.12",
+      "version": "16.3.1",
       "scope": "optional",
-      "purl": "pkg:npm/%40next/swc-linux-x64-musl@16.2.12",
+      "purl": "pkg:npm/%40next/swc-linux-x64-musl@16.3.1",
       "properties": [
         {
           "name": "cdx:npm:package:path",
@@ -1735,13 +1743,13 @@
       "externalReferences": [
         {
           "type": "distribution",
-          "url": "https://registry.npmjs.org/@next/swc-linux-x64-musl/-/swc-linux-x64-musl-16.2.12.tgz"
+          "url": "https://registry.npmjs.org/@next/swc-linux-x64-musl/-/swc-linux-x64-musl-16.3.1.tgz"
         }
       ],
       "hashes": [
         {
           "alg": "SHA-512",
-          "content": "a928cbfeea699be71b876d6cef64acf209223a1438744c561cd18e5b2e9e655ed24e3e56b0a7a18314fad5b792b0e8fe61842e4e994bdfbea538274c414e53f3"
+          "content": "eb2cb7153d772a05053a3e47f1b97cc3fea72a22701c8bdbb7087557ed5a72cbbeef2e2d2639de9926ba9a1b21e7705ea15ae5a3313e7cc8198571f8e969a330"
         }
       ],
       "licenses": [
@@ -1753,12 +1761,12 @@
       ]
     },
     {
-      "bom-ref": "@next/swc-win32-arm64-msvc@16.2.12",
+      "bom-ref": "@next/swc-win32-arm64-msvc@16.3.1",
       "type": "library",
       "name": "@next/swc-win32-arm64-msvc",
-      "version": "16.2.12",
+      "version": "16.3.1",
       "scope": "optional",
-      "purl": "pkg:npm/%40next/swc-win32-arm64-msvc@16.2.12",
+      "purl": "pkg:npm/%40next/swc-win32-arm64-msvc@16.3.1",
       "properties": [
         {
           "name": "cdx:npm:package:path",
@@ -1768,13 +1776,13 @@
       "externalReferences": [
         {
           "type": "distribution",
-          "url": "https://registry.npmjs.org/@next/swc-win32-arm64-msvc/-/swc-win32-arm64-msvc-16.2.12.tgz"
+          "url": "https://registry.npmjs.org/@next/swc-win32-arm64-msvc/-/swc-win32-arm64-msvc-16.3.1.tgz"
         }
       ],
       "hashes": [
         {
           "alg": "SHA-512",
-          "content": "5fa873b0e50969cfdeec05926e7f6043d9f31e5775c563f98b28c7a585afb9df29b9f07aefd3b5c60e090f22abf1777af49bddfa43360deafab9fb626429a360"
+          "content": "88ea0dd5079c52818d662939dfa53fbed2b8dd8c20cab0ac18892d879db222497ad769fed02f4c8d29c96d00229084a96fe598468a015616839545bb899a0aa2"
         }
       ],
       "licenses": [
@@ -1786,12 +1794,12 @@
       ]
     },
     {
-      "bom-ref": "@next/swc-win32-x64-msvc@16.2.12",
+      "bom-ref": "@next/swc-win32-x64-msvc@16.3.1",
       "type": "library",
       "name": "@next/swc-win32-x64-msvc",
-      "version": "16.2.12",
+      "version": "16.3.1",
       "scope": "optional",
-      "purl": "pkg:npm/%40next/swc-win32-x64-msvc@16.2.12",
+      "purl": "pkg:npm/%40next/swc-win32-x64-msvc@16.3.1",
       "properties": [
         {
           "name": "cdx:npm:package:path",
@@ -1801,13 +1809,13 @@
       "externalReferences": [
         {
           "type": "distribution",
-          "url": "https://registry.npmjs.org/@next/swc-win32-x64-msvc/-/swc-win32-x64-msvc-16.2.12.tgz"
+          "url": "https://registry.npmjs.org/@next/swc-win32-x64-msvc/-/swc-win32-x64-msvc-16.3.1.tgz"
         }
       ],
       "hashes": [
         {
           "alg": "SHA-512",
-          "content": "17a7da91e1ee1532ce3edd1bb2540975ffb1b53f9620ff43567fe6e32d70d6646754fca1dc3fdc36fce5464c4ce38e317e6f88bef60d48eaca880d820c9d14c7"
+          "content": "77f93e3e902b8943da78c249386ec751276a7c45f8e8510f594d69dff9e6d800a65e18fd84511674538350122992e8a35d891f2fdd2a6734ea54f469e015bf87"
         }
       ],
       "licenses": [
@@ -1819,12 +1827,12 @@
       ]
     },
     {
-      "bom-ref": "@swc/helpers@0.5.15",
+      "bom-ref": "@swc/helpers@0.5.23",
       "type": "library",
       "name": "@swc/helpers",
-      "version": "0.5.15",
+      "version": "0.5.23",
       "scope": "required",
-      "purl": "pkg:npm/%40swc/helpers@0.5.15",
+      "purl": "pkg:npm/%40swc/helpers@0.5.23",
       "properties": [
         {
           "name": "cdx:npm:package:path",
@@ -1834,13 +1842,13 @@
       "externalReferences": [
         {
           "type": "distribution",
-          "url": "https://registry.npmjs.org/@swc/helpers/-/helpers-0.5.15.tgz"
+          "url": "https://registry.npmjs.org/@swc/helpers/-/helpers-0.5.23.tgz"
         }
       ],
       "hashes": [
         {
           "alg": "SHA-512",
-          "content": "250e53b8c8b8e4ec22e3f048300241a12428389bb5da83a4fe0003aa57142fd24474707cbf28d44acc6a78d5e79971e360a322d96718b5ecc610486a508fc4da"
+          "content": "e654ac30e4d751178f8250dfbee01052a9067a4f47836924b0e61acb69b4f9747ef9bd8d5982ffe2c5b2baf54122cf282a725ac64762f7085a2ffb2a375dda7f"
         }
       ],
       "licenses": [
@@ -2041,15 +2049,15 @@
       ]
     },
     {
-      "bom-ref": "container:python@sha256:399babc8b49529dabfd9c922f2b5eea81d611e4512e3ed250d75bd2e7683f4b0",
+      "bom-ref": "container:python@sha256:540c7d91f98ff6880174c40e99067bf5941eb54d818a7a5e094d188b196a934d",
       "type": "container",
       "name": "python",
-      "version": "3.13.14-alpine3.24",
+      "version": "3.13.15-alpine3.24",
       "scope": "required",
       "properties": [
         {
           "name": "castingcompass:image-reference",
-          "value": "python:3.13.14-alpine3.24@sha256:399babc8b49529dabfd9c922f2b5eea81d611e4512e3ed250d75bd2e7683f4b0"
+          "value": "python:3.13.15-alpine3.24@sha256:540c7d91f98ff6880174c40e99067bf5941eb54d818a7a5e094d188b196a934d"
         },
         {
           "name": "castingcompass:inventory-limit",
@@ -2063,13 +2071,13 @@
       "hashes": [
         {
           "alg": "SHA-256",
-          "content": "399babc8b49529dabfd9c922f2b5eea81d611e4512e3ed250d75bd2e7683f4b0"
+          "content": "540c7d91f98ff6880174c40e99067bf5941eb54d818a7a5e094d188b196a934d"
         }
       ],
       "externalReferences": [
         {
           "type": "distribution",
-          "url": "https://hub.docker.com/_/python/tags?name=3.13.14-alpine3.24"
+          "url": "https://hub.docker.com/_/python/tags?name=3.13.15-alpine3.24"
         }
       ]
     },
@@ -2371,12 +2379,12 @@
       ]
     },
     {
-      "bom-ref": "nanoid@3.3.12",
+      "bom-ref": "nanoid@3.3.18",
       "type": "library",
       "name": "nanoid",
-      "version": "3.3.12",
+      "version": "3.3.18",
       "scope": "required",
-      "purl": "pkg:npm/nanoid@3.3.12",
+      "purl": "pkg:npm/nanoid@3.3.18",
       "properties": [
         {
           "name": "cdx:npm:package:path",
@@ -2386,13 +2394,13 @@
       "externalReferences": [
         {
           "type": "distribution",
-          "url": "https://registry.npmjs.org/nanoid/-/nanoid-3.3.12.tgz"
+          "url": "https://registry.npmjs.org/nanoid/-/nanoid-3.3.18.tgz"
         }
       ],
       "hashes": [
         {
           "alg": "SHA-512",
-          "content": "641f511ffdfdaa9ab956ee98f8d99468585047aa69f8cd97b7be970671300da19c540aa196fc6b9770766ca4b90f7347dd047beafdda4ab29a17f2a2cbb944b5"
+          "content": "0d38383096c631691f8ba55915d36ddbf71a31b432e0ebbe3a9fe1250bc611672755fa00d5003ec7344a033c3d8c3ebe19538e798aff98872e0d276e83a17afb"
         }
       ],
       "licenses": [
@@ -2404,12 +2412,12 @@
       ]
     },
     {
-      "bom-ref": "next@16.2.12",
+      "bom-ref": "next@16.3.1",
       "type": "library",
       "name": "next",
-      "version": "16.2.12",
+      "version": "16.3.1",
       "scope": "required",
-      "purl": "pkg:npm/next@16.2.12",
+      "purl": "pkg:npm/next@16.3.1",
       "properties": [
         {
           "name": "cdx:npm:package:path",
@@ -2419,13 +2427,13 @@
       "externalReferences": [
         {
           "type": "distribution",
-          "url": "https://registry.npmjs.org/next/-/next-16.2.12.tgz"
+          "url": "https://registry.npmjs.org/next/-/next-16.3.1.tgz"
         }
       ],
       "hashes": [
         {
           "alg": "SHA-512",
-          "content": "883e7d79841699b15c11b5fbbff69c1b90d1ca6f62c350dd68fa03d164c0f76d27696b04db9c12873256e3e52f02cf0c2bd102da405f207eafb6da351f53c71b"
+          "content": "86c029d22ed187efdd85eec318878dd989692ccd433f830dc6d8bd12d0ccb6a70eeb5d97f3532fbc48f7f3cfe84dc7bd53511c1083960e51aad33470ac12afb8"
         }
       ],
       "licenses": [
@@ -2557,12 +2565,12 @@
       ]
     },
     {
-      "bom-ref": "postcss@8.5.18",
+      "bom-ref": "postcss@8.5.23",
       "type": "library",
       "name": "postcss",
-      "version": "8.5.18",
+      "version": "8.5.23",
       "scope": "required",
-      "purl": "pkg:npm/postcss@8.5.18",
+      "purl": "pkg:npm/postcss@8.5.23",
       "properties": [
         {
           "name": "cdx:npm:package:path",
@@ -2572,13 +2580,13 @@
       "externalReferences": [
         {
           "type": "distribution",
-          "url": "https://registry.npmjs.org/postcss/-/postcss-8.5.18.tgz"
+          "url": "https://registry.npmjs.org/postcss/-/postcss-8.5.23.tgz"
         }
       ],
       "hashes": [
         {
           "alg": "SHA-512",
-          "content": "c5d075a122c76f3d6f4568020da96b0aa1054d6cc5961a850b9b481cb30e494223866dd75d0d6aac5cbc4bf112af52584515ea33773540588c65425d513ab231"
+          "content": "839d39f3acebe1b666c0589395f94cbbc1346c34dbe48e607abb60c002a6b1d5254d022166dba7cd4943d564b3c1c5563e8015a6cac0eaf95f083ee85ef47082"
         }
       ],
       "licenses": [
@@ -2656,19 +2664,19 @@
       ]
     },
     {
-      "bom-ref": "pypi:annotated-doc@0.0.4",
+      "bom-ref": "pypi:annotated-doc@0.0.5",
       "type": "library",
       "name": "annotated-doc",
-      "version": "0.0.4",
+      "version": "0.0.5",
       "scope": "required",
       "properties": [
         {
           "name": "castingcompass:locked-distribution-sha256",
-          "value": "571ac1dc6991c450b25a9c2d84a3705e2ae7a53467b5d111c24fa8baabbed320"
+          "value": "117bac03a25ede5df5440e855b32d556049ca169ead221505badf432fed4b101"
         },
         {
           "name": "castingcompass:locked-distribution-sha256",
-          "value": "fbcda96e87e9c92ad167c2e53839e57503ecfda18804ea28102353485033faa4"
+          "value": "c7e58ce09192557605d8bbd92836d7e1d520ac9580096042c0bfd197efacf1bb"
         },
         {
           "name": "castingcompass:python-graph",
@@ -2680,10 +2688,10 @@
         },
         {
           "name": "castingcompass:python-lock-sha256",
-          "value": "6cea94a8204926a6703b22a5e85d3cd015061ccce5e80890a62d1631e18b252b"
+          "value": "33df67982e9d596483a12f89c2117d813d12764de38acb5501aeee78e2993caa"
         }
       ],
-      "purl": "pkg:pypi/annotated-doc@0.0.4"
+      "purl": "pkg:pypi/annotated-doc@0.0.5"
     },
     {
       "bom-ref": "pypi:annotated-types@0.8.0",
@@ -2710,7 +2718,7 @@
         },
         {
           "name": "castingcompass:python-lock-sha256",
-          "value": "6cea94a8204926a6703b22a5e85d3cd015061ccce5e80890a62d1631e18b252b"
+          "value": "33df67982e9d596483a12f89c2117d813d12764de38acb5501aeee78e2993caa"
         }
       ],
       "purl": "pkg:pypi/annotated-types@0.8.0"
@@ -2740,16 +2748,16 @@
         },
         {
           "name": "castingcompass:python-lock-sha256",
-          "value": "6cea94a8204926a6703b22a5e85d3cd015061ccce5e80890a62d1631e18b252b"
+          "value": "33df67982e9d596483a12f89c2117d813d12764de38acb5501aeee78e2993caa"
         }
       ],
       "purl": "pkg:pypi/anyio@4.14.2"
     },
     {
-      "bom-ref": "pypi:cffi@2.1.0",
+      "bom-ref": "pypi:cffi@2.1.1",
       "type": "library",
       "name": "cffi",
-      "version": "2.1.0",
+      "version": "2.1.1",
       "scope": "required",
       "properties": [
         {
@@ -2758,403 +2766,403 @@
         },
         {
           "name": "castingcompass:locked-distribution-sha256",
-          "value": "02cb7ff33ded4f1532476731f89ede53e2e488a8e6205515a82144246ffa7dcc"
+          "value": "046bfc24911b37851ee1b51aab8bffe713d89c68c6a057b09484ce9fd5f69b4e"
         },
         {
           "name": "castingcompass:locked-distribution-sha256",
-          "value": "03e9810d18c646077e501f661b682fbf5dee4676048527ca3cffe66faa9960dd"
+          "value": "06c72bb76605a4b0cd0aad6930b69d4baf7dd5d806cfc409b824191099700e66"
         },
         {
           "name": "castingcompass:locked-distribution-sha256",
-          "value": "0520e1f4c35f44e209cbbb421b67eec42e6a157f59444dfb6058874ff3610e5d"
+          "value": "0beceaabe56af686895136a2de78db54ecd8e4046b236b8fd6d6cb61389e9bf2"
         },
         {
           "name": "castingcompass:locked-distribution-sha256",
-          "value": "0582a58f3051372229ca8e7f5f589f9e5632678208d8636fea3676711fdf7fe5"
+          "value": "154852545011f779917b11c78db2358d095da62a9a172b78ad0a583ee5adc0d0"
         },
         {
           "name": "castingcompass:locked-distribution-sha256",
-          "value": "0611e7ebf90573a535ebdc33ae9da222d037853983e13359f580fab781ca017f"
+          "value": "194cffa889098ced9976c3fc6340305e43f6303657d298da55366907c05c22d6"
         },
         {
           "name": "castingcompass:locked-distribution-sha256",
-          "value": "0a42c688d19fca6e095a53c6a6e2295a5b050a8b289f109adab02a9e61a25de6"
+          "value": "19ee6127ee34de7d83ce3d371ebc5ed91addbdcc39f9ab15ce4eb35a4e534971"
         },
         {
           "name": "castingcompass:locked-distribution-sha256",
-          "value": "0a96b74cda968eebbad56d973efe5098974f0a9fb323865bf99ea1fd24e3e64c"
+          "value": "1a18a57b58cfb21fc28d72e876acf10eaed67a1ed96226f92af4df681d571c4c"
         },
         {
           "name": "castingcompass:locked-distribution-sha256",
-          "value": "10537b1df4967ca26d21e5072d7d54188354483b91dc75058968d3f0cf13fbda"
+          "value": "1aa5645c30469b09530c4ebca77ebf8f17618293c58f8549cb1a543a50236e7d"
         },
         {
           "name": "castingcompass:locked-distribution-sha256",
-          "value": "11b3fb55f4f8ad92274ed26705f65d8f91457de71f5380061eb6d125a768fecd"
+          "value": "1dea0e4d7d4f11f619fe8c1d76caf49e24405b4b5743c0e3be16a500ecd930c9"
         },
         {
           "name": "castingcompass:locked-distribution-sha256",
-          "value": "15faec4adfff450819f3aee0e2e02c812de6edb88203aa58807955db2003472a"
+          "value": "208f941bb9d18e768138677f0a6d2ce01f590df56043dda1df1535ac57c88517"
         },
         {
           "name": "castingcompass:locked-distribution-sha256",
-          "value": "164bff1657b2a74f0b6d54e11c9b375bc97b931f2ca9c43fcf875838da1570dd"
+          "value": "210019b6c7cf07f081b4c54635c8cf744377001350e29cc0f81c4377b4797735"
         },
         {
           "name": "castingcompass:locked-distribution-sha256",
-          "value": "1854b724d00f6654c742097d5387569021be12d3a0f770eae1df8f8acfcc6acd"
+          "value": "246fa40ce8645a614ff682e0b70f37134e460eaf93a775e0cbe3cca585a67a80"
         },
         {
           "name": "castingcompass:locked-distribution-sha256",
-          "value": "19c54ac121cad98450b4896fa9a43ee0180d57bc4bc911a33db6cab1efab6cd3"
+          "value": "25792eac27877609e7bb06d42ff88278a6624fff2ba9bbb523c09616b117e80f"
         },
         {
           "name": "castingcompass:locked-distribution-sha256",
-          "value": "1b96bfe2c4bd825681b7d311ad6d9b7280a091f43e8f63da5729638083cd3bfb"
+          "value": "27350daa11d4f10c540e6e89dada4c54feb7256ad03e9a4dc075ebad7ba360d1"
         },
         {
           "name": "castingcompass:locked-distribution-sha256",
-          "value": "1e9f50d192a3e525b15a75ab5114e442d83d657b7ec29182a991bc9a88fd3a66"
+          "value": "28907ab9bfb6aa13184cfc17c6b8e1023c5ab6fd7076d8c20a35e59fe04f8f29"
         },
         {
           "name": "castingcompass:locked-distribution-sha256",
-          "value": "1ff3456eab0d889592d1936d6125bbfbc7ae4d3354a700f8bd80450a66445d4d"
+          "value": "2ae64be792b8966f2c69538199728b290e34726562896df1e5dc8ffd8d8188e8"
         },
         {
           "name": "castingcompass:locked-distribution-sha256",
-          "value": "2282cd5e38aa8accd03e99d1256af8411c84cdbee6a89d841b563fdbd1f3e50f"
+          "value": "31348097ff5bbe827ccc41795d4dd099d9f0625e7def00ee653c137a490c2a6c"
         },
         {
           "name": "castingcompass:locked-distribution-sha256",
-          "value": "276f20fffd7b396e12516ba8edf9509210ac248cbbc5acbc39cd512f9f59ebe6"
+          "value": "3143d81e29e1e20a9ce10901ec369012947876596f75a222235965f2b7ae832e"
         },
         {
           "name": "castingcompass:locked-distribution-sha256",
-          "value": "2b71d409cccee78310ab5dec549aed052aaea483346e282c7b02362596e01bb0"
+          "value": "3222ba5d678f80a030e6afbcc33dc1ae5cb45facabb61cee2c7016b8432fde48"
         },
         {
           "name": "castingcompass:locked-distribution-sha256",
-          "value": "2e9dabb9abcb7ad15938c7196ad5c1718a4e6d33cc79b4c0209bdb64c4a54a5c"
+          "value": "3311ed60d36f83378794e1009ac6258bafbf81f7888b4caa7b35a521e3f95813"
         },
         {
           "name": "castingcompass:locked-distribution-sha256",
-          "value": "30b65779d598c370374fefabf138d456fd6f3216bfa7bedfab1ba82025b0cd93"
+          "value": "334644fbac4eff73d985a17a91226df55d0f394160c4cfb880e084c8f7161cac"
         },
         {
           "name": "castingcompass:locked-distribution-sha256",
-          "value": "33eb1ad83ebe8f313e0df035c406227d55a79456704a863fad9842136af5ad7d"
+          "value": "34e261f78cb6ceaaa36f42f2613f4380d94d9c759a9c73c769ee6e0247364632"
         },
         {
           "name": "castingcompass:locked-distribution-sha256",
-          "value": "35aaea0c7ee0e58a5cd8c2fd1a48fdf7ece0d2699b7ecdda08194e9ce5dd9b3d"
+          "value": "363e05fa78e15116c3c32c210ee36884fd6b9afa6d440e47112c3bd511d64cb6"
         },
         {
           "name": "castingcompass:locked-distribution-sha256",
-          "value": "3681e031db29958a7502f5c0c9d6bbc4c36cb20f7b104086fa642d1799631ff8"
+          "value": "398aff33cee2767e3e781d2554c54bd0dff386bb437581e0d8011fde1a942ec1"
         },
         {
           "name": "castingcompass:locked-distribution-sha256",
-          "value": "379de10ce1ba048b1448599d1b37b24caee16309d1ac98d3982fc997f768700b"
+          "value": "3d22a20b1fb1632cc72c22f95f7b0d2961c3e1c235f245ba4c606c4771035659"
         },
         {
           "name": "castingcompass:locked-distribution-sha256",
-          "value": "37f525a7e7e50c017fdebe58b787be310ad59357ae43a053943a6e1a6c526001"
+          "value": "42a494cee34437f05546455144f2b5d9ac09b1face62bcfce597d2e521066688"
         },
         {
           "name": "castingcompass:locked-distribution-sha256",
-          "value": "3b926723c13eba9f81d2ef3820d63aeceec3b2d4639906047bf675cb8a7a500d"
+          "value": "42e2f76b9455f5a9a844f770bf3e200ed3da0e15f5df3db9c31fe80b04b3d004"
         },
         {
           "name": "castingcompass:locked-distribution-sha256",
-          "value": "3d7f118b5adbfdfead90c25822690b02bc8074fba949bb7858bec4ebd55adb43"
+          "value": "42f6930c31dc7f50732c9ae793c2786c7b6b044195967bbdde40bb9be81c4cc0"
         },
         {
           "name": "castingcompass:locked-distribution-sha256",
-          "value": "46b1c8db8f6122420f32d02fffb924c2fe9bc772d228c7c711748fff56aabb2b"
+          "value": "456a61fa52d579ebf9df2e9552ead5129855dbaff6c1e5a9b1bc408809bdc062"
         },
         {
           "name": "castingcompass:locked-distribution-sha256",
-          "value": "47ff3a8bfd8cb9da1af7524b965127095055654c177fcfc7578debcb015eecd0"
+          "value": "471cee653ae88de62096552e6d24ccb4a5adb8c8c9f10b5054d0122c15bf2779"
         },
         {
           "name": "castingcompass:locked-distribution-sha256",
-          "value": "4d433a51f1870e43a13b6732f92aaf540ff77c2015097c78556f75a2d6c030e0"
+          "value": "49cbc70e6542d4ccccb936558d1064a8012541e78f821f955cff24e357776c94"
         },
         {
           "name": "castingcompass:locked-distribution-sha256",
-          "value": "4f26194e3d95e06501b942642855aed4f953d55e95d7d01b7c4483db3ecff458"
+          "value": "4a7c934f7360e8cd64fe9efadcbd10c7c6364f531e432b9a4bf5ccbc9e0e8b50"
         },
         {
           "name": "castingcompass:locked-distribution-sha256",
-          "value": "510aeeeac94811b138077451da1fb18b308a5feab47dd2b603af55804155e1c8"
+          "value": "4be96343e422f2dfcd12ab5c9f5aebe03f82f737c6bffeca6830b3875cb44aab"
         },
         {
           "name": "castingcompass:locked-distribution-sha256",
-          "value": "5972433ad71a9e46516584ef60a0fda12d9dc459938d1539c3ddecf9bdc1368d"
+          "value": "4f42141fc14250de6dde5ee7ea4432be017252d91f19c5ad043c084cea629cac"
         },
         {
           "name": "castingcompass:locked-distribution-sha256",
-          "value": "5ecbd0499275d57506d397eebe1981cee87b47fcd9ef5c22cab7ed7644a39a94"
+          "value": "507a24c282e0f42f8ed737cf048572cbf580468da5555764a8331735e9c736b6"
         },
         {
           "name": "castingcompass:locked-distribution-sha256",
-          "value": "6274dcb2d15cef48daa73ed1be5a40d501d74dccd0cd6db364776d12cb6ba022"
+          "value": "51b31d1c98274844cfd7838ce00bfc27c7423a4dc00fc0772fc3331c2cc90676"
         },
         {
           "name": "castingcompass:locked-distribution-sha256",
-          "value": "63960549e4f8dc41e31accb97b975abaecfc44c03e396c093a6436763c2ea7db"
+          "value": "58acb8ab8e295e6c5ea12f888cbb13cf21511ef2a3303a23f4325c29d17fe5c1"
         },
         {
           "name": "castingcompass:locked-distribution-sha256",
-          "value": "64c753a0f87a256020004f37a1c8c02c480e725f910f0b2a0f3f07debd1b2479"
+          "value": "5a59cc1c4442bc3d5c703bf720b51138d0bfc173618807c9ee2490a7541dd3d9"
         },
         {
           "name": "castingcompass:locked-distribution-sha256",
-          "value": "6af371f3767faeffc6ac1ef57cdfd25844403e9d3f476c5537caee499de96376"
+          "value": "5bb4e7ea95dcd6a014a6fef62e62467d67d8e582326443f3d68e71d6320a9fcf"
         },
         {
           "name": "castingcompass:locked-distribution-sha256",
-          "value": "6ca4919c6e4f89aa99c42510b42cf54596892c00b3f9077f6bdd1505e24b9c8d"
+          "value": "5c58fe613dc5e5336357eff555824a314d8e43282600435c8d1cb6a7a2fedd13"
         },
         {
           "name": "castingcompass:locked-distribution-sha256",
-          "value": "6d194185eabd279f1c05ebe3504265ddfc5ad2b58d0714f7db9f01da592e9eb6"
+          "value": "5e7cecbaadb83884793e05828cee59b210b24583b9c7425d0ba6a754fe22eb4e"
         },
         {
           "name": "castingcompass:locked-distribution-sha256",
-          "value": "702c436735fbe99d59ada02a1f65cfc0d31c0ee8b7290912f8fbc5cd1e4b16c3"
+          "value": "616f097f2fe415bc92a247f02e11f634e1f9e9a83d327e3c915c15089c87869e"
         },
         {
           "name": "castingcompass:locked-distribution-sha256",
-          "value": "716ff8ec22f20b4d988b12884086bcef0fc99737043e503f7a3935a6be99b1ea"
+          "value": "63bbfd5ded17c4840ac07cd8f1c21ba9d9708141f840b324f422f41b207e3973"
         },
         {
           "name": "castingcompass:locked-distribution-sha256",
-          "value": "762f99479dcb369f60ab9017ad4ab97a36a1dd7c1ee5a3b15db0f4b8659120cd"
+          "value": "64faea20f4e2613363a1a9b9c7dd73058f3ecd00133a511e72ad7c511658f527"
         },
         {
           "name": "castingcompass:locked-distribution-sha256",
-          "value": "7762faa47e8ff7eb80bd261d9a7d8eea2d8baa69de5e95b70c1f338bbe712f02"
+          "value": "661c298b4821edebead0c91edd2b00374d67ad7c5a1f7a91d4442633b79d6a72"
         },
         {
           "name": "castingcompass:locked-distribution-sha256",
-          "value": "78474632761faa0fb96f30b1c928c84ebcf68713cbb80d15bab09dfe61640fde"
+          "value": "68e62fe11f30d5ca8289242866f0a5291402d8529ca2178ab8afc5c9694ae890"
         },
         {
           "name": "castingcompass:locked-distribution-sha256",
-          "value": "799416bae98336e400981ff6e532d67d5c709cfb30afb79865a1315f94b0e224"
+          "value": "6a8dddef476fab96d066d578fc88526767b836ab5ab21754e1d5bf3879c31c7c"
         },
         {
           "name": "castingcompass:locked-distribution-sha256",
-          "value": "7d034dcffa09e9a46c93fa3a3be402096cb5354ac6e41ab8e5cc9cd8b642ad76"
+          "value": "6e192623c49c94421616a5778fba35cf0d5a8d000650c1967ef4448ee5cdd990"
         },
         {
           "name": "castingcompass:locked-distribution-sha256",
-          "value": "7d28dff1db6764108bc30788d85d61c876beff416d9a49cb9dd7c5a9f34f5804"
+          "value": "7225e4514edb64eb6740324353e0da0711954fd8d7da4576755b1c6e09b697cd"
         },
         {
           "name": "castingcompass:locked-distribution-sha256",
-          "value": "7d3538f9c0e50670f4deb93dbb696576e60590369cae2faf7de681e597a8a1f1"
+          "value": "75f80557d1389eddbd0de2681f6a390a0c5338c31ddaa821381c203fc3fd50d9"
         },
         {
           "name": "castingcompass:locked-distribution-sha256",
-          "value": "7d5980a3433d4b71a5e120f9dd551403d7824e31e2e67124fe2769c404c06913"
+          "value": "770de9db11e84213beec501cfcaa013b019820ca881e03344dea5844f7876d94"
         },
         {
           "name": "castingcompass:locked-distribution-sha256",
-          "value": "7ea6b3e2c4250ff1de21c630fe72d0f63eb95c2c32ffbf64a358cf4a8836d714"
+          "value": "7750c6449dff7864bb9bb27ddfb0267756189201a3afc911d82b3caacd70dfc3"
         },
         {
           "name": "castingcompass:locked-distribution-sha256",
-          "value": "86cf8755a791f72c85dc287128cc62d4f24d392e3f1e15837245623f4a33cccc"
+          "value": "7bde5e4cc5c10140859842b9d383af292b22639a4dffb725314baf45968cef80"
         },
         {
           "name": "castingcompass:locked-distribution-sha256",
-          "value": "88023dfe18799507b73f1dbb0d14326a17465de1bc9c9c7655c22845e9ddc3a2"
+          "value": "7ce713ace7c0e4520535b42b77eaa742c16dab813978064913e5a3cf82973b41"
         },
         {
           "name": "castingcompass:locked-distribution-sha256",
-          "value": "89095c1968b4ba8285840e131bf2891b09ae137fe2146905acae0354fbce1b5e"
+          "value": "7da0c5eff80f0197f3b3d1232ec5a682a9325f4ae9016a78f5f5ca35f9ced1f5"
         },
         {
           "name": "castingcompass:locked-distribution-sha256",
-          "value": "8d35c139744adb3e727cd51b1a18324bbe44b8bd41bf8322bca4d41289f48eda"
+          "value": "7dbb61fe3a7699468030f71bbe5f8a0e326a151daa91beb11a6fc1f980c55e1c"
         },
         {
           "name": "castingcompass:locked-distribution-sha256",
-          "value": "8e74a6135550c4748af665b1b1118b6aab33b1fc6a16f9aff630af107c3b4512"
+          "value": "811bd1e21d32de12efca32393a0ab3f5133b54fce9bd44b8bd77ab07da14bf6a"
         },
         {
           "name": "castingcompass:locked-distribution-sha256",
-          "value": "8f9ec95b8a043d3dfbc74d9abc6f7baf524dd27a8dc160b0a32ff9cdab650c28"
+          "value": "8ef53b2de9bcb9197d31854256575d59dbac0cba72ac627bb291ef5eceb74be4"
         },
         {
           "name": "castingcompass:locked-distribution-sha256",
-          "value": "90bec57cf82089383bd06a605b3eb8daebf7e5a668520beaf6e327a83a947699"
+          "value": "937c0052c05a31ca1daf18de3158eed4dbfcb9cc107adbea227728d647be701e"
         },
         {
           "name": "castingcompass:locked-distribution-sha256",
-          "value": "95f2954c2c9473d892eca6e0409f3568b37ab62a8eedb122461f73cc273476e3"
+          "value": "9d2055050ea716bd38b7f7f1579c275386646b4894c155a3e2f3cd62ed41b7c6"
         },
         {
           "name": "castingcompass:locked-distribution-sha256",
-          "value": "961be50688f7fba2fa65f63712d3b9b341a22311f5253460ce933f52f0de1c8c"
+          "value": "9f8d177621de5cb38ee3e731eda45d421db093ec0739f46a5594babda7987a98"
         },
         {
           "name": "castingcompass:locked-distribution-sha256",
-          "value": "98fff996e983a36d3aa2eca83af40c5821202e7e6f32d13ae94e3d2286f10cfe"
+          "value": "a2d7755bef5a12ed488f4ef1f1b69ee9191d7396083b755a5d2295f6edb4768b"
         },
         {
           "name": "castingcompass:locked-distribution-sha256",
-          "value": "9b8f0f26ca4e7513c534d351eca551947d053fac438f2a04ac96d882909b0d3a"
+          "value": "a48d62ab9d6f4f98c983223a547af44be6ca3691074c31cecced6facd3ba2dc1"
         },
         {
           "name": "castingcompass:locked-distribution-sha256",
-          "value": "9d72af0cf10a76a600a9690078fe31c63b9588c8e86bf9fd353f713c84b5db0f"
+          "value": "a4f00aa42f75d6e4595e8866e748cc1705adc0cddfeb2ca86d0d03993d63ba03"
         },
         {
           "name": "castingcompass:locked-distribution-sha256",
-          "value": "9d8272c0e483b024e1b9ad029821470ed8ec65631dbd90217469da0e7cd89f1c"
+          "value": "a6e721d4b0e45d5b65e87534470e67b18dcd092c83f68fba09f152b9cbc061af"
         },
         {
           "name": "castingcompass:locked-distribution-sha256",
-          "value": "a016194dbe13d14ee9556e734b772d8d67b947092b268d757fd4290e3ba2dfc2"
+          "value": "a730a083190634c65cca36ba5f489531576ebd79bcd5c8e172130f6453127231"
         },
         {
           "name": "castingcompass:locked-distribution-sha256",
-          "value": "a5781494d4d400a3f47f8f1da94b324f6e6b440a53387774002890a2a2f4b50f"
+          "value": "a931079504ecc49efed7744c476a5c343a92fabf66dec2db95edb1b2fdc770e2"
         },
         {
           "name": "castingcompass:locked-distribution-sha256",
-          "value": "a95b05f9baf29b91171b3a8bd2020b028835243e7b0ff6bb23e2a3c228518b1b"
+          "value": "aa9511c62d14da7aacc9b4bf51f3f697a621e83b2d6919008243c3aad168eea3"
         },
         {
           "name": "castingcompass:locked-distribution-sha256",
-          "value": "aa7a1b53a2a4452ada2d1b5dade9960b2522f1e61293a811a077439e39029565"
+          "value": "ab36d55f9ed2d067327667c2fea18dda018eb628dd6347aa01dda6cf1f5d3836"
         },
         {
           "name": "castingcompass:locked-distribution-sha256",
-          "value": "ac0f1a2d0cfa7eea3f2aaf006ab6e70e8feeb16b75d65b7e5939982ca2f11056"
+          "value": "ad2c86c495b899d862ea0f4b42891b8713a3bd45dd4105c7fd51c2a72f39f3a5"
         },
         {
           "name": "castingcompass:locked-distribution-sha256",
-          "value": "af5e2915d41fe6c961694d7bfdc8562942638200f3ce2765dfb8b745cf997629"
+          "value": "aeae0e330c9f6acd681f647d46cefd30c29f93e3392882e792e82080c9691399"
         },
         {
           "name": "castingcompass:locked-distribution-sha256",
-          "value": "b6422532152adf4e59b110cb2808cee7a033800952f5c036b4af047ee43199e7"
+          "value": "b0431303acaea1089ad4b3e9ce4e6518193def1118d4073ca848635ee4ea2e96"
         },
         {
           "name": "castingcompass:locked-distribution-sha256",
-          "value": "b65f590ef2a44640f9a05dbb548a429b4ade77913ce683ac8b1480777658a6c0"
+          "value": "b5bdfd1c873d4e093aabc0ca84c4ca6dbc4f752afb5c86f146d9742580c9da2e"
         },
         {
           "name": "castingcompass:locked-distribution-sha256",
-          "value": "ba00f661f8ba35d075c937174e27c2c421cec3942fd2e0ea3e66996757c0fdd9"
+          "value": "baed1e86cc735622097354b9d1281406caf42ff42a886d29faa8e8d1630333be"
         },
         {
           "name": "castingcompass:locked-distribution-sha256",
-          "value": "bccbbb5ee76a61f9d99b5bf3846a51d7fca4b6a732fe46f89295610edaf41853"
+          "value": "c1453022f490d2459a11819d83ad1d586e9ff65a12ac3e705ffebd46d3685dcf"
         },
         {
           "name": "castingcompass:locked-distribution-sha256",
-          "value": "bf01d8c84cbea96b944c73b22182e6c7c432b3475632b8111dbfdc95ddad6e13"
+          "value": "c26608d2222fb1e94487e4a387d85f13eb55d5ed725cb25a0c589ac4ee60e7bc"
         },
         {
           "name": "castingcompass:locked-distribution-sha256",
-          "value": "bf5c6cf48238b0eb4c086978c492ad1cbc22373fc5b2d7353b3a598ce6db887a"
+          "value": "c7659f22557c5a0bc4855cd635f55edec690cc008a40768527762cb9fb263455"
         },
         {
           "name": "castingcompass:locked-distribution-sha256",
-          "value": "c16914df9fb7f500e440e6875fa23ff5e0b31db01fa9c06af98d59a91f0dc2e4"
+          "value": "c8c69575568085ba0b1b10c0249d779a214aea6f6522e949a0fc9fb0fcb449d0"
         },
         {
           "name": "castingcompass:locked-distribution-sha256",
-          "value": "c351efb95e832a853a29361675f33a7ce53de1a109cd73fd47af0712213aa4ce"
+          "value": "c8d2c9fd1f2d16f780d15127abb050d13d1a76c03a4bd87d7e4980e45e511e12"
         },
         {
           "name": "castingcompass:locked-distribution-sha256",
-          "value": "c4165821e131d6d4ca444347c2b694e2311bcfa3fe5a861cc72968f28867beac"
+          "value": "ca82be1a1d406ecfe1d25dc16cb33488e5a16bf4438c9fb590484ea29d92478b"
         },
         {
           "name": "castingcompass:locked-distribution-sha256",
-          "value": "c5f5df567f6eb216de69be06ce55c8b714090fae02b18a3b40da8163b8c5fa9c"
+          "value": "cc572dace3f60ef98d7b12ff411d20f5362feb31a0439eab0085bbfd349982d7"
         },
         {
           "name": "castingcompass:locked-distribution-sha256",
-          "value": "c941bb58d5a6e1c3892d86e42927ed6c180302f07e6d395d08c416e594b98b46"
+          "value": "d18e5ac0f2f03f4f518d3e23db0f0cad7faa1da8620e9c09461d443bbf6e6692"
         },
         {
           "name": "castingcompass:locked-distribution-sha256",
-          "value": "c97f080ea627e2863524c5af3836e2270b5f5dfff1f104392b959f8df0c5d384"
+          "value": "d28630f5854ab07ab1fd4aba756de52326c82e6be15d414b12793f1975048b54"
         },
         {
           "name": "castingcompass:locked-distribution-sha256",
-          "value": "cb96698e3c7413d906ce83f8ffd245ec1bd94707541f299d0ce4d6b0193e982b"
+          "value": "d9c275eaacd24aa73f94ffd6de08fc3f932424d8b6c376f4bed7cde376fe7bc3"
         },
         {
           "name": "castingcompass:locked-distribution-sha256",
-          "value": "cbb7640ce37159548d2147b5b8c241f962143d4c71231431820783f4dc78f210"
+          "value": "da0e573f9f97159390c89d9f1a9e41908b66d408cc5b58d08cf3847d844c531b"
         },
         {
           "name": "castingcompass:locked-distribution-sha256",
-          "value": "cdf2448aab5f661c9315308ec8b93f4e8a1a67a3c733f8631067a2b67d5913dc"
+          "value": "dd31f52ea1086513bb9df30f8fcee9b8918323ae067a3d5b78bc826a000712be"
         },
         {
           "name": "castingcompass:locked-distribution-sha256",
-          "value": "d2117334c3af3bdcb9a88522b844a2bdb5efdc4f71c6c822df55486ae1c3347a"
+          "value": "dddad92b554513a31f272570678ba307fb9f618f05e3d4a5eacafff9eae03e1d"
         },
         {
           "name": "castingcompass:locked-distribution-sha256",
-          "value": "d53d10f7da99ae46f7373b9150393e9c5eab9b224909982b43832668de4779f5"
+          "value": "df423d40ee8654634421812bc3b196da3f9bd7d32929da813f8394c4348a5358"
         },
         {
           "name": "castingcompass:locked-distribution-sha256",
-          "value": "d9fafc5aa2e2a39aaf7f8cc0c1f044a9b07fca12e558dca53a3cc5c654ad67a7"
+          "value": "df913725b79db7bcf03448f36b7bf8815363417d5b58deecf9305e3e30f0f21a"
         },
         {
           "name": "castingcompass:locked-distribution-sha256",
-          "value": "db3eb7d46527159a878ec3460e9d40615bc25ba337d477db681aea6e4f05c5d2"
+          "value": "e0bcb7e0f677f543555d2adff3bf19c05f66cdb4796e5ff602442ab2fe3c4ef7"
         },
         {
           "name": "castingcompass:locked-distribution-sha256",
-          "value": "dbf7c7a88e2bac086f06d14577332760bdeecc42bdec8ac4077f6260557d9326"
+          "value": "e2d65b31f36619cda3999b78b2aa9632e76b78448e7a56fc4240824200e7c4fc"
         },
         {
           "name": "castingcompass:locked-distribution-sha256",
-          "value": "df2b82571a1b30f58a87bf4e5a9e78d2b1eff6c6ce8fd3aa3757221f93f0863f"
+          "value": "e6e8cff14d6fb0be70a09c0bdc58096f501952d04624ebf867e0e56da2df8960"
         },
         {
           "name": "castingcompass:locked-distribution-sha256",
-          "value": "df92f2aba50eb4d96718b68ef76f2e57a57b54f2fa62333496d16c6d585a85ca"
+          "value": "f16c709686a78c727bbbf059f92b0bf41c6fc60deec706d2dc19f529175a6125"
         },
         {
           "name": "castingcompass:locked-distribution-sha256",
-          "value": "eb4e8997a49aa2c08a3e43c9045d224448b8941d88e7ac163c7d383e560cbf98"
+          "value": "f24fb43132a4c6b4cb4eb029492919b2db645be6808d738f244fd146c03c32cb"
         },
         {
           "name": "castingcompass:locked-distribution-sha256",
-          "value": "efc1cdd798b1aaf39b4610bba7aad28c9bea9b910f25c784ccf9ec1fa719d1f9"
+          "value": "f53e442b08449d42821fa4a4fba000095af9f62742a500f978a9f557ec44339a"
         },
         {
           "name": "castingcompass:locked-distribution-sha256",
-          "value": "f146d154428a2523f9cc7936c02353c2459b8f6cf07d3cd1ee1c0a611109c5d5"
+          "value": "f5cfbc5fe74540d335175b656c725d74d90e3730c626d92575eea35029d9afaa"
         },
         {
           "name": "castingcompass:locked-distribution-sha256",
-          "value": "f5bce581e6b8c235e566a14768a943b172ada3ed73537bb0c0be1edee312d4e7"
+          "value": "f81b3b8f3d4e343550fa4baa0e479bba9f2d29ce9c2e9b51d1ce1718d7442fcf"
         },
         {
           "name": "castingcompass:locked-distribution-sha256",
-          "value": "f9912624a0c0b834b7520d7769b3644453aabc0a7e1c839da7359f050750e9bc"
+          "value": "f8ec5e643a9a937f64e1999eb9f75d072263751912dc5cd06d3c85f8f44be7c3"
         },
         {
           "name": "castingcompass:locked-distribution-sha256",
-          "value": "fb62edb5bb52cca65fab91a63afa7561607120d26090a7e8fda6fb9f064726da"
+          "value": "fb92203a88b3d3053034db775110081c49d28be6551923805e039924093761e4"
         },
         {
           "name": "castingcompass:locked-distribution-sha256",
-          "value": "ff067a8d8d880e7809e4ac88eb009bb848870115317b306666502ccad30b147f"
+          "value": "fcd22650c908d7b7da162bbfaab594a1227a15d1643a98c68b122ac642fa2264"
         },
         {
           "name": "castingcompass:python-graph",
@@ -3166,10 +3174,10 @@
         },
         {
           "name": "castingcompass:python-lock-sha256",
-          "value": "a275330ce3af4e0c2e0bff6fb1ecb804dae465b99041d96dfffd36f8fc051a2c"
+          "value": "654598b121081ef60b9334bc92365c787037a3bc5b445d5afd9fb34459a1f076"
         }
       ],
-      "purl": "pkg:pypi/cffi@2.1.0"
+      "purl": "pkg:pypi/cffi@2.1.1"
     },
     {
       "bom-ref": "pypi:click@8.4.2",
@@ -3196,7 +3204,7 @@
         },
         {
           "name": "castingcompass:python-lock-sha256",
-          "value": "6cea94a8204926a6703b22a5e85d3cd015061ccce5e80890a62d1631e18b252b"
+          "value": "33df67982e9d596483a12f89c2117d813d12764de38acb5501aeee78e2993caa"
         }
       ],
       "purl": "pkg:pypi/click@8.4.2"
@@ -3230,213 +3238,201 @@
         },
         {
           "name": "castingcompass:python-lock-sha256",
-          "value": "6cea94a8204926a6703b22a5e85d3cd015061ccce5e80890a62d1631e18b252b"
+          "value": "33df67982e9d596483a12f89c2117d813d12764de38acb5501aeee78e2993caa"
         }
       ],
       "purl": "pkg:pypi/colorama@0.4.6"
     },
     {
-      "bom-ref": "pypi:cryptography@48.0.1",
+      "bom-ref": "pypi:cryptography@50.0.0",
       "type": "library",
       "name": "cryptography",
-      "version": "48.0.1",
+      "version": "50.0.0",
       "scope": "required",
       "properties": [
         {
           "name": "castingcompass:locked-distribution-sha256",
-          "value": "08a597acce1ff37f347400087776599e2348a3a8bc53b44120e463cd274efe4a"
+          "value": "031e2d5dd4bb9caa3ca9c82e5a197fd8ae680232cee62603d1a813f3f07e3d03"
         },
         {
           "name": "castingcompass:locked-distribution-sha256",
-          "value": "09f73a725d582cef64b91281a322cd798d14a33b2b6f2b7ad9531dc336d84c02"
+          "value": "06a32a980526a6ab9a4b9bf8f7385800791e2bb960903cb6b530e4817509a3b7"
         },
         {
           "name": "castingcompass:locked-distribution-sha256",
-          "value": "0df56b056bc17c1b7d6821dfa65216e62bd232d8ab05eb3db44e71d235651471"
+          "value": "07479a1cb08219ab719147e742e76090c9c773321959bb94946fffdd397a6437"
         },
         {
           "name": "castingcompass:locked-distribution-sha256",
-          "value": "0ee6ea481db1ab889cba043ec1eda17bb9c1ea79db6722f779c3667f9f70322f"
+          "value": "07949c449a1abcf60d1ee6e88956d89404c7df3c8258f46589e912988e551987"
         },
         {
           "name": "castingcompass:locked-distribution-sha256",
-          "value": "15254441469dd6bf027039453288e2072124f8b6603563f5d759e1c9b69273fa"
+          "value": "105110f43a471dbd0060b9c9516cb8a6a79233631a04cc2ba16f28323ac6e025"
         },
         {
           "name": "castingcompass:locked-distribution-sha256",
-          "value": "266f4ee051abb2f725b74ef8072b521ce1feacf685a3364fa6a6b45548db791a"
+          "value": "11b74db56cdbe3cdee6e3f6982ecb70334fa10dce99ed58bf7894aaaa3b2a037"
         },
         {
           "name": "castingcompass:locked-distribution-sha256",
-          "value": "2c37f2461406063b417837f5f3daab668652acd82423efcd7f0a9f04be972de1"
+          "value": "12b9c6996425c76ea6c457ace4f3073e715b8c545add07cd1a8f3a4f90691269"
         },
         {
           "name": "castingcompass:locked-distribution-sha256",
-          "value": "32143b24adb918f078134e1e230f1eb8cc04886b92c28b5f0041aaf3e5699225"
+          "value": "1489e263a8048bb8b6a8bac662eb2d402ea5d2b7b4699b72f385f1e2772db105"
         },
         {
           "name": "castingcompass:locked-distribution-sha256",
-          "value": "33842cf0888951cef5bc7ac724ab844a42044c1727b967b7f8997289a0464f92"
+          "value": "19736989797678c6af1e55cd49055cdbcb55d8f6b5583ac5335f933aba9101dc"
         },
         {
           "name": "castingcompass:locked-distribution-sha256",
-          "value": "3752f2dbc8f07a30aad2932c986cea495b03bb554887828225da104f732852b6"
+          "value": "1b4a266766514614f8aa60416e71f2fc6e575d36e7bdc90f644fadb2f4b75b95"
         },
         {
           "name": "castingcompass:locked-distribution-sha256",
-          "value": "39489bfca54c7a1f6b297efcd8bc608ab92d16c4ca631b0cad4da46724588b24"
+          "value": "2a8183b489dc1f7f80f135780fadc1108f14b31b8a40411c7a5b17425f65f28b"
         },
         {
           "name": "castingcompass:locked-distribution-sha256",
-          "value": "3e4a1a3232eef2e6c732827d5722db29a0cc8b27af2a4d865b094cf954be9ca1"
+          "value": "37fdb0d0111f1e2ff07139dfb79f1b49531f8e213c46f1163dd7642979b58c47"
         },
         {
           "name": "castingcompass:locked-distribution-sha256",
-          "value": "3fd2ca57062b241c856670b073487d2e86c4637937ca5601e48f97bf8e11fc8f"
+          "value": "3f5735ffe4996d28b809371756219f5354864902a3b9e7c0b9ee87041209fc9c"
         },
         {
           "name": "castingcompass:locked-distribution-sha256",
-          "value": "42fcd8e26fe555d9b3577a135f5091fefa0aa4e99129c23fb56787a1bd4ada72"
+          "value": "49e7d93abdbd2990caced757e5fade25302f719c3c8fb6e6fff2dde98999fc41"
         },
         {
           "name": "castingcompass:locked-distribution-sha256",
-          "value": "43c5835e2cb98c8733d86f57d6fc879b613f5c3478607281c3e36daffc6dd8a6"
+          "value": "5e34edd123674534acd70147f0ca331eaa2c74e6325fb2028c886aa26ba0b68c"
         },
         {
           "name": "castingcompass:locked-distribution-sha256",
-          "value": "48fe40804d4caa2288f24e70ca8c64c42dd826da0ad7e4f1b41b2128d679e6c8"
+          "value": "62598a8a57f815db4c6259a4e97d857dab56697e7de8e8ab02352ab74da1995d"
         },
         {
           "name": "castingcompass:locked-distribution-sha256",
-          "value": "4ab0a343c807bbcd90c971cd1ecf072937cd01847a9e002bef88fb47ac6be577"
+          "value": "65c2c3add92b45fd0709db8594536aea39c2a67af0e27ffcf049c498501140b7"
         },
         {
           "name": "castingcompass:locked-distribution-sha256",
-          "value": "4fdc69f8e4316bcf0c8c8ec1f26f285d12e8142d88d96c876a59a03be3f6ae67"
+          "value": "6ba6a53445bd3cfa809ef3ef5f1589aa6ba08784a1d962bf47d0940e871dab1c"
         },
         {
           "name": "castingcompass:locked-distribution-sha256",
-          "value": "6184ca7b174f28d7c703f1290d4b297217c45355f77a98f67e9b7f14549ac54a"
+          "value": "6e7d61120573a7f2cd94cc095f9e81f6967c61ccdf194285aa143ecec8e0b708"
         },
         {
           "name": "castingcompass:locked-distribution-sha256",
-          "value": "66fd0771e7b9c6dcd44cf1120690d2338d16d72795cf40cae2786a39eba65429"
+          "value": "7cec5b856506da6defb290f30c9ee687d5f5e8cb0bd3f6459dde43b0b4fa40ef"
         },
         {
           "name": "castingcompass:locked-distribution-sha256",
-          "value": "6b2c0c3e6ccf3ade7750f836ef3ee36eea250cc467d45c256895573ac08cc6f1"
+          "value": "80b63928fa35083b33966ce1efb70e5b9607181e49dcd1c22c8c005e319f667f"
         },
         {
           "name": "castingcompass:locked-distribution-sha256",
-          "value": "735824ec41b7f74a7c45fb1591349333e4c696cb6c044e5f46356e560143e4cd"
+          "value": "82148ec5bddac30b51a5b3c1945075f896fa022cb93f8e4a01e9f6ee95292c5f"
         },
         {
           "name": "castingcompass:locked-distribution-sha256",
-          "value": "7e234ac052af99f2700826a5c29ea99d9c1b1f80341cde62d11c8154dc8e0bd9"
+          "value": "828743d939e9629bc267b8e2d08d8bb67cd4319c771a33d4b18b22dd8fb7440a"
         },
         {
           "name": "castingcompass:locked-distribution-sha256",
-          "value": "869c3b8a53bfe27147832df48b32adadf558249d50e76cb3769d40e986b13265"
+          "value": "8d89f3976b10b4ce31118de72329025f70d2c6ead14a8217c5514dd2c6d5a78f"
         },
         {
           "name": "castingcompass:locked-distribution-sha256",
-          "value": "86be3b1b0b6bf09482fb50a979c508d2950ed95f5621ec77f4e385962006b83a"
+          "value": "8eb5e1172eb569ea8a872796576e6a67c276351728b6455d5beb01242b027c6a"
         },
         {
           "name": "castingcompass:locked-distribution-sha256",
-          "value": "86fe77abb1bd87afb251d4d02ada7ecf53a32cee9b67d976abb2e45a13297475"
+          "value": "900131fafd8aead39ac7dd3a7e833be754c17a95cfd91221636949fe4eb0aa8a"
         },
         {
           "name": "castingcompass:locked-distribution-sha256",
-          "value": "88c852a0ae366e262e5a1744b685e6a433dc8788dd2a277e418bf4904203609d"
+          "value": "910d11e1a385c654bf738bf3e6b8e6ed5de0f5610fcae2be9e5b398d8081d20e"
         },
         {
           "name": "castingcompass:locked-distribution-sha256",
-          "value": "8ace4507d1e6533c125f4fac754f8bb8b6a74c08e92179dabd7e16571a3efbf3"
+          "value": "910e1d2668e7de9648f2bcee30e180db2a6b15c30f887d7c4c93ddf96e3992e3"
         },
         {
           "name": "castingcompass:locked-distribution-sha256",
-          "value": "92a46e1d638daa264ba2971c0b0489c9409787943efae4d60ffda3d091ef832c"
+          "value": "9aa87839c383bdbab6ef865787a1fb877af8dd03464c4400322726feaaadfc6d"
         },
         {
           "name": "castingcompass:locked-distribution-sha256",
-          "value": "9621de99d2da096006b629979efd8ae7eb2d8b822488d0c89ee4000c306c59b1"
+          "value": "a1b30560f2acc95aa8b2e06e716a13dbfc97314747b80d9707e307f77b40d6b3"
         },
         {
           "name": "castingcompass:locked-distribution-sha256",
-          "value": "9a49ca6c81417f6a5edb50375a60cccdd70fa0a91a5211829dbea74eba94d2ac"
+          "value": "a91296cb61e8df6f86d0c19cc4068228da256bf59bf86049fbd821084565327f"
         },
         {
           "name": "castingcompass:locked-distribution-sha256",
-          "value": "9bd3f92d76217892b15df84ca256c2c113d386fdda7a7d8691aeeced976507c6"
+          "value": "b42a28c1844fd9de8f3f7d540e36b66f3a9c83fceac7170ebc7a6a19edd9dcae"
         },
         {
           "name": "castingcompass:locked-distribution-sha256",
-          "value": "9de21387aa95e2a895823d0745b430bed4f33503ba9ab5e0b5311f33e37d66d2"
+          "value": "bd1c592e4d5974f0d08d4888e432157adba757c66da0246918e43677fafa2d30"
         },
         {
           "name": "castingcompass:locked-distribution-sha256",
-          "value": "b024e784ad6c077ee0147b35ea9cbfc1e34e1fd4c1dcca214c2794d73a12df08"
+          "value": "c87f62a3d3b9888ed0fdde100ec06aa61ca9cd44bad9057d1dff9a516b5f5bb9"
         },
         {
           "name": "castingcompass:locked-distribution-sha256",
-          "value": "b4e391975f038e66432328639620a4aff2d307513b004f1ca06d6225bced815c"
+          "value": "c99c003e088647b8a5b7c145d6f78c335f6348332b62e142d411c4b63d1460b9"
         },
         {
           "name": "castingcompass:locked-distribution-sha256",
-          "value": "b74ca3b8e5ecdd833bf6a002ca41b4793bb27fb8f1c06ffaf2643c9e9140e31b"
+          "value": "ccdc4a71a4dabae05de219404f9f4abc38e3b58422177ff93d0da05967dafa07"
         },
         {
           "name": "castingcompass:locked-distribution-sha256",
-          "value": "b7a2d1a937a738a881737cec135a38bb61470589b17515b9f73f571d0ae10401"
+          "value": "d24fead1d4d076e1bfb006dcec392074a3cd8d7b4fc8a595aa64073b2b7a96ba"
         },
         {
           "name": "castingcompass:locked-distribution-sha256",
-          "value": "b9a32b876490d66c8bcc9963ef220199569748434ab01a9d6aaeabf88e7f5158"
+          "value": "d58c3db7cd6eed54e6c06744db55456b65ebd7492ddeae9c1e93cfca7aa857d3"
         },
         {
           "name": "castingcompass:locked-distribution-sha256",
-          "value": "bd81490cd5801d755cf97bb68ac191f14b708470b1c7cf4580f669b9c9264cd8"
+          "value": "d764dcf130c428ef66786f866dd750f53182bc608813489915e9fc106bb0c82f"
         },
         {
           "name": "castingcompass:locked-distribution-sha256",
-          "value": "c1400da5e32a43253392277eac7490a60e497d810a63dd5608d71bbd7af507c9"
+          "value": "df2a58a472f332225671c35b0a830208b86d004f82baa8530fa3782c85646533"
         },
         {
           "name": "castingcompass:locked-distribution-sha256",
-          "value": "d069066deead00ac7f090be101be875a06855908f7ec004c27b8fefb4acfb411"
+          "value": "e722f16708d854fe924790e051061f6704a472c3bac347b6fd88033ea8dd0dc5"
         },
         {
           "name": "castingcompass:locked-distribution-sha256",
-          "value": "d5d30989c6917b478b5817902e85fddaea2261efa8648383d965381ccb9e1ac4"
+          "value": "ecfed7367f965a0328cfbdd70da860f15441f002f613185668c6e6ebf5a0ac11"
         },
         {
           "name": "castingcompass:locked-distribution-sha256",
-          "value": "df637c05205ea7c1d7fbcbe54bbfea648a52951155f997af13d895d0ecc96991"
+          "value": "eeac2acb5a20ed25e0ad6d1df9891a520b78b404266b6d11778f25d5d691a6c9"
         },
         {
           "name": "castingcompass:locked-distribution-sha256",
-          "value": "e361afba8918070d376df76f408a4f67fec0ee9cff81a99e48fe9a233ef59e17"
+          "value": "f59e38625469987d7ef6d495323c55e7db6c212eaf6112267e0d3b565a2e9c9f"
         },
         {
           "name": "castingcompass:locked-distribution-sha256",
-          "value": "eb86ce1af36fe65041b6db9a8bb064ee621a7e5fded0f80d475ec243477cd242"
+          "value": "f89831ef99dd7dd169ab06d63a831adb9e20a87aac6d380266bbda5823349169"
         },
         {
           "name": "castingcompass:locked-distribution-sha256",
-          "value": "f0d27a5696721ef7a672b8c810f6aded391058e0b9486e63e6d93baf765da691"
-        },
-        {
-          "name": "castingcompass:locked-distribution-sha256",
-          "value": "f2ceef93cb096aa3c4cc4b5c94ca6131f9196d28c64d6111533402a9b2054d41"
-        },
-        {
-          "name": "castingcompass:locked-distribution-sha256",
-          "value": "f817adc181390bd54f2f700107a7419040fb7c1bdf2fc26f36551a06a68c3345"
-        },
-        {
-          "name": "castingcompass:locked-distribution-sha256",
-          "value": "fe0180af5bf9236518a087e35bf2d9a347d5f5f51e63c579d683ddff424e3d46"
+          "value": "fd9192b7b70c573d7f214eb1ae35e00d359f6f5e4b27c7e21e30de1fc6204645"
         },
         {
           "name": "castingcompass:python-graph",
@@ -3448,10 +3444,10 @@
         },
         {
           "name": "castingcompass:python-lock-sha256",
-          "value": "a275330ce3af4e0c2e0bff6fb1ecb804dae465b99041d96dfffd36f8fc051a2c"
+          "value": "654598b121081ef60b9334bc92365c787037a3bc5b445d5afd9fb34459a1f076"
         }
       ],
-      "purl": "pkg:pypi/cryptography@48.0.1"
+      "purl": "pkg:pypi/cryptography@50.0.0"
     },
     {
       "bom-ref": "pypi:fastapi@0.140.0",
@@ -3478,7 +3474,7 @@
         },
         {
           "name": "castingcompass:python-lock-sha256",
-          "value": "6cea94a8204926a6703b22a5e85d3cd015061ccce5e80890a62d1631e18b252b"
+          "value": "33df67982e9d596483a12f89c2117d813d12764de38acb5501aeee78e2993caa"
         }
       ],
       "purl": "pkg:pypi/fastapi@0.140.0"
@@ -3508,7 +3504,7 @@
         },
         {
           "name": "castingcompass:python-lock-sha256",
-          "value": "6cea94a8204926a6703b22a5e85d3cd015061ccce5e80890a62d1631e18b252b"
+          "value": "33df67982e9d596483a12f89c2117d813d12764de38acb5501aeee78e2993caa"
         }
       ],
       "purl": "pkg:pypi/h11@0.16.0"
@@ -3730,7 +3726,7 @@
         },
         {
           "name": "castingcompass:python-lock-sha256",
-          "value": "6cea94a8204926a6703b22a5e85d3cd015061ccce5e80890a62d1631e18b252b"
+          "value": "33df67982e9d596483a12f89c2117d813d12764de38acb5501aeee78e2993caa"
         }
       ],
       "purl": "pkg:pypi/httptools@0.8.0"
@@ -3760,7 +3756,7 @@
         },
         {
           "name": "castingcompass:python-lock-sha256",
-          "value": "6cea94a8204926a6703b22a5e85d3cd015061ccce5e80890a62d1631e18b252b"
+          "value": "33df67982e9d596483a12f89c2117d813d12764de38acb5501aeee78e2993caa"
         }
       ],
       "purl": "pkg:pypi/idna@3.18"
@@ -3790,7 +3786,7 @@
         },
         {
           "name": "castingcompass:python-lock-sha256",
-          "value": "a275330ce3af4e0c2e0bff6fb1ecb804dae465b99041d96dfffd36f8fc051a2c"
+          "value": "654598b121081ef60b9334bc92365c787037a3bc5b445d5afd9fb34459a1f076"
         }
       ],
       "purl": "pkg:pypi/joblib@1.5.3"
@@ -3820,7 +3816,7 @@
         },
         {
           "name": "castingcompass:python-lock-sha256",
-          "value": "a275330ce3af4e0c2e0bff6fb1ecb804dae465b99041d96dfffd36f8fc051a2c"
+          "value": "654598b121081ef60b9334bc92365c787037a3bc5b445d5afd9fb34459a1f076"
         }
       ],
       "purl": "pkg:pypi/narwhals@2.24.0"
@@ -4018,7 +4014,7 @@
         },
         {
           "name": "castingcompass:python-lock-sha256",
-          "value": "a275330ce3af4e0c2e0bff6fb1ecb804dae465b99041d96dfffd36f8fc051a2c"
+          "value": "654598b121081ef60b9334bc92365c787037a3bc5b445d5afd9fb34459a1f076"
         }
       ],
       "purl": "pkg:pypi/numpy@2.5.1"
@@ -4208,7 +4204,7 @@
         },
         {
           "name": "castingcompass:python-lock-sha256",
-          "value": "a275330ce3af4e0c2e0bff6fb1ecb804dae465b99041d96dfffd36f8fc051a2c"
+          "value": "654598b121081ef60b9334bc92365c787037a3bc5b445d5afd9fb34459a1f076"
         }
       ],
       "purl": "pkg:pypi/pandas@3.0.5"
@@ -4454,7 +4450,7 @@
         },
         {
           "name": "castingcompass:python-lock-sha256",
-          "value": "6cea94a8204926a6703b22a5e85d3cd015061ccce5e80890a62d1631e18b252b"
+          "value": "33df67982e9d596483a12f89c2117d813d12764de38acb5501aeee78e2993caa"
         }
       ],
       "purl": "pkg:pypi/psycopg-binary@3.3.4"
@@ -4484,7 +4480,7 @@
         },
         {
           "name": "castingcompass:python-lock-sha256",
-          "value": "6cea94a8204926a6703b22a5e85d3cd015061ccce5e80890a62d1631e18b252b"
+          "value": "33df67982e9d596483a12f89c2117d813d12764de38acb5501aeee78e2993caa"
         }
       ],
       "purl": "pkg:pypi/psycopg-pool@3.3.1"
@@ -4514,7 +4510,7 @@
         },
         {
           "name": "castingcompass:python-lock-sha256",
-          "value": "6cea94a8204926a6703b22a5e85d3cd015061ccce5e80890a62d1631e18b252b"
+          "value": "33df67982e9d596483a12f89c2117d813d12764de38acb5501aeee78e2993caa"
         }
       ],
       "purl": "pkg:pypi/psycopg@3.3.4"
@@ -4548,7 +4544,7 @@
         },
         {
           "name": "castingcompass:python-lock-sha256",
-          "value": "a275330ce3af4e0c2e0bff6fb1ecb804dae465b99041d96dfffd36f8fc051a2c"
+          "value": "654598b121081ef60b9334bc92365c787037a3bc5b445d5afd9fb34459a1f076"
         }
       ],
       "purl": "pkg:pypi/pycparser@3.0"
@@ -4966,7 +4962,7 @@
         },
         {
           "name": "castingcompass:python-lock-sha256",
-          "value": "6cea94a8204926a6703b22a5e85d3cd015061ccce5e80890a62d1631e18b252b"
+          "value": "33df67982e9d596483a12f89c2117d813d12764de38acb5501aeee78e2993caa"
         }
       ],
       "purl": "pkg:pypi/pydantic-core@2.33.2"
@@ -4996,7 +4992,7 @@
         },
         {
           "name": "castingcompass:python-lock-sha256",
-          "value": "6cea94a8204926a6703b22a5e85d3cd015061ccce5e80890a62d1631e18b252b"
+          "value": "33df67982e9d596483a12f89c2117d813d12764de38acb5501aeee78e2993caa"
         }
       ],
       "purl": "pkg:pypi/pydantic@2.11.7"
@@ -5026,7 +5022,7 @@
         },
         {
           "name": "castingcompass:python-lock-sha256",
-          "value": "a275330ce3af4e0c2e0bff6fb1ecb804dae465b99041d96dfffd36f8fc051a2c"
+          "value": "654598b121081ef60b9334bc92365c787037a3bc5b445d5afd9fb34459a1f076"
         }
       ],
       "purl": "pkg:pypi/python-dateutil@2.9.0.post0"
@@ -5056,7 +5052,7 @@
         },
         {
           "name": "castingcompass:python-lock-sha256",
-          "value": "6cea94a8204926a6703b22a5e85d3cd015061ccce5e80890a62d1631e18b252b"
+          "value": "33df67982e9d596483a12f89c2117d813d12764de38acb5501aeee78e2993caa"
         }
       ],
       "purl": "pkg:pypi/python-dotenv@1.2.2"
@@ -5370,7 +5366,7 @@
         },
         {
           "name": "castingcompass:python-lock-sha256",
-          "value": "6cea94a8204926a6703b22a5e85d3cd015061ccce5e80890a62d1631e18b252b"
+          "value": "33df67982e9d596483a12f89c2117d813d12764de38acb5501aeee78e2993caa"
         }
       ],
       "purl": "pkg:pypi/pyyaml@6.0.3"
@@ -5464,7 +5460,7 @@
         },
         {
           "name": "castingcompass:python-lock-sha256",
-          "value": "a275330ce3af4e0c2e0bff6fb1ecb804dae465b99041d96dfffd36f8fc051a2c"
+          "value": "654598b121081ef60b9334bc92365c787037a3bc5b445d5afd9fb34459a1f076"
         }
       ],
       "purl": "pkg:pypi/ruff@0.15.22"
@@ -5610,7 +5606,7 @@
         },
         {
           "name": "castingcompass:python-lock-sha256",
-          "value": "a275330ce3af4e0c2e0bff6fb1ecb804dae465b99041d96dfffd36f8fc051a2c"
+          "value": "654598b121081ef60b9334bc92365c787037a3bc5b445d5afd9fb34459a1f076"
         }
       ],
       "purl": "pkg:pypi/scikit-learn@1.9.0"
@@ -5796,7 +5792,7 @@
         },
         {
           "name": "castingcompass:python-lock-sha256",
-          "value": "a275330ce3af4e0c2e0bff6fb1ecb804dae465b99041d96dfffd36f8fc051a2c"
+          "value": "654598b121081ef60b9334bc92365c787037a3bc5b445d5afd9fb34459a1f076"
         }
       ],
       "purl": "pkg:pypi/scipy@1.18.0"
@@ -5826,7 +5822,7 @@
         },
         {
           "name": "castingcompass:python-lock-sha256",
-          "value": "a275330ce3af4e0c2e0bff6fb1ecb804dae465b99041d96dfffd36f8fc051a2c"
+          "value": "654598b121081ef60b9334bc92365c787037a3bc5b445d5afd9fb34459a1f076"
         }
       ],
       "purl": "pkg:pypi/six@1.17.0"
@@ -5856,7 +5852,7 @@
         },
         {
           "name": "castingcompass:python-lock-sha256",
-          "value": "6cea94a8204926a6703b22a5e85d3cd015061ccce5e80890a62d1631e18b252b"
+          "value": "33df67982e9d596483a12f89c2117d813d12764de38acb5501aeee78e2993caa"
         }
       ],
       "purl": "pkg:pypi/starlette@1.3.1"
@@ -5886,7 +5882,7 @@
         },
         {
           "name": "castingcompass:python-lock-sha256",
-          "value": "a275330ce3af4e0c2e0bff6fb1ecb804dae465b99041d96dfffd36f8fc051a2c"
+          "value": "654598b121081ef60b9334bc92365c787037a3bc5b445d5afd9fb34459a1f076"
         }
       ],
       "purl": "pkg:pypi/threadpoolctl@3.6.0"
@@ -5916,25 +5912,25 @@
         },
         {
           "name": "castingcompass:python-lock-sha256",
-          "value": "6cea94a8204926a6703b22a5e85d3cd015061ccce5e80890a62d1631e18b252b"
+          "value": "33df67982e9d596483a12f89c2117d813d12764de38acb5501aeee78e2993caa"
         }
       ],
       "purl": "pkg:pypi/typing-extensions@4.16.0"
     },
     {
-      "bom-ref": "pypi:typing-inspection@0.4.2",
+      "bom-ref": "pypi:typing-inspection@0.4.4",
       "type": "library",
       "name": "typing-inspection",
-      "version": "0.4.2",
+      "version": "0.4.4",
       "scope": "required",
       "properties": [
         {
           "name": "castingcompass:locked-distribution-sha256",
-          "value": "4ed1cacbdc298c220f1bd249ed5287caa16f34d44ef4e9c3d0cbad5b521545e7"
+          "value": "547274fa6b0a561ccf549cc9524b999a578e737d015d8709d021f9d0d13bea47"
         },
         {
           "name": "castingcompass:locked-distribution-sha256",
-          "value": "ba561c48a67c5958007083d386c3295464928b01faa735ab8547c5692e87f464"
+          "value": "65b8397ba37ccbce054456aaccddfc91e6e3083c92824df348d96ca832f3f147"
         },
         {
           "name": "castingcompass:python-graph",
@@ -5946,10 +5942,10 @@
         },
         {
           "name": "castingcompass:python-lock-sha256",
-          "value": "6cea94a8204926a6703b22a5e85d3cd015061ccce5e80890a62d1631e18b252b"
+          "value": "33df67982e9d596483a12f89c2117d813d12764de38acb5501aeee78e2993caa"
         }
       ],
-      "purl": "pkg:pypi/typing-inspection@0.4.2"
+      "purl": "pkg:pypi/typing-inspection@0.4.4"
     },
     {
       "bom-ref": "pypi:tzdata@2026.3",
@@ -5992,11 +5988,11 @@
         },
         {
           "name": "castingcompass:python-lock-sha256",
-          "value": "6cea94a8204926a6703b22a5e85d3cd015061ccce5e80890a62d1631e18b252b"
+          "value": "33df67982e9d596483a12f89c2117d813d12764de38acb5501aeee78e2993caa"
         },
         {
           "name": "castingcompass:python-lock-sha256",
-          "value": "a275330ce3af4e0c2e0bff6fb1ecb804dae465b99041d96dfffd36f8fc051a2c"
+          "value": "654598b121081ef60b9334bc92365c787037a3bc5b445d5afd9fb34459a1f076"
         }
       ],
       "purl": "pkg:pypi/tzdata@2026.3"
@@ -6026,7 +6022,7 @@
         },
         {
           "name": "castingcompass:python-lock-sha256",
-          "value": "6cea94a8204926a6703b22a5e85d3cd015061ccce5e80890a62d1631e18b252b"
+          "value": "33df67982e9d596483a12f89c2117d813d12764de38acb5501aeee78e2993caa"
         }
       ],
       "purl": "pkg:pypi/uvicorn@0.35.0"
@@ -6248,7 +6244,7 @@
         },
         {
           "name": "castingcompass:python-lock-sha256",
-          "value": "6cea94a8204926a6703b22a5e85d3cd015061ccce5e80890a62d1631e18b252b"
+          "value": "33df67982e9d596483a12f89c2117d813d12764de38acb5501aeee78e2993caa"
         }
       ],
       "purl": "pkg:pypi/uvloop@0.22.1"
@@ -6698,453 +6694,449 @@
         },
         {
           "name": "castingcompass:python-lock-sha256",
-          "value": "6cea94a8204926a6703b22a5e85d3cd015061ccce5e80890a62d1631e18b252b"
+          "value": "33df67982e9d596483a12f89c2117d813d12764de38acb5501aeee78e2993caa"
         }
       ],
       "purl": "pkg:pypi/watchfiles@1.2.0"
     },
     {
-      "bom-ref": "pypi:websockets@16.1.1",
+      "bom-ref": "pypi:websockets@17.0.1",
       "type": "library",
       "name": "websockets",
-      "version": "16.1.1",
+      "version": "17.0.1",
       "scope": "required",
       "properties": [
         {
           "name": "castingcompass:locked-distribution-sha256",
-          "value": "01fbdcbac298efe19360b94bc0039c8f746f0220ba570f327577bfee81059175"
+          "value": "02ed63bf26dda9fa27df730a41f6664586c4ee05972c8fb667ce1725b3fd13d3"
         },
         {
           "name": "castingcompass:locked-distribution-sha256",
-          "value": "024193f8551a2b0eafbdd160911012c4e6c228c28430c84433253299a9e42d6a"
+          "value": "02f0b037a737d0cb0c33866c97bcd1a0b73170dfbf42d69d8fb86f51002fd5ae"
         },
         {
           "name": "castingcompass:locked-distribution-sha256",
-          "value": "04fd29a0e2fe9414a95b00e92c67ae51bf900c50c0f8a4b2dafdad621f49ea1d"
+          "value": "038cfad5d5417f8bb09295abe986029a26d22f34bda622ccc79b670efd4dab56"
         },
         {
           "name": "castingcompass:locked-distribution-sha256",
-          "value": "056ae37939ed7e9974f364f5864e76e49182622d8f9751ac1903c0d09b013985"
+          "value": "07abc3bd196a48af476a82fd47f3f79a6a3f70937a9f930cef703cfa0c9d83b6"
         },
         {
           "name": "castingcompass:locked-distribution-sha256",
-          "value": "0f62863e8a00a6d33c3d6566ec0b89f23787b747ffe0c3bc71ec0e76b82c94b1"
+          "value": "07d78a509c3333f5908c83d7f78144ea68a6c9ec28110f5c54d81d8fcdc262c4"
         },
         {
           "name": "castingcompass:locked-distribution-sha256",
-          "value": "0ffd3031ea8bda8d61762e84220186105ba3b748b3c8da2ae4f7816fac03e573"
+          "value": "0b52c76b8a870b141b7ca0705289452183ce7a523101954ccfe29a25986a673f"
         },
         {
           "name": "castingcompass:locked-distribution-sha256",
-          "value": "1214e673c404684b9bf7154f5cf43b45025b1a6160fac3a9e438e9c1a97e22cb"
+          "value": "10b1587c599fa0f2c89154587c80e0fda98ade6c9fa8c0260a2823fb1800b685"
         },
         {
           "name": "castingcompass:locked-distribution-sha256",
-          "value": "125f22dbefaf1554fea66fc83851490edb284ce4f501d37ffed2752f418332d9"
+          "value": "10f461191125c63902ea7394ae9e752b1b5785641850c1d365bb30b0f88bc53f"
         },
         {
           "name": "castingcompass:locked-distribution-sha256",
-          "value": "130937b167a52af203c8d58e78d67705874e82759862e3b9671a452fec4abc87"
+          "value": "15920057a6b723f84734f0641403bca163a4b176e5af809ee4f0c4a1e75e9fed"
         },
         {
           "name": "castingcompass:locked-distribution-sha256",
-          "value": "1427fb4cf0d72f66333e2cacc3ff5f575bf2d7008166ce991a4a470b21d51a22"
+          "value": "17ac37716c0244e82c9e384c41653c090b1864c6610224ca3857e7f7b58fce10"
         },
         {
           "name": "castingcompass:locked-distribution-sha256",
-          "value": "195c978b065fa40910582464f99d6b15c8b314c68e0546549a55ed83f4735328"
+          "value": "18ded646ce98cdd3c0235825b3252f1df55765ba49b616bb10282f758667b4d0"
         },
         {
           "name": "castingcompass:locked-distribution-sha256",
-          "value": "1d27fa8462ad6a1cb36206a3d0640b2333340def181fae11ed7f9adeaa5c0747"
+          "value": "1b363bfd72a52c0658a3154a4cff219f15a474b35a235057d38853bf151acce7"
         },
         {
           "name": "castingcompass:locked-distribution-sha256",
-          "value": "1db4de4a0e95673f7545d393c49eeb0c2f18ac1ef93073218c79d5cdb2ee75ab"
+          "value": "1bdd8c4be420905dd732e00dcd669852d8128cc723efa585a0c0e51adb00a28a"
         },
         {
           "name": "castingcompass:locked-distribution-sha256",
-          "value": "1f79c89b5eb034d1722938a891916582f8f7f503f58ca22518a63c3f2cd18499"
+          "value": "1d4cf7e8e5b8b1fa40758ac7524843a00237b124ab217e227542cafcfeb7a946"
         },
         {
           "name": "castingcompass:locked-distribution-sha256",
-          "value": "23253dd5bcae3f9aaee0a1d30967a8dbd52e5d3cff93a2e5b84df57b77d4750d"
+          "value": "1df81d174c1561292de9e40b141cafc04f69077272f6c352afe1d743e20810df"
         },
         {
           "name": "castingcompass:locked-distribution-sha256",
-          "value": "249116b4a76063d930a46391ad56e135c286e4562a18309029fc2c73f4ed4c62"
+          "value": "20a92f78ac8250984ed459faa9ca48c285adbfc0038ddc3fdac6046990a9c9ed"
         },
         {
           "name": "castingcompass:locked-distribution-sha256",
-          "value": "29dfa8114c4a620c69591c5973860f768eac29d3fd6904f37f34266cb219c512"
+          "value": "22bd00f8bae2bccdb5dbe41e20f58ba44ca9fff0b4b561aaf39099c35da762ed"
         },
         {
           "name": "castingcompass:locked-distribution-sha256",
-          "value": "2a606d9c24035242a3e256e9d5b77ed9cd6bccfcb7cf993e5ca3c0f6f68fb6a7"
+          "value": "2437d4ca208cc0f246d3a2297ae7474b4ba18261aaf5b9c79c84c031ecf348e1"
         },
         {
           "name": "castingcompass:locked-distribution-sha256",
-          "value": "2a636ff1e7a5c4edf71ef0e79adae7f25dba93b4fcbe3dc958733477ffeb0eaf"
+          "value": "246927ae9ae06ca0d42a483a4bdb80d4862e1ee5b4cab37c354a5e1ad8356448"
         },
         {
           "name": "castingcompass:locked-distribution-sha256",
-          "value": "2bb5d041a8307d2e18782e7ce777f6fdb1e8c2f5d09291484b18c294b789d9aa"
+          "value": "2503c7e2a5049a12d5dac917a46d5d52591283a766165b8176bb167560421b38"
         },
         {
           "name": "castingcompass:locked-distribution-sha256",
-          "value": "2e28e602bb13da44fbe518c1781a88e3b9d4c3d48d02c9bad83e546164336f57"
+          "value": "2604de7228506b13a44a256a9d223943340c0e725af5d367dc068e192b027761"
         },
         {
           "name": "castingcompass:locked-distribution-sha256",
-          "value": "30bbe120437b5648a77d3519b7024ea09530e0b5b18d3698c5a0ae536fe0cc2e"
+          "value": "28012a54510fe8301bb893ef143cec30a2780a2d3bc20b7bbdf4379d7a63945d"
         },
         {
           "name": "castingcompass:locked-distribution-sha256",
-          "value": "34420aaa64440ebd51ac72ca8a45ef4626429438c9b02e633ae412ed43f925d3"
+          "value": "2a855b6dfe21c4d3420be265ae031829ba8ba0be0ea350d9f7c3ef30ae63ebe2"
         },
         {
           "name": "castingcompass:locked-distribution-sha256",
-          "value": "38565aca3e01ea8734e578fb2118dade0ecb0250533f29e22b8d1a7a196cf4d0"
+          "value": "2abb1ba0a5133b7d2ef3c1c9f4b0c1e8a101012dce0b594ab2b2888d9a64820e"
         },
         {
           "name": "castingcompass:locked-distribution-sha256",
-          "value": "387e8e4aa5df2f90b198fa3cad3478822a89cf905b6a6d6c97dc3664689640cc"
+          "value": "2b3f3020171202b135ca078e20434977c6b2b02af647130d6980c9e39b9462e3"
         },
         {
           "name": "castingcompass:locked-distribution-sha256",
-          "value": "39f2a024af5c345ffe8fcf1ee18c049c024c94df393bb09b044a6917c77bde43"
+          "value": "2bc14b481e05e331811108daa1aeb41a5e237a5564ef2f02ec5a356a0f102f78"
         },
         {
           "name": "castingcompass:locked-distribution-sha256",
-          "value": "3df13f73af9b3b38ab1195eb299ecb67a4330c911c97ae04043ff74085728abe"
+          "value": "2fa2cb465a131c347ba6717a78c887746e73edb1c131d01c982d6ef0d68b82e0"
         },
         {
           "name": "castingcompass:locked-distribution-sha256",
-          "value": "414e596c75f74e0994084694189d7dc9229fb278e33064d6784b73ffbba3ca31"
+          "value": "409d93efcaa14f7a99592c5baaef5ec6ca94fba0f5aec1a86f693977c69c9c1c"
         },
         {
           "name": "castingcompass:locked-distribution-sha256",
-          "value": "41c8e77f17294c0ac18008a7309b99b34ee72247ef10b6dff4c3f8b5ac29896b"
+          "value": "41d6aa06b5ab832aee72fedf47a149535b121ac900b6bb4d3fe14712afac9a79"
         },
         {
           "name": "castingcompass:locked-distribution-sha256",
-          "value": "42290eb6db4ccaca7012656738214f8514082fb6fa40cdeb61bb9a471b52e383"
+          "value": "49266e4488309b38783257293a38298942b9a03aa106fcb45195377a77c0c1e2"
         },
         {
           "name": "castingcompass:locked-distribution-sha256",
-          "value": "42f599f4d48c7e1a3338fdaac3acd075be3b3cf02d4b274f3bf2767aedd3d217"
+          "value": "4d1d99db29b5444e3982f1ce2ba8a833508ad44b2f1fbd0bd99e81d825c0b461"
         },
         {
           "name": "castingcompass:locked-distribution-sha256",
-          "value": "43e3a9fdd7cbf7ba6040c31fae0faf84ca1474fef777c4e37912f1540f854499"
+          "value": "4d41c0a1d47a478bc432b3b9068097bee1ce0c5b19327ea6f75c2ab34ab1f2fb"
         },
         {
           "name": "castingcompass:locked-distribution-sha256",
-          "value": "443aefe96b7fdb132e2a70806cca1f2af49bb3f28e47abcd7c2e9dcf4d8fa1b8"
+          "value": "5033ffe6804dd53afafa7d08e8c3eef2d2431f34d58ca30507a8442dd04a033a"
         },
         {
           "name": "castingcompass:locked-distribution-sha256",
-          "value": "46dcaa042cd1de6c59e7d9269fa63ff7572b6df40510600b678f0826b3c7af51"
+          "value": "53b90c00bc6201ab6695c7ff51a04d0e425514c37515e9eeecd2c1b978ac6c0e"
         },
         {
           "name": "castingcompass:locked-distribution-sha256",
-          "value": "496af849a472b531f758dbd4d61338f5000538cb1a7b3d20d9d32a264517f509"
+          "value": "54cdcaa56f5d3eafd57058f0fa4a3de93a310b43a3c4699f06efc4c0bd054a5a"
         },
         {
           "name": "castingcompass:locked-distribution-sha256",
-          "value": "49ae99bdfcae803a885c926bf14f886196e84925395bb3f568fef5c0f0979d7d"
+          "value": "5508f38c98ac29def9e747b87543b008a58b075df6da70b2cf2e0b47073d33bb"
         },
         {
           "name": "castingcompass:locked-distribution-sha256",
-          "value": "4b57693728576d84ede0a77987ab16881b783d2cd9f1dc180a8fbbc3f79c4428"
+          "value": "55383d8177b3c99fd873ee5db0e0193f4c1dd4a3feaccf1a4a03c1b7cf539cac"
         },
         {
           "name": "castingcompass:locked-distribution-sha256",
-          "value": "4e3b680b1e0a27457e727a0d572fd81dffa87b6dbf8b228ab57da64f7d85aead"
+          "value": "55b12e47dcee83673a40d07686cfb6f9d6dfc285976ade9463f61d2bef3fad22"
         },
         {
           "name": "castingcompass:locked-distribution-sha256",
-          "value": "4e8d01cc3bcae7bbf8167f944aeafefed590fae5693552bba9794a9df68371cc"
+          "value": "5661f868ef191d33dfc6a0cc7c5b3d495f0cc8bb3f8b30d87bda8755c61c95f5"
         },
         {
           "name": "castingcompass:locked-distribution-sha256",
-          "value": "5283810d2646741a0d8da2aa733d6aefa0545809afccb2a5d105a26bc45125f1"
+          "value": "57d2ee9b24b404ce75f3814f92073c0ed88106c950148d2427fe8d25ca254d1f"
         },
         {
           "name": "castingcompass:locked-distribution-sha256",
-          "value": "53260c8930da5771cec89439bff99c20c8cb03ddb9588b980697355a83cd4bd3"
+          "value": "599b03beb77633bffc095334338fad79cafc2b01fbd58953838130a9ae967d7b"
         },
         {
           "name": "castingcompass:locked-distribution-sha256",
-          "value": "536676848fc5961aca9d20389951f59169508f765637a172403dc5434d722fa0"
+          "value": "5baa9bc0dfbae8c507e51c8cf1b6d4628086f7a87bbd3a9952bd5f035451f1cc"
         },
         {
           "name": "castingcompass:locked-distribution-sha256",
-          "value": "54509b8e92fee4453e152b7558ddef37ce9705a044922f2095a6105e3f80c96f"
+          "value": "5f33a649bfcb8312524173cc4bbafa7dbb236e18eee9aa31a1d324ca0ddda28c"
         },
         {
           "name": "castingcompass:locked-distribution-sha256",
-          "value": "56cd5fc4f10a9ea8aa0804bddb7b42506cf9e136046f3b4c27de8fec9e2ecba5"
+          "value": "6740be6d1bab69f08ab52cb15b08f76c143b6fe61c580ba62bd929f3ab7a1d42"
         },
         {
           "name": "castingcompass:locked-distribution-sha256",
-          "value": "5bfd1ac19b1b9986a9c95a82d5e23a391ebb09e12c34d7be6094b86efcc35731"
+          "value": "6a434e59962a4fb9016bea327e1d14d6cd67670ecfb8942b4f4a0c24036634ce"
         },
         {
           "name": "castingcompass:locked-distribution-sha256",
-          "value": "5c31aa7e39ee3e8a358573257f1c0bb5c52430d1b637030dd9c8cc2c282926be"
+          "value": "6db9e5bf3649ab506c6ae8a3ac85a00fb1ae3816d75962771b2df8adbc5d40d2"
         },
         {
           "name": "castingcompass:locked-distribution-sha256",
-          "value": "5e3b7d601f6f84156b08cc4a5e541c2b50ad7b36cfc302b657a12477c904a5df"
+          "value": "6fd88365da261c53d3e943fb37e0d0721b9cde119f6b2e3fc84369b6ab234d63"
         },
         {
           "name": "castingcompass:locked-distribution-sha256",
-          "value": "61922544a0587a13fd3f53e4c0e5e606510c7b0d9d22c8444e5fae22a06b38cb"
+          "value": "7002d5f9e1c3ddd991cdfdbfee18cc8c8b196b2445022892badacd6cb338bbbc"
         },
         {
           "name": "castingcompass:locked-distribution-sha256",
-          "value": "6456ff333092d509127d75a638cb411afae8ff17f092635015d1902efec8a293"
+          "value": "70d438268e49f1a4bd096b6b6f7010f3ab48b5db2574dbf7d8c864c46ce7a06a"
         },
         {
           "name": "castingcompass:locked-distribution-sha256",
-          "value": "69159730a823dde3ea8d08783e8d47ef135a6d7e8d44eb127e32b321c9db8e3e"
+          "value": "72d7f2a5aeb4e82daa4ee18f125b4277f427033359be5c745ad709608446cc2c"
         },
         {
           "name": "castingcompass:locked-distribution-sha256",
-          "value": "69e52d175a0a7d1e13b4b67ad41c560b7d98e8c6f6126eb0bda496c784faf8c7"
+          "value": "733e3cc7171fa1b899edbe725ef9382d0e960657dc1fd933f3281ae910c01dab"
         },
         {
           "name": "castingcompass:locked-distribution-sha256",
-          "value": "6aaface73b9c71974c6497366d8b9628357f6c9749e09c4ea3610176c63f2ae3"
+          "value": "734d20364dc2cfe03674883cafcf580b6e431c5ce42b476312b9285310230cf9"
         },
         {
           "name": "castingcompass:locked-distribution-sha256",
-          "value": "6abbd3e82c731c8e531714466acd5d87b5e88ac3243465337ba71d68e23ae7e3"
+          "value": "759adeb5b0c5775b563254ec63b5b79089fc0045b479143a0b1b8c0ebaae1253"
         },
         {
           "name": "castingcompass:locked-distribution-sha256",
-          "value": "6ff9417c0ada4d0f7d212f928303e5579bdf3ace4c802fa4afabb30995da58c3"
+          "value": "769ce7e2acfd9a89f2bed3a9c0da229459516bbc00bd4c9e2ca492c613ae4861"
         },
         {
           "name": "castingcompass:locked-distribution-sha256",
-          "value": "7421fad442de870a8cbf2287d1cad7e706ece0dbfeba5e911df132cbdc1cb56a"
+          "value": "810cb3fb5fa6e447216f4e82d9a85cb8aed0929ae3538153ddfe8a6e3121a58d"
         },
         {
           "name": "castingcompass:locked-distribution-sha256",
-          "value": "7883388947767080f094950b342b30d35a2a06b849cd967c422fa0db72b40ea9"
+          "value": "81ce19c6046ace11da7001781be7317bb1dc389f399af4b2ed962190f76f9add"
         },
         {
           "name": "castingcompass:locked-distribution-sha256",
-          "value": "79eace538c6a97e96d0d03d4f9d314f9677f5ed85a8a984992ffd90b13cb8a56"
+          "value": "846a4a8b0833e3cad57523d9e3bd50ec8ea05ab9d06c582f82a1340ba096af5f"
         },
         {
           "name": "castingcompass:locked-distribution-sha256",
-          "value": "7b1b19636af86a3c7995d4d028dbe376f39b4bf31541146f9c123582a6c94562"
+          "value": "872273e629ca7e3d35f16a2dc6ede84e1d5c831e616b8277de6e4f83114e7c58"
         },
         {
           "name": "castingcompass:locked-distribution-sha256",
-          "value": "7dfcad78ea1492ee3a9ec765cb7f51bbc17d477107aaf6b22abf7b2558d1c5a0"
+          "value": "8848c207049ad49d318e5f64a3d4d7bb189f8328d0d98e65647788f2a085785c"
         },
         {
           "name": "castingcompass:locked-distribution-sha256",
-          "value": "8087e82f842609734c9b5a1330464f8e94e346ba0e18c832c08bafa4b0d63c15"
+          "value": "884af729b8ab50486acd94d9768c2b60914bf39b579ebba0a5cb73bfdfd61fd2"
         },
         {
           "name": "castingcompass:locked-distribution-sha256",
-          "value": "820fb8450edddae3812fd58cbc08e2bf22812cb248ecb5f06dbb82119a56e869"
+          "value": "8c07f145d0b9e90cbd96035f31fb79199aef4da1872854e36ebeb258e3d57594"
         },
         {
           "name": "castingcompass:locked-distribution-sha256",
-          "value": "8483c2096363120eea8b07c06ae7304d520f686665fffd4811fad423930a65d7"
+          "value": "8cd3369e42c0246afaf9d669cfc19797e3a49e8c0a639544459c57597108b966"
         },
         {
           "name": "castingcompass:locked-distribution-sha256",
-          "value": "84a2cef8deffbd9ab8ee0ea546a2a6a7030c28f44e6cdd4547dbfeb489eb8999"
+          "value": "8e387adb0c692c6b5571bdeafc8ac9d1901ea30f10309134780b16ecd35e6605"
         },
         {
           "name": "castingcompass:locked-distribution-sha256",
-          "value": "86d7f0f8bdb25d2c632b72527325e4776430fd5bc61b9118de4e2b8ddb5f5b01"
+          "value": "90246fa9e6cb192a778ce6ce024057ec54317a894db7899c922dcdc1f4cbf6a5"
         },
         {
           "name": "castingcompass:locked-distribution-sha256",
-          "value": "8fe0b50da2d84535fb4f7b4bfa951280f97ce3d558a0443b541166d609e67b57"
+          "value": "90973a3a00f23afdfd1c9b06fb84289bf0220f247ef8a62501a1967c7af54f7b"
         },
         {
           "name": "castingcompass:locked-distribution-sha256",
-          "value": "90001d893bc368e302ef168d82130b4e4fdd27b85fa094682df9b667c2d48838"
+          "value": "9493314a99e599163c854fb5900ad7f7ea38c5cb9d9103aa30b3c6b8181c01fa"
         },
         {
           "name": "castingcompass:locked-distribution-sha256",
-          "value": "9246a0d063cfcbcc85f2359dd6876d681213f4790832272aa16641b4ed5d64d4"
+          "value": "9f7747d3daa41a11f25f7cca5dc988fc51da97b311bed4c9d843860f79779283"
         },
         {
           "name": "castingcompass:locked-distribution-sha256",
-          "value": "92b820d345f7a3fc7b8163949ee92df910f290c3fc517b3d5301c78065adafe1"
+          "value": "a39ce3a7b0e6059be093213d637963101380157bcbad355916738fafb490698d"
         },
         {
           "name": "castingcompass:locked-distribution-sha256",
-          "value": "952303a7318d4cbe1011400839bb2051c9f84fa0a35923267f5daba34b15d458"
+          "value": "a60fa1a25cca1bcc2bf87b8d6be37a741f0a3239fb5e9cfb7a37173b68ffcf87"
         },
         {
           "name": "castingcompass:locked-distribution-sha256",
-          "value": "97fd3a0e8b53efa41970ac1dff3d8cf0d2884cadeb4caaf95db7ad1526926ee3"
+          "value": "a68e604c6d1b0338e46652e2688cbce8096ad9c03548b075fda9e2ea19a9b7dd"
         },
         {
           "name": "castingcompass:locked-distribution-sha256",
-          "value": "9c1c5705e314449e3308872fe084b8571ce078ee4fc55a98a769bdefe5917392"
+          "value": "a8af570fc29cd998a921c7131c8ac81d9434466d6d25300cb12a690fb56a8a08"
         },
         {
           "name": "castingcompass:locked-distribution-sha256",
-          "value": "9c9f23004a3d40e89c01a7955d186a6cc83418d93b749701944ce2de3e95a1f3"
+          "value": "aadc298969ad229d8e3029fc5cc751fdad286696230f9cf014e90ff9cd8e6ea0"
         },
         {
           "name": "castingcompass:locked-distribution-sha256",
-          "value": "9f63bcef7f4b02b06b35fc01c93b96c43b5e88e1e8868676caacf493d5a31f3a"
+          "value": "ab56439c9f74c52770690c7b2f616b3bf775cb3920453ee355ac765c032d8bbf"
         },
         {
           "name": "castingcompass:locked-distribution-sha256",
-          "value": "a0eadbbf2c30f01efa58e1f110eb6fa293261f6b0b1aa38f7f48707107690af9"
+          "value": "ab9f962a5b64a5c3c845d556b7dc4e6fb683f7b67179f8205e814bb2e0213ffe"
         },
         {
           "name": "castingcompass:locked-distribution-sha256",
-          "value": "a28fcbc9b6baf54a2e23f8655f308e4ccc6afdd7266f8fe7954f320dcda0f785"
+          "value": "afbce6e3f0fac32dc87c2a0d84869d1a706460d64f39f3889386413e6e4d3d26"
         },
         {
           "name": "castingcompass:locked-distribution-sha256",
-          "value": "a6a61aff018180c9c50b7b0da33bfd29d378af3497429c95006c589a23a11648"
+          "value": "b3ff0ad440ad52dda64138f16895f66403f40192365e39b1010e889f289746b0"
         },
         {
           "name": "castingcompass:locked-distribution-sha256",
-          "value": "aabe464bfd13bd25f4821faf111da6fefdc389f870265a53105580e45b0a2e49"
+          "value": "b580794e926cab7ff42ee4371ef14e0b22cb2bb722a607f77769136468f49a3f"
         },
         {
           "name": "castingcompass:locked-distribution-sha256",
-          "value": "ab59169ace05dcb49a1d4118f0bde139557adf45091bd85747e36bf5de984dd1"
+          "value": "b85b960a4507b0714c0a1246d031be9118d908ee974dc085257297a955205f1d"
         },
         {
           "name": "castingcompass:locked-distribution-sha256",
-          "value": "b436f6ec4fc3a6b4237c84d3f83170ed2b40bb584222f0ac47a0c8a5921980c7"
+          "value": "b98860aefbd3d9bc8e3c7f0eefb83b11142b16110739c68cd33d3b4d6e84e536"
         },
         {
           "name": "castingcompass:locked-distribution-sha256",
-          "value": "b6b9dadbef0cccd9f4c4ee96b08898afa73e26803bbe0f6aeb5bb12b0074206d"
+          "value": "bb31f42ea095ea826463c770829aa188a86c9a5c976b1467cbbf583c811de833"
         },
         {
           "name": "castingcompass:locked-distribution-sha256",
-          "value": "b852788aa51764e2d8e4cf5493d559326bcae5e38d16ba25ffa322b034df272a"
+          "value": "bc0bca48ba24c6c866847fd20478a51dd547fa0ad258dab9615c414ec534bbc0"
         },
         {
           "name": "castingcompass:locked-distribution-sha256",
-          "value": "bae954c382e013d5ea5b190d2830526bfa45ad121c326da0049b8c769f185db6"
+          "value": "bd1470d2c53fe53269bf5619da7725d30dd9b9693f1689f7a85eab8dea734442"
         },
         {
           "name": "castingcompass:locked-distribution-sha256",
-          "value": "bcce07e23e5769375158f5efdcdafa8d5cd014b93c6683865b840ed65b96f231"
+          "value": "c09e097d0e46e3c289bedab9a475ae344b70c30ff5646e46af22b4e6fdc97b21"
         },
         {
           "name": "castingcompass:locked-distribution-sha256",
-          "value": "cc97814dfb786a83b6e2dc2e79351e1b83e6d715647d6887fcabd83026417a00"
+          "value": "c1bec5d6a19f5fbe87e4940739cfc65e7bb53d8b353e1029b8037a1653b321bc"
         },
         {
           "name": "castingcompass:locked-distribution-sha256",
-          "value": "cd2ca96a082a36964aca83e992f72abeb61b7306c1a6cba4c7d06a7b93750cac"
+          "value": "c1c118a6b0e25bfc9a6802075d748fa6321714ffbdf3c88d29d9a0e3c7386c75"
         },
         {
           "name": "castingcompass:locked-distribution-sha256",
-          "value": "cfb70b4eb56cac4da0a83588f3ad50d46beb0690391082f3d4e2d488c70b68ea"
+          "value": "c23e532c8a2325a1e7486de8763a60dc43e83f01bcaeca07e3ba79652c156db1"
         },
         {
           "name": "castingcompass:locked-distribution-sha256",
-          "value": "d0fcf657e9f13ff4b177960ab2200237b12994232dfb6df16f1cfe1d4339f93c"
+          "value": "c356dbddab0a529ed7574f78f559d75a223735c321c28f6f587fbf02b11ed301"
         },
         {
           "name": "castingcompass:locked-distribution-sha256",
-          "value": "d14bfb217eb4701e850f1525c9d29d79c44794cdf1c299ead25f39f8c78dea81"
+          "value": "c38515cb54902f7e97d0239e81ef46c4444f9475f4807fb9bbdb789b4089abcf"
         },
         {
           "name": "castingcompass:locked-distribution-sha256",
-          "value": "d57685547e0060cc6fd90ee6a28405d6bd395e525545f13c8d7cd99c78afd79f"
+          "value": "c395bda8e7d8f51a02e80261fb57127979e5c472675d9a96b2860619ad47da48"
         },
         {
           "name": "castingcompass:locked-distribution-sha256",
-          "value": "d6bec75c290fe484a8ba4cacdf838501e17c06ecfbbf31eede81a9e431bd7751"
+          "value": "c6be9cba65c65cc76dfa3d4619e359ff02a4476c74e179b215236c11a0b32345"
         },
         {
           "name": "castingcompass:locked-distribution-sha256",
-          "value": "d9531d9cbeac99af6f038fb1bc351403531f7d634a2c2e10e2f7c854c6ed5b68"
+          "value": "cd526c8228e759c1006c4b7c9ac71dc4e925ced1a6a6a5a8e94643709738f63e"
         },
         {
           "name": "castingcompass:locked-distribution-sha256",
-          "value": "da4ca1a9d72f9030b3146b8d7022719a9f3d478f61efe6f7dd51d243f61c51b2"
+          "value": "cddc675ec31bca65473321f9a9794e488b43b3b8de5d02c8ef4810c5d5792163"
         },
         {
           "name": "castingcompass:locked-distribution-sha256",
-          "value": "dab9eb87869da2d6ed3af3f3adf28414baae6ec9d4df355ffc18889132f3436c"
+          "value": "cffc84ddec6da7f447677266fee2a3c40ecc78172f00752aa1150b8a8d65df1d"
         },
         {
           "name": "castingcompass:locked-distribution-sha256",
-          "value": "db234eda965dcce15df96bb9709f587cd87d4d52aaf0e80e2f34ec04c7670c57"
+          "value": "d41e9845514754a42d1d83b2fca9d27fee2ca7b3b0bee6843ba5a9bb2b6e25ac"
         },
         {
           "name": "castingcompass:locked-distribution-sha256",
-          "value": "dc0fad4933f427acd5b1cec210f3ea6dce7089e1724e4b9ec6ef47c6c04d1b3b"
+          "value": "d69fd559f9f0e8a52d2fce6f04ee143f86e70df0a189cd95164eddac599e810f"
         },
         {
           "name": "castingcompass:locked-distribution-sha256",
-          "value": "dc385593a42e31cd6fb60c19f0ecb015b386603818fc2c6c274fb42bd2bb4165"
+          "value": "d7d72843691f50b91127c50688df10cb72ec6f4c4b1d7e2c11ab33b16acf8e51"
         },
         {
           "name": "castingcompass:locked-distribution-sha256",
-          "value": "dcc04fedf83effaeb9cce98abc9469bb1b42ef85f03e01c8c1f4438ef7555737"
+          "value": "d9aac6081513f02eac3f8caace800dbfc5c608b69e4a7bef69e414eabfc95aa1"
         },
         {
           "name": "castingcompass:locked-distribution-sha256",
-          "value": "e047dc87ef7ca50f4d309bf775ad4a71711c58556d75d7bd0604b2317f43e94b"
+          "value": "dbfae8e75b342e31fc6fd1a8bbb393b7cbb91d6cfd581650300a94381e7b7e2b"
         },
         {
           "name": "castingcompass:locked-distribution-sha256",
-          "value": "e09f753a169951eb4f28c2c774f71069304f66e7277e0f5a2892423599cfa854"
+          "value": "e8208f2729cba030ff872a92064c97584eeb9502f53d32a05a0f05d5a17ca6c6"
         },
         {
           "name": "castingcompass:locked-distribution-sha256",
-          "value": "ed5bb271084b46530ee2ddc0410537a9961152c5ccba2fc98c5276d992ccba87"
+          "value": "e95e321d0d763f2b6633512605f6112ebd70d5746f3ce05c941909d4a25233f2"
         },
         {
           "name": "castingcompass:locked-distribution-sha256",
-          "value": "f0aa4aad3b1b69ad3fd85a0fd0952ec64331c762bd77ec51cc814170873890b2"
+          "value": "e98ec9ec61cce5bc4b8b218322ad090b0994eb060bb04da704c62ef0a3d864e6"
         },
         {
           "name": "castingcompass:locked-distribution-sha256",
-          "value": "f17dbe07eb3ea7f99e4df9b7e0efefe80fbf30d37a8cc4d561a0aed310bc8847"
+          "value": "eab6de8a98b9a7772cf686d00b4de439fc7efb8ab05ae106ef227291d06f87c5"
         },
         {
           "name": "castingcompass:locked-distribution-sha256",
-          "value": "f2769a0344a09e9ccf5b3cce538bc75a51b53eff3275d3896310c8552049195d"
+          "value": "efe0ae052a8d023b87198921e8a7ce1dc7768816bcd2fbc20df171ac73a04891"
         },
         {
           "name": "castingcompass:locked-distribution-sha256",
-          "value": "f55f0b01956a094c8587146d9558c91937e78789c333860ffaf35931a6e5dbc4"
+          "value": "f11a398d8170b7ac5000baf7f258dcda579ef3ea744e0cc6a165e0dfbc0d3198"
         },
         {
           "name": "castingcompass:locked-distribution-sha256",
-          "value": "f5d497865f05bb222cab7016c6034542e84e5f29f49c6fd3f4939cda7197b5b8"
+          "value": "f3fd9a1f87f8f0f3f8e9f9bd0195f7516562d13f5b178db8c5784d1f60b60bed"
         },
         {
           "name": "castingcompass:locked-distribution-sha256",
-          "value": "f70541f3104339f59f830522d94ebadb1bf47426287381623443d8bb1cdbf33d"
+          "value": "f47b0815af3948ec6a440b3afa02f05b18cc0939549e91b5c677b5d9c2c8472a"
         },
         {
           "name": "castingcompass:locked-distribution-sha256",
-          "value": "fb9a0a6dc3d1b3986cb88091b6899f0396651e0f74e2c9766ab8d6ffc3842e29"
+          "value": "f991247276797d0c61ab7770bc9791eadc16f683b4d83517f624932adc1a8bab"
         },
         {
           "name": "castingcompass:locked-distribution-sha256",
-          "value": "fce6c48559c86d1ac3632ccb1bebc7d5442fbe79bd9bb0e40379ee54be2a4051"
-        },
-        {
-          "name": "castingcompass:locked-distribution-sha256",
-          "value": "fd46fff7eb62c24804d234f0051c7a8ea81285ad63e0337d3dcf33ca82aee58a"
+          "value": "ffad64ce7ad3703d652a3fd9af26238377d24ce52c6ad8ff35d26d82f61f493f"
         },
         {
           "name": "castingcompass:python-graph",
@@ -7156,10 +7148,10 @@
         },
         {
           "name": "castingcompass:python-lock-sha256",
-          "value": "6cea94a8204926a6703b22a5e85d3cd015061ccce5e80890a62d1631e18b252b"
+          "value": "33df67982e9d596483a12f89c2117d813d12764de38acb5501aeee78e2993caa"
         }
       ],
-      "purl": "pkg:pypi/websockets@16.1.1"
+      "purl": "pkg:pypi/websockets@17.0.1"
     },
     {
       "bom-ref": "quickselect@3.0.0",
@@ -7322,10 +7314,10 @@
       "purl": "pkg:generic/python@3.12.13"
     },
     {
-      "bom-ref": "runtime:python@3.13.14",
+      "bom-ref": "runtime:python@3.13.15",
       "type": "application",
       "name": "Python",
-      "version": "3.13.14",
+      "version": "3.13.15",
       "scope": "required",
       "properties": [
         {
@@ -7333,7 +7325,7 @@
           "value": "api-runtime"
         }
       ],
-      "purl": "pkg:generic/python@3.13.14"
+      "purl": "pkg:generic/python@3.13.15"
     },
     {
       "bom-ref": "scheduler@0.27.0",
@@ -7645,11 +7637,11 @@
         },
         {
           "name": "castingcompass:wrangler-version",
-          "value": "4.114.0"
+          "value": "4.123.0"
         },
         {
           "name": "castingcompass:wrangler-sha256",
-          "value": "eb055dbff42ca11f52b6c952faba602d3ee8fd7137a709ea980111f220d8bd35"
+          "value": "a246fe056f96bc6fad3d71b9f9fe9b3e6b5164c92a42578699704ffbb2b1eb18"
         },
         {
           "name": "castingcompass:version-metadata-binding",
@@ -7873,43 +7865,43 @@
       ]
     },
     {
-      "ref": "@next/env@16.2.12",
+      "ref": "@next/env@16.3.1",
       "dependsOn": []
     },
     {
-      "ref": "@next/swc-darwin-arm64@16.2.12",
+      "ref": "@next/swc-darwin-arm64@16.3.1",
       "dependsOn": []
     },
     {
-      "ref": "@next/swc-darwin-x64@16.2.12",
+      "ref": "@next/swc-darwin-x64@16.3.1",
       "dependsOn": []
     },
     {
-      "ref": "@next/swc-linux-arm64-gnu@16.2.12",
+      "ref": "@next/swc-linux-arm64-gnu@16.3.1",
       "dependsOn": []
     },
     {
-      "ref": "@next/swc-linux-arm64-musl@16.2.12",
+      "ref": "@next/swc-linux-arm64-musl@16.3.1",
       "dependsOn": []
     },
     {
-      "ref": "@next/swc-linux-x64-gnu@16.2.12",
+      "ref": "@next/swc-linux-x64-gnu@16.3.1",
       "dependsOn": []
     },
     {
-      "ref": "@next/swc-linux-x64-musl@16.2.12",
+      "ref": "@next/swc-linux-x64-musl@16.3.1",
       "dependsOn": []
     },
     {
-      "ref": "@next/swc-win32-arm64-msvc@16.2.12",
+      "ref": "@next/swc-win32-arm64-msvc@16.3.1",
       "dependsOn": []
     },
     {
-      "ref": "@next/swc-win32-x64-msvc@16.2.12",
+      "ref": "@next/swc-win32-x64-msvc@16.3.1",
       "dependsOn": []
     },
     {
-      "ref": "@swc/helpers@0.5.15",
+      "ref": "@swc/helpers@0.5.23",
       "dependsOn": [
         "tslib@2.8.1"
       ]
@@ -7929,8 +7921,8 @@
     {
       "ref": "castingcompass-api@0.1.0",
       "dependsOn": [
-        "container:python@sha256:399babc8b49529dabfd9c922f2b5eea81d611e4512e3ed250d75bd2e7683f4b0",
-        "pypi:annotated-doc@0.0.4",
+        "container:python@sha256:540c7d91f98ff6880174c40e99067bf5941eb54d818a7a5e094d188b196a934d",
+        "pypi:annotated-doc@0.0.5",
         "pypi:annotated-types@0.8.0",
         "pypi:anyio@4.14.2",
         "pypi:click@8.4.2",
@@ -7948,19 +7940,19 @@
         "pypi:pyyaml@6.0.3",
         "pypi:starlette@1.3.1",
         "pypi:typing-extensions@4.16.0",
-        "pypi:typing-inspection@0.4.2",
+        "pypi:typing-inspection@0.4.4",
         "pypi:tzdata@2026.3",
         "pypi:uvicorn@0.35.0",
         "pypi:uvloop@0.22.1",
         "pypi:watchfiles@1.2.0",
-        "pypi:websockets@16.1.1"
+        "pypi:websockets@17.0.1"
       ]
     },
     {
       "ref": "castingcompass-pipeline@0.1.0",
       "dependsOn": [
-        "pypi:cffi@2.1.0",
-        "pypi:cryptography@48.0.1",
+        "pypi:cffi@2.1.1",
+        "pypi:cryptography@50.0.0",
         "pypi:joblib@1.5.3",
         "pypi:narwhals@2.24.0",
         "pypi:numpy@2.5.1",
@@ -7982,10 +7974,10 @@
         "castingcompass-api@0.1.0",
         "castingcompass-pipeline@0.1.0",
         "castingcompass@0.1.0",
-        "container:python@sha256:399babc8b49529dabfd9c922f2b5eea81d611e4512e3ed250d75bd2e7683f4b0",
+        "container:python@sha256:540c7d91f98ff6880174c40e99067bf5941eb54d818a7a5e094d188b196a934d",
         "runtime:node@22.23.1",
         "runtime:python@3.12.13",
-        "runtime:python@3.13.14",
+        "runtime:python@3.13.15",
         "service:cloudflare-d1",
         "service:cloudflare-workers-assets",
         "service:cloudflare-workers@2026-05-15"
@@ -7996,7 +7988,7 @@
       "dependsOn": [
         "drizzle-orm@0.45.2",
         "maplibre-gl@5.24.0",
-        "next@16.2.12",
+        "next@16.3.1",
         "react-dom@19.2.8",
         "react@19.2.8",
         "runtime:node@22.23.1",
@@ -8008,10 +8000,10 @@
       "dependsOn": []
     },
     {
-      "ref": "container:python@sha256:399babc8b49529dabfd9c922f2b5eea81d611e4512e3ed250d75bd2e7683f4b0",
+      "ref": "container:python@sha256:540c7d91f98ff6880174c40e99067bf5941eb54d818a7a5e094d188b196a934d",
       "dependsOn": [
         "operating-system:alpine@3.24",
-        "runtime:python@3.13.14"
+        "runtime:python@3.13.15"
       ]
     },
     {
@@ -8071,25 +8063,25 @@
       "dependsOn": []
     },
     {
-      "ref": "nanoid@3.3.12",
+      "ref": "nanoid@3.3.18",
       "dependsOn": []
     },
     {
-      "ref": "next@16.2.12",
+      "ref": "next@16.3.1",
       "dependsOn": [
-        "@next/env@16.2.12",
-        "@next/swc-darwin-arm64@16.2.12",
-        "@next/swc-darwin-x64@16.2.12",
-        "@next/swc-linux-arm64-gnu@16.2.12",
-        "@next/swc-linux-arm64-musl@16.2.12",
-        "@next/swc-linux-x64-gnu@16.2.12",
-        "@next/swc-linux-x64-musl@16.2.12",
-        "@next/swc-win32-arm64-msvc@16.2.12",
-        "@next/swc-win32-x64-msvc@16.2.12",
-        "@swc/helpers@0.5.15",
+        "@next/env@16.3.1",
+        "@next/swc-darwin-arm64@16.3.1",
+        "@next/swc-darwin-x64@16.3.1",
+        "@next/swc-linux-arm64-gnu@16.3.1",
+        "@next/swc-linux-arm64-musl@16.3.1",
+        "@next/swc-linux-x64-gnu@16.3.1",
+        "@next/swc-linux-x64-musl@16.3.1",
+        "@next/swc-win32-arm64-msvc@16.3.1",
+        "@next/swc-win32-x64-msvc@16.3.1",
+        "@swc/helpers@0.5.23",
         "baseline-browser-mapping@2.10.30",
         "caniuse-lite@1.0.30001793",
-        "postcss@8.5.18",
+        "postcss@8.5.23",
         "react-dom@19.2.8",
         "react@19.2.8",
         "sharp@0.35.3",
@@ -8113,9 +8105,9 @@
       "dependsOn": []
     },
     {
-      "ref": "postcss@8.5.18",
+      "ref": "postcss@8.5.23",
       "dependsOn": [
-        "nanoid@3.3.12",
+        "nanoid@3.3.18",
         "picocolors@1.1.1",
         "source-map-js@1.2.1"
       ]

@@ -33,6 +33,7 @@
     ]
   },
   "feature_flags": {
+    "DEPLOYMENT_ENVIRONMENT": "staging",
     "PUBLIC_DISCUSSIONS_ENABLED": "false",
     "TRIP_PHOTO_UPLOADS_ENABLED": "false",
     "TURNSTILE_ENABLED": "false",

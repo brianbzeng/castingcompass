@@ -17,7 +17,7 @@ const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const UV_VERSION = "0.10.11";
 const PYTHON_VERSION_FILES = new Map([
   [".python-version", "3.12.13"],
-  ["services/api/.python-version", "3.13.14"],
+  ["services/api/.python-version", "3.13.15"],
   ["pipeline/.python-version", "3.12.13"],
 ]);
 const VALIDATION_LOCK = "pipeline/requirements-validation.lock";

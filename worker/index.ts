@@ -16,27 +16,27 @@ import {
   AI_REVIEW_QUEUE_MESSAGE_VERSION,
   consumeAiReviewQueue,
   scheduleTripReview,
-  type AiReviewQueueEnv,
   type QueueBatchLike,
   type QueueMessageLike,
 } from "./trip-review-queue.ts";
 import {
   PRIVACY_EXPORT_QUEUE_MESSAGE_VERSION,
   consumePrivacyExportQueue,
-  type PrivacyExportEnv,
 } from "./privacy-export.ts";
 import { handleDiscussionRequest } from "./discussions";
 import {
+  applyContentSecurityPolicy,
   canonicalRedirect,
   guardRequestBody,
   hardenResponse,
   healthResponse,
+  hostBoundaryResponse,
   normalizeNotFoundDocument,
   releaseMaintenanceEnabled,
   releaseMaintenanceResponse,
 } from "./security";
-import { handleTurnstileConfigRequest, type TurnstileEnv } from "./turnstile";
-import { enforceRequestRateLimit, type RateLimitEnv } from "./rate-limit";
+import { handleTurnstileConfigRequest } from "./turnstile";
+import { enforceRequestRateLimit } from "./rate-limit";
 import {
   apiRoutePolicyForRequest,
   apiRouteRejectionForRequest,
@@ -57,24 +57,8 @@ import {
   requestLogContext,
   runWithLogContext,
   safeErrorFields,
-  type ObservabilityEnv,
 } from "./observability";
 import { runScheduledLane, scheduledLaneFor } from "./scheduled.ts";
-
-interface AssetFetcher {
-  fetch(request: Request): Promise<Response>;
-}
-
-interface Env extends TripApiEnv, TurnstileEnv, RateLimitEnv, ObservabilityEnv, AiReviewQueueEnv, PrivacyExportEnv {
-  ASSETS: AssetFetcher;
-  PUBLIC_DISCUSSIONS_ENABLED?: string;
-  RELEASE_MAINTENANCE_MODE?: string;
-}
-
-interface ExecutionContext {
-  waitUntil(promise: Promise<unknown>): void;
-  passThroughOnException(): void;
-}
 
 // Image security config. SVG sources with .svg extension auto-skip the
 // optimization endpoint on the client side (served directly, no proxy).
@@ -83,7 +67,7 @@ interface ExecutionContext {
 // const imageConfig: ImageConfig = { dangerouslyAllowSVG: true };
 
 const worker = {
-  async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
+  async fetch(request: Request, env: CloudflareEnv, ctx: ExecutionContext): Promise<Response> {
     const logContext = await requestLogContext(request, env);
     return runWithLogContext(logContext, async () => {
       const started = performance.now();
@@ -94,19 +78,21 @@ const worker = {
         logEvent("error", "http.request.exception", safeErrorFields(error));
         response = internalErrorResponse(request);
       }
-      const hardened = attachRequestId(hardenResponse(response, request), logContext.requestId);
-      logRequestCompleted(hardened, performance.now() - started);
-      return hardened;
+      const hardened = hardenResponse(response, request);
+      const policyApplied = await applyContentSecurityPolicy(hardened, request);
+      const correlated = attachRequestId(policyApplied, logContext.requestId);
+      logRequestCompleted(correlated, performance.now() - started);
+      return correlated;
     });
   },
 
-  async scheduled(controller: unknown, env: Env, ctx: ExecutionContext) {
+  async scheduled(controller: unknown, env: CloudflareEnv, ctx: ExecutionContext) {
     if (releaseMaintenanceEnabled(env)) return;
     const lane = scheduledLaneFor(controller);
     ctx.waitUntil(observeScheduledTask(env, lane, () => runScheduledLane(lane, env, sites)));
   },
 
-  async queue(batch: QueueBatchLike, env: Env) {
+  async queue(batch: QueueBatchLike, env: CloudflareEnv) {
     const aiReviewMessages: QueueMessageLike[] = [];
     const privacyExportMessages: QueueMessageLike[] = [];
     for (const message of batch.messages) {
@@ -135,7 +121,10 @@ const worker = {
   },
 };
 
-async function handleFetchRequest(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
+async function handleFetchRequest(request: Request, env: CloudflareEnv, ctx: ExecutionContext): Promise<Response> {
+  const rejectedHost = hostBoundaryResponse(request, env);
+  if (rejectedHost) return rejectedHost;
+
   const redirect = canonicalRedirect(request);
   if (redirect) return redirect;
 
@@ -219,7 +208,7 @@ function routePolicyUnavailableResponse(): Response {
 
 async function routeRequest(
   request: Request,
-  env: Env,
+  env: CloudflareEnv,
   ctx: ExecutionContext,
   apiPolicy: ApiRoutePolicy | null,
   authenticatedSession: AuthenticatedSession | null,
@@ -288,7 +277,7 @@ async function routeRequest(
   }
 
   if (url.pathname === "/_vinext/image") {
-    const images = env.IMAGES;
+    const images = (env as TripApiEnv).IMAGES;
     if (!images) return new Response("Image optimization is unavailable.", { status: 404 });
     const allowedWidths = [...DEFAULT_DEVICE_SIZES, ...DEFAULT_IMAGE_SIZES];
     return handleImageOptimization(request, {

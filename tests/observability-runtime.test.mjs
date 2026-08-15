@@ -25,6 +25,7 @@ async function contextFor(path, options = {}) {
       "CF-Ray": "1234567890abcdef-SJC",
     },
   }), {
+    DEPLOYMENT_ENVIRONMENT: "production",
     OBSERVABILITY_PSEUDONYM_SECRET: SECRET,
     CF_VERSION_METADATA: { id: "version-safe-123" },
     LOG_LEVEL: options.logLevel,

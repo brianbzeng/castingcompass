@@ -29,7 +29,24 @@ test("server-renders the CastingCompass product shell", async () => {
   assert.equal(response.status, 200);
   assert.match(response.headers.get("content-type") ?? "", /^text\/html\b/i);
 
+  const csp = response.headers.get("content-security-policy-report-only") ?? "";
+  const cspNonce = csp.match(/'nonce-([a-f0-9]{32})'/)?.[1];
+  assert.ok(cspNonce, "rendered response must advertise a 128-bit CSP nonce");
+  assert.match(csp, /script-src 'self' 'nonce-[a-f0-9]{32}' 'strict-dynamic'/);
+  assert.match(csp, /script-src-attr 'none'/);
+  assert.match(csp, /style-src-attr 'none'/);
+
+  const secondResponse = await render();
+  const secondCsp = secondResponse.headers.get("content-security-policy-report-only") ?? "";
+  const secondCspNonce = secondCsp.match(/'nonce-([a-f0-9]{32})'/)?.[1];
+  assert.ok(secondCspNonce, "a second rendered response must advertise a 128-bit CSP nonce");
+  assert.notEqual(secondCspNonce, cspNonce, "CSP nonces must be unique per response");
+
   const html = await response.text();
+  assert.doesNotMatch(html, /<(?:script|style)\b(?![^>]*\bnonce=)[^>]*>/i);
+  for (const occurrence of html.matchAll(/<(?:script|style)\b[^>]*\bnonce="([^"]+)"/gi)) {
+    assert.equal(occurrence[1], cspNonce);
+  }
   assert.match(html, /<title>CastingCompass — California halibut opportunity planner(?: · CastingCompass)?<\/title>/i);
   assert.match(html, /Find the water/);
   assert.match(html, /California halibut/);

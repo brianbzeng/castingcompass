@@ -176,6 +176,7 @@ export function validatePolicy(
   ], "Application boundary");
   exactValue(policy.production, productionIdentity(productionConfig), "Production resource inventory");
   exactValue(policy.feature_flags, {
+    DEPLOYMENT_ENVIRONMENT: "staging",
     PUBLIC_DISCUSSIONS_ENABLED: "false",
     TRIP_PHOTO_UPLOADS_ENABLED: "false",
     TURNSTILE_ENABLED: "false",
@@ -295,6 +296,9 @@ export function validateConfiguration(config, mode, policy = loadPolicy()) {
   }, "Observability boundary", "configuration-invalid");
 
   const host = validateTargetHost(config.routes[0].pattern, policy);
+  if (config.vars.STAGING_HOSTNAME !== host) {
+    refuse("configuration-invalid", "Staging hostname binding must match the exact custom domain");
+  }
   const database = config.d1_databases[0];
   if (database.database_name === policy.production.database_name
     || database.database_id === policy.production.database_id) {
@@ -329,6 +333,7 @@ export function validateConfigurationPair(directConfig, queueConfig, policy = lo
     compatibility_date: value.config.compatibility_date,
     compatibility_flags: value.config.compatibility_flags,
     workers_dev: value.config.workers_dev,
+    preview_urls: value.config.preview_urls,
     target_origin: value.targetOrigin,
     rules: value.config.rules,
     assets: value.config.assets,
@@ -493,6 +498,7 @@ function privateJsonWrite(path, value, maximumBytes) {
 function template(mode, policy) {
   const vars = {
     ...policy.feature_flags,
+    STAGING_HOSTNAME: "replace-with-isolated-host.invalid",
     AI_REVIEW_QUEUE_ENABLED: mode === "durable_queue" ? "true" : "false",
     AI_REVIEW_EXERCISE_ID: "sec_00000000000000000000000000000000",
     AI_REVIEW_EXERCISE_ACCOUNT_HASH: "0".repeat(64),
@@ -506,6 +512,7 @@ function template(mode, policy) {
     compatibility_date: policy.application.compatibility_date,
     compatibility_flags: policy.application.compatibility_flags,
     workers_dev: false,
+    preview_urls: false,
     vars,
     ratelimits: policy.rate_limits.map((entry, index) => ({
       name: entry.name,

@@ -89,7 +89,7 @@ export RELEASE_AUTHORIZATION_FILE=/PRIVATE/ENCRYPTED/PATH/EXACT_ACTION.json
 npm run verify:production-change -- --action deploy:maintenance
 ```
 
-Deploy commands run the same verifier, confirm exact npm 10.9.8 and Wrangler 4.114.0, reinstall
+Deploy commands run the same verifier, confirm exact npm 10.9.8 and Wrangler 4.123.0, reinstall
 the locked graph with lifecycle scripts disabled, rebuild the Cloudflare target, and invoke
 Wrangler without a shell. The wrapper rechecks the installed tooling, clean source, packet,
 action, and expiry after the build and immediately before deployment. D1 mutations likewise

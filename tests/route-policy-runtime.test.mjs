@@ -672,6 +672,7 @@ test("the production bundle dispatches representative API policies without stati
   const { default: worker } = await import(workerUrl.href);
   let assetFetches = 0;
   const baseEnv = {
+    DEPLOYMENT_ENVIRONMENT: "production",
     ASSETS: {
       fetch: async () => {
         assetFetches += 1;

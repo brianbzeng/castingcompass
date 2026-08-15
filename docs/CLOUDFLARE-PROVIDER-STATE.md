@@ -46,9 +46,10 @@ rate-limit bindings. The hold comparison deliberately expects deployed
 Unlisted `secret_text` bindings are ignored for parity and never enter the receipt.
 
 Even a matching maintenance candidate cannot make `production_hold_proven` or `release_ready`
-true. A separate live-host maintenance verifier must prove the canonical and direct Worker hosts,
-and private release evidence must bind the exact reviewed commit to the exact deployment and
-version. Provider metadata is useful context but is not sufficient source provenance.
+true. A separate live-host maintenance verifier must prove the canonical custom domain, intended
+alias redirects, and the absence of default/version-preview Worker entry points. Private release
+evidence must bind the exact reviewed commit to the exact deployment and version. Provider
+metadata is useful context but is not sufficient source provenance.
 
 ## 2026-07-19 reconciliation
 

@@ -3197,7 +3197,7 @@ interface ProcessedTripPhoto {
 }
 
 async function processPhoto(
-  entry: FormDataEntryValue | null,
+  entry: string | File | null,
   tripId: string,
   accountId: string | null,
   env: TripApiEnv,

@@ -11,6 +11,7 @@
     "compatibility_date",
     "compatibility_flags",
     "workers_dev",
+    "preview_urls",
     "vars",
     "ratelimits",
     "version_metadata",
@@ -35,10 +36,13 @@
       "items": { "type": "string", "minLength": 1, "maxLength": 64 }
     },
     "workers_dev": { "const": false },
+    "preview_urls": { "const": false },
     "vars": {
       "type": "object",
       "additionalProperties": false,
       "required": [
+        "DEPLOYMENT_ENVIRONMENT",
+        "STAGING_HOSTNAME",
         "PUBLIC_DISCUSSIONS_ENABLED",
         "TRIP_PHOTO_UPLOADS_ENABLED",
         "TURNSTILE_ENABLED",
@@ -52,6 +56,8 @@
         "SECURITY_EXERCISE_ID"
       ],
       "properties": {
+        "DEPLOYMENT_ENVIRONMENT": { "const": "staging" },
+        "STAGING_HOSTNAME": { "type": "string", "minLength": 4, "maxLength": 253 },
         "PUBLIC_DISCUSSIONS_ENABLED": { "const": "false" },
         "TRIP_PHOTO_UPLOADS_ENABLED": { "const": "false" },
         "TURNSTILE_ENABLED": { "const": "false" },

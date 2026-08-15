@@ -135,12 +135,11 @@ that could become a privacy, integrity, or availability incident.
 - **Residual risk:** Advisory and scanner databases lag new issues; a correctly named package
   can still be compromised. The minimatch 3 development edge and its August 1 exception were
   removed, but the new exact lint composition must continue to prove equivalent-or-stronger rule
-  coverage. The owner-bound CPython image exceptions require re-review when Python 3.13.15 is
-  scheduled on 2026-08-04 and expire 2026-08-08.
+  coverage. Python 3.13.15 removed the prior CPython image exception set; the image policy now
+  rejects every unreviewed High or Critical finding and watches the final 3.13.16 bugfix release.
 - **Next gate:** Keep both npm graphs at zero through the daily verifier, independently review
   lint-toolchain updates for coverage as well as advisories, and adopt/natively verify the first
-  fixed stable official Python image. Fail closed at the image deadline rather than silently
-  extending an exception.
+  fixed stable official Python image promptly and keep native AMD64/ARM64 evidence current.
 
 ### L04 — Static application security testing
 
@@ -150,8 +149,10 @@ that could become a privacy, integrity, or availability incident.
 - **State:** provider-evidenced.
 - **Evidence:** GitHub-managed CodeQL covers Actions, JavaScript/TypeScript, and Python; required
   `main` protection binds those analyses to pull requests; repository security and runtime
-  tests cover business invariants that SAST cannot infer. The current open code-scanning alert
-  count is zero.
+  tests cover business invariants that SAST cannot infer. The Worker is checked against
+  Wrangler-generated runtime types, rejects every non-canonical production host before assets,
+  D1, or request-body work, and applies a unique per-response nonce plus a complete report-only
+  CSP to rendered script and style elements. The current open code-scanning alert count is zero.
 - **Alert:** Required CodeQL check or GitHub code-scanning alert.
 - **Recovery:** Block the PR or deployment, remediate the source, add a regression test, and let
   the alert close as fixed rather than dismissing a real defect.
@@ -356,7 +357,8 @@ that could become a privacy, integrity, or availability incident.
 | --- | --- | --- | --- |
 | Session theft, fixation, credential stuffing, or recovery abuse | L06, L07, L11, L13 | Opaque rotated cookie sessions, same-origin mutations, generic auth behavior, exact D1 ceilings | Live cookie/revocation/email evidence, active edge ceilings, alerts |
 | IDOR/BOLA or client-side privilege escalation | L04, L07, L10 | Server-derived identity, owner predicates, deny-by-default route inventory, cross-account tests | Authorized staging DAST; future privileged-role design |
-| SQL/XSS/multipart/parser/prompt injection | L01, L04, L08, L10 | Allowlists, bounds, parameter binding, contextual encoding, no-tools exact-schema AI boundary | Deployed-composition DAST and provider-edge evidence |
+| SQL/XSS/multipart/parser/prompt injection | L01, L04, L08, L10 | Allowlists, bounds, parameter binding, contextual encoding, nonce-bearing report-only CSP, no-tools exact-schema AI boundary | Deployed-composition DAST, CSP-event capture, and provider-edge evidence |
+| Host-header, preview URL, or default Worker subdomain bypass | L04, L07, L12 | Host boundary is the first Worker branch; production accepts only the intended domains; staging requires one exact non-production hostname; `workers_dev` and preview URLs are disabled | Provider-state and deployed-host verification for the exact release |
 | Secret, dependency, build, or release compromise | L02, L03, L04, L05, L09 | Secret scanning, exact locks, dependency/image gates, CodeQL, signed provenance, protected main | Production IAM/key custody, scanner lag, exception expiry |
 | Model output publishing or performing a privileged action | L01, L05, L07, L08 | Private bounded draft only; separate auditable human approval; no model tools or authority | Guarded production migration, legacy audit, live smoke evidence |
 | Privacy deletion, wrong-object deletion, restore, migration, or backup failure | L05, L07, L09, L13 | Atomic active-data removal; exact lease/terminal receipts; store-bound locator-hash verification before R2; atomic export-locator/task finalization; tombstones, restore suppression, synthetic drill | Production migration/binding/alert/custody evidence and independent review |

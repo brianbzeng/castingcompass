@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
-import { readFileSync } from "node:fs";
-import { dirname, resolve } from "node:path";
+import { existsSync, readFileSync } from "node:fs";
+import { dirname, isAbsolute, resolve, win32 as win32Path } from "node:path";
 import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 
@@ -248,8 +248,42 @@ function parseReport(text, label) {
   }
 }
 
+export function npmAuditInvocation({
+  environment = process.env,
+  nodeExecutable = process.execPath,
+  fileExists = existsSync,
+  platform = process.platform,
+} = {}) {
+  const pathApi = platform === "win32"
+    ? win32Path
+    : { dirname, isAbsolute, resolve };
+  const environmentCli = environment.npm_execpath;
+  const candidates = [
+    typeof environmentCli === "string" && pathApi.isAbsolute(environmentCli) ? environmentCli : undefined,
+    pathApi.resolve(pathApi.dirname(nodeExecutable), "node_modules", "npm", "bin", "npm-cli.js"),
+    pathApi.resolve(pathApi.dirname(nodeExecutable), "..", "lib", "node_modules", "npm", "bin", "npm-cli.js"),
+  ].filter(Boolean);
+  const npmCli = candidates.find((candidate) => fileExists(candidate));
+  if (npmCli) {
+    return {
+      command: nodeExecutable,
+      argumentsPrefix: [npmCli],
+    };
+  }
+  return {
+    command: platform === "win32" ? "npm.cmd" : "npm",
+    argumentsPrefix: [],
+  };
+}
+
 function runAudit(argumentsList, label) {
-  const result = spawnSync("npm", ["audit", ...argumentsList, "--json"], {
+  const invocation = npmAuditInvocation();
+  const result = spawnSync(invocation.command, [
+    ...invocation.argumentsPrefix,
+    "audit",
+    ...argumentsList,
+    "--json",
+  ], {
     cwd: ROOT,
     encoding: "utf8",
     maxBuffer: 16 * 1024 * 1024,

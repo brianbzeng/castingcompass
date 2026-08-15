@@ -1,14 +1,18 @@
 import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
 import test from "node:test";
 
 import {
   API_MUTATION_BODY_LIMIT,
+  CSP_REPORT_ONLY_HEADER,
   TRIP_MULTIPART_BODY_LIMIT,
+  applyContentSecurityPolicy,
   bodyLimitForRequest,
   canonicalRedirect,
   guardRequestBody,
   hardenResponse,
   healthResponse,
+  hostBoundaryResponse,
   normalizeNotFoundDocument,
   releaseMaintenanceEnabled,
   releaseMaintenanceResponse,
@@ -38,6 +42,142 @@ test("canonical redirects preserve path and query without redirecting preview ho
   assert.equal(canonicalRedirect(new Request(`${ORIGIN}/privacy`)), null);
   assert.equal(canonicalRedirect(new Request("https://contourcast-halibut.workers.dev/privacy")), null);
   assert.equal(canonicalRedirect(new Request("https://example.com/privacy")), null);
+});
+
+test("deployment host boundary admits only exact environment hosts before routing", async () => {
+  const production = { DEPLOYMENT_ENVIRONMENT: "production" };
+  for (const hostname of [
+    "castingcompass.com",
+    "www.castingcompass.com",
+    "castcompass.brianbzeng.com",
+    "contourcast.brianbzeng.com",
+  ]) {
+    assert.equal(hostBoundaryResponse(new Request(`https://${hostname}/api/health`), production), null);
+  }
+
+  for (const url of [
+    "https://contourcast-halibut.workers.dev/api/health",
+    "https://contourcast-halibut.preview.workers.dev/api/health",
+    "https://example.com/api/health",
+    "https://isolated.example.test/api/health",
+  ]) {
+    const response = hostBoundaryResponse(new Request(url), production);
+    assert.equal(response?.status, 421);
+    assert.equal(response?.headers.get("Cache-Control"), "no-store");
+    assert.equal(await response?.text(), "Misdirected Request");
+  }
+
+  const staging = { DEPLOYMENT_ENVIRONMENT: "staging", STAGING_HOSTNAME: "isolated.example.test" };
+  assert.equal(hostBoundaryResponse(new Request("https://isolated.example.test/"), staging), null);
+  assert.equal(hostBoundaryResponse(new Request(`${ORIGIN}/`), staging)?.status, 421);
+  assert.equal(hostBoundaryResponse(new Request("http://isolated.example.test/"), staging)?.status, 421);
+  assert.equal(hostBoundaryResponse(new Request("https://preview.workers.dev/"), {
+    ...staging,
+    STAGING_HOSTNAME: "preview.workers.dev",
+  })?.status, 421);
+
+  assert.equal(hostBoundaryResponse(new Request("http://localhost/"), {}), null);
+  assert.equal(hostBoundaryResponse(new Request(`${ORIGIN}/`), {})?.status, 421);
+  assert.equal(hostBoundaryResponse(new Request(`${ORIGIN}/`), {
+    DEPLOYMENT_ENVIRONMENT: "unexpected",
+  })?.status, 421);
+});
+
+test("the host boundary executes before redirects, maintenance, abuse controls, and handlers", async () => {
+  const source = await readFile(new URL("../worker/index.ts", import.meta.url), "utf8");
+  const entry = source.indexOf("async function handleFetchRequest(");
+  const hostBoundary = source.indexOf("hostBoundaryResponse(request, env)", entry);
+  const redirect = source.indexOf("canonicalRedirect(request)", entry);
+  const maintenance = source.indexOf("releaseMaintenanceResponse(request, env)", entry);
+  const rateLimit = source.indexOf("enforceRequestRateLimit(request, env)", entry);
+  const routeRejection = source.indexOf("apiRouteRejectionForRequest(request)", entry);
+  const bodyGuard = source.indexOf("guardRequestBody(request)", entry);
+  const dispatch = source.indexOf("routeRequest(routedRequest", entry);
+
+  assert.ok(entry >= 0);
+  assert.ok(hostBoundary > entry);
+  assert.ok(hostBoundary < redirect);
+  assert.ok(redirect < maintenance);
+  assert.ok(maintenance < rateLimit);
+  assert.ok(rateLimit < routeRejection);
+  assert.ok(routeRejection < bodyGuard);
+  assert.ok(bodyGuard < dispatch);
+});
+
+test("production exposure is disabled and the generated binding contract stays checked", async () => {
+  const config = JSON.parse(await readFile(new URL("../wrangler.jsonc", import.meta.url), "utf8"));
+  assert.equal(config.workers_dev, false);
+  assert.equal(config.preview_urls, false);
+  assert.equal(config.vars.DEPLOYMENT_ENVIRONMENT, "production");
+  assert.equal(config.vars.STAGING_HOSTNAME, "");
+  assert.deepEqual(config.routes.map(({ pattern }) => pattern), [
+    "castingcompass.com",
+    "www.castingcompass.com",
+    "castcompass.brianbzeng.com",
+    "contourcast.brianbzeng.com",
+  ]);
+
+  const generated = await readFile(new URL("../worker-configuration.d.ts", import.meta.url), "utf8");
+  assert.match(generated, /interface CloudflareEnv extends __BaseEnv_CloudflareEnv/);
+  for (const binding of [
+    "DB",
+    "ASSETS",
+    "CF_VERSION_METADATA",
+    "AUTH_RATE_LIMITER",
+    "EMAIL_RATE_LIMITER",
+    "WRITE_RATE_LIMITER",
+    "SENSITIVE_RATE_LIMITER",
+    "READ_RATE_LIMITER",
+    "AI_PROVIDER_RATE_LIMITER",
+    "DEPLOYMENT_ENVIRONMENT",
+    "STAGING_HOSTNAME",
+  ]) {
+    assert.match(generated, new RegExp(`\\b${binding}:`));
+  }
+  const manifest = JSON.parse(await readFile(new URL("../package.json", import.meta.url), "utf8"));
+  assert.match(manifest.scripts.typecheck, /types:cloudflare:check/);
+  assert.match(manifest.scripts.typecheck, /tsconfig\.worker\.json/);
+});
+
+test("HTML receives one dynamic nonce and a complete non-breaking report-only CSP", async () => {
+  const original = new Response(
+    '<!doctype html><html><head><style>body{color:green}</style></head><body><script>globalThis.ready=true</script><script type="application/ld+json">{}</script></body></html>',
+    {
+      headers: {
+        "Content-Type": "text/html; charset=utf-8",
+        "Content-Length": "10",
+      },
+    },
+  );
+  const secured = await applyContentSecurityPolicy(original, new Request(`${ORIGIN}/`));
+  const policy = secured.headers.get(CSP_REPORT_ONLY_HEADER) ?? "";
+  const match = policy.match(/'nonce-([a-f0-9]{32})'/);
+  assert.ok(match);
+  const nonce = match[1];
+  assert.match(policy, /default-src 'self'/);
+  assert.match(policy, /script-src 'self' 'nonce-[a-f0-9]{32}' 'strict-dynamic'/);
+  assert.match(policy, /script-src-attr 'none'/);
+  assert.match(policy, /style-src-attr 'none'/);
+  assert.match(policy, /frame-ancestors 'none'/);
+  assert.match(policy, /upgrade-insecure-requests/);
+  assert.doesNotMatch(policy, /'unsafe-inline'|'unsafe-eval'/);
+  assert.equal(secured.headers.has("Content-Length"), false);
+
+  const html = await secured.text();
+  assert.equal([...html.matchAll(/<script\b[^>]*\bnonce="([^"]+)"/gi)].length, 2);
+  assert.equal([...html.matchAll(/<style\b[^>]*\bnonce="([^"]+)"/gi)].length, 1);
+  for (const occurrence of html.matchAll(/<(?:script|style)\b[^>]*\bnonce="([^"]+)"/gi)) {
+    assert.equal(occurrence[1], nonce);
+  }
+
+  const second = await applyContentSecurityPolicy(
+    new Response("<!doctype html><script></script>", { headers: { "Content-Type": "text/html" } }),
+    new Request(`${ORIGIN}/`),
+  );
+  assert.notEqual(second.headers.get(CSP_REPORT_ONLY_HEADER)?.match(/'nonce-([a-f0-9]{32})'/)?.[1], nonce);
+
+  const json = new Response("{}", { headers: { "Content-Type": "application/json" } });
+  assert.equal(await applyContentSecurityPolicy(json, new Request(`${ORIGIN}/api/health`)), json);
 });
 
 test("health endpoint reports D1 readiness, Worker and staging exercise identity, and supports HEAD", async () => {

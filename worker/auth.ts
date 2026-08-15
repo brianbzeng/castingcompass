@@ -4826,7 +4826,7 @@ function assertSameOrigin(request: Request) {
   }
 }
 
-async function readJson(request: Request) {
+async function readJson(request: Pick<Request, "headers" | "json">) {
   if (!(request.headers.get("Content-Type") ?? "").toLowerCase().startsWith("application/json")) {
     throw new AuthError(415, "unsupported_media_type", "Send account details as JSON.");
   }

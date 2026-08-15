@@ -139,5 +139,12 @@ resources and undeclared bindings and requires distinct direct and durable-Queue
 the authenticated plan can be written. Its local receipt is configuration evidence only, not
 provider, deployment, scan, or production-readiness evidence.
 
+The same exact staging build emits a nonce-bearing `Content-Security-Policy-Report-Only`
+header. Browser exercises must record `securitypolicyviolation` events privately, classify
+each effective directive/resource class without retaining sensitive URLs, and fail acceptance
+for unexplained executable-content, framing, object, base, form, mixed-content, or unexpected
+network destinations. Report-only evidence is not permission to promote enforcement; that is a
+separate reviewed release after the outgoing frontend has been tested.
+
 Never use this runner as permission to load-test or penetration-test a host. Written owner
 authorization, the isolated staging boundary, and applicable law/provider rules remain required.

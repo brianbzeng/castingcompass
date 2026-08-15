@@ -75,7 +75,7 @@ async function acceptedEvidence(platform = "linux/arm64") {
         db: {
           status: {
             valid: true,
-            built: "2026-07-17T06:57:18Z",
+            built: "2026-08-14T06:57:18Z",
             schemaVersion: "v6.1.9",
             from: "https://grype.anchore.io/databases/test.tar.zst?checksum=sha256:test",
           },
@@ -85,6 +85,40 @@ async function acceptedEvidence(platform = "linux/arm64") {
       matches,
     },
   };
+}
+
+function policyWithReviewedException() {
+  const reviewed = structuredClone(policy);
+  reviewed.highSeverityExceptions = [{
+    vulnerability: "CVE-2026-99998",
+    namespace: "nvd:cpe",
+    package: "python",
+    version: policy.runtime.python,
+    type: "binary",
+    severity: "High",
+    expires: reviewed.exceptionReview.renewalDeadline,
+    module: "tarfile",
+    reason: "Synthetic exact exception used only to prove the fail-closed expiry and stable-fix contracts.",
+    source: "https://github.com/python/cpython/issues/99998",
+  }];
+  return reviewed;
+}
+
+function addReviewedFinding(evidence, reviewed, fixVersions = []) {
+  const exception = reviewed.highSeverityExceptions[0];
+  evidence.scan.matches.push({
+    artifact: {
+      name: exception.package,
+      version: exception.version,
+      type: exception.type,
+    },
+    vulnerability: {
+      id: exception.vulnerability,
+      namespace: exception.namespace,
+      severity: exception.severity,
+      fix: { versions: fixVersions, state: fixVersions.length > 0 ? "fixed" : "" },
+    },
+  });
 }
 
 test("native image workflow pins scanners and fails closed on full findings", async () => {
@@ -125,7 +159,7 @@ test("API image evidence binds packages, licenses, mitigations and reviewed find
     ...evidence,
     policy,
     platform: "linux/arm64",
-    now: new Date("2026-07-18T12:00:00Z"),
+    now: new Date("2026-08-15T12:00:00Z"),
   });
   assert.equal(summary.inventory.apkPackages, 29);
   assert.equal(summary.sourceCommit, "a".repeat(40));
@@ -135,10 +169,18 @@ test("API image evidence binds packages, licenses, mitigations and reviewed find
     Negligible: 0,
     Low: 0,
     Medium: 0,
-    High: 3,
+    High: 1,
     Critical: 0,
   });
-  assert.equal(summary.vulnerabilities.highSeverity.length, 3);
+  assert.deepEqual(summary.vulnerabilities.highSeverity, [{
+    vulnerability: "CVE-2026-15308",
+    namespace: "nvd:cpe",
+    package: "python",
+    version: "3.13.15",
+    type: "binary",
+    severity: "High",
+    fix: { versions: ["3.15.0"], state: "fixed" },
+  }]);
 });
 
 test("API image evidence binds the architecture-specific runtime marker", async () => {
@@ -147,10 +189,10 @@ test("API image evidence binds the architecture-specific runtime marker", async 
     ...evidence,
     policy,
     platform: "linux/amd64",
-    now: new Date("2026-07-18T12:00:00Z"),
+    now: new Date("2026-08-15T12:00:00Z"),
   });
   assert.deepEqual(summary.inventory.missingLicenseReviews, [
-    "apk:-python-rundeps@20260616.002554",
+    "apk:-python-rundeps@20260810.210928",
   ]);
 });
 
@@ -169,56 +211,68 @@ test("API image evidence rejects unreviewed Critical findings", async () => {
     ...evidence,
     policy,
     platform: "linux/arm64",
-    now: new Date("2026-07-18T12:00:00Z"),
+    now: new Date("2026-08-15T12:00:00Z"),
   }), /unshippable Critical finding/);
 });
 
 test("API image evidence rejects expired exceptions and stable-series fixes", async () => {
+  const expired = policyWithReviewedException();
   const evidence = await acceptedEvidence();
+  evidence.scan.matches = [];
+  addReviewedFinding(evidence, expired);
+  evidence.scan.descriptor.db.status.built = "2026-10-10T00:00:00Z";
   assert.throws(() => verifyApiImageEvidence({
     ...evidence,
-    policy,
+    policy: expired,
     platform: "linux/arm64",
-    now: new Date("2026-08-09T00:00:00Z"),
+    now: new Date("2026-10-11T00:00:00Z"),
   }), /exception expired/);
 
-  evidence.scan.matches[0].vulnerability.fix.versions = ["3.13.15"];
+  const stableFix = policyWithReviewedException();
+  const fixedEvidence = await acceptedEvidence();
+  fixedEvidence.scan.matches = [];
+  addReviewedFinding(fixedEvidence, stableFix, ["3.13.16"]);
   assert.throws(() => verifyApiImageEvidence({
-    ...evidence,
-    policy,
+    ...fixedEvidence,
+    policy: stableFix,
     platform: "linux/arm64",
-    now: new Date("2026-07-18T12:00:00Z"),
-  }), /fixed by stable Python 3\.13\.15/);
+    now: new Date("2026-08-15T12:00:00Z"),
+  }), /fixed by stable Python 3\.13\.16/);
 });
 
 test("API image evidence rejects unowned or overlong exception renewals", async () => {
-  const evidence = await acceptedEvidence();
-  const unowned = structuredClone(policy);
+  const unowned = policyWithReviewedException();
   unowned.exceptionReview.owner = "";
+  const unownedEvidence = await acceptedEvidence();
+  addReviewedFinding(unownedEvidence, unowned);
   assert.throws(() => verifyApiImageEvidence({
-    ...evidence,
+    ...unownedEvidence,
     policy: unowned,
     platform: "linux/arm64",
-    now: new Date("2026-07-18T12:00:00Z"),
+    now: new Date("2026-08-15T12:00:00Z"),
   }), /review owner is invalid/);
 
-  const overlong = structuredClone(policy);
-  overlong.exceptionReview.renewalDeadline = "2026-08-20";
-  for (const exception of overlong.highSeverityExceptions) exception.expires = "2026-08-20";
+  const overlong = policyWithReviewedException();
+  overlong.exceptionReview.renewalDeadline = "2026-10-20";
+  for (const exception of overlong.highSeverityExceptions) exception.expires = "2026-10-20";
+  const overlongEvidence = await acceptedEvidence();
+  addReviewedFinding(overlongEvidence, overlong);
   assert.throws(() => verifyApiImageEvidence({
-    ...evidence,
+    ...overlongEvidence,
     policy: overlong,
     platform: "linux/arm64",
-    now: new Date("2026-07-18T12:00:00Z"),
+    now: new Date("2026-08-15T12:00:00Z"),
   }), /exceeds the bounded post-release grace/);
 
-  const futureReview = structuredClone(policy);
-  futureReview.reviewedAt = "2026-07-19";
+  const futureReview = policyWithReviewedException();
+  futureReview.reviewedAt = "2026-08-16";
+  const futureEvidence = await acceptedEvidence();
+  addReviewedFinding(futureEvidence, futureReview);
   assert.throws(() => verifyApiImageEvidence({
-    ...evidence,
+    ...futureEvidence,
     policy: futureReview,
     platform: "linux/arm64",
-    now: new Date("2026-07-18T12:00:00Z"),
+    now: new Date("2026-08-15T12:00:00Z"),
   }), /review date is in the future/);
 });
 
@@ -231,7 +285,7 @@ test("API image evidence rejects packages without license reconciliation", async
     ...evidence,
     policy,
     platform: "linux/arm64",
-    now: new Date("2026-07-18T12:00:00Z"),
+    now: new Date("2026-08-15T12:00:00Z"),
   }), /has no reviewed license evidence/);
 });
 
@@ -248,6 +302,6 @@ test("API image evidence rejects an additional otherwise-allowed APK package", a
     ...evidence,
     policy,
     platform: "linux/arm64",
-    now: new Date("2026-07-18T12:00:00Z"),
+    now: new Date("2026-08-15T12:00:00Z"),
   }), /does not contain exactly 29 reviewed APK packages/);
 });

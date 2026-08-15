@@ -137,14 +137,14 @@ npm run release:cloudflare:maintenance
 ```
 
 Record the maintenance deployment ID and version ID and confirm exactly one version receives
-`100%` of traffic. Then prove both the canonical and direct `workers.dev` hosts identify that
-version, report maintenance active, serve the marked browser `503`, keep `robots.txt` available,
-and block both read and mutation APIs:
+`100%` of traffic. Then prove the canonical custom domain identifies that version, reports
+maintenance active, serves the marked browser `503`, keeps `robots.txt` available, and blocks
+both read and mutation APIs. The release configuration must report `workers_dev=false` and
+`preview_urls=false`; the former default/preview URLs must not serve an application response:
 
 ```sh
 npm run verify:release-maintenance -- \
   --base-url https://castingcompass.com \
-  --base-url https://WORKER_SUBDOMAIN.workers.dev \
   --expected-worker-version-id MAINTENANCE_VERSION_ID
 ```
 
@@ -237,11 +237,15 @@ npm run release:cloudflare
 ```
 
 Record the final deployment and version IDs and prove one version has `100%` traffic. Run the
-all-host command in [Discussion moderation](DISCUSSION-MODERATION.md) with
+custom-domain command in [Discussion moderation](DISCUSSION-MODERATION.md) with
 `--expected-worker-version-id FINAL_VERSION_ID`. Confirm `/api/health` reports
 `releaseMaintenance: false`, every discussion endpoint is empty and non-cacheable, aliases
 are exact `308` redirects, protected account mutations enforce the current legal version, and
 normal trip start/completion succeeds with the species contract.
+
+Repeat the provider check for `workers_dev=false`, `preview_urls=false`, and the exact
+production host allowlist. A known default or version-preview URL must return Cloudflare's
+non-application response and must not expose the Worker version, API headers, assets, or D1.
 
 Then complete the production-shaped synthetic containment, account deletion/export,
 encrypted backup, restore, alerts, edge rate limits, Turnstile default-off/activation, privacy,

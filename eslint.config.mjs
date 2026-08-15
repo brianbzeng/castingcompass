@@ -87,6 +87,9 @@ export default defineConfig([
     "out/**",
     "build/**",
     "dist/**",
+    ".pytest_cache/**",
+    ".wrangler/**",
     "next-env.d.ts",
+    "worker-configuration.d.ts",
   ]),
 ]);

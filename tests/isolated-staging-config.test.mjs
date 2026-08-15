@@ -45,8 +45,10 @@ function configuration(mode = "direct") {
     compatibility_date: policy.application.compatibility_date,
     compatibility_flags: policy.application.compatibility_flags,
     workers_dev: false,
+    preview_urls: false,
     vars: {
       ...policy.feature_flags,
+      STAGING_HOSTNAME: "isolated.example.test",
       AI_REVIEW_QUEUE_ENABLED: mode === "durable_queue" ? "true" : "false",
       AI_REVIEW_EXERCISE_ID: EXERCISE_ID,
       AI_REVIEW_EXERCISE_ACCOUNT_HASH: "a".repeat(64),

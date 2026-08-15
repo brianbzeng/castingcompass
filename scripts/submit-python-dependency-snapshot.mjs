@@ -17,13 +17,13 @@ const MANIFESTS = [
     manifest: "services/api/requirements.txt",
     lock: "services/api/requirements-runtime.lock",
     scope: "runtime",
-    python: "3.13.14",
+    python: "3.13.15",
   },
   {
     manifest: "services/api/requirements-test.in",
     lock: "services/api/requirements-test.lock",
     scope: "development",
-    python: "3.13.14",
+    python: "3.13.15",
   },
   {
     manifest: "pipeline/requirements-ci.in",
