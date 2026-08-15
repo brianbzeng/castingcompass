@@ -32,16 +32,28 @@ interface ExecutionContext {
 const worker = {
   async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
     const url = new URL(request.url);
-
-    if ([
+    const redirectHostnames = new Set([
       "www.castingcompass.com",
       "castcompass.brianbzeng.com",
       "contourcast.brianbzeng.com",
-    ].includes(url.hostname)) {
+    ]);
+
+    if (redirectHostnames.has(url.hostname)) {
       url.protocol = "https:";
       url.hostname = "castingcompass.com";
       url.port = "";
       return Response.redirect(url.toString(), 308);
+    }
+
+    if (url.hostname !== "castingcompass.com") {
+      return new Response("Not Found", {
+        status: 404,
+        headers: {
+          "Cache-Control": "no-store",
+          "Content-Type": "text/plain; charset=utf-8",
+          "X-Content-Type-Options": "nosniff",
+        },
+      });
     }
 
     const discussionResponse = await handleDiscussionRequest(request, env, sites);

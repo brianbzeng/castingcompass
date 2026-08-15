@@ -9,7 +9,7 @@ async function render(path = "/") {
   const { default: worker } = await import(workerUrl.href);
 
   return worker.fetch(
-    new Request(`http://localhost${path}`, {
+    new Request(`https://castingcompass.com${path}`, {
       headers: { accept: "text/html" },
     }),
     {
