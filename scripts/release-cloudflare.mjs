@@ -54,8 +54,8 @@ function isInside(root, candidate) {
     || (!pathFromRoot.startsWith(`..${sep}`) && pathFromRoot !== ".." && !isAbsolute(pathFromRoot));
 }
 
-async function assertOutsideGitCheckout(candidate) {
-  let directory = dirname(candidate);
+async function assertOutsideGitCheckout(candidate, { candidateIsDirectory = false } = {}) {
+  let directory = candidateIsDirectory ? candidate : dirname(candidate);
   while (true) {
     let marker = null;
     try {
@@ -342,6 +342,7 @@ async function verifiedOutputDirectory(releaseRoot, requestedDirectory) {
   if (isInside(releaseRoot, directory) || isInside(POLICY_ROOT, directory)) {
     throw new Error("Wrangler evidence output must be outside every release checkout.");
   }
+  await assertOutsideGitCheckout(directory, { candidateIsDirectory: true });
   const metadata = await stat(directory);
   if ((metadata.mode & 0o077) !== 0
     || (typeof process.getuid === "function" && metadata.uid !== process.getuid())) {

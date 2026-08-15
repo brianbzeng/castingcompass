@@ -331,6 +331,7 @@ test("release wrapper accepts only private evidence output outside every checkou
   const directory = await mkdtemp(join(tmpdir(), "castingcompass-release-evidence-"));
   try {
     let subprocesses = 0;
+    const npmCli = await fakeNpmCli(join(directory, "npm"));
     await assert.rejects(
       releaseCloudflare({
         mode: "normal",
@@ -338,7 +339,7 @@ test("release wrapper accepts only private evidence output outside every checkou
         expectedCommit: HEAD,
         expectedGateCommit: HEAD,
         authorizationFile: "/private/authorization.json",
-        npmCli: await fakeNpmCli(join(directory, "npm")),
+        npmCli,
         environment: {
           PATH: process.env.PATH,
           WRANGLER_OUTPUT_FILE_DIRECTORY: ROOT,
@@ -347,6 +348,28 @@ test("release wrapper accepts only private evidence output outside every checkou
         runner: () => { subprocesses += 1; },
       }),
       /outside every release checkout/,
+    );
+    assert.equal(subprocesses, 0);
+
+    const thirdCheckout = join(directory, "third-checkout");
+    await mkdir(thirdCheckout);
+    await writeFile(join(thirdCheckout, ".git"), "gitdir: ../private-git-metadata\n", { mode: 0o600 });
+    await assert.rejects(
+      releaseCloudflare({
+        mode: "normal",
+        releaseRoot: ROOT,
+        expectedCommit: HEAD,
+        expectedGateCommit: HEAD,
+        authorizationFile: "/private/authorization.json",
+        npmCli,
+        environment: {
+          PATH: process.env.PATH,
+          WRANGLER_OUTPUT_FILE_DIRECTORY: thirdCheckout,
+        },
+        authorizationVerifier: async () => ({ authorized: true }),
+        runner: () => { subprocesses += 1; },
+      }),
+      /outside every Git checkout/,
     );
     assert.equal(subprocesses, 0);
   } finally {
