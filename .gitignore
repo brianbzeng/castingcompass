@@ -12,6 +12,8 @@
 
 # testing
 /coverage
+/playwright-report/
+/test-results/
 .pytest_cache/
 **/.pytest_cache/
 .ruff_cache/

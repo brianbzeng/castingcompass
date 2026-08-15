@@ -20,7 +20,7 @@ export default defineConfig({
     { name: "pixel-7", use: { viewport: { width: 412, height: 915 } } },
   ],
   webServer: {
-    command: "npm run start -- --host 127.0.0.1 --port 4173",
+    command: "node scripts/start-mobile-test-server.mjs",
     url: "http://127.0.0.1:4173",
     reuseExistingServer: !process.env.CI,
     timeout: 120_000,

@@ -41,9 +41,7 @@ test("map overlays do not collide or clip", async ({ page }) => {
   await map.evaluate((element) => element.scrollIntoView({ block: "center", behavior: "instant" }));
   if (!(await centerButton.isVisible())) {
     const loadMap = page.getByRole("button", { name: /open interactive map/i });
-    if (await loadMap.isVisible()) {
-      await loadMap.click().catch(() => undefined);
-    }
+    if (await loadMap.isVisible()) await loadMap.click();
   }
   await expect(centerButton).toBeVisible({ timeout: 15_000 });
 
