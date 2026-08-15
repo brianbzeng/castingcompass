@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "reviewedAt": "2026-07-26",
+  "reviewedAt": "2026-08-15",
   "packageManager": {
     "name": "npm",
     "version": "10.9.8",
@@ -67,8 +67,8 @@
       {
         "path": "node_modules/workerd",
         "name": "workerd",
-        "version": "1.20260722.1",
-        "integrity": "sha512-NycKuc1x2onvsRfGGpM093vRlLFU2zHDAM0+APpccfg4+gZxDGCH27RmdDvkeBuoZyYqgLo3oAfF6re4mvC3vQ==",
+        "version": "1.20260811.1",
+        "integrity": "sha512-kh+FFm55JQ4ssxhHZV9VPdMQq3D1nHxNJgwxMtWGD4dGppJvLySdguTRDKgeNTvgq6heSz+6TTXyPSDGj8Yllw==",
         "development": true,
         "optional": false,
         "execution": "disabled"

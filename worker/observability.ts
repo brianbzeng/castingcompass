@@ -2,8 +2,10 @@ import { AsyncLocalStorage } from "node:async_hooks";
 
 export interface ObservabilityEnv {
   CF_VERSION_METADATA?: { id?: string };
+  DEPLOYMENT_ENVIRONMENT?: string;
   LOG_LEVEL?: string;
   OBSERVABILITY_PSEUDONYM_SECRET?: string;
+  STAGING_HOSTNAME?: string;
 }
 
 type LogLevel = "debug" | "info" | "warn" | "error";
@@ -15,7 +17,7 @@ export interface RequestLogContext {
   traceId: string | null;
   actorSessionKey: string | null;
   workerVersionId: string | null;
-  environment: "development" | "preview" | "production" | "unknown";
+  environment: "development" | "preview" | "production" | "staging" | "unknown";
   method: string;
   route: string;
   minimumLevel: LogLevel;
@@ -100,7 +102,7 @@ export async function requestLogContext(
       ? await hmacSha256(secret, `castingcompass.observability/session/1\u0000${sessionToken}`)
       : null,
     workerVersionId: safeIdentifier(env.CF_VERSION_METADATA?.id),
-    environment: environmentForUrl(url),
+    environment: environmentForRequest(url, env),
     method: safeMethod(request.method),
     route: routeTemplate(url.pathname),
     minimumLevel: configuredLogLevel(env.LOG_LEVEL),
@@ -319,17 +321,21 @@ function configuredLogLevel(value: unknown): LogLevel {
   return value === "debug" || value === "warn" || value === "error" ? value : "info";
 }
 
-function environmentForUrl(url: URL): RequestLogContext["environment"] {
+function environmentForRequest(url: URL, env: ObservabilityEnv): RequestLogContext["environment"] {
   if (url.hostname === "localhost" || url.hostname === "127.0.0.1" || url.hostname === "[::1]") {
     return "development";
   }
   if (url.hostname.endsWith(".workers.dev")) return "preview";
-  if (url.protocol === "https:" && (
+  if (env.DEPLOYMENT_ENVIRONMENT === "production" && url.protocol === "https:" && (
     url.hostname === "castingcompass.com" ||
     url.hostname === "www.castingcompass.com" ||
     url.hostname === "castcompass.brianbzeng.com" ||
     url.hostname === "contourcast.brianbzeng.com"
   )) return "production";
+  if (env.DEPLOYMENT_ENVIRONMENT === "staging" && url.protocol === "https:"
+    && typeof env.STAGING_HOSTNAME === "string" && url.hostname === env.STAGING_HOSTNAME) {
+    return "staging";
+  }
   return "unknown";
 }
 

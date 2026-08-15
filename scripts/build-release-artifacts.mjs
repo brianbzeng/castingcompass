@@ -79,6 +79,8 @@ const sourcePaths = [
   ["water-quality/audits/sf-unmapped-station-candidates.json", "water-quality/audits/sf-unmapped-station-candidates.json"],
   ["water-quality/policy.json", "water-quality/policy.json"],
   ["water-quality/pollution-score-source-policy.json", "water-quality/pollution-score-source-policy.json"],
+  ["tsconfig.worker.json", "tsconfig.worker.json"],
+  ["worker-configuration.d.ts", "worker-configuration.d.ts"],
   ["wrangler.jsonc", "wrangler.jsonc"],
 ];
 const releaseSbomInputs = [
@@ -134,6 +136,8 @@ const releaseSbomInputs = [
   "water-quality/audits/sf-unmapped-station-candidates.json",
   "water-quality/policy.json",
   "water-quality/pollution-score-source-policy.json",
+  "tsconfig.worker.json",
+  "worker-configuration.d.ts",
   "wrangler.jsonc",
 ];
 

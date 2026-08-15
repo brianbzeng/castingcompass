@@ -5,7 +5,7 @@
   "sourceFiles": [
     {
       "file": "worker/auth.ts",
-      "sha256": "0cb432734313985d5a7475eefddc89fae14e6d0547f54f92f984ab4a23cadfd4",
+      "sha256": "9cdfe07eedc1939666a697e4ba9cf0235d6e2cded7d05b116a2b825c6d34169a",
       "prepareCallCount": 133
     },
     {
@@ -20,7 +20,7 @@
     },
     {
       "file": "worker/security.ts",
-      "sha256": "db37941db98248845f541934b1cf0a3e1b725d4f5293dca4e4ab4cb4cd531c7a",
+      "sha256": "8eb142330843d4ea6c20627cb1ee92965e4cf48e3e03dbb515ce7e0322e30c65",
       "prepareCallCount": 1
     },
     {
@@ -35,7 +35,7 @@
     },
     {
       "file": "worker/trips.ts",
-      "sha256": "a88bc9c734a4c9ef25a0ec87a25d2a73830fadc4b6d51fa6925437ec44c37cf8",
+      "sha256": "5c53c129d38a4af6bc06121768bc1f8ee883cb4c446d08fc7a42381df12848a8",
       "prepareCallCount": 41
     },
     {
@@ -4106,7 +4106,7 @@
     {
       "callSiteId": "65c921bfcb06286e79de16d8",
       "file": "worker/security.ts",
-      "line": 68,
+      "line": 182,
       "containingFunction": "healthResponse",
       "occurrence": 1,
       "executionMode": "first",

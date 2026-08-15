@@ -142,7 +142,7 @@ export function validatePolicy(policy) {
   exactKeys(policy.worker, ["name", "config_path", "wrangler_version"], "Worker policy");
   if (policy.worker.name !== "contourcast-halibut"
     || policy.worker.config_path !== "wrangler.jsonc"
-    || policy.worker.wrangler_version !== "4.114.0") {
+    || policy.worker.wrangler_version !== "4.123.0") {
     refuse("policy-invalid", "Worker identity is not locked");
   }
 
@@ -206,7 +206,8 @@ function validateRepositoryContract(policy, config, packageManifest) {
       !== policy.production_hold.candidate_default_value) {
     refuse("repository-contract-invalid", "Worker identity, Wrangler version, or hold default drifted");
   }
-  if (config.workers_dev !== true
+  if (config.workers_dev !== false
+    || config.preview_urls !== false
     || !Array.isArray(config.compatibility_flags)
     || !COMPATIBILITY_DATE_PATTERN.test(config.compatibility_date ?? "")
     || config.compatibility_flags.length === 0

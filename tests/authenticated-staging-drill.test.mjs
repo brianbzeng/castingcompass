@@ -142,6 +142,7 @@ test("the authenticated drill policy locks scope, counts, truth boundaries, and 
   assert.equal(policy.exercise_provider.model, "castingcompass-isolated-stub-v1");
   const stubConfig = JSON.parse(readFileSync("staging/ai-review-exercise-stub.wrangler.jsonc", "utf8"));
   assert.equal(stubConfig.workers_dev, false);
+  assert.equal(stubConfig.preview_urls, false);
   assert.deepEqual(stubConfig.routes, []);
   assert.equal(stubConfig.vars, undefined);
   assert.equal(stubConfig.d1_databases, undefined);

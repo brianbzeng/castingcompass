@@ -1,0 +1,23 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "allowJs": false,
+    "incremental": false,
+    "lib": ["ES2022"],
+    "plugins": [],
+    "types": ["node"]
+  },
+  "include": [
+    "worker-configuration.d.ts",
+    "worker/**/*.ts",
+    "shared/**/*.ts",
+    "public/**/*.json"
+  ],
+  "exclude": [
+    "node_modules",
+    ".next",
+    "dist",
+    "app",
+    "tests"
+  ]
+}

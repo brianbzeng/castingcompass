@@ -103,11 +103,12 @@ review can write the public table.
    the complete final schema, and publishes the same reviewed release with maintenance off.
    Its postflight requires all discussion rows to remain without approval metadata.
 
-4. Repeat the all-host verifier command from step 1 with
-   `--expected-worker-version-id FULL_VERSION_ID`. Every direct host's health response must
-   identify that version, every direct location endpoint must return an empty `posts` array
-   with `Cache-Control: no-store`, and every redirect alias must return the exact canonical
-   `308` response.
+4. Repeat the verifier command from step 1 with the `workers.dev` `--base-url` removed and
+   `--expected-worker-version-id FULL_VERSION_ID`. The canonical custom domain's health
+   response must identify that version, every canonical location endpoint must return an empty
+   `posts` array with `Cache-Control: no-store`, and every redirect alias must return the
+   exact canonical `308` response. Separately prove `workers_dev=false` and
+   `preview_urls=false`; default and version-preview hosts must no longer serve the app.
 
    Then run a real containment smoke test with photos disabled. Record the total public-row
    count, submit one unmistakably synthetic completed trip through the production product,

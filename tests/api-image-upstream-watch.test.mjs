@@ -15,18 +15,18 @@ const releaseWorkflow = await readFile(new URL(".github/workflows/release-proven
 const packageManifest = JSON.parse(await readFile(new URL("package.json", root), "utf8"));
 
 function acceptedSources() {
-  const sourceSha256 = "639e43243c620a308f968213df9e00f2f8f62332f7adbaa7a7eeb9783057c690";
+  const sourceSha256 = "1e66a7945a48390ee4c2a4268a0e4185884059a13c4aab6d148aa208deea4a76";
   return {
     versionsText: JSON.stringify({
       "3.13": {
-        version: "3.13.14",
+        version: "3.13.15",
         checksums: { source: { sha256: sourceSha256 } },
         variants: ["trixie", "alpine3.24", "alpine3.23"],
       },
     }),
     dockerfileText: [
       "FROM alpine:3.24",
-      "ENV PYTHON_VERSION 3.13.14",
+      "ENV PYTHON_VERSION 3.13.15",
       `ENV PYTHON_SHA256 ${sourceSha256}`,
       "CMD [\"python3\"]",
       "",
@@ -35,9 +35,9 @@ function acceptedSources() {
       "Maintainers: Python Docker maintainers",
       "GitRepo: https://github.com/docker-library/python.git",
       "",
-      "Tags: 3.13.14-alpine3.24, 3.13-alpine3.24, 3.13.14-alpine, 3.13-alpine",
+      "Tags: 3.13.15-alpine3.24, 3.13-alpine3.24, 3.13.15-alpine, 3.13-alpine",
       "Architectures: amd64, arm32v6, arm64v8, riscv64",
-      "GitCommit: f79aea5b8f6b2d65b31ba2bb3f69c0c2083345c8",
+      "GitCommit: 3cb2fbae63fab2184343a01e4bd63a7540462999",
       "Directory: 3.13/alpine3.24",
       "",
     ].join("\n"),
@@ -48,9 +48,9 @@ test("upstream watch policy binds reviewed sources, a daily read-only workflow, 
   const result = verifyApiImageUpstreamPolicy(policy, workflow);
   assert.equal(result.policyValid, true);
   assert.equal(result.maximumScheduleIntervalHours, 24);
-  assert.equal(result.expectedNextVersion, "3.13.15");
-  assert.equal(result.expectedReleaseOn, "2026-08-04");
-  assert.equal(result.exceptionsExpire, "2026-08-08");
+  assert.equal(result.expectedNextVersion, "3.13.16");
+  assert.equal(result.expectedReleaseOn, "2026-10-06");
+  assert.equal(result.exceptionsExpire, "2026-10-10");
   assert.equal(result.liveQueryPerformed, false);
   assert.match(packageManifest.scripts.security, /security:api-image-upstream-watch/u);
   assert.equal(
@@ -65,20 +65,20 @@ test("upstream watch accepts only matching official release, checksum, source, a
   const result = evaluateApiImageUpstream({
     policy,
     ...acceptedSources(),
-    checkedAt: new Date("2026-07-20T04:00:00Z"),
+    checkedAt: new Date("2026-08-15T04:00:00Z"),
   });
   assert.deepEqual(result, {
     schemaVersion: "castingcompass.api-image-upstream-watch/1.0.0",
-    checkedAt: "2026-07-20T04:00:00.000Z",
+    checkedAt: "2026-08-15T04:00:00.000Z",
     status: "current",
-    currentVersion: "3.13.14",
-    upstreamVersion: "3.13.14",
-    expectedNextVersion: "3.13.15",
-    expectedReleaseOn: "2026-08-04",
-    exceptionsExpire: "2026-08-08",
+    currentVersion: "3.13.15",
+    upstreamVersion: "3.13.15",
+    expectedNextVersion: "3.13.16",
+    expectedReleaseOn: "2026-10-06",
+    exceptionsExpire: "2026-10-10",
     variant: "alpine3.24",
-    sourceSha256: "639e43243c620a308f968213df9e00f2f8f62332f7adbaa7a7eeb9783057c690",
-    sourceRevision: "f79aea5b8f6b2d65b31ba2bb3f69c0c2083345c8",
+    sourceSha256: "1e66a7945a48390ee4c2a4268a0e4185884059a13c4aab6d148aa208deea4a76",
+    sourceRevision: "3cb2fbae63fab2184343a01e4bd63a7540462999",
     architectures: ["linux/amd64", "linux/arm64"],
     liveQueryPerformed: true,
   });
@@ -87,16 +87,16 @@ test("upstream watch accepts only matching official release, checksum, source, a
 test("upstream watch fails immediately when the maintained series advances", () => {
   const sources = acceptedSources();
   const versions = JSON.parse(sources.versionsText);
-  versions["3.13"].version = "3.13.15";
+  versions["3.13"].version = "3.13.16";
   sources.versionsText = JSON.stringify(versions);
   assert.throws(() => evaluateApiImageUpstream({ policy, ...sources }),
-    /advanced from 3\.13\.14 to 3\.13\.15; replace or re-review/u);
+    /advanced from 3\.13\.15 to 3\.13\.16; replace or re-review/u);
 });
 
 test("upstream watch rejects checksum, source-revision, architecture, and duplicate-tag drift", () => {
   const checksum = acceptedSources();
   checksum.dockerfileText = checksum.dockerfileText.replace(
-    "639e43243c620a308f968213df9e00f2f8f62332f7adbaa7a7eeb9783057c690",
+    "1e66a7945a48390ee4c2a4268a0e4185884059a13c4aab6d148aa208deea4a76",
     "a".repeat(64),
   );
   assert.throws(() => evaluateApiImageUpstream({ policy, ...checksum }), /checksum disagrees/u);

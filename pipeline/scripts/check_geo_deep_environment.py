@@ -15,7 +15,7 @@ from rasterio.transform import from_origin
 
 
 EXPECTED_VERSIONS = {
-    "cryptography": "48.0.1",
+    "cryptography": "50.0.0",
     "narwhals": "2.24.0",
     "numpy": "2.5.1",
     "pandas": "3.0.5",

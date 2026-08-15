@@ -50,7 +50,7 @@ Every application event uses `castingcompass.log/1.0.0` and has:
 | `level` | `debug`, `info`, `warn`, or `error` |
 | `event` | Stable dotted event name, not prose |
 | `service` | `castingcompass-web` for the Worker or `castingcompass-api` for the optional FastAPI service |
-| `environment` | `development`, `preview`, `production`, `unknown`, or `scheduled` |
+| `environment` | `development`, `preview`, `staging`, `production`, `unknown`, or `scheduled`; remote staging and production classification also require their explicit environment binding |
 | `worker_version_id` | Validated Cloudflare version metadata when available |
 | `request_id` | Server-generated UUID returned as `X-Request-ID`; inbound values are ignored |
 | `trace_id` | Validated Cloudflare Ray ID when available |
@@ -68,7 +68,7 @@ coordinates, object locators, and photos. String values must be short code-like 
 exception messages and stacks are never submitted. The only direct `console.*` calls live in
 `worker/observability.ts`, where severity is preserved for Cloudflare indexing.
 
-Development debug logging is explicit: use `LOG_LEVEL=debug` only in a local or isolated preview
+Development debug logging is explicit: use `LOG_LEVEL=debug` only in a local or isolated staging
 environment. Production defaults to `info`; an absent or unrecognized level cannot enable debug.
 
 ## Operator dashboard recipe

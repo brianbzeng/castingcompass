@@ -4,10 +4,11 @@ import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import test from "node:test";
+import { fileURLToPath } from "node:url";
 
 import { releaseCloudflare } from "../scripts/release-cloudflare.mjs";
 
-const ROOT = resolve(new URL("../", import.meta.url).pathname);
+const ROOT = resolve(fileURLToPath(new URL("../", import.meta.url)));
 const HEAD = "0123456789abcdef0123456789abcdef01234567";
 
 async function fakeNpmCli(directory) {
@@ -32,9 +33,9 @@ async function freshReleaseRoot(directory) {
     lockfileVersion: 3,
     requires: true,
     packages: {
-      "": { devDependencies: { wrangler: "4.114.0" } },
+      "": { devDependencies: { wrangler: "4.123.0" } },
       "node_modules/wrangler": {
-        version: "4.114.0",
+        version: "4.123.0",
         integrity: "sha512-dGVzdA==",
       },
     },
@@ -99,8 +100,9 @@ test("release wrapper authorizes before locked install, build, and exact normal 
       assert.equal("NEXT_PUBLIC_API_URL" in event.options.env, false);
       assert.equal("npm_config_registry" in event.options.env, false);
       assert.equal(event.options.env.CLOUDFLARE_API_TOKEN, "test-only-not-a-real-token");
-      assert.equal(event.options.env.NPM_CONFIG_USERCONFIG, "/dev/null");
-      assert.equal(event.options.env.NPM_CONFIG_GLOBALCONFIG, "/dev/null");
+      const emptyConfig = process.platform === "win32" ? "NUL" : "/dev/null";
+      assert.equal(event.options.env.NPM_CONFIG_USERCONFIG, emptyConfig);
+      assert.equal(event.options.env.NPM_CONFIG_GLOBALCONFIG, emptyConfig);
       assert.equal(event.options.env.WRANGLER_SEND_METRICS, "false");
     }
   } finally {
@@ -202,7 +204,7 @@ test("release wrapper supports a fresh checkout with no preinstalled Wrangler", 
           writeFileSync(join(releaseRoot, "node_modules/wrangler/bin/wrangler.js"), "// installed\n");
           writeFileSync(join(releaseRoot, "node_modules/wrangler/package.json"), `${JSON.stringify({
             name: "wrangler",
-            version: "4.114.0",
+            version: "4.123.0",
           })}\n`);
         }
         return "";

@@ -20,14 +20,14 @@ test("direct npm packages and build runtimes are exact reviewed versions", async
   assert.equal(manifest.packageManager, "npm@10.9.8");
   assert.equal(await readFile(new URL(".node-version", root), "utf8"), "22.23.1\n");
   assert.equal(await readFile(new URL(".python-version", root), "utf8"), "3.12.13\n");
-  assert.equal(await readFile(new URL("services/api/.python-version", root), "utf8"), "3.13.14\n");
+  assert.equal(await readFile(new URL("services/api/.python-version", root), "utf8"), "3.13.15\n");
   assert.equal(await readFile(new URL("pipeline/.python-version", root), "utf8"), "3.12.13\n");
 
   const reactFramework = {
-    next: "16.2.12",
+    next: "16.3.1",
     react: "19.2.8",
     "react-dom": "19.2.8",
-    "@next/eslint-plugin-next": "16.2.12",
+    "@next/eslint-plugin-next": "16.3.1",
     "react-server-dom-webpack": "19.2.8",
   };
   for (const [name, version] of Object.entries(reactFramework)) {
@@ -35,9 +35,9 @@ test("direct npm packages and build runtimes are exact reviewed versions", async
     assert.equal(lock.packages[`node_modules/${name}`].version, version);
   }
   const buildToolchain = {
-    "@cloudflare/vite-plugin": "1.47.0",
+    "@cloudflare/vite-plugin": "1.52.1",
     "@vitejs/plugin-react": "6.0.4",
-    wrangler: "4.114.0",
+    wrangler: "4.123.0",
   };
   for (const [name, version] of Object.entries(buildToolchain)) {
     assert.equal(manifest.devDependencies[name], version);
@@ -53,7 +53,7 @@ test("direct npm packages and build runtimes are exact reviewed versions", async
   }
   assert.equal(
     lock.packages["node_modules/@cloudflare/vite-plugin"].peerDependencies.wrangler,
-    "4.114.0",
+    "^4.123.0",
   );
   assert.equal(manifest.devDependencies.ajv, "8.20.0");
   assert.equal(manifest.devDependencies["ajv-formats"], "3.0.1");
@@ -72,16 +72,17 @@ test("direct npm packages and build runtimes are exact reviewed versions", async
   assert.match(dependabot, /dependency-name: eslint[\s\S]+version-update:semver-major/);
 
   assert.equal(lock.packages["node_modules/@babel/core"].version, "7.29.7");
-  assert.equal(manifest.overrides["fast-uri"], "3.1.4");
-  assert.equal(lock.packages["node_modules/fast-uri"].version, "3.1.4");
+  assert.equal(manifest.overrides["fast-uri"], "3.1.5");
+  assert.equal(lock.packages["node_modules/fast-uri"].version, "3.1.5");
   assert.equal(manifest.overrides["js-yaml"], undefined);
   assert.equal(lock.packages["node_modules/js-yaml"], undefined);
   assert.equal(manifest.overrides.sharp, "0.35.3");
   assert.equal(lock.packages["node_modules/eslint"].version, "10.8.0");
   assert.equal(lock.packages["node_modules/minimatch"].version, "10.2.5");
-  assert.equal(lock.packages["node_modules/brace-expansion"].version, "5.0.8");
-  assert.equal(lock.packages["node_modules/fast-uri"].version, "3.1.4");
-  assert.equal(lock.packages["node_modules/postcss"].version, "8.5.18");
+  assert.equal(lock.packages["node_modules/brace-expansion"].version, "5.0.9");
+  assert.equal(lock.packages["node_modules/fast-uri"].version, "3.1.5");
+  assert.equal(lock.packages["node_modules/nanoid"].version, "3.3.18");
+  assert.equal(lock.packages["node_modules/postcss"].version, "8.5.23");
   assert.equal(lock.packages["node_modules/sharp"].version, "0.35.3");
   for (const removedPackage of [
     "@eslint/eslintrc",
@@ -163,7 +164,7 @@ test("CI fixes runner versions and enforces dependency review, audits, and SBOM 
   }
   assert.equal((`${ci}\n${refresh}`.match(/node-version:\s*22\.23\.1/g) ?? []).length, 3);
   assert.equal((`${ci}\n${refresh}\n${optional}`.match(/python-version:\s*["']3\.12\.13["']/g) ?? []).length, 4);
-  assert.equal((ci.match(/python-version:\s*["']3\.13\.14["']/g) ?? []).length, 1);
+  assert.equal((ci.match(/python-version:\s*["']3\.13\.15["']/g) ?? []).length, 1);
   assert.match(ci, /actions\/dependency-review-action@a1d282b36b6f3519aa1f3fc636f609c47dddb294/);
   assert.match(ci, /fail-on-severity:\s*high/);
   assert.match(ci, /github\.base_ref\s*==\s*github\.event\.repository\.default_branch/);
@@ -204,7 +205,7 @@ test("Python API and pipeline installs use exact source-bound wheel hashes", asy
   const dockerfile = await readFile(new URL("services/api/Dockerfile", root), "utf8");
   assert.match(
     dockerfile,
-    /^FROM python:3\.13\.14-alpine3\.24@sha256:399babc8b49529dabfd9c922f2b5eea81d611e4512e3ed250d75bd2e7683f4b0 AS runtime$/m,
+    /^FROM python:3\.13\.15-alpine3\.24@sha256:540c7d91f98ff6880174c40e99067bf5941eb54d818a7a5e094d188b196a934d AS runtime$/m,
   );
   assert.match(dockerfile, /--only-binary=:all: --require-hashes/);
   assert.match(dockerfile, /services\/api\/requirements-runtime\.lock/);
@@ -281,7 +282,7 @@ test("the deterministic production SBOM is bound to the lock and direct runtime 
   assert.equal(sbom.bomFormat, "CycloneDX");
   assert.equal(sbom.specVersion, "1.5");
   assert.match(sbom.serialNumber, /^urn:uuid:[0-9a-f]{8}-[0-9a-f]{4}-5[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/u);
-  assert.equal(sbom.serialNumber, "urn:uuid:b69403eb-994b-565e-989a-f2e7e5ef887a");
+  assert.equal(sbom.serialNumber, "urn:uuid:b4396c94-6443-5aa4-b460-fcfbe043fedf");
   assert.equal("timestamp" in sbom.metadata, false);
   assert.equal(sbom.metadata.component.name, manifest.name);
   assert.deepEqual(sbom.metadata.properties, [{
@@ -337,7 +338,7 @@ test("the supply-chain runbook scopes optional locks and keeps deployment proven
   assert.match(policy, /package-level contents[\s\S]+per-architecture Syft\/Grype[\s\S]+do not identify deployed\s+bytes/i);
   assert.match(
     policy,
-    /native API image evidence[\s\S]+AMD64 and ARM64[\s\S]+Syft 1\.42\.3[\s\S]+Grype 0\.110\.0[\s\S]+expires? 2026-08-08/i,
+    /native API image evidence[\s\S]+AMD64 and ARM64[\s\S]+Syft 1\.42\.3[\s\S]+Grype 0\.110\.0[\s\S]+zero high-severity exceptions[\s\S]+mandatory before release acceptance/i,
   );
   assert.match(policy, /Main-branch signing acceptance is recorded below[\s\S]+rather than deployed-version evidence/i);
   assert.match(
@@ -349,7 +350,7 @@ test("the supply-chain runbook scopes optional locks and keeps deployment proven
     /PR[\s\S]+`#79`[\s\S]+d98d947360df4845901ca95c921b9e10733f6aaa[\s\S]+29630783417[\s\S]+8425375002[\s\S]+5a106e016c15ae269a7dc1b28ebdb04f281e125dfb63456b03f20b2b43938805[\s\S]+35937141[\s\S]+35937144[\s\S]+2193447569[\s\S]+2193447815[\s\S]+29630783432[\s\S]+83457741[\s\S]+29630783254[\s\S]+zero open Dependabot,[\s\S]+code-scanning,[\s\S]+secret-scanning alerts[\s\S]+source-bound combined inventory[\s\S]+deployed Worker digest proof/i,
   );
   assert.match(policy, /stacked successor PRs[\s\S]+do not falsely report a dependency-review pass/i);
-  assert.match(policy, /directory-local `services\/api\/\.python-version`[\s\S]+Python 3\.13\.14[\s\S]+not a[\s\S]+control over GitHub's hosted resolver/i);
+  assert.match(policy, /directory-local `services\/api\/\.python-version`[\s\S]+Python 3\.13\.15[\s\S]+not a[\s\S]+control over GitHub's hosted resolver/i);
   assert.match(policy, /byte-identical transport mirror[\s\S]+managed parser/i);
   assert.match(
     policy,

@@ -60,6 +60,8 @@ const inputPaths = [
   "water-quality/audits/sf-unmapped-station-candidates.json",
   "water-quality/policy.json",
   "water-quality/pollution-score-source-policy.json",
+  "tsconfig.worker.json",
+  "worker-configuration.d.ts",
   "wrangler.jsonc",
 ];
 

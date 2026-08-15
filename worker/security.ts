@@ -4,12 +4,15 @@ import { API_COMPATIBILITY_VERSION, API_VERSION_HEADER } from "./api-version.ts"
 interface SecurityEnv {
   DB?: D1DatabaseLike;
   CF_VERSION_METADATA?: { id?: string };
+  DEPLOYMENT_ENVIRONMENT?: string;
+  STAGING_HOSTNAME?: string;
   RELEASE_MAINTENANCE_MODE?: string;
   SECURITY_EXERCISE_ID?: string;
 }
 
 export const API_MUTATION_BODY_LIMIT = 64 * 1024;
 export const TRIP_MULTIPART_BODY_LIMIT = 6 * 1024 * 1024;
+export const CSP_REPORT_ONLY_HEADER = "Content-Security-Policy-Report-Only";
 
 const CANONICAL_HOST = "castingcompass.com";
 const CANONICAL_ALIASES = new Set([
@@ -21,15 +24,126 @@ const PRODUCTION_HOSTS = new Set([CANONICAL_HOST, ...CANONICAL_ALIASES]);
 const MUTATION_METHODS = new Set(["POST", "PUT", "PATCH", "DELETE"]);
 const CRAWLER_CONTROL_PATHS = new Set(["/robots.txt", "/sitemap.xml"]);
 const MAINTENANCE_RETRY_SECONDS = 300;
+const LOCAL_DEVELOPMENT_HOSTS = new Set(["localhost", "127.0.0.1", "[::1]"]);
 
 export type GuardedRequest =
   | { request: Request; response: null }
   | { request: null; response: Response };
 
 /**
+ * Reject every request that did not arrive on the exact host for the resolved
+ * deployment environment. The production service has no preview-host escape
+ * hatch; isolated staging must supply its one separately reviewed hostname.
+ */
+export function hostBoundaryResponse(request: Request, env: SecurityEnv = {}): Response | null {
+  const url = new URL(request.url);
+  const environment = env.DEPLOYMENT_ENVIRONMENT;
+  let allowed = false;
+
+  if (environment === "production") {
+    allowed = PRODUCTION_HOSTS.has(url.hostname);
+  } else if (environment === "staging") {
+    const stagingHostname = validStagingHostname(env.STAGING_HOSTNAME);
+    allowed = stagingHostname !== null && url.protocol === "https:" && url.hostname === stagingHostname;
+  } else if (environment === undefined || environment === "development") {
+    // Local rendering/tests deliberately omit the production binding. No
+    // named remote hostname is admitted in this development-only branch.
+    allowed = LOCAL_DEVELOPMENT_HOSTS.has(url.hostname);
+  }
+
+  if (allowed) return null;
+  return new Response("Misdirected Request", {
+    status: 421,
+    headers: {
+      "Content-Type": "text/plain; charset=utf-8",
+      "Cache-Control": "no-store",
+      "CDN-Cache-Control": "no-store",
+      "X-Robots-Tag": "noindex, nofollow",
+    },
+  });
+}
+
+function validStagingHostname(value: unknown): string | null {
+  if (typeof value !== "string" || value !== value.toLowerCase()
+    || value.length > 253
+    || !/^(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}$/.test(value)
+    || PRODUCTION_HOSTS.has(value)
+    || value.endsWith(".workers.dev")) {
+    return null;
+  }
+  return value;
+}
+
+/**
+ * Attach a complete report-only browser policy and mark every server-rendered
+ * script/style element with one unpredictable response nonce. Cloudflare's
+ * streaming HTMLRewriter is used in production; the bounded string fallback
+ * exists only for local Node rendering where HTMLRewriter is unavailable.
+ */
+export async function applyContentSecurityPolicy(response: Response, request: Request): Promise<Response> {
+  if (!/^text\/html\b/i.test(response.headers.get("Content-Type") ?? "")) return response;
+
+  const nonce = crypto.randomUUID().replaceAll("-", "");
+  const headers = new Headers(response.headers);
+  headers.set(CSP_REPORT_ONLY_HEADER, contentSecurityPolicy(nonce));
+  headers.delete("Content-Length");
+  const secured = new Response(response.body, {
+    status: response.status,
+    statusText: response.statusText,
+    headers,
+  });
+
+  if (request.method === "HEAD" || secured.body === null) return secured;
+  if (typeof HTMLRewriter === "function") {
+    const addNonce = {
+      element(element: Element) {
+        element.setAttribute("nonce", nonce);
+      },
+    };
+    return new HTMLRewriter()
+      .on("script", addNonce)
+      .on("style", addNonce)
+      .transform(secured);
+  }
+
+  const html = await secured.text();
+  const annotated = html
+    .replace(/<script\b(?![^>]*\bnonce=)/gi, `<script nonce="${nonce}"`)
+    .replace(/<style\b(?![^>]*\bnonce=)/gi, `<style nonce="${nonce}"`);
+  return new Response(annotated, {
+    status: secured.status,
+    statusText: secured.statusText,
+    headers: secured.headers,
+  });
+}
+
+function contentSecurityPolicy(nonce: string) {
+  return [
+    "default-src 'self'",
+    "base-uri 'self'",
+    "object-src 'none'",
+    "frame-ancestors 'none'",
+    "form-action 'self'",
+    `script-src 'self' 'nonce-${nonce}' 'strict-dynamic'`,
+    "script-src-attr 'none'",
+    `style-src 'self' 'nonce-${nonce}'`,
+    "style-src-attr 'none'",
+    "img-src 'self' data: blob: https://server.arcgisonline.com",
+    "font-src 'self' data: https://basemaps.arcgis.com",
+    "connect-src 'self' https://server.arcgisonline.com https://basemaps.arcgis.com https://challenges.cloudflare.com",
+    "frame-src https://challenges.cloudflare.com",
+    "worker-src 'self' blob:",
+    "child-src 'self' blob:",
+    "manifest-src 'self'",
+    "media-src 'self' blob:",
+    "upgrade-insecure-requests",
+  ].join("; ");
+}
+
+/**
  * Return a same-path permanent redirect for known production aliases and for
- * cleartext requests to the canonical hostname. Unknown hosts (including the
- * workers.dev preview hostname) are deliberately left alone.
+ * cleartext requests to the canonical hostname. Host admission is enforced
+ * before this function, so only reviewed production hosts reach this branch.
  */
 export function canonicalRedirect(request: Request): Response | null {
   const url = new URL(request.url);
@@ -257,9 +371,7 @@ export function hardenResponse(response: Response, request: Request): Response {
   const url = new URL(request.url);
   const isApi = url.pathname.startsWith("/api/");
   const isPreviewHost = url.hostname.endsWith(".workers.dev");
-  const isProductionHttps = url.protocol === "https:" && (
-    PRODUCTION_HOSTS.has(url.hostname) || isPreviewHost
-  );
+  const isProductionHttps = url.protocol === "https:" && PRODUCTION_HOSTS.has(url.hostname);
 
   if (isApi) headers.set(API_VERSION_HEADER, API_COMPATIBILITY_VERSION);
 
