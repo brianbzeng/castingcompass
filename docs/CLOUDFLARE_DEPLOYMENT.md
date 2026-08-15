@@ -27,7 +27,11 @@ account. This prevents users from seeing an upload control that cannot succeed.
 Production Worker deployments and production schema changes are separate operations. A
 production deploy command must not run migrations automatically. In the current release,
 `release:cloudflare`, `deploy:cloudflare`, and `deploy:cloudflare:worker-only` are all
-Worker-only and all rebuild with the production environment before publishing.
+Worker-only and all rebuild with the production environment before publishing. The guarded
+wrapper uploads an inactive Worker version, inspects its exact source-derived runtime and
+binding contract, reauthorizes, promotes only that version ID to `100%`, and verifies the
+resulting deployment. A failed promotion or final status check triggers a verified restore of
+the previously recorded version at `100%`.
 `migrate:cloudflare:remote` is a separately reviewed, one-file schema operation; the guarded
 wrapper also requires the same verified `RELEASE_COMMIT`, an exact migration filename, the
 exact primary ledger prefix, and confirmation that a Time Travel bookmark was stored before
@@ -55,8 +59,14 @@ npm run release:cloudflare
 ./node_modules/.bin/wrangler deployments status --config wrangler.jsonc --json
 ```
 
-Record the Cloudflare deployment ID and Worker version ID, and confirm that exactly one
-version receives `100%` of traffic. Keep release evidence outside the repository.
+Record the inactive upload's Worker version ID, the resulting Cloudflare deployment ID, and the
+final Worker version ID, and confirm that the inspected version alone receives `100%` of traffic.
+Keep release evidence outside the repository.
+
+Secret-backed abuse-control activation must use a separate reviewed commit with both switches
+enabled and `npm run release:cloudflare:activation`, following the private-file contract in
+[Production change authorization](PRODUCTION-CHANGE-AUTHORIZATION.md). Do not run `wrangler
+secret put`: it immediately deploys a version and skips the required inactive-version inspection.
 
 For a release with a D1 change, use a change-specific sequence that deploys a
 backward-compatible safety Worker first, records a D1 Time Travel bookmark, inspects the
@@ -141,13 +151,14 @@ auth, email-producing flows, general writes, sensitive export/deletion/retry ope
 reads, and application-wide AI-provider dispatch. The policy and reviewed thresholds are in
 [Production operations](PRODUCTION-OPERATIONS.md#abuse-controls).
 
-Before a later reviewed activation, store a dedicated random value of at least 32 characters
-as the Worker secret `RATE_LIMIT_KEY_SECRET`; never add it to `wrangler.jsonc`, a local env
-file, a screenshot, logs, or release evidence. Confirm all six bindings on the exact deployed
-version and exercise the synthetic 429 and fail-closed 503 cases before changing the switch.
-Activation requires a separate immutable config commit containing the exact string
-`RATE_LIMITING_ENABLED=true`. A missing secret, missing binding, malformed switch, missing
-Cloudflare client address, or binding failure intentionally blocks protected API routes while
+Before a later reviewed activation, generate a dedicated random value of at least 32 characters
+for the Worker secret `RATE_LIMIT_KEY_SECRET`; never add it to `wrangler.jsonc`, a committed env
+file, a screenshot, logs, or release evidence. Supply it only through the private exact activation
+file described above. Confirm all six bindings on the inactive uploaded version, then exercise the
+synthetic 429 and fail-closed 503 cases on isolated staging and again while production remains
+paused after exact-version promotion. Activation requires the separate immutable config commit
+containing the exact string `RATE_LIMITING_ENABLED=true`. A missing secret, missing binding,
+malformed switch, missing Cloudflare client address, or binding failure intentionally blocks protected API routes while
 health remains available. Emergency disablement is the guarded release of
 `RATE_LIMITING_ENABLED=false`; the D1 email/login/trip ceilings continue to operate.
 
@@ -221,12 +232,14 @@ Activation is a separate, reviewed production operation:
 2. Create a **Managed** Turnstile widget in Cloudflare and restrict its hostname
    management to the exact production hosts that will display it. Use separate
    widgets and keys for non-production environments.
-3. Store `TURNSTILE_SECRET_KEY` only as a Cloudflare Worker secret. Do not place
-   it in Wrangler vars, `.env` files committed to Git, logs, screenshots, or
-   release evidence.
-4. In a reviewed config change, set the public `TURNSTILE_SITE_KEY`, a
-   comma-separated exact lowercase `TURNSTILE_ALLOWED_HOSTNAMES`, and finally
-   `TURNSTILE_ENABLED=true`. A non-boolean switch value is treated as a broken
+3. Put `TURNSTILE_SECRET_KEY` only in the owner-only exact two-key activation file alongside
+   the distinct rate-limit secret. Do not place it in Wrangler vars, `.env` files committed to
+   Git, logs, screenshots, or release evidence. The guarded wrapper passes it only to the inactive
+   version upload.
+4. In the same separately reviewed `deploy:activation` config change, set the public
+   `TURNSTILE_SITE_KEY`, a comma-separated exact lowercase `TURNSTILE_ALLOWED_HOSTNAMES`,
+   `TURNSTILE_ENABLED=true`, and `RATE_LIMITING_ENABLED=true`, then use
+   `npm run release:cloudflare:activation`. A non-boolean switch value is treated as a broken
    enabled configuration and blocks protected actions.
 5. Exercise every protected action, token expiry/reuse, action/hostname
    rejection, provider failure, accessibility, and 320/360px layouts before

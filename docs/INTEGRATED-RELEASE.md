@@ -38,14 +38,18 @@ Checkout verification, static confirmation flags, or a previous phase's packet c
   available; returns a self-contained non-cacheable HTML `503` for browser documents and a
   non-cacheable `503 release_maintenance` for every API or mutation before body parsing or
   database handlers; and suppresses scheduled review and cleanup work.
+- Every Worker release first records the single version currently at `100%`, uploads one inactive
+  version, verifies its exact source-derived runtime and bindings, reauthorizes, and then promotes
+  only the inspected version ID. A failed promotion or final deployment check must restore and
+  verify the recorded prior version at `100%`.
 
 ## Compatibility sequence
 
 | Phase | Worker serving traffic | Permitted schema state | Safe recovery |
 | --- | --- | --- | --- |
 | A | pinned discussion safety floor | through `0010` | route back to the recorded safety version |
-| B | reviewed full release with maintenance on | `0010` through `0018` | remain on the recorded maintenance version and fix forward |
-| C | reviewed full release with maintenance off | exactly through `0018` | re-enable the same release's maintenance version while investigating |
+| B | reviewed full release with maintenance on | `0010` through `0020` | remain on the recorded maintenance version and fix forward |
+| C | reviewed full release with maintenance off | exactly through `0020` | re-enable the same release's maintenance version while investigating |
 
 The safety-floor Worker is not a valid normal-traffic rollback after `0011`: the species
 contract adds completion guards that older trip writes do not satisfy. A Time Travel restore
@@ -149,8 +153,9 @@ npm run release:cloudflare:maintenance
 ./node_modules/.bin/wrangler deployments status --config wrangler.jsonc --json
 ```
 
-Record the maintenance deployment ID and version ID and confirm exactly one version receives
-`100%` of traffic. Then prove the canonical custom domain identifies that version, reports
+Record the inactive upload version ID plus the maintenance deployment ID and final version ID;
+confirm the inspected version alone receives `100%` of traffic. Then prove the canonical custom
+domain identifies that version, reports
 maintenance active, serves the marked browser `503`, keeps `robots.txt` available, and blocks
 both read and mutation APIs. The release configuration must report `workers_dev=false` and
 `preview_urls=false`; the former default/preview URLs must not serve an application response:
@@ -266,7 +271,8 @@ npm run release:cloudflare
 ./node_modules/.bin/wrangler deployments status --config wrangler.jsonc --json
 ```
 
-Record the final deployment and version IDs and prove one version has `100%` traffic. Run the
+Record the inactive upload and final deployment/version IDs and prove the inspected version alone
+has `100%` traffic. Run the
 custom-domain command in [Discussion moderation](DISCUSSION-MODERATION.md) with
 `--expected-worker-version-id FINAL_VERSION_ID`. Confirm `/api/health` reports
 `releaseMaintenance: false`, every discussion endpoint is empty and non-cacheable, aliases
@@ -281,6 +287,13 @@ Then complete the production-shaped synthetic containment, account deletion/expo
 encrypted backup, restore, alerts, edge rate limits, Turnstile default-off/activation, privacy,
 and SEO gates in the linked runbooks. Do not enable public discussions, validation activation,
 photo uploads, or Turnstile merely because this schema release succeeds.
+
+Rate-limit and Turnstile activation is a later, separate immutable normal release. It requires
+both checked-in switches to be exactly `true`, the reviewed hostname/action configuration, the
+private two-key activation file, and `npm run release:cloudflare:activation`. The guarded wrapper
+passes that file only to the inactive `versions upload`, verifies the resulting secret binding
+names without exposing values, and performs the same exact-version promotion and automatic
+rollback checks. Do not use `wrangler secret put` or an ad hoc dashboard edit.
 
 ## Evidence checklist
 

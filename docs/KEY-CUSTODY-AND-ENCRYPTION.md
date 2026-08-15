@@ -17,7 +17,9 @@ ignored `.dev.vars` file containing non-production values.
 Cloudflare documents Worker secrets as encrypted bindings whose values are hidden after entry.
 It also documents that ordinary `wrangler secret put` creates and immediately deploys a new
 Worker version. Therefore secret changes are production changes and must use the guarded,
-immutable release process; they are not an ad hoc dashboard or local-shell operation.
+immutable release process: inactive version upload, exact binding inspection, separate
+authorization immediately before traffic, and exact-version promotion. They are not an ad hoc
+dashboard or local-shell operation.
 
 ## Runtime secret inventory
 
@@ -111,10 +113,12 @@ backup key is data loss; unauthorized disclosure is a security incident.
 2. Assess semantic impact before changing bytes. Rate-limit rotation resets pseudonyms;
    validation HMAC rotation can break identity continuity or tokens; backup-key rotation must
    preserve decryptability through retention.
-3. Stage one replacement at a time in a non-production environment or a reviewed versioned
-   secret workflow. Because ordinary `wrangler secret put` immediately deploys a version, do
-   not run it outside the immutable release procedure. Never rotate secrets while an unrelated
-   migration or emergency fix is being diagnosed.
+3. Stage one replacement at a time in a non-production environment or the reviewed inactive
+   version workflow. For abuse-control activation, use the exact private file and
+   `release:cloudflare:activation` contract in
+   [Production change authorization](PRODUCTION-CHANGE-AUTHORIZATION.md). Because ordinary
+   `wrangler secret put` immediately deploys a version, do not use it for production. Never
+   rotate secrets while an unrelated migration or emergency fix is being diagnosed.
 4. Deploy the exact reviewed Worker version with no schema mutation. Run feature-specific
    synthetic checks and confirm logs, alerts, and dashboards contain only redacted metadata.
 5. Revoke the old provider credential only after the new version is healthy and the rollback

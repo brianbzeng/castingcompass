@@ -20,6 +20,13 @@
     "PRIVACY_EXPORT_QUEUE_ENABLED": "false",
     "RELEASE_MAINTENANCE_MODE": "false"
   },
+  "secrets": {
+    "required": [
+      "AUTH_EMAIL_FROM",
+      "MIMO_API_KEY",
+      "RESEND_API_KEY"
+    ]
+  },
   "ratelimits": [
     {
       "name": "AUTH_RATE_LIMITER",

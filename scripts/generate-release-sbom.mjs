@@ -49,6 +49,7 @@ const inputPaths = [
   "security/observability-activation-policy.json",
   "security/operational-restore-review-policy.json",
   "security/production-change-authorization-policy.json",
+  "security/production-worker-secret-bindings.json",
   "security/npm-audit-policy.json",
   "security/npm-install-policy.json",
   "scripts/verify-npm-audit-policy.mjs",

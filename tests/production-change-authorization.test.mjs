@@ -80,6 +80,25 @@ test("locked production change policy is canonical and covers every release phas
     "migrate:0020_trip_photo_upload_reservations.sql",
     "optimize:pragma",
     "deploy:normal",
+    "deploy:activation",
+  ]);
+  assert.deepEqual(policy.actions["deploy:activation"].required_evidence, [
+    "abuse_control_staging_verified",
+    "automatic_deployments_disabled",
+    "change_window_approved",
+    "current_provider_state_recorded",
+    "edge_rate_limit_rules_verified",
+    "key_custody_reviewed",
+    "normal_version_verified",
+    "notification_path_confirmed",
+    "production_pause_verified",
+    "rate_limit_synthetic_plan",
+    "rollback_path_recorded",
+    "security_alert_inventory_reviewed",
+    "snapshot_schedule_paused",
+    "source_commit_reviewed",
+    "turnstile_hostname_action_verified",
+    "turnstile_synthetic_plan",
   ]);
   const weakened = structuredClone(policy);
   weakened.actions["deploy:normal"].required_evidence.pop();
