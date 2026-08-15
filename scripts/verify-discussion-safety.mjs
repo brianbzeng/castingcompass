@@ -111,7 +111,7 @@ export async function verifySourceSafety(root = DEFAULT_ROOT) {
     requirePattern(reconciliation, /INSERT INTO d1_migrations\(name\)/, "0007 ledger reconciliation is explicit"),
     requirePattern(deployment, /must not run migrations automatically/i, "production deployment guidance separates schema changes"),
     requirePattern(packageJson, /"release:cloudflare"\s*:\s*"[^"]*release-cloudflare\.mjs[^"]*--mode normal/, "release uses the guarded wrapper"),
-    requirePattern(releaseWrapper, /await authorizationVerifier\([\s\S]+npmPath, "ci", "--ignore-scripts"[\s\S]+npmPath, "run", "build:cloudflare"[\s\S]+await authorizationVerifier\([\s\S]+wranglerPath, "deploy"/, "release rebuilds before deployment"),
+    requirePattern(releaseWrapper, /await authorizationVerifier\([\s\S]+npmPath, "ci", "--ignore-scripts"[\s\S]+npmPath, "run", "build:cloudflare"[\s\S]+await authorizationVerifier\([\s\S]+wranglerPath,\s+"versions",\s+"upload"[\s\S]+verifyUploadedVersion\([\s\S]+await authorizationVerifier\([\s\S]+wranglerPath,\s+"versions",\s+"deploy"/, "release rebuilds before deployment"),
     requirePattern(packageJson, /"migrate:cloudflare:remote"\s*:\s*"[^"]*integrated-release\.mjs apply/, "migration uses the guarded staged wrapper"),
     requirePattern(postMigrationAudit, /approval_columns_found/, "post-migration approval schema is audited"),
     requirePattern(postMigrationAudit, /rows_with_any_approval_metadata/, "legacy approval metadata is audited"),
