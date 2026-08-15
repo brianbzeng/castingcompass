@@ -93,7 +93,7 @@ export async function verifySourceSafety(root = DEFAULT_ROOT) {
     requirePattern(migration, /ADD COLUMN `approved_by` text/, "approver migration exists"),
     requirePattern(migration, /ADD COLUMN `source_ai_reviewed_at` text/, "review-version migration exists"),
     requirePattern(runbook, /oldest permitted rollback target/, "safe rollback floor is documented"),
-    requirePattern(runbook, /e2c612246fadfdb231e481c405fa72e502458ed1/, "patched safety-floor commit is pinned"),
+    requirePattern(runbook, /511f85d7d5f8714d41633be24491e2087c366598/, "patched safety-floor commit is pinned"),
     requirePattern(runbook, /moderation_status = 'pending'/, "approval occurs while the trip remains hidden"),
     requirePattern(integratedRunbook, /d1 time-travel info/, "pre-migration Time Travel bookmark is recorded"),
     requirePattern(integratedRunbook, /exactly one version[\s\S]*100%/i, "deployed Worker version must receive all traffic"),

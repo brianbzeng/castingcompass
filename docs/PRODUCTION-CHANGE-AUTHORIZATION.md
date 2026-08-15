@@ -106,12 +106,12 @@ npm user/global configuration, and restores only disabled Wrangler metrics plus 
 evidence-output directory. If `WRANGLER_OUTPUT_FILE_DIRECTORY` is set, it must already exist as
 an owner-only, owner-owned, non-symlink directory outside both the release and gate checkouts.
 
-The old safety-floor commit does not contain the current gate. Invoke the current full-release
+The dedicated safety-floor commit does not contain the current gate. Invoke the current full-release
 wrapper while pointing it at the separately checked-out safety worktree:
 
 ```sh
 export RELEASE_ROOT=/ABSOLUTE/PATH/TO/SAFETY_WORKTREE
-export RELEASE_COMMIT=e2c612246fadfdb231e481c405fa72e502458ed1
+export RELEASE_COMMIT=511f85d7d5f8714d41633be24491e2087c366598
 export RELEASE_GATE_COMMIT=FULL_40_CHARACTER_CURRENT_GATE_COMMIT
 export RELEASE_AUTHORIZATION_FILE=/PRIVATE/ENCRYPTED/PATH/deploy-safety-floor.json
 npm run release:cloudflare:safety-floor
