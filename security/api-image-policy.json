@@ -9,7 +9,7 @@
     "nextReviewOn": "2026-10-06",
     "renewalDeadline": "2026-10-10",
     "maximumPostReleaseGraceDays": 4,
-    "reason": "Python 3.13.15 is the current stable 3.13 maintenance release and removes the prior high-severity exception set. Continue the daily upstream watch through the scheduled final 3.13.16 bugfix release, retaining a four-day bound for native two-architecture image review.",
+    "reason": "Python 3.13.15 is the current stable 3.13 maintenance release. Its CPython source contains the CVE-2026-15308 backport, but the fresh NVD CPE feed still flags the binary and names only 3.15.0 as fixed. Retain the removed and import-guarded html.parser mitigation plus a bounded review through the scheduled final 3.13.16 bugfix release.",
     "sources": [
       "https://www.python.org/downloads/source/",
       "https://www.python.org/downloads/release/python-31315/",
@@ -150,5 +150,18 @@
       "removedPath": "/usr/local/lib/python3.13/html/parser.py"
     }
   ],
-  "highSeverityExceptions": []
+  "highSeverityExceptions": [
+    {
+      "vulnerability": "CVE-2026-15308",
+      "namespace": "nvd:cpe",
+      "package": "python",
+      "version": "3.13.15",
+      "type": "binary",
+      "severity": "High",
+      "expires": "2026-10-10",
+      "module": "html.parser",
+      "reason": "The CPython 3.13 backport was merged before Python 3.13.15, but the current Grype NVD CPE record still reports only 3.15.0 as fixed. The API image removes html.parser and the source contract rejects reintroduction while the discrepancy remains under bounded review.",
+      "source": "https://github.com/python/cpython/issues/153030"
+    }
+  ]
 }

@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 import { existsSync, readFileSync } from "node:fs";
-import { dirname, isAbsolute, resolve } from "node:path";
+import { dirname, isAbsolute, resolve, win32 as win32Path } from "node:path";
 import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 
@@ -254,11 +254,14 @@ export function npmAuditInvocation({
   fileExists = existsSync,
   platform = process.platform,
 } = {}) {
+  const pathApi = platform === "win32"
+    ? win32Path
+    : { dirname, isAbsolute, resolve };
   const environmentCli = environment.npm_execpath;
   const candidates = [
-    typeof environmentCli === "string" && isAbsolute(environmentCli) ? environmentCli : undefined,
-    resolve(dirname(nodeExecutable), "node_modules", "npm", "bin", "npm-cli.js"),
-    resolve(dirname(nodeExecutable), "..", "lib", "node_modules", "npm", "bin", "npm-cli.js"),
+    typeof environmentCli === "string" && pathApi.isAbsolute(environmentCli) ? environmentCli : undefined,
+    pathApi.resolve(pathApi.dirname(nodeExecutable), "node_modules", "npm", "bin", "npm-cli.js"),
+    pathApi.resolve(pathApi.dirname(nodeExecutable), "..", "lib", "node_modules", "npm", "bin", "npm-cli.js"),
   ].filter(Boolean);
   const npmCli = candidates.find((candidate) => fileExists(candidate));
   if (npmCli) {

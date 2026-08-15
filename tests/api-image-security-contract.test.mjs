@@ -169,10 +169,18 @@ test("API image evidence binds packages, licenses, mitigations and reviewed find
     Negligible: 0,
     Low: 0,
     Medium: 0,
-    High: 0,
+    High: 1,
     Critical: 0,
   });
-  assert.equal(summary.vulnerabilities.highSeverity.length, 0);
+  assert.deepEqual(summary.vulnerabilities.highSeverity, [{
+    vulnerability: "CVE-2026-15308",
+    namespace: "nvd:cpe",
+    package: "python",
+    version: "3.13.15",
+    type: "binary",
+    severity: "High",
+    fix: { versions: ["3.15.0"], state: "fixed" },
+  }]);
 });
 
 test("API image evidence binds the architecture-specific runtime marker", async () => {
@@ -210,6 +218,7 @@ test("API image evidence rejects unreviewed Critical findings", async () => {
 test("API image evidence rejects expired exceptions and stable-series fixes", async () => {
   const expired = policyWithReviewedException();
   const evidence = await acceptedEvidence();
+  evidence.scan.matches = [];
   addReviewedFinding(evidence, expired);
   evidence.scan.descriptor.db.status.built = "2026-10-10T00:00:00Z";
   assert.throws(() => verifyApiImageEvidence({
@@ -221,6 +230,7 @@ test("API image evidence rejects expired exceptions and stable-series fixes", as
 
   const stableFix = policyWithReviewedException();
   const fixedEvidence = await acceptedEvidence();
+  fixedEvidence.scan.matches = [];
   addReviewedFinding(fixedEvidence, stableFix, ["3.13.16"]);
   assert.throws(() => verifyApiImageEvidence({
     ...fixedEvidence,
