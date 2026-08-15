@@ -4,6 +4,7 @@ import test from "node:test";
 
 import {
   calculateProjectedSequenceRequests,
+  createGlobalRequestScheduler,
   evaluateResults,
   executeLoadTest,
   percentile,
@@ -219,25 +220,63 @@ test("remote execution verifies checkout then target identity before starting wo
 });
 
 test("pacer enforces the global request rate and never catches up in a burst", async () => {
-  let fastNow = 0;
-  const fastStarts = [];
-  await runWorker(
-    1,
+  const concurrentProfile = { durationSeconds: 2, concurrency: 3, requestsPerSecond: 4 };
+  const scheduler = createGlobalRequestScheduler(concurrentProfile, 0);
+  assert.deepEqual([
+    scheduler.claim(0, 2_000),
+    scheduler.claim(0, 2_000),
+    scheduler.claim(0, 2_000),
+  ], [0, 250, 500]);
+  assert.equal(scheduler.claim(1_000, 2_000), 1_000);
+  assert.equal(scheduler.claim(1_000, 2_000), 1_250);
+
+  let concurrentNow = 0;
+  let waiters = [];
+  const flushAsyncTurns = async () => {
+    for (let index = 0; index < 12; index += 1) await Promise.resolve();
+  };
+  const concurrentTiming = {
+    now: () => concurrentNow,
+    wait: (milliseconds) => new Promise((resolve) => {
+      waiters.push({ at: concurrentNow + milliseconds, resolve });
+    }),
+  };
+  const advanceTo = async (nextNow) => {
+    concurrentNow = nextNow;
+    const ready = waiters.filter(({ at }) => at <= concurrentNow);
+    waiters = waiters.filter(({ at }) => at > concurrentNow);
+    for (const waiter of ready) waiter.resolve();
+    await flushAsyncTurns();
+  };
+  const concurrentStarts = [];
+  const concurrentResults = { latencies: [], failures: 0 };
+  const sharedScheduler = createGlobalRequestScheduler(
+    { durationSeconds: 2, concurrency: 2, requestsPerSecond: 4 },
+    0,
+  );
+  const workers = [0, 1].map((workerId) => runWorker(
+    workerId,
     new URL("http://127.0.0.1:8787"),
     configuration,
-    { durationSeconds: 1, concurrency: 2, requestsPerSecond: 4 },
-    800,
-    { latencies: [], failures: 0 },
+    { durationSeconds: 2, concurrency: 2, requestsPerSecond: 4 },
+    2_000,
+    concurrentResults,
     async () => {
-      fastStarts.push(fastNow);
+      concurrentStarts.push(concurrentNow);
       return new Response(null, { status: 200 });
     },
-    {
-      now: () => fastNow,
-      wait: async (milliseconds) => { fastNow += milliseconds; },
-    },
-  );
-  assert.deepEqual(fastStarts, [250, 750]);
+    concurrentTiming,
+    sharedScheduler,
+  ));
+  await flushAsyncTurns();
+  await advanceTo(1_000);
+  await advanceTo(1_250);
+  await advanceTo(1_500);
+  await advanceTo(1_750);
+  await advanceTo(2_000);
+  await Promise.all(workers);
+  assert.deepEqual(concurrentStarts, [0, 1_000, 1_250, 1_500, 1_750]);
+  assert.equal(new Set(concurrentStarts).size, concurrentStarts.length);
 
   let now = 0;
   const starts = [];
@@ -259,6 +298,10 @@ test("pacer enforces the global request rate and never catches up in a burst", a
       return new Response(null, { status: 200 });
     },
     timing,
+    createGlobalRequestScheduler(
+      { durationSeconds: 2, concurrency: 1, requestsPerSecond: 2 },
+      0,
+    ),
   );
   assert.deepEqual(starts, [0, 750, 1_500]);
   assert.equal(results.failures, 0);

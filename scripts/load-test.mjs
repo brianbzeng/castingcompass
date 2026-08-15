@@ -149,6 +149,26 @@ export function calculateProjectedSequenceRequests(configuration) {
     + PROFILE_NAMES.length * configuration.quotaGuard.preflightRequestsPerProfile;
 }
 
+export function createGlobalRequestScheduler(profile, startedAt) {
+  const intervalMilliseconds = 1_000 / profile.requestsPerSecond;
+  let nextSlot = startedAt;
+  return {
+    intervalMilliseconds,
+    claim(now, deadline) {
+      if (now >= deadline) return null;
+      if (nextSlot + intervalMilliseconds <= now) {
+        const overdueSlots = Math.floor((now - nextSlot) / intervalMilliseconds);
+        nextSlot += overdueSlots * intervalMilliseconds;
+        if (nextSlot + intervalMilliseconds <= now) nextSlot += intervalMilliseconds;
+      }
+      const claimedSlot = nextSlot;
+      if (claimedSlot >= deadline) return null;
+      nextSlot += intervalMilliseconds;
+      return claimedSlot;
+    },
+  };
+}
+
 export function validateTarget(value, remoteAuthorization = "") {
   let target;
   try {
@@ -324,14 +344,16 @@ export async function runWorker(
   results,
   fetchImpl = fetch,
   timing = DEFAULT_TIMING,
+  scheduler = createGlobalRequestScheduler(profile, timing.now()),
 ) {
-  const intervalMilliseconds = (profile.concurrency / profile.requestsPerSecond) * 1_000;
-  let nextStart = timing.now() + (workerId / profile.requestsPerSecond) * 1_000;
   let sequence = workerId;
   while (timing.now() < deadline) {
-    const waitMilliseconds = Math.min(nextStart - timing.now(), deadline - timing.now());
+    const scheduledStart = scheduler.claim(timing.now(), deadline);
+    if (scheduledStart === null) break;
+    const waitMilliseconds = Math.min(scheduledStart - timing.now(), deadline - timing.now());
     if (waitMilliseconds > 0) await timing.wait(waitMilliseconds);
     if (timing.now() >= deadline) break;
+    if (timing.now() >= scheduledStart + scheduler.intervalMilliseconds) continue;
     const route = configuration.routes[sequence % configuration.routes.length];
     sequence += profile.concurrency;
     const url = new URL(route.path, target);
@@ -354,7 +376,6 @@ export async function runWorker(
     }
     results.latencies.push(timing.now() - started);
     if (failed) results.failures += 1;
-    nextStart = Math.max(nextStart + intervalMilliseconds, timing.now());
   }
 }
 
@@ -400,7 +421,9 @@ export async function executeLoadTest(options) {
   }
   const results = { latencies: [], failures: 0 };
   const timing = options.timing ?? DEFAULT_TIMING;
-  const deadline = timing.now() + profile.durationSeconds * 1000;
+  const startedAt = timing.now();
+  const deadline = startedAt + profile.durationSeconds * 1000;
+  const scheduler = createGlobalRequestScheduler(profile, startedAt);
   const workerRunner = options.workerRunner ?? runWorker;
   await Promise.all(Array.from(
     { length: profile.concurrency },
@@ -413,6 +436,7 @@ export async function executeLoadTest(options) {
       results,
       options.loadFetch,
       timing,
+      scheduler,
     ),
   ));
   const evaluation = evaluateResults(results.latencies, results.failures, configuration.budgets);

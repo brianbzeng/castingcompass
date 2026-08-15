@@ -171,13 +171,14 @@ repository profiles are deliberately capped and paced:
 | `spike` | 30 seconds | 30 | 300 | 9,000 | Short burst and recovery behavior |
 | `soak` | 15 minutes | 5 | 40 | 36,000 | Leak, pool, cache, and gradual-error evidence |
 
-Each worker receives an evenly offset share of the global rate. A slow response advances that
-worker's next start time instead of creating catch-up bursts. The four timed ceilings plus one
-identity preflight per profile project to at most 64,504 requests. Validation fails closed if the
-sequence exceeds 65,000 requests against the conservative 100,000-request daily account ceiling,
-preserving at least 35,000 requests for unrelated traffic and operational checks. This guard is an
-execution-safety boundary, not an assertion that Cloudflare will always supply that allowance; the
-operator must still begin with verified quota capacity and stop on provider throttling.
+All workers claim from one shared global slot timeline. Each slot is allocated once; a full slot
+missed during an event-loop delay is discarded before workers resume on the shared timeline, so
+independent workers cannot create catch-up bursts. The four timed ceilings plus one identity
+preflight per profile project to at most 64,504 requests. Validation fails closed if the sequence
+exceeds 65,000 requests against the conservative 100,000-request daily account ceiling, preserving
+at least 35,000 requests for unrelated traffic and operational checks. This guard is an execution-
+safety boundary, not an assertion that Cloudflare will always supply that allowance; the operator
+must still begin with verified quota capacity and stop on provider throttling.
 
 The initial provisional budgets are p95 ≤ 750 ms, p99 ≤ 1500 ms, and error rate ≤ 1%. They are
 engineering tripwires, not a public SLA, and must be revised from staged measurements. The
