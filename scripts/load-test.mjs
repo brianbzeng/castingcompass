@@ -3,6 +3,7 @@
 import { readFile } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
 import { performance } from "node:perf_hooks";
+import { setTimeout as sleep } from "node:timers/promises";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
 import { verifyReleaseCheckout } from "./verify-release-checkout.mjs";
@@ -16,8 +17,15 @@ const PRODUCTION_HOSTS = new Set([
 const REMOTE_AUTHORIZATION = "I_HAVE_AUTHORIZATION_FOR_THIS_STAGING_TARGET";
 const CONFIG_URL = new URL("../config/performance-budgets.json", import.meta.url);
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
-const EXPECTED_SCHEMA_VERSION = "castingcompass.performance-budgets/1.1.0";
+const EXPECTED_SCHEMA_VERSION = "castingcompass.performance-budgets/1.2.0";
 const EXPECTED_API_COMPATIBILITY_VERSION = "1";
+const ACCOUNT_DAILY_REQUEST_CEILING = 100_000;
+const MINIMUM_RESERVE_REQUESTS = 35_000;
+const PROFILE_NAMES = ["smoke", "load", "spike", "soak"];
+const DEFAULT_TIMING = Object.freeze({
+  now: () => performance.now(),
+  wait: (milliseconds) => sleep(milliseconds),
+});
 const EXPECTED_ROUTES = [
   { name: "home", path: "/", expectedStatuses: [200] },
   { name: "health", path: "/api/health", expectedStatuses: [200] },
@@ -55,7 +63,7 @@ function exactJson(value) {
 export function validateConfiguration(configuration) {
   exactKeys(configuration, [
     "schemaVersion", "apiCompatibilityVersion", "profiles", "limits",
-    "requestTimeoutMilliseconds", "maximumHealthResponseBytes", "budgets", "routes",
+    "quotaGuard", "requestTimeoutMilliseconds", "maximumHealthResponseBytes", "budgets", "routes",
   ], "Performance configuration");
   if (configuration.schemaVersion !== EXPECTED_SCHEMA_VERSION
     || configuration.apiCompatibilityVersion !== EXPECTED_API_COMPATIBILITY_VERSION) {
@@ -69,24 +77,48 @@ export function validateConfiguration(configuration) {
     || configuration.maximumHealthResponseBytes > 8_192) {
     throw new Error("performance configuration request limits are invalid");
   }
-  exactKeys(configuration.limits, ["maximumDurationSeconds", "maximumConcurrency"], "Performance limits");
+  exactKeys(configuration.limits, [
+    "maximumDurationSeconds", "maximumConcurrency", "maximumRequestsPerSecond",
+  ], "Performance limits");
   if (!Number.isInteger(configuration.limits.maximumDurationSeconds)
     || configuration.limits.maximumDurationSeconds < 1
     || configuration.limits.maximumDurationSeconds > 1_800
     || !Number.isInteger(configuration.limits.maximumConcurrency)
     || configuration.limits.maximumConcurrency < 1
-    || configuration.limits.maximumConcurrency > 50) {
+    || configuration.limits.maximumConcurrency > 50
+    || !Number.isInteger(configuration.limits.maximumRequestsPerSecond)
+    || configuration.limits.maximumRequestsPerSecond < 1
+    || configuration.limits.maximumRequestsPerSecond > 500) {
     throw new Error("performance configuration execution limits are invalid");
   }
-  exactKeys(configuration.profiles, ["smoke", "load", "spike", "soak"], "Performance profiles");
+  exactKeys(configuration.profiles, PROFILE_NAMES, "Performance profiles");
   for (const [name, profile] of Object.entries(configuration.profiles)) {
-    exactKeys(profile, ["durationSeconds", "concurrency"], `Performance profile ${name}`);
+    exactKeys(profile, [
+      "durationSeconds", "concurrency", "requestsPerSecond",
+    ], `Performance profile ${name}`);
     if (!Number.isInteger(profile.durationSeconds) || profile.durationSeconds < 1
       || profile.durationSeconds > configuration.limits.maximumDurationSeconds
       || !Number.isInteger(profile.concurrency) || profile.concurrency < 1
-      || profile.concurrency > configuration.limits.maximumConcurrency) {
+      || profile.concurrency > configuration.limits.maximumConcurrency
+      || !Number.isInteger(profile.requestsPerSecond) || profile.requestsPerSecond < 1
+      || profile.requestsPerSecond > configuration.limits.maximumRequestsPerSecond) {
       throw new Error(`performance profile ${name} exceeds the locked limits`);
     }
+  }
+  exactKeys(configuration.quotaGuard, [
+    "accountDailyRequestCeiling", "minimumReserveRequests", "preflightRequestsPerProfile",
+  ], "Performance quota guard");
+  if (configuration.quotaGuard.accountDailyRequestCeiling !== ACCOUNT_DAILY_REQUEST_CEILING
+    || !Number.isInteger(configuration.quotaGuard.minimumReserveRequests)
+    || configuration.quotaGuard.minimumReserveRequests < MINIMUM_RESERVE_REQUESTS
+    || configuration.quotaGuard.minimumReserveRequests >= ACCOUNT_DAILY_REQUEST_CEILING
+    || configuration.quotaGuard.preflightRequestsPerProfile !== 1) {
+    throw new Error("performance quota guard was weakened or is invalid");
+  }
+  if (calculateProjectedSequenceRequests(configuration)
+    > configuration.quotaGuard.accountDailyRequestCeiling
+      - configuration.quotaGuard.minimumReserveRequests) {
+    throw new Error("performance sequence exceeds the locked daily request allowance");
   }
   exactKeys(configuration.budgets, [
     "p95Milliseconds", "p99Milliseconds", "errorRatePercent",
@@ -106,6 +138,15 @@ export function validateConfiguration(configuration) {
     throw new Error("performance route scope was widened");
   }
   return configuration;
+}
+
+export function calculateProjectedSequenceRequests(configuration) {
+  const timedRequests = PROFILE_NAMES.reduce((total, name) => {
+    const profile = configuration.profiles[name];
+    return total + Math.ceil(profile.durationSeconds * profile.requestsPerSecond);
+  }, 0);
+  return timedRequests
+    + PROFILE_NAMES.length * configuration.quotaGuard.preflightRequestsPerProfile;
 }
 
 export function validateTarget(value, remoteAuthorization = "") {
@@ -274,13 +315,27 @@ export function parseArguments(arguments_) {
   return parsed;
 }
 
-async function runWorker(workerId, target, configuration, profile, deadline, results, fetchImpl = fetch) {
+export async function runWorker(
+  workerId,
+  target,
+  configuration,
+  profile,
+  deadline,
+  results,
+  fetchImpl = fetch,
+  timing = DEFAULT_TIMING,
+) {
+  const intervalMilliseconds = (profile.concurrency / profile.requestsPerSecond) * 1_000;
+  let nextStart = timing.now() + (workerId / profile.requestsPerSecond) * 1_000;
   let sequence = workerId;
-  while (performance.now() < deadline) {
+  while (timing.now() < deadline) {
+    const waitMilliseconds = Math.min(nextStart - timing.now(), deadline - timing.now());
+    if (waitMilliseconds > 0) await timing.wait(waitMilliseconds);
+    if (timing.now() >= deadline) break;
     const route = configuration.routes[sequence % configuration.routes.length];
     sequence += profile.concurrency;
     const url = new URL(route.path, target);
-    const started = performance.now();
+    const started = timing.now();
     let failed = false;
     try {
       const response = await fetchImpl(url, {
@@ -297,8 +352,9 @@ async function runWorker(workerId, target, configuration, profile, deadline, res
     } catch {
       failed = true;
     }
-    results.latencies.push(performance.now() - started);
+    results.latencies.push(timing.now() - started);
     if (failed) results.failures += 1;
+    nextStart = Math.max(nextStart + intervalMilliseconds, timing.now());
   }
 }
 
@@ -343,7 +399,8 @@ export async function executeLoadTest(options) {
     });
   }
   const results = { latencies: [], failures: 0 };
-  const deadline = performance.now() + profile.durationSeconds * 1000;
+  const timing = options.timing ?? DEFAULT_TIMING;
+  const deadline = timing.now() + profile.durationSeconds * 1000;
   const workerRunner = options.workerRunner ?? runWorker;
   await Promise.all(Array.from(
     { length: profile.concurrency },
@@ -355,6 +412,7 @@ export async function executeLoadTest(options) {
       deadline,
       results,
       options.loadFetch,
+      timing,
     ),
   ));
   const evaluation = evaluateResults(results.latencies, results.failures, configuration.budgets);
@@ -364,6 +422,10 @@ export async function executeLoadTest(options) {
     targetIdentityVerified: !local,
     sourceCommit: local ? null : identity.expectedCommit,
     profile: arguments_.profile,
+    targetRequestsPerSecond: profile.requestsPerSecond,
+    projectedProfileRequestCeiling: Math.ceil(
+      profile.durationSeconds * profile.requestsPerSecond,
+    ),
     ...evaluation.summary,
     passed: evaluation.passed,
   };

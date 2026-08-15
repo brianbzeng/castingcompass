@@ -160,15 +160,24 @@ and connection ceilings are recorded in [D1 limits](https://developers.cloudflar
 
 ## Staging-only load harness
 
-`scripts/load-test.mjs` exercises four read-only routes and reports request count, failures,
-error rate, p50, p95, and p99. The repository profiles are deliberately capped:
+`scripts/load-test.mjs` exercises four read-only routes and reports the target request rate,
+projected profile ceiling, actual request count, failures, error rate, p50, p95, and p99. The
+repository profiles are deliberately capped and paced:
 
-| Profile | Duration | Concurrency | Purpose |
-| --- | ---: | ---: | --- |
-| `smoke` | 15 seconds | 2 | Connectivity, headers, and gross regression |
-| `load` | 120 seconds | 10 | Initial steady-state budget evidence |
-| `spike` | 30 seconds | 30 | Short burst and recovery behavior |
-| `soak` | 15 minutes | 5 | Leak, pool, cache, and gradual-error evidence |
+| Profile | Duration | Concurrency | Global requests/second | Request ceiling | Purpose |
+| --- | ---: | ---: | ---: | ---: | --- |
+| `smoke` | 15 seconds | 2 | 20 | 300 | Connectivity, headers, and gross regression |
+| `load` | 120 seconds | 10 | 160 | 19,200 | Initial steady-state budget evidence |
+| `spike` | 30 seconds | 30 | 300 | 9,000 | Short burst and recovery behavior |
+| `soak` | 15 minutes | 5 | 40 | 36,000 | Leak, pool, cache, and gradual-error evidence |
+
+Each worker receives an evenly offset share of the global rate. A slow response advances that
+worker's next start time instead of creating catch-up bursts. The four timed ceilings plus one
+identity preflight per profile project to at most 64,504 requests. Validation fails closed if the
+sequence exceeds 65,000 requests against the conservative 100,000-request daily account ceiling,
+preserving at least 35,000 requests for unrelated traffic and operational checks. This guard is an
+execution-safety boundary, not an assertion that Cloudflare will always supply that allowance; the
+operator must still begin with verified quota capacity and stop on provider throttling.
 
 The initial provisional budgets are p95 ≤ 750 ms, p99 ≤ 1500 ms, and error rate ≤ 1%. They are
 engineering tripwires, not a public SLA, and must be revised from staged measurements. The
