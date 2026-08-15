@@ -42,10 +42,49 @@ export const ALL_RELEASE_MIGRATIONS = Object.freeze([
   ...STAGED_MIGRATIONS,
 ]);
 
+// Read-only primary-D1 observation recorded on 2026-08-15. These hashes deliberately bind the
+// pre-ledger production definitions; they must never be regenerated from local migration output.
+export const KNOWN_PRELEDGER_POLICY = Object.freeze({
+  schemaHashes: Object.freeze({
+    preledger_signup_age_proofs_schema: "01f676a48864ab7518bac5a5edd2ec42c6f7222c5e800a8ea868940f452c4728",
+    preledger_privacy_deletion_jobs_schema: "87f9c3d51380d829a5f68830c831dfb2bf157c3dbc2029c10e057861c65afec8",
+    preledger_privacy_deletion_tasks_schema: "5109d292b7f4d2c2ff6ca5169d7a049245ebeff52b546917636bbd8150ec07b2",
+    preledger_forecast_impressions_schema: "024d3342d5b8a26774c9481f6459251d74fc01a6478bd504604519d998283873",
+    preledger_trip_validation_provenance_schema: "82486bae70c3d37ee510148506aaf571eec22a92e248f6664b429212007d6eff",
+    preledger_signup_age_proofs_expiry_index_schema: "632577534d505323cd867a25a7b3598864f1db456d5c19c6a4750690ac1f5706",
+    preledger_privacy_deletion_jobs_state_index_schema: "101fcf6347bb96e6fefb514e9f510fc48a32ca13de8c9e53b6b2c5c90e4f7256",
+    preledger_privacy_deletion_jobs_owner_index_schema: "11c218db5fb854920f1e237dfbcfdad4a83459e28b956797d37e2997cd52ba54",
+    preledger_privacy_deletion_tasks_retry_index_schema: "9d6a17ae7413e1249b6dbe0f8df762d973d6fc36d2912b2d0ae13ae913d88772",
+  }),
+  privacyIndexes: Object.freeze([
+    "privacy_deletion_jobs_owner_state_idx",
+    "privacy_deletion_jobs_state_updated_idx",
+    "privacy_deletion_tasks_retry_idx",
+    "signup_age_proofs_expiry_idx",
+    "sqlite_autoindex_privacy_deletion_jobs_1",
+    "sqlite_autoindex_privacy_deletion_jobs_2",
+    "sqlite_autoindex_privacy_deletion_tasks_1",
+    "sqlite_autoindex_privacy_deletion_tasks_2",
+    "sqlite_autoindex_signup_age_proofs_1",
+  ]),
+  validationIndexes: Object.freeze([
+    "sqlite_autoindex_forecast_impressions_1",
+    "sqlite_autoindex_forecast_impressions_2",
+    "sqlite_autoindex_forecast_impressions_3",
+    "sqlite_autoindex_trip_validation_provenance_1",
+  ]),
+});
+
 const LEDGER_QUERY = `SELECT COALESCE((
   SELECT json_group_array(name) FROM (SELECT name FROM d1_migrations ORDER BY id)
 ), '[]') AS applied_migrations_json,
 (SELECT COUNT(*) FROM pragma_foreign_key_check) AS foreign_key_violations`;
+
+const PRIVACY_PRESERVATION_QUERY = `SELECT
+  (SELECT COUNT(*) FROM signup_age_proofs) AS signup_age_proof_rows,
+  (SELECT COUNT(*) FROM privacy_deletion_jobs) AS privacy_deletion_job_rows,
+  (SELECT COUNT(*) FROM privacy_deletion_tasks) AS privacy_deletion_task_rows,
+  (SELECT COUNT(*) FROM pragma_foreign_key_check) AS foreign_key_violations`;
 
 const STAGE_ABSENCE_QUERIES = Object.freeze({
   "0009_human_discussion_approval.sql": `
@@ -53,10 +92,34 @@ const STAGE_ABSENCE_QUERIES = Object.freeze({
     FROM pragma_table_info('site_discussion_posts')
     WHERE name IN ('approved_at', 'approved_by', 'source_ai_reviewed_at')`,
   "0010_privacy_durability.sql": `
-    SELECT COUNT(*) AS target_artifacts_found FROM sqlite_master
-    WHERE type = 'table' AND name IN (
-      'signup_age_proofs', 'privacy_deletion_jobs', 'privacy_deletion_tasks'
-    )`,
+    SELECT
+      (SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'signup_age_proofs')
+        AS preledger_signup_age_proofs_schema,
+      (SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'privacy_deletion_jobs')
+        AS preledger_privacy_deletion_jobs_schema,
+      (SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'privacy_deletion_tasks')
+        AS preledger_privacy_deletion_tasks_schema,
+      (SELECT sql FROM sqlite_master WHERE type = 'index' AND name = 'signup_age_proofs_expiry_idx')
+        AS preledger_signup_age_proofs_expiry_index_schema,
+      (SELECT sql FROM sqlite_master WHERE type = 'index' AND name = 'privacy_deletion_jobs_state_updated_idx')
+        AS preledger_privacy_deletion_jobs_state_index_schema,
+      (SELECT sql FROM sqlite_master WHERE type = 'index' AND name = 'privacy_deletion_jobs_owner_state_idx')
+        AS preledger_privacy_deletion_jobs_owner_index_schema,
+      (SELECT sql FROM sqlite_master WHERE type = 'index' AND name = 'privacy_deletion_tasks_retry_idx')
+        AS preledger_privacy_deletion_tasks_retry_index_schema,
+      COALESCE((SELECT json_group_array(name) FROM (
+        SELECT name FROM sqlite_master
+        WHERE type = 'index' AND tbl_name IN (
+          'signup_age_proofs', 'privacy_deletion_jobs', 'privacy_deletion_tasks'
+        ) ORDER BY name
+      )), '[]') AS preledger_privacy_indexes_json,
+      (SELECT COUNT(*) FROM sqlite_master
+        WHERE type = 'trigger' AND tbl_name IN (
+          'signup_age_proofs', 'privacy_deletion_jobs', 'privacy_deletion_tasks'
+        )) AS preledger_privacy_triggers,
+      (SELECT COUNT(*) FROM signup_age_proofs) AS preledger_signup_age_proof_rows,
+      (SELECT COUNT(*) FROM privacy_deletion_jobs) AS preledger_privacy_deletion_job_rows,
+      (SELECT COUNT(*) FROM privacy_deletion_tasks) AS preledger_privacy_deletion_task_rows`,
   "0011_species_aware_observations.sql": `
     SELECT
       (SELECT COUNT(*) FROM pragma_table_info('trips') WHERE name IN (
@@ -68,8 +131,23 @@ const STAGE_ABSENCE_QUERIES = Object.freeze({
         'trips_completed_contract_insert_guard', 'trips_completed_contract_update_guard'
       )) AS target_artifacts_found`,
   "0012_validation_protocol.sql": `
-    SELECT COUNT(*) AS target_artifacts_found FROM sqlite_master
-    WHERE type = 'table' AND name IN ('forecast_impressions', 'trip_validation_provenance')`,
+    SELECT
+      (SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'forecast_impressions')
+        AS preledger_forecast_impressions_schema,
+      (SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'trip_validation_provenance')
+        AS preledger_trip_validation_provenance_schema,
+      COALESCE((SELECT json_group_array(name) FROM (
+        SELECT name FROM sqlite_master
+        WHERE type = 'index' AND tbl_name IN (
+          'forecast_impressions', 'trip_validation_provenance'
+        ) ORDER BY name
+      )), '[]') AS preledger_validation_indexes_json,
+      (SELECT COUNT(*) FROM sqlite_master
+        WHERE type = 'trigger' AND tbl_name IN (
+          'forecast_impressions', 'trip_validation_provenance'
+        )) AS preledger_validation_triggers,
+      (SELECT COUNT(*) FROM forecast_impressions) AS preledger_forecast_impression_rows,
+      (SELECT COUNT(*) FROM trip_validation_provenance) AS preledger_trip_validation_provenance_rows`,
   "0013_validation_feasibility_pilot.sql": `
     SELECT COUNT(*) AS target_artifacts_found FROM sqlite_master
     WHERE type = 'table' AND name IN (
@@ -192,6 +270,59 @@ function requireMigrationArray(label, actual, expected) {
   }
 }
 
+function requireSha256(label, value, expected) {
+  if (typeof value !== "string") {
+    throw new Error(`${label}: expected stored schema SQL, received ${JSON.stringify(value)}`);
+  }
+  requireEqual(label, createHash("sha256").update(value).digest("hex"), expected);
+}
+
+function requireJsonStringArray(label, value, expected) {
+  const actual = parseMigrationArray(value, label);
+  requireMigrationArray(label, actual, expected);
+}
+
+function verifyKnownPreledgerPrivacy(row, policy = KNOWN_PRELEDGER_POLICY) {
+  for (const field of [
+    "preledger_signup_age_proofs_schema",
+    "preledger_privacy_deletion_jobs_schema",
+    "preledger_privacy_deletion_tasks_schema",
+    "preledger_signup_age_proofs_expiry_index_schema",
+    "preledger_privacy_deletion_jobs_state_index_schema",
+    "preledger_privacy_deletion_jobs_owner_index_schema",
+    "preledger_privacy_deletion_tasks_retry_index_schema",
+  ]) requireSha256(field, row[field], policy.schemaHashes[field]);
+  requireJsonStringArray(
+    "preledger_privacy_indexes_json",
+    row.preledger_privacy_indexes_json,
+    policy.privacyIndexes,
+  );
+  requireEqual("preledger_privacy_triggers", row.preledger_privacy_triggers, 0);
+  requireNonnegativeInteger("preledger_signup_age_proof_rows", row.preledger_signup_age_proof_rows);
+  requireEqual("preledger_privacy_deletion_job_rows", row.preledger_privacy_deletion_job_rows, 0);
+  requireEqual("preledger_privacy_deletion_task_rows", row.preledger_privacy_deletion_task_rows, 0);
+  return { signupAgeProofRows: row.preledger_signup_age_proof_rows };
+}
+
+function verifyKnownPreledgerValidation(row, policy = KNOWN_PRELEDGER_POLICY) {
+  for (const field of [
+    "preledger_forecast_impressions_schema",
+    "preledger_trip_validation_provenance_schema",
+  ]) requireSha256(field, row[field], policy.schemaHashes[field]);
+  requireJsonStringArray(
+    "preledger_validation_indexes_json",
+    row.preledger_validation_indexes_json,
+    policy.validationIndexes,
+  );
+  requireEqual("preledger_validation_triggers", row.preledger_validation_triggers, 0);
+  requireEqual("preledger_forecast_impression_rows", row.preledger_forecast_impression_rows, 0);
+  requireEqual(
+    "preledger_trip_validation_provenance_rows",
+    row.preledger_trip_validation_provenance_rows,
+    0,
+  );
+}
+
 function resultEnvelope(payload) {
   if (!Array.isArray(payload) || payload.length !== 1) {
     throw new Error(`Wrangler result must contain exactly one statement result; received ${payload?.length ?? "invalid"}.`);
@@ -206,7 +337,11 @@ function resultEnvelope(payload) {
   return entry;
 }
 
-export function verifyInitialPreflight(payload, expectedMigrations = BASE_APPLIED_MIGRATIONS) {
+export function verifyInitialPreflight(
+  payload,
+  expectedMigrations = BASE_APPLIED_MIGRATIONS,
+  preledgerPolicy = KNOWN_PRELEDGER_POLICY,
+) {
   const entry = resultEnvelope(payload);
   requireEqual("preflight row count", entry.results.length, 1);
   const row = entry.results[0];
@@ -217,7 +352,7 @@ export function verifyInitialPreflight(payload, expectedMigrations = BASE_APPLIE
     legal_columns_present: 8,
     legal_columns_exact: 8,
     approval_columns_found: 0,
-    later_tables_found: 0,
+    later_tables_found: 5,
     later_trip_columns_found: 0,
     later_indexes_found: 0,
     later_triggers_found: 0,
@@ -231,6 +366,8 @@ export function verifyInitialPreflight(payload, expectedMigrations = BASE_APPLIE
     "trips",
     "discussion_rows",
   ]) requireNonnegativeInteger(field, row[field]);
+  const knownPrivacy = verifyKnownPreledgerPrivacy(row, preledgerPolicy);
+  verifyKnownPreledgerValidation(row, preledgerPolicy);
   if (row.users_missing_age_eligibility > row.users) throw new Error("Age-eligibility aggregate exceeds the user count.");
   if (row.users_missing_legal_acceptance > row.users) throw new Error("Legal-acceptance aggregate exceeds the user count.");
   return {
@@ -242,6 +379,7 @@ export function verifyInitialPreflight(payload, expectedMigrations = BASE_APPLIE
       trips: row.trips,
       discussionRows: row.discussion_rows,
       tripPhotoLocators: row.trip_photo_locators,
+      signupAgeProofRows: knownPrivacy.signupAgeProofRows,
     },
   };
 }
@@ -271,9 +409,32 @@ export function verifyLedgerPayload(payload, expectedMigrations) {
   return { appliedMigrations };
 }
 
-export function verifyStageBoundaryPayload(payload) {
+export function verifyPrivacyPreservationPayload(payload, expectedAgeProofRows) {
+  const entry = resultEnvelope(payload);
+  requireEqual("privacy-preservation row count", entry.results.length, 1);
+  const row = entry.results[0];
+  requireEqual("signup_age_proof_rows", row.signup_age_proof_rows, expectedAgeProofRows);
+  requireEqual("privacy_deletion_job_rows", row.privacy_deletion_job_rows, 0);
+  requireEqual("privacy_deletion_task_rows", row.privacy_deletion_task_rows, 0);
+  requireEqual("foreign_key_violations", row.foreign_key_violations, 0);
+  return { signupAgeProofRows: expectedAgeProofRows };
+}
+
+export function verifyStageBoundaryPayload(
+  payload,
+  migration,
+  preledgerPolicy = KNOWN_PRELEDGER_POLICY,
+) {
   const entry = resultEnvelope(payload);
   requireEqual("stage-boundary row count", entry.results.length, 1);
+  if (migration === "0010_privacy_durability.sql") {
+    const knownPrivacy = verifyKnownPreledgerPrivacy(entry.results[0], preledgerPolicy);
+    return { targetArtifactsFound: 3, signupAgeProofRows: knownPrivacy.signupAgeProofRows };
+  }
+  if (migration === "0012_validation_protocol.sql") {
+    verifyKnownPreledgerValidation(entry.results[0], preledgerPolicy);
+    return { targetArtifactsFound: 2 };
+  }
   requireEqual("target_artifacts_found", entry.results[0]?.target_artifacts_found, 0);
   return { targetArtifactsFound: 0 };
 }
@@ -388,10 +549,12 @@ function parseJsonOutput(output, label) {
 }
 
 async function defaultWranglerRunner(root, args, { inherit = false } = {}) {
-  const binary = resolve(root, "node_modules/.bin/wrangler");
+  const binary = process.execPath;
+  const wranglerCli = await realpath(resolve(root, "node_modules/wrangler/bin/wrangler.js"));
+  const invocation = [wranglerCli, ...args];
   if (inherit) {
     await new Promise((resolvePromise, rejectPromise) => {
-      const child = spawnCallback(binary, args, { cwd: root, stdio: "inherit" });
+      const child = spawnCallback(binary, invocation, { cwd: root, stdio: "inherit" });
       child.once("error", rejectPromise);
       child.once("exit", (code, signal) => {
         if (code === 0) resolvePromise();
@@ -400,7 +563,7 @@ async function defaultWranglerRunner(root, args, { inherit = false } = {}) {
     });
     return "";
   }
-  const { stdout } = await execFile(binary, args, {
+  const { stdout } = await execFile(binary, invocation, {
     cwd: root,
     encoding: "utf8",
     maxBuffer: 10 * 1024 * 1024,
@@ -442,6 +605,14 @@ async function queryStageBoundary(root, runner, migration) {
     "--command", query, "--json",
   ]);
   return parseJsonOutput(output, `${migration} schema-boundary query`);
+}
+
+async function queryPrivacyPreservation(root, runner) {
+  const output = await runner(root, [
+    "d1", "execute", PRIMARY_DATABASE, "--remote", "--config", "wrangler.jsonc",
+    "--command", PRIVACY_PRESERVATION_QUERY, "--json",
+  ]);
+  return parseJsonOutput(output, "privacy-preservation query");
 }
 
 function assertMutationConfirmation(options) {
@@ -512,7 +683,10 @@ async function applyOneMigration(
   assertMutationConfirmation(options);
   const expectedBefore = expectedMigrationsBefore(options.migration);
   verifyLedgerPayload(await queryLedger(root, runner), expectedBefore);
-  verifyStageBoundaryPayload(await queryStageBoundary(root, runner, options.migration));
+  const stageBoundary = verifyStageBoundaryPayload(
+    await queryStageBoundary(root, runner, options.migration),
+    options.migration,
+  );
   await withStagedConfig(root, options.migration, async (configPath) => {
     const listOutput = await runner(root, [
       "d1", "migrations", "list", PRIMARY_DATABASE, "--remote", "--config", configPath,
@@ -526,7 +700,15 @@ async function applyOneMigration(
   });
   const expectedAfter = [...expectedBefore, options.migration];
   const result = verifyLedgerPayload(await queryLedger(root, runner), expectedAfter);
-  return { ...result, appliedMigration: options.migration, evidenceSha256: evidenceDigest(result) };
+  let preservation = {};
+  if (options.migration === "0010_privacy_durability.sql") {
+    preservation = verifyPrivacyPreservationPayload(
+      await queryPrivacyPreservation(root, runner),
+      stageBoundary.signupAgeProofRows,
+    );
+  }
+  const evidence = { ...result, ...preservation };
+  return { ...evidence, appliedMigration: options.migration, evidenceSha256: evidenceDigest(evidence) };
 }
 
 function parseArguments(args) {

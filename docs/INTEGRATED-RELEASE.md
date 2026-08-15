@@ -2,10 +2,13 @@
 
 This runbook is the authoritative path for the first release containing migrations
 `0009` through `0020`. It exists because production has a known, narrowly bounded drift:
-the eight nullable `0007_legal_acceptance.sql` columns are already present, while the D1
-migration ledger records only `0000` through `0006`. Running Wrangler against the normal
-`drizzle` directory would try `0007` again and then every later migration. Do not run raw
-`wrangler d1 migrations apply` against production.
+the eight nullable `0007_legal_acceptance.sql` columns are already present; the three `0010`
+privacy tables and two empty `0012` validation tables predate their ledger entries; and the D1
+migration ledger records only `0000` through `0006`. The existing age-proof rows are retained.
+The guarded preflight pins every pre-ledger table and index definition by SHA-256, requires the
+deletion and validation tables to remain empty, and refuses any additional later artifact.
+Running Wrangler against the normal `drizzle` directory would try `0007` again and then every
+later migration. Do not run raw `wrangler d1 migrations apply` against production.
 
 The release remains pending until a human explicitly authorizes the external operations.
 All command output and identifiers belong in a private evidence directory outside the
@@ -25,8 +28,9 @@ Checkout verification, static confirmation flags, or a previous phase's packet c
   ledger before and after, and creates a private temporary Wrangler config whose
   `migrations_pattern` exposes one exact file.
 - `0007` is never rerun. A guarded SQL statement records it only if the ledger is exactly
-  `0000`–`0006`, all eight columns have the expected nullable `TEXT` shape, no later schema
-  exists, and the foreign-key check is empty.
+  `0000`–`0006`, all eight columns have the expected nullable `TEXT` shape, the exact pinned
+  pre-ledger `0010`/`0012` schema is unchanged, no other later schema exists, the deletion and
+  validation tables remain empty, and the foreign-key check is empty.
 - Remote D1 does not authorize SQLite `PRAGMA integrity_check`. The release therefore uses
   D1's supported foreign-key check and exact schema/data predicates; the complete migration
   chain still runs `integrity_check` in local automated tests.
@@ -92,10 +96,11 @@ npm run preflight:cloudflare:remote
 ```
 
 Stop unless the preflight succeeds. It must observe the exact `0000`–`0006` ledger; all eight
-`0007` columns; no `0009`–`0020` release schema or indexes; no photo locators; no
-foreign-key violations; and
-only aggregate user, trip, and discussion counts. Preserve its aggregate evidence hash and
-output. The zero-photo-locator result is the protected boundary that permits `0020` to add a
+`0007` columns; the hash-pinned pre-ledger privacy and validation tables/indexes; no other
+`0009`–`0020` release schema; zero deletion and validation rows; no photo locators; no
+foreign-key violations; and only aggregate user, age-proof, trip, and discussion counts.
+Preserve its aggregate evidence hash and output. The zero-photo-locator result is the protected
+boundary that permits `0020` to add a
 source-bound locator-hash column without inventing legacy object identity. The confirmation flags
 in later commands assert that the bookmark was already stored;
 they do not create or preserve it for the operator.
@@ -120,11 +125,19 @@ npm run migrate:cloudflare:remote -- \
   --confirm-primary contourcast-trips --confirm-bookmark-recorded
 ```
 
-Each invocation re-verifies the immutable checkout and exact ordered remote ledger. Wrangler
-also verifies that none of the target migration's tables, columns, or boundary triggers exists;
-it can then see only the named file and creates its normal per-migration backup. Stop on any
+Each invocation re-verifies the immutable checkout, exact ordered remote ledger, and exact
+stage boundary. Except for the hash-pinned `0010` and `0012` artifacts described below, no target
+table, column, index, or trigger may exist. Wrangler can then see only the named file and creates
+its normal per-migration backup. Stop on any
 mismatch, prompt rejection, command error, or post-apply ledger failure. Do not skip ahead,
 rename a migration, or use the normal `wrangler.jsonc` migration directory directly.
+
+For `0010`, the boundary check instead requires the exact hash-pinned pre-ledger privacy tables
+and indexes, preserves every existing age-proof row, requires the deletion tables to be empty,
+and permits the reviewed idempotent DDL to add only its missing named unique indexes and ledger
+entry. A post-apply primary-D1 query must prove that the age-proof aggregate is unchanged, the
+deletion tables are still empty, and foreign keys remain valid. Any schema hash, index set,
+trigger, or aggregate mismatch fails closed.
 
 ## 5. Deploy and prove the maintenance bridge
 
@@ -208,6 +221,11 @@ npm run migrate:cloudflare:remote -- \
 
 npm run postflight:cloudflare:remote
 ```
+
+For `0012`, the boundary check requires the exact hash-pinned pre-ledger validation tables,
+their original implicit indexes, no triggers, and zero rows. The reviewed migration then fills
+in the missing indexes, triggers, legacy classifications, and ledger entry. It never replaces or
+drops a production table.
 
 The postflight must prove the exact full ledger; approval, privacy, species, validation, and
 snapshot-suppression schema; all 15 workload-backed data-resilience indexes; the exact nullable

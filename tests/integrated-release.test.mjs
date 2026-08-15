@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { createHash } from "node:crypto";
 import { readFile, readdir } from "node:fs/promises";
 import { DatabaseSync } from "node:sqlite";
 import test from "node:test";
@@ -14,6 +15,7 @@ import {
   verifyInitialPreflight,
   verifyLedgerPayload,
   verifyLocalMigrationSet,
+  verifyPrivacyPreservationPayload,
   productionMutationAction,
   verifyReconciliationResult,
   verifyStageBoundaryPayload,
@@ -63,14 +65,43 @@ async function legalSchemaWithUnrecordedMigration() {
     await applyMigration(sqlite, name);
     if (name !== RECONCILED_LEGAL_MIGRATION) recordMigration(sqlite, name);
   }
+  await applyMigration(sqlite, "0010_privacy_durability.sql");
+  const validationSource = await readFile(new URL("0012_validation_protocol.sql", migrationDirectory), "utf8");
+  const validationStatements = validationSource.split("--> statement-breakpoint");
+  sqlite.exec(validationStatements[0]);
+  sqlite.exec(validationStatements[2]);
   return sqlite;
 }
 
-test("integrated preflight recognizes only the observed 0007 schema-ledger drift", async () => {
+const preledgerSchemaFields = [
+  "preledger_signup_age_proofs_schema",
+  "preledger_privacy_deletion_jobs_schema",
+  "preledger_privacy_deletion_tasks_schema",
+  "preledger_forecast_impressions_schema",
+  "preledger_trip_validation_provenance_schema",
+  "preledger_signup_age_proofs_expiry_index_schema",
+  "preledger_privacy_deletion_jobs_state_index_schema",
+  "preledger_privacy_deletion_jobs_owner_index_schema",
+  "preledger_privacy_deletion_tasks_retry_index_schema",
+];
+
+function fixturePreledgerPolicy(row) {
+  return {
+    schemaHashes: Object.fromEntries(preledgerSchemaFields.map((field) => [
+      field,
+      createHash("sha256").update(row[field]).digest("hex"),
+    ])),
+    privacyIndexes: JSON.parse(row.preledger_privacy_indexes_json),
+    validationIndexes: JSON.parse(row.preledger_validation_indexes_json),
+  };
+}
+
+test("integrated preflight recognizes only the exact observed pre-ledger schema drift", async () => {
   const sqlite = await legalSchemaWithUnrecordedMigration();
   const source = await readFile(new URL("../scripts/integrated-release-preflight.sql", import.meta.url), "utf8");
   const row = sqlite.prepare(source).get();
-  const result = verifyInitialPreflight(readEnvelope(row));
+  const preledgerPolicy = fixturePreledgerPolicy(row);
+  const result = verifyInitialPreflight(readEnvelope(row), BASE_APPLIED_MIGRATIONS, preledgerPolicy);
   assert.deepEqual(result.appliedMigrations, BASE_APPLIED_MIGRATIONS);
   assert.deepEqual(result.aggregates, {
     users: 0,
@@ -79,23 +110,41 @@ test("integrated preflight recognizes only the observed 0007 schema-ledger drift
     trips: 0,
     discussionRows: 0,
     tripPhotoLocators: 0,
+    signupAgeProofRows: 0,
   });
 
   sqlite.exec("ALTER TABLE site_discussion_posts ADD COLUMN approved_at TEXT");
   const drifted = sqlite.prepare(source).get();
-  assert.throws(() => verifyInitialPreflight(readEnvelope(drifted)), /approval_columns_found/);
+  assert.throws(
+    () => verifyInitialPreflight(readEnvelope(drifted), BASE_APPLIED_MIGRATIONS, preledgerPolicy),
+    /approval_columns_found/,
+  );
+
+  const schemaDrifted = { ...row, preledger_forecast_impressions_schema: `${row.preledger_forecast_impressions_schema} ` };
+  assert.throws(
+    () => verifyInitialPreflight(readEnvelope(schemaDrifted), BASE_APPLIED_MIGRATIONS, preledgerPolicy),
+    /preledger_forecast_impressions_schema/,
+  );
 
   const idempotencyDrift = await legalSchemaWithUnrecordedMigration();
   idempotencyDrift.exec("ALTER TABLE trips ADD COLUMN idempotency_key_hash TEXT");
   assert.throws(
-    () => verifyInitialPreflight(readEnvelope(idempotencyDrift.prepare(source).get())),
+    () => verifyInitialPreflight(
+      readEnvelope(idempotencyDrift.prepare(source).get()),
+      BASE_APPLIED_MIGRATIONS,
+      preledgerPolicy,
+    ),
     /later_trip_columns_found/,
   );
 
   const indexDrift = await legalSchemaWithUnrecordedMigration();
   indexDrift.exec("CREATE INDEX auth_sessions_expires_idx ON auth_sessions(expires_at)");
   assert.throws(
-    () => verifyInitialPreflight(readEnvelope(indexDrift.prepare(source).get())),
+    () => verifyInitialPreflight(
+      readEnvelope(indexDrift.prepare(source).get()),
+      BASE_APPLIED_MIGRATIONS,
+      preledgerPolicy,
+    ),
     /later_indexes_found/,
   );
 });
@@ -132,6 +181,38 @@ test("final postflight proves the complete additive schema and empty default-off
   assert.equal(result.aggregates.trips, 0);
 });
 
+test("the pinned pre-ledger drift converges through the complete additive migration chain", async () => {
+  const sqlite = await legalSchemaWithUnrecordedMigration();
+  sqlite.prepare(`INSERT INTO signup_age_proofs(
+    token_hash, confirmed_at, gate_version, expires_at, consumed_at, created_at
+  ) VALUES (?, ?, ?, ?, ?, ?)`).run(
+    "a".repeat(64),
+    "2026-08-15T00:00:00.000Z",
+    "castingcompass.age-gate/1.0.0",
+    "2026-08-15T00:15:00.000Z",
+    null,
+    "2026-08-15T00:00:00.000Z",
+  );
+  const reconciliation = await readFile(
+    new URL("../scripts/reconcile-0007-legal-migration.sql", import.meta.url),
+    "utf8",
+  );
+  assert.equal(sqlite.prepare(reconciliation).all().length, 1);
+  for (const name of STAGED_MIGRATIONS) {
+    await applyMigration(sqlite, name);
+    recordMigration(sqlite, name);
+  }
+  assert.equal(sqlite.prepare("SELECT COUNT(*) AS count FROM signup_age_proofs").get().count, 1);
+  const postflight = await readFile(
+    new URL("../scripts/integrated-release-postflight.sql", import.meta.url),
+    "utf8",
+  );
+  assert.deepEqual(
+    verifyFinalPostflight(readEnvelope(sqlite.prepare(postflight).get())).appliedMigrations,
+    ALL_RELEASE_MIGRATIONS,
+  );
+});
+
 test("ledger verifier binds read-only primary results to an exact ordered prefix", () => {
   const row = {
     applied_migrations_json: JSON.stringify(BASE_APPLIED_MIGRATIONS),
@@ -149,6 +230,26 @@ test("ledger verifier binds read-only primary results to an exact ordered prefix
   assert.throws(() => verifyLedgerPayload(nonPrimary, BASE_APPLIED_MIGRATIONS), /primary D1 execution/);
 });
 
+test("privacy preservation verifier binds the retained age-proof aggregate", () => {
+  const row = {
+    signup_age_proof_rows: 2,
+    privacy_deletion_job_rows: 0,
+    privacy_deletion_task_rows: 0,
+    foreign_key_violations: 0,
+  };
+  assert.deepEqual(verifyPrivacyPreservationPayload(readEnvelope(row), 2), {
+    signupAgeProofRows: 2,
+  });
+  assert.throws(
+    () => verifyPrivacyPreservationPayload(readEnvelope({ ...row, signup_age_proof_rows: 1 }), 2),
+    /signup_age_proof_rows/,
+  );
+  assert.throws(
+    () => verifyPrivacyPreservationPayload(readEnvelope({ ...row, privacy_deletion_job_rows: 1 }), 2),
+    /privacy_deletion_job_rows/,
+  );
+});
+
 test("stage-boundary verifier rejects any pre-existing target artifact", () => {
   assert.deepEqual(verifyStageBoundaryPayload(readEnvelope({ target_artifacts_found: 0 })), {
     targetArtifactsFound: 0,
@@ -156,6 +257,34 @@ test("stage-boundary verifier rejects any pre-existing target artifact", () => {
   assert.throws(
     () => verifyStageBoundaryPayload(readEnvelope({ target_artifacts_found: 1 })),
     /target_artifacts_found/,
+  );
+});
+
+test("stage-boundary verifier preserves only the pinned pre-ledger tables", async () => {
+  const sqlite = await legalSchemaWithUnrecordedMigration();
+  const preflightSource = await readFile(
+    new URL("../scripts/integrated-release-preflight.sql", import.meta.url),
+    "utf8",
+  );
+  const row = sqlite.prepare(preflightSource).get();
+  const preledgerPolicy = fixturePreledgerPolicy(row);
+  assert.deepEqual(
+    verifyStageBoundaryPayload(readEnvelope(row), "0010_privacy_durability.sql", preledgerPolicy),
+    { targetArtifactsFound: 3, signupAgeProofRows: 0 },
+  );
+  assert.deepEqual(
+    verifyStageBoundaryPayload(readEnvelope(row), "0012_validation_protocol.sql", preledgerPolicy),
+    { targetArtifactsFound: 2 },
+  );
+  sqlite.exec("CREATE INDEX forecast_impressions_window_idx ON forecast_impressions(window_id, site_id, window_start)");
+  const changed = sqlite.prepare(preflightSource).get();
+  assert.throws(
+    () => verifyStageBoundaryPayload(
+      readEnvelope(changed),
+      "0012_validation_protocol.sql",
+      preledgerPolicy,
+    ),
+    /preledger_validation_indexes_json/,
   );
 });
 

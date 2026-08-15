@@ -20,7 +20,7 @@ CI verifies its locked hash and semantics without reading any private packet. Th
 - separate `operator` and `independent_reviewer` approvals;
 - the one permitted safety-floor commit;
 - one action for every safety-floor, maintenance, and normal deployment; and
-- one action for `0007` reconciliation and each exact `0009`–`0018` migration.
+- one action for `0007` reconciliation and each exact `0009`–`0020` migration.
 
 The verifier requires full lowercase 40-character release and gate commits. Each verified
 checkout must be clean, belong to the official `brianbzeng/castingcompass` origin, and be
