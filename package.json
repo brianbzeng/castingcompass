@@ -145,7 +145,7 @@
     "@cloudflare/vite-plugin": "1.52.1",
     "@eslint-react/eslint-plugin": "5.18.0",
     "@next/eslint-plugin-next": "16.3.1",
-    "@playwright/test": "1.61.1",
+    "@playwright/test": "1.62.1",
     "@tailwindcss/postcss": "4.3.3",
     "@types/node": "22.19.19",
     "@types/react": "19.2.14",
