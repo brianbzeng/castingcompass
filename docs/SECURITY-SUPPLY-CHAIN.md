@@ -182,6 +182,11 @@ commercial licensing or redistribution claim.
 in the API image.
 `pipeline/requirements-ci.in` composes the smoke ranges with the validation protocol's exact
 overlap constraints, fixes the reviewed pandas behavior, and pins the CI-only Ruff version.
+Ruff 0.16 expanded its implicit default from 59 to 413 rules. The root `ruff.toml` therefore
+requires the exact reviewed Ruff version and explicitly selects `E4`, `E7`, `E9`, and `F`,
+which is Ruff's documented compatibility configuration for the pre-0.16 default contract.
+Expanding the lint policy is a separate code-quality change and must not be hidden inside a
+dependency refresh.
 The generated FastAPI runtime/test locks contain exact transitive versions and SHA-256 hashes for
 universal CPython 3.13 wheel resolution. `pipeline/requirements-ci.lock` retains the corresponding
 CPython 3.12 contract.

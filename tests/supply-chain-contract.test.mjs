@@ -247,19 +247,24 @@ test("Python API and pipeline installs use exact source-bound wheel hashes", asy
   const pipelineInput = await readFile(new URL("pipeline/requirements-ci.in", root), "utf8");
   assert.match(pipelineInput, /^-c requirements-validation\.txt$/m);
   assert.match(pipelineInput, /^pandas==3\.0\.5$/m);
+  assert.match(pipelineInput, /^ruff==0\.16\.2$/m);
   assert.doesNotMatch(pipelineInput, /^-c .*\.lock$/m);
   const pipelineLock = await readFile(new URL("pipeline/requirements-ci.lock", root), "utf8");
   assert.match(pipelineLock, /^pandas==3\.0\.5\s+\\$/m);
+  assert.match(pipelineLock, /^ruff==0\.16\.2\s+\\$/m);
   assert.doesNotMatch(pipelineLock, /^pytz==/m);
   assert.match(dependabot, /scientific-runtime:[\s\S]+numpy[\s\S]+scipy[\s\S]+scikit-learn[\s\S]+pandas/);
   assert.match(dependabot, /geo-deep-runtime:[\s\S]+pyproj[\s\S]+rasterio[\s\S]+torch/);
 
   const geoInput = await readFile(new URL("pipeline/requirements-geo-deep.in", root), "utf8");
+  assert.match(geoInput, /^ruff==0\.16\.2$/m);
   assert.match(geoInput, /^pyproj==3\.7\.2$/m);
   assert.match(geoInput, /^rasterio==1\.5\.1$/m);
   assert.match(geoInput, /^torch==2\.13\.0$/m);
   const macLock = await readFile(new URL("pipeline/requirements-geo-deep-macos-arm64.lock", root), "utf8");
   const linuxLock = await readFile(new URL("pipeline/requirements-geo-deep-linux-cpu.lock", root), "utf8");
+  assert.match(macLock, /^ruff==0\.16\.2\s+\\$/m);
+  assert.match(linuxLock, /^ruff==0\.16\.2\s+\\$/m);
   assert.match(macLock, /^torch==2\.13\.0\s+\\$/m);
   assert.match(linuxLock, /^torch==2\.13\.0\+cpu\s+\\$/m);
   assert.doesNotMatch(`${macLock}\n${linuxLock}`, /^(?:nvidia-|triton==)/m);
@@ -273,6 +278,11 @@ test("Python API and pipeline installs use exact source-bound wheel hashes", asy
   assert.equal((optionalWorkflow.match(/--require-hashes/g) ?? []).length, 2);
   assert.equal((optionalWorkflow.match(/--only-binary=:all:/g) ?? []).length, 2);
   assert.equal((optionalWorkflow.match(/check_geo_deep_environment\.py/g) ?? []).length, 4);
+
+  const ruffConfig = await readFile(new URL("ruff.toml", root), "utf8");
+  assert.match(ruffConfig, /^required-version = "==0\.16\.2"$/m);
+  assert.match(ruffConfig, /^select = \["E4", "E7", "E9", "F"\]$/m);
+  assert.doesNotMatch(ruffConfig, /extend-select|preview\s*=\s*true/);
 });
 
 test("the deterministic production SBOM is bound to the lock and direct runtime packages", async () => {
