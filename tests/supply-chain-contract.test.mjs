@@ -77,7 +77,7 @@ test("direct npm packages and build runtimes are exact reviewed versions", async
   assert.equal(manifest.overrides["js-yaml"], undefined);
   assert.equal(lock.packages["node_modules/js-yaml"], undefined);
   assert.equal(manifest.overrides.sharp, "0.35.3");
-  assert.equal(lock.packages["node_modules/eslint"].version, "10.8.0");
+  assert.equal(lock.packages["node_modules/eslint"].version, "10.8.1");
   assert.equal(lock.packages["node_modules/minimatch"].version, "10.2.5");
   assert.equal(lock.packages["node_modules/brace-expansion"].version, "5.0.9");
   assert.equal(lock.packages["node_modules/fast-uri"].version, "3.1.5");
@@ -282,7 +282,7 @@ test("the deterministic production SBOM is bound to the lock and direct runtime 
   assert.equal(sbom.bomFormat, "CycloneDX");
   assert.equal(sbom.specVersion, "1.5");
   assert.match(sbom.serialNumber, /^urn:uuid:[0-9a-f]{8}-[0-9a-f]{4}-5[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/u);
-  assert.equal(sbom.serialNumber, "urn:uuid:f58257e5-21fa-503c-97d2-a55201412b48");
+  assert.equal(sbom.serialNumber, "urn:uuid:4238ad6a-8ec7-58b3-b99f-438e198a1425");
   assert.equal("timestamp" in sbom.metadata, false);
   assert.equal(sbom.metadata.component.name, manifest.name);
   assert.deepEqual(sbom.metadata.properties, [{

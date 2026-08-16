@@ -15,15 +15,15 @@ const watchWorkflow = await readFile(
 
 const requiredLockPackages = {
   "node_modules/@cloudflare/vite-plugin": { version: "1.52.1", dev: true },
-  "node_modules/@eslint-react/eslint-plugin": { version: "5.18.0", dev: true },
+  "node_modules/@eslint-react/eslint-plugin": { version: "5.18.6", dev: true },
   "node_modules/@next/eslint-plugin-next": { version: "16.3.1", dev: true },
   "node_modules/brace-expansion": { version: "5.0.9", dev: true },
-  "node_modules/eslint": { version: "10.8.0", dev: true },
+  "node_modules/eslint": { version: "10.8.1", dev: true },
   "node_modules/eslint-plugin-import-x": { version: "4.17.1", dev: true },
   "node_modules/eslint-plugin-jsx-a11y-x": { version: "0.2.0", dev: true },
   "node_modules/eslint-plugin-react-hooks": { version: "7.1.1", dev: true },
   "node_modules/fast-uri": { version: "3.1.5", dev: true },
-  "node_modules/globals": { version: "16.4.0", dev: true },
+  "node_modules/globals": { version: "17.11.0", dev: true },
   "node_modules/minimatch": { version: "10.2.5", dev: true },
   "node_modules/nanoid": { version: "3.3.18", dev: false },
   "node_modules/next": { version: "16.3.1", dev: false },
@@ -31,7 +31,7 @@ const requiredLockPackages = {
   "node_modules/react": { version: "19.2.8", dev: false },
   "node_modules/react-dom": { version: "19.2.8", dev: false },
   "node_modules/react-server-dom-webpack": { version: "19.2.8", dev: true },
-  "node_modules/typescript-eslint": { version: "8.65.0", dev: true },
+  "node_modules/typescript-eslint": { version: "8.67.0", dev: true },
   "node_modules/vinext": { version: "0.0.45", dev: true },
   "node_modules/wrangler": { version: "4.123.0", dev: true },
 };
@@ -57,7 +57,7 @@ function fixture() {
   return {
     policy: {
       schemaVersion: "castingcompass.npm-audit-policy/2.0.0",
-      reviewedOn: "2026-08-15",
+      reviewedOn: "2026-08-16",
       owner: "dependency-release-owner",
       requiredAuditCounts: {
         complete: { ...zeroCounts },
@@ -154,7 +154,7 @@ test("rejects a hidden vulnerability inventory even when metadata claims zero", 
 test("rejects exact lock-version or dev-classification drift", () => {
   const versionInput = fixture();
   versionInput.lockfile.packages["node_modules/eslint"].version = "10.7.0";
-  assert.throws(() => verifyNpmAuditPolicy(versionInput), /must remain 10\.8\.0/u);
+  assert.throws(() => verifyNpmAuditPolicy(versionInput), /must remain 10\.8\.1/u);
 
   const classificationInput = fixture();
   classificationInput.lockfile.packages["node_modules/react-server-dom-webpack"].dev = false;

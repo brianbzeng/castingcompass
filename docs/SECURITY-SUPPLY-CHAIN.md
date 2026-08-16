@@ -60,7 +60,7 @@ same lint boundaries directly from exact maintained packages:
   browser-lifecycle checks. Overlapping compiler rules remain owned by the official React Hooks
   plugin.
 
-ESLint `10.8.0`, minimatch `10.2.5`, and brace-expansion `5.0.9` now form the only lint glob
+ESLint `10.8.1`, minimatch `10.2.5`, and brace-expansion `5.0.9` now form the only lint glob
 edge. The unused legacy YAML override disappeared with the old bundle. Both complete and
 production `npm audit` reports are zero.
 
