@@ -37,7 +37,7 @@ test("Python dependency snapshot publishes exact versioned lock inventories", ()
     scope: "development",
   });
   assert.deepEqual(runtime.resolved.starlette, {
-    package_url: "pkg:pypi/starlette@1.3.1",
+    package_url: "pkg:pypi/starlette@1.6.0",
     relationship: "direct",
     scope: "runtime",
   });
