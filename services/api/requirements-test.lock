@@ -2,7 +2,7 @@
 # Target: CPython 3.13 universal wheel resolution; source builds are disabled at install.
 # Input-SHA256: services/api/.python-version=861b3dd8083d28f336ef70f6755bc399538ddad627b1d095820ca34cb953cf14
 # Input-SHA256: services/api/requirements-test.in=5490dfdbe81f68d1fe6a25309614372346c74ef8506e7106d1a1ad74cf5aa755
-# Input-SHA256: services/api/requirements.txt=d23ee1f99caed4e1b58080b79e5e673103856faf8d98d8bad675aeca80f8fc11
+# Input-SHA256: services/api/requirements.txt=b6af471b18036ffbf27c375ca5a41eb1f31ffde97b2797cb1f28cf4f240fbd14
 # Regenerate: node scripts/generate-python-locks.mjs --write
 annotated-doc==0.0.5 \
     --hash=sha256:117bac03a25ede5df5440e855b32d556049ca169ead221505badf432fed4b101 \
@@ -29,7 +29,6 @@ colorama==0.4.6 ; sys_platform == 'win32' \
     # via
     #   click
     #   pytest
-    #   uvicorn
 fastapi==0.141.1 \
     --hash=sha256:bfb91aa2d334c61cb35ba9a116fc123b3d3df31640b801cf57a7a78ec3f603b3 \
     --hash=sha256:e8822fc40db1e1858054d7a949a888695bc9bdce70139178e33bd2871a453ca1
@@ -408,9 +407,9 @@ tzdata==2026.3 ; sys_platform == 'win32' \
     --hash=sha256:4a1518b8993086a7982523e071643f3c0e5f213e75b21318e78bcabfff9d1415 \
     --hash=sha256:dc096730c87af6cab1b171c9d532be840741ff5d459015e7f6947bd7d7e54931
     # via psycopg
-uvicorn==0.35.0 \
-    --hash=sha256:197535216b25ff9b785e29a0b79199f55222193d47f820816e7da751e9bc8d4a \
-    --hash=sha256:bc662f087f7cf2ce11a1d7fd70b90c9f98ef2e2831556dd078d131b96cc94a01
+uvicorn==0.52.2 \
+    --hash=sha256:0b916d247cf5500b320638ea11abf0fed7f348e8e1c7fde53a0e6b6319803512 \
+    --hash=sha256:4294500b9c8f7a3ef3e975d9e4be08c3eb76441af449a9e6e10146c6a182ffec
     # via -r services/api/requirements.txt
 uvloop==0.22.1 ; platform_python_implementation != 'PyPy' and sys_platform != 'cygwin' and sys_platform != 'win32' \
     --hash=sha256:017bd46f9e7b78e81606329d07141d3da446f8798c6baeec124260e22c262772 \

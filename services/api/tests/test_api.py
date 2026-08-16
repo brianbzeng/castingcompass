@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import inspect
 import json
 import logging
 import threading
@@ -23,6 +24,7 @@ from services.api.app.repository import (
     build_repository,
     validate_database_window_shape,
 )
+from services.api.app import server
 from services.api.app.server import configured_port
 
 
@@ -66,6 +68,34 @@ def test_server_rejects_invalid_or_shell_like_ports(value: str) -> None:
 
 def test_server_accepts_bounded_port() -> None:
     assert configured_port("8000") == 8000
+
+
+def test_server_uses_the_reviewed_uvicorn_launch_contract(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    assert version("uvicorn") == "0.52.2"
+    assert {"host", "port", "proxy_headers", "forwarded_allow_ips"} <= set(
+        inspect.signature(server.uvicorn.run).parameters
+    )
+
+    observed: dict[str, object] = {}
+
+    def fake_run(app: str, **kwargs: object) -> None:
+        observed["app"] = app
+        observed.update(kwargs)
+
+    monkeypatch.setenv("PORT", "8123")
+    monkeypatch.setattr(server.uvicorn, "run", fake_run)
+
+    server.main()
+
+    assert observed == {
+        "app": "services.api.app.main:app",
+        "host": "0.0.0.0",
+        "port": 8123,
+        "proxy_headers": True,
+        "forwarded_allow_ips": "*",
+    }
 
 
 @pytest.fixture
