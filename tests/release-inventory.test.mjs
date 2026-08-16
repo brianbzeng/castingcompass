@@ -9,6 +9,7 @@ const inputPaths = [
   ".node-version",
   ".npmrc",
   ".python-version",
+  "ruff.toml",
   "field-review/marin-structure-depth-review-policy.json",
   "field-review/north-east-bay-structure-depth-review-policy.json",
   "field-review/oakland-south-bay-structure-depth-review-policy.json",
