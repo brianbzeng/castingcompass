@@ -2,7 +2,7 @@
 # Target: CPython 3.13 universal wheel resolution; source builds are disabled at install.
 # Input-SHA256: services/api/.python-version=861b3dd8083d28f336ef70f6755bc399538ddad627b1d095820ca34cb953cf14
 # Input-SHA256: services/api/requirements-test.in=5490dfdbe81f68d1fe6a25309614372346c74ef8506e7106d1a1ad74cf5aa755
-# Input-SHA256: services/api/requirements.txt=152cb5699f583932f995e9cb2d445f84542bbb23706ec6d27f98cccd6023c5f2
+# Input-SHA256: services/api/requirements.txt=d23ee1f99caed4e1b58080b79e5e673103856faf8d98d8bad675aeca80f8fc11
 # Regenerate: node scripts/generate-python-locks.mjs --write
 annotated-doc==0.0.5 \
     --hash=sha256:117bac03a25ede5df5440e855b32d556049ca169ead221505badf432fed4b101 \
@@ -30,9 +30,9 @@ colorama==0.4.6 ; sys_platform == 'win32' \
     #   click
     #   pytest
     #   uvicorn
-fastapi==0.140.0 \
-    --hash=sha256:e951c0a0d9540bf5d9a2a9e078fd415da2ab7e312d435139e7d9e2e7fe9f0b23 \
-    --hash=sha256:f338951b82fd74ca8f843163aec43ea1a1ce84d515415a50fa98fa25572a5544
+fastapi==0.141.1 \
+    --hash=sha256:bfb91aa2d334c61cb35ba9a116fc123b3d3df31640b801cf57a7a78ec3f603b3 \
+    --hash=sha256:e8822fc40db1e1858054d7a949a888695bc9bdce70139178e33bd2871a453ca1
     # via -r services/api/requirements.txt
 h11==0.16.0 \
     --hash=sha256:4e35b956cf45792e4caa5885e69fba00bdbc6ffafbfa020300e549b208ee5ff1 \
@@ -377,9 +377,9 @@ pyyaml==6.0.3 \
     --hash=sha256:fa160448684b4e94d80416c0fa4aac48967a969efe22931448d853ada8baf926 \
     --hash=sha256:fc09d0aa354569bc501d4e787133afc08552722d3ab34836a80547331bb5d4a0
     # via uvicorn
-starlette==1.3.1 \
-    --hash=sha256:05d0213193f2fbaae60e2ecb593b4add4262ad4e46536b54abe36f11a71724e0 \
-    --hash=sha256:c7372aae11c3c3f26a42df7bd626cec2f47d03483d261d369516a615a53714c6
+starlette==1.6.0 \
+    --hash=sha256:a86dd39d14bb45f85a3d18525215a9ef0cfd1f192ac793220e72598c90335f0c \
+    --hash=sha256:d4e3ac5e546444960c710297a3c9fc3f7ebae1b7e963f3d36173b49da535be9b
     # via
     #   -r services/api/requirements.txt
     #   fastapi

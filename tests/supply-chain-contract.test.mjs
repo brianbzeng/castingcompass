@@ -223,10 +223,10 @@ test("Python API and pipeline installs use exact source-bound wheel hashes", asy
   assert.match(dependabot, /psycopg-family:[\s\S]+psycopg-binary[\s\S]+psycopg-pool/);
 
   const apiRequirements = await readFile(new URL("services/api/requirements.txt", root), "utf8");
-  assert.match(apiRequirements, /^fastapi==0\.140\.0$/m);
+  assert.match(apiRequirements, /^fastapi==0\.141\.1$/m);
   assert.match(apiRequirements, /^psycopg\[binary\]==3\.3\.4$/m);
   assert.match(apiRequirements, /^psycopg-pool==3\.3\.1$/m);
-  assert.match(apiRequirements, /^starlette==1\.3\.1$/m);
+  assert.match(apiRequirements, /^starlette==1\.6\.0$/m);
   const apiTestRequirements = await readFile(
     new URL("services/api/requirements-test.in", root),
     "utf8",
