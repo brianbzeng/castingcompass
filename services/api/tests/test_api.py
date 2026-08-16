@@ -301,6 +301,8 @@ def test_rejects_unsupported_species_and_horizon(client: TestClient):
 def test_patched_starlette_url_boundaries_and_narrow_method_surface(client: TestClient):
     assert version("fastapi") == "0.141.1"
     assert version("starlette") == "1.6.0"
+    assert version("httpx2") == "2.10.0"
+    assert version("httpcore2") == "2.10.0"
 
     malformed_host = Request(
         {

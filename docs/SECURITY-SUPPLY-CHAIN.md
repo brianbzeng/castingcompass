@@ -225,8 +225,10 @@ the pair for future Dependabot proposals. The API does not mount `StaticFiles`, 
 `FileResponse`, parse forms, or define `HTTPEndpoint` subclasses, and it allows only GET/OPTIONS;
 those facts reduce reachability but do not justify retaining a vulnerable framework. Isolated
 tests must also exercise the patched malformed-Host/path URL boundaries and reject unsupported
-methods before this change is merged. The test-only graph uses exact `httpx2` 2.9.1, Starlette's
+methods before this change is merged. The test-only graph uses exact `httpx2` 2.10.0, Starlette's
 preferred test-client backend, instead of relying on its deprecated `httpx` compatibility path.
+Its `httpcore2` 2.10.0 transport is used outside Emscripten, while the separately hashed
+`httpx2-jsfetch` 1.0 transport remains restricted to the Emscripten environment marker.
 
 The 2026-07-18 provider evidence is complete at merge commit
 `8d130c47c7cd708eefc47bdbfd83e391ce4b08c7`: main CI run `29622373929` passed the hash-required

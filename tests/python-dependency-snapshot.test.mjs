@@ -23,7 +23,7 @@ test("Python dependency snapshot publishes exact versioned lock inventories", ()
   const tests = snapshot.manifests["services/api/requirements-test.in"];
   const pipeline = snapshot.manifests["pipeline/requirements-ci.in"];
   assert.equal(Object.keys(runtime.resolved).length, 24);
-  assert.equal(Object.keys(tests.resolved).length, 32);
+  assert.equal(Object.keys(tests.resolved).length, 33);
   assert.equal(Object.keys(pipeline.resolved).length, 14);
 
   assert.deepEqual(runtime.resolved.psycopg, {
@@ -42,8 +42,18 @@ test("Python dependency snapshot publishes exact versioned lock inventories", ()
     scope: "runtime",
   });
   assert.deepEqual(tests.resolved.httpx2, {
-    package_url: "pkg:pypi/httpx2@2.9.1",
+    package_url: "pkg:pypi/httpx2@2.10.0",
     relationship: "direct",
+    scope: "development",
+  });
+  assert.deepEqual(tests.resolved.httpcore2, {
+    package_url: "pkg:pypi/httpcore2@2.10.0",
+    relationship: "indirect",
+    scope: "development",
+  });
+  assert.deepEqual(tests.resolved["httpx2-jsfetch"], {
+    package_url: "pkg:pypi/httpx2-jsfetch@1.0",
+    relationship: "indirect",
     scope: "development",
   });
   assert.equal("httpx" in tests.resolved, false);
