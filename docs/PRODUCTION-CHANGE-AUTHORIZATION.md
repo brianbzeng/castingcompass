@@ -19,7 +19,8 @@ CI verifies its locked hash and semantics without reading any private packet. Th
 - a maximum six-hour authorization window;
 - separate `operator` and `independent_reviewer` approvals;
 - the one permitted safety-floor commit;
-- one action for every safety-floor, maintenance, and normal deployment; and
+- one action for every safety-floor, maintenance, normal, and later abuse-control activation
+  deployment; and
 - one action for `0007` reconciliation and each exact `0009`–`0020` migration; and
 - one action for the fixed production `PRAGMA optimize` operation before normal traffic.
 
@@ -93,17 +94,49 @@ npm run verify:production-change -- --action deploy:maintenance
 Deploy commands run the same verifier, confirm exact npm 10.9.8 and Wrangler 4.123.0, reinstall
 the locked graph with lifecycle scripts disabled, rebuild the Cloudflare target, and invoke
 Wrangler without a shell. The wrapper rechecks the installed tooling, clean source, packet,
-action, and expiry after the build and immediately before deployment. D1 mutations likewise
-reauthorize after their final read-only boundary check and immediately before the write:
+action, and expiry after the build. It uploads exactly one inactive version, identifies that
+version by comparing the before/after version inventories, and verifies its runtime, every
+binding, every variable, the D1 identity, and all rate-limit parameters against reviewed source.
+Only after a third authorization check does it re-read the active deployment, refuse any drift
+from the recorded single version at `100%`, and then send `100%` of traffic to that exact new
+version ID. It verifies the resulting deployment and automatically restores the recorded prior
+version at `100%` if promotion or the final status check fails. D1 mutations likewise reauthorize after
+their final read-only boundary check and immediately before the write:
 
 ```sh
 npm run release:cloudflare:maintenance
 npm run release:cloudflare
 ```
 
-The wrapper discards ambient `npm_config_*`, public-build, and `WRANGLER_*` overrides, uses empty
-npm user/global configuration, and restores only disabled Wrangler metrics plus an optional
-evidence-output directory. If `WRANGLER_OUTPUT_FILE_DIRECTORY` is set, it must already exist as
+An abuse-control activation is a separate immutable normal-release commit whose checked-in
+configuration sets both `RATE_LIMITING_ENABLED=true` and `TURNSTILE_ENABLED=true`. Provide only
+the two activation values in an exact canonical JSON file outside every repository:
+
+```sh
+umask 077
+export RELEASE_SECRETS_FILE=/PRIVATE/ENCRYPTED/PATH/activation-secrets.json
+export RELEASE_AUTHORIZATION_FILE=/PRIVATE/ENCRYPTED/PATH/deploy-normal.json
+npm run release:cloudflare:activation
+```
+
+Its private packet must name the distinct `deploy:activation` action. A prior `deploy:normal`
+packet cannot authorize activation.
+
+The file must be an absolute owner-readable regular file with one link, no symlink traversal,
+no group/other permissions, exact ordered keys `RATE_LIMIT_KEY_SECRET` then
+`TURNSTILE_SECRET_KEY`, distinct values of at least 32 characters, canonical two-space JSON,
+and a trailing newline. The wrapper reads and fingerprints it privately before the build, repeats
+the full file-identity and content check after the build, and passes it only to `wrangler versions
+upload --secrets-file`. The fingerprint is an internal stability check and is not release output.
+Never use `wrangler secret put` for this path because it creates and immediately deploys a
+version rather than preserving the inactive inspection boundary.
+
+The wrapper discards ambient `npm_config_*`, public-build, runtime-secret, `RELEASE_*`, and
+`WRANGLER_*` overrides, uses empty npm user/global configuration, and restores only disabled
+Wrangler metrics plus an optional evidence-output directory. Install and build subprocesses also
+receive no `CLOUDFLARE_*` credentials; only the post-build Wrangler provider commands receive the
+deployment authentication from the operator environment. If
+`WRANGLER_OUTPUT_FILE_DIRECTORY` is set, it must already exist as
 an owner-only, owner-owned, non-symlink directory outside both the release and gate checkouts.
 
 The dedicated safety-floor commit does not contain the current gate. Invoke the current full-release

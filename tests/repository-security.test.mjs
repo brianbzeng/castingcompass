@@ -87,6 +87,7 @@ test("production release scripts cannot apply migrations implicitly or bypass th
     "release:cloudflare",
     "release:cloudflare:maintenance",
     "release:cloudflare:safety-floor",
+    "release:cloudflare:activation",
   ]) {
     const command = packageJson.scripts[name];
     assert.equal(typeof command, "string", `${name} must exist`);
@@ -124,8 +125,36 @@ test("every deploy and migration entry point requires private exact-action autho
     scripts["release:cloudflare:safety-floor"],
     /release-cloudflare\.mjs.*--mode safety-floor.*\$RELEASE_ROOT.*\$RELEASE_COMMIT.*\$RELEASE_GATE_COMMIT.*\$RELEASE_AUTHORIZATION_FILE/,
   );
+  assert.match(
+    scripts["release:cloudflare:activation"],
+    /release-cloudflare\.mjs.*--mode activation.*\$RELEASE_COMMIT.*\$RELEASE_AUTHORIZATION_FILE.*--secrets-file "\$RELEASE_SECRETS_FILE"/,
+  );
   const releaseWrapper = readFileSync("scripts/release-cloudflare.mjs", "utf8");
-  assert.match(releaseWrapper, /await authorizationVerifier\([\s\S]+npmPath, "ci", "--ignore-scripts"[\s\S]+npmPath, "run", "build:cloudflare"[\s\S]+await authorizationVerifier\([\s\S]+wranglerPath, "deploy"/);
+  assert.match(
+    releaseWrapper,
+    /await authorizationVerifier\([\s\S]+npmPath, "ci", "--ignore-scripts"[\s\S]+npmPath, "run", "build:cloudflare"[\s\S]+await authorizationVerifier\([\s\S]+wranglerPath,\s+"versions",\s+"upload"[\s\S]+\["versions", "view"[\s\S]+verifyUploadedVersion\([\s\S]+await authorizationVerifier\([\s\S]+wranglerPath,\s+"versions",\s+"deploy"/,
+  );
+  assert.match(
+    releaseWrapper,
+    /wranglerPath,\s+"versions",\s+"deploy",\s+`\$\{priorVersion\}@100%`[\s\S]+Automatic rollback after refused[\s\S]+Restored production deployment/,
+  );
+  const secretPolicy = JSON.parse(readFileSync(
+    "security/production-worker-secret-bindings.json",
+    "utf8",
+  ));
+  assert.deepEqual(secretPolicy.base_secret_names, [
+    "AUTH_EMAIL_FROM",
+    "MIMO_API_KEY",
+    "RESEND_API_KEY",
+  ]);
+  assert.deepEqual(secretPolicy.activation_secret_names, [
+    "RATE_LIMIT_KEY_SECRET",
+    "TURNSTILE_SECRET_KEY",
+  ]);
+  const wranglerConfig = JSON.parse(readFileSync("wrangler.jsonc", "utf8"));
+  assert.deepEqual(wranglerConfig.secrets, {
+    required: secretPolicy.base_secret_names,
+  });
   assert.match(releaseWrapper, /shell: false/);
   assert.match(scripts["migrate:cloudflare:remote"], /integrated-release\.mjs apply/);
   assert.match(scripts["reconcile:cloudflare:0007"], /integrated-release\.mjs reconcile-0007/);

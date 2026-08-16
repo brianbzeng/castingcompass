@@ -43,9 +43,10 @@ Activate these bindings only as a separate reviewed production operation:
 
 1. Deploy the reviewed Worker and bindings with `RATE_LIMITING_ENABLED=false`; confirm the
    health route, normal API traffic, and existing D1 ceilings still behave normally.
-2. Generate a dedicated high-entropy secret of at least 32 characters and store it only as
-   the Cloudflare Worker secret `RATE_LIMIT_KEY_SECRET`. Record its custodian and rotation
-   procedure, never its value. Do not reuse a session, validation, deletion, or backup key.
+2. Generate a dedicated high-entropy secret of 32–256 characters for the Cloudflare Worker
+   secret `RATE_LIMIT_KEY_SECRET`. Place it only in the owner-only exact activation file until
+   the guarded inactive-version upload. Record its custodian and rotation procedure, never its
+   value. Do not reuse a session, validation, deletion, or backup key.
 3. Confirm the exact six binding names, unique namespace IDs, and reviewed limits on the
    deployed version. Exercise 429, invalid-config 503, header redaction, normal signup/login,
    export/deletion, report, retry, and scheduled AI fixtures in an isolated environment.
@@ -53,9 +54,15 @@ Activate these bindings only as a separate reviewed production operation:
    observation/log-only mode where the account plan supports it; otherwise use conservative
    thresholds and a synthetic hostname before routing normal beta traffic.
 5. In a separately reviewed immutable config change, set exactly
-   `RATE_LIMITING_ENABLED=true`. Any other non-empty value is intentionally treated as an
-   invalid enabled configuration. Monitor 429/503 classes, legitimate multi-user NAT traffic,
-   D1 growth, Worker CPU, and provider usage before promotion.
+   `RATE_LIMITING_ENABLED=true` and `TURNSTILE_ENABLED=true`, retain only the reviewed production
+   hostname/action allowlist, and use `npm run release:cloudflare:activation` with the private
+   exact two-key secrets file defined in
+   [Production change authorization](PRODUCTION-CHANGE-AUTHORIZATION.md). The wrapper uploads
+   the version without traffic, verifies every binding and value, reauthorizes, and then promotes
+   that exact version to `100%`. Any other non-empty switch value is intentionally treated as an
+   invalid enabled configuration. Never use `wrangler secret put`, which immediately deploys a
+   version and bypasses this inspection boundary. Monitor 429/503 classes, legitimate multi-user
+   NAT traffic, D1 growth, Worker CPU, and provider usage after promotion.
 6. If thresholds harm legitimate use, return the switch to `false` through the guarded
    release path while retaining the durable D1 ceilings. If the controls are under attack,
    use maintenance mode or tighten the outer rule rather than exposing identifiers in logs.
@@ -115,8 +122,9 @@ operator dashboard. A local scanner pass does not prove production custody, leas
 roles, MFA, correct environment bindings, revocation, recovery, or rotation.
 
 Treat every runtime secret change as a deployment. Cloudflare documents that ordinary
-`wrangler secret put` immediately deploys a new Worker version, so use a reviewed versioned
-secret/release workflow and record the exact Worker version. Do not rotate validation HMACs
+`wrangler secret put` immediately deploys a new Worker version, so use the guarded inactive
+version upload, exact binding inspection, and exact-version promotion workflow and record the
+exact Worker version. Do not rotate validation HMACs
 mid-activation, do not rotate a backup key before all retained artifacts remain recoverable,
 and account for the temporary edge-counter reset caused by rate-limit pseudonym-key rotation.
 
