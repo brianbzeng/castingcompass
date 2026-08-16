@@ -69,6 +69,7 @@ jobs:
           python-version: "3.12.13"
           enable-cache: true
           cache-python: true
+          prune-cache: true
           cache-dependency-glob: pipeline/requirements-geo-deep-macos-arm64.lock
       - run: uv python install 3.12.13
       - run: uv venv --python 3.12.13 --seed .venv
