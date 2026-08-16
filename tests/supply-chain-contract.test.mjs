@@ -195,8 +195,8 @@ test("Python API and pipeline installs use exact source-bound wheel hashes", asy
   assert.match(verifier.stdout, /FastAPI runtime Python lock verified \(\d+ exact hashed packages\)/);
   assert.match(verifier.stdout, /FastAPI test Python lock verified \(33 exact hashed packages\)/);
   assert.match(verifier.stdout, /pipeline CI Python lock verified \(14 exact hashed packages\)/);
-  assert.match(verifier.stdout, /Geo\/deep macOS ARM64 Python lock verified \(31 exact hashed packages\)/);
-  assert.match(verifier.stdout, /Geo\/deep Linux x86-64 CPU Python lock verified \(31 exact hashed packages\)/);
+  assert.match(verifier.stdout, /Geo\/deep macOS ARM64 Python lock verified \(30 exact hashed packages\)/);
+  assert.match(verifier.stdout, /Geo\/deep Linux x86-64 CPU Python lock verified \(30 exact hashed packages\)/);
 
   const manifest = JSON.parse(await readFile(new URL("package.json", root), "utf8"));
   assert.match(manifest.scripts.security, /security:python-locks/);
@@ -256,7 +256,7 @@ test("Python API and pipeline installs use exact source-bound wheel hashes", asy
 
   const geoInput = await readFile(new URL("pipeline/requirements-geo-deep.in", root), "utf8");
   assert.match(geoInput, /^pyproj==3\.7\.2$/m);
-  assert.match(geoInput, /^rasterio==1\.5\.0$/m);
+  assert.match(geoInput, /^rasterio==1\.5\.1$/m);
   assert.match(geoInput, /^torch==2\.13\.0$/m);
   const macLock = await readFile(new URL("pipeline/requirements-geo-deep-macos-arm64.lock", root), "utf8");
   const linuxLock = await readFile(new URL("pipeline/requirements-geo-deep-linux-cpu.lock", root), "utf8");
