@@ -42,9 +42,15 @@ review can write the public table.
    and the AI-to-public writer removed. Record its source commit, Cloudflare deployment ID,
    Worker version ID, and traffic percentage as the oldest permitted rollback target. For
    this release, the source commit is
-   `e2c612246fadfdb231e481c405fa72e502458ed1`. It descends from the original containment
-   commit `16db94b` and adds only patched build tools plus a cleared public API build override;
-   `16db94b` is historical context, not a permitted deployment or rollback target. From the
+   `511f85d7d5f8714d41633be24491e2087c366598` with tree
+   `d2a6335a0648bdca4c6a13d0b987b96b4e05b76e`. It is based directly on the original
+   containment commit `16db94b` and rebuilds that safety floor with the reviewed dependency
+   lock, a cleared public API build override, disabled public Worker subdomains and previews,
+   a fail-closed canonical-host boundary, and fail-closed direct deployment entry points.
+   Hosted CI run `31894634326` passed its API, pipeline, web, and mobile jobs. The previous
+   fixed commit is no longer reachable from repository refs or provider source metadata and is
+   not a permitted deployment or rollback target. `16db94b` remains historical context, not a
+   permitted deployment or rollback target. From the
    full release checkout, prove that
    the dedicated safety worktree is clean and resolves to that immutable commit before
    installing, building, or deploying it:
@@ -52,7 +58,7 @@ review can write the public table.
    ```sh
    node /ABSOLUTE/PATH/TO/FULL_RELEASE_WORKTREE/scripts/verify-release-checkout.mjs \
      --root /ABSOLUTE/PATH/TO/SAFETY_WORKTREE \
-     --expected-commit e2c612246fadfdb231e481c405fa72e502458ed1
+     --expected-commit 511f85d7d5f8714d41633be24491e2087c366598
    ```
 
    The safety commit predates the current authorization gate. Stay in the full release checkout
@@ -62,7 +68,7 @@ review can write the public table.
 
    ```sh
    export RELEASE_ROOT=/ABSOLUTE/PATH/TO/SAFETY_WORKTREE
-   export RELEASE_COMMIT=e2c612246fadfdb231e481c405fa72e502458ed1
+   export RELEASE_COMMIT=511f85d7d5f8714d41633be24491e2087c366598
    export RELEASE_GATE_COMMIT="$FULL_RELEASE_COMMIT"
    export RELEASE_AUTHORIZATION_FILE=/PRIVATE/ENCRYPTED/PATH/deploy-safety-floor.json
    export WRANGLER_OUTPUT_FILE_DIRECTORY=/ABSOLUTE/PATH/TO/PRIVATE/RELEASE_EVIDENCE
