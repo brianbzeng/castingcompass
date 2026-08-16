@@ -87,6 +87,15 @@ test("padding entries are ignored and safe whole-password results pass", async (
   ));
 });
 
+test("bounded padded ranges larger than 64 KiB remain usable", async () => {
+  const password = "large padded range test passphrase";
+  await assert.doesNotReject(assertNewPasswordAllowed(
+    password,
+    "safe@example.com",
+    async () => new Response(`${"A".repeat(35)}:0\n`.repeat(2_400)),
+  ));
+});
+
 test("provider errors and malformed or oversized ranges fail closed", async () => {
   const password = "provider failure test passphrase";
   const email = "safe@example.com";
@@ -100,7 +109,7 @@ test("provider errors and malformed or oversized ranges fail closed", async () =
   await unavailable(assertNewPasswordAllowed(
     password,
     email,
-    async () => new Response(`${"A".repeat(35)}:0\n`.repeat(2_000)),
+    async () => new Response(`${"A".repeat(35)}:0\n`.repeat(8_000)),
   ));
   await unavailable(assertNewPasswordAllowed(password, email, async () => { throw new Error("network secret"); }));
 });
