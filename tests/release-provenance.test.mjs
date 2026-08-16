@@ -69,7 +69,10 @@ test("release signing stays main-only and isolated from dependency execution", (
   assert.match(workflow, /\.metadata\.component\.name == "castingcompass-release"/u);
   assert.match(workflow, /\.type == "container"[\s\S]+\.type == "operating-system"[\s\S]+pkg:pypi\//u);
   assert.match(workflow, /Cloudflare Workers Runtime/u);
-  assert.match(workflow, /actions\/attest@f7c74d28b9d84cb8768d0b8ca14a4bac6ef463e6 # v4\.2\.0/u);
+  assert.equal(
+    (workflow.match(/actions\/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4\.2\.2/gu) ?? []).length,
+    2,
+  );
   assert.match(workflow, /actions\/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7\.0\.1/u);
   assert.match(workflow, /actions\/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8\.0\.1/u);
   const signingJob = workflow.slice(workflow.indexOf("  attest-release:"));
