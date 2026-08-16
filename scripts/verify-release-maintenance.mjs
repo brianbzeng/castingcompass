@@ -23,6 +23,13 @@ function requireNoStore(response, label) {
   if (!/\bno-store\b/i.test(value)) throw new Error(`${label}: expected Cache-Control no-store`);
 }
 
+function requireNoTransform(response, label) {
+  const value = response.headers.get("Cache-Control") ?? "";
+  if (!/(?:^|,)\s*no-transform\s*(?:,|$)/i.test(value)) {
+    throw new Error(`${label}: expected Cache-Control no-transform`);
+  }
+}
+
 function requireRetryAfter(response, label) {
   if (!/^\d+$/.test(response.headers.get("Retry-After") ?? "")) {
     throw new Error(`${label}: expected a numeric Retry-After`);
@@ -74,6 +81,7 @@ export async function verifyReleaseMaintenance({
     requests += 1;
     if (page.status !== 503) throw new Error(`${pageLabel}: expected 503, received ${page.status}`);
     requireNoStore(page, pageLabel);
+    requireNoTransform(page, pageLabel);
     requireRetryAfter(page, pageLabel);
     requireMaintenanceMarker(page, pageLabel);
     if (!/^text\/html\b/i.test(page.headers.get("Content-Type") ?? "")) {

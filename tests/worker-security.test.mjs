@@ -246,7 +246,7 @@ test("release maintenance stops writes and serves a self-contained browser 503",
   assert.equal(page?.status, 503);
   assert.match(page?.headers.get("Content-Type") ?? "", /^text\/html\b/);
   assert.equal(page?.headers.get("Retry-After"), "300");
-  assert.equal(page?.headers.get("Cache-Control"), "no-store");
+  assert.equal(page?.headers.get("Cache-Control"), "no-store, no-transform");
   assert.equal(page?.headers.get("CDN-Cache-Control"), "no-store");
   assert.equal(page?.headers.get("X-CastingCompass-Maintenance"), "true");
   const pageHtml = await page?.text() ?? "";

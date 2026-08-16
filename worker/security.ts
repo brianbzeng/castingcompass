@@ -240,7 +240,9 @@ export function releaseMaintenanceResponse(request: Request, env?: SecurityEnv):
 
   const headers = new Headers(maintenanceHeaders);
   headers.set("Content-Type", "text/html; charset=utf-8");
-  headers.set("Cache-Control", "no-store");
+  // The maintenance document is deliberately self-contained. `no-transform`
+  // prevents edge features from injecting scripts into this emergency page.
+  headers.set("Cache-Control", "no-store, no-transform");
   headers.set("CDN-Cache-Control", "no-store");
   headers.set("Vary", "Accept");
   headers.set(
