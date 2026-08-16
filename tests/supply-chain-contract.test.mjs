@@ -193,7 +193,7 @@ test("Python API and pipeline installs use exact source-bound wheel hashes", asy
   });
   assert.equal(verifier.status, 0, verifier.stderr);
   assert.match(verifier.stdout, /FastAPI runtime Python lock verified \(\d+ exact hashed packages\)/);
-  assert.match(verifier.stdout, /FastAPI test Python lock verified \(32 exact hashed packages\)/);
+  assert.match(verifier.stdout, /FastAPI test Python lock verified \(33 exact hashed packages\)/);
   assert.match(verifier.stdout, /pipeline CI Python lock verified \(14 exact hashed packages\)/);
   assert.match(verifier.stdout, /Geo\/deep macOS ARM64 Python lock verified \(31 exact hashed packages\)/);
   assert.match(verifier.stdout, /Geo\/deep Linux x86-64 CPU Python lock verified \(31 exact hashed packages\)/);
@@ -231,7 +231,7 @@ test("Python API and pipeline installs use exact source-bound wheel hashes", asy
     new URL("services/api/requirements-test.in", root),
     "utf8",
   );
-  assert.match(apiTestRequirements, /^httpx2==2\.9\.1$/m);
+  assert.match(apiTestRequirements, /^httpx2==2\.10\.0$/m);
   assert.doesNotMatch(apiTestRequirements, /^httpx==/m);
 
   const validationLock = await readFile(new URL("pipeline/requirements-validation.lock", root));
