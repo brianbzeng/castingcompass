@@ -20,7 +20,7 @@ EXPECTED_VERSIONS = {
     "numpy": "2.5.1",
     "pandas": "3.0.5",
     "pyproj": "3.7.2",
-    "rasterio": "1.5.0",
+    "rasterio": "1.5.1",
     "scikit-learn": "1.9.0",
     "scipy": "1.18.0",
 }
