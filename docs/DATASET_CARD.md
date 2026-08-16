@@ -7,7 +7,7 @@ implemented. The production
 species migration and any supervised catch-training dataset remain unapproved.
 Official rasters, probe corpora, and weights are not bundled.
 
-**Version:** 0.6.0
+**Version:** 0.7.0
 
 ## Intended dataset
 
@@ -288,6 +288,10 @@ Every real-data run must preserve:
 - exact source product/query, filters, access date, citation, and manifest ID;
 - CRS and vertical-datum transformation history;
 - terrain configuration and fixed channel order;
+- the exact `california-halibut-model-input-v1` contract and feature-order hash,
+  including the no-lookahead cutoff, shared source snapshots, explicit
+  missingness masks, candidate-parity evidence, and separate pre-ranking
+  access/regulation/water-quality safety actions;
 - observation eligibility counts and rejected-row reasons;
 - geographic split seed/count/buffer;
 - for the v2 feasibility pilot, the externally registered protocol hash,

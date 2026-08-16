@@ -1,7 +1,7 @@
 {
   "bomFormat": "CycloneDX",
   "specVersion": "1.5",
-  "serialNumber": "urn:uuid:fd5a3997-c98e-531e-82d4-b093818a420b",
+  "serialNumber": "urn:uuid:e761ac1a-4db2-5d58-9cd2-80802602cc91",
   "version": 1,
   "metadata": {
     "component": {
@@ -53,7 +53,11 @@
         },
         {
           "name": "castingcompass:input-sha256",
-          "value": "contracts/model-selection-plan.schema.json:55a9d42afdbaa8afd6b21276a1ecca3de5b2bc61becc1f62ef95b85673d416c6"
+          "value": "contracts/model-input-contract.schema.json:3852ba5cc0dfcd05177aa9e1484952b3067e3332d982c265ae7feacb861e2149"
+        },
+        {
+          "name": "castingcompass:input-sha256",
+          "value": "contracts/model-selection-plan.schema.json:fb7a39eebffb2ce2ae5c815c5c2b23af12f9e4e0d309fa7b26c0cf78a7a7b8a8"
         },
         {
           "name": "castingcompass:input-sha256",
@@ -101,7 +105,11 @@
         },
         {
           "name": "castingcompass:input-sha256",
-          "value": "model/selection/california-halibut-v1.json:be764612e1deec8971fa858d2e3fb8e10863b088879ab46092742143558fb194"
+          "value": "model/selection/california-halibut-input-v1.json:b4736ac0e34c2485d3cd83c60d610cfad408b40ab89436a5fea920347de1dc40"
+        },
+        {
+          "name": "castingcompass:input-sha256",
+          "value": "model/selection/california-halibut-v1.json:40a3ab368b39889cf942fc4265150a7879a5036ebdb61d35957fffee274cf19d"
         },
         {
           "name": "castingcompass:input-sha256",

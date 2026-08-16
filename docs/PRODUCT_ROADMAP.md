@@ -1005,10 +1005,18 @@ after its acceptance checks pass in the intended environment.
     attention pooling, and returns the same two heads. Real targets/datasets and every training,
     benchmark, locked-test, winner, score, serving, and deployment authority remain rejected;
     the metric-free receipt reports plumbing facts only.
-  - [ ] After eligible data and a separate confirmatory design exist, freeze the actual input
-    adapters, search spaces, final primary metrics, materiality thresholds, slice floors,
+  - [x] Freeze and locally verify the pre-label candidate input contract before eligible outcomes
+    exist. Every required family is bound to the same rows, folds, context, source snapshots,
+    and raw 64 m/256 m/1,024 m six-channel terrain evidence; classical models receive fold-local
+    summaries of the same patch bags used by the deep model. Outcome, identity, history, score,
+    post-trip, lookahead, moderation, and restricted-platform inputs are prohibited. Missingness
+    stays explicit, unsupported terrain abstains, and pollution/access/regulation remain separate
+    pre-ranking safety actions that cannot increase catch opportunity. The hash-bound contract
+    grants no label, training, benchmark, selection, score, serving, or deployment authority.
+  - [ ] After eligible data and a separate confirmatory design exist, implement the frozen input
+    adapters and freeze search spaces, final primary metrics, materiality thresholds, slice floors,
     calibration ceiling, and independent-reproduction procedure before any locked-test access.
-    The local v1 template is not a preregistration and runs no benchmark.
+    The local v1.1 template is not a preregistration and runs no benchmark.
 - [ ] Define model promotion, drift, and rollback gates: beat preregistered geographic/time
   holdout baselines before promotion; monitor by site, season, mode, and taxon; version every
   release; and require rollback/revalidation when performance or data support drifts. **Local

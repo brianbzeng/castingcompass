@@ -2,7 +2,7 @@
 
 **Plan:** `california-halibut-model-selection-v1`
 
-**Machine contract:** `castingcompass.model-selection-plan/1.0.0`
+**Machine contract:** `castingcompass.model-selection-plan/1.1.0`
 
 **Status:** frozen local template; not preregistered and not authorized to run
 
@@ -62,12 +62,25 @@ authority, locked-test access, winner selection, score changes, serving
 changes, and deployment. Their existence proves interface compatibility only;
 they supply no comparative metric or evidence that any family is better.
 
-The deep capability adapter is not the future benchmark input contract. It
-does not decide real patch sources, physical radii, feature channels,
-normalization policy, training budget, checkpoint selection, abstention
-support, or missing-coverage rules. Those choices remain deliberately open
-until the separate confirmatory protocol can freeze them without access to
-eligible labels or locked-test outcomes.
+The versioned `california-halibut-model-input-v1` contract now freezes the
+pre-label information boundary without opening any labels or running a
+benchmark. It binds all seven required candidates to the same eligible rows,
+folds, context features, source snapshots, and raw terrain evidence. Classical
+candidates receive fold-local summaries of the exact 64 m, 256 m, and 1,024 m
+six-channel terrain bags received by the deep candidate; that representation
+difference is the only architecture-specific view and grants no candidate a
+private upstream source.
+
+The frozen input boundary also forbids outcome, catch, post-trip, identity,
+personal-history, score, moderation, future-source, and restricted-platform
+features. Missing values retain explicit masks, every transform is fold-local,
+and missing or out-of-support terrain causes abstention rather than an invented
+neutral value.
+
+Current access closures, regulations, and water-quality actions stay outside
+the catch model and run before ranking. Pollution or an advisory can never
+increase opportunity merely because fish might still be present. A separately
+reviewed safety policy may withhold or clearly downgrade a destination.
 
 ## Shared future evidence
 
@@ -91,21 +104,21 @@ indistinguishable complex model loses to the simpler model.
 
 ## Gates before execution
 
-The benchmark remains closed until all twelve machine-checked gates have
-evidence, including:
+The input-contract gate is locally complete. The benchmark remains closed until
+the other eleven machine-checked gates have evidence, including:
 
 - permitted complete-effort data with confirmed skunk semantics;
 - valid target-specific observation contracts and a passed feasibility pilot
   whose rows remain excluded from confirmation;
 - an externally timestamped separate confirmatory protocol and activation
   before its first eligible row;
-- frozen input, candidate, geographic/time, participant, minimum-support, and
+- frozen candidate, geographic/time, participant, minimum-support, and
   source-separation contracts;
 - legal, privacy, consent, license, and data-steward approval; and
 - encrypted custody, restore, deletion, and retention evidence.
 
-When those prerequisites exist, the next version must freeze actual feature
-adapters, hyperparameter search spaces, final primary metrics, materiality
+When those prerequisites exist, the next version must implement the frozen
+feature adapters and freeze hyperparameter search spaces, final primary metrics, materiality
 thresholds, slice floors, calibration ceiling, and independent-reproduction
 procedure before any locked-test access.
 
@@ -115,6 +128,7 @@ Run:
 
 ```bash
 python -m pipeline.contourcast.model_selection_plan audit
+python -m unittest pipeline.tests.test_model_input_contract -v
 python -m pipeline.contourcast.candidate_models
 python -m pipeline.contourcast.deep_candidate
 python -m unittest pipeline.tests.test_model_selection_plan \

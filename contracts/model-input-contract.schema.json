@@ -1,0 +1,442 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "castingcompass.model-input-contract/1.0.0",
+  "title": "CastingCompass California-halibut model input contract",
+  "description": "Frozen local, pre-label feature boundary shared by every future model candidate. It grants no label, benchmark, training, selection, score, serving, or deployment authority.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "contract_id",
+    "contract_version",
+    "status",
+    "target_taxon_id",
+    "prediction_unit",
+    "prediction_time_boundary",
+    "candidate_parity",
+    "context_features",
+    "terrain_view",
+    "label_contract",
+    "missingness_and_abstention",
+    "safety_gate_boundary",
+    "prohibited_inputs",
+    "source_binding",
+    "authority"
+  ],
+  "properties": {
+    "schema_version": { "const": "castingcompass.model-input-contract/1.0.0" },
+    "contract_id": { "const": "california-halibut-model-input-v1" },
+    "contract_version": { "const": "1.0.0" },
+    "status": { "const": "frozen-local-template-no-label-authority" },
+    "target_taxon_id": { "const": "california-halibut" },
+    "prediction_unit": { "const": "one-public-site-by-two-hour-window-before-outcome" },
+    "prediction_time_boundary": { "$ref": "#/$defs/predictionTimeBoundary" },
+    "candidate_parity": { "$ref": "#/$defs/candidateParity" },
+    "context_features": { "$ref": "#/$defs/contextFeatures" },
+    "terrain_view": { "$ref": "#/$defs/terrainView" },
+    "label_contract": { "$ref": "#/$defs/labelContract" },
+    "missingness_and_abstention": { "$ref": "#/$defs/missingnessAndAbstention" },
+    "safety_gate_boundary": { "$ref": "#/$defs/safetyGateBoundary" },
+    "prohibited_inputs": {
+      "type": "array",
+      "minItems": 15,
+      "maxItems": 15,
+      "prefixItems": [
+        { "const": "target-outcome" },
+        { "const": "catch-counts" },
+        { "const": "post-trip-observations" },
+        { "const": "trip-notes" },
+        { "const": "trip-photo" },
+        { "const": "bait-lure-rig-or-gear-selected-after-score-exposure" },
+        { "const": "participant-account-or-reporter-identity" },
+        { "const": "participant-personal-history" },
+        { "const": "exact-private-gps" },
+        { "const": "score-influenced-choice" },
+        { "const": "current-or-prior-opportunity-score" },
+        { "const": "current-or-prior-component-scores" },
+        { "const": "future-weather-or-revised-source-values" },
+        { "const": "moderation-output" },
+        { "const": "protected-or-scraped-platform-content" }
+      ],
+      "items": false
+    },
+    "source_binding": { "$ref": "#/$defs/sourceBinding" },
+    "authority": { "$ref": "#/$defs/authority" }
+  },
+  "$defs": {
+    "slug": {
+      "type": "string",
+      "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+    },
+    "closedBoolean": { "const": false },
+    "predictionTimeBoundary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "anchor",
+        "forecast_values",
+        "future_or_revised_values_allowed",
+        "post_start_values_allowed"
+      ],
+      "properties": {
+        "anchor": { "const": "before-score-exposure-and-before-trip-start" },
+        "forecast_values": {
+          "const": "only-values-issued-or-observed-at-or-before-the-anchor"
+        },
+        "future_or_revised_values_allowed": { "const": false },
+        "post_start_values_allowed": { "const": false }
+      }
+    },
+    "candidateParity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "required_candidate_ids",
+        "same_eligible_rows",
+        "same_outer_and_inner_folds",
+        "same_context_features",
+        "same_raw_terrain_sources_and_centers",
+        "same_source_snapshots",
+        "candidate_exclusive_upstream_source_allowed",
+        "architecture_view_rule"
+      ],
+      "properties": {
+        "required_candidate_ids": {
+          "type": "array",
+          "minItems": 7,
+          "maxItems": 7,
+          "prefixItems": [
+            { "const": "naive-prevalence-mean-cpue" },
+            { "const": "regularized-linear-two-head" },
+            { "const": "spline-gam-two-head" },
+            { "const": "random-forest-two-head" },
+            { "const": "hist-gradient-boosted-two-head" },
+            { "const": "spatial-hierarchical-two-head" },
+            { "const": "bathymetric-deep-two-head" }
+          ],
+          "items": false
+        },
+        "same_eligible_rows": { "const": true },
+        "same_outer_and_inner_folds": { "const": true },
+        "same_context_features": { "const": true },
+        "same_raw_terrain_sources_and_centers": { "const": true },
+        "same_source_snapshots": { "const": true },
+        "candidate_exclusive_upstream_source_allowed": { "const": false },
+        "architecture_view_rule": {
+          "const": "classical-candidates-receive-fold-local-summaries-of-the-exact-multiscale-terrain-bags-received-by-the-deep-candidate"
+        }
+      }
+    },
+    "contextFeatures": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["numeric", "categorical", "binary", "availability_masks"],
+      "properties": {
+        "numeric": {
+          "type": "array",
+          "minItems": 28,
+          "maxItems": 28,
+          "prefixItems": [
+            { "const": "month_sin" },
+            { "const": "month_cos" },
+            { "const": "local_hour_sin" },
+            { "const": "local_hour_cos" },
+            { "const": "tide_level_midpoint_ft" },
+            { "const": "tide_change_m" },
+            { "const": "current_knots" },
+            { "const": "current_direction_sin" },
+            { "const": "current_direction_cos" },
+            { "const": "wind_mph" },
+            { "const": "swell_feet" },
+            { "const": "swell_period_seconds" },
+            { "const": "swell_direction_sin" },
+            { "const": "swell_direction_cos" },
+            { "const": "wave_power_kw_m" },
+            { "const": "water_temp_f" },
+            { "const": "cloud_cover_fraction" },
+            { "const": "pressure_hpa" },
+            { "const": "pressure_trend_hpa_3h" },
+            { "const": "moon_illumination_fraction" },
+            { "const": "expected_access_pressure_fraction" },
+            { "const": "casting_bearing_sin" },
+            { "const": "casting_bearing_cos" },
+            { "const": "forecast_lead_hours" },
+            { "const": "tide_source_age_hours" },
+            { "const": "weather_source_age_hours" },
+            { "const": "buoy_source_age_hours" },
+            { "const": "marine_source_age_hours" }
+          ],
+          "items": false
+        },
+        "categorical": {
+          "type": "array",
+          "minItems": 5,
+          "maxItems": 5,
+          "prefixItems": [
+            { "const": "fishing_mode" },
+            { "const": "region_panel" },
+            { "const": "tide_stage" },
+            { "const": "casting_exposure" },
+            { "const": "beach_slope_class" }
+          ],
+          "items": false
+        },
+        "binary": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 1,
+          "prefixItems": [
+            { "const": "daylight" }
+          ],
+          "items": false
+        },
+        "availability_masks": {
+          "type": "array",
+          "minItems": 5,
+          "maxItems": 5,
+          "prefixItems": [
+            { "const": "tide_available" },
+            { "const": "weather_available" },
+            { "const": "buoy_available" },
+            { "const": "marine_forecast_available" },
+            { "const": "terrain_available" }
+          ],
+          "items": false
+        }
+      }
+    },
+    "terrainView": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "source_channels",
+        "radii_m",
+        "output_size",
+        "minimum_valid_fraction_each_scale",
+        "classical_summary_statistics",
+        "deep_patch_bag",
+        "fold_local_only"
+      ],
+      "properties": {
+        "source_channels": {
+          "type": "array",
+          "minItems": 6,
+          "maxItems": 6,
+          "prefixItems": [
+            { "const": "depth_m" },
+            { "const": "slope_deg" },
+            { "const": "roughness_m" },
+            { "const": "curvature" },
+            { "const": "tpi_local_m" },
+            { "const": "tpi_broad_m" }
+          ],
+          "items": false
+        },
+        "radii_m": {
+          "type": "array",
+          "minItems": 3,
+          "maxItems": 3,
+          "prefixItems": [
+            { "const": 64.0 },
+            { "const": 256.0 },
+            { "const": 1024.0 }
+          ],
+          "items": false
+        },
+        "output_size": { "const": 33 },
+        "minimum_valid_fraction_each_scale": { "const": 0.8 },
+        "classical_summary_statistics": {
+          "type": "array",
+          "minItems": 5,
+          "maxItems": 5,
+          "prefixItems": [
+            { "const": "center" },
+            { "const": "mean" },
+            { "const": "std" },
+            { "const": "min" },
+            { "const": "max" }
+          ],
+          "items": false
+        },
+        "deep_patch_bag": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "shape",
+            "mask_required",
+            "maximum_site_support_patches",
+            "empty_bag_action"
+          ],
+          "properties": {
+            "shape": {
+              "const": "rows-by-sitesupportpatches-by-3-scales-by-6-channels-by-33-by-33"
+            },
+            "mask_required": { "const": true },
+            "maximum_site_support_patches": { "const": 32 },
+            "empty_bag_action": { "const": "abstain" }
+          }
+        },
+        "fold_local_only": {
+          "type": "array",
+          "minItems": 5,
+          "maxItems": 5,
+          "prefixItems": [
+            { "const": "imputation" },
+            { "const": "normalization" },
+            { "const": "categorical-encoding" },
+            { "const": "feature-selection" },
+            { "const": "calibration" }
+          ],
+          "items": false
+        }
+      }
+    },
+    "labelContract": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "observation_contract_version",
+        "eligible_contract_status",
+        "primary_target_taxon_id",
+        "complete_attempt_required",
+        "expanded_estimate_allowed",
+        "occurrence_label",
+        "positive_cpue_label",
+        "non_encounter_cpue",
+        "pilot_rows_allowed",
+        "legacy_unverified_rows_allowed"
+      ],
+      "properties": {
+        "observation_contract_version": {
+          "const": "castingcompass.observation/2.0.0"
+        },
+        "eligible_contract_status": { "const": "valid" },
+        "primary_target_taxon_id": { "const": "california-halibut" },
+        "complete_attempt_required": { "const": true },
+        "expanded_estimate_allowed": { "const": false },
+        "occurrence_label": {
+          "const": "target-encounter-count-greater-than-zero"
+        },
+        "positive_cpue_label": {
+          "const": "target-encounter-count-divided-by-positive-target-effort"
+        },
+        "non_encounter_cpue": { "const": 0 },
+        "pilot_rows_allowed": { "const": false },
+        "legacy_unverified_rows_allowed": { "const": false }
+      }
+    },
+    "missingnessAndAbstention": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "invented_neutral_values_allowed",
+        "missingness_masks_required",
+        "missing_dynamic_values_may_be_fold_locally_imputed",
+        "missing_terrain_or_subthreshold_coverage_action",
+        "outside_validated_geography_or_mode_action",
+        "abstentions_reported_separately"
+      ],
+      "properties": {
+        "invented_neutral_values_allowed": { "const": false },
+        "missingness_masks_required": { "const": true },
+        "missing_dynamic_values_may_be_fold_locally_imputed": { "const": true },
+        "missing_terrain_or_subthreshold_coverage_action": {
+          "const": "abstain"
+        },
+        "outside_validated_geography_or_mode_action": { "const": "abstain" },
+        "abstentions_reported_separately": { "const": true }
+      }
+    },
+    "safetyGateBoundary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "candidate_inputs",
+        "ordered_before_ranking",
+        "unsafe_or_unknown_action",
+        "pollution_or_advisory_status_may_increase_opportunity",
+        "reason"
+      ],
+      "properties": {
+        "candidate_inputs": {
+          "type": "array",
+          "maxItems": 0
+        },
+        "ordered_before_ranking": {
+          "type": "array",
+          "minItems": 3,
+          "maxItems": 3,
+          "prefixItems": [
+            { "const": "current-access-closure" },
+            { "const": "current-fishing-regulation" },
+            { "const": "current-water-quality-action" }
+          ],
+          "items": false
+        },
+        "unsafe_or_unknown_action": {
+          "const": "withhold-or-clearly-downgrade-through-a-separate-reviewed-safety-policy"
+        },
+        "pollution_or_advisory_status_may_increase_opportunity": {
+          "const": false
+        },
+        "reason": {
+          "const": "a-catch-model-must-not-learn-that-polluted-closed-or-illegal-water-is-a-better-destination"
+        }
+      }
+    },
+    "sourceBinding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "raw_source_id_required",
+        "raw_sha256_required",
+        "source_revision_required",
+        "retrieved_at_required",
+        "issued_or_observed_at_required",
+        "transform_version_required",
+        "feature_order_hash_required",
+        "feature_order_sha256",
+        "timezone",
+        "no_lookahead_enforced"
+      ],
+      "properties": {
+        "raw_source_id_required": { "const": true },
+        "raw_sha256_required": { "const": true },
+        "source_revision_required": { "const": true },
+        "retrieved_at_required": { "const": true },
+        "issued_or_observed_at_required": { "const": true },
+        "transform_version_required": { "const": true },
+        "feature_order_hash_required": { "const": true },
+        "feature_order_sha256": {
+          "const": "e7916adf5d65ac03c89bbe6a9d8d7ef52a7eda56a6611d6af5d2f7306af12f4d"
+        },
+        "timezone": { "const": "America/Los_Angeles" },
+        "no_lookahead_enforced": { "const": true }
+      }
+    },
+    "authority": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "eligible_labeled_data_available",
+        "benchmark_execution_authorized",
+        "target_specific_training_authorized",
+        "locked_test_access_authorized",
+        "winner_selection_authorized",
+        "score_change_authorized",
+        "serving_change_authorized",
+        "deployment_authorized"
+      ],
+      "properties": {
+        "eligible_labeled_data_available": { "const": false },
+        "benchmark_execution_authorized": { "const": false },
+        "target_specific_training_authorized": { "const": false },
+        "locked_test_access_authorized": { "const": false },
+        "winner_selection_authorized": { "const": false },
+        "score_change_authorized": { "const": false },
+        "serving_change_authorized": { "const": false },
+        "deployment_authorized": { "const": false }
+      }
+    }
+  }
+}
