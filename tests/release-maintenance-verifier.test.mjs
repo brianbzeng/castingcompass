@@ -77,20 +77,26 @@ test("maintenance verifier rejects cacheable or unblocked APIs", async () => {
 });
 
 test("maintenance verifier rejects a transformable maintenance document", async () => {
-  await assert.rejects(verifyReleaseMaintenance({
-    baseUrls: ["https://castingcompass.test"],
-    expectedWorkerVersionId: "version-123",
-    fetchImpl: async (input) => {
-      const response = await maintenanceFetch()(input);
-      if (new URL(input).pathname !== "/") return response;
-      const headers = new Headers(response.headers);
-      headers.set("Cache-Control", "no-store");
-      return new Response(await response.text(), {
-        status: response.status,
-        headers,
-      });
-    },
-  }), /expected Cache-Control no-transform/);
+  for (const cacheControl of [
+    "no-store",
+    "no-store, x-no-transform",
+    'no-store, private="no-transform"',
+  ]) {
+    await assert.rejects(verifyReleaseMaintenance({
+      baseUrls: ["https://castingcompass.test"],
+      expectedWorkerVersionId: "version-123",
+      fetchImpl: async (input) => {
+        const response = await maintenanceFetch()(input);
+        if (new URL(input).pathname !== "/") return response;
+        const headers = new Headers(response.headers);
+        headers.set("Cache-Control", cacheControl);
+        return new Response(await response.text(), {
+          status: response.status,
+          headers,
+        });
+      },
+    }), /expected Cache-Control no-transform/);
+  }
 });
 
 test("maintenance verifier rejects a blocked robots policy", async () => {

@@ -25,7 +25,9 @@ function requireNoStore(response, label) {
 
 function requireNoTransform(response, label) {
   const value = response.headers.get("Cache-Control") ?? "";
-  if (!/\bno-transform\b/i.test(value)) throw new Error(`${label}: expected Cache-Control no-transform`);
+  if (!/(?:^|,)\s*no-transform\s*(?:,|$)/i.test(value)) {
+    throw new Error(`${label}: expected Cache-Control no-transform`);
+  }
 }
 
 function requireRetryAfter(response, label) {
