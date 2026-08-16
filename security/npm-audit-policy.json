@@ -1,6 +1,6 @@
 {
   "schemaVersion": "castingcompass.npm-audit-policy/2.0.0",
-  "reviewedOn": "2026-08-15",
+  "reviewedOn": "2026-08-16",
   "owner": "dependency-release-owner",
   "requiredAuditCounts": {
     "complete": {
@@ -26,7 +26,7 @@
       "dev": true
     },
     "node_modules/@eslint-react/eslint-plugin": {
-      "version": "5.18.0",
+      "version": "5.18.6",
       "dev": true
     },
     "node_modules/@next/eslint-plugin-next": {
@@ -38,7 +38,7 @@
       "dev": true
     },
     "node_modules/eslint": {
-      "version": "10.8.0",
+      "version": "10.8.1",
       "dev": true
     },
     "node_modules/eslint-plugin-import-x": {
@@ -58,7 +58,7 @@
       "dev": true
     },
     "node_modules/globals": {
-      "version": "16.4.0",
+      "version": "17.11.0",
       "dev": true
     },
     "node_modules/minimatch": {
@@ -90,7 +90,7 @@
       "dev": true
     },
     "node_modules/typescript-eslint": {
-      "version": "8.65.0",
+      "version": "8.67.0",
       "dev": true
     },
     "node_modules/vinext": {
