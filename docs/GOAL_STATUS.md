@@ -54,8 +54,11 @@ by that discovery.
       or authorize deployment.
 - [ ] Obtain eligible complete-attempt evidence. Recruit consented participants who report every
       targeted attempt, including non-encounters, and send the drafted RecFIN/CRFS request for a
-      permitted reproducible complete-effort export with confirmed zero-catch semantics and
-      intended-use terms. Do not scrape Fishbrain, Facebook, or other restricted sources.
+      permitted reproducible non-confidential public-release complete-effort export with an
+      opaque non-identifying public-release effort key, confirmed zero-catch semantics, and
+      intended-use terms. Do not request confidential or restricted records, respondent
+      identifiers, protected precise locations, or special raw-query access. Do not scrape
+      Fishbrain, Facebook, or other restricted sources.
 - [ ] Keep ordinary friend reports truthful. Until the separately reviewed feasibility protocol
       is activated, new reports are privacy-minimized product observations only and cannot be
       retroactively relabeled as pilot or confirmatory rows.
@@ -4216,7 +4219,8 @@ supersedes this mutation-metadata authority while preserving its fail-closed beh
 - [ ] Acquire reproducible official CDFW/CRFS/RecFIN data with manifests, checksums, licenses,
       dictionaries, sampling support, and allowed-use declarations; begin a prospective cohort.
       **Exact aggregate ds3186/ds3185 snapshots and receipts complete;** both are context-only,
-      while a complete-effort RecFIN export and the prospective cohort remain open.
+      while a non-confidential public-release complete-effort RecFIN export and the prospective
+      cohort remain open.
 - [ ] Treat Fishbrain only as an optional written-license partnership and Facebook groups only
       as admin-approved prospective recruitment—never scraped retrospective evidence.
       **Local default-deny policy/schema/loader and operation gates complete;** written platform
@@ -4415,9 +4419,11 @@ supersedes this mutation-metadata authority while preserving its fail-closed beh
       **Public complete-effort discovery locally complete:** official RecFIN SD002 exposes
       Santa Barbara California-halibut-target sample rows, including blank-catch rows, and its
       exact 71-field comprehensive-sample dictionary is hash-bound. Raw QueryBuilder/LDE access
-      is account-bound; blank-row zero-catch semantics, stable export identities, a California
-      effort unit, sampling fields, a saved query/export checksum, and written intended-use
-      permission remain open. A draft request is ready but was not sent, no raw corpus was
+      is account-bound; CastingCompass's draft explicitly refuses confidential or restricted
+      records, respondent identifiers, protected precise locations, and special raw-query
+      access. Blank-row zero-catch semantics, an opaque non-identifying public-release effort
+      key, a California effort unit, sampling fields, public filters and an export checksum, and
+      written intended-use permission remain open. The draft was not sent, no raw corpus was
       acquired, and normalization/training/validation/scoring remain denied.
 - [x] Draft five short user-interview scripts focused on whether people understand the
       heuristic ranking, freshness labels, limitations, and trip-report privacy. The fictional,
