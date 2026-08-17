@@ -25,6 +25,7 @@ import {
   type MarketingOpportunity,
 } from "./marketing-home-data";
 import { HeroTopographicArt, TopographicLoader } from "./TopographicTransition";
+import { selectLocalSettleCandidate } from "../lib/marketing-scroll-settle";
 
 const navItems = [
   ["Home", "/"],
@@ -111,45 +112,18 @@ const DEFAULT_MARKETING_LOCATION: LocationState = {
 type IntroState = "drawing" | "revealing" | "settled";
 const INTRO_REVEAL_DELAY_MS = 1000;
 const INTRO_FALLBACK_SETTLE_MS = 3400;
-const USP_SETTLE_CAPTURE_VH = 0.65;
+const USP_SETTLE_CAPTURE_VH = 0.14;
+const USP_SETTLE_CAPTURE_MIN_PX = 72;
+const USP_SETTLE_CAPTURE_MAX_PX = 140;
+const USP_SETTLE_MIN_CORRECTION_PX = 12;
 const USP_SETTLE_INPUT_END_MS = 140;
-const USP_SETTLE_DURATION_SECONDS = 0.55;
+const USP_SETTLE_DURATION_SECONDS = 0.32;
 const USP_TEXT_VELOCITY_LERP = 0.16;
 const USP_TEXT_OFFSET_LERP = 0.14;
 const USP_VELOCITY_PARALLAX_FACTOR = 0.5;
 const USP_VELOCITY_PARALLAX_MAX_PX = 12;
 
 type UspScrollDirection = -1 | 0 | 1;
-
-type UspSettleCandidate = {
-  distance: number;
-  story: number;
-  target: number;
-};
-
-export function selectDirectionalSettleCandidate(
-  targets: readonly number[],
-  releaseY: number,
-  direction: UspScrollDirection,
-  forwardCaptureDistance: number,
-): UspSettleCandidate | null {
-  if (direction === 0) return null;
-
-  const orderedIndexes =
-    direction > 0
-      ? targets.map((_, index) => index)
-      : targets.map((_, index) => index).reverse();
-
-  for (const index of orderedIndexes) {
-    const target = targets[index];
-    const distance = direction > 0 ? target - releaseY : releaseY - target;
-    if (distance < 0) continue;
-    if (distance > forwardCaptureDistance) return null;
-    return { distance, story: index + 1, target };
-  }
-
-  return null;
-}
 
 type CommunityResult = {
   threads: MarketingCommunityThread[];
@@ -1314,15 +1288,18 @@ export function MarketingHome() {
 
       const lenis = scrollWindow.__castingCompassLenis;
       if (!lenis) return;
-      const threshold = window.innerHeight * USP_SETTLE_CAPTURE_VH;
+      const threshold = clampRange(
+        window.innerHeight * USP_SETTLE_CAPTURE_VH,
+        USP_SETTLE_CAPTURE_MIN_PX,
+        USP_SETTLE_CAPTURE_MAX_PX,
+      );
       section.dataset.uspSettleThreshold = threshold.toFixed(2);
-      const candidate = selectDirectionalSettleCandidate(
+      const candidate = selectLocalSettleCandidate(
         targets,
         releaseY,
-        direction,
         threshold,
       );
-      if (!candidate || candidate.distance < 1) {
+      if (!candidate || candidate.distance < USP_SETTLE_MIN_CORRECTION_PX) {
         section.dataset.uspSettleState = "idle";
         setGallerySettleState("idle");
         return;
@@ -1349,7 +1326,7 @@ export function MarketingHome() {
           easing: (time) => 1 - (1 - time) ** 3,
           lock: false,
           force: false,
-          userData: { source: "usp-directional-settle" },
+          userData: { source: "usp-local-center-correction" },
           onComplete: () => {
             if (token !== settleToken) return;
             settleInProgress = false;
