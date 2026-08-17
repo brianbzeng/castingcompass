@@ -840,13 +840,13 @@ test("official water-quality status exposes the East Bay Parks action source", a
   ).toHaveAttribute("href", "https://beachwatch.waterboards.ca.gov/public/advisory.php");
 });
 
-test("official water-quality status keeps neutral status explicit", async ({ page }) => {
+test("stale official water-quality status stays explicitly unknown", async ({ page }) => {
   // Open the exact site through the product's stable deep-link contract. Its rank can move as
   // regional sites are added, so the advisory test must not assume it appears in the first cards.
   await page.goto("/?site=crissy-field-east-beach");
   const advisory = page.locator(".water-quality-advisory");
   await expect(advisory).toBeVisible();
-  await expect(advisory).toContainText("No active posting reported");
+  await expect(advisory).toContainText("Official sample is stale");
   await expect(advisory).toContainText("does not improve this fishing score");
   await expect(advisory.getByRole("link", { name: /official agency status/i })).toHaveAttribute(
     "href",
