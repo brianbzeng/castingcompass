@@ -374,6 +374,12 @@ test("central hardening prevents API caching and preserves explicit asset cachin
   assert.equal(apiResponse.headers.get("Strict-Transport-Security"), "max-age=31536000");
   assert.match(apiResponse.headers.get("Content-Security-Policy"), /frame-ancestors 'none'/);
 
+  const maintenanceResponse = hardenResponse(new Response("maintenance", {
+    status: 503,
+    headers: { "Cache-Control": "no-store, no-transform" },
+  }), new Request(`${ORIGIN}/`));
+  assert.equal(maintenanceResponse.headers.get("Cache-Control"), "no-store, no-transform");
+
   const assetResponse = hardenResponse(new Response("asset", {
     headers: { "Cache-Control": "public, max-age=31536000, immutable" },
   }), new Request(`${ORIGIN}/_next/static/app.js`));

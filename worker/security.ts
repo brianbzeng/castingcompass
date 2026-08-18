@@ -389,7 +389,8 @@ export function hardenResponse(response: Response, request: Request): Response {
 
   if (isApi || isPreviewHost) headers.set("X-Robots-Tag", "noindex, nofollow");
   if (isApi || headers.has("Set-Cookie") || response.status >= 400) {
-    headers.set("Cache-Control", "no-store");
+    const noTransform = /\bno-transform\b/i.test(headers.get("Cache-Control") ?? "");
+    headers.set("Cache-Control", noTransform ? "no-store, no-transform" : "no-store");
     headers.set("CDN-Cache-Control", "no-store");
   } else if (response.status >= 300 && response.status < 400 && !headers.has("Cache-Control")) {
     headers.set("Cache-Control", "no-store");
