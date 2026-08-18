@@ -144,7 +144,7 @@ wrapper while pointing it at the separately checked-out safety worktree:
 
 ```sh
 export RELEASE_ROOT=/ABSOLUTE/PATH/TO/SAFETY_WORKTREE
-export RELEASE_COMMIT=511f85d7d5f8714d41633be24491e2087c366598
+export RELEASE_COMMIT=0d32bfec7d4c92fa0bd6a36d6ce0135ebf131061
 export RELEASE_GATE_COMMIT=FULL_40_CHARACTER_CURRENT_GATE_COMMIT
 export RELEASE_AUTHORIZATION_FILE=/PRIVATE/ENCRYPTED/PATH/deploy-safety-floor.json
 npm run release:cloudflare:safety-floor
