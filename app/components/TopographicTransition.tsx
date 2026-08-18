@@ -1,13 +1,16 @@
 "use client";
 
-import type { CSSProperties, SVGProps } from "react";
+import { useEffect, useState } from "react";
+import type { CSSProperties } from "react";
 
 const TOPOGRAPHIC_ASSET =
   "/marketing/daylight-draft/topographic-stock-blue.webp";
 const WORDMARK = "CastingCompass";
-const HIGH_PRIORITY_SVG_IMAGE = {
-  fetchpriority: "high",
-} as unknown as SVGProps<SVGImageElement>;
+const HERO_LAND_ASSET =
+  "/marketing/daylight-draft/santa-barbara-land.png";
+const HERO_GEOMETRY_ASSET =
+  "/marketing/daylight-draft/santa-barbara-hero-geometry.json";
+const HERO_MAP_TRANSFORM_ID = "santa-barbara-wgs84-20260808-v1";
 const WORDMARK_LETTERS = Array.from(WORDMARK, (letter, position) => ({
   id: `wordmark-letter-${position}`,
   letter,
@@ -136,7 +139,6 @@ function LoaderTopographicMap({
       <g className="cc-topo-loader-sheet" mask="url(#cc-topo-loader-dissolve)">
         <rect className="cc-topo-loader-ground" width="6324" height="2372" />
         <image
-          {...HIGH_PRIORITY_SVG_IMAGE}
           className="cc-topo-stock-image"
           href={TOPOGRAPHIC_ASSET}
           width="6324"
@@ -148,29 +150,145 @@ function LoaderTopographicMap({
   );
 }
 
+type HeroContour = {
+  depth: number;
+  major: boolean;
+  path: string;
+};
+
+type HeroFeature = {
+  id: string;
+  label: string;
+  kind: "label" | "marker";
+  x: number;
+  y: number;
+};
+
+type HeroGeometry = {
+  mapTransformId: string;
+  viewBox: [number, number, number, number];
+  camera: {
+    rotationDegrees: number;
+    scale: number;
+  };
+  contours: HeroContour[];
+  shorelines: string[];
+  features: HeroFeature[];
+};
+
 function HeroTopographicMap() {
+  const [geometry, setGeometry] = useState<HeroGeometry | null>(null);
+
+  useEffect(() => {
+    let active = true;
+
+    async function loadRegisteredLayers() {
+      const [response] = await Promise.all([
+        fetch(HERO_GEOMETRY_ASSET),
+        new Promise<void>((resolve, reject) => {
+          const image = new Image();
+          image.onload = () => resolve();
+          image.onerror = () => reject(new Error("Unable to load hero land layer"));
+          image.src = HERO_LAND_ASSET;
+        }),
+      ]);
+
+      if (!response.ok) {
+        throw new Error(`Unable to load hero geometry: ${response.status}`);
+      }
+
+      const payload = (await response.json()) as HeroGeometry;
+      if (payload.mapTransformId !== HERO_MAP_TRANSFORM_ID) {
+        throw new Error("Hero layer transform registration does not match");
+      }
+      if (active) setGeometry(payload);
+    }
+
+    loadRegisteredLayers().catch(() => {
+      if (active) setGeometry(null);
+    });
+
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const viewBox = geometry?.viewBox.join(" ") ?? "0 0 1800 1800";
+  const mapStyle = geometry
+    ? ({
+        "--cc-map-rotation": `${geometry.camera.rotationDegrees}deg`,
+        "--cc-map-scale": geometry.camera.scale,
+      } as CSSProperties)
+    : undefined;
+
   return (
     <div className="cc-hero-satellite" aria-hidden="true">
-      <img
-        className="cc-hero-satellite-image"
-        src="/marketing/daylight-draft/santa-barbara-satellite.jpg"
-        alt=""
-        loading="eager"
-        decoding="async"
-      />
-      <div className="cc-hero-ocean-tint" />
-      <div className="cc-hero-contour-water">
-        <img
-          className="cc-hero-etopo-bathymetry"
-          src="/marketing/daylight-draft/santa-barbara-etopo-bathymetry.svg?v=20260802-smooth-2"
-          alt=""
-          data-coverage="full-water"
-          loading="eager"
-          decoding="async"
-        />
-      </div>
+      <div className="cc-hero-ocean-base" />
+      {geometry ? (
+        <div
+          className="cc-hero-map-camera"
+          data-map-transform={geometry.mapTransformId}
+          style={mapStyle}
+        >
+          <div
+            className="cc-hero-depth-shading"
+            data-map-transform={geometry.mapTransformId}
+          />
+          <svg
+            className="cc-hero-bathymetry"
+            data-map-transform={geometry.mapTransformId}
+            viewBox={viewBox}
+            preserveAspectRatio="none"
+          >
+            {geometry.contours.map((contour, index) => (
+              <path
+                key={`${contour.depth}-${index}`}
+                className={contour.major ? "cc-contour-major" : undefined}
+                data-depth-meters={contour.depth}
+                data-source="usgs-ds-702"
+                d={contour.path}
+                pathLength={1}
+              />
+            ))}
+          </svg>
+          <img
+            className="cc-hero-land-layer"
+            data-map-transform={geometry.mapTransformId}
+            src={HERO_LAND_ASSET}
+            alt=""
+            loading="eager"
+            decoding="async"
+          />
+          <svg
+            className="cc-hero-shoreline"
+            data-map-transform={geometry.mapTransformId}
+            viewBox={viewBox}
+            preserveAspectRatio="none"
+          >
+            {geometry.shorelines.map((path, index) => (
+              <path key={index} d={path} />
+            ))}
+          </svg>
+          <svg
+            className="cc-hero-map-features"
+            data-map-transform={geometry.mapTransformId}
+            viewBox={viewBox}
+            preserveAspectRatio="none"
+          >
+            {geometry.features
+              .filter((feature) => feature.kind === "marker")
+              .map((feature) => (
+                <g key={feature.id} data-feature={feature.id}>
+                  <circle cx={feature.x} cy={feature.y} r="17" />
+                  <circle cx={feature.x} cy={feature.y} r="4" />
+                </g>
+              ))}
+          </svg>
+        </div>
+      ) : null}
       <span className="cc-hero-map-attribution">
-        Santa Barbara · Sentinel-2 / NOAA ETOPO / USGS contours
+        Santa Barbara · USGS DS 702 / NOAA MHW / Sentinel-2 · Not for
+        navigation
       </span>
     </div>
   );
@@ -206,7 +324,7 @@ export function HeroTopographicArt() {
     <div
       className="cc-hero-topo"
       role="img"
-      aria-label="Satellite view of Santa Barbara shoreline with smooth NOAA ETOPO bathymetric contours"
+      aria-label="Satellite view of Santa Barbara with registered USGS bathymetric contours, NOAA shoreline, and a harbor marker"
     >
       <HeroTopographicMap />
     </div>

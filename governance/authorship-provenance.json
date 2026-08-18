@@ -1,6 +1,6 @@
 {
   "schema_version": "castingcompass.authorship-provenance/1.0.0",
-  "reviewed_at": "2026-08-02",
+  "reviewed_at": "2026-08-03",
   "policy_effective_commit": "ea922c8dfbdb7e35a81836d1f6a9e9e35c9081bb",
   "private_evidence_boundary": "Private agreements, legal advice, identities, personal data, and secret material stay outside this repository; this register may contain only non-sensitive receipt identifiers.",
   "records": [
@@ -258,6 +258,75 @@
       "private_evidence_receipt": null
     },
     {
+      "id": "marketing-personal-flatfish-result",
+      "title": "Owner-supplied angler and flatfish result photograph",
+      "kind": "first_party_owner_supplied",
+      "paths": [
+        {
+          "path": "public/marketing/daylight-draft/angler-flatfish-result.jpg",
+          "sha256": "dd41768684c9ca24af47a4aa35b55818d5a41125cfab20387f3aec2f38fd79f9"
+        }
+      ],
+      "creator_display": "Project-owner supplied; photographer confirmation required",
+      "creation_date": null,
+      "source_url": null,
+      "source_remote_sha1": null,
+      "source_reviewed_at": null,
+      "license_id": null,
+      "license_label": null,
+      "license_url": null,
+      "rights_basis": "owner_supplied",
+      "attribution_required": false,
+      "share_alike": false,
+      "attribution_text": "CastingCompass owner-supplied photography",
+      "modifications": "Re-encoded the owner-supplied 1440 by 1920 JPEG at high quality for the homepage story, stripped embedded metadata, and preserved the original pixel dimensions; no generative edit or content alteration was used.",
+      "ai_assistance": "none_declared",
+      "rights_review": "owner_supplied_not_independently_cleared",
+      "release_state": "candidate_review_required",
+      "upstream_record_id": null,
+      "release_commit": "9cf7c04d6a6026096029ecbdd2e4b31280996630",
+      "evidence_refs": [
+        "source-original-sha1:771676627355930350d113af671bb53da7ea9e05",
+        "The project owner supplied the flatfish photograph in the 2026-08-03 homepage visual-narrative task and directed its use as Story 03.",
+        "This public record does not claim independent photographer-rights verification, depicted-person permission, or production release clearance."
+      ],
+      "private_evidence_receipt": null
+    },
+    {
+      "id": "marketing-personal-measured-catch",
+      "title": "Owner-supplied measured catch photograph",
+      "kind": "first_party_owner_supplied",
+      "paths": [
+        {
+          "path": "public/marketing/daylight-draft/personal-measured-catch.jpg",
+          "sha256": "1b9f8726b3c0df361970986bbef6a29dc1b623e07d506a2e1f99e46ceb01a811"
+        }
+      ],
+      "creator_display": "Project-owner supplied; photographer confirmation required",
+      "creation_date": null,
+      "source_url": null,
+      "source_remote_sha1": null,
+      "source_reviewed_at": null,
+      "license_id": null,
+      "license_label": null,
+      "license_url": null,
+      "rights_basis": "owner_supplied",
+      "attribution_required": false,
+      "share_alike": false,
+      "attribution_text": "CastingCompass owner-supplied photography",
+      "modifications": "Used the owner-supplied 2400 by 3200 JPEG as the measured-catch story image; no generative edit or content alteration was used.",
+      "ai_assistance": "none_declared",
+      "rights_review": "owner_supplied_not_independently_cleared",
+      "release_state": "candidate_review_required",
+      "upstream_record_id": null,
+      "release_commit": "09ef68d7f9b7976f57fec9f5adef6ecfaaceedb1",
+      "evidence_refs": [
+        "The project owner supplied the measured-catch photograph for the Daylight-style homepage story and directed its use in the gallery.",
+        "This public record does not claim independent photographer-rights verification, depicted-person permission, or production release clearance."
+      ],
+      "private_evidence_receipt": null
+    },
+    {
       "id": "marketing-personal-mosaic-photographs",
       "title": "Owner-supplied coastal fishing photographs for the Modern Mosaic",
       "kind": "first_party_owner_supplied",
@@ -383,6 +452,43 @@
       "private_evidence_receipt": null
     },
     {
+      "id": "marketing-santa-barbara-hero-land",
+      "title": "Registered Copernicus Sentinel-2 Santa Barbara land layer",
+      "kind": "third_party_open_data",
+      "paths": [
+        {
+          "path": "public/marketing/daylight-draft/santa-barbara-land.png",
+          "sha256": "a1f0da500e9e5d2e4395fcf9fdf48f07ee61cc63a801a199a59cb2a9d1dd58df"
+        }
+      ],
+      "creator_display": "Copernicus Sentinel-2 / Element84 Earth Search",
+      "creation_date": "2025-10-17",
+      "source_url": "https://earth-search.aws.element84.com/v1/collections/sentinel-2-l2a/items/S2B_11SKU_20251017_0_L2A",
+      "source_remote_sha1": "dfecb8ea3231bc4c4d18cc7c887668fc55032afa",
+      "source_reviewed_at": "2026-08-08",
+      "license_id": "LicenseRef-Copernicus-Sentinel",
+      "license_label": "Copernicus Sentinel data free, full, and open access",
+      "license_url": "https://cds.climate.copernicus.eu/licences/ec-sentinel",
+      "rights_basis": "copernicus_open_data",
+      "attribution_required": true,
+      "share_alike": false,
+      "attribution_text": "Copernicus Sentinel-2 / Element84 Earth Search",
+      "modifications": "Reprojected the 10 m true-color COG to the shared 1800px EPSG:4326 hero grid and applied the NOAA MHW land mask with a two-pixel offshore dilation to prevent water overlays from covering land. No generative edit was used.",
+      "ai_assistance": "none_declared",
+      "rights_review": "verified_source_license",
+      "release_state": "approved_existing_use",
+      "upstream_record_id": null,
+      "release_commit": "9cf7c04d6a6026096029ecbdd2e4b31280996630",
+      "evidence_refs": [
+        "Element84 Earth Search STAC item: S2B_11SKU_20251017_0_L2A",
+        "Source COG SHA-1: dfecb8ea3231bc4c4d18cc7c887668fc55032afa",
+        "NOAA Santa Barbara MHW DEM subset used only as the alpha mask",
+        "docs/SANTA-BARBARA-HERO-GEOSPATIAL-ASSETS.md",
+        "scripts/generate-santa-barbara-hero-assets.py"
+      ],
+      "private_evidence_receipt": null
+    },
+    {
       "id": "marketing-santa-barbara-satellite",
       "title": "Copernicus Sentinel-2 true-color Santa Barbara satellite crop",
       "kind": "third_party_open_data",
@@ -418,8 +524,8 @@
       ],
       "private_evidence_receipt": null
     },
-  {
-    "id": "marketing-spearfishers-pair",
+    {
+      "id": "marketing-spearfishers-pair",
       "title": "Paired spearfisher silhouettes for the marketing water column",
       "kind": "first_party_owner_supplied",
       "paths": [
@@ -451,186 +557,292 @@
         "The project owner supplied the reference in the product-design task and directed use of only the top-left and middle-left spearfisher silhouettes.",
         "OpenAI ImageGen isolated the selected silhouettes; the background was removed and the result was re-encoded as a transparent WebP."
       ],
-    "private_evidence_receipt": null
-  },
-  {
-    "id": "marketing-stock-bay-bridge-angler",
-    "title": "Bay Bridge shoreline angler hero photograph",
-    "kind": "third_party_owner_licensed",
-    "paths": [
-      {
-        "path": "public/marketing/daylight-draft/bay-bridge-angler.jpg",
-        "sha256": "64f496fbc8a47d23dd2197c34a7ddfa61e0bb99e87d3e6562e10c36a47ea846d"
-      }
-    ],
-    "creator_display": "Jordan Feeg / Adobe Stock",
-    "creation_date": null,
-    "source_url": "https://stock.adobe.com/search?k=360946385",
-    "source_remote_sha1": "a92cac7162bde63590bfabedd927f4776de6f8df",
-    "source_reviewed_at": "2026-07-31",
-    "license_id": "LicenseRef-AdobeStock-Standard",
-    "license_label": "Adobe Stock Standard License (owner-supplied purchase)",
-    "license_url": "https://stock.adobe.com/license-terms",
-    "rights_basis": "commercial_stock_license",
-    "attribution_required": false,
-    "share_alike": false,
-    "attribution_text": "Jordan Feeg / Adobe Stock",
-    "modifications": "Resized the owner-supplied licensed JPEG to a 2400-pixel maximum dimension and re-encoded it at quality 82 for the local marketing draft.",
-    "ai_assistance": "not_disclosed_by_source",
-    "rights_review": "owner_license_not_independently_cleared",
-    "release_state": "candidate_review_required",
-    "upstream_record_id": null,
-    "release_commit": "5c05b1e35de9b9a15fe174acda4711cf5d96784f",
-    "evidence_refs": [
-      "adobe-stock-asset:360946385",
-      "source-original-sha1:a92cac7162bde63590bfabedd927f4776de6f8df",
-      "The project owner stated that the supplied Adobe Stock image was purchased for this homepage draft; private purchase records remain outside the repository."
-    ],
-    "private_evidence_receipt": null
-  },
-  {
-    "id": "marketing-stock-surf-cast-close",
-    "title": "Golden-hour surf-casting photograph",
-    "kind": "third_party_owner_licensed",
-    "paths": [
-      {
-        "path": "public/marketing/daylight-draft/surf-cast-close.jpg",
-        "sha256": "6a876f6cbead150b668bb5b8b67df56a2bea4c8aa1545b667285ab0f6dd076ac"
-      }
-    ],
-    "creator_display": "Adobe Stock contributor (creator metadata not embedded)",
-    "creation_date": null,
-    "source_url": "https://stock.adobe.com/search?k=295437748",
-    "source_remote_sha1": "168f253a17a7bdaff81d6fbed269e9f7c51b2ffe",
-    "source_reviewed_at": "2026-07-31",
-    "license_id": "LicenseRef-AdobeStock-Standard",
-    "license_label": "Adobe Stock Standard License (owner-supplied purchase)",
-    "license_url": "https://stock.adobe.com/license-terms",
-    "rights_basis": "commercial_stock_license",
-    "attribution_required": false,
-    "share_alike": false,
-    "attribution_text": "Adobe Stock",
-    "modifications": "Resized the owner-supplied licensed JPEG to a 2400-pixel maximum dimension and re-encoded it at quality 82 for the local marketing draft.",
-    "ai_assistance": "not_disclosed_by_source",
-    "rights_review": "owner_license_not_independently_cleared",
-    "release_state": "candidate_review_required",
-    "upstream_record_id": null,
-    "release_commit": "5c05b1e35de9b9a15fe174acda4711cf5d96784f",
-    "evidence_refs": [
-      "adobe-stock-asset:295437748",
-      "source-original-sha1:168f253a17a7bdaff81d6fbed269e9f7c51b2ffe",
-      "The project owner stated that the supplied Adobe Stock image was purchased for this homepage draft; the creator name still requires confirmation from the private purchase record."
-    ],
-    "private_evidence_receipt": null
-  },
-  {
-    "id": "marketing-stock-surf-cast-wide",
-    "title": "Wide surf-casting photograph",
-    "kind": "third_party_owner_licensed",
-    "paths": [
-      {
-        "path": "public/marketing/daylight-draft/surf-cast-wide.jpg",
-        "sha256": "f3e9a86edb2c11a27ecc4c3af141bc7f5ef973dff73eeabc0b1dfdc0d04eff8a"
-      }
-    ],
-    "creator_display": "Adobe Stock contributor (creator metadata not embedded)",
-    "creation_date": null,
-    "source_url": "https://stock.adobe.com/search?k=43079417",
-    "source_remote_sha1": "b239e0d590445f9e5c0266495e30d69835ecfc4e",
-    "source_reviewed_at": "2026-07-31",
-    "license_id": "LicenseRef-AdobeStock-Standard",
-    "license_label": "Adobe Stock Standard License (owner-supplied purchase)",
-    "license_url": "https://stock.adobe.com/license-terms",
-    "rights_basis": "commercial_stock_license",
-    "attribution_required": false,
-    "share_alike": false,
-    "attribution_text": "Adobe Stock",
-    "modifications": "Resized the owner-supplied licensed JPEG to a 2400-pixel maximum dimension and re-encoded it at quality 82 for the local marketing draft.",
-    "ai_assistance": "not_disclosed_by_source",
-    "rights_review": "owner_license_not_independently_cleared",
-    "release_state": "candidate_review_required",
-    "upstream_record_id": null,
-    "release_commit": "5c05b1e35de9b9a15fe174acda4711cf5d96784f",
-    "evidence_refs": [
-      "adobe-stock-asset:43079417",
-      "source-original-sha1:b239e0d590445f9e5c0266495e30d69835ecfc4e",
-      "The project owner stated that the supplied Adobe Stock image was purchased for this homepage draft; the creator name still requires confirmation from the private purchase record."
-    ],
-    "private_evidence_receipt": null
-  },
-  {
-    "id": "marketing-stock-topographic-contours",
-    "title": "Topographic contour artwork for the marketing loader and hero",
-    "kind": "third_party_owner_licensed",
-    "paths": [
+      "private_evidence_receipt": null
+    },
+    {
+      "id": "marketing-stock-bay-bridge-angler",
+      "title": "Bay Bridge shoreline angler hero photograph",
+      "kind": "third_party_owner_licensed",
+      "paths": [
+        {
+          "path": "public/marketing/daylight-draft/bay-bridge-angler.jpg",
+          "sha256": "64f496fbc8a47d23dd2197c34a7ddfa61e0bb99e87d3e6562e10c36a47ea846d"
+        }
+      ],
+      "creator_display": "Jordan Feeg / Adobe Stock",
+      "creation_date": null,
+      "source_url": "https://stock.adobe.com/search?k=360946385",
+      "source_remote_sha1": "a92cac7162bde63590bfabedd927f4776de6f8df",
+      "source_reviewed_at": "2026-07-31",
+      "license_id": "LicenseRef-AdobeStock-Standard",
+      "license_label": "Adobe Stock Standard License (owner-supplied purchase)",
+      "license_url": "https://stock.adobe.com/license-terms",
+      "rights_basis": "commercial_stock_license",
+      "attribution_required": false,
+      "share_alike": false,
+      "attribution_text": "Jordan Feeg / Adobe Stock",
+      "modifications": "Resized the owner-supplied licensed JPEG to a 2400-pixel maximum dimension and re-encoded it at quality 82 for the local marketing draft.",
+      "ai_assistance": "not_disclosed_by_source",
+      "rights_review": "owner_license_not_independently_cleared",
+      "release_state": "candidate_review_required",
+      "upstream_record_id": null,
+      "release_commit": "5c05b1e35de9b9a15fe174acda4711cf5d96784f",
+      "evidence_refs": [
+        "adobe-stock-asset:360946385",
+        "source-original-sha1:a92cac7162bde63590bfabedd927f4776de6f8df",
+        "The project owner stated that the supplied Adobe Stock image was purchased for this homepage draft; private purchase records remain outside the repository."
+      ],
+      "private_evidence_receipt": null
+    },
+    {
+      "id": "marketing-stock-phone-preview",
+      "title": "Rocky-coast angler checking a phone Adobe Stock preview",
+      "kind": "third_party_owner_licensed",
+      "paths": [
+        {
+          "path": "public/marketing/daylight-draft/adobe-phone-watermarked.webp",
+          "sha256": "20b603057f4046bfb03089b1ca48c500f1a6a56896fd15e007850fcf7fcffeb5"
+        }
+      ],
+      "creator_display": "Adobe Stock contributor (preview watermark)",
+      "creation_date": null,
+      "source_url": "https://stock.adobe.com/search?k=1950534022",
+      "source_remote_sha1": "426f9d9f776616272e3ef80c582b1980fc409334",
+      "source_reviewed_at": "2026-08-13",
+      "license_id": "LicenseRef-AdobeStock-Standard",
+      "license_label": "Adobe Stock Standard License candidate (watermarked design preview)",
+      "license_url": "https://stock.adobe.com/license-terms",
+      "rights_basis": "commercial_stock_license",
+      "attribution_required": false,
+      "share_alike": false,
+      "attribution_text": "Adobe Stock preview",
+      "modifications": "Converted the owner-supplied 1000 by 659 watermarked preview from PNG to WebP for gallery crop evaluation; no generative edit or content alteration was used.",
+      "ai_assistance": "not_disclosed_by_source",
+      "rights_review": "owner_license_not_independently_cleared",
+      "release_state": "candidate_review_required",
+      "upstream_record_id": null,
+      "release_commit": "09ef68d7f9b7976f57fec9f5adef6ecfaaceedb1",
+      "evidence_refs": [
+        "adobe-stock-asset:1950534022",
+        "source-original-sha1:426f9d9f776616272e3ef80c582b1980fc409334",
+        "The project owner supplied this watermarked Adobe Stock preview for design evaluation and stated that Adobe Stock credits are available; the exact asset must remain candidate-only until its license record is confirmed."
+      ],
+      "private_evidence_receipt": null
+    },
+    {
+      "id": "marketing-stock-pier-fishing-rods",
+      "title": "Fishing rods on an ocean pier photograph",
+      "kind": "third_party_owner_licensed",
+      "paths": [
+        {
+          "path": "public/marketing/daylight-draft/pier-fishing-rods.jpg",
+          "sha256": "c742d9294f855c11cabab29ca3dbf731777b00b5a7a9c1adfa5f738665a0de0e"
+        }
+      ],
+      "creator_display": "Colby Lysne / Adobe Stock",
+      "creation_date": "2014-11-03",
+      "source_url": "https://stock.adobe.com/search?k=182869751",
+      "source_remote_sha1": "ec804ea2a57ccb17661d3f5498770ff58e0d0e8e",
+      "source_reviewed_at": "2026-08-03",
+      "license_id": "LicenseRef-AdobeStock-Standard",
+      "license_label": "Adobe Stock Standard License (owner-supplied file)",
+      "license_url": "https://stock.adobe.com/license-terms",
+      "rights_basis": "commercial_stock_license",
+      "attribution_required": false,
+      "share_alike": false,
+      "attribution_text": "Colby Lysne / Adobe Stock",
+      "modifications": "Resized the owner-supplied 4896 by 3264 Adobe Stock JPEG to 2400 by 1600 pixels, stripped embedded metadata, and re-encoded it at high quality for the homepage story; no generative edit or content alteration was used.",
+      "ai_assistance": "not_disclosed_by_source",
+      "rights_review": "owner_license_not_independently_cleared",
+      "release_state": "candidate_review_required",
+      "upstream_record_id": null,
+      "release_commit": "9cf7c04d6a6026096029ecbdd2e4b31280996630",
+      "evidence_refs": [
+        "adobe-stock-asset:182869751",
+        "source-original-sha1:ec804ea2a57ccb17661d3f5498770ff58e0d0e8e",
+        "The supplied source metadata identifies Colby Lysne as the creator.",
+        "The project owner supplied the Adobe Stock file in the 2026-08-03 homepage visual-narrative task and directed its use as Story 02; private license records remain outside the repository and were not independently reviewed."
+      ],
+      "private_evidence_receipt": null
+    },
+    {
+      "id": "marketing-stock-rock-anglers-preview",
+      "title": "Rocky-shore anglers Adobe Stock preview",
+      "kind": "third_party_owner_licensed",
+      "paths": [
+        {
+          "path": "public/marketing/daylight-draft/adobe-rock-anglers-watermarked.jpg",
+          "sha256": "1ab54857f3330c21743f5520e58378b7474b6761e0c4cf22e005f326f98ebab0"
+        }
+      ],
+      "creator_display": "Adobe Stock contributor (preview watermark)",
+      "creation_date": null,
+      "source_url": "https://stock.adobe.com/search?k=532812379",
+      "source_remote_sha1": "d9beaa4be6b864cf3582e4f6b3b0ce38b891a04f",
+      "source_reviewed_at": "2026-08-13",
+      "license_id": "LicenseRef-AdobeStock-Standard",
+      "license_label": "Adobe Stock Standard License candidate (watermarked design preview)",
+      "license_url": "https://stock.adobe.com/license-terms",
+      "rights_basis": "commercial_stock_license",
+      "attribution_required": false,
+      "share_alike": false,
+      "attribution_text": "Adobe Stock preview",
+      "modifications": "Used the owner-supplied 1000 by 750 watermarked JPEG preview for gallery crop evaluation; no generative edit or content alteration was used.",
+      "ai_assistance": "not_disclosed_by_source",
+      "rights_review": "owner_license_not_independently_cleared",
+      "release_state": "candidate_review_required",
+      "upstream_record_id": null,
+      "release_commit": "09ef68d7f9b7976f57fec9f5adef6ecfaaceedb1",
+      "evidence_refs": [
+        "adobe-stock-asset:532812379",
+        "source-original-sha1:d9beaa4be6b864cf3582e4f6b3b0ce38b891a04f",
+        "The project owner supplied this watermarked Adobe Stock preview for design evaluation and stated that Adobe Stock credits are available; the exact asset must remain candidate-only until its license record is confirmed."
+      ],
+      "private_evidence_receipt": null
+    },
+    {
+      "id": "marketing-stock-surf-cast-close",
+      "title": "Golden-hour surf-casting photograph",
+      "kind": "third_party_owner_licensed",
+      "paths": [
+        {
+          "path": "public/marketing/daylight-draft/surf-cast-close.jpg",
+          "sha256": "6a876f6cbead150b668bb5b8b67df56a2bea4c8aa1545b667285ab0f6dd076ac"
+        }
+      ],
+      "creator_display": "Adobe Stock contributor (creator metadata not embedded)",
+      "creation_date": null,
+      "source_url": "https://stock.adobe.com/search?k=295437748",
+      "source_remote_sha1": "168f253a17a7bdaff81d6fbed269e9f7c51b2ffe",
+      "source_reviewed_at": "2026-07-31",
+      "license_id": "LicenseRef-AdobeStock-Standard",
+      "license_label": "Adobe Stock Standard License (owner-supplied purchase)",
+      "license_url": "https://stock.adobe.com/license-terms",
+      "rights_basis": "commercial_stock_license",
+      "attribution_required": false,
+      "share_alike": false,
+      "attribution_text": "Adobe Stock",
+      "modifications": "Resized the owner-supplied licensed JPEG to a 2400-pixel maximum dimension and re-encoded it at quality 82 for the local marketing draft.",
+      "ai_assistance": "not_disclosed_by_source",
+      "rights_review": "owner_license_not_independently_cleared",
+      "release_state": "candidate_review_required",
+      "upstream_record_id": null,
+      "release_commit": "5c05b1e35de9b9a15fe174acda4711cf5d96784f",
+      "evidence_refs": [
+        "adobe-stock-asset:295437748",
+        "source-original-sha1:168f253a17a7bdaff81d6fbed269e9f7c51b2ffe",
+        "The project owner stated that the supplied Adobe Stock image was purchased for this homepage draft; the creator name still requires confirmation from the private purchase record."
+      ],
+      "private_evidence_receipt": null
+    },
+    {
+      "id": "marketing-stock-surf-cast-wide",
+      "title": "Wide surf-casting photograph",
+      "kind": "third_party_owner_licensed",
+      "paths": [
+        {
+          "path": "public/marketing/daylight-draft/surf-cast-wide.jpg",
+          "sha256": "f3e9a86edb2c11a27ecc4c3af141bc7f5ef973dff73eeabc0b1dfdc0d04eff8a"
+        }
+      ],
+      "creator_display": "Adobe Stock contributor (creator metadata not embedded)",
+      "creation_date": null,
+      "source_url": "https://stock.adobe.com/search?k=43079417",
+      "source_remote_sha1": "b239e0d590445f9e5c0266495e30d69835ecfc4e",
+      "source_reviewed_at": "2026-07-31",
+      "license_id": "LicenseRef-AdobeStock-Standard",
+      "license_label": "Adobe Stock Standard License (owner-supplied purchase)",
+      "license_url": "https://stock.adobe.com/license-terms",
+      "rights_basis": "commercial_stock_license",
+      "attribution_required": false,
+      "share_alike": false,
+      "attribution_text": "Adobe Stock",
+      "modifications": "Resized the owner-supplied licensed JPEG to a 2400-pixel maximum dimension and re-encoded it at quality 82 for the local marketing draft.",
+      "ai_assistance": "not_disclosed_by_source",
+      "rights_review": "owner_license_not_independently_cleared",
+      "release_state": "candidate_review_required",
+      "upstream_record_id": null,
+      "release_commit": "5c05b1e35de9b9a15fe174acda4711cf5d96784f",
+      "evidence_refs": [
+        "adobe-stock-asset:43079417",
+        "source-original-sha1:b239e0d590445f9e5c0266495e30d69835ecfc4e",
+        "The project owner stated that the supplied Adobe Stock image was purchased for this homepage draft; the creator name still requires confirmation from the private purchase record."
+      ],
+      "private_evidence_receipt": null
+    },
+    {
+      "id": "marketing-stock-topographic-contours",
+      "title": "Topographic contour artwork for the marketing loader and hero",
+      "kind": "third_party_owner_licensed",
+      "paths": [
         {
           "path": "public/marketing/daylight-draft/topographic-stock-blue.webp",
           "sha256": "59279c603b9e132786cb05da777b203f55a781b45864cb8770ca55aea146c281"
-      }
-    ],
-    "creator_display": "Adobe Stock contributor (creator metadata not embedded)",
-    "creation_date": null,
-    "source_url": "https://stock.adobe.com/search?k=2039907697",
-    "source_remote_sha1": "cc5d1bf5f2be241bf9f21b6b4fdcd84f55661d1b",
-    "source_reviewed_at": "2026-07-31",
-    "license_id": "LicenseRef-AdobeStock-Standard",
-    "license_label": "Adobe Stock Standard License (owner-supplied purchase)",
-    "license_url": "https://stock.adobe.com/license-terms",
-    "rights_basis": "commercial_stock_license",
-    "attribution_required": false,
-    "share_alike": false,
-    "attribution_text": "Adobe Stock",
-    "modifications": "Used disclosed OpenAI ImageGen assistance to round and smooth the licensed source artwork while preserving its terrain composition and major peak locations; then resized the refinement to 3200 by 1200 pixels, mapped the white field to CastingCompass navy and the black contour lines to electric blue, and encoded the derivative as WebP for the local marketing draft.",
-    "ai_assistance": "not_disclosed_by_source",
-    "rights_review": "owner_license_not_independently_cleared",
-    "release_state": "candidate_review_required",
-    "upstream_record_id": null,
-    "release_commit": "5c05b1e35de9b9a15fe174acda4711cf5d96784f",
-    "evidence_refs": [
-      "adobe-stock-asset:2039907697",
-      "source-original-sha1:cc5d1bf5f2be241bf9f21b6b4fdcd84f55661d1b",
-      "OpenAI ImageGen was used in edit mode to smooth the licensed contour geometry without introducing a new terrain composition.",
-      "The project owner stated that the supplied Adobe Stock image was purchased for this homepage draft; the creator name and exact license record still require confirmation from the owner's private Adobe License History."
-    ],
-    "private_evidence_receipt": null
-  },
-  {
-    "id": "marketing-testflight-phone-concept",
-    "title": "CastingCompass TestFlight phone concept mockup",
-    "kind": "first_party_owner_supplied",
-    "paths": [
-      {
-        "path": "public/marketing/daylight-draft/testflight-phone-mockup-v1.png",
-        "sha256": "c9e51c8a89d44f50b844533caeb9f2bf3f0367ee02d0f00b504583f68aced49e"
-      }
-    ],
-    "creator_display": "CastingCompass project owner with OpenAI ImageGen assistance",
-    "creation_date": "2026-08-01",
-    "source_url": null,
-    "source_remote_sha1": null,
-    "source_reviewed_at": null,
-    "license_id": null,
-    "license_label": null,
-    "license_url": null,
-    "rights_basis": "owner_supplied_ai_assisted",
-    "attribution_required": false,
-    "share_alike": false,
-    "attribution_text": "CastingCompass",
-    "modifications": "Generated a right-weighted hand-and-phone editorial concept from the project owner's TestFlight-section direction; the fictional phone UI uses non-readable map, opportunity, and weather motifs and contains no third-party logos or marks.",
-    "ai_assistance": "disclosed",
-    "rights_review": "owner_supplied_not_independently_cleared",
-    "release_state": "candidate_review_required",
-    "upstream_record_id": null,
-    "release_commit": "5c05b1e35de9b9a15fe174acda4711cf5d96784f",
-    "evidence_refs": [
-      "OpenAI ImageGen generation session dated 2026-08-01.",
-      "Prompt requested a photoreal hand holding a fictional CastingCompass coastal-planner phone mockup with no readable text, logos, watermarks, or app-store marks.",
-      "The project owner explicitly requested a temporary hand-and-phone TestFlight mockup for the homepage draft."
-    ],
-    "private_evidence_receipt": null
-  },
-  {
-    "id": "marketing-water-column-silhouettes",
+        }
+      ],
+      "creator_display": "Adobe Stock contributor (creator metadata not embedded)",
+      "creation_date": null,
+      "source_url": "https://stock.adobe.com/search?k=2039907697",
+      "source_remote_sha1": "cc5d1bf5f2be241bf9f21b6b4fdcd84f55661d1b",
+      "source_reviewed_at": "2026-07-31",
+      "license_id": "LicenseRef-AdobeStock-Standard",
+      "license_label": "Adobe Stock Standard License (owner-supplied purchase)",
+      "license_url": "https://stock.adobe.com/license-terms",
+      "rights_basis": "commercial_stock_license",
+      "attribution_required": false,
+      "share_alike": false,
+      "attribution_text": "Adobe Stock",
+      "modifications": "Used disclosed OpenAI ImageGen assistance to round and smooth the licensed source artwork while preserving its terrain composition and major peak locations; then resized the refinement to 3200 by 1200 pixels, mapped the white field to CastingCompass navy and the black contour lines to electric blue, and encoded the derivative as WebP for the local marketing draft.",
+      "ai_assistance": "not_disclosed_by_source",
+      "rights_review": "owner_license_not_independently_cleared",
+      "release_state": "candidate_review_required",
+      "upstream_record_id": null,
+      "release_commit": "5c05b1e35de9b9a15fe174acda4711cf5d96784f",
+      "evidence_refs": [
+        "adobe-stock-asset:2039907697",
+        "source-original-sha1:cc5d1bf5f2be241bf9f21b6b4fdcd84f55661d1b",
+        "OpenAI ImageGen was used in edit mode to smooth the licensed contour geometry without introducing a new terrain composition.",
+        "The project owner stated that the supplied Adobe Stock image was purchased for this homepage draft; the creator name and exact license record still require confirmation from the owner's private Adobe License History."
+      ],
+      "private_evidence_receipt": null
+    },
+    {
+      "id": "marketing-testflight-phone-concept",
+      "title": "CastingCompass TestFlight phone concept mockup",
+      "kind": "first_party_owner_supplied",
+      "paths": [
+        {
+          "path": "public/marketing/daylight-draft/testflight-phone-mockup-v1.png",
+          "sha256": "c9e51c8a89d44f50b844533caeb9f2bf3f0367ee02d0f00b504583f68aced49e"
+        }
+      ],
+      "creator_display": "CastingCompass project owner with OpenAI ImageGen assistance",
+      "creation_date": "2026-08-01",
+      "source_url": null,
+      "source_remote_sha1": null,
+      "source_reviewed_at": null,
+      "license_id": null,
+      "license_label": null,
+      "license_url": null,
+      "rights_basis": "owner_supplied_ai_assisted",
+      "attribution_required": false,
+      "share_alike": false,
+      "attribution_text": "CastingCompass",
+      "modifications": "Generated a right-weighted hand-and-phone editorial concept from the project owner's TestFlight-section direction; the fictional phone UI uses non-readable map, opportunity, and weather motifs and contains no third-party logos or marks.",
+      "ai_assistance": "disclosed",
+      "rights_review": "owner_supplied_not_independently_cleared",
+      "release_state": "candidate_review_required",
+      "upstream_record_id": null,
+      "release_commit": "5c05b1e35de9b9a15fe174acda4711cf5d96784f",
+      "evidence_refs": [
+        "OpenAI ImageGen generation session dated 2026-08-01.",
+        "Prompt requested a photoreal hand holding a fictional CastingCompass coastal-planner phone mockup with no readable text, logos, watermarks, or app-store marks.",
+        "The project owner explicitly requested a temporary hand-and-phone TestFlight mockup for the homepage draft."
+      ],
+      "private_evidence_receipt": null
+    },
+    {
+      "id": "marketing-water-column-silhouettes",
       "title": "Marine-life and seafloor silhouettes for the marketing water column",
       "kind": "first_party_owner_supplied",
       "paths": [

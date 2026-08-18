@@ -935,6 +935,7 @@ html.lenis body {
 }
 
 .cc-usp-image-frame img {
+  --cc-usp-image-scale: 1.26;
   position: absolute;
   inset: 0;
   display: block;
@@ -946,22 +947,26 @@ html.lenis body {
     0,
     calc(var(--cc-usp-image-y, 0px) + var(--cc-usp-velocity-y, 0px)),
     0
-  );
+  ) scale(var(--cc-usp-image-scale));
+  transform-origin: 50% 50%;
   transition: none;
   animation: none;
   will-change: transform;
 }
 
 .cc-usp-figure-1 img {
-  object-position: 45% 52%;
+  --cc-usp-image-scale: 1.32;
+  object-position: 50% 60%;
 }
 
 .cc-usp-figure-2 img {
-  object-position: 52% 54%;
+  --cc-usp-image-scale: 1.2;
+  object-position: 64% 66%;
 }
 
 .cc-usp-figure-3 img {
-  object-position: 80% 49%;
+  --cc-usp-image-scale: 1.24;
+  object-position: 34% 62%;
 }
 
 .cc-usp-center-cell {

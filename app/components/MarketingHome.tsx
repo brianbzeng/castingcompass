@@ -94,7 +94,7 @@ const daylightStoryBeats = [
     copy: "Keep public places, gear presets, and trip history together, ready for the next window.",
     image: {
       src: "/marketing/daylight-draft/adobe-phone-watermarked.webp",
-      alt: "A phone held in two hands beside the water.",
+      alt: "An angler checking her phone while fishing from a rocky coast.",
       aspect: "landscape",
     },
     imageSide: "left",

@@ -58,10 +58,10 @@ test("the committed public-safe provenance report is deterministic and productio
   const checked = verifyProject(root, { reportMode: "check" });
   const rebuilt = verifyProject(root, { reportMode: "none" });
   assert.deepEqual(checked, rebuilt);
-  assert.equal(checked.recordCount, 26);
-  assert.equal(checked.visualAssetCount, 63);
-  assert.equal(checked.thirdPartyRecordCount, 14);
-  assert.equal(checked.candidateReviewRequiredRecordCount, 11);
+  assert.equal(checked.recordCount, 32);
+  assert.equal(checked.visualAssetCount, 69);
+  assert.equal(checked.thirdPartyRecordCount, 18);
+  assert.equal(checked.candidateReviewRequiredRecordCount, 16);
   assert.deepEqual(checked.candidateReviewRequiredPaths, [
     "public/marketing/actors/boat-fisherman.webp",
     "public/marketing/actors/diving-helmet.webp",
@@ -83,13 +83,18 @@ test("the committed public-safe provenance report is deterministic and productio
     "public/marketing/approved/seafloor-anchor.webp",
     "public/marketing/approved/seafloor-starfish.webp",
     "public/marketing/approved/striped-bass.webp",
+    "public/marketing/daylight-draft/adobe-phone-watermarked.webp",
+    "public/marketing/daylight-draft/adobe-rock-anglers-watermarked.jpg",
+    "public/marketing/daylight-draft/angler-flatfish-result.jpg",
     "public/marketing/daylight-draft/bay-bridge-angler.jpg",
     "public/marketing/daylight-draft/personal-angler-catch.jpg",
     "public/marketing/daylight-draft/personal-group-catch.jpg",
+    "public/marketing/daylight-draft/personal-measured-catch.jpg",
     "public/marketing/daylight-draft/personal-pier-sunset.jpg",
     "public/marketing/daylight-draft/personal-rocky-intertidal.jpg",
     "public/marketing/daylight-draft/personal-rod-pov.jpg",
     "public/marketing/daylight-draft/personal-santa-barbara-sunset.jpg",
+    "public/marketing/daylight-draft/pier-fishing-rods.jpg",
     "public/marketing/daylight-draft/surf-cast-close.jpg",
     "public/marketing/daylight-draft/surf-cast-wide.jpg",
     "public/marketing/daylight-draft/testflight-phone-mockup-v1.png",
@@ -114,7 +119,7 @@ test("the committed public-safe provenance report is deterministic and productio
   assert.equal(checked.liveAttributionVerified, true);
   assert.equal(checked.privateEvidenceIncluded, false);
   assert.equal(checked.productionReadiness, false);
-  assert.equal(checked.rightsBasisCounts.owner_supplied, 1);
+  assert.equal(checked.rightsBasisCounts.owner_supplied, 3);
 });
 
 test("the strict schema and private-data boundary reject extra or sensitive record content", () => {
