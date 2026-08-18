@@ -51,11 +51,11 @@ function readEnvelope(row) {
   }];
 }
 
-function mutationEnvelope(rows) {
+function mutationEnvelope(rows, rowsWritten = 1) {
   return [{
     results: rows,
     success: true,
-    meta: { served_by_primary: true, changed_db: true, changes: 1, rows_written: 1 },
+    meta: { served_by_primary: true, changed_db: true, changes: 1, rows_written: rowsWritten },
   }];
 }
 
@@ -160,6 +160,9 @@ test("0007 reconciliation is one guarded ledger insert and refuses replay", asyn
   const first = sqlite.prepare(reconciliation).all();
   assert.deepEqual(first.map((row) => ({ ...row })), [{ reconciled_migration: RECONCILED_LEGAL_MIGRATION }]);
   assert.deepEqual(verifyReconciliationResult(mutationEnvelope(first)), {
+    reconciledMigration: RECONCILED_LEGAL_MIGRATION,
+  });
+  assert.deepEqual(verifyReconciliationResult(mutationEnvelope(first, 3)), {
     reconciledMigration: RECONCILED_LEGAL_MIGRATION,
   });
   assert.deepEqual(
