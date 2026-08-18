@@ -20,7 +20,7 @@
     },
     {
       "file": "worker/security.ts",
-      "sha256": "fe1686d58fe3c55da93590117cbf3c112dc72fea1ccc333923917f8d6f210fb2",
+      "sha256": "431e787c799044191b2039545c711bee8ebe64f73aebb016617be1974211ea4f",
       "prepareCallCount": 1
     },
     {
