@@ -9,7 +9,7 @@ import { verifyReleaseCheckout } from "./verify-release-checkout.mjs";
 
 const DEFAULT_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const POLICY_PATH = "security/production-change-authorization-policy.json";
-const LOCKED_POLICY_SHA256 = "a5967ff4b7e1fb9fd6707c5a24f8af0c6d406ee86f78ee7dddbf250c19f101d8";
+const LOCKED_POLICY_SHA256 = "0c777e7dec3072343cc36c54adedb0d4c2a7e27b4de1728924913859147e1aff";
 const MAX_AUTHORIZATION_BYTES = 64 * 1024;
 const CLOCK_SKEW_MS = 60 * 1000;
 const COMMIT_PATTERN = /^[a-f0-9]{40}$/u;
@@ -124,7 +124,7 @@ export function validateProductionChangePolicy(policy, source = stableJson(polic
   for (const [action, contract] of Object.entries(policy.actions)) {
     exactKeys(contract, ["fixed_release_commit", "required_evidence"], `${action} policy`);
     if (action === "deploy:safety-floor") {
-      if (contract.fixed_release_commit !== "511f85d7d5f8714d41633be24491e2087c366598") {
+      if (contract.fixed_release_commit !== "0d32bfec7d4c92fa0bd6a36d6ce0135ebf131061") {
         throw new Error("Safety-floor release commit is invalid.");
       }
     } else if (contract.fixed_release_commit !== null) {

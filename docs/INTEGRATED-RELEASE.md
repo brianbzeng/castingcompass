@@ -80,7 +80,7 @@ the release command; it is an operator-supplied review boundary.
 ## 2. Establish the safety floor
 
 Follow step 1 of [Discussion moderation](DISCUSSION-MODERATION.md) from a separate clean
-worktree pinned to `511f85d7d5f8714d41633be24491e2087c366598`. Deploy it Worker-only, record
+worktree pinned to `0d32bfec7d4c92fa0bd6a36d6ce0135ebf131061`. Deploy it Worker-only, record
 the deployment and version IDs, confirm exactly one version receives `100%` of traffic, and
 run the all-host discussion verifier. The public discussion switch remains off.
 

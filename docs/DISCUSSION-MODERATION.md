@@ -42,7 +42,7 @@ review can write the public table.
    and the AI-to-public writer removed. Record its source commit, Cloudflare deployment ID,
    Worker version ID, and traffic percentage as the oldest permitted rollback target. For
    this release, the source commit is
-   `511f85d7d5f8714d41633be24491e2087c366598` with tree
+   `0d32bfec7d4c92fa0bd6a36d6ce0135ebf131061` with tree
    `d2a6335a0648bdca4c6a13d0b987b96b4e05b76e`. It is based directly on the original
    containment commit `16db94b` and rebuilds that safety floor with the reviewed dependency
    lock, a cleared public API build override, disabled public Worker subdomains and previews,
@@ -58,7 +58,7 @@ review can write the public table.
    ```sh
    node /ABSOLUTE/PATH/TO/FULL_RELEASE_WORKTREE/scripts/verify-release-checkout.mjs \
      --root /ABSOLUTE/PATH/TO/SAFETY_WORKTREE \
-     --expected-commit 511f85d7d5f8714d41633be24491e2087c366598
+     --expected-commit 0d32bfec7d4c92fa0bd6a36d6ce0135ebf131061
    ```
 
    The safety commit predates the current authorization gate. Stay in the full release checkout
@@ -68,7 +68,7 @@ review can write the public table.
 
    ```sh
    export RELEASE_ROOT=/ABSOLUTE/PATH/TO/SAFETY_WORKTREE
-   export RELEASE_COMMIT=511f85d7d5f8714d41633be24491e2087c366598
+   export RELEASE_COMMIT=0d32bfec7d4c92fa0bd6a36d6ce0135ebf131061
    export RELEASE_GATE_COMMIT="$FULL_RELEASE_COMMIT"
    export RELEASE_AUTHORIZATION_FILE=/PRIVATE/ENCRYPTED/PATH/deploy-safety-floor.json
    export WRANGLER_OUTPUT_FILE_DIRECTORY=/ABSOLUTE/PATH/TO/PRIVATE/RELEASE_EVIDENCE
