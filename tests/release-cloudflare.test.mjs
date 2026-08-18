@@ -215,9 +215,12 @@ test("release wrapper authorizes before locked install, build, and exact normal 
       assert.equal("RELEASE_AUTHORIZATION_FILE" in event.options.env, false);
       assert.equal("RELEASE_SECRETS_FILE" in event.options.env, false);
       assert.equal("RESEND_API_KEY" in event.options.env, false);
-      const emptyConfig = process.platform === "win32" ? "NUL" : "/dev/null";
-      assert.equal(event.options.env.NPM_CONFIG_USERCONFIG, emptyConfig);
-      assert.equal(event.options.env.NPM_CONFIG_GLOBALCONFIG, emptyConfig);
+      const emptyUserConfig = process.platform === "win32" ? "NUL" : "/dev/null";
+      const emptyGlobalConfig = process.platform === "win32"
+        ? "NUL"
+        : "/nonexistent/castingcompass-global-npmrc";
+      assert.equal(event.options.env.NPM_CONFIG_USERCONFIG, emptyUserConfig);
+      assert.equal(event.options.env.NPM_CONFIG_GLOBALCONFIG, emptyGlobalConfig);
       assert.equal(event.options.env.WRANGLER_SEND_METRICS, "false");
     }
     for (const event of subprocesses.slice(0, 3)) {
