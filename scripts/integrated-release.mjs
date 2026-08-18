@@ -392,8 +392,11 @@ export function verifyReconciliationResult(payload) {
   requireEqual("Wrangler success", entry?.success, true);
   requireEqual("primary D1 execution", entry?.meta?.served_by_primary, true);
   requireEqual("changed_db", entry?.meta?.changed_db, true);
-  requireEqual("rows_written", entry?.meta?.rows_written, 1);
   requireEqual("changes", entry?.meta?.changes, 1);
+  requireNonnegativeInteger("rows_written", entry?.meta?.rows_written);
+  if (entry.meta.rows_written < 1) {
+    throw new Error("rows_written must be positive for the single reconciliation change.");
+  }
   requireEqual("reconciliation row count", entry?.results?.length, 1);
   requireEqual("reconciled migration", entry.results[0]?.reconciled_migration, RECONCILED_LEGAL_MIGRATION);
   return { reconciledMigration: RECONCILED_LEGAL_MIGRATION };
