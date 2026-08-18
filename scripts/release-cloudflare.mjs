@@ -318,9 +318,16 @@ function childEnvironment(environment, outputDirectory, { providerAuth = false }
       delete child[name];
     }
   }
-  const emptyConfig = process.platform === "win32" ? "NUL" : "/dev/null";
-  child.NPM_CONFIG_USERCONFIG = emptyConfig;
-  child.NPM_CONFIG_GLOBALCONFIG = emptyConfig;
+  // npm 10 rejects loading the same device path as both user and global config on
+  // POSIX ("double-loading config /dev/null"). Keep both config layers empty while
+  // using distinct paths so the guarded release can run in the supported Linux/WSL
+  // operator environment as well as Windows.
+  const emptyUserConfig = process.platform === "win32" ? "NUL" : "/dev/null";
+  const emptyGlobalConfig = process.platform === "win32"
+    ? "NUL"
+    : "/nonexistent/castingcompass-global-npmrc";
+  child.NPM_CONFIG_USERCONFIG = emptyUserConfig;
+  child.NPM_CONFIG_GLOBALCONFIG = emptyGlobalConfig;
   child.NPM_CONFIG_AUDIT = "false";
   child.NPM_CONFIG_FUND = "false";
   child.NPM_CONFIG_UPDATE_NOTIFIER = "false";
