@@ -60,12 +60,28 @@ body:has(.cc-intro-revealing) {
 }
 
 .cc-opening-sticky {
+  --cc-hero-squeeze-scale-x: 1;
+  --cc-hero-squeeze-scale-y: 1;
+  --cc-hero-squeeze-lift: 0px;
+  --cc-hero-squeeze-radius: 0px;
+  --cc-hero-squeeze-shadow-alpha: 0;
   position: sticky;
   z-index: 0;
   top: 0;
   height: 100svh;
   min-height: 700px;
   overflow: hidden;
+  border-radius: var(--cc-hero-squeeze-radius);
+  box-shadow: 0 30px 80px
+    rgba(6, 24, 42, var(--cc-hero-squeeze-shadow-alpha));
+  transform: translate3d(0, var(--cc-hero-squeeze-lift), 0)
+    scale3d(
+      var(--cc-hero-squeeze-scale-x),
+      var(--cc-hero-squeeze-scale-y),
+      1
+    );
+  transform-origin: 50% 0;
+  will-change: transform, border-radius;
 }
 
 .cc-hero-topo-panel {
@@ -1169,6 +1185,10 @@ html.lenis body {
   .cc-opening-sticky {
     position: relative;
     top: auto;
+    border-radius: 0;
+    box-shadow: none;
+    transform: none;
+    will-change: auto;
   }
 
   .cc-usp-section {

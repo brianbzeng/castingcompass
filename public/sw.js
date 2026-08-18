@@ -1,5 +1,6 @@
 const CACHE_PREFIXES = ["castingcompass-", "castcompass-", "contourcast-"];
-const CACHE_NAME = "castingcompass-v15";
+const CACHE_NAME = "castingcompass-v16";
+const IS_LOCALHOST = ["localhost", "127.0.0.1", "[::1]"].includes(self.location.hostname);
 const PUBLIC_NAVIGATION_PATHS = new Set(["/", "/forecast", "/community", "/privacy", "/terms", "/ai-disclosure"]);
 const APP_SHELL = [
   "/",
@@ -17,6 +18,11 @@ const APP_SHELL = [
 ];
 
 self.addEventListener("install", (event) => {
+  if (IS_LOCALHOST) {
+    self.skipWaiting();
+    return;
+  }
+
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) =>
       Promise.allSettled(APP_SHELL.map((path) => cache.add(path))),
@@ -32,7 +38,10 @@ self.addEventListener("activate", (event) => {
       .then((keys) =>
         Promise.all(
           keys
-            .filter((key) => CACHE_PREFIXES.some((prefix) => key.startsWith(prefix)) && key !== CACHE_NAME)
+            .filter((key) =>
+              CACHE_PREFIXES.some((prefix) => key.startsWith(prefix)) &&
+              (IS_LOCALHOST || key !== CACHE_NAME),
+            )
             .map((key) => caches.delete(key)),
         ),
       )
@@ -41,6 +50,7 @@ self.addEventListener("activate", (event) => {
 });
 
 self.addEventListener("fetch", (event) => {
+  if (IS_LOCALHOST) return;
   if (event.request.method !== "GET") return;
   const url = new URL(event.request.url);
 

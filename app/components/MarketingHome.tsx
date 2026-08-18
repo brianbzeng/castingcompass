@@ -708,6 +708,8 @@ export function MarketingHome() {
   });
   const [showBackToTop, setShowBackToTop] = useState(false);
   const [desktopUspActive, setDesktopUspActive] = useState(true);
+  const openingRef = useRef<HTMLElement>(null);
+  const openingStickyRef = useRef<HTMLDivElement>(null);
   const approachRef = useRef<HTMLElement>(null);
   const imageChapterRef = useRef<HTMLElement>(null);
 
@@ -845,6 +847,80 @@ export function MarketingHome() {
     return () => {
       desktopQuery.removeEventListener("change", updateMode);
       reducedMotionQuery.removeEventListener("change", updateMode);
+    };
+  }, []);
+
+  useLayoutEffect(() => {
+    const opening = openingRef.current;
+    const hero = openingStickyRef.current;
+    if (!opening || !hero) return;
+
+    const desktopQuery = window.matchMedia("(min-width: 1024px)");
+    const reducedMotionQuery = window.matchMedia(
+      "(prefers-reduced-motion: reduce)",
+    );
+    let frame = 0;
+
+    const reset = () => {
+      hero.style.removeProperty("--cc-hero-squeeze-scale-x");
+      hero.style.removeProperty("--cc-hero-squeeze-scale-y");
+      hero.style.removeProperty("--cc-hero-squeeze-lift");
+      hero.style.removeProperty("--cc-hero-squeeze-radius");
+      hero.style.removeProperty("--cc-hero-squeeze-shadow-alpha");
+      delete hero.dataset.heroSqueezeProgress;
+    };
+    const update = () => {
+      frame = 0;
+      if (!desktopQuery.matches || reducedMotionQuery.matches) {
+        reset();
+        return;
+      }
+
+      const progress = Math.min(
+        1,
+        Math.max(0, -opening.getBoundingClientRect().top / window.innerHeight),
+      );
+      const easedProgress = progress * progress * (3 - 2 * progress);
+
+      hero.style.setProperty(
+        "--cc-hero-squeeze-scale-x",
+        (1 - easedProgress * 0.045).toFixed(4),
+      );
+      hero.style.setProperty(
+        "--cc-hero-squeeze-scale-y",
+        (1 - easedProgress * 0.075).toFixed(4),
+      );
+      hero.style.setProperty(
+        "--cc-hero-squeeze-lift",
+        `${(-easedProgress * 10).toFixed(2)}px`,
+      );
+      hero.style.setProperty(
+        "--cc-hero-squeeze-radius",
+        `${(easedProgress * 26).toFixed(2)}px`,
+      );
+      hero.style.setProperty(
+        "--cc-hero-squeeze-shadow-alpha",
+        (easedProgress * 0.18).toFixed(4),
+      );
+      hero.dataset.heroSqueezeProgress = progress.toFixed(4);
+    };
+    const scheduleUpdate = () => {
+      if (!frame) frame = window.requestAnimationFrame(update);
+    };
+
+    update();
+    window.addEventListener("scroll", scheduleUpdate, { passive: true });
+    window.addEventListener("resize", scheduleUpdate);
+    desktopQuery.addEventListener("change", scheduleUpdate);
+    reducedMotionQuery.addEventListener("change", scheduleUpdate);
+
+    return () => {
+      window.removeEventListener("scroll", scheduleUpdate);
+      window.removeEventListener("resize", scheduleUpdate);
+      desktopQuery.removeEventListener("change", scheduleUpdate);
+      reducedMotionQuery.removeEventListener("change", scheduleUpdate);
+      if (frame) window.cancelAnimationFrame(frame);
+      reset();
     };
   }, []);
 
@@ -1428,7 +1504,7 @@ export function MarketingHome() {
         setGalleryDirection(lastDirection);
       }
       lastScrollY = scrollY;
-      scheduleUpdate();
+      update();
     };
     const handleWheel = (event: WheelEvent) => {
       registerInput(signedDirection(event.deltaY));
@@ -1550,11 +1626,12 @@ export function MarketingHome() {
       </a>
 
       <section
+        ref={openingRef}
         className="cc-opening"
         aria-labelledby="cc-title"
         data-hero-transition="pinned-cover"
       >
-        <div className="cc-opening-sticky">
+        <div ref={openingStickyRef} className="cc-opening-sticky">
           <div className="cc-hero-topo-panel">
             <HeroTopographicArt />
             <ForecastCard state={opportunity} location={location} />
