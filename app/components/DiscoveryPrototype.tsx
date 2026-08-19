@@ -1,6 +1,7 @@
 "use client";
 
 import { lazy, Suspense, useEffect, useMemo, useState } from "react";
+import { createPortal } from "react-dom";
 import Link from "next/link";
 import { ArrowIcon, ChevronIcon, CloseIcon, LayersIcon, ListIcon, LocateIcon, MapIcon } from "./icons";
 import type { FishingSite, OpportunitySnapshot, OpportunityWindow } from "../types";
@@ -11,6 +12,7 @@ const ContourMap = lazy(() => import("./ContourMap").then((module) => ({ default
 
 type FilterPanel = "area" | "type" | "score" | "more" | null;
 type SiteTypeFilter = "all" | "Beach" | "Shore" | "Pier" | "Jetty";
+type FilterPopoverPosition = { top: number; left: number };
 
 const SITE_TYPE_FILTERS: SiteTypeFilter[] = ["Beach", "Shore", "Pier", "Jetty"];
 const EMPTY_SNAPSHOT: OpportunitySnapshot = {
@@ -80,6 +82,7 @@ export function DiscoveryPrototype() {
   const [siteType, setSiteType] = useState<SiteTypeFilter>("all");
   const [minimumScore, setMinimumScore] = useState(0);
   const [filterPanel, setFilterPanel] = useState<FilterPanel>(null);
+  const [filterPopoverPosition, setFilterPopoverPosition] = useState<FilterPopoverPosition | null>(null);
   const [selectedSiteId, setSelectedSiteId] = useState<string | null>(null);
   const [hoveredSiteId, setHoveredSiteId] = useState<string | null>(null);
   const [detailSiteId, setDetailSiteId] = useState<string | null>(null);
@@ -132,6 +135,18 @@ export function DiscoveryPrototype() {
   const selectedWindow = selectedSite ? windowsBySite.get(selectedSite.id) ?? null : null;
   const activeMapSiteId = hoveredSiteId ?? selectedSiteId;
   const activeMapSite = visibleSites.find((site) => site.id === activeMapSiteId) ?? null;
+
+  useEffect(() => {
+    if (!filterPanel) return;
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setFilterPanel(null);
+        setFilterPopoverPosition(null);
+      }
+    };
+    window.addEventListener("keydown", closeOnEscape);
+    return () => window.removeEventListener("keydown", closeOnEscape);
+  }, [filterPanel]);
 
   function openDetail(site: FishingSite) {
     setSelectedSiteId(site.id);
@@ -187,71 +202,132 @@ export function DiscoveryPrototype() {
     </header>
   );
 
+  function toggleFilter(panel: Exclude<FilterPanel, null>, trigger: HTMLButtonElement) {
+    if (filterPanel === panel) {
+      setFilterPanel(null);
+      setFilterPopoverPosition(null);
+      return;
+    }
+
+    const triggerRect = trigger.getBoundingClientRect();
+    const popoverWidth = 270;
+    const gutter = 12;
+    const left = Math.min(Math.max(gutter, triggerRect.left), window.innerWidth - popoverWidth - gutter);
+    setFilterPopoverPosition({ top: triggerRect.bottom + 10, left });
+    setFilterPanel(panel);
+  }
+
   function filterButton(label: string, panel: Exclude<FilterPanel, null>, active = false) {
     return (
       <div className={styles.filterWrap}>
         <button
           className={`${styles.filterButton} ${active ? styles.filterButtonActive : ""}`}
           type="button"
+          id={`filter-${panel}-trigger`}
+          aria-controls={`filter-${panel}-popover`}
           aria-expanded={filterPanel === panel}
-          onClick={() => setFilterPanel(filterPanel === panel ? null : panel)}
+          onClick={(event) => toggleFilter(panel, event.currentTarget)}
         >
           {label}
           <ChevronIcon />
         </button>
-        {filterPanel === panel && panel !== "more" && (
-          <div className={styles.filterPopover} role="dialog" aria-label={`${label} filter`}>
-            {panel === "area" && (
-              <>
-                <h3>Search area</h3>
-                <p>Keep the map centered on the coastline you are exploring.</p>
-                <div className={styles.filterOptions} role="group" aria-label="Search area options">
-                  {(["east-bay", "all"] as const).map((value) => (
-                    <label className={styles.filterOption} key={value}>
-                      <span>{value === "east-bay" ? "Oakland / East Bay" : "All California"}</span>
-                      <input type="radio" name="area" checked={area === value} onChange={() => setArea(value)} />
-                    </label>
-                  ))}
-                </div>
-              </>
-            )}
-            {panel === "type" && (
-              <>
-                <h3>Access type</h3>
-                <p>Choose the kinds of public water access that fit the trip.</p>
-                <div className={styles.filterOptions} role="group" aria-label="Access type options">
-                  {(["all", ...SITE_TYPE_FILTERS] as SiteTypeFilter[]).map((value) => (
-                    <label className={styles.filterOption} key={value}>
-                      <span>{value === "all" ? "All access types" : value}</span>
-                      <input type="radio" name="site-type" checked={siteType === value} onChange={() => setSiteType(value)} />
-                    </label>
-                  ))}
-                </div>
-              </>
-            )}
-            {panel === "score" && (
-              <>
-                <h3>Opportunity score</h3>
-                <p>Only show locations at or above a relative planning score.</p>
-                <div className={styles.filterOptions} role="group" aria-label="Minimum score options">
-                  {[0, 50, 75].map((value) => (
-                    <label className={styles.filterOption} key={value}>
-                      <span>{value === 0 ? "Any score" : `${value}+ score`}</span>
-                      <input type="radio" name="minimum-score" checked={minimumScore === value} onChange={() => setMinimumScore(value)} />
-                    </label>
-                  ))}
-                </div>
-              </>
-            )}
-            <div className={styles.filterPopoverFooter}>
-              <button className={styles.textButton} type="button" onClick={resetFilters}>Clear filters</button>
-              <button className={styles.primaryButton} type="button" onClick={() => setFilterPanel(null)}>See {visibleSites.length} locations</button>
-            </div>
-          </div>
-        )}
       </div>
     );
   }
+
+  function filterPopoverContent(panel: Exclude<FilterPanel, null>) {
+    if (panel === "more") {
+      return (
+        <>
+          <h3 id="filter-more-title">More filters</h3>
+          <p>Keep the map visible while tuning the shortlist.</p>
+          <div className={styles.filterOptions}>
+            <label className={styles.filterOption}>
+              <span>Public access only</span>
+              <input type="checkbox" checked readOnly aria-label="Public access only" />
+            </label>
+            <label className={styles.filterOption}>
+              <span>Fresh conditions</span>
+              <input type="checkbox" aria-label="Fresh conditions" onChange={() => undefined} />
+            </label>
+            <label className={styles.filterOption}>
+              <span>Saved locations</span>
+              <input type="checkbox" aria-label="Saved locations" onChange={() => undefined} />
+            </label>
+          </div>
+        </>
+      );
+    }
+
+    if (panel === "area") {
+      return (
+        <>
+          <h3 id="filter-area-title">Search area</h3>
+          <p>Keep the map centered on the coastline you are exploring.</p>
+          <div className={styles.filterOptions} role="group" aria-label="Search area options">
+            {(["east-bay", "all"] as const).map((value) => (
+              <label className={styles.filterOption} key={value}>
+                <span>{value === "east-bay" ? "Oakland / East Bay" : "All California"}</span>
+                <input type="radio" name="area" checked={area === value} onChange={() => setArea(value)} />
+              </label>
+            ))}
+          </div>
+        </>
+      );
+    }
+
+    if (panel === "type") {
+      return (
+        <>
+          <h3 id="filter-type-title">Access type</h3>
+          <p>Choose the kinds of public water access that fit the trip.</p>
+          <div className={styles.filterOptions} role="group" aria-label="Access type options">
+            {(["all", ...SITE_TYPE_FILTERS] as SiteTypeFilter[]).map((value) => (
+              <label className={styles.filterOption} key={value}>
+                <span>{value === "all" ? "All access types" : value}</span>
+                <input type="radio" name="site-type" checked={siteType === value} onChange={() => setSiteType(value)} />
+              </label>
+            ))}
+          </div>
+        </>
+      );
+    }
+
+    return (
+      <>
+        <h3 id="filter-score-title">Opportunity score</h3>
+        <p>Only show locations at or above a relative planning score.</p>
+        <div className={styles.filterOptions} role="group" aria-label="Minimum score options">
+          {[0, 50, 75].map((value) => (
+            <label className={styles.filterOption} key={value}>
+              <span>{value === 0 ? "Any score" : `${value}+ score`}</span>
+              <input type="radio" name="minimum-score" checked={minimumScore === value} onChange={() => setMinimumScore(value)} />
+            </label>
+          ))}
+        </div>
+      </>
+    );
+  }
+
+  const activeFilterPopover = filterPanel && filterPopoverPosition && typeof document !== "undefined"
+    ? createPortal(
+        <div
+          className={styles.filterPopover}
+          id={`filter-${filterPanel}-popover`}
+          role="dialog"
+          aria-modal="false"
+          aria-labelledby={`filter-${filterPanel}-title`}
+          style={{ top: filterPopoverPosition.top, left: filterPopoverPosition.left }}
+        >
+          {filterPopoverContent(filterPanel)}
+          <div className={styles.filterPopoverFooter}>
+            <button className={styles.textButton} type="button" onClick={resetFilters}>Clear filters</button>
+            <button className={styles.primaryButton} type="button" onClick={() => { setFilterPanel(null); setFilterPopoverPosition(null); }}>See {visibleSites.length} locations</button>
+          </div>
+        </div>,
+        document.body,
+      )
+    : null;
 
   return (
     <div className={styles.discoveryShell}>
@@ -283,30 +359,6 @@ export function DiscoveryPrototype() {
             <button className={styles.useLocationButton} type="button" onClick={findUserLocation}><LocateIcon /> Use my location</button>
             <button className={styles.mapModeButton} type="button" onClick={() => setArea(area === "all" ? "east-bay" : "all")}><MapIcon /> {area === "all" ? "All water" : "Local view"}</button>
           </div>
-          {filterPanel === "more" && (
-            <div className={styles.filterPopover} role="dialog" aria-label="More filters">
-              <h3>More filters</h3>
-              <p>Keep the map visible while tuning the shortlist.</p>
-              <div className={styles.filterOptions}>
-                <label className={styles.filterOption}>
-                  <span>Public access only</span>
-                  <input type="checkbox" checked readOnly aria-label="Public access only" />
-                </label>
-                <label className={styles.filterOption}>
-                  <span>Fresh conditions</span>
-                  <input type="checkbox" aria-label="Fresh conditions" onChange={() => undefined} />
-                </label>
-                <label className={styles.filterOption}>
-                  <span>Saved locations</span>
-                  <input type="checkbox" aria-label="Saved locations" onChange={() => undefined} />
-                </label>
-              </div>
-              <div className={styles.filterPopoverFooter}>
-                <button className={styles.textButton} type="button" onClick={resetFilters}>Clear filters</button>
-                <button className={styles.primaryButton} type="button" onClick={() => setFilterPanel(null)}>See {visibleSites.length} locations</button>
-              </div>
-            </div>
-          )}
         </section>
 
         <section className={`${styles.discoveryWorkspace} ${panelExpanded ? styles.expanded : ""} ${panelCollapsed ? styles.collapsed : ""}`} aria-label="Map discovery workspace">
@@ -443,6 +495,7 @@ export function DiscoveryPrototype() {
           </div>
         </section>
       </main>
+      {activeFilterPopover}
     </div>
   );
 }
