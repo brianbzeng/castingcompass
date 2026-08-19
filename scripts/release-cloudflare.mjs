@@ -477,7 +477,7 @@ export async function releaseCloudflare({
     exactKeys(config.secrets, ["required"], "Reviewed Wrangler secrets configuration");
     exactStringArray(
       config.secrets.required,
-      secretNames,
+      secretPolicy.base_secret_names,
       "Reviewed Wrangler required secret names",
     );
   }
