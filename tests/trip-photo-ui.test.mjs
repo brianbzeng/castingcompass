@@ -11,8 +11,9 @@ test("trip photos are fail-closed and remain bound to the current one-photo cont
 
   assert.match(source, /NEXT_PUBLIC_PHOTO_UPLOADS === "true"/);
   assert.doesNotMatch(source, /NEXT_PUBLIC_PHOTO_UPLOADS !== "false"/);
-  assert.match(source, /PHOTO_UPLOADS_ENABLED && canUploadPhoto/);
+  assert.match(source, /PHOTO_UPLOADS_ENABLED && canSubmit/);
   assert.match(source, /type="file" accept="image\/jpeg,image\/png,image\/webp"/);
+  assert.match(source, /capture="environment"/);
   assert.doesNotMatch(source, /type="file"[^>]+multiple/);
   assert.match(source, /Current storage supports one private photo per trip/);
   assert.match(source, /server strips metadata and re-encodes accepted files before storage/);

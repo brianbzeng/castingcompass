@@ -4294,6 +4294,101 @@ footer > div {
   gap: 1rem;
 }
 
+.trip-location-fields {
+  display: grid;
+  gap: 0.7rem;
+  margin-top: 1.2rem;
+}
+
+.trip-location-fields .trip-field {
+  margin-top: 0;
+}
+
+.trip-location-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.65rem 0.9rem;
+}
+
+.trip-location-button,
+.trip-profile-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  min-height: 42px;
+  padding: 0.65rem 0.8rem;
+  border: 1px solid var(--line-strong);
+  color: var(--mint);
+  background: rgba(8, 35, 68, 0.52);
+  font-size: 0.65rem;
+  font-weight: 650;
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.trip-location-button:hover,
+.trip-location-button:focus-visible,
+.trip-profile-link:hover,
+.trip-profile-link:focus-visible {
+  border-color: var(--seafoam);
+  background: rgba(17, 67, 118, 0.62);
+}
+
+.trip-location-button:disabled {
+  cursor: wait;
+  opacity: 0.7;
+}
+
+.trip-location-actions small,
+.trip-location-status {
+  color: var(--ink-soft);
+  font-size: 0.56rem;
+  line-height: 1.5;
+}
+
+.trip-location-status {
+  margin: 0;
+  color: var(--seafoam);
+}
+
+.trip-location-status-denied,
+.trip-location-status-unsupported {
+  color: #f2c7a4;
+}
+
+.trip-profile-link {
+  justify-self: start;
+  border-style: dashed;
+}
+
+.trip-profile-link svg {
+  width: 0.8rem;
+  height: 0.8rem;
+}
+
+.trip-photo-unavailable {
+  display: grid;
+  gap: 0.35rem;
+  margin-top: 1rem;
+  padding: 0.9rem 1rem;
+  border: 1px dashed var(--line-strong);
+  background: rgba(4, 20, 41, 0.42);
+}
+
+.trip-photo-unavailable strong {
+  color: var(--mint);
+  font-size: 0.75rem;
+}
+
+.trip-photo-unavailable p {
+  margin: 0;
+  color: var(--ink-soft);
+  font-size: 0.6rem;
+  line-height: 1.5;
+}
+
 .gear-catalog-fields { display: grid; gap: 0.85rem; }
 
 .gear-catalog-row {
@@ -4588,6 +4683,31 @@ footer > div {
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 0.75rem;
   margin-top: 0.8rem;
+}
+
+.trip-quick-result {
+  display: grid !important;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.55rem;
+  margin-top: 0.8rem;
+}
+
+.trip-quick-result button {
+  min-height: 44px;
+  padding: 0.65rem 0.7rem;
+  border: 1px solid var(--line-strong);
+  color: var(--ink-soft);
+  background: rgba(4, 20, 41, 0.5);
+  font-size: 0.63rem;
+  cursor: pointer;
+}
+
+.trip-quick-result button:hover,
+.trip-quick-result button:focus-visible,
+.trip-quick-result button.selected {
+  border-color: var(--seafoam);
+  color: var(--ink);
+  background: rgba(17, 67, 118, 0.72);
 }
 
 .catch-fieldset .regulation-reminder {

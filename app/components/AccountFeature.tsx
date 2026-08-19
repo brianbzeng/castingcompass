@@ -2292,7 +2292,7 @@ export function AccountModal({
               ) : profile ? <p>No saved locations yet. Open a forecast and tap “Save location.”</p>
                 : <p className="profile-data-unavailable">Saved locations are unavailable. Retry the profile above.</p>}
             </section>
-            <section className="profile-section profile-gear-section">
+            <section className="profile-section profile-gear-section" id="gear">
               <h3>Gear presets</h3>
               {profileLoading && !profile ? <ProfileSectionLoading label="Loading gear presets" /> : profile?.gearProfiles.length ? <div className="profile-list">
                 {profile.gearProfiles.map((gear) => {
