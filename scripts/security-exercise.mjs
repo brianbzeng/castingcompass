@@ -36,6 +36,7 @@ const PRODUCTION_HOSTS = [
   "castcompass.brianbzeng.com",
   "contourcast.brianbzeng.com",
 ];
+const ISOLATED_STAGING_HOSTNAME = "cc-security-stage.castingcompass.com";
 const PUBLIC_PATH_PATTERNS = [
   "^/$",
   "^/ai-disclosure/?$",
@@ -267,7 +268,7 @@ export function validateTargetOrigin(value, policy, mode, environment) {
     refuse("target-invalid", "Target must be one canonical origin without normalization");
   }
   const hostname = target.hostname.toLowerCase();
-  if (policy.production_hosts.includes(hostname) || hostname.endsWith(".castingcompass.com")) {
+  if (hostname !== ISOLATED_STAGING_HOSTNAME && (policy.production_hosts.includes(hostname) || hostname.endsWith(".castingcompass.com"))) {
     refuse("production-target-blocked", "Production CastingCompass targets are permanently blocked");
   }
   const local = isLocalHostname(hostname);
