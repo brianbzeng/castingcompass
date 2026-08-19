@@ -45,23 +45,25 @@ const EMPTY_POINTS: FeatureCollection<Point> = {
 const OPENFREEMAP_STYLE_URL = "https://tiles.openfreemap.org/styles/positron";
 
 const APPLE_LIKE_MAP_COLORS = {
-  background: "#f7fbfc",
-  water: "#d9edf5",
-  waterway: "#9fcbd9",
-  park: "#e6f1eb",
-  wood: "#dcece4",
-  residential: "#f4f5f2",
-  building: "#edf1ee",
-  buildingOutline: "#dbe5e4",
-  road: "#ffffff",
-  roadCasing: "#c9dce3",
-  motorway: "#e5f1f5",
-  motorwayCasing: "#b6d4df",
-  label: "#536e7b",
-  labelHalo: "#f7fbfc",
-  waterLabel: "#4d8aa0",
-  waterLabelHalo: "#d9edf5",
-  selected: "#176e8c",
+  background: "#172748",
+  water: "#1e3f87",
+  waterway: "#2d6eb2",
+  park: "#0f6a5b",
+  wood: "#0d584e",
+  residential: "#303d50",
+  building: "#3a4659",
+  buildingOutline: "#4b5b70",
+  road: "#6e8199",
+  roadCasing: "#485b73",
+  majorRoad: "#aabbd1",
+  majorCasing: "#60758f",
+  motorway: "#dbe8f6",
+  motorwayCasing: "#83a4cc",
+  label: "#c9d7e9",
+  labelHalo: "#263650",
+  waterLabel: "#7fb9e7",
+  waterLabelHalo: "#1a3a78",
+  selected: "#2894e8",
   selectedLabel: "#ffffff",
 };
 
@@ -84,16 +86,29 @@ function applyAppleLikeMapStyle(map: MapLibreMap) {
   setPaintPropertyIfPresent(map, "building", "fill-color", APPLE_LIKE_MAP_COLORS.building);
   setPaintPropertyIfPresent(map, "building", "fill-outline-color", APPLE_LIKE_MAP_COLORS.buildingOutline);
 
-  for (const layerId of ["highway_path", "highway_minor", "highway_major_inner"]) {
+  for (const layerId of ["highway_path", "highway_minor"]) {
     setPaintPropertyIfPresent(map, layerId, "line-color", APPLE_LIKE_MAP_COLORS.road);
   }
-  for (const layerId of ["highway_major_casing", "highway_motorway_casing"]) {
-    setPaintPropertyIfPresent(map, layerId, "line-color", APPLE_LIKE_MAP_COLORS.roadCasing);
+  setPaintPropertyIfPresent(map, "highway_path", "line-opacity", 0.45);
+  setPaintPropertyIfPresent(map, "highway_minor", "line-opacity", 0.52);
+  setPaintPropertyIfPresent(map, "highway_major_inner", "line-color", APPLE_LIKE_MAP_COLORS.majorRoad);
+  setPaintPropertyIfPresent(map, "highway_major_inner", "line-opacity", 0.88);
+  setPaintPropertyIfPresent(map, "highway_major_subtle", "line-color", APPLE_LIKE_MAP_COLORS.majorRoad);
+  setPaintPropertyIfPresent(map, "highway_major_subtle", "line-opacity", 0.54);
+  setPaintPropertyIfPresent(map, "highway_major_casing", "line-color", APPLE_LIKE_MAP_COLORS.majorCasing);
+  setPaintPropertyIfPresent(map, "highway_major_casing", "line-opacity", 0.82);
+  for (const layerId of ["highway_motorway_casing", "highway_motorway_bridge_casing"]) {
+    setPaintPropertyIfPresent(map, layerId, "line-color", APPLE_LIKE_MAP_COLORS.motorwayCasing);
+    setPaintPropertyIfPresent(map, layerId, "line-opacity", 0.94);
   }
   setPaintPropertyIfPresent(map, "highway_motorway_inner", "line-color", APPLE_LIKE_MAP_COLORS.motorway);
-  setPaintPropertyIfPresent(map, "highway_motorway_casing", "line-color", APPLE_LIKE_MAP_COLORS.motorwayCasing);
-  setPaintPropertyIfPresent(map, "road_area_pier", "fill-color", "#c6e0e8");
-  setPaintPropertyIfPresent(map, "road_pier", "line-color", "#8fbccc");
+  setPaintPropertyIfPresent(map, "highway_motorway_inner", "line-opacity", 1);
+  setPaintPropertyIfPresent(map, "highway_motorway_subtle", "line-color", APPLE_LIKE_MAP_COLORS.motorwayCasing);
+  setPaintPropertyIfPresent(map, "highway_motorway_subtle", "line-opacity", 0.62);
+  setPaintPropertyIfPresent(map, "highway_motorway_bridge_inner", "line-color", APPLE_LIKE_MAP_COLORS.motorway);
+  setPaintPropertyIfPresent(map, "highway_motorway_bridge_inner", "line-opacity", 1);
+  setPaintPropertyIfPresent(map, "road_area_pier", "fill-color", "#315879");
+  setPaintPropertyIfPresent(map, "road_pier", "line-color", "#6d9ec3");
 
   for (const layerId of [
     "highway-name-path",
@@ -210,7 +225,7 @@ function addFishingSiteLayers(map: MapLibreMap) {
     source: SITE_SOURCE_ID,
     filter: ["has", "point_count"],
     paint: {
-      "circle-color": "#4c9bb8",
+      "circle-color": "#3d9dcc",
       "circle-opacity": 0.96,
       "circle-radius": ["step", ["get", "point_count"], 20, 5, 23, 10, 27],
       "circle-stroke-color": "#f8fbfc",
@@ -248,13 +263,13 @@ function addFishingSiteLayers(map: MapLibreMap) {
         [
           "step",
           ["to-number", ["get", "score"]],
-          "#b7cbd2",
+          "#88a9bf",
           45,
-          "#f1d69a",
+          "#e6b75c",
           65,
-          "#9dd7e7",
+          "#5bc4df",
           80,
-          "#5ca9d5",
+          "#2e9cda",
         ],
       ],
       "circle-opacity": 0.98,
@@ -286,7 +301,7 @@ function addFishingSiteLayers(map: MapLibreMap) {
         "case",
         ["==", ["get", "selected"], 1],
         APPLE_LIKE_MAP_COLORS.selectedLabel,
-        "#174e64",
+        "#f2f8ff",
       ],
     },
   });

@@ -938,24 +938,24 @@
   min-width: 0;
   min-height: 0;
   overflow: hidden;
-  background: #d9edf5;
+  background: #172748;
 }
 
 .mapPanel :global(.contour-map-shell) {
-  background: #d9edf5;
+  background: #172748;
 }
 
 .mapPanel :global(.contour-map) {
-  background: #d9edf5;
+  background: #172748;
 }
 
 .mapPanel :global(.contour-map)::after {
   background: linear-gradient(
     90deg,
-    rgba(41, 112, 145, 0.06),
+    rgba(4, 18, 48, 0.14),
     transparent 22%,
     transparent 78%,
-    rgba(41, 112, 145, 0.05)
+    rgba(4, 18, 48, 0.12)
   );
 }
 
@@ -964,40 +964,41 @@
   right: 1rem;
   bottom: auto;
   left: auto;
-  border: 1px solid rgba(6, 24, 42, 0.2);
+  border: 1px solid rgba(219, 232, 246, 0.26);
   border-radius: 999px;
-  color: var(--discovery-navy);
-  background: rgba(255, 255, 255, 0.94);
-  box-shadow: 0 8px 18px rgba(6, 24, 42, 0.12);
+  color: #e1edf9;
+  background: rgba(12, 28, 60, 0.9);
+  box-shadow: 0 8px 18px rgba(3, 13, 34, 0.3);
   font-family: inherit;
   font-size: 0.68rem;
   font-weight: 750;
 }
 
 .mapPanel :global(.map-center-button:hover) {
-  color: var(--discovery-blue-dark);
-  background: white;
+  color: white;
+  border-color: #83a4cc;
+  background: rgba(22, 57, 103, 0.96);
 }
 
 .mapPanel :global(.maplibregl-ctrl-group) {
-  border-color: rgba(6, 24, 42, 0.18) !important;
+  border-color: rgba(219, 232, 246, 0.24) !important;
   border-radius: 0.65rem !important;
-  background: rgba(255, 255, 255, 0.92) !important;
-  box-shadow: 0 8px 18px rgba(6, 24, 42, 0.1) !important;
+  background: rgba(12, 28, 60, 0.9) !important;
+  box-shadow: 0 8px 18px rgba(3, 13, 34, 0.3) !important;
 }
 
 .mapPanel :global(.maplibregl-ctrl-group button + button) {
-  border-top-color: rgba(6, 24, 42, 0.12) !important;
+  border-top-color: rgba(219, 232, 246, 0.2) !important;
 }
 
 .mapPanel :global(.maplibregl-ctrl-icon) {
-  filter: none;
-  opacity: 0.78;
+  filter: brightness(0) invert(1);
+  opacity: 0.86;
 }
 
 .mapPanel :global(.maplibregl-ctrl-attrib) {
-  color: rgba(6, 24, 42, 0.64) !important;
-  background: rgba(255, 255, 255, 0.8) !important;
+  color: rgba(225, 237, 249, 0.72) !important;
+  background: rgba(12, 28, 60, 0.82) !important;
 }
 
 .mapToolbar {
@@ -1007,11 +1008,11 @@
   left: 1rem;
   gap: 0.45rem;
   padding: 0.42rem 0.58rem;
-  border: 1px solid rgba(6, 24, 42, 0.13);
+  border: 1px solid rgba(219, 232, 246, 0.22);
   border-radius: 999px;
-  color: var(--discovery-navy);
-  background: rgba(255, 255, 255, 0.88);
-  box-shadow: 0 8px 18px rgba(6, 24, 42, 0.08);
+  color: #e1edf9;
+  background: rgba(12, 28, 60, 0.84);
+  box-shadow: 0 8px 18px rgba(3, 13, 34, 0.24);
   font-size: 0.66rem;
   font-weight: 750;
   pointer-events: none;
@@ -1019,7 +1020,7 @@
 
 .mapToolbar svg {
   width: 14px;
-  color: var(--discovery-blue-dark);
+  color: #83c5f2;
 }
 
 .mapHint {
@@ -1029,11 +1030,11 @@
   bottom: 1rem;
   max-width: 275px;
   padding: 0.62rem 0.78rem;
-  border: 1px solid rgba(6, 24, 42, 0.13);
+  border: 1px solid rgba(219, 232, 246, 0.2);
   border-radius: 0.65rem;
-  color: rgba(6, 24, 42, 0.72);
-  background: rgba(255, 255, 255, 0.88);
-  box-shadow: 0 8px 18px rgba(6, 24, 42, 0.08);
+  color: rgba(225, 237, 249, 0.78);
+  background: rgba(12, 28, 60, 0.84);
+  box-shadow: 0 8px 18px rgba(3, 13, 34, 0.24);
   font-size: 0.64rem;
   line-height: 1.4;
   pointer-events: none;
@@ -1046,10 +1047,10 @@
   left: 1rem;
   gap: 0.65rem;
   padding: 0.48rem 0.62rem;
-  border: 1px solid rgba(6, 24, 42, 0.13);
+  border: 1px solid rgba(219, 232, 246, 0.2);
   border-radius: 999px;
-  color: rgba(6, 24, 42, 0.68);
-  background: rgba(255, 255, 255, 0.88);
+  color: rgba(225, 237, 249, 0.76);
+  background: rgba(12, 28, 60, 0.84);
   font-size: 0.6rem;
   pointer-events: none;
 }
@@ -1064,15 +1065,15 @@
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background: var(--discovery-blue);
+  background: #65c7ed;
 }
 
 .mapLegend i.selected {
-  background: var(--discovery-coral);
+  background: #2894e8;
 }
 
 .mapLegend i.user {
-  background: var(--discovery-sea);
+  background: #6ee7d0;
 }
 
 .mapLoading {
@@ -1081,8 +1082,8 @@
   inset: 0;
   display: grid;
   place-items: center;
-  color: var(--discovery-navy);
-  background: #b9dce1;
+  color: #e1edf9;
+  background: #1e3f87;
 }
 
 @media (max-width: 1100px) {
