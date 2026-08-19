@@ -1077,13 +1077,17 @@
     display: none;
   }
 
+  .mapModeButton {
+    display: none;
+  }
+
   .contextBlock {
     min-width: 175px;
   }
 
   .searchBox {
-    width: min(240px, 21vw);
-    min-width: 175px;
+    width: min(190px, 18vw);
+    min-width: 165px;
   }
 
   .filterButton {
