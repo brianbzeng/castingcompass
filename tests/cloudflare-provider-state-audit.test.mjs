@@ -127,6 +127,8 @@ test("current provider drift produces only aggregate blockers and never leaks pr
   assert.deepEqual(receipt.configuration.missing_binding_names, [
     "DEPLOYMENT_ENVIRONMENT",
     "STAGING_HOSTNAME",
+    "TURNSTILE_SITE_KEY",
+    "TURNSTILE_ALLOWED_HOSTNAMES",
     "RATE_LIMITING_ENABLED",
     "AI_REVIEW_QUEUE_ENABLED",
     "PRIVACY_EXPORT_QUEUE_ENABLED",

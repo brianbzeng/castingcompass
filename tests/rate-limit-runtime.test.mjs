@@ -175,9 +175,9 @@ test("the AI-provider ceiling is global, fail-closed, and content-free", async (
   assert.doesNotMatch(JSON.stringify(entries), /trip|user|email|note/i);
 });
 
-test("Wrangler declares unique reviewed ceilings but keeps activation default-off", async () => {
+test("Wrangler declares unique reviewed ceilings and keeps activation secrets private", async () => {
   const config = JSON.parse(await readFile(new URL("../wrangler.jsonc", import.meta.url), "utf8"));
-  assert.equal(config.vars.RATE_LIMITING_ENABLED, "false");
+  assert.equal(config.vars.RATE_LIMITING_ENABLED, "true");
   assert.equal("RATE_LIMIT_KEY_SECRET" in config.vars, false);
   assert.deepEqual(config.ratelimits.map((entry) => [entry.name, entry.simple.limit, entry.simple.period]), [
     ["AUTH_RATE_LIMITER", 20, 60],

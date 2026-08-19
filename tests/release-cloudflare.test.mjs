@@ -21,6 +21,11 @@ const NEW_VERSION = "22222222-2222-4222-8222-222222222222";
 const BASE_SECRETS = ["AUTH_EMAIL_FROM", "MIMO_API_KEY", "RESEND_API_KEY"];
 const ACTIVATION_SECRETS = ["RATE_LIMIT_KEY_SECRET", "TURNSTILE_SECRET_KEY"];
 const ROOT_CONFIG = JSON.parse(await readFile(join(ROOT, "wrangler.jsonc"), "utf8"));
+const TEST_DEFAULT_CONFIG = structuredClone(ROOT_CONFIG);
+TEST_DEFAULT_CONFIG.vars.RATE_LIMITING_ENABLED = "false";
+TEST_DEFAULT_CONFIG.vars.TURNSTILE_ENABLED = "false";
+delete TEST_DEFAULT_CONFIG.vars.TURNSTILE_SITE_KEY;
+delete TEST_DEFAULT_CONFIG.vars.TURNSTILE_ALLOWED_HOSTNAMES;
 
 const CONTRACTS = {
   normal: { variables: [] },
@@ -53,7 +58,7 @@ function uploadedVersion(config, mode, secretNames = BASE_SECRETS, overrides = {
 }
 
 function versionedRunner(events, {
-  config = ROOT_CONFIG,
+  config = TEST_DEFAULT_CONFIG,
   mode = "normal",
   secretNames = BASE_SECRETS,
   afterVersions = [{ id: NEW_VERSION }, { id: PRIOR_VERSION }],
@@ -119,7 +124,7 @@ async function fakeNpmCli(directory) {
   return path;
 }
 
-async function freshReleaseRoot(directory, config = ROOT_CONFIG) {
+async function freshReleaseRoot(directory, config = TEST_DEFAULT_CONFIG) {
   const root = join(directory, "release");
   await mkdir(root);
   await writeFile(join(root, "wrangler.jsonc"), `${JSON.stringify(config, null, 2)}\n`, { mode: 0o600 });
@@ -335,10 +340,11 @@ test("release wrapper accepts only private evidence output outside every checkou
   try {
     let subprocesses = 0;
     const npmCli = await fakeNpmCli(join(directory, "npm"));
+    const releaseRoot = await freshReleaseRoot(directory);
     await assert.rejects(
       releaseCloudflare({
         mode: "normal",
-        releaseRoot: ROOT,
+        releaseRoot,
         expectedCommit: HEAD,
         expectedGateCommit: HEAD,
         authorizationFile: "/private/authorization.json",
@@ -360,7 +366,7 @@ test("release wrapper accepts only private evidence output outside every checkou
     await assert.rejects(
       releaseCloudflare({
         mode: "normal",
-        releaseRoot: ROOT,
+        releaseRoot,
         expectedCommit: HEAD,
         expectedGateCommit: HEAD,
         authorizationFile: "/private/authorization.json",
@@ -477,11 +483,11 @@ test("activation secrets file enforces the POSIX private-file boundary", {
 });
 
 test("uploaded version must exactly match source-derived bindings before traffic", () => {
-  const view = uploadedVersion(ROOT_CONFIG, "normal");
+  const view = uploadedVersion(TEST_DEFAULT_CONFIG, "normal");
   assert.equal(verifyUploadedVersion(
     view,
     NEW_VERSION,
-    ROOT_CONFIG,
+    TEST_DEFAULT_CONFIG,
     CONTRACTS.normal,
     BASE_SECRETS,
   ), true);
@@ -489,14 +495,14 @@ test("uploaded version must exactly match source-derived bindings before traffic
   const unexpected = structuredClone(view);
   unexpected.resources.bindings.push({ name: "UNREVIEWED_SECRET", type: "secret_text" });
   assert.throws(
-    () => verifyUploadedVersion(unexpected, NEW_VERSION, ROOT_CONFIG, CONTRACTS.normal, BASE_SECRETS),
+    () => verifyUploadedVersion(unexpected, NEW_VERSION, TEST_DEFAULT_CONFIG, CONTRACTS.normal, BASE_SECRETS),
     /inventory differs/,
   );
 
   const changedLimit = structuredClone(view);
   changedLimit.resources.bindings.find(({ name }) => name === "AUTH_RATE_LIMITER").simple.limit += 1;
   assert.throws(
-    () => verifyUploadedVersion(changedLimit, NEW_VERSION, ROOT_CONFIG, CONTRACTS.normal, BASE_SECRETS),
+    () => verifyUploadedVersion(changedLimit, NEW_VERSION, TEST_DEFAULT_CONFIG, CONTRACTS.normal, BASE_SECRETS),
     /rate-limit binding differs/,
   );
 });
@@ -504,7 +510,7 @@ test("uploaded version must exactly match source-derived bindings before traffic
 test("activation mode binds a stable private secrets file to the inactive version upload", async () => {
   const directory = await mkdtemp(join(tmpdir(), "castingcompass-versioned-activation-"));
   try {
-    const config = structuredClone(ROOT_CONFIG);
+    const config = structuredClone(TEST_DEFAULT_CONFIG);
     config.vars.RATE_LIMITING_ENABLED = "true";
     config.vars.TURNSTILE_ENABLED = "true";
     config.secrets = { required: [...BASE_SECRETS, ...ACTIVATION_SECRETS] };
@@ -549,7 +555,7 @@ test("activation mode binds a stable private secrets file to the inactive versio
 test("activation mode and enabled controls refuse every missing or misplaced secret path", async () => {
   const directory = await mkdtemp(join(tmpdir(), "castingcompass-activation-refusal-"));
   try {
-    const config = structuredClone(ROOT_CONFIG);
+    const config = structuredClone(TEST_DEFAULT_CONFIG);
     config.vars.RATE_LIMITING_ENABLED = "true";
     config.vars.TURNSTILE_ENABLED = "true";
     config.secrets = { required: [...BASE_SECRETS, ...ACTIVATION_SECRETS] };

@@ -1,7 +1,7 @@
 {
   "bomFormat": "CycloneDX",
   "specVersion": "1.5",
-  "serialNumber": "urn:uuid:e4e46169-8fd8-532e-9474-e9b52f9a4ab8",
+  "serialNumber": "urn:uuid:f879c944-060f-5ced-97ac-e418c92ced98",
   "version": 1,
   "metadata": {
     "component": {
@@ -253,7 +253,7 @@
         },
         {
           "name": "castingcompass:input-sha256",
-          "value": "worker-configuration.d.ts:78aebc7dfa15dc95043a422caa5a0a676f0686590715c206e65c7be0da82658c"
+          "value": "worker-configuration.d.ts:6c26e95c20af0096220c901b6e5a781aeed25e51cdb98dd1fcd988eb5e31a628"
         },
         {
           "name": "castingcompass:input-sha256",
@@ -261,7 +261,7 @@
         },
         {
           "name": "castingcompass:input-sha256",
-          "value": "wrangler.jsonc:06479164a75280e5bc071752915f41adb6a814687d356b49c9abb3d5a1a2c461"
+          "value": "wrangler.jsonc:32289eea06e8336c02fbb92fc6380352ff2ed6b300f01276bc5d6909b63c5b73"
         }
       ],
       "purl": "pkg:generic/castingcompass-release@0.1.0"
@@ -7657,7 +7657,7 @@
         },
         {
           "name": "castingcompass:wrangler-sha256",
-          "value": "06479164a75280e5bc071752915f41adb6a814687d356b49c9abb3d5a1a2c461"
+          "value": "32289eea06e8336c02fbb92fc6380352ff2ed6b300f01276bc5d6909b63c5b73"
         },
         {
           "name": "castingcompass:version-metadata-binding",

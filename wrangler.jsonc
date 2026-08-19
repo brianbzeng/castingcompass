@@ -14,8 +14,10 @@
     "STAGING_HOSTNAME": "",
     "PUBLIC_DISCUSSIONS_ENABLED": "false",
     "TRIP_PHOTO_UPLOADS_ENABLED": "false",
-    "TURNSTILE_ENABLED": "false",
-    "RATE_LIMITING_ENABLED": "false",
+    "TURNSTILE_ENABLED": "true",
+    "TURNSTILE_SITE_KEY": "0x4AAAAAAD_XWC_gaU1tG3rw",
+    "TURNSTILE_ALLOWED_HOSTNAMES": "castingcompass.com,www.castingcompass.com",
+    "RATE_LIMITING_ENABLED": "true",
     "AI_REVIEW_QUEUE_ENABLED": "false",
     "PRIVACY_EXPORT_QUEUE_ENABLED": "false",
     "RELEASE_MAINTENANCE_MODE": "false"
