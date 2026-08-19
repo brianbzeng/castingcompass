@@ -3657,6 +3657,43 @@ footer > div {
   margin: 0;
 }
 
+.profile-trip-conditions {
+  margin-top: 0.15rem;
+  padding: 0.45rem 0.55rem;
+  border: 1px solid var(--line);
+  background: rgba(3, 20, 42, 0.34);
+}
+
+.profile-trip-conditions summary {
+  color: var(--seafoam);
+  font-size: 0.68rem;
+  font-weight: 750;
+  cursor: pointer;
+}
+
+.profile-trip-conditions-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(7rem, 1fr));
+  gap: 0.35rem 0.7rem;
+  margin-top: 0.55rem;
+}
+
+.profile-trip-conditions-grid span {
+  color: var(--ink-soft);
+  font-size: 0.65rem;
+}
+
+.profile-trip-conditions-grid strong {
+  font-size: 0.68rem;
+}
+
+.profile-trip-conditions p {
+  margin-top: 0.55rem;
+  color: var(--ink-soft);
+  font-size: 0.65rem;
+  line-height: 1.45;
+}
+
 .profile-trip-actions {
   display: flex !important;
   justify-content: flex-start !important;

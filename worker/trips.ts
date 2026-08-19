@@ -13,6 +13,7 @@ import {
   TRIP_VALIDATION_CONSENT_VERSION,
   VALIDATION_COLLECTION_CONTRACT_VERSION,
   verifyOpportunityAttestation,
+  hydrateOpportunityConditions,
   type AssetFetcherLike,
   type AttestedOpportunity,
   type OpportunityAttestationStatus,
@@ -44,7 +45,6 @@ const TRIP_PHOTO_RESERVATION_GRACE_MS = 15 * 60 * 1000;
 const TRIP_PHOTO_RESERVATION_LEASE_MS = 5 * 60 * 1000;
 const REPORTER_COOKIE = "cc_reporter";
 const ALLOWED_IMAGE_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
-const ALLOWED_MODES = new Set(["shore", "beach", "pier", "jetty", "kayak", "boat", "other"]);
 const TRIP_DETAIL_FIELDS = [
   "gear",
   "gearProfileId",
@@ -1945,6 +1945,7 @@ function forecastFieldsFromAttestation(
       scoringSystemSha256: opportunity.scoringSystemSha256,
       windowStart: opportunity.windowStart,
       windowEnd: opportunity.windowEnd,
+      conditionsSnapshot: opportunity.conditions ?? null,
     }),
   };
 }
@@ -2487,7 +2488,10 @@ export async function handleTripRequest(
       await store.assertSubmissionAllowed(reporter.hash, now);
       const site = getSite(siteMap, body.siteId);
       const submittedStartedAt = parseStartDate(body.startedAt, now, 48);
-      const mode = parseRequiredMode(body.mode);
+      // The catalog location is the source of truth for the fishing zone. The
+      // client may still send mode for older builds, but it cannot override the
+      // site classification or change forecast attribution.
+      const mode = modeForSite(site);
       const scoreInfluencedChoice = requiredScoreInfluence(body);
       const referralCode = parseReferralCode(body.referralCode);
       const timestamp = now.toISOString();
@@ -2506,6 +2510,11 @@ export async function handleTripRequest(
         siteId: site.id,
         startedAt,
       });
+      const attestedOpportunity = await hydrateOpportunityConditions(
+        env.ASSETS,
+        request.url,
+        attestation.opportunity,
+      );
       let feasibilityStart: FeasibilityEventRecord | null = null;
       let feasibilityRecruitment: FeasibilityRecruitmentRecord | null = null;
       if (feasibilityPilotEnabled(env) && optionalBoolean(body.studyConsent, "studyConsent") === true) {
@@ -2521,7 +2530,7 @@ export async function handleTripRequest(
         if (
           !activationId || !store.getFeasibilityActivation || !store.getFeasibilityRecruitment ||
           !store.getFeasibilityRecruitmentCampaign ||
-          !attestation.opportunity || !options.accountId
+          !attestedOpportunity || !options.accountId
         ) {
           throw new ApiError(503, "validation_pilot_unavailable", "The validation pilot is not available right now.");
         }
@@ -2530,7 +2539,7 @@ export async function handleTripRequest(
           env,
           activation: storedActivation,
           accountId: options.accountId,
-          opportunity: attestation.status === "verified" ? attestation.opportunity : null,
+          opportunity: attestation.status === "verified" ? attestedOpportunity : null,
           timestamp,
           studyConsent: true,
           studyConsentVersion,
@@ -2582,7 +2591,7 @@ export async function handleTripRequest(
           context,
           recruitment: resolvedRecruitment.record,
           tripId: id,
-          opportunity: attestation.opportunity,
+          opportunity: attestedOpportunity,
           siteId: site.id,
           mode,
           anglerCount: parseInteger(body.anglerCount, "anglerCount", 1, 12, 1),
@@ -2597,9 +2606,9 @@ export async function handleTripRequest(
           );
         }
       }
-      const activation = validationActivation(env, startedAt, timestamp, attestation.opportunity);
+      const activation = validationActivation(env, startedAt, timestamp, attestedOpportunity);
       const eligibleRecruitmentCandidate = Boolean(
-        activation && attestation.status === "verified" && attestation.opportunity &&
+        activation && attestation.status === "verified" && attestedOpportunity &&
           serverBoundLiveStart && VALIDATION_ELIGIBLE_MODES.has(mode),
       );
       const participantGroupId = eligibleRecruitmentCandidate
@@ -2627,7 +2636,7 @@ export async function handleTripRequest(
         recruitmentEvent,
         collectionIdentity,
         attestationStatus: attestation.status,
-        opportunity: attestation.opportunity,
+        opportunity: attestedOpportunity,
       });
 
       let trip: TripRow;
@@ -2666,7 +2675,7 @@ export async function handleTripRequest(
           referralCode,
           tokenHash: idempotencyKeyHash,
           idempotencyKeyHash,
-          ...forecastFieldsFromAttestation(attestation.opportunity, scoreInfluencedChoice),
+          ...forecastFieldsFromAttestation(attestedOpportunity, scoreInfluencedChoice),
           photoKey: null,
           photoKeyHash: null,
           photoContentType: null,
@@ -2795,8 +2804,11 @@ export async function handleTripRequest(
       }
       const details = parseTripDetails(form, existing);
       assertOtherSpeciesCountConsistency(details.otherCatchCount, details.otherSpecies);
-      const mode = parseRequiredMode(form.get("mode"));
-      const forecastAttributionCleared = mode !== existing.mode;
+      // A trip keeps the mode implied by its curated location. This avoids a
+      // second, conflicting user choice and keeps completion from clearing a
+      // valid forecast snapshot just because an old client posted a mode.
+      const mode = modeForSite(siteMap.get(existing.site_id));
+      const forecastAttributionCleared = false;
       assertImmutableScoreInfluence(form, existing.score_influenced_choice);
       const anglerHours = (Date.parse(endedAt) - Date.parse(existing.started_at)) * anglerCount / 3_600_000;
       const speciesObservation = buildSpeciesObservationFields({
@@ -2977,9 +2989,19 @@ export async function handleTripRequest(
       }
 
       const timestamp = now.toISOString();
-      const mode = parseRequiredMode(form.get("mode"));
+      const mode = modeForSite(site);
       const scoreInfluencedChoice = requiredScoreInfluence(form);
       const referralCode = parseReferralCode(form.get("referralCode"));
+      const attestation = await verifyOpportunityAttestation(env.ASSETS, request.url, {
+        windowId: form.get("opportunityWindowId"),
+        siteId: site.id,
+        startedAt,
+      });
+      const attestedOpportunity = await hydrateOpportunityConditions(
+        env.ASSETS,
+        request.url,
+        attestation.opportunity,
+      );
       const details = parseTripDetails(form);
       assertOtherSpeciesCountConsistency(details.otherCatchCount, details.otherSpecies);
       const anglerHours = (Date.parse(endedAt) - Date.parse(startedAt)) * anglerCount / 3_600_000;
@@ -3036,7 +3058,7 @@ export async function handleTripRequest(
           referralCode,
           tokenHash: null,
           idempotencyKeyHash,
-          ...forecastFieldsFromAttestation(null, scoreInfluencedChoice),
+          ...forecastFieldsFromAttestation(attestedOpportunity, scoreInfluencedChoice),
           photoKey: uploaded?.key ?? null,
           photoKeyHash: uploaded?.keyHash ?? null,
           photoContentType: uploaded?.contentType ?? null,
@@ -3102,6 +3124,10 @@ export async function handleTripRequest(
 }
 
 function publicTrip(row: TripRow) {
+  const predictionMetadata = safeJsonValue(row.prediction_metadata_json);
+  const forecastConditions = isRecord(predictionMetadata) && isRecord(predictionMetadata.conditionsSnapshot)
+    ? predictionMetadata.conditionsSnapshot
+    : null;
   return {
     id: row.id,
     status: row.status,
@@ -3146,6 +3172,7 @@ function publicTrip(row: TripRow) {
     conditionsScore: row.conditions_score,
     fishabilityScore: row.fishability_score,
     modelVersion: row.model_version,
+    forecastConditions,
     scoreInfluencedChoice:
       row.score_influenced_choice === null ? null : Boolean(row.score_influenced_choice),
     hasPhoto: Boolean(row.photo_key),
@@ -3186,6 +3213,10 @@ function safeJsonValue(value: string | null) {
   } catch {
     return null;
   }
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === "object" && !Array.isArray(value);
 }
 
 interface ProcessedTripPhoto {
@@ -3371,10 +3402,6 @@ export function minimizeForecastMetadata(value: unknown) {
   return minimized;
 }
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return Boolean(value) && typeof value === "object" && !Array.isArray(value);
-}
-
 function addBoundedText(target: Record<string, unknown>, key: string, value: unknown, maximum: number) {
   if (typeof value !== "string") return;
   const text = value.trim().slice(0, maximum);
@@ -3499,15 +3526,9 @@ function getSite(siteMap: Map<string, CuratedSite>, value: unknown) {
   return site;
 }
 
-function parseRequiredMode(value: unknown) {
-  if (value === null || value === undefined || value === "") {
-    throw new ApiError(422, "mode_required", "Choose the fishing mode used for the whole trip.");
-  }
-  const mode = String(value).trim().toLowerCase();
-  if (!ALLOWED_MODES.has(mode)) {
-    throw new ApiError(422, "invalid_mode", "Choose a supported fishing mode.");
-  }
-  return mode;
+function modeForSite(site: CuratedSite | undefined) {
+  const type = site?.type?.trim().toLowerCase();
+  return type === "beach" || type === "pier" || type === "jetty" ? type : "shore";
 }
 
 function parseStartDate(value: unknown, now: Date, maximumPastHours: number) {

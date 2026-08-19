@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import {
   clearAttestationCacheForTests,
+  hydrateOpportunityConditions,
   verifyOpportunityAttestation,
 } from "../worker/validation.ts";
 
@@ -101,4 +102,65 @@ test("attestation parsing fails closed for malformed identity, dates, shape, and
     },
   );
   assert.deepEqual(oversizedResult, { status: "unverified_asset", opportunity: null });
+});
+
+test("verified windows can bind a bounded conditions snapshot to the exact published bytes", async () => {
+  const snapshot = {
+    windows: [{
+      id: "ocean-beach--20260801T1000Z",
+      siteId: "ocean-beach",
+      start: "2026-08-01T10:00:00Z",
+      end: "2026-08-01T12:00:00Z",
+      score: 67,
+      habitatScore: 55,
+      seasonalityScore: 66,
+      dynamicScore: 77,
+      fishabilityScore: 88,
+      conditions: {
+        tideStage: "falling",
+        tideLevelsFeet: [4.1, 2.2, 1.3, 1.8],
+        currentKnots: 0.6,
+        currentDirection: "SW",
+        windMph: 12,
+        waterTempF: 62.4,
+        daylight: true,
+        fishabilityReasons: ["Manageable conditions."],
+      },
+    }],
+  };
+  const bytes = new TextEncoder().encode(JSON.stringify(snapshot));
+  const digest = await crypto.subtle.digest("SHA-256", bytes);
+  const snapshotSha256 = [...new Uint8Array(digest)].map((byte) => byte.toString(16).padStart(2, "0")).join("");
+  const opportunity = {
+    snapshotSha256,
+    siteCatalogSha256: "b".repeat(64),
+    targetTaxonId: "california-halibut",
+    taxonCatalogVersion: "castingcompass.taxa/1.0.0",
+    observationContractVersion: "castingcompass.observation/2.0.0",
+    modelRunContractVersion: "castingcompass.model-run/2.0.0",
+    opportunityContractVersion: "castingcompass.opportunity/2.0.0",
+    scoringSystemKind: "heuristic-configuration",
+    scoringSystemVersion: `heuristic-california-halibut-${scoringSha}`,
+    scoringSystemSha256: scoringSha,
+    generatedAt: "2026-08-01T00:00:00.000Z",
+    windowId: "ocean-beach--20260801T1000Z",
+    siteId: "ocean-beach",
+    windowStart: "2026-08-01T10:00:00.000Z",
+    windowEnd: "2026-08-01T12:00:00.000Z",
+    opportunityScore: 67,
+    habitatScore: 55,
+    seasonalityScore: 66,
+    conditionsScore: 77,
+    fishabilityScore: 88,
+  };
+  const assets = {
+    async fetch() {
+      return new Response(bytes, { status: 200, headers: { "Content-Type": "application/json" } });
+    },
+  };
+  const hydrated = await hydrateOpportunityConditions(assets, "https://castingcompass.com/api/trips/start", opportunity);
+  assert.equal(hydrated?.conditions?.tideStage, "falling");
+  assert.deepEqual(hydrated?.conditions?.tideLevelsFeet, [4.1, 2.2, 1.3, 1.8]);
+  assert.deepEqual(hydrated?.conditions?.fishabilityReasons, ["Manageable conditions."]);
+  clearAttestationCacheForTests(assets);
 });

@@ -1088,6 +1088,8 @@ export function TripReportFeature({
       formData.set("fishingMethod", fields.fishingMethod);
       formData.set("method", fields.fishingMethod);
       formData.set("scoreInfluencedChoice", "false");
+      const forecastWindow = findForecastWindow(snapshot, site.id, reportFields.startedAt, reportFields.endedAt);
+      if (forecastWindow) formData.set("opportunityWindowId", forecastWindow.id);
       formData.set("reporterKey", anonymousReporterKey());
       if (referralCodeRef.current) formData.set("referralCode", referralCodeRef.current);
       if (photo) setPhotoTransferState("sending");
