@@ -133,6 +133,7 @@
   },
   "dependencies": {
     "drizzle-orm": "0.45.2",
+    "lenis": "^1.3.26",
     "maplibre-gl": "5.24.0",
     "next": "16.2.12",
     "react": "19.2.8",
