@@ -53,13 +53,14 @@ const APPLE_LIKE_MAP_COLORS = {
   residential: "#303d50",
   building: "#3a4659",
   buildingOutline: "#4b5b70",
-  road: "#6e8199",
+  road: "#566a83",
   roadCasing: "#485b73",
-  majorRoad: "#aabbd1",
-  majorCasing: "#60758f",
-  motorway: "#dbe8f6",
-  motorwayCasing: "#83a4cc",
+  majorRoad: "#8296ad",
+  majorCasing: "#536981",
+  motorway: "#c6d7eb",
+  motorwayCasing: "#7593b8",
   label: "#c9d7e9",
+  roadLabel: "#8a9bb0",
   labelHalo: "#263650",
   waterLabel: "#7fb9e7",
   waterLabelHalo: "#1a3a78",
@@ -89,31 +90,36 @@ function applyAppleLikeMapStyle(map: MapLibreMap) {
   for (const layerId of ["highway_path", "highway_minor"]) {
     setPaintPropertyIfPresent(map, layerId, "line-color", APPLE_LIKE_MAP_COLORS.road);
   }
-  setPaintPropertyIfPresent(map, "highway_path", "line-opacity", 0.45);
-  setPaintPropertyIfPresent(map, "highway_minor", "line-opacity", 0.52);
+  setPaintPropertyIfPresent(map, "highway_path", "line-opacity", 0.28);
+  setPaintPropertyIfPresent(map, "highway_path", "line-width", ["interpolate", ["exponential", 1.2], ["zoom"], 12, 0.55, 15, 1, 20, 5]);
+  setPaintPropertyIfPresent(map, "highway_minor", "line-opacity", 0.36);
+  setPaintPropertyIfPresent(map, "highway_minor", "line-width", ["interpolate", ["exponential", 1.45], ["zoom"], 12, 0.7, 15, 1.2, 20, 6.5]);
   setPaintPropertyIfPresent(map, "highway_major_inner", "line-color", APPLE_LIKE_MAP_COLORS.majorRoad);
-  setPaintPropertyIfPresent(map, "highway_major_inner", "line-opacity", 0.88);
+  setPaintPropertyIfPresent(map, "highway_major_inner", "line-opacity", 0.68);
+  setPaintPropertyIfPresent(map, "highway_major_inner", "line-width", ["interpolate", ["exponential", 1.3], ["zoom"], 10, 1.1, 13, 1.8, 16, 3.5, 20, 9]);
   setPaintPropertyIfPresent(map, "highway_major_subtle", "line-color", APPLE_LIKE_MAP_COLORS.majorRoad);
-  setPaintPropertyIfPresent(map, "highway_major_subtle", "line-opacity", 0.54);
+  setPaintPropertyIfPresent(map, "highway_major_subtle", "line-opacity", 0.38);
+  setPaintPropertyIfPresent(map, "highway_major_subtle", "line-width", ["interpolate", ["exponential", 1.3], ["zoom"], 10, 0.75, 13, 1.15, 16, 2.4, 20, 6]);
   setPaintPropertyIfPresent(map, "highway_major_casing", "line-color", APPLE_LIKE_MAP_COLORS.majorCasing);
-  setPaintPropertyIfPresent(map, "highway_major_casing", "line-opacity", 0.82);
+  setPaintPropertyIfPresent(map, "highway_major_casing", "line-opacity", 0.62);
+  setPaintPropertyIfPresent(map, "highway_major_casing", "line-width", ["interpolate", ["exponential", 1.3], ["zoom"], 10, 1.8, 13, 2.5, 16, 4.4, 20, 10]);
   for (const layerId of ["highway_motorway_casing", "highway_motorway_bridge_casing"]) {
     setPaintPropertyIfPresent(map, layerId, "line-color", APPLE_LIKE_MAP_COLORS.motorwayCasing);
-    setPaintPropertyIfPresent(map, layerId, "line-opacity", 0.94);
+    setPaintPropertyIfPresent(map, layerId, "line-opacity", 0.88);
+    setPaintPropertyIfPresent(map, layerId, "line-width", ["interpolate", ["exponential", 1.4], ["zoom"], 5.8, 0, 8, 2.4, 12, 3.2, 16, 6.5, 20, 16]);
   }
-  setPaintPropertyIfPresent(map, "highway_motorway_inner", "line-color", APPLE_LIKE_MAP_COLORS.motorway);
-  setPaintPropertyIfPresent(map, "highway_motorway_inner", "line-opacity", 1);
+  for (const layerId of ["highway_motorway_inner", "highway_motorway_bridge_inner"]) {
+    setPaintPropertyIfPresent(map, layerId, "line-color", APPLE_LIKE_MAP_COLORS.motorway);
+    setPaintPropertyIfPresent(map, layerId, "line-opacity", 0.94);
+    setPaintPropertyIfPresent(map, layerId, "line-width", ["interpolate", ["exponential", 1.4], ["zoom"], 5.8, 0, 8, 1.15, 12, 2, 16, 4.5, 20, 12]);
+  }
   setPaintPropertyIfPresent(map, "highway_motorway_subtle", "line-color", APPLE_LIKE_MAP_COLORS.motorwayCasing);
-  setPaintPropertyIfPresent(map, "highway_motorway_subtle", "line-opacity", 0.62);
-  setPaintPropertyIfPresent(map, "highway_motorway_bridge_inner", "line-color", APPLE_LIKE_MAP_COLORS.motorway);
-  setPaintPropertyIfPresent(map, "highway_motorway_bridge_inner", "line-opacity", 1);
+  setPaintPropertyIfPresent(map, "highway_motorway_subtle", "line-opacity", 0.48);
+  setPaintPropertyIfPresent(map, "highway_motorway_subtle", "line-width", ["interpolate", ["exponential", 1.4], ["zoom"], 5.8, 0, 8, 1.35, 12, 2.1, 16, 4, 20, 10]);
   setPaintPropertyIfPresent(map, "road_area_pier", "fill-color", "#315879");
   setPaintPropertyIfPresent(map, "road_pier", "line-color", "#6d9ec3");
 
   for (const layerId of [
-    "highway-name-path",
-    "highway-name-minor",
-    "highway-name-major",
     "label_other",
     "label_village",
     "label_town",
@@ -127,6 +133,13 @@ function applyAppleLikeMapStyle(map: MapLibreMap) {
     setPaintPropertyIfPresent(map, layerId, "text-color", APPLE_LIKE_MAP_COLORS.label);
     setPaintPropertyIfPresent(map, layerId, "text-halo-color", APPLE_LIKE_MAP_COLORS.labelHalo);
     setPaintPropertyIfPresent(map, layerId, "text-halo-width", 1.25);
+    setPaintPropertyIfPresent(map, layerId, "text-halo-blur", 0.2);
+  }
+  for (const [layerId, opacity] of [["highway-name-path", 0.18], ["highway-name-minor", 0.26], ["highway-name-major", 0.46]] as const) {
+    setPaintPropertyIfPresent(map, layerId, "text-color", APPLE_LIKE_MAP_COLORS.roadLabel);
+    setPaintPropertyIfPresent(map, layerId, "text-opacity", opacity);
+    setPaintPropertyIfPresent(map, layerId, "text-halo-color", APPLE_LIKE_MAP_COLORS.labelHalo);
+    setPaintPropertyIfPresent(map, layerId, "text-halo-width", 0.65);
     setPaintPropertyIfPresent(map, layerId, "text-halo-blur", 0.2);
   }
   for (const layerId of ["water_name_point_label", "water_name_line_label", "waterway_line_label"]) {
