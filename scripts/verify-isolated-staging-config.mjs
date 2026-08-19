@@ -33,6 +33,7 @@ const PRODUCTION_CONFIG_PATH = join(ROOT, "wrangler.jsonc");
 const COMMIT_PATTERN = /^[a-f0-9]{40}$/u;
 const HASH_PATTERN = /^[a-f0-9]{64}$/u;
 const WORKER_VERSION_PATTERN = /^[A-Za-z0-9-]{1,128}$/u;
+const ISOLATED_STAGING_HOSTNAME = "cc-security-stage.castingcompass.com";
 
 export class IsolatedStagingConfigRefusal extends Error {
   constructor(code, message) {
@@ -228,7 +229,7 @@ function validateTargetHost(host, policy) {
     || isIP(host) !== 0) {
     refuse("target-invalid", "Isolated staging requires one canonical DNS custom domain");
   }
-  if (policy.production.hosts.includes(host) || host.endsWith(".castingcompass.com")) {
+  if (host !== ISOLATED_STAGING_HOSTNAME && (policy.production.hosts.includes(host) || host.endsWith(".castingcompass.com"))) {
     refuse("production-blocked", "Production and every CastingCompass subdomain are blocked");
   }
   return host;

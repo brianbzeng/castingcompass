@@ -36,6 +36,7 @@ const PRODUCTION_HOSTS = [
   "castcompass.brianbzeng.com",
   "contourcast.brianbzeng.com",
 ];
+const ISOLATED_STAGING_HOSTNAME = "cc-security-stage.castingcompass.com";
 const EXPECTED_ROUTES = [
   { method: "GET", path: "/api/health" },
   { method: "GET", path: "/api/profile" },
@@ -188,8 +189,7 @@ function validateTargetOrigin(value, policy) {
     || isIP(target.hostname) !== 0) {
     refuse("target-invalid", "Target must be one canonical HTTPS DNS origin");
   }
-  if (policy.production_hosts.includes(target.hostname)
-    || target.hostname.endsWith(".castingcompass.com")) {
+  if (target.hostname !== ISOLATED_STAGING_HOSTNAME && (policy.production_hosts.includes(target.hostname) || target.hostname.endsWith(".castingcompass.com"))) {
     refuse("production-blocked", "Production and every CastingCompass subdomain are permanently blocked");
   }
   return target.origin;

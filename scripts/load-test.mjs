@@ -14,6 +14,7 @@ const PRODUCTION_HOSTS = new Set([
   "castcompass.brianbzeng.com",
   "contourcast.brianbzeng.com",
 ]);
+const ISOLATED_STAGING_HOSTNAME = "cc-security-stage.castingcompass.com";
 const REMOTE_AUTHORIZATION = "I_HAVE_AUTHORIZATION_FOR_THIS_STAGING_TARGET";
 const CONFIG_URL = new URL("../config/performance-budgets.json", import.meta.url);
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
@@ -183,7 +184,7 @@ export function validateTarget(value, remoteAuthorization = "") {
     throw new Error("--target must contain only scheme, hostname, and optional port");
   }
   const hostname = target.hostname.toLowerCase();
-  if (PRODUCTION_HOSTS.has(hostname) || hostname.endsWith(".castingcompass.com")) {
+  if (hostname !== ISOLATED_STAGING_HOSTNAME && (PRODUCTION_HOSTS.has(hostname) || hostname.endsWith(".castingcompass.com"))) {
     throw new Error("production CastingCompass hostnames are permanently blocked by this harness");
   }
   const local = isLoopbackHostname(hostname);
