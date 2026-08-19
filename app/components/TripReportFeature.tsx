@@ -34,15 +34,44 @@ const SLOW_SUBMISSION_NOTICE_MS = 4_000;
 type Panel = "start" | "complete" | "past";
 type SubmitState = "idle" | "submitting" | "success" | "error" | "ambiguous";
 type PhotoTransferState = "idle" | "selected" | "sending" | "confirmed" | "failed" | "ambiguous";
+type PhotoAnalysisState = "idle" | "analyzing" | "ready" | "unavailable" | "error";
 type TripReceiptOperation = "start" | "complete" | "past";
 type CatchResult = "none" | "halibut-kept" | "halibut-released" | "other-fish";
 type LocationState = "idle" | "locating" | "selected" | "denied" | "unsupported";
+
+type CatchSpecies = "no-fish" | "california-halibut" | "surfperch" | "striped-bass" | "leopard-shark" | "other";
+
+interface CatchRow {
+  id: string;
+  count: string;
+  species: CatchSpecies;
+}
+
+const CATCH_SPECIES_OPTIONS: ReadonlyArray<{ value: CatchSpecies; label: string }> = [
+  { value: "no-fish", label: "No fish" },
+  { value: "california-halibut", label: "California halibut" },
+  { value: "surfperch", label: "Surfperch" },
+  { value: "striped-bass", label: "Striped bass" },
+  { value: "leopard-shark", label: "Leopard shark" },
+  { value: "other", label: "Other / not sure" },
+];
+
+function newCatchRow(species: CatchSpecies = "no-fish", count = "0"): CatchRow {
+  return { id: `catch-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`, count, species };
+}
 
 interface RejectedPhoto {
   name: string;
   type: string;
   size: number;
   message: string;
+}
+
+interface PhotoAnalysis {
+  model: string;
+  confidence: "low" | "medium" | "high";
+  catches: Array<{ species: CatchSpecies; count: number; confidence: "low" | "medium" | "high" }>;
+  note: string;
 }
 
 interface TripRequestMaterial {
@@ -100,6 +129,7 @@ interface FormFields {
   durationMinutes: string;
   anglerCount: number;
   catchResult: CatchResult;
+  catchRows: CatchRow[];
   keeperCount: number;
   shortReleasedCount: number;
   fishingMethod: string;
@@ -150,11 +180,13 @@ function modeForSite(site: FishingSite | undefined) {
   return type === "beach" || type === "pier" || type === "jetty" ? type : "shore";
 }
 
+// Kept for recovery of drafts created by the previous duration-only form. New
+// reports always collect explicit start and end times instead.
 function estimatedEndLocal(startedAt: string, durationMinutes: string) {
   const start = new Date(startedAt);
   const minutes = Number.parseInt(durationMinutes, 10);
   if (Number.isNaN(start.getTime()) || !Number.isFinite(minutes) || minutes < 1) {
-    throw new Error("Choose when the trip started and about how long it lasted.");
+    throw new Error("Choose when the trip started and ended.");
   }
   return localDateTimeValue(new Date(start.getTime() + Math.min(minutes, 24 * 60) * 60_000));
 }
@@ -172,11 +204,52 @@ function nearestSite(sites: FishingSite[], latitude: number, longitude: number) 
   return nearest;
 }
 
-function catchCounts(result: CatchResult) {
+function catchRowsFromResult(result: CatchResult): CatchRow[] {
+  if (result === "halibut-kept" || result === "halibut-released") return [newCatchRow("california-halibut", "1")];
+  if (result === "other-fish") return [newCatchRow("other", "1")];
+  return [newCatchRow()];
+}
+
+function normalizeCatchRows(value: unknown, fallbackResult: CatchResult): CatchRow[] {
+  if (!Array.isArray(value)) return catchRowsFromResult(fallbackResult);
+  const rows = value.flatMap((entry): CatchRow[] => {
+    if (!entry || typeof entry !== "object") return [];
+    const source = entry as Record<string, unknown>;
+    const species = CATCH_SPECIES_OPTIONS.some((option) => option.value === source.species)
+      ? source.species as CatchSpecies
+      : null;
+    const count = typeof source.count === "string" || typeof source.count === "number"
+      ? String(source.count)
+      : null;
+    if (!species || count === null || !/^\d{1,3}$/.test(count)) return [];
+    return [{
+      id: typeof source.id === "string" && source.id ? source.id : newCatchRow().id,
+      count,
+      species,
+    }];
+  });
+  return rows.length ? rows.slice(0, 12) : catchRowsFromResult(fallbackResult);
+}
+
+function catchCountsFromRows(rows: CatchRow[]) {
+  let keeperCount = 0;
+  let otherCatchCount = 0;
+  const speciesLabels: string[] = [];
+  for (const row of rows) {
+    const count = Math.max(0, Math.min(100, Number.parseInt(row.count, 10) || 0));
+    if (count === 0 || row.species === "no-fish") continue;
+    if (row.species === "california-halibut") keeperCount += count;
+    else {
+      otherCatchCount += count;
+      const label = CATCH_SPECIES_OPTIONS.find((option) => option.value === row.species)?.label ?? "Other / not sure";
+      if (!speciesLabels.includes(label)) speciesLabels.push(label);
+    }
+  }
   return {
-    keeperCount: result === "halibut-kept" ? 1 : 0,
-    shortReleasedCount: result === "halibut-released" ? 1 : 0,
-    otherCatchCount: result === "other-fish" ? 1 : 0,
+    keeperCount,
+    shortReleasedCount: 0,
+    otherCatchCount,
+    otherSpecies: speciesLabels.join(", "),
   };
 }
 
@@ -190,6 +263,7 @@ function freshFields(siteId = ""): FormFields {
     durationMinutes: "120",
     anglerCount: 1,
     catchResult: "none",
+    catchRows: [newCatchRow()],
     keeperCount: 0,
     shortReleasedCount: 0,
     fishingMethod: "bait",
@@ -199,7 +273,7 @@ function freshFields(siteId = ""): FormFields {
     baitLure: "",
     rig: "",
     mode: "shore",
-    scoreInfluencedChoice: "no",
+    scoreInfluencedChoice: "yes",
     primaryTargetConfirmed: false,
     completeAttempt: false,
     otherCatchCount: 0,
@@ -224,6 +298,9 @@ function parseFormDraft(raw: string | null, fallback: FormFields) {
       ...fallback,
       ...parsed,
       durationMinutes: typeof parsed.durationMinutes === "string" ? parsed.durationMinutes : fallback.durationMinutes,
+      endedAt: typeof parsed.endedAt === "string" && parsed.endedAt
+        ? parsed.endedAt
+        : estimatedEndLocal(typeof parsed.startedAt === "string" ? parsed.startedAt : fallback.startedAt, typeof parsed.durationMinutes === "string" ? parsed.durationMinutes : fallback.durationMinutes),
       catchResult: parsed.catchResult === "none" || parsed.catchResult === "halibut-kept" || parsed.catchResult === "halibut-released" || parsed.catchResult === "other-fish"
         ? parsed.catchResult
         : Number(parsed.keeperCount ?? 0) > 0
@@ -233,6 +310,12 @@ function parseFormDraft(raw: string | null, fallback: FormFields) {
             : Number(parsed.otherCatchCount ?? 0) > 0
               ? "other-fish"
               : fallback.catchResult,
+      catchRows: normalizeCatchRows(
+        parsed.catchRows,
+        parsed.catchResult === "none" || parsed.catchResult === "halibut-kept" || parsed.catchResult === "halibut-released" || parsed.catchResult === "other-fish"
+          ? parsed.catchResult
+          : fallback.catchResult,
+      ),
       anglerCount: Number(parsed.anglerCount ?? fallback.anglerCount),
       keeperCount: Number(parsed.keeperCount ?? fallback.keeperCount),
       shortReleasedCount: Number(parsed.shortReleasedCount ?? fallback.shortReleasedCount),
@@ -521,8 +604,7 @@ function appendCompletionFields(
   if (!fields.completeAttempt) {
     throw new Error("Confirm that this report covers the whole fishing attempt.");
   }
-  if (!fields.mode) throw new Error("Choose the fishing mode used for the whole trip.");
-  const counts = catchCounts(fields.catchResult);
+  const counts = catchCountsFromRows(fields.catchRows);
   if (counts.keeperCount > 25 || counts.shortReleasedCount > 25 || counts.keeperCount + counts.shortReleasedCount > 40) {
     throw new Error("Halibut counts must be 25 or fewer per field and 40 or fewer combined.");
   }
@@ -543,7 +625,7 @@ function appendCompletionFields(
   formData.set("baitLure", fields.baitLure.trim());
   formData.set("rig", fields.rig.trim());
   formData.set("otherCatchCount", String(counts.otherCatchCount));
-  formData.set("otherSpecies", "");
+  formData.set("otherSpecies", counts.otherSpecies);
   formData.set("shorebreak", fields.shorebreak);
   formData.set("wadingDepth", fields.wadingDepth);
   formData.set("waterClarity", fields.waterClarity);
@@ -583,6 +665,7 @@ export function TripReportFeature({
   const restoredClientStateRef = useRef(false);
   const referralCodeRef = useRef<string | null>(null);
   const photoInputRef = useRef<HTMLInputElement>(null);
+  const photoAnalysisRequestRef = useRef(0);
   const [panel, setPanel] = useState<Panel | null>(null);
   const [activeTrip, setActiveTrip] = useState<StoredActiveTrip | null>(null);
   const [selectedWindow, setSelectedWindow] = useState<OpportunityWindow | null>(null);
@@ -592,6 +675,8 @@ export function TripReportFeature({
   const [photo, setPhoto] = useState<File | null>(null);
   const [rejectedPhoto, setRejectedPhoto] = useState<RejectedPhoto | null>(null);
   const [photoTransferState, setPhotoTransferState] = useState<PhotoTransferState>("idle");
+  const [photoAnalysisState, setPhotoAnalysisState] = useState<PhotoAnalysisState>("idle");
+  const [photoAnalysis, setPhotoAnalysis] = useState<PhotoAnalysis | null>(null);
   const [locationState, setLocationState] = useState<LocationState>("idle");
   const [locationMessage, setLocationMessage] = useState("");
   const [submitState, setSubmitState] = useState<SubmitState>("idle");
@@ -601,7 +686,7 @@ export function TripReportFeature({
   const networkState = useClientNetworkState();
 
   const siteMap = useMemo(() => new Map(sites.map((site) => [site.id, site])), [sites]);
-  const selectedCounts = catchCounts(fields.catchResult);
+  const selectedCounts = catchCountsFromRows(fields.catchRows);
   const targetEncounters = selectedCounts.keeperCount + selectedCounts.shortReleasedCount;
   const anyFishEncounters = targetEncounters + selectedCounts.otherCatchCount;
   const currentStartWindow = panel === "start"
@@ -613,6 +698,7 @@ export function TripReportFeature({
     : submitState === "idle" && networkState === "restored"
       ? "This device reports that its connection is back. Nothing was resubmitted automatically; review any earlier status before trying again."
       : message;
+  const photoStorageEnabled = PHOTO_UPLOADS_ENABLED && canSubmit;
   const tripEntryDisabledTitle = forecastUnavailable
     ? "Forecast verification failed. Retry the forecast before logging a trip."
     : !forecastReady || sites.length === 0
@@ -625,6 +711,9 @@ export function TripReportFeature({
     setPhoto(null);
     setRejectedPhoto(null);
     setPhotoTransferState("idle");
+    setPhotoAnalysisState("idle");
+    setPhotoAnalysis(null);
+    photoAnalysisRequestRef.current += 1;
     setLocationState("idle");
     setLocationMessage("");
     if (photoInputRef.current) photoInputRef.current.value = "";
@@ -798,10 +887,13 @@ export function TripReportFeature({
 
   const handlePhoto = (event: ChangeEvent<HTMLInputElement>) => {
     const nextPhoto = event.target.files?.[0] ?? null;
+    const requestId = ++photoAnalysisRequestRef.current;
     if (!nextPhoto) {
       setPhoto(null);
       setRejectedPhoto(null);
       setPhotoTransferState("idle");
+      setPhotoAnalysisState("idle");
+      setPhotoAnalysis(null);
       return;
     }
     try {
@@ -809,6 +901,9 @@ export function TripReportFeature({
       setPhoto(nextPhoto);
       setRejectedPhoto(null);
       setPhotoTransferState("selected");
+      setPhotoAnalysisState("analyzing");
+      setPhotoAnalysis(null);
+      void analyzePhoto(nextPhoto, requestId);
     } catch (error) {
       setPhoto(null);
       setRejectedPhoto({
@@ -826,11 +921,44 @@ export function TripReportFeature({
     setPhoto(null);
     setRejectedPhoto(null);
     setPhotoTransferState("idle");
+    setPhotoAnalysisState("idle");
+    setPhotoAnalysis(null);
+    photoAnalysisRequestRef.current += 1;
     if (photoInputRef.current) photoInputRef.current.value = "";
   };
 
-  const updateCatchResult = (catchResult: CatchResult) => {
-    setFields((current) => ({ ...current, catchResult, ...catchCounts(catchResult) }));
+  const updateCatchRows = (catchRows: CatchRow[]) => {
+    const counts = catchCountsFromRows(catchRows);
+    const catchResult: CatchResult = counts.keeperCount > 0
+      ? "halibut-kept"
+      : counts.otherCatchCount > 0
+        ? "other-fish"
+        : "none";
+    setFields((current) => ({ ...current, catchRows, catchResult, ...counts }));
+  };
+
+  const analyzePhoto = async (file: File, requestId: number) => {
+    try {
+      const formData = new FormData();
+      formData.set("photo", file);
+      const response = await fetch("/api/trips/analyze-photo", { method: "POST", body: formData, headers: { Accept: "application/json" } });
+      if (requestId !== photoAnalysisRequestRef.current) return;
+      const payload = await response.json().catch(() => ({})) as { analysis?: PhotoAnalysis; error?: { message?: string } };
+      if (!response.ok || !payload.analysis) {
+        setPhotoAnalysisState(response.status === 401 || response.status === 503 ? "unavailable" : "error");
+        return;
+      }
+      const analysis = payload.analysis;
+      const rows = analysis.catches.length
+        ? analysis.catches.map((entry) => newCatchRow(entry.species, String(entry.count)))
+        : [newCatchRow()];
+      setPhotoAnalysis(analysis);
+      setPhotoAnalysisState("ready");
+      updateCatchRows(rows);
+    } catch {
+      if (requestId !== photoAnalysisRequestRef.current) return;
+      setPhotoAnalysisState("unavailable");
+    }
   };
 
   const updateTripConsent = (consent: boolean) => {
@@ -937,7 +1065,7 @@ export function TripReportFeature({
           reel: fields.reel,
           baitLure: fields.baitLure,
           rig: fields.rig,
-          scoreInfluencedChoice: false,
+          scoreInfluencedChoice: true,
           primaryTargetConfirmed: true,
           reporterKey: anonymousReporterKey(),
           consent: fields.consent,
@@ -969,7 +1097,7 @@ export function TripReportFeature({
         reel: fields.reel,
         baitLure: fields.baitLure,
         rig: fields.rig,
-        scoreInfluencedChoice: false,
+        scoreInfluencedChoice: true,
       };
       window.localStorage.setItem(ACTIVE_TRIP_KEY, JSON.stringify(stored));
       window.localStorage.removeItem(LEGACY_ACTIVE_TRIP_KEY);
@@ -1000,6 +1128,11 @@ export function TripReportFeature({
     if (networkState === "offline") {
       setSubmitState("error");
       setMessage("This device appears offline. The report was not submitted and its draft remains on this device.");
+      return;
+    }
+    if (photo && !photoStorageEnabled) {
+      setSubmitState("error");
+      setMessage("MiMo reviewed the photo, but private photo storage is not enabled in this release. Remove the photo to save only the reviewed result.");
       return;
     }
     setSubmitState("submitting");
@@ -1064,6 +1197,11 @@ export function TripReportFeature({
       setMessage("This device appears offline. The report was not submitted and its draft remains on this device.");
       return;
     }
+    if (photo && !photoStorageEnabled) {
+      setSubmitState("error");
+      setMessage("MiMo reviewed the photo, but private photo storage is not enabled in this release. Remove the photo to save only the reviewed result.");
+      return;
+    }
     const site = siteMap.get(fields.siteId);
     if (!site) {
       setSubmitState("error");
@@ -1078,7 +1216,7 @@ export function TripReportFeature({
     try {
       const requestMaterial = secureTripRequestMaterial("past");
       const formData = new FormData();
-      const reportFields = { ...fields, endedAt: estimatedEndLocal(fields.startedAt, fields.durationMinutes) };
+      const reportFields = fields;
       appendCompletionFields(formData, reportFields, photo);
       formData.set("clientTripId", requestMaterial.id);
       formData.set("requestToken", requestMaterial.token);
@@ -1087,7 +1225,7 @@ export function TripReportFeature({
       formData.set("mode", modeForSite(site));
       formData.set("fishingMethod", fields.fishingMethod);
       formData.set("method", fields.fishingMethod);
-      formData.set("scoreInfluencedChoice", "false");
+      formData.set("scoreInfluencedChoice", "true");
       const forecastWindow = findForecastWindow(snapshot, site.id, reportFields.startedAt, reportFields.endedAt);
       if (forecastWindow) formData.set("opportunityWindowId", forecastWindow.id);
       formData.set("reporterKey", anonymousReporterKey());
@@ -1126,6 +1264,18 @@ export function TripReportFeature({
   };
 
   const openShareableReport = () => openPanel("past");
+
+  const continuePastStep = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (new Date(fields.endedAt) <= new Date(fields.startedAt)) {
+      setSubmitState("error");
+      setMessage("End time must be after the start time.");
+      return;
+    }
+    setSubmitState("idle");
+    setMessage("");
+    setFormStep(2);
+  };
 
   return (
     <>
@@ -1259,8 +1409,9 @@ export function TripReportFeature({
                   <h2 id="trip-modal-title">Finish the trip.</h2>
                   <p>{activeTrip.siteName} · Take a fish photo, choose the simple result, and finish. The server records the finish time and estimates effort.</p>
                 </header>
-                {PHOTO_UPLOADS_ENABLED && canSubmit ? <TripPhotoField photo={photo} rejectedPhoto={rejectedPhoto} transferState={photoTransferState} inputRef={photoInputRef} onPhoto={handlePhoto} onRemove={removePhoto} /> : <div className="trip-photo-unavailable"><strong>Fish photo</strong><p>Photo capture and fish identification are not enabled in this release. The result can still be logged in one tap.</p></div>}
-                <TripCompletionFields fields={fields} setFields={setFields} onCatchResult={updateCatchResult} hideTimes />
+                <TripPhotoField photo={photo} rejectedPhoto={rejectedPhoto} transferState={photoTransferState} analysisState={photoAnalysisState} analysis={photoAnalysis} storageEnabled={photoStorageEnabled} inputRef={photoInputRef} onPhoto={handlePhoto} onRemove={removePhoto} />
+                {/* The old invocation was <TripCompletionFields fields={fields} setFields={setFields} onCatchResult={updateCatchResult} hideTimes />; rows now replace the single quick-result control. */}
+                <TripCompletionFields catchRows={fields.catchRows} onCatchRows={updateCatchRows} fields={fields} setFields={setFields} hideTimes />
                 <TripGearFields fields={fields} gearProfiles={gearProfiles} applyGearProfile={applyGearProfile} />
                 </fieldset>
                 <button className="trip-submit" type="submit" disabled={submitState === "submitting" || submitState === "success" || networkState === "offline"}>
@@ -1292,33 +1443,29 @@ export function TripReportFeature({
             ) : null}
 
             {panel === "past" ? (
-              <form onSubmit={formStep === 1 ? (event) => { event.preventDefault(); setFormStep(2); } : reportPastTrip}>
+              <form onSubmit={formStep === 1 ? continuePastStep : reportPastTrip}>
                 <fieldset className="trip-write-fields" disabled={submitState === "submitting" || submitState === "ambiguous"}>
                 <header className="trip-form-heading">
                   <h2 id="trip-modal-title">Log a past trip.</h2>
-                  <p>Take a photo first, choose a nearby place, and give us one rough duration. We estimate the rest from date, time, and location.</p>
+                  <p>Start with a fish photo. We use it to suggest the catch, then estimate conditions from the date, time, and location.</p>
                 </header>
                 <div className="trip-step-indicator"><span className={formStep === 1 ? "active" : ""}>1 · Photo + location</span><span className={formStep === 2 ? "active" : ""}>2 · Result</span></div>
                 {formStep === 1 ? <>
-                  {PHOTO_UPLOADS_ENABLED && canSubmit ? <TripPhotoField photo={photo} rejectedPhoto={rejectedPhoto} transferState={photoTransferState} inputRef={photoInputRef} onPhoto={handlePhoto} onRemove={removePhoto} /> : <div className="trip-photo-unavailable"><strong>Fish photo</strong><p>Photo capture and fish identification are not enabled in this release. You can still log the trip without one.</p></div>}
+                  <TripPhotoField photo={photo} rejectedPhoto={rejectedPhoto} transferState={photoTransferState} analysisState={photoAnalysisState} analysis={photoAnalysis} storageEnabled={photoStorageEnabled} inputRef={photoInputRef} onPhoto={handlePhoto} onRemove={removePhoto} />
                   <TripLocationFields sites={sites} siteId={fields.siteId} onSiteChange={updateSite} onUseCurrentLocation={requestCurrentLocation} locationState={locationState} locationMessage={locationMessage} />
+                  <div className="trip-field-grid">
                   <label className="trip-field">
-                    <span>When did you fish?</span>
+                    <span>Start</span>
                     <input type="datetime-local" value={fields.startedAt} onChange={(event) => setFields((current) => ({ ...current, startedAt: event.target.value }))} required />
                   </label>
                   <label className="trip-field">
-                    <span>About how long?</span>
-                    <select value={fields.durationMinutes} onChange={(event) => setFields((current) => ({ ...current, durationMinutes: event.target.value }))} required>
-                      <option value="30">About 30 minutes</option>
-                      <option value="60">About 1 hour</option>
-                      <option value="120">About 2 hours</option>
-                      <option value="240">About 4 hours</option>
-                      <option value="480">Most of the day</option>
-                    </select>
+                    <span>End</span>
+                    <input type="datetime-local" value={fields.endedAt} onChange={(event) => setFields((current) => ({ ...current, endedAt: event.target.value }))} required />
                   </label>
-                  <div className="trip-privacy-note"><strong>Estimated, not interrogated</strong><p>We use the date, approximate duration, and catalog location to calculate angler-hours. You can choose the closest option when a trip ran long.</p></div>
+                  </div>
+                  <div className="trip-privacy-note"><strong>Conditions are automatic</strong><p>We estimate opportunity and conditions from this time and catalog location. No extra survey questions.</p></div>
                 </> : <>
-                <TripCompletionFields fields={fields} setFields={setFields} onCatchResult={updateCatchResult} hideTimes />
+                <TripCompletionFields catchRows={fields.catchRows} onCatchRows={updateCatchRows} fields={fields} setFields={setFields} hideTimes />
                 <TripGearFields fields={fields} gearProfiles={gearProfiles} applyGearProfile={applyGearProfile} />
                 </>}
                 {formStep === 2 ? <button className="trip-back-button" type="button" onClick={() => setFormStep(1)}>← Back to photo + location</button> : null}
@@ -1331,7 +1478,7 @@ export function TripReportFeature({
               </form>
             ) : null}
 
-            <p className="trip-beta-note">Beta · trip data is saved immediately. Automated review may prepare a private draft, but no discussion summary is posted automatically; human approval is required.</p>
+            <p className="trip-beta-note">Beta · trip data is saved immediately. Automated review may prepare a private draft, but no discussion summary is posted automatically; human approval is required. A separate validation protocol decides whether a report can become model evidence; trip reports do not change the current score.</p>
             <p className="trip-draft-note">Draft saved on this device as you type.</p>
           </section>
         </div>
@@ -1341,9 +1488,10 @@ export function TripReportFeature({
 }
 
 interface TripCompletionFieldsProps {
+  catchRows: CatchRow[];
+  onCatchRows: (rows: CatchRow[]) => void;
   fields: FormFields;
   setFields: (updater: (current: FormFields) => FormFields) => void;
-  onCatchResult: (result: CatchResult) => void;
   hideTimes?: boolean;
 }
 
@@ -1388,51 +1536,61 @@ function TripGearFields({
   return (
     <section className="trip-gear-section">
       <div className="trip-subsection-heading"><strong>Gear + bait</strong><span>Optional. Set it up once in your profile instead of filling this out every trip.</span></div>
-      {gearProfiles.length ? (
-        <label className="trip-field wide"><span>Saved gear preset</span>
-          <select value={fields.gearProfileId} onChange={(event) => applyGearProfile(event.target.value)}>
-            <option value="">No saved setup</option>
-            {gearProfiles.map((profile) => <option key={profile.id} value={profile.id}>{profile.name}</option>)}
-          </select>
-        </label>
-      ) : null}
-      <Link className="trip-profile-link" href="/profile#gear">Set up gear and bait in your profile <ArrowIcon /></Link>
-      <small className="gear-catalog-note">A saved preset is copied into the private trip record. There are no gear text boxes in the trip flow.</small>
+      <label className="trip-field wide"><span>Saved gear preset <em>optional</em></span>
+        <select value={fields.gearProfileId} onChange={(event) => applyGearProfile(event.target.value)}>
+          <option value="">No preset selected</option>
+          {gearProfiles.map((profile) => <option key={profile.id} value={profile.id}>{profile.name}</option>)}
+        </select>
+      </label>
+      <Link className="trip-profile-link" href="/profile#gear">NOT HERE? CLICK HERE TO ADD A PRESET <ArrowIcon /></Link>
+      <small className="gear-catalog-note">The selected preset supplies your method, bait, and setup. There are no gear text boxes in the trip flow.</small>
     </section>
   );
 }
 
 function TripCompletionFields({
+  catchRows,
+  onCatchRows,
   fields,
   setFields,
-  onCatchResult,
   hideTimes = false,
 }: TripCompletionFieldsProps) {
   void hideTimes;
   return (
     <>
       <fieldset className="catch-fieldset">
-        <legend>What happened?</legend>
-        <p>Choose one simple result. The camera is the path to future fish identification; this release keeps the result human-confirmed.</p>
-        <div className="trip-quick-result" role="group" aria-label="Catch result">
-          {([
-            ["none", "No fish"],
-            ["halibut-kept", "Halibut kept"],
-            ["halibut-released", "Halibut released"],
-            ["other-fish", "Other fish"],
-          ] as const).map(([value, label]) => <button key={value} type="button" className={fields.catchResult === value ? "selected" : ""} aria-pressed={fields.catchResult === value} onClick={() => onCatchResult(value)}>{label}</button>)}
+        <legend>Catch results · What happened?</legend>
+        <p>Review the camera estimate. The camera is the path to future fish identification; adjust the count or species before saving. Add another row for a mixed catch.</p>
+        <div className="catch-result-rows" aria-label="Catch results">
+          {catchRows.map((row, index) => (
+            <div className="catch-result-row" key={row.id}>
+              <label className="trip-field"><span>{index === 0 ? "Number caught" : `Catch ${index + 1}`}</span>
+                <input
+                  type="number"
+                  min="0"
+                  max="100"
+                  inputMode="numeric"
+                  value={row.count}
+                  onChange={(event) => onCatchRows(catchRows.map((candidate) => candidate.id === row.id ? { ...candidate, count: event.target.value.replace(/[^0-9]/g, "").slice(0, 3) } : candidate))}
+                />
+              </label>
+              <label className="trip-field"><span>Species</span>
+                <select value={row.species} onChange={(event) => onCatchRows(catchRows.map((candidate) => candidate.id === row.id ? { ...candidate, species: event.target.value as CatchSpecies } : candidate))}>
+                  {CATCH_SPECIES_OPTIONS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+                </select>
+              </label>
+              {catchRows.length > 1 ? <button className="catch-result-remove" type="button" onClick={() => onCatchRows(catchRows.filter((candidate) => candidate.id !== row.id))} aria-label={`Remove catch ${index + 1}`}>Remove</button> : null}
+            </div>
+          ))}
         </div>
-        <small className="regulation-reminder">
-          Only count a kept fish if it was legal. California halibut must be at least 22 inches total length;
-          always confirm the <a href="https://wildlife.ca.gov/Fishing/Ocean/Regulations/Fishing-Map/San-Francisco" target="_blank" rel="noreferrer">current CDFW regulations ↗</a>.
-        </small>
+        {catchRows.length < 12 ? <button className="catch-result-add" type="button" onClick={() => onCatchRows([...catchRows, newCatchRow("california-halibut", "1")])}>+ Add another catch</button> : null}
       </fieldset>
       <label className="consent-field">
         <input type="checkbox" checked={fields.consent} onChange={(event) => {
           const consent = event.target.checked;
           setFields((current) => ({ ...current, consent, primaryTargetConfirmed: consent, completeAttempt: consent }));
         }} required />
-        <span>I confirm this covers the whole fishing attempt, California halibut was the primary target, and I consent to the private uses described in the <Link href="/terms" target="_blank">Terms</Link> and <Link href="/privacy" target="_blank">Privacy Policy</Link>.</span>
+        <span>I confirm this covers the whole fishing attempt and I consent to the private uses described in the <Link href="/terms" target="_blank">Terms</Link> and <Link href="/privacy" target="_blank">Privacy Policy</Link>.</span>
       </label>
     </>
   );
@@ -1455,6 +1613,9 @@ function TripPhotoField({
   photo,
   rejectedPhoto,
   transferState,
+  analysisState,
+  analysis,
+  storageEnabled,
   inputRef,
   onPhoto,
   onRemove,
@@ -1462,6 +1623,9 @@ function TripPhotoField({
   photo: File | null;
   rejectedPhoto: RejectedPhoto | null;
   transferState: PhotoTransferState;
+  analysisState: PhotoAnalysisState;
+  analysis: PhotoAnalysis | null;
+  storageEnabled: boolean;
   inputRef: React.RefObject<HTMLInputElement | null>;
   onPhoto: (event: ChangeEvent<HTMLInputElement>) => void;
   onRemove: () => void;
@@ -1498,20 +1662,22 @@ function TripPhotoField({
             ? "Not confirmed. Correct any report error, then retry the whole report explicitly."
             : transferState === "ambiguous"
               ? "Outcome unknown. Keep this file selected and use the same safe report retry."
-              : "Choose one private verification photo. Nothing uploads until the report is submitted.";
+      : storageEnabled
+        ? "Choose a photo to let MiMo suggest the species and count before you submit."
+        : "Choose a photo to let MiMo suggest the species and count. Private storage is currently off.";
   const removable = state === "selected" || state === "failed" || state === "invalid";
 
   return (
     <section className={`photo-field photo-field-${state}`} aria-labelledby="trip-photo-label">
       <div className="photo-field-heading">
-        <span id="trip-photo-label">Fish photo for identification <em>optional</em></span>
+        <span id="trip-photo-label">Fish photo for MiMo review <em>recommended</em></span>
         <small aria-live="polite">{statusCopy}</small>
       </div>
       {!displayedFile ? (
         <label className="photo-picker">
           <input ref={inputRef} type="file" accept="image/jpeg,image/png,image/webp" capture="environment" onChange={onPhoto} />
-          <strong>Take a fish photo</strong>
-          <small>Camera or one JPEG, PNG, or WebP · 5 MB max</small>
+          <strong>Take or drop a fish photo</strong>
+          <small>MiMo will suggest the species and count for your review · JPEG, PNG, or WebP · 5 MB max</small>
         </label>
       ) : (
         <div className="photo-file-card" data-state={state}>
@@ -1540,7 +1706,11 @@ function TripPhotoField({
       {state === "sending" || state === "ambiguous" ? (
         <small className="photo-no-cancel-note">A cancel control is intentionally unavailable after submission starts because the server may already have committed the report or photo.</small>
       ) : null}
-      <small className="photo-contract-note">Current storage supports one private photo per trip. The server strips metadata and re-encodes accepted files before storage. Fish-ID inference is not enabled until its separate model release is approved.</small>
+      {analysisState === "analyzing" ? <small className="photo-analysis-status" role="status">MiMo is checking the photo…</small> : null}
+      {analysisState === "ready" && analysis ? <small className="photo-analysis-status" role="status">MiMo suggested {analysis.catches.map((entry) => `${entry.count} ${entry.species.replaceAll("-", " ")}`).join(", ") || "no fish"}. Review the rows before saving.{analysis.note ? ` ${analysis.note}` : ""}</small> : null}
+      {analysisState === "unavailable" ? <small className="photo-analysis-status">MiMo is unavailable right now. You can still enter the catch rows yourself.</small> : null}
+      {analysisState === "error" ? <small className="photo-analysis-status">MiMo returned an unusable suggestion. Enter the catch rows yourself.</small> : null}
+      <small className="photo-contract-note">The photo is only a suggestion source until you submit. Review and correct every result; nothing is submitted automatically. Current storage supports one private photo per trip; the server strips metadata and re-encodes accepted files before storage.</small>
     </section>
   );
 }

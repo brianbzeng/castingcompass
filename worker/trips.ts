@@ -37,6 +37,7 @@ import {
 } from "./validation-feasibility.ts";
 import { logEvent } from "./observability.ts";
 import { API_ROUTE_PATTERNS } from "./route-policy.ts";
+import { analyzeFishPhotoWithMimo, ReviewError } from "./trip-review.ts";
 
 const MAX_PHOTO_BYTES = 5 * 1024 * 1024;
 const MAX_MULTIPART_BYTES = MAX_PHOTO_BYTES + 1024 * 1024;
@@ -218,6 +219,8 @@ export interface TripApiEnv extends FeasibilityRuntimeEnv {
   TRIP_PHOTOS?: R2BucketLike;
   IMAGES?: ImageBindingLike;
   TRIP_PHOTO_UPLOADS_ENABLED?: string;
+  MIMO_API_KEY?: string;
+  MIMO_MODEL?: string;
   /** Enables only organic score-visible observational-secondary collection; never primary evidence. */
   VALIDATION_OBSERVATIONAL_SECONDARY_ENABLED?: string;
   VALIDATION_COHORT_ID?: string;
@@ -2445,6 +2448,40 @@ export async function handleTripRequest(
   const siteMap = new Map(curatedSites.map((site) => [site.id, site]));
 
   try {
+    if (url.pathname === "/api/trips/analyze-photo") {
+      if (request.method !== "POST") return methodNotAllowed("POST");
+      assertSameOrigin(request);
+      assertContentType(request, "multipart/form-data");
+      assertBodySize(request, MAX_MULTIPART_BYTES);
+      if (!options.accountId) throw new ApiError(401, "authentication_required", "Sign in before analyzing a trip photo.");
+      const form = await request.formData();
+      assertOnlyInputFields(form, ["photo"]);
+      const entry = form.get("photo");
+      if (!(entry instanceof File) || entry.size === 0) {
+        throw new ApiError(422, "invalid_photo", "Choose a non-empty JPEG, PNG, or WebP photo.");
+      }
+      if (entry.size > MAX_PHOTO_BYTES) {
+        throw new ApiError(413, "photo_too_large", "Photos must be 5 MB or smaller.");
+      }
+      if (!ALLOWED_IMAGE_TYPES.has(entry.type)) {
+        throw new ApiError(415, "invalid_photo_type", "Photos must be JPEG, PNG, or WebP.");
+      }
+      const bytes = new Uint8Array(await entry.arrayBuffer());
+      if (!matchesImageSignature(bytes.slice(0, 16), entry.type)) {
+        throw new ApiError(415, "invalid_photo_type", "The uploaded file does not match its image type.");
+      }
+      let analysis: Awaited<ReturnType<typeof analyzeFishPhotoWithMimo>>;
+      try {
+        analysis = await analyzeFishPhotoWithMimo(env, { type: entry.type, bytes });
+      } catch (error) {
+        if (error instanceof ReviewError) {
+          throw new ApiError(503, "photo_analysis_unavailable", "MiMo could not analyze this photo right now.");
+        }
+        throw error;
+      }
+      if (!analysis) throw new ApiError(503, "photo_analysis_unavailable", "MiMo photo analysis is not configured yet.");
+      return jsonResponse({ analysis });
+    }
     const store = options.store ?? (env.DB ? createTripStore(env.DB) : null);
     if (!store) throw new ApiError(503, "storage_unavailable", "Trip storage is temporarily unavailable.");
     await store.initialize();

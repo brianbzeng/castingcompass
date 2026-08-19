@@ -4722,6 +4722,53 @@ footer > div {
   margin-top: 0.8rem;
 }
 
+.catch-result-rows {
+  display: grid !important;
+  grid-template-columns: 1fr !important;
+  gap: 0.65rem !important;
+}
+
+.catch-result-row {
+  display: grid;
+  grid-template-columns: minmax(7rem, 0.7fr) minmax(11rem, 1.3fr) auto;
+  align-items: end;
+  gap: 0.6rem;
+}
+
+.catch-result-row .trip-field {
+  margin-top: 0;
+}
+
+.catch-result-remove,
+.catch-result-add {
+  min-height: 36px;
+  border: 1px solid var(--line-strong);
+  color: var(--ink-soft);
+  background: rgba(4, 20, 41, 0.5);
+  padding: 0.5rem 0.65rem;
+  font-size: 0.58rem;
+  cursor: pointer;
+}
+
+.catch-result-remove:hover,
+.catch-result-remove:focus-visible,
+.catch-result-add:hover,
+.catch-result-add:focus-visible {
+  border-color: var(--seafoam);
+  color: var(--ink);
+}
+
+.catch-result-add {
+  justify-self: start;
+  margin-top: 0.7rem;
+}
+
+.photo-analysis-status {
+  color: var(--seafoam);
+  font-size: 0.58rem;
+  line-height: 1.5;
+}
+
 .trip-quick-result {
   display: grid !important;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -5668,6 +5715,14 @@ footer > div {
 
   .trip-field-grid {
     grid-template-columns: 1fr;
+  }
+
+  .catch-result-row {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .catch-result-remove {
+    justify-self: start;
   }
 
   .trip-field.wide {

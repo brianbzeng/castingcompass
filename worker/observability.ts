@@ -77,6 +77,7 @@ const EXACT_ROUTES = new Set([
   "/api/profile/reviews/retry",
   "/api/saved-sites",
   "/api/trips/report",
+  "/api/trips/analyze-photo",
   "/api/trips/start",
   "/api/trips/summary",
   "/ai-disclosure",
@@ -264,6 +265,7 @@ export function routeTemplate(pathname: string): string {
   if (/^\/api\/saved-sites\/[a-z0-9-]+$/.test(pathname)) return "/api/saved-sites/:site_id";
   if (/^\/api\/trips\/[^/]+\/cancel$/.test(pathname)) return "/api/trips/:trip_id/cancel";
   if (/^\/api\/trips\/[^/]+\/complete$/.test(pathname)) return "/api/trips/:trip_id/complete";
+  if (pathname === "/api/trips/analyze-photo") return "/api/trips/analyze-photo";
   if (pathname === "/_vinext/image") return "/_vinext/image";
   if (pathname.startsWith("/_next/") || pathname.startsWith("/assets/")) return "/:asset";
   if (pathname === "/manifest.webmanifest" || pathname === "/sw.js" || pathname.startsWith("/icons/")) {

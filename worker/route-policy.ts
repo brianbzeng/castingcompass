@@ -350,6 +350,15 @@ export const API_ROUTE_POLICIES: readonly ApiRoutePolicy[] = [
     { ...ownerMutation, matches: (path) => API_ROUTE_PATTERNS.savedSite.test(path) },
   ),
   route("trips.summary", "/api/trips/summary", "/api/trips/summary", ["GET"], "public", "trips"),
+  route(
+    "trips.analyze_photo",
+    "/api/trips/analyze-photo",
+    "/api/trips/analyze-photo",
+    ["POST"],
+    ownerMutation.authorization,
+    "trips",
+    { ...ownerMutation, rateLimitTags: ["sensitive"] },
+  ),
   route("trips.start", "/api/trips/start", "/api/trips/start", ["POST"], "owner", "trips", ownerMutation),
   route(
     "trips.cancel",
@@ -741,6 +750,16 @@ const REVIEWED_OWNER_API_ROUTE_CONTRACTS: Readonly<Record<string, ReviewedOwnerA
     currentLegalAcceptanceRequired: true,
     deletionFenceAccessAllowed: false,
     rateLimitTags: [],
+  },
+  "trips.analyze_photo": {
+    pathTemplate: "/api/trips/analyze-photo",
+    pathPattern: /^\/api\/trips\/analyze-photo$/,
+    methods: ["POST"],
+    handler: "trips",
+    sameOriginRequired: true,
+    currentLegalAcceptanceRequired: true,
+    deletionFenceAccessAllowed: false,
+    rateLimitTags: ["sensitive"],
   },
   "trips.cancel": {
     pathTemplate: "/api/trips/{tripId}/cancel",
