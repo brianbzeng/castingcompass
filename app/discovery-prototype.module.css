@@ -917,15 +917,25 @@
   min-width: 0;
   min-height: 0;
   overflow: hidden;
-  background: #b9dce1;
+  background: #d9edf5;
 }
 
 .mapPanel :global(.contour-map-shell) {
-  background: #b9dce1;
+  background: #d9edf5;
 }
 
 .mapPanel :global(.contour-map) {
-  background: #b9dce1;
+  background: #d9edf5;
+}
+
+.mapPanel :global(.contour-map)::after {
+  background: linear-gradient(
+    90deg,
+    rgba(41, 112, 145, 0.06),
+    transparent 22%,
+    transparent 78%,
+    rgba(41, 112, 145, 0.05)
+  );
 }
 
 .mapPanel :global(.map-center-button) {

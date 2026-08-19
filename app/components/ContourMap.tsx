@@ -7,7 +7,6 @@ import type {
   GeoJSONSource,
   Map as MapLibreMap,
   MapLayerMouseEvent,
-  StyleSpecification,
 } from "maplibre-gl";
 import type { FishingSite, OpportunityWindow } from "../types";
 import { suppressExpectedMapLibreRasterTileAbort } from "../lib/maplibre-errors.js";
@@ -41,50 +40,86 @@ const EMPTY_POINTS: FeatureCollection<Point> = {
   features: [],
 };
 
-const ARCGIS_ATTRIBUTION =
-  'Powered by <a href="https://www.esri.com/" target="_blank">Esri</a> | Sources: Esri, GEBCO, NOAA, National Geographic, Garmin, TomTom, and other contributors';
+// Keyless vector base for the prototype. The style URL can later move to a
+// MapTiler or Stadia account without changing CastingCompass' map overlays.
+const OPENFREEMAP_STYLE_URL = "https://tiles.openfreemap.org/styles/positron";
 
-const ARCGIS_OCEAN_STYLE: StyleSpecification = {
-  version: 8,
-  name: "ArcGIS World Ocean",
-  glyphs:
-    "https://basemaps.arcgis.com/arcgis/rest/services/World_Basemap_v2/VectorTileServer/resources/fonts/{fontstack}/{range}.pbf",
-  sources: {
-    "arcgis-ocean-base": {
-      type: "raster",
-      tiles: [
-        "https://server.arcgisonline.com/ArcGIS/rest/services/Ocean/World_Ocean_Base/MapServer/tile/{z}/{y}/{x}",
-      ],
-      tileSize: 256,
-      minzoom: 0,
-      maxzoom: 16,
-      attribution: ARCGIS_ATTRIBUTION,
-    },
-    "arcgis-ocean-reference": {
-      type: "raster",
-      tiles: [
-        "https://server.arcgisonline.com/ArcGIS/rest/services/Ocean/World_Ocean_Reference/MapServer/tile/{z}/{y}/{x}",
-      ],
-      tileSize: 256,
-      minzoom: 0,
-      maxzoom: 16,
-    },
-  },
-  layers: [
-    {
-      id: "arcgis-ocean-base",
-      type: "raster",
-      source: "arcgis-ocean-base",
-      paint: { "raster-fade-duration": 0 },
-    },
-    {
-      id: "arcgis-ocean-reference",
-      type: "raster",
-      source: "arcgis-ocean-reference",
-      paint: { "raster-fade-duration": 0 },
-    },
-  ],
+const APPLE_LIKE_MAP_COLORS = {
+  background: "#f7fbfc",
+  water: "#d9edf5",
+  waterway: "#9fcbd9",
+  park: "#e6f1eb",
+  wood: "#dcece4",
+  residential: "#f4f5f2",
+  building: "#edf1ee",
+  buildingOutline: "#dbe5e4",
+  road: "#ffffff",
+  roadCasing: "#c9dce3",
+  motorway: "#e5f1f5",
+  motorwayCasing: "#b6d4df",
+  label: "#536e7b",
+  labelHalo: "#f7fbfc",
+  waterLabel: "#4d8aa0",
+  waterLabelHalo: "#d9edf5",
+  selected: "#176e8c",
+  selectedLabel: "#ffffff",
 };
+
+function setPaintPropertyIfPresent(
+  map: MapLibreMap,
+  layerId: string,
+  property: string,
+  value: unknown,
+) {
+  if (map.getLayer(layerId)) map.setPaintProperty(layerId, property, value);
+}
+
+function applyAppleLikeMapStyle(map: MapLibreMap) {
+  setPaintPropertyIfPresent(map, "background", "background-color", APPLE_LIKE_MAP_COLORS.background);
+  setPaintPropertyIfPresent(map, "water", "fill-color", APPLE_LIKE_MAP_COLORS.water);
+  setPaintPropertyIfPresent(map, "waterway", "line-color", APPLE_LIKE_MAP_COLORS.waterway);
+  setPaintPropertyIfPresent(map, "park", "fill-color", APPLE_LIKE_MAP_COLORS.park);
+  setPaintPropertyIfPresent(map, "landcover_wood", "fill-color", APPLE_LIKE_MAP_COLORS.wood);
+  setPaintPropertyIfPresent(map, "landuse_residential", "fill-color", APPLE_LIKE_MAP_COLORS.residential);
+  setPaintPropertyIfPresent(map, "building", "fill-color", APPLE_LIKE_MAP_COLORS.building);
+  setPaintPropertyIfPresent(map, "building", "fill-outline-color", APPLE_LIKE_MAP_COLORS.buildingOutline);
+
+  for (const layerId of ["highway_path", "highway_minor", "highway_major_inner"]) {
+    setPaintPropertyIfPresent(map, layerId, "line-color", APPLE_LIKE_MAP_COLORS.road);
+  }
+  for (const layerId of ["highway_major_casing", "highway_motorway_casing"]) {
+    setPaintPropertyIfPresent(map, layerId, "line-color", APPLE_LIKE_MAP_COLORS.roadCasing);
+  }
+  setPaintPropertyIfPresent(map, "highway_motorway_inner", "line-color", APPLE_LIKE_MAP_COLORS.motorway);
+  setPaintPropertyIfPresent(map, "highway_motorway_casing", "line-color", APPLE_LIKE_MAP_COLORS.motorwayCasing);
+  setPaintPropertyIfPresent(map, "road_area_pier", "fill-color", "#c6e0e8");
+  setPaintPropertyIfPresent(map, "road_pier", "line-color", "#8fbccc");
+
+  for (const layerId of [
+    "highway-name-path",
+    "highway-name-minor",
+    "highway-name-major",
+    "label_other",
+    "label_village",
+    "label_town",
+    "label_state",
+    "label_city",
+    "label_city_capital",
+    "label_country_3",
+    "label_country_2",
+    "label_country_1",
+  ]) {
+    setPaintPropertyIfPresent(map, layerId, "text-color", APPLE_LIKE_MAP_COLORS.label);
+    setPaintPropertyIfPresent(map, layerId, "text-halo-color", APPLE_LIKE_MAP_COLORS.labelHalo);
+    setPaintPropertyIfPresent(map, layerId, "text-halo-width", 1.25);
+    setPaintPropertyIfPresent(map, layerId, "text-halo-blur", 0.2);
+  }
+  for (const layerId of ["water_name_point_label", "water_name_line_label", "waterway_line_label"]) {
+    setPaintPropertyIfPresent(map, layerId, "text-color", APPLE_LIKE_MAP_COLORS.waterLabel);
+    setPaintPropertyIfPresent(map, layerId, "text-halo-color", APPLE_LIKE_MAP_COLORS.waterLabelHalo);
+    setPaintPropertyIfPresent(map, layerId, "text-halo-width", 1.25);
+  }
+}
 
 interface ContourMapProps {
   sites: FishingSite[];
@@ -175,7 +210,7 @@ function addFishingSiteLayers(map: MapLibreMap) {
     source: SITE_SOURCE_ID,
     filter: ["has", "point_count"],
     paint: {
-      "circle-color": "#0c4b6a",
+      "circle-color": "#4c9bb8",
       "circle-opacity": 0.96,
       "circle-radius": ["step", ["get", "point_count"], 20, 5, 23, 10, 27],
       "circle-stroke-color": "#f8fbfc",
@@ -190,7 +225,7 @@ function addFishingSiteLayers(map: MapLibreMap) {
     filter: ["has", "point_count"],
     layout: {
       "text-field": ["to-string", ["get", "point_count_abbreviated"]],
-      "text-font": ["Arial Unicode MS Regular"],
+      "text-font": ["Noto Sans Regular"],
       "text-size": 12,
       "text-allow-overlap": true,
       "text-ignore-placement": true,
@@ -207,15 +242,20 @@ function addFishingSiteLayers(map: MapLibreMap) {
     filter: ["!", ["has", "point_count"]],
     paint: {
       "circle-color": [
-        "step",
-        ["to-number", ["get", "score"]],
-        "#a9b1aa",
-        45,
-        "#e8d8a6",
-        65,
-        "#9fd8e5",
-        80,
-        "#d8ed94",
+        "case",
+        ["==", ["get", "selected"], 1],
+        APPLE_LIKE_MAP_COLORS.selected,
+        [
+          "step",
+          ["to-number", ["get", "score"]],
+          "#b7cbd2",
+          45,
+          "#f1d69a",
+          65,
+          "#9dd7e7",
+          80,
+          "#5ca9d5",
+        ],
       ],
       "circle-opacity": 0.98,
       "circle-radius": ["case", ["==", ["get", "selected"], 1], 23, 20],
@@ -236,13 +276,18 @@ function addFishingSiteLayers(map: MapLibreMap) {
     filter: ["!", ["has", "point_count"]],
     layout: {
       "text-field": ["to-string", ["get", "score"]],
-      "text-font": ["Arial Unicode MS Regular"],
+      "text-font": ["Noto Sans Regular"],
       "text-size": 12,
       "text-allow-overlap": true,
       "text-ignore-placement": true,
     },
     paint: {
-      "text-color": "#061b2b",
+      "text-color": [
+        "case",
+        ["==", ["get", "selected"], 1],
+        APPLE_LIKE_MAP_COLORS.selectedLabel,
+        "#174e64",
+      ],
     },
   });
 }
@@ -316,7 +361,7 @@ export function ContourMap({
 
       const map = new maplibregl.Map({
         container: containerRef.current,
-        style: ARCGIS_OCEAN_STYLE,
+        style: OPENFREEMAP_STYLE_URL,
         bounds: CALIFORNIA_COVERAGE_BOUNDS,
         fitBoundsOptions: { ...SITE_FIT_OPTIONS, duration: 0 },
         maxBounds: CALIFORNIA_COVERAGE_MAX_BOUNDS,
@@ -335,7 +380,10 @@ export function ContourMap({
       map.touchZoomRotate.disableRotation();
       map.keyboard.disableRotation();
       map.addControl(new maplibregl.NavigationControl({ showCompass: false }), "bottom-right");
-      map.addControl(new maplibregl.AttributionControl({ compact: true }), "bottom-right");
+      map.addControl(new maplibregl.AttributionControl({
+        compact: true,
+        customAttribution: "OpenFreeMap © OpenMapTiles Data from OpenStreetMap",
+      }), "bottom-right");
       mapRef.current = map;
 
       if (typeof ResizeObserver !== "undefined") {
@@ -345,6 +393,7 @@ export function ContourMap({
 
       map.once("load", () => {
         if (!active) return;
+        applyAppleLikeMapStyle(map);
         addFishingSiteLayers(map);
         addUserPositionLayer(map);
 
