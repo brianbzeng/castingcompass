@@ -1,7 +1,7 @@
 {
   "bomFormat": "CycloneDX",
   "specVersion": "1.5",
-  "serialNumber": "urn:uuid:e4e46169-8fd8-532e-9474-e9b52f9a4ab8",
+  "serialNumber": "urn:uuid:9da696c9-ff4d-5735-b434-c89b3ae8e951",
   "version": 1,
   "metadata": {
     "component": {
@@ -129,7 +129,7 @@
         },
         {
           "name": "castingcompass:input-sha256",
-          "value": "public/data/water-quality.json:af6bc9538997e8a999f6f9cb9736d9f9bcc179e3adc5b5ba316ea3937375938c"
+          "value": "public/data/water-quality.json:eafea1f6286ef42e376e5819bce1b900c70b931ae5730ddfae06eaa6c5eae09e"
         },
         {
           "name": "castingcompass:input-sha256",
