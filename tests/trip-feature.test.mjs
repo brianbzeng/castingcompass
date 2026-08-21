@@ -93,6 +93,20 @@ test("trip entry points are present in the top bar, forecast detail, and validat
   assert.match(feature, /whether it’s a skunk or not are useful and genuinely appreciated/);
 });
 
+test("loopback previews can inspect trip logging without weakening live auth", async () => {
+  const [feature, app] = await Promise.all([
+    readFile(featurePath, "utf8"),
+    readFile(appPath, "utf8"),
+  ]);
+
+  assert.match(app, /localTripPreview = typeof window !== "undefined"/);
+  assert.match(app, /!account\.user && !localTripPreview/);
+  assert.match(app, /previewOnly=\{localTripPreview\}/);
+  assert.match(feature, /previewOnly\?: boolean/);
+  assert.match(feature, /if \(!canSubmit && !previewOnly\)/);
+  assert.match(feature, /Preview only: sign in to submit a trip from the live app/);
+});
+
 test("forecast controls offer practical preset and custom location radii", async () => {
   const app = await readFile(appPath, "utf8");
 

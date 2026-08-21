@@ -1052,6 +1052,8 @@ export function OpportunityApp() {
   const [rememberRespectNotice, setRememberRespectNotice] = useState(false);
   const [showLocationDisclosure, setShowLocationDisclosure] = useState(false);
   const tripReportRequestKeyRef = useRef(0);
+  const localTripPreview = typeof window !== "undefined" &&
+    ["localhost", "127.0.0.1", "::1", "[::1]"].includes(window.location.hostname);
   const initialSiteHandledRef = useRef(false);
   const discussionPosts = discussionFeed?.siteId === selectedSiteId ? discussionFeed.posts : [];
 
@@ -1367,13 +1369,13 @@ export function OpportunityApp() {
   }, [forecastReady, openSiteDetail, sites]);
 
   const openTripReport = useCallback((mode: "start" | "past", siteId?: string, window?: OpportunityWindow) => {
-    if (!account.user) {
+    if (!account.user && !localTripPreview) {
       account.openAccount("Sign in before submitting a trip report. Complete trips and skunks are tied to an account so reports can be reviewed privately before any separate decision about model evidence.");
       return;
     }
     tripReportRequestKeyRef.current += 1;
     setTripReportRequest({ key: tripReportRequestKeyRef.current, mode, siteId, window });
-  }, [account]);
+  }, [account, localTripPreview]);
 
   const scrollToSection = useCallback((sectionId: "forecast" | "forecast-status" | "sources") => {
     setShowMethod(false);
@@ -1779,6 +1781,7 @@ export function OpportunityApp() {
         forecastUnavailable={forecastUnavailable}
         request={tripReportRequest}
         canSubmit={Boolean(account.user?.legalAccepted)}
+        previewOnly={localTripPreview}
         onRequireLogin={() => account.openAccount("Sign in before submitting a trip report. Complete trips and skunks are tied to an account so reports can be reviewed privately before any separate decision about model evidence.")}
       />
 

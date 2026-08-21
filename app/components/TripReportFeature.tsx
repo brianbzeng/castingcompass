@@ -119,6 +119,11 @@ interface TripReportFeatureProps {
   forecastUnavailable: boolean;
   request: TripReportRequest | null;
   canSubmit: boolean;
+  /**
+   * Local preview mode lets an operator inspect the complete flow without
+   * creating an account or sending a mutation to the real API.
+   */
+  previewOnly?: boolean;
   onRequireLogin(): void;
 }
 
@@ -657,6 +662,7 @@ export function TripReportFeature({
   forecastUnavailable,
   request,
   canSubmit,
+  previewOnly = false,
   onRequireLogin,
 }: TripReportFeatureProps) {
   const openerRef = useRef<HTMLElement | null>(null);
@@ -723,7 +729,7 @@ export function TripReportFeature({
     // Finishing a previously started trip must remain possible during a forecast outage.
     // Starting or backfilling a location-bound trip requires the verified catalog and snapshot.
     if (nextPanel !== "complete" && (!forecastReady || sites.length === 0)) return;
-    if (!canSubmit) {
+    if (!canSubmit && !previewOnly) {
       onRequireLogin();
       return;
     }
@@ -779,7 +785,7 @@ export function TripReportFeature({
       window.history.replaceState(null, "", `${url.pathname}${url.search}${url.hash}`);
     }
     setPanel(nextPanel);
-  }, [activeTrip, canSubmit, forecastReady, onRequireLogin, resetFeedback, sites]);
+  }, [activeTrip, canSubmit, forecastReady, onRequireLogin, previewOnly, resetFeedback, sites]);
 
   const closePanel = useCallback(() => {
     setPanel(null);
@@ -1017,6 +1023,11 @@ export function TripReportFeature({
 
   const startTrip = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    if (previewOnly) {
+      setSubmitState("error");
+      setMessage("Preview only: sign in to submit a trip from the live app. No data was sent.");
+      return;
+    }
     if (!forecastReady || sites.length === 0) {
       setSubmitState("error");
       setMessage("The trip was not started because the location catalog or forecast snapshot is no longer verified.");
@@ -1125,6 +1136,11 @@ export function TripReportFeature({
   const completeTrip = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!activeTrip) return;
+    if (previewOnly) {
+      setSubmitState("error");
+      setMessage("Preview only: sign in to submit a trip from the live app. No data was sent.");
+      return;
+    }
     if (networkState === "offline") {
       setSubmitState("error");
       setMessage("This device appears offline. The report was not submitted and its draft remains on this device.");
@@ -1187,6 +1203,11 @@ export function TripReportFeature({
 
   const reportPastTrip = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    if (previewOnly) {
+      setSubmitState("error");
+      setMessage("Preview only: sign in to submit a trip from the live app. No data was sent.");
+      return;
+    }
     if (!forecastReady || sites.length === 0) {
       setSubmitState("error");
       setMessage("The report was not submitted because the location catalog or forecast snapshot is no longer verified.");
