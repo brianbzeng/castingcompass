@@ -30,6 +30,9 @@ async function preparePastTrip(page: Page) {
   await location.click();
   await modal.getByRole("option").first().click();
   await expect(modal.locator(".site-combobox-status")).toHaveText(/^Selected: .+$/);
+  const tripTimes = modal.locator('input[type="datetime-local"]');
+  await tripTimes.nth(0).fill("2026-08-20T17:00");
+  await tripTimes.nth(1).fill("2026-08-20T19:00");
   return modal;
 }
 

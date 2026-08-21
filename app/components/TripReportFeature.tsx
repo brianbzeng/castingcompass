@@ -810,7 +810,11 @@ export function TripReportFeature({
       };
       setFields(parseFormDraft(window.localStorage.getItem(`${TRIP_DRAFT_PREFIX}start`), fallback));
     } else {
-      const fallback = freshFields(siteId ?? "");
+      const fallback = {
+        ...freshFields(siteId ?? ""),
+        startedAt: "",
+        endedAt: "",
+      };
       setFields(parseFormDraft(window.localStorage.getItem(`${TRIP_DRAFT_PREFIX}past`), fallback));
     }
 
