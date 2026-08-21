@@ -66,7 +66,7 @@ const LOCAL_RADIUS_KM = 80;
  */
 function isVisualOnlyPreview() {
   return typeof window !== "undefined"
-    && window.location.hostname === "127.0.0.1"
+    && ["127.0.0.1", "localhost", "::1", "[::1]"].includes(window.location.hostname)
     && window.location.port === "8788";
 }
 
