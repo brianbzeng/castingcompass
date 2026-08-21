@@ -45,7 +45,15 @@ const MAX_TRIP_PHOTO_RESERVATION_ATTEMPTS = 8;
 const TRIP_PHOTO_RESERVATION_GRACE_MS = 15 * 60 * 1000;
 const TRIP_PHOTO_RESERVATION_LEASE_MS = 5 * 60 * 1000;
 const REPORTER_COOKIE = "cc_reporter";
-const ALLOWED_IMAGE_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
+const ALLOWED_IMAGE_TYPES = new Set([
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+  "image/heic",
+  "image/heif",
+  "image/heic-sequence",
+  "image/heif-sequence",
+]);
 const TRIP_DETAIL_FIELDS = [
   "gear",
   "gearProfileId",
@@ -2458,21 +2466,22 @@ export async function handleTripRequest(
       assertOnlyInputFields(form, ["photo"]);
       const entry = form.get("photo");
       if (!(entry instanceof File) || entry.size === 0) {
-        throw new ApiError(422, "invalid_photo", "Choose a non-empty JPEG, PNG, or WebP photo.");
+        throw new ApiError(422, "invalid_photo", "Choose a non-empty JPEG, PNG, WebP, HEIC, or HEIF photo.");
       }
       if (entry.size > MAX_PHOTO_BYTES) {
         throw new ApiError(413, "photo_too_large", "Photos must be 5 MB or smaller.");
       }
       if (!ALLOWED_IMAGE_TYPES.has(entry.type)) {
-        throw new ApiError(415, "invalid_photo_type", "Photos must be JPEG, PNG, or WebP.");
+        throw new ApiError(415, "invalid_photo_type", "Photos must be JPEG, PNG, WebP, HEIC, or HEIF.");
       }
       const bytes = new Uint8Array(await entry.arrayBuffer());
       if (!matchesImageSignature(bytes.slice(0, 16), entry.type)) {
         throw new ApiError(415, "invalid_photo_type", "The uploaded file does not match its image type.");
       }
+      const reviewPhoto = await preparePhotoForMimo(env, entry, bytes);
       let analysis: Awaited<ReturnType<typeof analyzeFishPhotoWithMimo>>;
       try {
-        analysis = await analyzeFishPhotoWithMimo(env, { type: entry.type, bytes });
+        analysis = await analyzeFishPhotoWithMimo(env, reviewPhoto);
       } catch (error) {
         if (error instanceof ReviewError) {
           throw new ApiError(503, "photo_analysis_unavailable", "MiMo could not analyze this photo right now.");
@@ -3284,7 +3293,7 @@ async function processPhoto(
     throw new ApiError(413, "photo_too_large", "Photos must be 5 MB or smaller.");
   }
   if (!ALLOWED_IMAGE_TYPES.has(entry.type)) {
-    throw new ApiError(415, "invalid_photo_type", "Photos must be JPEG, PNG, or WebP.");
+    throw new ApiError(415, "invalid_photo_type", "Photos must be JPEG, PNG, WebP, HEIC, or HEIF.");
   }
 
   const signature = new Uint8Array(await entry.slice(0, 16).arrayBuffer());
@@ -3455,6 +3464,9 @@ function matchesImageSignature(bytes: Uint8Array, type: string) {
   if (type === "image/png") {
     return bytes[0] === 0x89 && bytes[1] === 0x50 && bytes[2] === 0x4e && bytes[3] === 0x47;
   }
+  if (type === "image/heic" || type === "image/heif" || type === "image/heic-sequence" || type === "image/heif-sequence") {
+    return matchesHeifSignature(bytes);
+  }
   return (
     bytes[0] === 0x52 &&
     bytes[1] === 0x49 &&
@@ -3465,6 +3477,41 @@ function matchesImageSignature(bytes: Uint8Array, type: string) {
     bytes[10] === 0x42 &&
     bytes[11] === 0x50
   );
+}
+
+function matchesHeifSignature(bytes: Uint8Array) {
+  if (bytes.length < 12 ||
+    bytes[4] !== 0x66 || bytes[5] !== 0x74 || bytes[6] !== 0x79 || bytes[7] !== 0x70) return false;
+  const brands = ["heic", "heix", "hevc", "hevx", "heif", "mif1", "msf1"];
+  const text = new TextDecoder().decode(bytes.slice(8, Math.min(bytes.length, 64)));
+  return brands.some((brand) => text.includes(brand));
+}
+
+async function preparePhotoForMimo(
+  env: TripApiEnv,
+  entry: File,
+  bytes: Uint8Array,
+): Promise<{ type: string; bytes: Uint8Array }> {
+  if (!entry.type.startsWith("image/heic") && !entry.type.startsWith("image/heif")) {
+    return { type: entry.type, bytes };
+  }
+  if (!env.IMAGES) {
+    throw new ApiError(503, "photo_analysis_unavailable", "HEIC/HEIF analysis needs the image conversion service, which is unavailable right now.");
+  }
+  try {
+    const output = await env.IMAGES.input(entry.stream()).transform({
+      width: 2048,
+      height: 2048,
+      fit: "scale-down",
+    }).output({ format: "image/webp", quality: 82 });
+    const response = output.response();
+    if (!response.ok) throw new Error("image conversion failed");
+    const converted = new Uint8Array(await response.arrayBuffer());
+    if (converted.byteLength === 0 || converted.byteLength > MAX_PHOTO_BYTES) throw new Error("converted image is invalid");
+    return { type: "image/webp", bytes: converted };
+  } catch {
+    throw new ApiError(503, "photo_analysis_unavailable", "HEIC/HEIF could not be converted for MiMo right now.");
+  }
 }
 
 function assertSameOrigin(request: Request) {

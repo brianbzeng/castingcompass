@@ -4315,15 +4315,26 @@ footer > div {
   text-transform: uppercase;
 }
 
-.trip-step-indicator span {
+.trip-step-indicator button {
+  min-height: 36px;
   padding: 0.55rem 0.75rem;
   border: 1px solid var(--line);
   color: var(--ink-soft);
+  background: transparent;
+  font: inherit;
+  letter-spacing: inherit;
+  text-transform: inherit;
+  cursor: pointer;
 }
 
-.trip-step-indicator span.active {
+.trip-step-indicator button.active {
   border-color: var(--mint);
   color: var(--mint);
+}
+
+.trip-step-indicator button:disabled {
+  cursor: not-allowed;
+  opacity: 0.42;
 }
 
 .trip-gear-section {
@@ -4730,7 +4741,7 @@ footer > div {
 
 .catch-result-row {
   display: grid;
-  grid-template-columns: minmax(7rem, 0.7fr) minmax(11rem, 1.3fr) auto;
+  grid-template-columns: minmax(6rem, 0.55fr) minmax(10rem, 1.1fr) minmax(10rem, 1fr) auto;
   align-items: end;
   gap: 0.6rem;
 }
@@ -4748,6 +4759,10 @@ footer > div {
   padding: 0.5rem 0.65rem;
   font-size: 0.58rem;
   cursor: pointer;
+}
+
+.catch-result-notes input {
+  min-width: 0;
 }
 
 .catch-result-remove:hover,
@@ -4846,6 +4861,38 @@ footer > div {
   padding: 0.75rem;
   border: 1px solid rgba(168, 216, 242, 0.28);
   cursor: pointer;
+}
+
+.photo-file-list {
+  display: grid;
+  gap: 0.55rem;
+}
+
+.photo-add-more,
+.photo-analyze-button {
+  justify-self: start;
+  padding: 0.55rem 0.7rem;
+  border: 1px solid rgba(168, 216, 242, 0.34);
+  color: var(--seafoam);
+  background: rgba(4, 20, 41, 0.72);
+  font-size: 0.56rem;
+  cursor: pointer;
+}
+
+.photo-add-more input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+.photo-analyze-button {
+  border-color: var(--lime);
+  color: var(--ink);
+  background: var(--lime);
+  font-weight: 700;
 }
 
 .photo-picker:focus-within {
@@ -5718,7 +5765,7 @@ footer > div {
   }
 
   .catch-result-row {
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: 1fr;
   }
 
   .catch-result-remove {

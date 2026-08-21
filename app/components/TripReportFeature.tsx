@@ -25,7 +25,17 @@ import {
   TRIP_REQUEST_PREFIX,
 } from "../lib/account-browser-storage";
 const MAX_PHOTO_BYTES = 5 * 1024 * 1024;
-const ACCEPTED_PHOTO_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
+const MAX_PHOTOS = 4;
+const ACCEPTED_PHOTO_TYPES = new Set([
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+  "image/heic",
+  "image/heif",
+  "image/heic-sequence",
+  "image/heif-sequence",
+]);
+const PHOTO_ACCEPT = "image/jpeg,image/png,image/webp,image/heic,image/heif";
 const PHOTO_UPLOADS_ENABLED = process.env.NEXT_PUBLIC_PHOTO_UPLOADS === "true";
 // Keep a slow request pending. If its response is lost, the stable request
 // identity below makes an explicit user retry idempotent; nothing auto-replays.
@@ -45,6 +55,7 @@ interface CatchRow {
   id: string;
   count: string;
   species: CatchSpecies;
+  notes: string;
 }
 
 const CATCH_SPECIES_OPTIONS: ReadonlyArray<{ value: CatchSpecies; label: string }> = [
@@ -56,8 +67,8 @@ const CATCH_SPECIES_OPTIONS: ReadonlyArray<{ value: CatchSpecies; label: string 
   { value: "other", label: "Other / not sure" },
 ];
 
-function newCatchRow(species: CatchSpecies = "no-fish", count = "0"): CatchRow {
-  return { id: `catch-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`, count, species };
+function newCatchRow(species: CatchSpecies = "no-fish", count = "0", notes = ""): CatchRow {
+  return { id: `catch-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`, count, species, notes };
 }
 
 interface RejectedPhoto {
@@ -231,9 +242,24 @@ function normalizeCatchRows(value: unknown, fallbackResult: CatchResult): CatchR
       id: typeof source.id === "string" && source.id ? source.id : newCatchRow().id,
       count,
       species,
+      notes: typeof source.notes === "string" ? source.notes.slice(0, 240) : "",
     }];
   });
   return rows.length ? rows.slice(0, 12) : catchRowsFromResult(fallbackResult);
+}
+
+function catchNotesFromRows(rows: CatchRow[]) {
+  return rows
+    .map((row) => {
+      const note = row.notes.trim().slice(0, 240);
+      if (!note) return "";
+      const count = Math.max(0, Math.min(100, Number.parseInt(row.count, 10) || 0));
+      const species = CATCH_SPECIES_OPTIONS.find((option) => option.value === row.species)?.label ?? "Other / not sure";
+      return `${count} × ${species}: ${note}`;
+    })
+    .filter(Boolean)
+    .join("\n")
+    .slice(0, 1_000);
 }
 
 function catchCountsFromRows(rows: CatchRow[]) {
@@ -592,8 +618,17 @@ async function refreshSummary(
 
 function validatePhoto(file: File | null) {
   if (!file) return;
-  if (!ACCEPTED_PHOTO_TYPES.has(file.type)) throw new Error("Use a JPEG, PNG, or WebP photo.");
+  const filename = file.name.toLowerCase();
+  const extensionAccepted = filename.endsWith(".heic") || filename.endsWith(".heif");
+  if (!ACCEPTED_PHOTO_TYPES.has(file.type) && !extensionAccepted) throw new Error("Use a JPEG, PNG, WebP, HEIC, or HEIF photo.");
   if (file.size > MAX_PHOTO_BYTES) throw new Error("Photo must be 5 MB or smaller.");
+}
+
+function normalizePhotoFileType(file: File) {
+  if (file.type) return file;
+  const filename = file.name.toLowerCase();
+  const type = filename.endsWith(".heic") ? "image/heic" : filename.endsWith(".heif") ? "image/heif" : "";
+  return type ? new File([file], file.name, { type, lastModified: file.lastModified }) : file;
 }
 
 function appendCompletionFields(
@@ -638,7 +673,7 @@ function appendCompletionFields(
   formData.set("fishabilityRating", fields.fishabilityRating);
   formData.set("observedWaveHeightFeet", fields.observedWaveHeightFeet);
   formData.set("fishabilityNotes", "");
-  formData.set("notes", "");
+  formData.set("notes", catchNotesFromRows(fields.catchRows));
   formData.set("consent", "true");
   formData.set("primaryTargetConfirmed", "true");
   formData.set("completeAttempt", "true");
@@ -678,8 +713,8 @@ export function TripReportFeature({
   const [fields, setFields] = useState<FormFields>(() => freshFields());
   const [formStep, setFormStep] = useState<1 | 2>(1);
   const [gearProfiles, setGearProfiles] = useState<GearProfile[]>([]);
-  const [photo, setPhoto] = useState<File | null>(null);
-  const [rejectedPhoto, setRejectedPhoto] = useState<RejectedPhoto | null>(null);
+  const [photos, setPhotos] = useState<File[]>([]);
+  const [rejectedPhotos, setRejectedPhotos] = useState<RejectedPhoto[]>([]);
   const [photoTransferState, setPhotoTransferState] = useState<PhotoTransferState>("idle");
   const [photoAnalysisState, setPhotoAnalysisState] = useState<PhotoAnalysisState>("idle");
   const [photoAnalysis, setPhotoAnalysis] = useState<PhotoAnalysis | null>(null);
@@ -692,6 +727,7 @@ export function TripReportFeature({
   const networkState = useClientNetworkState();
 
   const siteMap = useMemo(() => new Map(sites.map((site) => [site.id, site])), [sites]);
+  const photo = photos[0] ?? null;
   const selectedCounts = catchCountsFromRows(fields.catchRows);
   const targetEncounters = selectedCounts.keeperCount + selectedCounts.shortReleasedCount;
   const anyFishEncounters = targetEncounters + selectedCounts.otherCatchCount;
@@ -710,12 +746,20 @@ export function TripReportFeature({
     : !forecastReady || sites.length === 0
       ? "Wait for the fishing-location catalog and forecast snapshot to load"
       : undefined;
+  const pastLocationAndTimeReady = Boolean(
+    fields.siteId &&
+    fields.startedAt &&
+    fields.endedAt &&
+    Number.isFinite(new Date(fields.startedAt).getTime()) &&
+    Number.isFinite(new Date(fields.endedAt).getTime()) &&
+    new Date(fields.endedAt) > new Date(fields.startedAt),
+  );
 
   const resetFeedback = useCallback(() => {
     setSubmitState("idle");
     setMessage("");
-    setPhoto(null);
-    setRejectedPhoto(null);
+    setPhotos([]);
+    setRejectedPhotos([]);
     setPhotoTransferState("idle");
     setPhotoAnalysisState("idle");
     setPhotoAnalysis(null);
@@ -766,7 +810,7 @@ export function TripReportFeature({
       };
       setFields(parseFormDraft(window.localStorage.getItem(`${TRIP_DRAFT_PREFIX}start`), fallback));
     } else {
-      const fallback = freshFields(siteId ?? sites[0]?.id ?? "");
+      const fallback = freshFields(siteId ?? "");
       setFields(parseFormDraft(window.localStorage.getItem(`${TRIP_DRAFT_PREFIX}past`), fallback));
     }
 
@@ -891,41 +935,42 @@ export function TripReportFeature({
     window.localStorage.setItem(`${TRIP_DRAFT_PREFIX}${suffix}`, JSON.stringify(fields));
   }, [activeTrip, fields, panel]);
 
-  const handlePhoto = (event: ChangeEvent<HTMLInputElement>) => {
-    const nextPhoto = event.target.files?.[0] ?? null;
-    const requestId = ++photoAnalysisRequestRef.current;
-    if (!nextPhoto) {
-      setPhoto(null);
-      setRejectedPhoto(null);
-      setPhotoTransferState("idle");
+  const handlePhotos = (event: ChangeEvent<HTMLInputElement>) => {
+    const selected = Array.from(event.target.files ?? []);
+    event.target.value = "";
+    if (!selected.length) return;
+    const accepted: File[] = [];
+    const rejected: RejectedPhoto[] = [];
+    for (const candidate of selected) {
+      try {
+        validatePhoto(candidate);
+        accepted.push(normalizePhotoFileType(candidate));
+      } catch (error) {
+        rejected.push({
+          name: candidate.name,
+          type: candidate.type,
+          size: candidate.size,
+          message: error instanceof Error ? error.message : "That photo cannot be used.",
+        });
+      }
+    }
+    setPhotos((current) => [...current, ...accepted].slice(0, MAX_PHOTOS));
+    setRejectedPhotos(rejected);
+    if (accepted.length) {
+      setPhotoTransferState("selected");
       setPhotoAnalysisState("idle");
       setPhotoAnalysis(null);
-      return;
-    }
-    try {
-      validatePhoto(nextPhoto);
-      setPhoto(nextPhoto);
-      setRejectedPhoto(null);
-      setPhotoTransferState("selected");
-      setPhotoAnalysisState("analyzing");
-      setPhotoAnalysis(null);
-      void analyzePhoto(nextPhoto, requestId);
-    } catch (error) {
-      setPhoto(null);
-      setRejectedPhoto({
-        name: nextPhoto.name,
-        type: nextPhoto.type,
-        size: nextPhoto.size,
-        message: error instanceof Error ? error.message : "That photo cannot be used.",
-      });
-      setPhotoTransferState("idle");
-      event.target.value = "";
+      photoAnalysisRequestRef.current += 1;
     }
   };
 
-  const removePhoto = () => {
-    setPhoto(null);
-    setRejectedPhoto(null);
+  const removePhoto = (index?: number) => {
+    if (typeof index === "number") {
+      setPhotos((current) => current.filter((_, candidateIndex) => candidateIndex !== index));
+    } else {
+      setPhotos([]);
+      setRejectedPhotos([]);
+    }
     setPhotoTransferState("idle");
     setPhotoAnalysisState("idle");
     setPhotoAnalysis(null);
@@ -943,24 +988,57 @@ export function TripReportFeature({
     setFields((current) => ({ ...current, catchRows, catchResult, ...counts }));
   };
 
-  const analyzePhoto = async (file: File, requestId: number) => {
+  const analyzePhotos = async () => {
+    if (!photos.length) return;
+    const requestId = ++photoAnalysisRequestRef.current;
+    setPhotoAnalysisState("analyzing");
+    setPhotoAnalysis(null);
     try {
-      const formData = new FormData();
-      formData.set("photo", file);
-      const response = await fetch("/api/trips/analyze-photo", { method: "POST", body: formData, headers: { Accept: "application/json" } });
-      if (requestId !== photoAnalysisRequestRef.current) return;
-      const payload = await response.json().catch(() => ({})) as { analysis?: PhotoAnalysis; error?: { message?: string } };
-      if (!response.ok || !payload.analysis) {
-        setPhotoAnalysisState(response.status === 401 || response.status === 503 ? "unavailable" : "error");
-        return;
+      const analyses: PhotoAnalysis[] = [];
+      for (const file of photos) {
+        const formData = new FormData();
+        formData.set("photo", file);
+        const response = await fetch("/api/trips/analyze-photo", { method: "POST", body: formData, headers: { Accept: "application/json" } });
+        const payload = await response.json().catch(() => ({})) as { analysis?: PhotoAnalysis; error?: { message?: string } };
+        if (!response.ok || !payload.analysis) {
+          if (requestId !== photoAnalysisRequestRef.current) return;
+          setPhotoAnalysisState(response.status === 401 || response.status === 503 ? "unavailable" : "error");
+          return;
+        }
+        analyses.push(payload.analysis);
       }
-      const analysis = payload.analysis;
-      const rows = analysis.catches.length
-        ? analysis.catches.map((entry) => newCatchRow(entry.species, String(entry.count)))
-        : [newCatchRow()];
+      if (requestId !== photoAnalysisRequestRef.current) return;
+      const confidenceRank = { low: 0, medium: 1, high: 2 } as const;
+      const merged = new Map<CatchSpecies, { species: CatchSpecies; count: number; confidence: "low" | "medium" | "high" }>();
+      for (const analysis of analyses) {
+        for (const entry of analysis.catches) {
+          const existing = merged.get(entry.species);
+          merged.set(entry.species, {
+            species: entry.species,
+            count: (existing?.count ?? 0) + entry.count,
+            confidence: existing && confidenceRank[existing.confidence] >= confidenceRank[entry.confidence]
+              ? existing.confidence
+              : entry.confidence,
+          });
+        }
+      }
+      const catches = [...merged.values()]
+        .filter((entry) => entry.species !== "no-fish" || entry.count === 0)
+        .sort((left, right) => right.count - left.count)
+        .slice(0, 8);
+      const analysis: PhotoAnalysis = {
+        model: analyses[0]?.model ?? "MiMo",
+        confidence: analyses.some((entry) => entry.confidence === "low")
+          ? "low"
+          : analyses.some((entry) => entry.confidence === "medium")
+            ? "medium"
+            : "high",
+        catches: catches.length ? catches : [{ species: "no-fish", count: 0, confidence: "low" }],
+        note: [...new Set(analyses.map((entry) => entry.note.trim()).filter(Boolean))].join(" ").slice(0, 240),
+      };
       setPhotoAnalysis(analysis);
       setPhotoAnalysisState("ready");
-      updateCatchRows(rows);
+      updateCatchRows(analysis.catches.map((entry) => newCatchRow(entry.species, String(entry.count))));
     } catch {
       if (requestId !== photoAnalysisRequestRef.current) return;
       setPhotoAnalysisState("unavailable");
@@ -1288,6 +1366,16 @@ export function TripReportFeature({
 
   const continuePastStep = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    if (!fields.siteId) {
+      setSubmitState("error");
+      setMessage("Choose a fishing location before opening results.");
+      return;
+    }
+    if (!fields.startedAt || !fields.endedAt || !Number.isFinite(new Date(fields.startedAt).getTime()) || !Number.isFinite(new Date(fields.endedAt).getTime())) {
+      setSubmitState("error");
+      setMessage("Choose when the trip started and ended before opening results.");
+      return;
+    }
     if (new Date(fields.endedAt) <= new Date(fields.startedAt)) {
       setSubmitState("error");
       setMessage("End time must be after the start time.");
@@ -1388,7 +1476,7 @@ export function TripReportFeature({
                   <h2 id="trip-modal-title">Start fishing.</h2>
                   <p>Choose where you are. We record the exact start now and estimate the rest from time and location.</p>
                 </header>
-                <div className="trip-step-indicator"><span className={formStep === 1 ? "active" : ""}>1 · Location</span><span className={formStep === 2 ? "active" : ""}>2 · Optional setup</span></div>
+                <TripStepTabs step={formStep} firstLabel="1 · Location" secondLabel="2 · Optional setup" secondDisabled={!fields.siteId} onStepChange={(nextStep) => setFormStep(nextStep)} />
                 {formStep === 1 ? <>
                   <TripLocationFields sites={sites} siteId={fields.siteId} onSiteChange={updateSite} onUseCurrentLocation={requestCurrentLocation} locationState={locationState} locationMessage={locationMessage} />
                   <div className="trip-privacy-note">
@@ -1413,9 +1501,8 @@ export function TripReportFeature({
                   <span>I confirm California halibut is my primary target, this is my whole fishing attempt, and I consent to the private use described in the <Link href="/terms" target="_blank">Terms</Link> and <Link href="/privacy" target="_blank">Privacy Policy</Link>.</span>
                 </label>
                 </>}
-                {formStep === 2 ? <button className="trip-back-button" type="button" onClick={() => setFormStep(1)}>← Back to location</button> : null}
                 </fieldset>
-                <button className="trip-submit" type="submit" disabled={submitState === "submitting" || Boolean(activeTrip) || (formStep === 2 && networkState === "offline")}>
+                <button className="trip-submit" type="submit" disabled={submitState === "submitting" || Boolean(activeTrip) || (formStep === 1 && !fields.siteId) || (formStep === 2 && networkState === "offline")}>
                   {activeTrip ? "Finish the active trip first" : submitState === "ambiguous" ? "Retry start safely" : formStep === 1 ? "Continue to optional setup" : submitState === "submitting" ? "Starting…" : networkState === "offline" ? "Reconnect to start trip" : "Start trip"}
                   {!activeTrip && submitState !== "submitting" ? <ArrowIcon /> : null}
                 </button>
@@ -1430,7 +1517,7 @@ export function TripReportFeature({
                   <h2 id="trip-modal-title">Finish the trip.</h2>
                   <p>{activeTrip.siteName} · Take a fish photo, choose the simple result, and finish. The server records the finish time and estimates effort.</p>
                 </header>
-                <TripPhotoField photo={photo} rejectedPhoto={rejectedPhoto} transferState={photoTransferState} analysisState={photoAnalysisState} analysis={photoAnalysis} storageEnabled={photoStorageEnabled} inputRef={photoInputRef} onPhoto={handlePhoto} onRemove={removePhoto} />
+                <TripPhotoField photos={photos} rejectedPhotos={rejectedPhotos} transferState={photoTransferState} analysisState={photoAnalysisState} analysis={photoAnalysis} storageEnabled={photoStorageEnabled} inputRef={photoInputRef} onPhotos={handlePhotos} onAnalyze={analyzePhotos} onRemove={removePhoto} />
                 {/* The old invocation was <TripCompletionFields fields={fields} setFields={setFields} onCatchResult={updateCatchResult} hideTimes />; rows now replace the single quick-result control. */}
                 <TripCompletionFields catchRows={fields.catchRows} onCatchRows={updateCatchRows} fields={fields} setFields={setFields} hideTimes />
                 <TripGearFields fields={fields} gearProfiles={gearProfiles} applyGearProfile={applyGearProfile} />
@@ -1470,9 +1557,18 @@ export function TripReportFeature({
                   <h2 id="trip-modal-title">Log a past trip.</h2>
                   <p>Start with a fish photo. We use it to suggest the catch, then estimate conditions from the date, time, and location.</p>
                 </header>
-                <div className="trip-step-indicator"><span className={formStep === 1 ? "active" : ""}>1 · Photo + location</span><span className={formStep === 2 ? "active" : ""}>2 · Result</span></div>
+                <TripStepTabs step={formStep} firstLabel="1 · Photo + location" secondLabel="2 · Result" secondDisabled={!pastLocationAndTimeReady} onStepChange={(nextStep) => {
+                  if (nextStep === 2 && !pastLocationAndTimeReady) {
+                    setSubmitState("error");
+                    setMessage("Choose a fishing location and valid start and end times before opening results.");
+                    return;
+                  }
+                  setSubmitState("idle");
+                  setMessage("");
+                  setFormStep(nextStep);
+                }} />
                 {formStep === 1 ? <>
-                  <TripPhotoField photo={photo} rejectedPhoto={rejectedPhoto} transferState={photoTransferState} analysisState={photoAnalysisState} analysis={photoAnalysis} storageEnabled={photoStorageEnabled} inputRef={photoInputRef} onPhoto={handlePhoto} onRemove={removePhoto} />
+                  <TripPhotoField photos={photos} rejectedPhotos={rejectedPhotos} transferState={photoTransferState} analysisState={photoAnalysisState} analysis={photoAnalysis} storageEnabled={photoStorageEnabled} inputRef={photoInputRef} onPhotos={handlePhotos} onAnalyze={analyzePhotos} onRemove={removePhoto} />
                   <TripLocationFields sites={sites} siteId={fields.siteId} onSiteChange={updateSite} onUseCurrentLocation={requestCurrentLocation} locationState={locationState} locationMessage={locationMessage} />
                   <div className="trip-field-grid">
                   <label className="trip-field">
@@ -1489,9 +1585,8 @@ export function TripReportFeature({
                 <TripCompletionFields catchRows={fields.catchRows} onCatchRows={updateCatchRows} fields={fields} setFields={setFields} hideTimes />
                 <TripGearFields fields={fields} gearProfiles={gearProfiles} applyGearProfile={applyGearProfile} />
                 </>}
-                {formStep === 2 ? <button className="trip-back-button" type="button" onClick={() => setFormStep(1)}>← Back to photo + location</button> : null}
                 </fieldset>
-                <button className="trip-submit" type="submit" disabled={submitState === "submitting" || submitState === "success" || (formStep === 2 && networkState === "offline")}>
+                <button className="trip-submit" type="submit" disabled={submitState === "submitting" || submitState === "success" || (formStep === 1 && !pastLocationAndTimeReady) || (formStep === 2 && networkState === "offline")}>
                   {submitState === "ambiguous" ? "Retry safely" : formStep === 1 ? "Continue to result" : submitState === "submitting" ? "Saving…" : networkState === "offline" ? "Reconnect to save report" : submitState === "success" ? "Report saved" : anyFishEncounters === 0 ? "Record no-fish trip" : "Submit trip report"}
                   {submitState === "idle" || submitState === "error" || submitState === "ambiguous" ? <ArrowIcon /> : null}
                 </button>
@@ -1514,6 +1609,27 @@ interface TripCompletionFieldsProps {
   fields: FormFields;
   setFields: (updater: (current: FormFields) => FormFields) => void;
   hideTimes?: boolean;
+}
+
+function TripStepTabs({
+  step,
+  firstLabel,
+  secondLabel,
+  secondDisabled,
+  onStepChange,
+}: {
+  step: 1 | 2;
+  firstLabel: string;
+  secondLabel: string;
+  secondDisabled: boolean;
+  onStepChange(nextStep: 1 | 2): void;
+}) {
+  return (
+    <div className="trip-step-indicator" role="tablist" aria-label="Trip report sections">
+      <button type="button" role="tab" aria-selected={step === 1} className={step === 1 ? "active" : ""} onClick={() => onStepChange(1)}>{firstLabel}</button>
+      <button type="button" role="tab" aria-selected={step === 2} className={step === 2 ? "active" : ""} disabled={secondDisabled} onClick={() => onStepChange(2)}>{secondLabel}</button>
+    </div>
+  );
 }
 
 function TripLocationFields({
@@ -1600,6 +1716,15 @@ function TripCompletionFields({
                   {CATCH_SPECIES_OPTIONS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
                 </select>
               </label>
+              <label className="trip-field catch-result-notes"><span>Notes <em>optional</em></span>
+                <input
+                  type="text"
+                  maxLength={240}
+                  placeholder="Length / weight"
+                  value={row.notes}
+                  onChange={(event) => onCatchRows(catchRows.map((candidate) => candidate.id === row.id ? { ...candidate, notes: event.target.value.slice(0, 240) } : candidate))}
+                />
+              </label>
               {catchRows.length > 1 ? <button className="catch-result-remove" type="button" onClick={() => onCatchRows(catchRows.filter((candidate) => candidate.id !== row.id))} aria-label={`Remove catch ${index + 1}`}>Remove</button> : null}
             </div>
           ))}
@@ -1627,54 +1752,57 @@ function photoTypeLabel(type: string) {
   if (type === "image/jpeg") return "JPEG";
   if (type === "image/png") return "PNG";
   if (type === "image/webp") return "WebP";
+  if (type === "image/heic" || type === "image/heic-sequence") return "HEIC";
+  if (type === "image/heif" || type === "image/heif-sequence") return "HEIF";
   return type || "Unknown type";
 }
 
 function TripPhotoField({
-  photo,
-  rejectedPhoto,
+  photos,
+  rejectedPhotos,
   transferState,
   analysisState,
   analysis,
   storageEnabled,
   inputRef,
-  onPhoto,
+  onPhotos,
+  onAnalyze,
   onRemove,
 }: {
-  photo: File | null;
-  rejectedPhoto: RejectedPhoto | null;
+  photos: File[];
+  rejectedPhotos: RejectedPhoto[];
   transferState: PhotoTransferState;
   analysisState: PhotoAnalysisState;
   analysis: PhotoAnalysis | null;
   storageEnabled: boolean;
   inputRef: React.RefObject<HTMLInputElement | null>;
-  onPhoto: (event: ChangeEvent<HTMLInputElement>) => void;
-  onRemove: () => void;
+  onPhotos: (event: ChangeEvent<HTMLInputElement>) => void;
+  onAnalyze(): void;
+  onRemove(index?: number): void;
 }) {
-  const [preview, setPreview] = useState<{ file: File; url: string } | null>(null);
+  const [previews, setPreviews] = useState<Array<{ file: File; url: string }>>([]);
 
   useEffect(() => {
-    if (!photo) return;
-    const reader = new FileReader();
-    const handleLoad = () => {
-      if (typeof reader.result === "string") setPreview({ file: photo, url: reader.result });
-    };
-    reader.addEventListener("load", handleLoad);
-    reader.readAsDataURL(photo);
+    let cancelled = false;
+    const readers = photos.map((file) => new Promise<{ file: File; url: string } | null>((resolve) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(typeof reader.result === "string" ? { file, url: reader.result } : null);
+      reader.onerror = () => resolve(null);
+      reader.readAsDataURL(file);
+    }));
+    void Promise.all(readers).then((next) => {
+      if (!cancelled) setPreviews(next.filter((value): value is { file: File; url: string } => Boolean(value)));
+    });
     return () => {
-      reader.removeEventListener("load", handleLoad);
-      if (reader.readyState === FileReader.LOADING) reader.abort();
+      cancelled = true;
     };
-  }, [photo]);
+  }, [photos]);
 
-  const previewUrl = preview?.file === photo ? preview.url : null;
-
-  const displayedFile = photo ?? rejectedPhoto;
-  const state = rejectedPhoto ? "invalid" : transferState;
-  const statusCopy = rejectedPhoto
-    ? rejectedPhoto.message
+  const state = rejectedPhotos.length && !photos.length ? "invalid" : transferState;
+  const statusCopy = rejectedPhotos.length && !photos.length
+    ? rejectedPhotos[0].message
     : transferState === "selected"
-      ? "Browser checks passed. Selected only—nothing has uploaded yet."
+      ? `${photos.length} photo${photos.length === 1 ? "" : "s"} selected. Nothing has uploaded yet.`
       : transferState === "sending"
         ? "Sending with the trip report. No attachment is confirmed yet."
         : transferState === "confirmed"
@@ -1684,9 +1812,8 @@ function TripPhotoField({
             : transferState === "ambiguous"
               ? "Outcome unknown. Keep this file selected and use the same safe report retry."
       : storageEnabled
-        ? "Choose a photo to let MiMo suggest the species and count before you submit."
-        : "Choose a photo to let MiMo suggest the species and count. Private storage is currently off.";
-  const removable = state === "selected" || state === "failed" || state === "invalid";
+        ? "Choose photos, confirm the selection, and MiMo will suggest the species and count before you submit."
+        : "Choose photos, confirm the selection, and MiMo will suggest the species and count. Private storage is currently off.";
 
   return (
     <section className={`photo-field photo-field-${state}`} aria-labelledby="trip-photo-label">
@@ -1694,28 +1821,41 @@ function TripPhotoField({
         <span id="trip-photo-label">Fish photo for MiMo review <em>recommended</em></span>
         <small aria-live="polite">{statusCopy}</small>
       </div>
-      {!displayedFile ? (
+      {!photos.length ? (
         <label className="photo-picker">
-          <input ref={inputRef} type="file" accept="image/jpeg,image/png,image/webp" capture="environment" onChange={onPhoto} />
-          <strong>Take or drop a fish photo</strong>
-          <small>MiMo will suggest the species and count for your review · JPEG, PNG, or WebP · 5 MB max</small>
+          <input ref={inputRef} type="file" accept={PHOTO_ACCEPT} multiple capture="environment" onChange={onPhotos} />
+          <strong>Take or add fish photos</strong>
+          <small>Confirm the selection before MiMo scans it · JPEG, PNG, WebP, HEIC, or HEIF · up to {MAX_PHOTOS} photos · 5 MB each</small>
         </label>
       ) : (
-        <div className="photo-file-card" data-state={state}>
-          {previewUrl && photo ? (
-            // A local data URL is deliberately not routed through the image optimizer or a provider.
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={previewUrl} alt="Selected verification photo preview" />
-          ) : <span className="photo-file-placeholder" aria-hidden="true">IMG</span>}
-          <div>
-            <strong>{displayedFile.name}</strong>
-            <span>{photoTypeLabel(displayedFile.type)} · {formatPhotoSize(displayedFile.size)}</span>
-            <small>{statusCopy}</small>
+        <>
+          <div className="photo-file-list">
+            {photos.map((file, index) => {
+              const preview = previews.find((candidate) => candidate.file === file);
+              return <div className="photo-file-card" data-state={state} key={`${file.name}-${file.lastModified}-${file.size}-${file.type}`}>
+                {preview ? (
+                  // A local data URL is deliberately not routed through the image optimizer or a provider.
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={preview.url} alt={`Selected verification photo ${index + 1}`} />
+                ) : <span className="photo-file-placeholder" aria-hidden="true">IMG</span>}
+                <div>
+                  <strong>{file.name}</strong>
+                  <span>{photoTypeLabel(file.type || (file.name.toLowerCase().endsWith(".heic") ? "image/heic" : file.name.toLowerCase().endsWith(".heif") ? "image/heif" : ""))} · {formatPhotoSize(file.size)}</span>
+                  <small>{index === 0 ? "Primary photo · this is the one stored with the trip today." : "Additional photo · used for MiMo review in this release."}</small>
+                </div>
+                {state === "selected" || state === "failed" ? <button type="button" onClick={() => onRemove(index)}>Remove</button> : null}
+              </div>;
+            })}
           </div>
-          {removable ? <button type="button" onClick={onRemove}>{state === "invalid" ? "Dismiss" : "Remove"}</button> : null}
-          {state === "failed" ? <button type="submit">Retry report with this photo</button> : null}
-        </div>
+          {photos.length < MAX_PHOTOS ? <label className="photo-add-more">
+            <input ref={inputRef} type="file" accept={PHOTO_ACCEPT} multiple capture="environment" onChange={onPhotos} />
+            + Add more photos
+          </label> : null}
+          {state === "failed" ? <button type="button" onClick={onAnalyze}>Analyze again</button> : null}
+        </>
       )}
+      {rejectedPhotos.map((rejected) => <small className="photo-analysis-status" role="alert" key={`${rejected.name}-${rejected.size}`}>{rejected.name}: {rejected.message}</small>)}
+      {photos.length && analysisState !== "analyzing" && analysisState !== "ready" ? <button className="photo-analyze-button" type="button" onClick={onAnalyze}>Confirm photos &amp; analyze with MiMo</button> : null}
       {state === "sending" ? (
         <span
           className="photo-indeterminate-progress"
@@ -1731,7 +1871,7 @@ function TripPhotoField({
       {analysisState === "ready" && analysis ? <small className="photo-analysis-status" role="status">MiMo suggested {analysis.catches.map((entry) => `${entry.count} ${entry.species.replaceAll("-", " ")}`).join(", ") || "no fish"}. Review the rows before saving.{analysis.note ? ` ${analysis.note}` : ""}</small> : null}
       {analysisState === "unavailable" ? <small className="photo-analysis-status">MiMo is unavailable right now. You can still enter the catch rows yourself.</small> : null}
       {analysisState === "error" ? <small className="photo-analysis-status">MiMo returned an unusable suggestion. Enter the catch rows yourself.</small> : null}
-      <small className="photo-contract-note">The photo is only a suggestion source until you submit. Review and correct every result; nothing is submitted automatically. Current storage supports one private photo per trip; the server strips metadata and re-encodes accepted files before storage.</small>
+      <small className="photo-contract-note">Photos stay local until you confirm analysis. Review and correct every result; nothing is submitted automatically. The first photo is stored privately with the trip today; additional selected photos are used for analysis only until multi-photo storage is enabled. The server strips metadata and re-encodes accepted files before storage.</small>
     </section>
   );
 }

@@ -27,12 +27,15 @@ async function preparePastTrip(page: Page) {
   await expect(modal).toBeVisible();
   const location = modal.getByRole("combobox", { name: "Fishing location" });
   await expect(location).toBeVisible();
+  await location.click();
+  await modal.getByRole("option").first().click();
   await expect(modal.locator(".site-combobox-status")).toHaveText(/^Selected: .+$/);
-  await modal.getByLabel("Fishing mode for the whole trip").selectOption("shore");
-  await modal.getByLabel("Did the score influence this trip?").selectOption("no");
-  await modal.getByRole("button", { name: "Continue to gear + result" }).click();
-  for (const checkbox of await modal.locator(".consent-field input").all()) await checkbox.check();
   return modal;
+}
+
+async function openResults(modal: ReturnType<Page["locator"]>) {
+  await modal.getByRole("tab", { name: "2 · Result" }).click();
+  for (const checkbox of await modal.locator(".consent-field input").all()) await checkbox.check();
 }
 
 test.beforeEach(async ({ page }) => {
@@ -70,21 +73,20 @@ test("selected and rejected photos expose local preview, type, size, and removab
   const selected = modal.locator(".photo-field-selected");
   await expect(selected).toContainText("verification.png");
   await expect(selected).toContainText(`PNG · ${PNG.length} B`);
-  await expect(selected).toContainText("Selected only—nothing has uploaded yet.");
-  await expect(selected.getByRole("img", { name: "Selected verification photo preview" })).toBeVisible();
+  await expect(selected).toContainText("1 photo selected. Nothing has uploaded yet.");
+  await expect(selected.getByRole("img", { name: "Selected verification photo 1" })).toBeVisible();
   await expect(selected.getByRole("button", { name: "Remove" })).toBeVisible();
   await expect(selected.getByRole("progressbar")).toHaveCount(0);
 
   await selected.getByRole("button", { name: "Remove" }).click();
-  await expect(modal.getByText("Choose a photo", { exact: true })).toBeVisible();
+  await expect(modal.getByText("Take or add fish photos", { exact: true })).toBeVisible();
 
   await input.setInputFiles({ name: "notes.txt", mimeType: "text/plain", buffer: Buffer.from("not an image") });
   const rejected = modal.locator(".photo-field-invalid");
   await expect(rejected).toContainText("notes.txt");
   await expect(rejected).toContainText("text/plain · 12 B");
-  await expect(rejected).toContainText("Use a JPEG, PNG, or WebP photo.");
-  await rejected.getByRole("button", { name: "Dismiss" }).click();
-  await expect(modal.getByText("Choose a photo", { exact: true })).toBeVisible();
+  await expect(rejected).toContainText("Use a JPEG, PNG, WebP, HEIC, or HEIF photo.");
+  await expect(rejected.getByText("Take or add fish photos", { exact: true })).toBeVisible();
 });
 
 test("pending UI stays indeterminate until an exact stored-photo receipt confirms success", async ({ page }) => {
@@ -101,6 +103,7 @@ test("pending UI stays indeterminate until an exact stored-photo receipt confirm
 
   const modal = await preparePastTrip(page);
   await modal.locator('input[type="file"]').setInputFiles({ name: "receipt.png", mimeType: "image/png", buffer: PNG });
+  await openResults(modal);
   await modal.getByRole("button", { name: "Record no-fish trip" }).click();
 
   const sending = modal.locator(".photo-field-sending");
@@ -127,6 +130,7 @@ test("an exact receipt that does not confirm the photo stays ambiguous and retri
 
   const modal = await preparePastTrip(page);
   await modal.locator('input[type="file"]').setInputFiles({ name: "retry.png", mimeType: "image/png", buffer: PNG });
+  await openResults(modal);
   await modal.getByRole("button", { name: "Record no-fish trip" }).click();
 
   const ambiguous = modal.locator(".photo-field-ambiguous");
@@ -160,6 +164,7 @@ test("an authoritative rejection exposes remove and explicit whole-report retry"
 
   const modal = await preparePastTrip(page);
   await modal.locator('input[type="file"]').setInputFiles({ name: "correctable.png", mimeType: "image/png", buffer: PNG });
+  await openResults(modal);
   await modal.getByRole("button", { name: "Record no-fish trip" }).click();
 
   const failed = modal.locator(".photo-field-failed");

@@ -6,16 +6,17 @@ const featurePath = new URL("../app/components/TripReportFeature.tsx", import.me
 const stylesPath = new URL("../app/globals.css", import.meta.url);
 const workflowPath = new URL("../.github/workflows/ci.yml", import.meta.url);
 
-test("trip photos are fail-closed and remain bound to the current one-photo contract", async () => {
+test("trip photos are fail-closed, multi-select, and mobile-format aware", async () => {
   const source = await readFile(featurePath, "utf8");
 
   assert.match(source, /NEXT_PUBLIC_PHOTO_UPLOADS === "true"/);
   assert.doesNotMatch(source, /NEXT_PUBLIC_PHOTO_UPLOADS !== "false"/);
   assert.match(source, /PHOTO_UPLOADS_ENABLED && canSubmit/);
-  assert.match(source, /type="file" accept="image\/jpeg,image\/png,image\/webp"/);
+  assert.match(source, /PHOTO_ACCEPT = "image\/jpeg,image\/png,image\/webp,image\/heic,image\/heif"/);
   assert.match(source, /capture="environment"/);
-  assert.doesNotMatch(source, /type="file"[^>]+multiple/);
-  assert.match(source, /Current storage supports one private photo per trip/);
+  assert.match(source, /multiple capture="environment"/);
+  assert.match(source, /MAX_PHOTOS = 4/);
+  assert.match(source, /first photo is stored privately with the trip today/);
   assert.match(source, /server strips metadata and re-encodes accepted files before storage/);
 });
 
@@ -23,12 +24,13 @@ test("trip photo UI discloses selected, rejected, pending, confirmed, failed, an
   const source = await readFile(featurePath, "utf8");
 
   assert.match(source, /"idle" \| "selected" \| "sending" \| "confirmed" \| "failed" \| "ambiguous"/);
-  assert.match(source, /Selected only—nothing has uploaded yet/);
+  assert.match(source, /selected\. Nothing has uploaded yet/);
   assert.match(source, /No attachment is confirmed yet/);
   assert.match(source, /exact trip receipt confirms a private stored photo/);
   assert.match(source, /Not confirmed\. Correct any report error, then retry the whole report explicitly/);
   assert.match(source, /Outcome unknown\. Keep this file selected and use the same safe report retry/);
-  assert.match(source, /Retry report with this photo/);
+  assert.match(source, /Confirm photos &amp; analyze with MiMo/);
+  assert.match(source, /additional selected photos are used for analysis only/);
   assert.match(source, /cancel control is intentionally unavailable after submission starts because the server may already have committed/);
 });
 
