@@ -958,7 +958,16 @@ export function TripReportFeature({
         });
       }
     }
-    setPhotos((current) => [...current, ...accepted].slice(0, MAX_PHOTOS));
+    const availableSlots = Math.max(0, MAX_PHOTOS - photos.length);
+    if (accepted.length > availableSlots) {
+      rejected.push({
+        name: `${accepted.length - availableSlots} additional photo${accepted.length - availableSlots === 1 ? "" : "s"}`,
+        type: "",
+        size: 0,
+        message: `You can add up to ${MAX_PHOTOS} photos per trip.`,
+      });
+    }
+    setPhotos((current) => [...current, ...accepted.slice(0, availableSlots)]);
     setRejectedPhotos(rejected);
     if (accepted.length) {
       setPhotoTransferState("selected");
