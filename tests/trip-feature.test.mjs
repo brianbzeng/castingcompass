@@ -99,7 +99,8 @@ test("loopback previews can inspect trip logging without weakening live auth", a
     readFile(appPath, "utf8"),
   ]);
 
-  assert.match(app, /localTripPreview = typeof window !== "undefined"/);
+  assert.match(app, /const \[localTripPreview, setLocalTripPreview\] = useState\(false\)/);
+  assert.match(app, /setLocalTripPreview\(\["localhost", "127\.0\.0\.1", "::1", "\[::1\]"\]/);
   assert.match(app, /!account\.user && !localTripPreview/);
   assert.match(app, /previewOnly=\{localTripPreview\}/);
   assert.match(feature, /previewOnly\?: boolean/);

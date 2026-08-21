@@ -1052,10 +1052,13 @@ export function OpportunityApp() {
   const [rememberRespectNotice, setRememberRespectNotice] = useState(false);
   const [showLocationDisclosure, setShowLocationDisclosure] = useState(false);
   const tripReportRequestKeyRef = useRef(0);
-  const localTripPreview = typeof window !== "undefined" &&
-    ["localhost", "127.0.0.1", "::1", "[::1]"].includes(window.location.hostname);
+  const [localTripPreview, setLocalTripPreview] = useState(false);
   const initialSiteHandledRef = useRef(false);
   const discussionPosts = discussionFeed?.siteId === selectedSiteId ? discussionFeed.posts : [];
+
+  useEffect(() => {
+    setLocalTripPreview(["localhost", "127.0.0.1", "::1", "[::1]"].includes(window.location.hostname));
+  }, []);
 
   const closeSiteDetail = useCallback(() => {
     setSelectedSiteId(null);
