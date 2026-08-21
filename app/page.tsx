@@ -52,6 +52,7 @@ export default function Home() {
       <script
         id="castingcompass-website-schema"
         type="application/ld+json"
+        suppressHydrationWarning
         dangerouslySetInnerHTML={{
           __html: JSON.stringify(websiteStructuredData).replace(/</g, "\\u003c"),
         }}
