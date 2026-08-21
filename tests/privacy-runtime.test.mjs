@@ -6087,13 +6087,13 @@ test("profile edits recompute valid v2 evidence, reject overrides, and never pro
   assert.deepEqual(await attributionEdit.json(), {
     updated: true,
     tripId,
-    forecastAttributionCleared: true,
+    forecastAttributionCleared: false,
     validationEvidenceExcluded: true,
   });
   assert.deepEqual({ ...sqlite.prepare(`SELECT mode, opportunity_window_id, opportunity_score,
       habitat_score, seasonality_score, conditions_score, fishability_score, model_version,
       score_influenced_choice, prediction_metadata_json FROM trips WHERE id = ?`).get(tripId) }, {
-    mode: "shore",
+    mode: "beach",
     opportunity_window_id: null,
     opportunity_score: null,
     habitat_score: null,
@@ -6146,7 +6146,7 @@ test("profile edits recompute valid v2 evidence, reject overrides, and never pro
   });
 });
 
-test("active completion clears forecast attribution atomically when fishing mode changes", async () => {
+test("active completion keeps catalog-derived mode and forecast attribution when a client mode changes", async () => {
   const { sqlite, d1 } = await database();
   const sites = [{ id: "ocean-beach", type: "Beach" }];
   const startResponse = await handleTripRequest(new Request("https://castingcompass.com/api/trips/start", {
@@ -6203,25 +6203,45 @@ test("active completion clears forecast attribution atomically when fishing mode
   ), { DB: d1, ASSETS: privacyTestAssets() }, sites, { now: () => new Date("2026-07-10T12:00:00.000Z") });
   assert.equal(completionResponse?.status, 200);
   const completed = await completionResponse.json();
-  assert.equal(completed.forecastAttributionCleared, true);
-  assert.equal(completed.trip.mode, "shore");
+  assert.equal(completed.forecastAttributionCleared, false);
+  assert.equal(completed.trip.mode, "beach");
   assert.equal(completed.trip.contractStatus, "valid");
-  assert.equal(completed.trip.opportunityWindowId, null);
-  assert.equal(completed.trip.opportunityScore, null);
-  assert.equal(completed.trip.modelVersion, null);
+  assert.equal(completed.trip.opportunityWindowId, "ocean-beach--20260710T1000Z");
+  assert.equal(completed.trip.opportunityScore, 81);
+  assert.equal(completed.trip.habitatScore, 78);
+  assert.equal(completed.trip.seasonalityScore, 74);
+  assert.equal(completed.trip.conditionsScore, 72);
+  assert.equal(completed.trip.fishabilityScore, 69);
+  assert.equal(completed.trip.modelVersion, `heuristic-california-halibut-${PRIVACY_TEST_SCORING_SHA}`);
   assert.equal(completed.trip.scoreInfluencedChoice, true);
   assert.deepEqual({ ...sqlite.prepare(`SELECT opportunity_window_id, opportunity_score,
       habitat_score, seasonality_score, conditions_score, fishability_score, model_version,
       score_influenced_choice, prediction_metadata_json FROM trips WHERE id = ?`).get(started.trip.id) }, {
-    opportunity_window_id: null,
-    opportunity_score: null,
-    habitat_score: null,
-    seasonality_score: null,
-    conditions_score: null,
-    fishability_score: null,
-    model_version: null,
+    opportunity_window_id: "ocean-beach--20260710T1000Z",
+    opportunity_score: 81,
+    habitat_score: 78,
+    seasonality_score: 74,
+    conditions_score: 72,
+    fishability_score: 69,
+    model_version: `heuristic-california-halibut-${PRIVACY_TEST_SCORING_SHA}`,
     score_influenced_choice: 1,
-    prediction_metadata_json: null,
+    prediction_metadata_json: JSON.stringify({
+      attestationIndexVersion: "castingcompass.opportunity-attestation-index/1.0.0",
+      attestationGeneratedAt: "2026-07-10T09:00:00.000Z",
+      snapshotSha256: "a".repeat(64),
+      siteCatalogSha256: "b0378742f40cca598c57d845fb683ab9b36068cdd69de541aeb3e45d93c31860",
+      targetTaxonId: "california-halibut",
+      taxonCatalogVersion: "castingcompass.taxa/1.0.0",
+      observationContractVersion: "castingcompass.observation/2.0.0",
+      modelRunContractVersion: "castingcompass.model-run/2.0.0",
+      opportunityContractVersion: "castingcompass.opportunity/2.0.0",
+      scoringSystemKind: "heuristic-configuration",
+      scoringSystemVersion: `heuristic-california-halibut-${PRIVACY_TEST_SCORING_SHA}`,
+      scoringSystemSha256: PRIVACY_TEST_SCORING_SHA,
+      windowStart: "2026-07-10T10:00:00.000Z",
+      windowEnd: "2026-07-10T12:00:00.000Z",
+      conditionsSnapshot: null,
+    }),
   });
   assert.equal(sqlite.prepare("SELECT COUNT(*) AS count FROM forecast_impressions WHERE trip_id = ?")
     .get(started.trip.id).count, 1);
@@ -6237,13 +6257,13 @@ test("active completion clears forecast attribution atomically when fishing mode
   assert.deepEqual(retried.receipt, { operation: "complete", tripId: started.trip.id });
   assert.equal(retried.trip.endedAt, completed.trip.endedAt);
   assert.equal(retried.trip.updatedAt, completed.trip.updatedAt);
-  assert.equal(retried.forecastAttributionCleared, true);
+  assert.equal(retried.forecastAttributionCleared, false);
   assert.deepEqual({ ...sqlite.prepare(`SELECT source_role, evidence_status, exclusion_reason,
       complete_attempt_confirmed, consented_at FROM trip_validation_provenance
     WHERE trip_id = ? AND event_type = 'completion'`).get(started.trip.id) }, {
     source_role: "context_only",
     evidence_status: "context_only",
-    exclusion_reason: "mode_changed_after_enrollment",
+      exclusion_reason: "enrollment_context_only",
     complete_attempt_confirmed: 1,
     consented_at: "2026-07-10T12:00:00.000Z",
   });

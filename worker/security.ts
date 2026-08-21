@@ -360,6 +360,7 @@ export function bodyLimitForRequest(request: Request): number | null {
   if (!url.pathname.startsWith("/api/") || !MUTATION_METHODS.has(request.method)) return null;
   if (
     url.pathname === "/api/trips/report" ||
+    url.pathname === "/api/trips/analyze-photo" ||
     /^\/api\/trips\/[^/]+\/complete$/.test(url.pathname)
   ) {
     return TRIP_MULTIPART_BODY_LIMIT;

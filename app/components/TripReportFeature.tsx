@@ -12,7 +12,6 @@ import {
 import Link from "next/link";
 import type { FishingSite, OpportunitySnapshot, OpportunityWindow, TripReportRequest } from "../types";
 import { ArrowIcon, ClockIcon, CloseIcon } from "./icons";
-import { GearCatalogFields } from "./GearCatalogFields";
 import { SiteCombobox } from "./SiteCombobox";
 import { useClientNetworkState } from "../lib/use-client-network-state";
 import { useModalDialog } from "../lib/use-modal-dialog";
@@ -26,7 +25,17 @@ import {
   TRIP_REQUEST_PREFIX,
 } from "../lib/account-browser-storage";
 const MAX_PHOTO_BYTES = 5 * 1024 * 1024;
-const ACCEPTED_PHOTO_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
+const MAX_PHOTOS = 4;
+const ACCEPTED_PHOTO_TYPES = new Set([
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+  "image/heic",
+  "image/heif",
+  "image/heic-sequence",
+  "image/heif-sequence",
+]);
+const PHOTO_ACCEPT = "image/jpeg,image/png,image/webp,image/heic,image/heif";
 const PHOTO_UPLOADS_ENABLED = process.env.NEXT_PUBLIC_PHOTO_UPLOADS === "true";
 // Keep a slow request pending. If its response is lost, the stable request
 // identity below makes an explicit user retry idempotent; nothing auto-replays.
@@ -35,13 +44,45 @@ const SLOW_SUBMISSION_NOTICE_MS = 4_000;
 type Panel = "start" | "complete" | "past";
 type SubmitState = "idle" | "submitting" | "success" | "error" | "ambiguous";
 type PhotoTransferState = "idle" | "selected" | "sending" | "confirmed" | "failed" | "ambiguous";
+type PhotoAnalysisState = "idle" | "analyzing" | "ready" | "unavailable" | "error";
 type TripReceiptOperation = "start" | "complete" | "past";
+type CatchResult = "none" | "halibut-kept" | "halibut-released" | "other-fish";
+type LocationState = "idle" | "locating" | "selected" | "denied" | "unsupported";
+
+type CatchSpecies = "no-fish" | "california-halibut" | "surfperch" | "striped-bass" | "leopard-shark" | "other";
+
+interface CatchRow {
+  id: string;
+  count: string;
+  species: CatchSpecies;
+  notes: string;
+}
+
+const CATCH_SPECIES_OPTIONS: ReadonlyArray<{ value: CatchSpecies; label: string }> = [
+  { value: "no-fish", label: "No fish" },
+  { value: "california-halibut", label: "California halibut" },
+  { value: "surfperch", label: "Surfperch" },
+  { value: "striped-bass", label: "Striped bass" },
+  { value: "leopard-shark", label: "Leopard shark" },
+  { value: "other", label: "Other / not sure" },
+];
+
+function newCatchRow(species: CatchSpecies = "no-fish", count = "0", notes = ""): CatchRow {
+  return { id: `catch-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`, count, species, notes };
+}
 
 interface RejectedPhoto {
   name: string;
   type: string;
   size: number;
   message: string;
+}
+
+interface PhotoAnalysis {
+  model: string;
+  confidence: "low" | "medium" | "high";
+  catches: Array<{ species: CatchSpecies; count: number; confidence: "low" | "medium" | "high" }>;
+  note: string;
 }
 
 interface TripRequestMaterial {
@@ -89,6 +130,11 @@ interface TripReportFeatureProps {
   forecastUnavailable: boolean;
   request: TripReportRequest | null;
   canSubmit: boolean;
+  /**
+   * Local preview mode lets an operator inspect the complete flow without
+   * creating an account or sending a mutation to the real API.
+   */
+  previewOnly?: boolean;
   onRequireLogin(): void;
 }
 
@@ -96,7 +142,10 @@ interface FormFields {
   siteId: string;
   startedAt: string;
   endedAt: string;
+  durationMinutes: string;
   anglerCount: number;
+  catchResult: CatchResult;
+  catchRows: CatchRow[];
   keeperCount: number;
   shortReleasedCount: number;
   fishingMethod: string;
@@ -142,6 +191,99 @@ function isoFromLocalInput(value: string) {
   return parsed.toISOString();
 }
 
+function modeForSite(site: FishingSite | undefined) {
+  const type = site?.type.toLowerCase();
+  return type === "beach" || type === "pier" || type === "jetty" ? type : "shore";
+}
+
+// Kept for recovery of drafts created by the previous duration-only form. New
+// reports always collect explicit start and end times instead.
+function estimatedEndLocal(startedAt: string, durationMinutes: string) {
+  const start = new Date(startedAt);
+  const minutes = Number.parseInt(durationMinutes, 10);
+  if (Number.isNaN(start.getTime()) || !Number.isFinite(minutes) || minutes < 1) {
+    throw new Error("Choose when the trip started and ended.");
+  }
+  return localDateTimeValue(new Date(start.getTime() + Math.min(minutes, 24 * 60) * 60_000));
+}
+
+function nearestSite(sites: FishingSite[], latitude: number, longitude: number) {
+  let nearest: { site: FishingSite; miles: number } | null = null;
+  for (const site of sites) {
+    const latDelta = (site.latitude - latitude) * Math.PI / 180;
+    const lonDelta = (site.longitude - longitude) * Math.PI / 180;
+    const a = Math.sin(latDelta / 2) ** 2
+      + Math.cos(latitude * Math.PI / 180) * Math.cos(site.latitude * Math.PI / 180) * Math.sin(lonDelta / 2) ** 2;
+    const miles = 3958.8 * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(Math.max(0, 1 - a)));
+    if (!nearest || miles < nearest.miles) nearest = { site, miles };
+  }
+  return nearest;
+}
+
+function catchRowsFromResult(result: CatchResult): CatchRow[] {
+  if (result === "halibut-kept" || result === "halibut-released") return [newCatchRow("california-halibut", "1")];
+  if (result === "other-fish") return [newCatchRow("other", "1")];
+  return [newCatchRow()];
+}
+
+function normalizeCatchRows(value: unknown, fallbackResult: CatchResult): CatchRow[] {
+  if (!Array.isArray(value)) return catchRowsFromResult(fallbackResult);
+  const rows = value.flatMap((entry): CatchRow[] => {
+    if (!entry || typeof entry !== "object") return [];
+    const source = entry as Record<string, unknown>;
+    const species = CATCH_SPECIES_OPTIONS.some((option) => option.value === source.species)
+      ? source.species as CatchSpecies
+      : null;
+    const count = typeof source.count === "string" || typeof source.count === "number"
+      ? String(source.count)
+      : null;
+    if (!species || count === null || !/^\d{1,3}$/.test(count)) return [];
+    return [{
+      id: typeof source.id === "string" && source.id ? source.id : newCatchRow().id,
+      count,
+      species,
+      notes: typeof source.notes === "string" ? source.notes.slice(0, 240) : "",
+    }];
+  });
+  return rows.length ? rows.slice(0, 12) : catchRowsFromResult(fallbackResult);
+}
+
+function catchNotesFromRows(rows: CatchRow[]) {
+  return rows
+    .map((row) => {
+      const note = row.notes.trim().slice(0, 240);
+      if (!note) return "";
+      const count = Math.max(0, Math.min(100, Number.parseInt(row.count, 10) || 0));
+      const species = CATCH_SPECIES_OPTIONS.find((option) => option.value === row.species)?.label ?? "Other / not sure";
+      return `${count} × ${species}: ${note}`;
+    })
+    .filter(Boolean)
+    .join("\n")
+    .slice(0, 1_000);
+}
+
+function catchCountsFromRows(rows: CatchRow[]) {
+  let keeperCount = 0;
+  let otherCatchCount = 0;
+  const speciesLabels: string[] = [];
+  for (const row of rows) {
+    const count = Math.max(0, Math.min(100, Number.parseInt(row.count, 10) || 0));
+    if (count === 0 || row.species === "no-fish") continue;
+    if (row.species === "california-halibut") keeperCount += count;
+    else {
+      otherCatchCount += count;
+      const label = CATCH_SPECIES_OPTIONS.find((option) => option.value === row.species)?.label ?? "Other / not sure";
+      if (!speciesLabels.includes(label)) speciesLabels.push(label);
+    }
+  }
+  return {
+    keeperCount,
+    shortReleasedCount: 0,
+    otherCatchCount,
+    otherSpecies: speciesLabels.join(", "),
+  };
+}
+
 function freshFields(siteId = ""): FormFields {
   const now = new Date();
   const twoHoursAgo = new Date(now.getTime() - 2 * 60 * 60 * 1000);
@@ -149,7 +291,10 @@ function freshFields(siteId = ""): FormFields {
     siteId,
     startedAt: localDateTimeValue(twoHoursAgo),
     endedAt: localDateTimeValue(now),
+    durationMinutes: "120",
     anglerCount: 1,
+    catchResult: "none",
+    catchRows: [newCatchRow()],
     keeperCount: 0,
     shortReleasedCount: 0,
     fishingMethod: "bait",
@@ -158,8 +303,8 @@ function freshFields(siteId = ""): FormFields {
     reel: "",
     baitLure: "",
     rig: "",
-    mode: "",
-    scoreInfluencedChoice: "",
+    mode: "shore",
+    scoreInfluencedChoice: "yes",
     primaryTargetConfirmed: false,
     completeAttempt: false,
     otherCatchCount: 0,
@@ -183,6 +328,25 @@ function parseFormDraft(raw: string | null, fallback: FormFields) {
     return {
       ...fallback,
       ...parsed,
+      durationMinutes: typeof parsed.durationMinutes === "string" ? parsed.durationMinutes : fallback.durationMinutes,
+      endedAt: typeof parsed.endedAt === "string" && parsed.endedAt
+        ? parsed.endedAt
+        : estimatedEndLocal(typeof parsed.startedAt === "string" ? parsed.startedAt : fallback.startedAt, typeof parsed.durationMinutes === "string" ? parsed.durationMinutes : fallback.durationMinutes),
+      catchResult: parsed.catchResult === "none" || parsed.catchResult === "halibut-kept" || parsed.catchResult === "halibut-released" || parsed.catchResult === "other-fish"
+        ? parsed.catchResult
+        : Number(parsed.keeperCount ?? 0) > 0
+          ? "halibut-kept"
+          : Number(parsed.shortReleasedCount ?? 0) > 0
+            ? "halibut-released"
+            : Number(parsed.otherCatchCount ?? 0) > 0
+              ? "other-fish"
+              : fallback.catchResult,
+      catchRows: normalizeCatchRows(
+        parsed.catchRows,
+        parsed.catchResult === "none" || parsed.catchResult === "halibut-kept" || parsed.catchResult === "halibut-released" || parsed.catchResult === "other-fish"
+          ? parsed.catchResult
+          : fallback.catchResult,
+      ),
       anglerCount: Number(parsed.anglerCount ?? fallback.anglerCount),
       keeperCount: Number(parsed.keeperCount ?? fallback.keeperCount),
       shortReleasedCount: Number(parsed.shortReleasedCount ?? fallback.shortReleasedCount),
@@ -190,6 +354,7 @@ function parseFormDraft(raw: string | null, fallback: FormFields) {
       consent: Boolean(parsed.consent),
       primaryTargetConfirmed: Boolean(parsed.primaryTargetConfirmed),
       completeAttempt: Boolean(parsed.completeAttempt),
+      mode: typeof parsed.mode === "string" && parsed.mode ? parsed.mode : fallback.mode,
       scoreInfluencedChoice:
         parsed.scoreInfluencedChoice === "yes" || parsed.scoreInfluencedChoice === "no"
           ? parsed.scoreInfluencedChoice
@@ -225,11 +390,6 @@ function findForecastWindow(snapshot: OpportunitySnapshot, siteId: string, start
 function forecastFields(window: OpportunityWindow | null) {
   if (!window) return {};
   return { opportunityWindowId: window.id };
-}
-
-function integerValue(value: string) {
-  const parsed = Number.parseInt(value, 10);
-  return Number.isFinite(parsed) && parsed >= 0 ? parsed : 0;
 }
 
 function parseStoredTrip(raw: string | null): StoredActiveTrip | null {
@@ -458,8 +618,17 @@ async function refreshSummary(
 
 function validatePhoto(file: File | null) {
   if (!file) return;
-  if (!ACCEPTED_PHOTO_TYPES.has(file.type)) throw new Error("Use a JPEG, PNG, or WebP photo.");
+  const filename = file.name.toLowerCase();
+  const extensionAccepted = filename.endsWith(".heic") || filename.endsWith(".heif");
+  if (!ACCEPTED_PHOTO_TYPES.has(file.type) && !extensionAccepted) throw new Error("Use a JPEG, PNG, WebP, HEIC, or HEIF photo.");
   if (file.size > MAX_PHOTO_BYTES) throw new Error("Photo must be 5 MB or smaller.");
+}
+
+function normalizePhotoFileType(file: File) {
+  if (file.type) return file;
+  const filename = file.name.toLowerCase();
+  const type = filename.endsWith(".heic") ? "image/heic" : filename.endsWith(".heif") ? "image/heif" : "";
+  return type ? new File([file], file.name, { type, lastModified: file.lastModified }) : file;
 }
 
 function appendCompletionFields(
@@ -475,8 +644,8 @@ function appendCompletionFields(
   if (!fields.completeAttempt) {
     throw new Error("Confirm that this report covers the whole fishing attempt.");
   }
-  if (!fields.mode) throw new Error("Choose the fishing mode used for the whole trip.");
-  if (fields.keeperCount > 25 || fields.shortReleasedCount > 25 || fields.keeperCount + fields.shortReleasedCount > 40) {
+  const counts = catchCountsFromRows(fields.catchRows);
+  if (counts.keeperCount > 25 || counts.shortReleasedCount > 25 || counts.keeperCount + counts.shortReleasedCount > 40) {
     throw new Error("Halibut counts must be 25 or fewer per field and 40 or fewer combined.");
   }
   validatePhoto(photo);
@@ -488,23 +657,23 @@ function appendCompletionFields(
     formData.set("startedAt", startedAt);
     formData.set("endedAt", endedAt);
   }
-  formData.set("keeperCount", String(fields.keeperCount));
-  formData.set("shortReleasedCount", String(fields.shortReleasedCount));
+  formData.set("keeperCount", String(counts.keeperCount));
+  formData.set("shortReleasedCount", String(counts.shortReleasedCount));
   formData.set("gearProfileId", fields.gearProfileId);
   formData.set("rod", fields.rod.trim());
   formData.set("reel", fields.reel.trim());
   formData.set("baitLure", fields.baitLure.trim());
   formData.set("rig", fields.rig.trim());
-  formData.set("otherCatchCount", String(fields.otherCatchCount));
-  formData.set("otherSpecies", fields.otherSpecies.trim());
+  formData.set("otherCatchCount", String(counts.otherCatchCount));
+  formData.set("otherSpecies", counts.otherSpecies);
   formData.set("shorebreak", fields.shorebreak);
   formData.set("wadingDepth", fields.wadingDepth);
   formData.set("waterClarity", fields.waterClarity);
   formData.set("crowding", fields.crowding);
   formData.set("fishabilityRating", fields.fishabilityRating);
   formData.set("observedWaveHeightFeet", fields.observedWaveHeightFeet);
-  formData.set("fishabilityNotes", fields.fishabilityNotes.trim());
-  formData.set("notes", fields.notes.trim());
+  formData.set("fishabilityNotes", "");
+  formData.set("notes", catchNotesFromRows(fields.catchRows));
   formData.set("consent", "true");
   formData.set("primaryTargetConfirmed", "true");
   formData.set("completeAttempt", "true");
@@ -528,6 +697,7 @@ export function TripReportFeature({
   forecastUnavailable,
   request,
   canSubmit,
+  previewOnly = false,
   onRequireLogin,
 }: TripReportFeatureProps) {
   const openerRef = useRef<HTMLElement | null>(null);
@@ -536,15 +706,20 @@ export function TripReportFeature({
   const restoredClientStateRef = useRef(false);
   const referralCodeRef = useRef<string | null>(null);
   const photoInputRef = useRef<HTMLInputElement>(null);
+  const photoAnalysisRequestRef = useRef(0);
   const [panel, setPanel] = useState<Panel | null>(null);
   const [activeTrip, setActiveTrip] = useState<StoredActiveTrip | null>(null);
   const [selectedWindow, setSelectedWindow] = useState<OpportunityWindow | null>(null);
   const [fields, setFields] = useState<FormFields>(() => freshFields());
   const [formStep, setFormStep] = useState<1 | 2>(1);
   const [gearProfiles, setGearProfiles] = useState<GearProfile[]>([]);
-  const [photo, setPhoto] = useState<File | null>(null);
-  const [rejectedPhoto, setRejectedPhoto] = useState<RejectedPhoto | null>(null);
+  const [photos, setPhotos] = useState<File[]>([]);
+  const [rejectedPhotos, setRejectedPhotos] = useState<RejectedPhoto[]>([]);
   const [photoTransferState, setPhotoTransferState] = useState<PhotoTransferState>("idle");
+  const [photoAnalysisState, setPhotoAnalysisState] = useState<PhotoAnalysisState>("idle");
+  const [photoAnalysis, setPhotoAnalysis] = useState<PhotoAnalysis | null>(null);
+  const [locationState, setLocationState] = useState<LocationState>("idle");
+  const [locationMessage, setLocationMessage] = useState("");
   const [submitState, setSubmitState] = useState<SubmitState>("idle");
   const [message, setMessage] = useState("");
   const [summary, setSummary] = useState<SummaryView | null>(null);
@@ -552,8 +727,10 @@ export function TripReportFeature({
   const networkState = useClientNetworkState();
 
   const siteMap = useMemo(() => new Map(sites.map((site) => [site.id, site])), [sites]);
-  const targetEncounters = fields.keeperCount + fields.shortReleasedCount;
-  const anyFishEncounters = targetEncounters + fields.otherCatchCount;
+  const photo = photos[0] ?? null;
+  const selectedCounts = catchCountsFromRows(fields.catchRows);
+  const targetEncounters = selectedCounts.keeperCount + selectedCounts.shortReleasedCount;
+  const anyFishEncounters = targetEncounters + selectedCounts.otherCatchCount;
   const currentStartWindow = panel === "start"
     ? findForecastWindow(snapshot, fields.siteId, new Date().toISOString())
     : null;
@@ -563,18 +740,32 @@ export function TripReportFeature({
     : submitState === "idle" && networkState === "restored"
       ? "This device reports that its connection is back. Nothing was resubmitted automatically; review any earlier status before trying again."
       : message;
+  const photoStorageEnabled = PHOTO_UPLOADS_ENABLED && canSubmit;
   const tripEntryDisabledTitle = forecastUnavailable
     ? "Forecast verification failed. Retry the forecast before logging a trip."
     : !forecastReady || sites.length === 0
       ? "Wait for the fishing-location catalog and forecast snapshot to load"
       : undefined;
+  const pastLocationAndTimeReady = Boolean(
+    fields.siteId &&
+    fields.startedAt &&
+    fields.endedAt &&
+    Number.isFinite(new Date(fields.startedAt).getTime()) &&
+    Number.isFinite(new Date(fields.endedAt).getTime()) &&
+    new Date(fields.endedAt) > new Date(fields.startedAt),
+  );
 
   const resetFeedback = useCallback(() => {
     setSubmitState("idle");
     setMessage("");
-    setPhoto(null);
-    setRejectedPhoto(null);
+    setPhotos([]);
+    setRejectedPhotos([]);
     setPhotoTransferState("idle");
+    setPhotoAnalysisState("idle");
+    setPhotoAnalysis(null);
+    photoAnalysisRequestRef.current += 1;
+    setLocationState("idle");
+    setLocationMessage("");
     if (photoInputRef.current) photoInputRef.current.value = "";
   }, []);
 
@@ -582,7 +773,7 @@ export function TripReportFeature({
     // Finishing a previously started trip must remain possible during a forecast outage.
     // Starting or backfilling a location-bound trip requires the verified catalog and snapshot.
     if (nextPanel !== "complete" && (!forecastReady || sites.length === 0)) return;
-    if (!canSubmit) {
+    if (!canSubmit && !previewOnly) {
       onRequireLogin();
       return;
     }
@@ -619,7 +810,11 @@ export function TripReportFeature({
       };
       setFields(parseFormDraft(window.localStorage.getItem(`${TRIP_DRAFT_PREFIX}start`), fallback));
     } else {
-      const fallback = freshFields(siteId ?? sites[0]?.id ?? "");
+      const fallback = {
+        ...freshFields(siteId ?? ""),
+        startedAt: "",
+        endedAt: "",
+      };
       setFields(parseFormDraft(window.localStorage.getItem(`${TRIP_DRAFT_PREFIX}past`), fallback));
     }
 
@@ -638,7 +833,7 @@ export function TripReportFeature({
       window.history.replaceState(null, "", `${url.pathname}${url.search}${url.hash}`);
     }
     setPanel(nextPanel);
-  }, [activeTrip, canSubmit, forecastReady, onRequireLogin, resetFeedback, sites]);
+  }, [activeTrip, canSubmit, forecastReady, onRequireLogin, previewOnly, resetFeedback, sites]);
 
   const closePanel = useCallback(() => {
     setPanel(null);
@@ -744,42 +939,132 @@ export function TripReportFeature({
     window.localStorage.setItem(`${TRIP_DRAFT_PREFIX}${suffix}`, JSON.stringify(fields));
   }, [activeTrip, fields, panel]);
 
-  const handlePhoto = (event: ChangeEvent<HTMLInputElement>) => {
-    const nextPhoto = event.target.files?.[0] ?? null;
-    if (!nextPhoto) {
-      setPhoto(null);
-      setRejectedPhoto(null);
-      setPhotoTransferState("idle");
-      return;
+  const handlePhotos = (event: ChangeEvent<HTMLInputElement>) => {
+    const selected = Array.from(event.target.files ?? []);
+    event.target.value = "";
+    if (!selected.length) return;
+    const accepted: File[] = [];
+    const rejected: RejectedPhoto[] = [];
+    for (const candidate of selected) {
+      try {
+        validatePhoto(candidate);
+        accepted.push(normalizePhotoFileType(candidate));
+      } catch (error) {
+        rejected.push({
+          name: candidate.name,
+          type: candidate.type,
+          size: candidate.size,
+          message: error instanceof Error ? error.message : "That photo cannot be used.",
+        });
+      }
     }
-    try {
-      validatePhoto(nextPhoto);
-      setPhoto(nextPhoto);
-      setRejectedPhoto(null);
-      setPhotoTransferState("selected");
-    } catch (error) {
-      setPhoto(null);
-      setRejectedPhoto({
-        name: nextPhoto.name,
-        type: nextPhoto.type,
-        size: nextPhoto.size,
-        message: error instanceof Error ? error.message : "That photo cannot be used.",
+    const availableSlots = Math.max(0, MAX_PHOTOS - photos.length);
+    if (accepted.length > availableSlots) {
+      rejected.push({
+        name: `${accepted.length - availableSlots} additional photo${accepted.length - availableSlots === 1 ? "" : "s"}`,
+        type: "",
+        size: 0,
+        message: `You can add up to ${MAX_PHOTOS} photos per trip.`,
       });
-      setPhotoTransferState("idle");
-      event.target.value = "";
+    }
+    setPhotos((current) => [...current, ...accepted.slice(0, availableSlots)]);
+    setRejectedPhotos(rejected);
+    if (accepted.length) {
+      setPhotoTransferState("selected");
+      setPhotoAnalysisState("idle");
+      setPhotoAnalysis(null);
+      photoAnalysisRequestRef.current += 1;
     }
   };
 
-  const removePhoto = () => {
-    setPhoto(null);
-    setRejectedPhoto(null);
+  const removePhoto = (index?: number) => {
+    if (typeof index === "number") {
+      setPhotos((current) => current.filter((_, candidateIndex) => candidateIndex !== index));
+    } else {
+      setPhotos([]);
+      setRejectedPhotos([]);
+    }
     setPhotoTransferState("idle");
+    setPhotoAnalysisState("idle");
+    setPhotoAnalysis(null);
+    photoAnalysisRequestRef.current += 1;
     if (photoInputRef.current) photoInputRef.current.value = "";
   };
 
-  const updateCount = (key: "anglerCount" | "keeperCount" | "shortReleasedCount" | "otherCatchCount", value: string) => {
-    const parsed = integerValue(value);
-    setFields((current) => ({ ...current, [key]: key === "anglerCount" ? Math.min(12, Math.max(1, parsed)) : parsed }));
+  const updateCatchRows = (catchRows: CatchRow[]) => {
+    const counts = catchCountsFromRows(catchRows);
+    const catchResult: CatchResult = counts.keeperCount > 0
+      ? "halibut-kept"
+      : counts.otherCatchCount > 0
+        ? "other-fish"
+        : "none";
+    setFields((current) => ({ ...current, catchRows, catchResult, ...counts }));
+  };
+
+  const analyzePhotos = async () => {
+    if (!photos.length) return;
+    const requestId = ++photoAnalysisRequestRef.current;
+    setPhotoAnalysisState("analyzing");
+    setPhotoAnalysis(null);
+    try {
+      const analyses: PhotoAnalysis[] = [];
+      for (const file of photos) {
+        const formData = new FormData();
+        formData.set("photo", file);
+        const response = await fetch("/api/trips/analyze-photo", { method: "POST", body: formData, headers: { Accept: "application/json" } });
+        const payload = await response.json().catch(() => ({})) as { analysis?: PhotoAnalysis; error?: { message?: string } };
+        if (!response.ok || !payload.analysis) {
+          if (requestId !== photoAnalysisRequestRef.current) return;
+          setPhotoAnalysisState(response.status === 401 || response.status === 503 ? "unavailable" : "error");
+          return;
+        }
+        analyses.push(payload.analysis);
+      }
+      if (requestId !== photoAnalysisRequestRef.current) return;
+      const confidenceRank = { low: 0, medium: 1, high: 2 } as const;
+      const merged = new Map<CatchSpecies, { species: CatchSpecies; count: number; confidence: "low" | "medium" | "high" }>();
+      for (const analysis of analyses) {
+        for (const entry of analysis.catches) {
+          const existing = merged.get(entry.species);
+          merged.set(entry.species, {
+            species: entry.species,
+            count: (existing?.count ?? 0) + entry.count,
+            confidence: existing && confidenceRank[existing.confidence] >= confidenceRank[entry.confidence]
+              ? existing.confidence
+              : entry.confidence,
+          });
+        }
+      }
+      const catches = [...merged.values()]
+        .filter((entry) => entry.species !== "no-fish" || entry.count === 0)
+        .sort((left, right) => right.count - left.count)
+        .slice(0, 8);
+      const analysis: PhotoAnalysis = {
+        model: analyses[0]?.model ?? "MiMo",
+        confidence: analyses.some((entry) => entry.confidence === "low")
+          ? "low"
+          : analyses.some((entry) => entry.confidence === "medium")
+            ? "medium"
+            : "high",
+        catches: catches.length ? catches : [{ species: "no-fish", count: 0, confidence: "low" }],
+        note: [...new Set(analyses.map((entry) => entry.note.trim()).filter(Boolean))].join(" ").slice(0, 240),
+      };
+      setPhotoAnalysis(analysis);
+      setPhotoAnalysisState("ready");
+      updateCatchRows(analysis.catches.map((entry) => newCatchRow(entry.species, String(entry.count))));
+    } catch {
+      if (requestId !== photoAnalysisRequestRef.current) return;
+      setPhotoAnalysisState("unavailable");
+    }
+  };
+
+  const updateTripConsent = (consent: boolean) => {
+    setFields((current) => ({
+      ...current,
+      consent,
+      primaryTargetConfirmed: consent,
+      completeAttempt: consent,
+    }));
   };
 
   const applyGearProfile = (profileId: string) => {
@@ -795,12 +1080,45 @@ export function TripReportFeature({
   };
 
   const updateSite = (siteId: string) => {
-    setFields((current) => ({ ...current, siteId }));
+    setFields((current) => ({ ...current, siteId, mode: modeForSite(siteMap.get(siteId)) }));
     if (selectedWindow && selectedWindow.siteId !== siteId) setSelectedWindow(null);
+  };
+
+  const requestCurrentLocation = () => {
+    if (!navigator.geolocation) {
+      setLocationState("unsupported");
+      setLocationMessage("Location is not available in this browser. Choose a catalog location instead.");
+      return;
+    }
+    setLocationState("locating");
+    setLocationMessage("Finding the closest catalog location…");
+    navigator.geolocation.getCurrentPosition(
+      ({ coords }) => {
+        const match = nearestSite(sites, coords.latitude, coords.longitude);
+        if (!match) {
+          setLocationState("denied");
+          setLocationMessage("No catalog locations are available yet. Choose one manually.");
+          return;
+        }
+        updateSite(match.site.id);
+        setLocationState("selected");
+        setLocationMessage(`Using ${match.site.name} · about ${match.miles < 0.1 ? "less than 0.1" : match.miles.toFixed(1)} mi away. Only the catalog location is saved.`);
+      },
+      () => {
+        setLocationState("denied");
+        setLocationMessage("Location permission was unavailable. Choose a catalog location instead.");
+      },
+      { enableHighAccuracy: false, maximumAge: 5 * 60_000, timeout: 10_000 },
+    );
   };
 
   const startTrip = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    if (previewOnly) {
+      setSubmitState("error");
+      setMessage("Preview only: sign in to submit a trip from the live app. No data was sent.");
+      return;
+    }
     if (!forecastReady || sites.length === 0) {
       setSubmitState("error");
       setMessage("The trip was not started because the location catalog or forecast snapshot is no longer verified.");
@@ -822,21 +1140,6 @@ export function TripReportFeature({
       setMessage("Confirm the collection and evaluation consent before starting.");
       return;
     }
-    if (!fields.primaryTargetConfirmed) {
-      setSubmitState("error");
-      setMessage("Confirm that California halibut is the primary target for this whole trip.");
-      return;
-    }
-    if (!fields.mode) {
-      setSubmitState("error");
-      setMessage("Choose the fishing mode you will use for this trip.");
-      return;
-    }
-    if (!fields.scoreInfluencedChoice) {
-      setSubmitState("error");
-      setMessage("Answer whether the CastingCompass score influenced this trip choice.");
-      return;
-    }
     setSubmitState("submitting");
     setMessage("Sending the trip start to the server. No trip is confirmed yet.");
     const slowNotice = window.setTimeout(() => {
@@ -856,7 +1159,7 @@ export function TripReportFeature({
           siteId: site.id,
           startedAt,
           anglerCount: fields.anglerCount,
-          mode: fields.mode,
+          mode: modeForSite(site),
           fishingMethod: fields.fishingMethod,
           method: fields.fishingMethod,
           gearProfileId: fields.gearProfileId,
@@ -864,8 +1167,8 @@ export function TripReportFeature({
           reel: fields.reel,
           baitLure: fields.baitLure,
           rig: fields.rig,
-          scoreInfluencedChoice: fields.scoreInfluencedChoice === "yes",
-          primaryTargetConfirmed: fields.primaryTargetConfirmed,
+          scoreInfluencedChoice: true,
+          primaryTargetConfirmed: true,
           reporterKey: anonymousReporterKey(),
           consent: fields.consent,
           website: "",
@@ -886,7 +1189,7 @@ export function TripReportFeature({
         siteName: site.name,
         startedAt: authoritativeStartedAt,
         anglerCount: fields.anglerCount,
-        mode: fields.mode,
+        mode: modeForSite(site),
         opportunityWindowId: forecastWindow?.id,
         opportunityScore: forecastWindow?.score,
         modelVersion: forecastWindow?.modelVersion ?? snapshot.modelVersion,
@@ -896,7 +1199,7 @@ export function TripReportFeature({
         reel: fields.reel,
         baitLure: fields.baitLure,
         rig: fields.rig,
-        scoreInfluencedChoice: fields.scoreInfluencedChoice === "yes",
+        scoreInfluencedChoice: true,
       };
       window.localStorage.setItem(ACTIVE_TRIP_KEY, JSON.stringify(stored));
       window.localStorage.removeItem(LEGACY_ACTIVE_TRIP_KEY);
@@ -924,9 +1227,19 @@ export function TripReportFeature({
   const completeTrip = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!activeTrip) return;
+    if (previewOnly) {
+      setSubmitState("error");
+      setMessage("Preview only: sign in to submit a trip from the live app. No data was sent.");
+      return;
+    }
     if (networkState === "offline") {
       setSubmitState("error");
       setMessage("This device appears offline. The report was not submitted and its draft remains on this device.");
+      return;
+    }
+    if (photo && !photoStorageEnabled) {
+      setSubmitState("error");
+      setMessage("MiMo reviewed the photo, but private photo storage is not enabled in this release. Remove the photo to save only the reviewed result.");
       return;
     }
     setSubmitState("submitting");
@@ -941,7 +1254,7 @@ export function TripReportFeature({
       formData.set("token", activeTrip.token);
       formData.set("reporterKey", anonymousReporterKey());
       formData.set("anglerCount", String(fields.anglerCount));
-      formData.set("mode", fields.mode);
+      formData.set("mode", activeTrip.mode || "shore");
       formData.set("fishingMethod", fields.fishingMethod);
       formData.set("method", fields.fishingMethod);
       if (photo) setPhotoTransferState("sending");
@@ -981,6 +1294,11 @@ export function TripReportFeature({
 
   const reportPastTrip = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    if (previewOnly) {
+      setSubmitState("error");
+      setMessage("Preview only: sign in to submit a trip from the live app. No data was sent.");
+      return;
+    }
     if (!forecastReady || sites.length === 0) {
       setSubmitState("error");
       setMessage("The report was not submitted because the location catalog or forecast snapshot is no longer verified.");
@@ -991,20 +1309,15 @@ export function TripReportFeature({
       setMessage("This device appears offline. The report was not submitted and its draft remains on this device.");
       return;
     }
+    if (photo && !photoStorageEnabled) {
+      setSubmitState("error");
+      setMessage("MiMo reviewed the photo, but private photo storage is not enabled in this release. Remove the photo to save only the reviewed result.");
+      return;
+    }
     const site = siteMap.get(fields.siteId);
     if (!site) {
       setSubmitState("error");
       setMessage("Choose a fishing location.");
-      return;
-    }
-    if (!fields.mode) {
-      setSubmitState("error");
-      setMessage("Choose the fishing mode used for this trip.");
-      return;
-    }
-    if (!fields.scoreInfluencedChoice) {
-      setSubmitState("error");
-      setMessage("Answer whether the CastingCompass score influenced this trip choice.");
       return;
     }
     setSubmitState("submitting");
@@ -1015,15 +1328,18 @@ export function TripReportFeature({
     try {
       const requestMaterial = secureTripRequestMaterial("past");
       const formData = new FormData();
-      appendCompletionFields(formData, fields, photo);
+      const reportFields = fields;
+      appendCompletionFields(formData, reportFields, photo);
       formData.set("clientTripId", requestMaterial.id);
       formData.set("requestToken", requestMaterial.token);
       formData.set("siteId", site.id);
       formData.set("anglerCount", String(fields.anglerCount));
-      formData.set("mode", fields.mode);
+      formData.set("mode", modeForSite(site));
       formData.set("fishingMethod", fields.fishingMethod);
       formData.set("method", fields.fishingMethod);
-      formData.set("scoreInfluencedChoice", String(fields.scoreInfluencedChoice === "yes"));
+      formData.set("scoreInfluencedChoice", "true");
+      const forecastWindow = findForecastWindow(snapshot, site.id, reportFields.startedAt, reportFields.endedAt);
+      if (forecastWindow) formData.set("opportunityWindowId", forecastWindow.id);
       formData.set("reporterKey", anonymousReporterKey());
       if (referralCodeRef.current) formData.set("referralCode", referralCodeRef.current);
       if (photo) setPhotoTransferState("sending");
@@ -1060,6 +1376,28 @@ export function TripReportFeature({
   };
 
   const openShareableReport = () => openPanel("past");
+
+  const continuePastStep = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!fields.siteId) {
+      setSubmitState("error");
+      setMessage("Choose a fishing location before opening results.");
+      return;
+    }
+    if (!fields.startedAt || !fields.endedAt || !Number.isFinite(new Date(fields.startedAt).getTime()) || !Number.isFinite(new Date(fields.endedAt).getTime())) {
+      setSubmitState("error");
+      setMessage("Choose when the trip started and ended before opening results.");
+      return;
+    }
+    if (new Date(fields.endedAt) <= new Date(fields.startedAt)) {
+      setSubmitState("error");
+      setMessage("End time must be after the start time.");
+      return;
+    }
+    setSubmitState("idle");
+    setMessage("");
+    setFormStep(2);
+  };
 
   return (
     <>
@@ -1149,57 +1487,17 @@ export function TripReportFeature({
                 <fieldset className="trip-write-fields" disabled={submitState === "submitting" || submitState === "ambiguous"}>
                 <header className="trip-form-heading">
                   <h2 id="trip-modal-title">Start fishing.</h2>
-                  <p>We save the chosen forecast now, then ask for the full result when you finish.</p>
+                  <p>Choose where you are. We record the exact start now and estimate the rest from time and location.</p>
                 </header>
-                <div className="trip-step-indicator"><span className={formStep === 1 ? "active" : ""}>1 · Trip</span><span className={formStep === 2 ? "active" : ""}>2 · Gear</span></div>
-                {formStep === 1 ? <div className="trip-field-grid">
-                  <SiteCombobox className="trip-field wide" sites={sites} value={fields.siteId} onChange={updateSite} />
-                  <div className="trip-field">
-                    <span>Start time</span>
-                    <strong>Starts when you tap Start trip</strong>
-                    <small>The server records the exact start; use Log a past trip for an earlier attempt.</small>
+                <TripStepTabs step={formStep} firstLabel="1 · Location" secondLabel="2 · Optional setup" secondDisabled={!fields.siteId} onStepChange={(nextStep) => setFormStep(nextStep)} />
+                {formStep === 1 ? <>
+                  <TripLocationFields sites={sites} siteId={fields.siteId} onSiteChange={updateSite} onUseCurrentLocation={requestCurrentLocation} locationState={locationState} locationMessage={locationMessage} />
+                  <div className="trip-privacy-note">
+                    <strong>Time is automatic</strong>
+                    <p>Tap Start trip when you begin. The server records the exact time; no extra timing survey is needed.</p>
                   </div>
-                  <label className="trip-field">
-                    <span>Anglers</span>
-                    <input type="number" min="1" max="12" inputMode="numeric" value={fields.anglerCount} onChange={(event) => updateCount("anglerCount", event.target.value)} required />
-                  </label>
-                  <label className="trip-field">
-                    <span>Fishing method</span>
-                    <select value={fields.fishingMethod} onChange={(event) => setFields((current) => ({ ...current, fishingMethod: event.target.value }))} required>
-                      <option value="bait">Bait</option>
-                      <option value="artificial-lure">Artificial lure</option>
-                      <option value="both">Bait + lure</option>
-                      <option value="other">Other</option>
-                    </select>
-                  </label>
-                  <label className="trip-field">
-                    <span>Fishing mode for the whole trip</span>
-                    <select value={fields.mode} onChange={(event) => setFields((current) => ({ ...current, mode: event.target.value }))} required>
-                      <option value="">Choose mode</option>
-                      <option value="shore">Shore</option>
-                      <option value="beach">Beach</option>
-                      <option value="pier">Pier</option>
-                      <option value="jetty">Jetty</option>
-                      <option value="kayak">Kayak</option>
-                      <option value="boat">Boat</option>
-                      <option value="other">Other</option>
-                    </select>
-                  </label>
-                  <label className="trip-field">
-                    <span>Did the score influence this trip?</span>
-                    <select value={fields.scoreInfluencedChoice} onChange={(event) => setFields((current) => ({ ...current, scoreInfluencedChoice: event.target.value as FormFields["scoreInfluencedChoice"] }))} required>
-                      <option value="">Choose an answer</option>
-                      <option value="yes">Yes</option>
-                      <option value="no">No — I had already chosen this trip</option>
-                    </select>
-                    <small>This answer is preserved, but it does not make a score-visible trip random or independent.</small>
-                  </label>
-                  <label className="consent-field wide">
-                    <input type="checkbox" checked={fields.primaryTargetConfirmed} onChange={(event) => setFields((current) => ({ ...current, primaryTargetConfirmed: event.target.checked }))} required />
-                    <span>I confirm California halibut is my primary target for this whole fishing attempt.</span>
-                  </label>
-                </div> : <>
-                <TripGearFields fields={fields} setFields={setFields} gearProfiles={gearProfiles} applyGearProfile={applyGearProfile} />
+                </> : <>
+                <TripGearFields fields={fields} gearProfiles={gearProfiles} applyGearProfile={applyGearProfile} />
                 {currentStartWindow ? (
                   <div className="captured-forecast">
                     <span>Forecast captured</span>
@@ -1209,17 +1507,16 @@ export function TripReportFeature({
                 ) : null}
                 <div className="trip-privacy-note">
                   <strong>What is stored</strong>
-                  <p>Curated site, time, forecast metadata, angler count, and your eventual outcome. No live GPS or social profile is collected. A random recovery key and unfinished-trip token stay in this browser for continuity.</p>
+                  <p>The selected catalog location, time, forecast metadata, and eventual outcome. If you use GPS, only the matched catalog location is saved; raw coordinates are discarded.</p>
                 </div>
                 <label className="consent-field">
-                  <input type="checkbox" checked={fields.consent} onChange={(event) => setFields((current) => ({ ...current, consent: event.target.checked }))} required />
-                  <span>I own anything I submit and consent to the private use described in the <Link href="/terms" target="_blank">Terms</Link> and <Link href="/privacy" target="_blank">Privacy Policy</Link>, including storage in a structured evaluation backlog. Organic score-visible trips are observational secondary or context only—not an active primary validation cohort.</span>
+                  <input type="checkbox" checked={fields.consent} onChange={(event) => updateTripConsent(event.target.checked)} required />
+                  <span>I confirm California halibut is my primary target, this is my whole fishing attempt, and I consent to the private use described in the <Link href="/terms" target="_blank">Terms</Link> and <Link href="/privacy" target="_blank">Privacy Policy</Link>.</span>
                 </label>
                 </>}
-                {formStep === 2 ? <button className="trip-back-button" type="button" onClick={() => setFormStep(1)}>← Back to trip details</button> : null}
                 </fieldset>
-                <button className="trip-submit" type="submit" disabled={submitState === "submitting" || Boolean(activeTrip) || (formStep === 2 && networkState === "offline")}>
-                  {activeTrip ? "Finish the active trip first" : submitState === "ambiguous" ? "Retry start safely" : formStep === 1 ? "Continue to gear" : submitState === "submitting" ? "Starting…" : networkState === "offline" ? "Reconnect to start trip" : "Start trip"}
+                <button className="trip-submit" type="submit" disabled={submitState === "submitting" || Boolean(activeTrip) || (formStep === 1 && !fields.siteId) || (formStep === 2 && networkState === "offline")}>
+                  {activeTrip ? "Finish the active trip first" : submitState === "ambiguous" ? "Retry start safely" : formStep === 1 ? "Continue to optional setup" : submitState === "submitting" ? "Starting…" : networkState === "offline" ? "Reconnect to start trip" : "Start trip"}
                   {!activeTrip && submitState !== "submitting" ? <ArrowIcon /> : null}
                 </button>
                 <TripFormStatus state={displayedSubmitState} message={displayedSubmitMessage} />
@@ -1231,23 +1528,12 @@ export function TripReportFeature({
                 <fieldset className="trip-write-fields" disabled={submitState === "submitting" || submitState === "ambiguous"}>
                 <header className="trip-form-heading">
                   <h2 id="trip-modal-title">Finish the trip.</h2>
-                  <p>{activeTrip.siteName} · Finish time is recorded when you submit. California halibut is the fixed target. Zero in every fish-count field records a no-fish trip.</p>
+                  <p>{activeTrip.siteName} · Take a fish photo, choose the simple result, and finish. The server records the finish time and estimates effort.</p>
                 </header>
-                <label className="trip-field wide">
-                  <span>Fishing mode for the whole trip</span>
-                  <select value={fields.mode} onChange={(event) => setFields((current) => ({ ...current, mode: event.target.value }))} required>
-                    <option value="shore">Shore</option>
-                    <option value="beach">Beach</option>
-                    <option value="pier">Pier</option>
-                    <option value="jetty">Jetty</option>
-                    <option value="kayak">Kayak</option>
-                    <option value="boat">Boat</option>
-                    <option value="other">Other</option>
-                  </select>
-                  <small>If the mode changed after you started, choose the mode that best describes the whole attempt. The report will stay useful as context.</small>
-                </label>
-                <TripGearFields fields={fields} setFields={setFields} gearProfiles={gearProfiles} applyGearProfile={applyGearProfile} includeObservations />
-                <TripCompletionFields fields={fields} setFields={setFields} updateCount={updateCount} photo={photo} rejectedPhoto={rejectedPhoto} photoTransferState={photoTransferState} photoInputRef={photoInputRef} onPhoto={handlePhoto} onRemovePhoto={removePhoto} canUploadPhoto={canSubmit} hideTimes />
+                <TripPhotoField photos={photos} rejectedPhotos={rejectedPhotos} transferState={photoTransferState} analysisState={photoAnalysisState} analysis={photoAnalysis} storageEnabled={photoStorageEnabled} inputRef={photoInputRef} onPhotos={handlePhotos} onAnalyze={analyzePhotos} onRemove={removePhoto} />
+                {/* The old invocation was <TripCompletionFields fields={fields} setFields={setFields} onCatchResult={updateCatchResult} hideTimes />; rows now replace the single quick-result control. */}
+                <TripCompletionFields catchRows={fields.catchRows} onCatchRows={updateCatchRows} fields={fields} setFields={setFields} hideTimes />
+                <TripGearFields fields={fields} gearProfiles={gearProfiles} applyGearProfile={applyGearProfile} />
                 </fieldset>
                 <button className="trip-submit" type="submit" disabled={submitState === "submitting" || submitState === "success" || networkState === "offline"}>
                   {submitState === "submitting"
@@ -1262,7 +1548,7 @@ export function TripReportFeature({
                         ? "Record no-fish trip"
                         : targetEncounters > 0
                           ? `Record ${targetEncounters} halibut`
-                          : `Record ${fields.otherCatchCount} non-target fish`}
+                          : `Record ${selectedCounts.otherCatchCount} non-target fish`}
                   {submitState === "idle" || submitState === "error" || submitState === "ambiguous" ? <ArrowIcon /> : null}
                 </button>
                 <TripFormStatus state={displayedSubmitState} message={displayedSubmitMessage} />
@@ -1278,73 +1564,50 @@ export function TripReportFeature({
             ) : null}
 
             {panel === "past" ? (
-              <form onSubmit={formStep === 1 ? (event) => { event.preventDefault(); setFormStep(2); } : reportPastTrip}>
+              <form onSubmit={formStep === 1 ? continuePastStep : reportPastTrip}>
                 <fieldset className="trip-write-fields" disabled={submitState === "submitting" || submitState === "ambiguous"}>
                 <header className="trip-form-heading">
                   <h2 id="trip-modal-title">Log a past trip.</h2>
-                  <p>Complete past results—including zero fish—provide exploratory context. They cannot enter prospective primary evidence.</p>
+                  <p>Start with a fish photo. We use it to suggest the catch, then estimate conditions from the date, time, and location.</p>
                 </header>
-                <div className="trip-step-indicator"><span className={formStep === 1 ? "active" : ""}>1 · Trip</span><span className={formStep === 2 ? "active" : ""}>2 · Gear + result</span></div>
-                {formStep === 1 ? <div className="trip-field-grid">
-                  <SiteCombobox className="trip-field wide" sites={sites} value={fields.siteId} onChange={updateSite} />
+                <TripStepTabs step={formStep} firstLabel="1 · Photo + location" secondLabel="2 · Result" secondDisabled={!pastLocationAndTimeReady} onStepChange={(nextStep) => {
+                  if (nextStep === 2 && !pastLocationAndTimeReady) {
+                    setSubmitState("error");
+                    setMessage("Choose a fishing location and valid start and end times before opening results.");
+                    return;
+                  }
+                  setSubmitState("idle");
+                  setMessage("");
+                  setFormStep(nextStep);
+                }} />
+                {formStep === 1 ? <>
+                  <TripPhotoField photos={photos} rejectedPhotos={rejectedPhotos} transferState={photoTransferState} analysisState={photoAnalysisState} analysis={photoAnalysis} storageEnabled={photoStorageEnabled} inputRef={photoInputRef} onPhotos={handlePhotos} onAnalyze={analyzePhotos} onRemove={removePhoto} />
+                  <TripLocationFields sites={sites} siteId={fields.siteId} onSiteChange={updateSite} onUseCurrentLocation={requestCurrentLocation} locationState={locationState} locationMessage={locationMessage} />
+                  <div className="trip-field-grid">
                   <label className="trip-field">
                     <span>Start</span>
                     <input type="datetime-local" value={fields.startedAt} onChange={(event) => setFields((current) => ({ ...current, startedAt: event.target.value }))} required />
                   </label>
                   <label className="trip-field">
-                    <span>Finish</span>
+                    <span>End</span>
                     <input type="datetime-local" value={fields.endedAt} onChange={(event) => setFields((current) => ({ ...current, endedAt: event.target.value }))} required />
                   </label>
-                  <label className="trip-field">
-                    <span>Anglers</span>
-                    <input type="number" min="1" max="12" inputMode="numeric" value={fields.anglerCount} onChange={(event) => updateCount("anglerCount", event.target.value)} required />
-                  </label>
-                  <label className="trip-field">
-                    <span>Fishing method</span>
-                    <select value={fields.fishingMethod} onChange={(event) => setFields((current) => ({ ...current, fishingMethod: event.target.value }))} required>
-                      <option value="bait">Bait</option>
-                      <option value="artificial-lure">Artificial lure</option>
-                      <option value="both">Bait + lure</option>
-                      <option value="other">Other</option>
-                    </select>
-                  </label>
-                  <label className="trip-field">
-                    <span>Fishing mode for the whole trip</span>
-                    <select value={fields.mode} onChange={(event) => setFields((current) => ({ ...current, mode: event.target.value }))} required>
-                      <option value="">Choose mode</option>
-                      <option value="shore">Shore</option>
-                      <option value="beach">Beach</option>
-                      <option value="pier">Pier</option>
-                      <option value="jetty">Jetty</option>
-                      <option value="kayak">Kayak</option>
-                      <option value="boat">Boat</option>
-                      <option value="other">Other</option>
-                    </select>
-                  </label>
-                  <label className="trip-field">
-                    <span>Did the score influence this trip?</span>
-                    <select value={fields.scoreInfluencedChoice} onChange={(event) => setFields((current) => ({ ...current, scoreInfluencedChoice: event.target.value as FormFields["scoreInfluencedChoice"] }))} required>
-                      <option value="">Choose an answer</option>
-                      <option value="yes">Yes</option>
-                      <option value="no">No — I had already chosen this trip</option>
-                    </select>
-                    <small>This self-report does not make a past trip random, independent, or prospective.</small>
-                  </label>
-                </div> : <>
-                <TripGearFields fields={fields} setFields={setFields} gearProfiles={gearProfiles} applyGearProfile={applyGearProfile} includeObservations />
-                <TripCompletionFields fields={fields} setFields={setFields} updateCount={updateCount} photo={photo} rejectedPhoto={rejectedPhoto} photoTransferState={photoTransferState} photoInputRef={photoInputRef} onPhoto={handlePhoto} onRemovePhoto={removePhoto} canUploadPhoto={canSubmit} hideTimes />
+                  </div>
+                  <div className="trip-privacy-note"><strong>Conditions are automatic</strong><p>We estimate opportunity and conditions from this time and catalog location. No extra survey questions.</p></div>
+                </> : <>
+                <TripCompletionFields catchRows={fields.catchRows} onCatchRows={updateCatchRows} fields={fields} setFields={setFields} hideTimes />
+                <TripGearFields fields={fields} gearProfiles={gearProfiles} applyGearProfile={applyGearProfile} />
                 </>}
-                {formStep === 2 ? <button className="trip-back-button" type="button" onClick={() => setFormStep(1)}>← Back to trip details</button> : null}
                 </fieldset>
-                <button className="trip-submit" type="submit" disabled={submitState === "submitting" || submitState === "success" || (formStep === 2 && networkState === "offline")}>
-                  {submitState === "ambiguous" ? "Retry safely" : formStep === 1 ? "Continue to gear + result" : submitState === "submitting" ? "Saving…" : networkState === "offline" ? "Reconnect to save report" : submitState === "success" ? "Report saved" : anyFishEncounters === 0 ? "Record no-fish trip" : "Submit trip report"}
+                <button className="trip-submit" type="submit" disabled={submitState === "submitting" || submitState === "success" || (formStep === 1 && !pastLocationAndTimeReady) || (formStep === 2 && networkState === "offline")}>
+                  {submitState === "ambiguous" ? "Retry safely" : formStep === 1 ? "Continue to result" : submitState === "submitting" ? "Saving…" : networkState === "offline" ? "Reconnect to save report" : submitState === "success" ? "Report saved" : anyFishEncounters === 0 ? "Record no-fish trip" : "Submit trip report"}
                   {submitState === "idle" || submitState === "error" || submitState === "ambiguous" ? <ArrowIcon /> : null}
                 </button>
                 <TripFormStatus state={displayedSubmitState} message={displayedSubmitMessage} />
               </form>
             ) : null}
 
-            <p className="trip-beta-note">Beta · trip data is saved immediately. Automated review may prepare a private draft, but no discussion summary is posted automatically; human approval is required.</p>
+            <p className="trip-beta-note">Beta · trip data is saved immediately. Automated review may prepare a private draft, but no discussion summary is posted automatically; human approval is required. A separate validation protocol decides whether a report can become model evidence; trip reports do not change the current score.</p>
             <p className="trip-draft-note">Draft saved on this device as you type.</p>
           </section>
         </div>
@@ -1354,140 +1617,139 @@ export function TripReportFeature({
 }
 
 interface TripCompletionFieldsProps {
+  catchRows: CatchRow[];
+  onCatchRows: (rows: CatchRow[]) => void;
   fields: FormFields;
   setFields: (updater: (current: FormFields) => FormFields) => void;
-  updateCount: (key: "anglerCount" | "keeperCount" | "shortReleasedCount" | "otherCatchCount", value: string) => void;
-  photo: File | null;
-  rejectedPhoto: RejectedPhoto | null;
-  photoTransferState: PhotoTransferState;
-  photoInputRef: React.RefObject<HTMLInputElement | null>;
-  onPhoto: (event: ChangeEvent<HTMLInputElement>) => void;
-  onRemovePhoto: () => void;
-  canUploadPhoto: boolean;
   hideTimes?: boolean;
+}
+
+function TripStepTabs({
+  step,
+  firstLabel,
+  secondLabel,
+  secondDisabled,
+  onStepChange,
+}: {
+  step: 1 | 2;
+  firstLabel: string;
+  secondLabel: string;
+  secondDisabled: boolean;
+  onStepChange(nextStep: 1 | 2): void;
+}) {
+  return (
+    <div className="trip-step-indicator" role="tablist" aria-label="Trip report sections">
+      <button type="button" role="tab" aria-selected={step === 1} className={step === 1 ? "active" : ""} onClick={() => onStepChange(1)}>{firstLabel}</button>
+      <button type="button" role="tab" aria-selected={step === 2} className={step === 2 ? "active" : ""} disabled={secondDisabled} onClick={() => onStepChange(2)}>{secondLabel}</button>
+    </div>
+  );
+}
+
+function TripLocationFields({
+  sites,
+  siteId,
+  onSiteChange,
+  onUseCurrentLocation,
+  locationState,
+  locationMessage,
+}: {
+  sites: FishingSite[];
+  siteId: string;
+  onSiteChange(siteId: string): void;
+  onUseCurrentLocation(): void;
+  locationState: LocationState;
+  locationMessage: string;
+}) {
+  return (
+    <section className="trip-location-fields" aria-label="Trip location">
+      <SiteCombobox className="trip-field wide" sites={sites} value={siteId} onChange={onSiteChange} />
+      <div className="trip-location-actions">
+        <button className="trip-location-button" type="button" onClick={onUseCurrentLocation} disabled={locationState === "locating"}>
+          {locationState === "locating" ? "Finding location…" : "Use my current location"}
+        </button>
+        <small>GPS is used once to choose the closest catalog location; raw coordinates are never submitted.</small>
+      </div>
+      {locationMessage ? <p className={`trip-location-status trip-location-status-${locationState}`} role={locationState === "denied" || locationState === "unsupported" ? "status" : undefined}>{locationMessage}</p> : null}
+    </section>
+  );
 }
 
 function TripGearFields({
   fields,
-  setFields,
   gearProfiles,
   applyGearProfile,
-  includeObservations = false,
 }: {
   fields: FormFields;
-  setFields: (updater: (current: FormFields) => FormFields) => void;
   gearProfiles: GearProfile[];
   applyGearProfile(profileId: string): void;
-  includeObservations?: boolean;
 }) {
   return (
     <section className="trip-gear-section">
-      <div className="trip-subsection-heading"><strong>What did you fish?</strong><span>Optional, but useful for comparing methods fairly.</span></div>
-      {gearProfiles.length ? (
-        <label className="trip-field wide"><span>Saved gear preset</span>
-          <select value={fields.gearProfileId} onChange={(event) => applyGearProfile(event.target.value)}>
-            <option value="">Enter gear manually</option>
-            {gearProfiles.map((profile) => <option key={profile.id} value={profile.id}>{profile.name}</option>)}
-          </select>
-        </label>
-      ) : null}
-      <GearCatalogFields
-        values={{ rod: fields.rod, reel: fields.reel, baitLure: fields.baitLure, rig: fields.rig }}
-        onChange={(gear) => setFields((current) => ({ ...current, ...gear, gearProfileId: "" }))}
-      />
-      {includeObservations ? <>
-        <div className="trip-subsection-heading"><strong>Could you fish it effectively?</strong><span>Observed conditions help separate fish presence from practical fishability.</span></div>
-        <div className="trip-field-grid">
-          <label className="trip-field"><span>Shorebreak</span><select value={fields.shorebreak} onChange={(event) => setFields((current) => ({ ...current, shorebreak: event.target.value }))}><option value="">Not noted</option><option value="calm">Calm</option><option value="manageable">Manageable</option><option value="difficult">Difficult</option><option value="unfishable">Unfishable</option></select></label>
-          <label className="trip-field"><span>Water reached</span><select value={fields.wadingDepth} onChange={(event) => setFields((current) => ({ ...current, wadingDepth: event.target.value }))}><option value="">Not noted</option><option value="ankle">Ankle</option><option value="knee">Knee</option><option value="thigh">Thigh</option><option value="waist-plus">Waist or higher</option><option value="did-not-wade">Did not wade</option></select></label>
-          <label className="trip-field"><span>Water clarity</span><select value={fields.waterClarity} onChange={(event) => setFields((current) => ({ ...current, waterClarity: event.target.value }))}><option value="">Not noted</option><option value="clear">Clear</option><option value="light-stain">Light stain</option><option value="murky">Murky</option><option value="muddy">Muddy</option></select></label>
-          <label className="trip-field"><span>Crowding</span><select value={fields.crowding} onChange={(event) => setFields((current) => ({ ...current, crowding: event.target.value }))}><option value="">Not noted</option><option value="empty">Empty</option><option value="light">Light</option><option value="moderate">Moderate</option><option value="packed">Packed</option></select></label>
-          <label className="trip-field"><span>Overall fishability</span><select value={fields.fishabilityRating} onChange={(event) => setFields((current) => ({ ...current, fishabilityRating: event.target.value }))}><option value="">Not rated</option><option value="5">5 · Excellent</option><option value="4">4 · Good</option><option value="3">3 · Workable</option><option value="2">2 · Difficult</option><option value="1">1 · Unfishable</option></select></label>
-          <label className="trip-field"><span>Observed waves, ft <em>optional</em></span><input type="number" min="0" max="30" step="0.5" value={fields.observedWaveHeightFeet} onChange={(event) => setFields((current) => ({ ...current, observedWaveHeightFeet: event.target.value }))} /></label>
-        </div>
-        <label className="trip-field wide"><span>Fishability notes <em>optional</em></span><textarea maxLength={500} rows={3} value={fields.fishabilityNotes} onChange={(event) => setFields((current) => ({ ...current, fishabilityNotes: event.target.value }))} placeholder="Steep beach, heavy shorebreak, weeds, snags, room to cast…" /></label>
-      </> : null}
+      <div className="trip-subsection-heading"><strong>Gear + bait</strong><span>Optional. Set it up once in your profile instead of filling this out every trip.</span></div>
+      <label className="trip-field wide"><span>Saved gear preset <em>optional</em></span>
+        <select value={fields.gearProfileId} onChange={(event) => applyGearProfile(event.target.value)}>
+          <option value="">No preset selected</option>
+          {gearProfiles.map((profile) => <option key={profile.id} value={profile.id}>{profile.name}</option>)}
+        </select>
+      </label>
+      <Link className="trip-profile-link" href="/profile#gear">NOT HERE? CLICK HERE TO ADD A PRESET <ArrowIcon /></Link>
+      <small className="gear-catalog-note">The selected preset supplies your method, bait, and setup. There are no gear text boxes in the trip flow.</small>
     </section>
   );
 }
 
 function TripCompletionFields({
+  catchRows,
+  onCatchRows,
   fields,
   setFields,
-  updateCount,
-  photo,
-  rejectedPhoto,
-  photoTransferState,
-  photoInputRef,
-  onPhoto,
-  onRemovePhoto,
-  canUploadPhoto,
   hideTimes = false,
 }: TripCompletionFieldsProps) {
+  void hideTimes;
   return (
     <>
-      {!hideTimes ? (
-        <div className="trip-field-grid">
-          <label className="trip-field">
-            <span>Finish time</span>
-            <input type="datetime-local" value={fields.endedAt} onChange={(event) => setFields((current) => ({ ...current, endedAt: event.target.value }))} required />
-          </label>
-        </div>
-      ) : null}
       <fieldset className="catch-fieldset">
-        <legend>California halibut result</legend>
-        <p>California halibut is the fixed observation target. Leave both at zero when none were encountered.</p>
-        <div>
-          <label className="trip-field count-field">
-            <span>Kept</span>
-            <input type="number" min="0" max="25" inputMode="numeric" value={fields.keeperCount} onChange={(event) => updateCount("keeperCount", event.target.value)} required />
-          </label>
-          <label className="trip-field count-field">
-            <span>Short / released</span>
-            <input type="number" min="0" max="25" inputMode="numeric" value={fields.shortReleasedCount} onChange={(event) => updateCount("shortReleasedCount", event.target.value)} required />
-          </label>
+        <legend>Catch results · What happened?</legend>
+        <p>Review the camera estimate. The camera is the path to future fish identification; adjust the count or species before saving. Add another row for a mixed catch.</p>
+        <div className="catch-result-rows" aria-label="Catch results">
+          {catchRows.map((row, index) => (
+            <div className="catch-result-row" key={row.id}>
+              <label className="trip-field"><span>{index === 0 ? "Number caught" : `Catch ${index + 1}`}</span>
+                <input
+                  type="number"
+                  min="0"
+                  max="100"
+                  inputMode="numeric"
+                  value={row.count}
+                  onChange={(event) => onCatchRows(catchRows.map((candidate) => candidate.id === row.id ? { ...candidate, count: event.target.value.replace(/[^0-9]/g, "").slice(0, 3) } : candidate))}
+                />
+              </label>
+              <label className="trip-field"><span>Species</span>
+                <select value={row.species} onChange={(event) => onCatchRows(catchRows.map((candidate) => candidate.id === row.id ? { ...candidate, species: event.target.value as CatchSpecies } : candidate))}>
+                  {CATCH_SPECIES_OPTIONS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+                </select>
+              </label>
+              <label className="trip-field catch-result-notes"><span>Notes <em>optional</em></span>
+                <input
+                  type="text"
+                  maxLength={240}
+                  placeholder="Length / weight"
+                  value={row.notes}
+                  onChange={(event) => onCatchRows(catchRows.map((candidate) => candidate.id === row.id ? { ...candidate, notes: event.target.value.slice(0, 240) } : candidate))}
+                />
+              </label>
+              {catchRows.length > 1 ? <button className="catch-result-remove" type="button" onClick={() => onCatchRows(catchRows.filter((candidate) => candidate.id !== row.id))} aria-label={`Remove catch ${index + 1}`}>Remove</button> : null}
+            </div>
+          ))}
         </div>
-        <small className="regulation-reminder">
-          Only count a kept fish if it was legal. California halibut must be at least 22 inches total length;
-          always confirm the <a href="https://wildlife.ca.gov/Fishing/Ocean/Regulations/Fishing-Map/San-Francisco" target="_blank" rel="noreferrer">current CDFW regulations ↗</a>.
-        </small>
+        {catchRows.length < 12 ? <button className="catch-result-add" type="button" onClick={() => onCatchRows([...catchRows, newCatchRow("california-halibut", "1")])}>+ Add another catch</button> : null}
       </fieldset>
-      <fieldset className="catch-fieldset">
-        <legend>Other catch</legend>
-        <p>Non-halibut catch helps distinguish no fish from a target-specific miss. The count is stored as unresolved non-target fish; an optional species label remains an unverified angler report.</p>
-        <div>
-          <label className="trip-field count-field"><span>Other fish</span><input type="number" min="0" max="100" inputMode="numeric" value={fields.otherCatchCount} onChange={(event) => updateCount("otherCatchCount", event.target.value)} /></label>
-          <label className="trip-field"><span>Species <em>optional</em></span><input maxLength={200} value={fields.otherSpecies} onChange={(event) => setFields((current) => ({ ...current, otherSpecies: event.target.value }))} placeholder="Surf smelt, striped bass…" /></label>
-        </div>
-      </fieldset>
-      <label className="trip-field wide">
-        <span>Notes <em>optional</em></span>
-        <textarea maxLength={1000} rows={4} value={fields.notes} onChange={(event) => setFields((current) => ({ ...current, notes: event.target.value }))} placeholder="Conditions, technique, approximate size, or anything that affected the trip…" />
-        <small>{fields.notes.length}/1000</small>
-        <small>Do not include names, contact details, precise locations, access codes, or other private information.</small>
-        <small className="discussion-publish-notice">Automated review may prepare a shortened discussion draft. It is not posted automatically and must be approved by a human moderator before it can appear publicly.</small>
-      </label>
-      {PHOTO_UPLOADS_ENABLED && canUploadPhoto ? (
-        <TripPhotoField
-          photo={photo}
-          rejectedPhoto={rejectedPhoto}
-          transferState={photoTransferState}
-          inputRef={photoInputRef}
-          onPhoto={onPhoto}
-          onRemove={onRemovePhoto}
-        />
-      ) : null}
       <label className="consent-field">
-        <input type="checkbox" checked={fields.primaryTargetConfirmed} onChange={(event) => setFields((current) => ({ ...current, primaryTargetConfirmed: event.target.checked }))} required />
-        <span>I confirm California halibut was the primary target for this whole fishing attempt.</span>
-      </label>
-      <label className="consent-field">
-        <input type="checkbox" checked={fields.completeAttempt} onChange={(event) => setFields((current) => ({ ...current, completeAttempt: event.target.checked }))} required />
-        <span>I confirm this report covers the whole attempt, including all zero-catch time—not just the best part.</span>
-      </label>
-      <label className="consent-field">
-        <input type="checkbox" checked={fields.consent} onChange={(event) => setFields((current) => ({ ...current, consent: event.target.checked }))} required />
-        <span>I own anything I submit and consent to the uses described in the <Link href="/terms" target="_blank">Terms</Link> and <Link href="/privacy" target="_blank">Privacy Policy</Link>, including structured evaluation and preparation of a possible public summary. Model use requires separate protocol activation, and a summary cannot appear unless a human moderator approves it.</span>
+        <input type="checkbox" checked={fields.consent} onChange={(event) => {
+          const consent = event.target.checked;
+          setFields((current) => ({ ...current, consent, primaryTargetConfirmed: consent, completeAttempt: consent }));
+        }} required />
+        <span>I confirm this covers the whole fishing attempt and I consent to the private uses described in the <Link href="/terms" target="_blank">Terms</Link> and <Link href="/privacy" target="_blank">Privacy Policy</Link>.</span>
       </label>
     </>
   );
@@ -1503,48 +1765,57 @@ function photoTypeLabel(type: string) {
   if (type === "image/jpeg") return "JPEG";
   if (type === "image/png") return "PNG";
   if (type === "image/webp") return "WebP";
+  if (type === "image/heic" || type === "image/heic-sequence") return "HEIC";
+  if (type === "image/heif" || type === "image/heif-sequence") return "HEIF";
   return type || "Unknown type";
 }
 
 function TripPhotoField({
-  photo,
-  rejectedPhoto,
+  photos,
+  rejectedPhotos,
   transferState,
+  analysisState,
+  analysis,
+  storageEnabled,
   inputRef,
-  onPhoto,
+  onPhotos,
+  onAnalyze,
   onRemove,
 }: {
-  photo: File | null;
-  rejectedPhoto: RejectedPhoto | null;
+  photos: File[];
+  rejectedPhotos: RejectedPhoto[];
   transferState: PhotoTransferState;
+  analysisState: PhotoAnalysisState;
+  analysis: PhotoAnalysis | null;
+  storageEnabled: boolean;
   inputRef: React.RefObject<HTMLInputElement | null>;
-  onPhoto: (event: ChangeEvent<HTMLInputElement>) => void;
-  onRemove: () => void;
+  onPhotos: (event: ChangeEvent<HTMLInputElement>) => void;
+  onAnalyze(): void;
+  onRemove(index?: number): void;
 }) {
-  const [preview, setPreview] = useState<{ file: File; url: string } | null>(null);
+  const [previews, setPreviews] = useState<Array<{ file: File; url: string }>>([]);
 
   useEffect(() => {
-    if (!photo) return;
-    const reader = new FileReader();
-    const handleLoad = () => {
-      if (typeof reader.result === "string") setPreview({ file: photo, url: reader.result });
-    };
-    reader.addEventListener("load", handleLoad);
-    reader.readAsDataURL(photo);
+    let cancelled = false;
+    const readers = photos.map((file) => new Promise<{ file: File; url: string } | null>((resolve) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(typeof reader.result === "string" ? { file, url: reader.result } : null);
+      reader.onerror = () => resolve(null);
+      reader.readAsDataURL(file);
+    }));
+    void Promise.all(readers).then((next) => {
+      if (!cancelled) setPreviews(next.filter((value): value is { file: File; url: string } => Boolean(value)));
+    });
     return () => {
-      reader.removeEventListener("load", handleLoad);
-      if (reader.readyState === FileReader.LOADING) reader.abort();
+      cancelled = true;
     };
-  }, [photo]);
+  }, [photos]);
 
-  const previewUrl = preview?.file === photo ? preview.url : null;
-
-  const displayedFile = photo ?? rejectedPhoto;
-  const state = rejectedPhoto ? "invalid" : transferState;
-  const statusCopy = rejectedPhoto
-    ? rejectedPhoto.message
+  const state = rejectedPhotos.length && !photos.length ? "invalid" : transferState;
+  const statusCopy = rejectedPhotos.length && !photos.length
+    ? rejectedPhotos[0].message
     : transferState === "selected"
-      ? "Browser checks passed. Selected only—nothing has uploaded yet."
+      ? `${photos.length} photo${photos.length === 1 ? "" : "s"} selected. Nothing has uploaded yet.`
       : transferState === "sending"
         ? "Sending with the trip report. No attachment is confirmed yet."
         : transferState === "confirmed"
@@ -1553,37 +1824,51 @@ function TripPhotoField({
             ? "Not confirmed. Correct any report error, then retry the whole report explicitly."
             : transferState === "ambiguous"
               ? "Outcome unknown. Keep this file selected and use the same safe report retry."
-              : "Choose one private verification photo. Nothing uploads until the report is submitted.";
-  const removable = state === "selected" || state === "failed" || state === "invalid";
+      : storageEnabled
+        ? "Choose photos, confirm the selection, and MiMo will suggest the species and count before you submit."
+        : "Choose photos, confirm the selection, and MiMo will suggest the species and count. Private storage is currently off.";
 
   return (
     <section className={`photo-field photo-field-${state}`} aria-labelledby="trip-photo-label">
       <div className="photo-field-heading">
-        <span id="trip-photo-label">Verification photo <em>optional</em></span>
+        <span id="trip-photo-label">Fish photo for MiMo review <em>recommended</em></span>
         <small aria-live="polite">{statusCopy}</small>
       </div>
-      {!displayedFile ? (
+      {!photos.length ? (
         <label className="photo-picker">
-          <input ref={inputRef} type="file" accept="image/jpeg,image/png,image/webp" onChange={onPhoto} />
-          <strong>Choose a photo</strong>
-          <small>One JPEG, PNG, or WebP · 5 MB max</small>
+          <input ref={inputRef} type="file" accept={PHOTO_ACCEPT} multiple capture="environment" onChange={onPhotos} />
+          <strong>Take or add fish photos</strong>
+          <small>Confirm the selection before MiMo scans it · JPEG, PNG, WebP, HEIC, or HEIF · up to {MAX_PHOTOS} photos · 5 MB each</small>
         </label>
       ) : (
-        <div className="photo-file-card" data-state={state}>
-          {previewUrl && photo ? (
-            // A local data URL is deliberately not routed through the image optimizer or a provider.
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={previewUrl} alt="Selected verification photo preview" />
-          ) : <span className="photo-file-placeholder" aria-hidden="true">IMG</span>}
-          <div>
-            <strong>{displayedFile.name}</strong>
-            <span>{photoTypeLabel(displayedFile.type)} · {formatPhotoSize(displayedFile.size)}</span>
-            <small>{statusCopy}</small>
+        <>
+          <div className="photo-file-list">
+            {photos.map((file, index) => {
+              const preview = previews.find((candidate) => candidate.file === file);
+              return <div className="photo-file-card" data-state={state} key={`${file.name}-${file.lastModified}-${file.size}-${file.type}`}>
+                {preview ? (
+                  // A local data URL is deliberately not routed through the image optimizer or a provider.
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={preview.url} alt={`Selected verification photo ${index + 1}`} />
+                ) : <span className="photo-file-placeholder" aria-hidden="true">IMG</span>}
+                <div>
+                  <strong>{file.name}</strong>
+                  <span>{photoTypeLabel(file.type || (file.name.toLowerCase().endsWith(".heic") ? "image/heic" : file.name.toLowerCase().endsWith(".heif") ? "image/heif" : ""))} · {formatPhotoSize(file.size)}</span>
+                  <small>{index === 0 ? "Primary photo · this is the one stored with the trip today." : "Additional photo · used for MiMo review in this release."}</small>
+                </div>
+                {state === "selected" || state === "failed" ? <button type="button" onClick={() => onRemove(index)}>Remove</button> : null}
+              </div>;
+            })}
           </div>
-          {removable ? <button type="button" onClick={onRemove}>{state === "invalid" ? "Dismiss" : "Remove"}</button> : null}
-          {state === "failed" ? <button type="submit">Retry report with this photo</button> : null}
-        </div>
+          {photos.length < MAX_PHOTOS ? <label className="photo-add-more">
+            <input ref={inputRef} type="file" accept={PHOTO_ACCEPT} multiple capture="environment" onChange={onPhotos} />
+            + Add more photos
+          </label> : null}
+          {state === "failed" ? <button type="button" onClick={onAnalyze}>Analyze again</button> : null}
+        </>
       )}
+      {rejectedPhotos.map((rejected) => <small className="photo-analysis-status" role="alert" key={`${rejected.name}-${rejected.size}`}>{rejected.name}: {rejected.message}</small>)}
+      {photos.length && analysisState !== "analyzing" && analysisState !== "ready" ? <button className="photo-analyze-button" type="button" onClick={onAnalyze}>Confirm photos &amp; analyze with MiMo</button> : null}
       {state === "sending" ? (
         <span
           className="photo-indeterminate-progress"
@@ -1595,7 +1880,11 @@ function TripPhotoField({
       {state === "sending" || state === "ambiguous" ? (
         <small className="photo-no-cancel-note">A cancel control is intentionally unavailable after submission starts because the server may already have committed the report or photo.</small>
       ) : null}
-      <small className="photo-contract-note">Current storage supports one private photo per trip. The server strips metadata and re-encodes accepted files before storage.</small>
+      {analysisState === "analyzing" ? <small className="photo-analysis-status" role="status">MiMo is checking the photo…</small> : null}
+      {analysisState === "ready" && analysis ? <small className="photo-analysis-status" role="status">MiMo suggested {analysis.catches.map((entry) => `${entry.count} ${entry.species.replaceAll("-", " ")}`).join(", ") || "no fish"}. Review the rows before saving.{analysis.note ? ` ${analysis.note}` : ""}</small> : null}
+      {analysisState === "unavailable" ? <small className="photo-analysis-status">MiMo is unavailable right now. You can still enter the catch rows yourself.</small> : null}
+      {analysisState === "error" ? <small className="photo-analysis-status">MiMo returned an unusable suggestion. Enter the catch rows yourself.</small> : null}
+      <small className="photo-contract-note">Photos stay local until you confirm analysis. Review and correct every result; nothing is submitted automatically. The first photo is stored privately with the trip today; additional selected photos are used for analysis only until multi-photo storage is enabled. The server strips metadata and re-encodes accepted files before storage.</small>
     </section>
   );
 }

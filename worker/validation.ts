@@ -16,7 +16,9 @@ export const DEFAULT_INCENTIVE_POLICY_ID = "none-v1" as const;
 export const DEFAULT_VALIDATION_COHORT_ID = "predeployment-context" as const;
 
 const ATTESTATION_PATH = "/data/opportunity-attestations.json";
+const OPPORTUNITY_SNAPSHOT_PATH = "/data/opportunities.json";
 const MAX_ATTESTATION_BYTES = 512 * 1024;
+const MAX_OPPORTUNITY_SNAPSHOT_BYTES = 5 * 1024 * 1024;
 const MAX_ATTESTATION_WINDOWS = 5_000;
 const SHA256_PATTERN = /^[a-f0-9]{64}$/;
 const SITE_ID_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
@@ -49,6 +51,36 @@ export interface AttestedOpportunity {
   seasonalityScore: number;
   conditionsScore: number;
   fishabilityScore: number;
+  /** A bounded, immutable copy of the published conditions for this window. */
+  conditions?: OpportunityConditionsSnapshot;
+}
+
+export interface OpportunityConditionsSnapshot {
+  tideStage?: string;
+  tideLevelsFeet?: number[];
+  currentKnots?: number;
+  currentDirectionDegrees?: number;
+  currentDirection?: string;
+  windMph?: number;
+  fishabilityLabel?: string;
+  fishabilityReasons?: string[];
+  waterTempF?: number;
+  daylight?: boolean;
+  cloudCoverPct?: number;
+  pressureHpa?: number;
+  pressureTrendHpa3h?: number;
+  moonPhase?: string;
+  moonIlluminationPct?: number;
+  fishingPressure?: string;
+  fishingPressurePct?: number;
+  accessAdjustmentPoints?: number;
+  swellFeet?: number;
+  swellPeriodSeconds?: number;
+  swellDirectionDegrees?: number;
+  swellDirection?: string;
+  wavePowerKwM?: number;
+  breakingIntensity?: string;
+  breakingWaveHeightFeet?: number;
 }
 
 export type OpportunityAttestationStatus =
@@ -67,6 +99,10 @@ interface ParsedAttestationIndex {
 }
 
 const attestationCache = new WeakMap<object, Promise<ParsedAttestationIndex>>();
+const opportunitySnapshotCache = new WeakMap<object, Promise<{
+  snapshotSha256: string;
+  windows: Map<string, Record<string, unknown>>;
+}>>();
 
 export async function verifyOpportunityAttestation(
   assets: AssetFetcherLike | undefined,
@@ -101,7 +137,73 @@ export async function verifyOpportunityAttestation(
 }
 
 export function clearAttestationCacheForTests(assets?: AssetFetcherLike) {
-  if (assets) attestationCache.delete(assets as object);
+  if (assets) {
+    attestationCache.delete(assets as object);
+    opportunitySnapshotCache.delete(assets as object);
+  }
+}
+
+/**
+ * Bind the full conditions to the already-verified compact attestation. The
+ * attestation index intentionally stays small; this second read is cached by
+ * the platform asset layer and is only needed when a trip is actually logged.
+ * If the snapshot is unavailable, scores remain valid and no untrusted client
+ * conditions are accepted.
+ */
+export async function hydrateOpportunityConditions(
+  assets: AssetFetcherLike | undefined,
+  requestUrl: string,
+  opportunity: AttestedOpportunity | null,
+): Promise<AttestedOpportunity | null> {
+  if (!opportunity || !assets) return opportunity;
+  try {
+    let snapshotPromise = opportunitySnapshotCache.get(assets as object);
+    if (!snapshotPromise) {
+      snapshotPromise = fetchOpportunitySnapshot(assets, requestUrl).catch((error) => {
+        opportunitySnapshotCache.delete(assets as object);
+        throw error;
+      });
+      opportunitySnapshotCache.set(assets as object, snapshotPromise);
+    }
+    const snapshot = await snapshotPromise;
+    if (snapshot.snapshotSha256 !== opportunity.snapshotSha256) return opportunity;
+    const window = snapshot.windows.get(opportunity.windowId);
+    const snapshotStart = isRecord(window) ? canonicalUtcTimestamp(window.start) : null;
+    const snapshotEnd = isRecord(window) ? canonicalUtcTimestamp(window.end) : null;
+    if (!isRecord(window) || window.siteId !== opportunity.siteId ||
+      snapshotStart !== opportunity.windowStart || snapshotEnd !== opportunity.windowEnd ||
+      window.score !== opportunity.opportunityScore ||
+      window.habitatScore !== opportunity.habitatScore ||
+      window.seasonalityScore !== opportunity.seasonalityScore ||
+      window.dynamicScore !== opportunity.conditionsScore ||
+      window.fishabilityScore !== opportunity.fishabilityScore) return opportunity;
+    const conditions = normalizeOpportunityConditions(window.conditions);
+    return conditions ? { ...opportunity, conditions } : opportunity;
+  } catch {
+    return opportunity;
+  }
+}
+
+async function fetchOpportunitySnapshot(assets: AssetFetcherLike, requestUrl: string) {
+  const response = await assets.fetch(new Request(new URL(OPPORTUNITY_SNAPSHOT_PATH, requestUrl)));
+  if (!response.ok) throw new Error("opportunity snapshot unavailable");
+  const declaredLength = Number(response.headers.get("Content-Length") ?? 0);
+  if (Number.isFinite(declaredLength) && declaredLength > MAX_OPPORTUNITY_SNAPSHOT_BYTES) {
+    throw new Error("opportunity snapshot too large");
+  }
+  const bytes = await response.arrayBuffer();
+  if (bytes.byteLength === 0 || bytes.byteLength > MAX_OPPORTUNITY_SNAPSHOT_BYTES) {
+    throw new Error("opportunity snapshot size invalid");
+  }
+  const digest = await crypto.subtle.digest("SHA-256", bytes);
+  const snapshotSha256 = [...new Uint8Array(digest)].map((byte) => byte.toString(16).padStart(2, "0")).join("");
+  const snapshot = JSON.parse(new TextDecoder().decode(bytes)) as unknown;
+  if (!isRecord(snapshot) || !Array.isArray(snapshot.windows)) throw new Error("opportunity snapshot is invalid");
+  const windows = new Map<string, Record<string, unknown>>();
+  for (const entry of snapshot.windows) {
+    if (isRecord(entry) && typeof entry.id === "string" && !windows.has(entry.id)) windows.set(entry.id, entry);
+  }
+  return { snapshotSha256, windows };
 }
 
 async function loadAttestationIndex(assets: AssetFetcherLike, requestUrl: string) {
@@ -214,6 +316,49 @@ function parseAttestationIndex(value: unknown): ParsedAttestationIndex {
   return { windows };
 }
 
+const CONDITION_KEYS = [
+  "tideStage", "tideLevelsFeet", "currentKnots", "currentDirectionDegrees", "currentDirection",
+  "windMph", "fishabilityLabel", "fishabilityReasons", "waterTempF", "daylight", "cloudCoverPct",
+  "pressureHpa", "pressureTrendHpa3h", "moonPhase", "moonIlluminationPct", "fishingPressure",
+  "fishingPressurePct", "accessAdjustmentPoints", "swellFeet", "swellPeriodSeconds",
+  "swellDirectionDegrees", "swellDirection", "wavePowerKwM", "breakingIntensity", "breakingWaveHeightFeet",
+] as const;
+
+function normalizeOpportunityConditions(value: unknown): OpportunityConditionsSnapshot | null {
+  if (!isRecord(value)) return null;
+  const output: OpportunityConditionsSnapshot = {};
+  for (const key of CONDITION_KEYS) {
+    const candidate = value[key];
+    if (candidate === undefined || candidate === null) continue;
+    if (key === "daylight") {
+      if (typeof candidate === "boolean") output.daylight = candidate;
+      continue;
+    }
+    if (key === "tideLevelsFeet") {
+      if (Array.isArray(candidate) && candidate.length <= 8 && candidate.every((entry) => boundedConditionNumber(entry, -100, 100))) {
+        output.tideLevelsFeet = candidate.map(Number);
+      }
+      continue;
+    }
+    if (key === "fishabilityReasons") {
+      if (Array.isArray(candidate) && candidate.length <= 4 && candidate.every((entry) => typeof entry === "string" && entry.length <= 240)) {
+        output.fishabilityReasons = candidate.map((entry) => entry as string);
+      }
+      continue;
+    }
+    if (typeof candidate === "string") {
+      if (candidate.length <= 160 && candidate.trim() === candidate) (output as Record<string, unknown>)[key] = candidate;
+      continue;
+    }
+    if (boundedConditionNumber(candidate, -10_000, 10_000)) (output as Record<string, unknown>)[key] = Number(candidate);
+  }
+  return Object.keys(output).length ? output : null;
+}
+
+function boundedConditionNumber(value: unknown, minimum: number, maximum: number) {
+  return typeof value === "number" && Number.isFinite(value) && value >= minimum && value <= maximum;
+}
+
 function assertExactKeys(value: Record<string, unknown>, expected: readonly string[]) {
   const actual = Object.keys(value).sort();
   const wanted = [...expected].sort();
@@ -236,6 +381,13 @@ function strictUtcTimestamp(value: unknown, field: string) {
     throw new Error(`${field} must be a real Gregorian UTC timestamp`);
   }
   return parsed.toISOString();
+}
+
+function canonicalUtcTimestamp(value: unknown) {
+  if (typeof value !== "string" || !UTC_TIMESTAMP_PATTERN.test(value) || value.startsWith("0000-")) return null;
+  const parsed = new Date(value);
+  const normalized = value.includes(".") ? value : value.replace("Z", ".000Z");
+  return Number.isFinite(parsed.getTime()) && parsed.toISOString() === normalized ? parsed.toISOString() : null;
 }
 
 function sha256(value: unknown, field: string) {

@@ -88,6 +88,11 @@ interface ProfileTrip {
   no_catch: number | null;
   moderation_status: string;
   opportunity_score: number | null;
+  habitat_score: number | null;
+  seasonality_score: number | null;
+  conditions_score: number | null;
+  fishability_score: number | null;
+  prediction_metadata_json: string | null;
   angler_count: number;
   notes: string | null;
   rod: string | null;
@@ -505,6 +510,19 @@ function isProfileData(value: unknown): value is ProfileData {
       typeof entry.started_at === "string") &&
     Array.isArray(candidate.gearProfiles) && candidate.gearProfiles.every((entry) =>
       isRecord(entry) && typeof entry.id === "string" && typeof entry.name === "string");
+}
+
+function forecastSnapshotForTrip(trip: ProfileTrip) {
+  if (!trip.prediction_metadata_json) return null;
+  try {
+    const metadata = JSON.parse(trip.prediction_metadata_json) as Record<string, unknown>;
+    if (!metadata || typeof metadata !== "object" || Array.isArray(metadata)) return null;
+    const conditions = metadata.conditionsSnapshot;
+    if (!conditions || typeof conditions !== "object" || Array.isArray(conditions)) return null;
+    return conditions as Record<string, unknown>;
+  } catch {
+    return null;
+  }
 }
 
 interface GearProfile {
@@ -2292,7 +2310,7 @@ export function AccountModal({
               ) : profile ? <p>No saved locations yet. Open a forecast and tap “Save location.”</p>
                 : <p className="profile-data-unavailable">Saved locations are unavailable. Retry the profile above.</p>}
             </section>
-            <section className="profile-section profile-gear-section">
+            <section className="profile-section profile-gear-section" id="gear">
               <h3>Gear presets</h3>
               {profileLoading && !profile ? <ProfileSectionLoading label="Loading gear presets" /> : profile?.gearProfiles.length ? <div className="profile-list">
                 {profile.gearProfiles.map((gear) => {
@@ -2349,6 +2367,13 @@ export function AccountModal({
                     const targetEncounters = Number(trip.target_encounter_count ?? trip.halibut_encounters ?? 0);
                     const anyFishEncounters = Number(trip.any_fish_encounter_count ?? 0);
                     const nonTargetEncounters = Math.max(0, anyFishEncounters - targetEncounters);
+                    const forecastConditions = forecastSnapshotForTrip(trip);
+                    const conditionText = (key: string, suffix = "") => {
+                      const value = forecastConditions?.[key];
+                      return typeof value === "number" || typeof value === "string"
+                        ? `${value}${suffix}`
+                        : null;
+                    };
                     const resultLabel = trip.contract_status !== "valid"
                       ? "Legacy report · not a structured v2 observation"
                       : trip.outcome_class === "target_encountered"
@@ -2378,6 +2403,28 @@ export function AccountModal({
                       <article className="profile-trip" key={trip.id}>
                         <div><strong>{site?.name ?? trip.site_id}</strong><span>{new Date(trip.started_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}</span></div>
                         <p>{resultLabel} · {Number(trip.angler_hours ?? 0).toFixed(1)} angler-hours</p>
+                        {trip.opportunity_score !== null ? (
+                          <small>
+                            Saved forecast: {trip.opportunity_score}/100 opportunity · {trip.conditions_score ?? "—"}/100 conditions
+                          </small>
+                        ) : <small>Forecast conditions were not available for this trip.</small>}
+                        {forecastConditions ? (
+                          <details className="profile-trip-conditions">
+                            <summary>View conditions saved for this trip</summary>
+                            <div className="profile-trip-conditions-grid">
+                              {conditionText("tideStage") ? <span>Tide <strong>{conditionText("tideStage")}</strong></span> : null}
+                              {conditionText("currentKnots", " kt") ? <span>Current <strong>{conditionText("currentKnots", " kt")}</strong>{conditionText("currentDirection") ? ` ${conditionText("currentDirection")}` : ""}</span> : null}
+                              {conditionText("windMph", " mph") ? <span>Wind <strong>{conditionText("windMph", " mph")}</strong></span> : null}
+                              {conditionText("waterTempF", "°F") ? <span>Water <strong>{conditionText("waterTempF", "°F")}</strong></span> : null}
+                              {conditionText("cloudCoverPct", "%") ? <span>Cloud <strong>{conditionText("cloudCoverPct", "%")}</strong></span> : null}
+                              {conditionText("moonPhase") ? <span>Moon <strong>{conditionText("moonPhase")}</strong></span> : null}
+                              {conditionText("fishingPressure") ? <span>Pressure <strong>{conditionText("fishingPressure")}</strong></span> : null}
+                            </div>
+                            {Array.isArray(forecastConditions.fishabilityReasons) && forecastConditions.fishabilityReasons.length ? (
+                              <p>{forecastConditions.fishabilityReasons.join(" ")}</p>
+                            ) : null}
+                          </details>
+                        ) : null}
                         <small>{tripReviewLabel(trip)}</small>
                         {trip.moderation_status === "pending" ? (
                           <>

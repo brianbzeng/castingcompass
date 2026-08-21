@@ -1508,7 +1508,8 @@ export async function handleAccountRequest(
           observation_contract_version, taxon_catalog_version, target_taxon_id, contract_status,
           taxon_observations_json, outcome_class, target_encounter_count, any_fish_encounter_count,
           target_identification_confidence,
-          opportunity_score, fishability_score, model_version, gear_profile_id, rod, reel,
+          opportunity_score, habitat_score, seasonality_score, conditions_score, fishability_score,
+          model_version, prediction_metadata_json, gear_profile_id, rod, reel,
           bait_lure, rig, ai_review_status,
           CASE WHEN ai_review_status = 'processing' THEN NULL ELSE ai_review_json END AS ai_review_json,
           ai_review_model, ai_reviewed_at, completed_at
@@ -1841,7 +1842,7 @@ export async function handleAccountRequest(
         const siteId = parseProfileTripSite(body.siteId, curatedSites);
         const startedAt = parseProfileTripDate(body.startedAt, "start time", requestNow);
         const endedAt = parseProfileTripDate(body.endedAt, "finish time", requestNow);
-        const mode = parseProfileTripMode(body.mode ?? trip.mode);
+        const mode = modeForCuratedSite(siteId, curatedSites);
         const durationHours = (new Date(endedAt).getTime() - new Date(startedAt).getTime()) / 3_600_000;
         if (!Number.isFinite(durationHours) || durationHours < (1 / 60) || durationHours > 36) {
           throw new AuthError(422, "invalid_duration", "Trip duration must be between 1 minute and 36 hours.");
@@ -2223,12 +2224,9 @@ function parseProfileTripDate(value: unknown, label: string, now = new Date()) {
   return date.toISOString();
 }
 
-function parseProfileTripMode(value: unknown) {
-  const allowed = new Set(["shore", "beach", "pier", "jetty", "kayak", "boat", "other"]);
-  if (typeof value !== "string" || !allowed.has(value)) {
-    throw new AuthError(422, "invalid_mode", "Choose a supported fishing mode.");
-  }
-  return value;
+function modeForCuratedSite(siteId: string, curatedSites: readonly CuratedSite[]) {
+  const type = curatedSites.find((site) => site.id === siteId)?.type?.trim().toLowerCase();
+  return type === "beach" || type === "pier" || type === "jetty" ? type : "shore";
 }
 
 function parseProfileTripInteger(value: unknown, label: string, minimum: number, maximum: number) {

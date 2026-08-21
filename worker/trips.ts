@@ -13,6 +13,7 @@ import {
   TRIP_VALIDATION_CONSENT_VERSION,
   VALIDATION_COLLECTION_CONTRACT_VERSION,
   verifyOpportunityAttestation,
+  hydrateOpportunityConditions,
   type AssetFetcherLike,
   type AttestedOpportunity,
   type OpportunityAttestationStatus,
@@ -36,6 +37,7 @@ import {
 } from "./validation-feasibility.ts";
 import { logEvent } from "./observability.ts";
 import { API_ROUTE_PATTERNS } from "./route-policy.ts";
+import { analyzeFishPhotoWithMimo, ReviewError } from "./trip-review.ts";
 
 const MAX_PHOTO_BYTES = 5 * 1024 * 1024;
 const MAX_MULTIPART_BYTES = MAX_PHOTO_BYTES + 1024 * 1024;
@@ -43,8 +45,15 @@ const MAX_TRIP_PHOTO_RESERVATION_ATTEMPTS = 8;
 const TRIP_PHOTO_RESERVATION_GRACE_MS = 15 * 60 * 1000;
 const TRIP_PHOTO_RESERVATION_LEASE_MS = 5 * 60 * 1000;
 const REPORTER_COOKIE = "cc_reporter";
-const ALLOWED_IMAGE_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
-const ALLOWED_MODES = new Set(["shore", "beach", "pier", "jetty", "kayak", "boat", "other"]);
+const ALLOWED_IMAGE_TYPES = new Set([
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+  "image/heic",
+  "image/heif",
+  "image/heic-sequence",
+  "image/heif-sequence",
+]);
 const TRIP_DETAIL_FIELDS = [
   "gear",
   "gearProfileId",
@@ -218,6 +227,8 @@ export interface TripApiEnv extends FeasibilityRuntimeEnv {
   TRIP_PHOTOS?: R2BucketLike;
   IMAGES?: ImageBindingLike;
   TRIP_PHOTO_UPLOADS_ENABLED?: string;
+  MIMO_API_KEY?: string;
+  MIMO_MODEL?: string;
   /** Enables only organic score-visible observational-secondary collection; never primary evidence. */
   VALIDATION_OBSERVATIONAL_SECONDARY_ENABLED?: string;
   VALIDATION_COHORT_ID?: string;
@@ -1945,6 +1956,7 @@ function forecastFieldsFromAttestation(
       scoringSystemSha256: opportunity.scoringSystemSha256,
       windowStart: opportunity.windowStart,
       windowEnd: opportunity.windowEnd,
+      conditionsSnapshot: opportunity.conditions ?? null,
     }),
   };
 }
@@ -2444,6 +2456,41 @@ export async function handleTripRequest(
   const siteMap = new Map(curatedSites.map((site) => [site.id, site]));
 
   try {
+    if (url.pathname === "/api/trips/analyze-photo") {
+      if (request.method !== "POST") return methodNotAllowed("POST");
+      assertSameOrigin(request);
+      assertContentType(request, "multipart/form-data");
+      assertBodySize(request, MAX_MULTIPART_BYTES);
+      if (!options.accountId) throw new ApiError(401, "authentication_required", "Sign in before analyzing a trip photo.");
+      const form = await request.formData();
+      assertOnlyInputFields(form, ["photo"]);
+      const entry = form.get("photo");
+      if (!(entry instanceof File) || entry.size === 0) {
+        throw new ApiError(422, "invalid_photo", "Choose a non-empty JPEG, PNG, WebP, HEIC, or HEIF photo.");
+      }
+      if (entry.size > MAX_PHOTO_BYTES) {
+        throw new ApiError(413, "photo_too_large", "Photos must be 5 MB or smaller.");
+      }
+      if (!ALLOWED_IMAGE_TYPES.has(entry.type)) {
+        throw new ApiError(415, "invalid_photo_type", "Photos must be JPEG, PNG, WebP, HEIC, or HEIF.");
+      }
+      const bytes = new Uint8Array(await entry.arrayBuffer());
+      if (!matchesImageSignature(bytes.slice(0, 16), entry.type)) {
+        throw new ApiError(415, "invalid_photo_type", "The uploaded file does not match its image type.");
+      }
+      const reviewPhoto = await preparePhotoForMimo(env, entry, bytes);
+      let analysis: Awaited<ReturnType<typeof analyzeFishPhotoWithMimo>>;
+      try {
+        analysis = await analyzeFishPhotoWithMimo(env, reviewPhoto);
+      } catch (error) {
+        if (error instanceof ReviewError) {
+          throw new ApiError(503, "photo_analysis_unavailable", "MiMo could not analyze this photo right now.");
+        }
+        throw error;
+      }
+      if (!analysis) throw new ApiError(503, "photo_analysis_unavailable", "MiMo photo analysis is not configured yet.");
+      return jsonResponse({ analysis });
+    }
     const store = options.store ?? (env.DB ? createTripStore(env.DB) : null);
     if (!store) throw new ApiError(503, "storage_unavailable", "Trip storage is temporarily unavailable.");
     await store.initialize();
@@ -2487,7 +2534,10 @@ export async function handleTripRequest(
       await store.assertSubmissionAllowed(reporter.hash, now);
       const site = getSite(siteMap, body.siteId);
       const submittedStartedAt = parseStartDate(body.startedAt, now, 48);
-      const mode = parseRequiredMode(body.mode);
+      // The catalog location is the source of truth for the fishing zone. The
+      // client may still send mode for older builds, but it cannot override the
+      // site classification or change forecast attribution.
+      const mode = modeForSite(site);
       const scoreInfluencedChoice = requiredScoreInfluence(body);
       const referralCode = parseReferralCode(body.referralCode);
       const timestamp = now.toISOString();
@@ -2506,6 +2556,11 @@ export async function handleTripRequest(
         siteId: site.id,
         startedAt,
       });
+      const attestedOpportunity = await hydrateOpportunityConditions(
+        env.ASSETS,
+        request.url,
+        attestation.opportunity,
+      );
       let feasibilityStart: FeasibilityEventRecord | null = null;
       let feasibilityRecruitment: FeasibilityRecruitmentRecord | null = null;
       if (feasibilityPilotEnabled(env) && optionalBoolean(body.studyConsent, "studyConsent") === true) {
@@ -2521,7 +2576,7 @@ export async function handleTripRequest(
         if (
           !activationId || !store.getFeasibilityActivation || !store.getFeasibilityRecruitment ||
           !store.getFeasibilityRecruitmentCampaign ||
-          !attestation.opportunity || !options.accountId
+          !attestedOpportunity || !options.accountId
         ) {
           throw new ApiError(503, "validation_pilot_unavailable", "The validation pilot is not available right now.");
         }
@@ -2530,7 +2585,7 @@ export async function handleTripRequest(
           env,
           activation: storedActivation,
           accountId: options.accountId,
-          opportunity: attestation.status === "verified" ? attestation.opportunity : null,
+          opportunity: attestation.status === "verified" ? attestedOpportunity : null,
           timestamp,
           studyConsent: true,
           studyConsentVersion,
@@ -2582,7 +2637,7 @@ export async function handleTripRequest(
           context,
           recruitment: resolvedRecruitment.record,
           tripId: id,
-          opportunity: attestation.opportunity,
+          opportunity: attestedOpportunity,
           siteId: site.id,
           mode,
           anglerCount: parseInteger(body.anglerCount, "anglerCount", 1, 12, 1),
@@ -2597,9 +2652,9 @@ export async function handleTripRequest(
           );
         }
       }
-      const activation = validationActivation(env, startedAt, timestamp, attestation.opportunity);
+      const activation = validationActivation(env, startedAt, timestamp, attestedOpportunity);
       const eligibleRecruitmentCandidate = Boolean(
-        activation && attestation.status === "verified" && attestation.opportunity &&
+        activation && attestation.status === "verified" && attestedOpportunity &&
           serverBoundLiveStart && VALIDATION_ELIGIBLE_MODES.has(mode),
       );
       const participantGroupId = eligibleRecruitmentCandidate
@@ -2627,7 +2682,7 @@ export async function handleTripRequest(
         recruitmentEvent,
         collectionIdentity,
         attestationStatus: attestation.status,
-        opportunity: attestation.opportunity,
+        opportunity: attestedOpportunity,
       });
 
       let trip: TripRow;
@@ -2666,7 +2721,7 @@ export async function handleTripRequest(
           referralCode,
           tokenHash: idempotencyKeyHash,
           idempotencyKeyHash,
-          ...forecastFieldsFromAttestation(attestation.opportunity, scoreInfluencedChoice),
+          ...forecastFieldsFromAttestation(attestedOpportunity, scoreInfluencedChoice),
           photoKey: null,
           photoKeyHash: null,
           photoContentType: null,
@@ -2795,8 +2850,11 @@ export async function handleTripRequest(
       }
       const details = parseTripDetails(form, existing);
       assertOtherSpeciesCountConsistency(details.otherCatchCount, details.otherSpecies);
-      const mode = parseRequiredMode(form.get("mode"));
-      const forecastAttributionCleared = mode !== existing.mode;
+      // A trip keeps the mode implied by its curated location. This avoids a
+      // second, conflicting user choice and keeps completion from clearing a
+      // valid forecast snapshot just because an old client posted a mode.
+      const mode = modeForSite(siteMap.get(existing.site_id));
+      const forecastAttributionCleared = false;
       assertImmutableScoreInfluence(form, existing.score_influenced_choice);
       const anglerHours = (Date.parse(endedAt) - Date.parse(existing.started_at)) * anglerCount / 3_600_000;
       const speciesObservation = buildSpeciesObservationFields({
@@ -2977,9 +3035,19 @@ export async function handleTripRequest(
       }
 
       const timestamp = now.toISOString();
-      const mode = parseRequiredMode(form.get("mode"));
+      const mode = modeForSite(site);
       const scoreInfluencedChoice = requiredScoreInfluence(form);
       const referralCode = parseReferralCode(form.get("referralCode"));
+      const attestation = await verifyOpportunityAttestation(env.ASSETS, request.url, {
+        windowId: form.get("opportunityWindowId"),
+        siteId: site.id,
+        startedAt,
+      });
+      const attestedOpportunity = await hydrateOpportunityConditions(
+        env.ASSETS,
+        request.url,
+        attestation.opportunity,
+      );
       const details = parseTripDetails(form);
       assertOtherSpeciesCountConsistency(details.otherCatchCount, details.otherSpecies);
       const anglerHours = (Date.parse(endedAt) - Date.parse(startedAt)) * anglerCount / 3_600_000;
@@ -3036,7 +3104,7 @@ export async function handleTripRequest(
           referralCode,
           tokenHash: null,
           idempotencyKeyHash,
-          ...forecastFieldsFromAttestation(null, scoreInfluencedChoice),
+          ...forecastFieldsFromAttestation(attestedOpportunity, scoreInfluencedChoice),
           photoKey: uploaded?.key ?? null,
           photoKeyHash: uploaded?.keyHash ?? null,
           photoContentType: uploaded?.contentType ?? null,
@@ -3102,6 +3170,10 @@ export async function handleTripRequest(
 }
 
 function publicTrip(row: TripRow) {
+  const predictionMetadata = safeJsonValue(row.prediction_metadata_json);
+  const forecastConditions = isRecord(predictionMetadata) && isRecord(predictionMetadata.conditionsSnapshot)
+    ? predictionMetadata.conditionsSnapshot
+    : null;
   return {
     id: row.id,
     status: row.status,
@@ -3146,6 +3218,7 @@ function publicTrip(row: TripRow) {
     conditionsScore: row.conditions_score,
     fishabilityScore: row.fishability_score,
     modelVersion: row.model_version,
+    forecastConditions,
     scoreInfluencedChoice:
       row.score_influenced_choice === null ? null : Boolean(row.score_influenced_choice),
     hasPhoto: Boolean(row.photo_key),
@@ -3188,6 +3261,10 @@ function safeJsonValue(value: string | null) {
   }
 }
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === "object" && !Array.isArray(value);
+}
+
 interface ProcessedTripPhoto {
   tripId: string;
   key: string;
@@ -3216,7 +3293,7 @@ async function processPhoto(
     throw new ApiError(413, "photo_too_large", "Photos must be 5 MB or smaller.");
   }
   if (!ALLOWED_IMAGE_TYPES.has(entry.type)) {
-    throw new ApiError(415, "invalid_photo_type", "Photos must be JPEG, PNG, or WebP.");
+    throw new ApiError(415, "invalid_photo_type", "Photos must be JPEG, PNG, WebP, HEIC, or HEIF.");
   }
 
   const signature = new Uint8Array(await entry.slice(0, 16).arrayBuffer());
@@ -3371,10 +3448,6 @@ export function minimizeForecastMetadata(value: unknown) {
   return minimized;
 }
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return Boolean(value) && typeof value === "object" && !Array.isArray(value);
-}
-
 function addBoundedText(target: Record<string, unknown>, key: string, value: unknown, maximum: number) {
   if (typeof value !== "string") return;
   const text = value.trim().slice(0, maximum);
@@ -3391,6 +3464,9 @@ function matchesImageSignature(bytes: Uint8Array, type: string) {
   if (type === "image/png") {
     return bytes[0] === 0x89 && bytes[1] === 0x50 && bytes[2] === 0x4e && bytes[3] === 0x47;
   }
+  if (type === "image/heic" || type === "image/heif" || type === "image/heic-sequence" || type === "image/heif-sequence") {
+    return matchesHeifSignature(bytes);
+  }
   return (
     bytes[0] === 0x52 &&
     bytes[1] === 0x49 &&
@@ -3401,6 +3477,41 @@ function matchesImageSignature(bytes: Uint8Array, type: string) {
     bytes[10] === 0x42 &&
     bytes[11] === 0x50
   );
+}
+
+function matchesHeifSignature(bytes: Uint8Array) {
+  if (bytes.length < 12 ||
+    bytes[4] !== 0x66 || bytes[5] !== 0x74 || bytes[6] !== 0x79 || bytes[7] !== 0x70) return false;
+  const brands = ["heic", "heix", "hevc", "hevx", "heif", "mif1", "msf1"];
+  const text = new TextDecoder().decode(bytes.slice(8, Math.min(bytes.length, 64)));
+  return brands.some((brand) => text.includes(brand));
+}
+
+async function preparePhotoForMimo(
+  env: TripApiEnv,
+  entry: File,
+  bytes: Uint8Array,
+): Promise<{ type: string; bytes: Uint8Array }> {
+  if (!entry.type.startsWith("image/heic") && !entry.type.startsWith("image/heif")) {
+    return { type: entry.type, bytes };
+  }
+  if (!env.IMAGES) {
+    throw new ApiError(503, "photo_analysis_unavailable", "HEIC/HEIF analysis needs the image conversion service, which is unavailable right now.");
+  }
+  try {
+    const output = await env.IMAGES.input(entry.stream()).transform({
+      width: 2048,
+      height: 2048,
+      fit: "scale-down",
+    }).output({ format: "image/webp", quality: 82 });
+    const response = output.response();
+    if (!response.ok) throw new Error("image conversion failed");
+    const converted = new Uint8Array(await response.arrayBuffer());
+    if (converted.byteLength === 0 || converted.byteLength > MAX_PHOTO_BYTES) throw new Error("converted image is invalid");
+    return { type: "image/webp", bytes: converted };
+  } catch {
+    throw new ApiError(503, "photo_analysis_unavailable", "HEIC/HEIF could not be converted for MiMo right now.");
+  }
 }
 
 function assertSameOrigin(request: Request) {
@@ -3499,15 +3610,9 @@ function getSite(siteMap: Map<string, CuratedSite>, value: unknown) {
   return site;
 }
 
-function parseRequiredMode(value: unknown) {
-  if (value === null || value === undefined || value === "") {
-    throw new ApiError(422, "mode_required", "Choose the fishing mode used for the whole trip.");
-  }
-  const mode = String(value).trim().toLowerCase();
-  if (!ALLOWED_MODES.has(mode)) {
-    throw new ApiError(422, "invalid_mode", "Choose a supported fishing mode.");
-  }
-  return mode;
+function modeForSite(site: CuratedSite | undefined) {
+  const type = site?.type?.trim().toLowerCase();
+  return type === "beach" || type === "pier" || type === "jetty" ? type : "shore";
 }
 
 function parseStartDate(value: unknown, now: Date, maximumPastHours: number) {
