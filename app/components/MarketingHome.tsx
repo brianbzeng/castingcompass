@@ -64,7 +64,7 @@ const daylightStoryBeats = [
     title: ["See what moves", "a spot up", "the list."],
     copy: "See how tide, wind, swell, source freshness, and one target species shape each relative opportunity score.",
     image: {
-      src: "/marketing/daylight-draft/adobe-rock-anglers-watermarked.jpg",
+      src: "/marketing/daylight-draft/personal-rocky-intertidal.jpg",
       alt: "Two anglers fishing from rocks along a turbulent coast.",
       aspect: "landscape",
     },
@@ -78,7 +78,7 @@ const daylightStoryBeats = [
     title: ["Every trip", "tells you", "something."],
     copy: "A keeper, a short release, or a no-catch trip can all make the next decision more informed.",
     image: {
-      src: "/marketing/daylight-draft/personal-measured-catch.jpg",
+      src: "/marketing/daylight-draft/personal-angler-catch.jpg",
       alt: "A freshly caught fish being measured on a pier.",
       aspect: "portrait",
     },
@@ -92,7 +92,7 @@ const daylightStoryBeats = [
     title: ["Save what", "worked for", "next time."],
     copy: "Keep public places, gear presets, and trip history together, ready for the next window.",
     image: {
-      src: "/marketing/daylight-draft/adobe-phone-watermarked.webp",
+      src: "/marketing/daylight-draft/testflight-phone-mockup-v1.png",
       alt: "A phone held in two hands beside the water.",
       aspect: "landscape",
     },

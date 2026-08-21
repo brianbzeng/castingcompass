@@ -59,6 +59,17 @@ export const marketingApiContract = {
 
 const LOCAL_RADIUS_KM = 80;
 
+/**
+ * The visual-only branch is intentionally self-contained. It should render
+ * the mockup without probing live community APIs that are not part of that
+ * checkout's purpose, which otherwise produces noisy 404/503 console errors.
+ */
+function isVisualOnlyPreview() {
+  return typeof window !== "undefined"
+    && window.location.hostname === "127.0.0.1"
+    && window.location.port === "8788";
+}
+
 export function requestBrowserLocation(): Promise<LocationState> {
   if (typeof navigator === "undefined" || !navigator.geolocation) {
     return Promise.resolve({ status: "unavailable" });
@@ -277,6 +288,10 @@ export async function loadMarketingCommunity(
     ? nearestResult.site
     : undefined;
 
+  if (isVisualOnlyPreview()) {
+    return { threads: [], scope: "service", siteName: nearest?.name };
+  }
+
   if (nearest) {
     const [previewResponse, legacyResponse] = await Promise.all([
       fetch(`/api/community/${encodeURIComponent(nearest.id)}/preview`, { cache: "no-store", signal }),
@@ -301,6 +316,7 @@ export async function loadMarketingCommunity(
 }
 
 export async function loadApprovedCatchReports(signal: AbortSignal): Promise<MarketingCatchReport[]> {
+  if (isVisualOnlyPreview()) return [];
   const response = await fetch(marketingApiContract.approvedCatches, { cache: "no-store", signal });
   const contentType = response.headers.get("content-type") ?? "";
   if (!response.ok || !contentType.includes("application/json")) return [];

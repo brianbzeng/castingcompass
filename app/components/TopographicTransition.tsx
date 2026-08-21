@@ -1,13 +1,10 @@
 "use client";
 
-import type { CSSProperties, SVGProps } from "react";
+import type { CSSProperties } from "react";
 
 const TOPOGRAPHIC_ASSET =
   "/marketing/daylight-draft/topographic-stock-blue.webp";
 const WORDMARK = "CastingCompass";
-const HIGH_PRIORITY_SVG_IMAGE = {
-  fetchpriority: "high",
-} as unknown as SVGProps<SVGImageElement>;
 const WORDMARK_LETTERS = Array.from(WORDMARK, (letter, position) => ({
   id: `wordmark-letter-${position}`,
   letter,
@@ -136,7 +133,6 @@ function LoaderTopographicMap({
       <g className="cc-topo-loader-sheet" mask="url(#cc-topo-loader-dissolve)">
         <rect className="cc-topo-loader-ground" width="6324" height="2372" />
         <image
-          {...HIGH_PRIORITY_SVG_IMAGE}
           className="cc-topo-stock-image"
           href={TOPOGRAPHIC_ASSET}
           width="6324"
